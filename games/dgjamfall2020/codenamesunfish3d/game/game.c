@@ -33,20 +33,20 @@ int                     vrl_image_count = 0;
 int                     vrl_image_select = 0;
 struct vrl_image        vrl_image[MAX_IMAGES] = { {NULL,NULL,NULL,0} };
 
-void free_vrl(int slot) {
-    if (vrl_image[slot].buffer != NULL) {
-        free(vrl_image[slot].buffer);
-        vrl_image[slot].buffer = NULL;
+void free_vrl(struct vrl_image *img) {
+    if (img->buffer != NULL) {
+        free(img->buffer);
+        img->buffer = NULL;
     }
-    if (vrl_image[slot].vrl_lineoffs != NULL) {
-        free(vrl_image[slot].vrl_lineoffs);
-        vrl_image[slot].vrl_lineoffs = NULL;
+    if (img->vrl_lineoffs != NULL) {
+        free(img->vrl_lineoffs);
+        img->vrl_lineoffs = NULL;
     }
-    vrl_image[slot].vrl_header = NULL;
-    vrl_image[slot].bufsz = 0;
+    img->vrl_header = NULL;
+    img->bufsz = 0;
 }
 
-int load_vrl(int slot,const char *path) {
+int load_vrl(struct vrl_image *img,const char *path) {
     struct vrl1_vgax_header *vrl_header;
     vrl1_vgax_offset_t *vrl_lineoffs;
     unsigned char *buffer = NULL;
@@ -80,12 +80,10 @@ int load_vrl(int slot,const char *path) {
     vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
     if (vrl_lineoffs == NULL) goto fail;
 
-    vrl_image[slot].vrl_header = vrl_header;
-    vrl_image[slot].vrl_lineoffs = vrl_lineoffs;
-    vrl_image[slot].buffer = buffer;
-    vrl_image[slot].bufsz = bufsz;
-
-    vrl_palrebase(vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),0x20); /* adjust the image to start at palette 0x20 */
+    img->vrl_header = vrl_header;
+    img->vrl_lineoffs = vrl_lineoffs;
+    img->buffer = buffer;
+    img->bufsz = bufsz;
 
     return 0;
 fail:
@@ -119,7 +117,7 @@ const char *image_file[VRL_IMAGE_FILES] = {
 
 void load_seq(void) {
     while (vrl_image_count < VRL_IMAGE_FILES) {
-        if (load_vrl(vrl_image_count,image_file[vrl_image_count])) break;
+        if (load_vrl(&vrl_image[vrl_image_count],image_file[vrl_image_count])) break;
         vrl_image_count++;
     }
 }
@@ -186,7 +184,7 @@ int main() {
             read(fd,palette,3*32);
             close(fd);
 
-            vga_palette_lseek(0+0x20);
+            vga_palette_lseek(0);
             for (i=0;i < 32;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
         }
     }
@@ -228,7 +226,7 @@ int main() {
     int10_setmode(3);
 
     for (vrl_image_select=0;vrl_image_select < vrl_image_count;vrl_image_select++)
-        free_vrl(vrl_image_select);
+        free_vrl(&vrl_image[vrl_image_select]);
 
     return 0;
 }
