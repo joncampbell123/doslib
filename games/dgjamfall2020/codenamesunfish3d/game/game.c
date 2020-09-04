@@ -19,9 +19,8 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
-static unsigned char palette[768];
-
-#define MAX_IMAGES          64
+#define VRL_IMAGE_FILES             19
+#define MAX_IMAGES                  VRL_IMAGE_FILES
 
 struct vrl_image {
     struct vrl1_vgax_header*        vrl_header;
@@ -32,7 +31,20 @@ struct vrl_image {
 
 int                     vrl_image_count = 0;
 int                     vrl_image_select = 0;
-struct vrl_image        vrl_image[MAX_IMAGES];
+struct vrl_image        vrl_image[MAX_IMAGES] = { {NULL,NULL,NULL,0} };
+
+void free_vrl(int slot) {
+    if (vrl_image[slot].buffer != NULL) {
+        free(vrl_image[slot].buffer);
+        vrl_image[slot].buffer = NULL;
+    }
+    if (vrl_image[slot].vrl_lineoffs != NULL) {
+        free(vrl_image[slot].vrl_lineoffs);
+        vrl_image[slot].vrl_lineoffs = NULL;
+    }
+    vrl_image[slot].vrl_header = NULL;
+    vrl_image[slot].bufsz = 0;
+}
 
 int load_vrl(int slot,const char *path) {
     struct vrl1_vgax_header *vrl_header;
@@ -82,31 +94,31 @@ fail:
     return 1;
 }
 
-const char *image_file[] = {
-    "sorcbwo1.vrl",
-    "sorcbwo2.vrl",
-    "sorcbwo3.vrl",
-    "sorcbwo4.vrl",
-    "sorcbwo5.vrl",
-    "sorcbwo6.vrl",
-    "sorcbwo7.vrl",
-    "sorcbwo8.vrl",
-    "sorcbwo9.vrl",
-    "sorcuhhh.vrl",
-    "sorcwoo1.vrl",
+const char *image_file[VRL_IMAGE_FILES] = {
+    "sorcwoo1.vrl",             // 0
     "sorcwoo2.vrl",
     "sorcwoo3.vrl",
     "sorcwoo4.vrl",
     "sorcwoo5.vrl",
-    "sorcwoo6.vrl",
+    "sorcwoo6.vrl",             // 5
     "sorcwoo7.vrl",
     "sorcwoo8.vrl",
     "sorcwoo9.vrl",
-    NULL
+    "sorcuhhh.vrl",
+    "sorcbwo1.vrl",             // 10
+    "sorcbwo2.vrl",
+    "sorcbwo3.vrl",
+    "sorcbwo4.vrl",
+    "sorcbwo5.vrl",
+    "sorcbwo6.vrl",             // 15
+    "sorcbwo7.vrl",
+    "sorcbwo8.vrl",
+    "sorcbwo9.vrl"
+                                // 19
 };
 
 void load_seq(void) {
-    while (vrl_image_count < MAX_IMAGES && image_file[vrl_image_count] != NULL) {
+    while (vrl_image_count < VRL_IMAGE_FILES) {
         if (load_vrl(vrl_image_count,image_file[vrl_image_count])) break;
         vrl_image_count++;
     }
@@ -163,6 +175,7 @@ int main() {
     vga_set_start_location(cur_offset);
 
     {
+        unsigned char palette[3*32];
         int fd;
 
         /* load color palette */
@@ -174,7 +187,7 @@ int main() {
             close(fd);
 
             vga_palette_lseek(0+0x20);
-            for (i=0;i < 256;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
+            for (i=0;i < 32;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
         }
     }
 
@@ -213,6 +226,10 @@ int main() {
     } while (1);
 
     int10_setmode(3);
+
+    for (vrl_image_select=0;vrl_image_select < vrl_image_count;vrl_image_select++)
+        free_vrl(vrl_image_select);
+
     return 0;
 }
 
