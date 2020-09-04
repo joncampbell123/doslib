@@ -19,7 +19,15 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) .symbolic
 	
-exe: $(GAME_EXE) .symbolic
+exe: $(GAME_EXE) final .symbolic
+
+final: $(GAME_EXE)
+	rm -Rf final
+	mkdir final
+	cp -v dos86l/game.exe final/game.exe
+	cp -v ../devasset/atomicplayboy-256x256.png final/atmpbrz.png
+	cp -v ../devasset/woo-sorcerer-character/set2/palette.png.pal final/sorcwoo.pal
+	cp -v ../devasset/woo-sorcerer-character/set2/REDOWIDER1-colorkey-matte-alpha-720p.mov-199.52-225.61.mov-uhhhhhh-wooooooo.mov-8.24-8.34.mov.001.png.cropped.png.palunord.png.palord.png.vrl final/sorcuhhh.vrl
 
 !ifdef GAME_EXE
 $(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj
