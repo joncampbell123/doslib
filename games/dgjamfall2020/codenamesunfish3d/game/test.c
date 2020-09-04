@@ -99,6 +99,10 @@ int main() {
         return 1;
 
 	cpu_probe();
+    if (cpu_basic_level < 3) {
+        printf("This game requires a 386 or higher\n");
+        return 1;
+    }
     probe_dos();
 	if (!probe_8254()) {
 		printf("No 8254 detected.\n");
