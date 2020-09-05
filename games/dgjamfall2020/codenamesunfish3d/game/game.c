@@ -20,6 +20,18 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
+struct seq_anim_i {
+    unsigned int        duration;       // in ticks
+    unsigned int        frame_rate;     // in Hz
+    int                 init_frame;
+    int                 min_frame;
+    int                 max_frame;
+    unsigned int        flags;
+    signed char         init_dir;
+};
+
+#define SEQANF_PINGPONG     (0x01u)
+
 uint32_t counter;
 uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
 uint16_t timer_irq_count;
@@ -271,18 +283,6 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 /* anim1: ping pong loop 0-8 (sorcwoo1.vrl to sorcwoo9.vrl) */
 /* anim2: single frame 9 (sorcuhhh.vrl) */
 /* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
-
-struct seq_anim_i {
-    unsigned int        duration;       // in ticks
-    unsigned int        frame_rate;     // in Hz
-    int                 init_frame;
-    int                 min_frame;
-    int                 max_frame;
-    unsigned int        flags;
-    signed char         init_dir;
-};
-
-#define SEQANF_PINGPONG     (0x01u)
 
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
