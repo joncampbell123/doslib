@@ -304,10 +304,11 @@ void seq_intro() {
     int redraw = 1;
     int c;
 
-    /* atomic playback background 256x256 */
+    unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
+
+    /* atomic playboy background 256x256 */
     {
         struct minipng_reader *rdr;
-        unsigned imgseg;
 
         /* WARNING: Code assumes 16-bit large memory model! */
 
@@ -315,14 +316,14 @@ void seq_intro() {
             fatal("seq_intro: failed atmpbrz.png");
         if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count < 64)
             fatal("seq_intro: failed atmpbrz.png");
-        if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&imgseg) != 0)
+        if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
             fatal("seq_intro: failed atmpbrz.png");
 
         {
             unsigned int i;
 
             for (i=0;i < 200;i++) {
-                unsigned char far *imgptr = (unsigned char far*)MK_FP(imgseg,i * 256u);
+                unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg,i * 256u);
                 minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
                 minipng_reader_read_idat(rdr,imgptr,256); /* row */
             }
@@ -336,7 +337,6 @@ void seq_intro() {
         }
 
         minipng_reader_close(&rdr);
-        _dos_freemem(imgseg);
     }
 
     pal_load_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,"sorcwoo.pal");
@@ -414,6 +414,7 @@ void seq_intro() {
         ccount = counter_read();
     } while (1);
 
+    _dos_freemem(atpbseg);
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
 #undef ATOMPB_PAL_OFFSET
