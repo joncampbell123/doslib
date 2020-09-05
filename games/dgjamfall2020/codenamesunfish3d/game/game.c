@@ -258,6 +258,7 @@ void fatal(const char *msg,...) {
 
 #define ANIM_SEQS                   3
 #define VRL_IMAGE_FILES             19
+#define SORC_PAL_OFFSET             0x40
 const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
     "sorcwoo1.vrl",             // 0
     "sorcwoo2.vrl",
@@ -302,13 +303,19 @@ void seq_intro() {
     int redraw = 1;
     int c;
 
-    pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
+    pal_load_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,"sorcwoo.pal");
 
     {
         unsigned int vrl_image_count = 0;
         for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
             if (load_vrl(&vrl_image[vrl_image_count],seq_intro_sorc_vrl[vrl_image_count]) != 0)
                 fatal("seq_intro: unable to load VRL %s",seq_intro_sorc_vrl[vrl_image_count]);
+
+                vrl_palrebase(
+                    vrl_image[vrl_image_count].vrl_header,
+                    vrl_image[vrl_image_count].vrl_lineoffs,
+                    vrl_image[vrl_image_count].buffer+sizeof(*(vrl_image[vrl_image_count].vrl_header)),
+                    SORC_PAL_OFFSET);
         }
     }
 
@@ -383,6 +390,7 @@ void seq_intro() {
 
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
+#undef SORC_PAL_OFFSET
 #undef VRL_IMAGE_FILES
 #undef ANIM_SEQS
 }
