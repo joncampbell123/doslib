@@ -25,6 +25,17 @@ uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
 uint16_t timer_irq_count;
 uint16_t timer_tick_rate = 120;
 
+/* must disable interrupts temporarily to avoid incomplete read */
+uint32_t counter_read() {
+    uint32_t tmp;
+
+    SAVE_CPUFLAGS( _cli() ) {
+        tmp = counter;
+    } RESTORE_CPUFLAGS();
+
+    return tmp;
+}
+
 void (__interrupt __far *prev_timer_irq)() = NULL;
 static void __interrupt __far timer_irq() { /* IRQ 0 */
     counter++;
@@ -261,18 +272,28 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 /* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
 
 void seq_intro() {
+    uint32_t nf_count,ccount;
+    uint32_t vrl_anim_interval;
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
     int vrl_image_select = 0;
-    int vrl_image_count = 0;
     int redraw = 1;
     int c;
 
     pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
 
-    for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
-        if (load_vrl(&vrl_image[vrl_image_count],seq_intro_sorc_vrl[vrl_image_count]) != 0)
-            fatal("seq_intro: unable to load VRL %s",seq_intro_sorc_vrl[vrl_image_count]);
+    {
+        unsigned int vrl_image_count = 0;
+        for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
+            if (load_vrl(&vrl_image[vrl_image_count],seq_intro_sorc_vrl[vrl_image_count]) != 0)
+                fatal("seq_intro: unable to load VRL %s",seq_intro_sorc_vrl[vrl_image_count]);
+        }
     }
+
+    /* anim1 */
+    vrl_anim_interval = timer_tick_rate / 10;
+    vrl_image_select = 0;
+
+    nf_count = counter_read() + vrl_anim_interval;
 
     do {
         if (redraw) {
@@ -296,12 +317,16 @@ void seq_intro() {
             if (c == 27) break;
         }
 
-        redraw = 1;
-        if ((++vrl_image_select) >= vrl_image_count)
-            vrl_image_select = 0;
+        ccount = counter_read();
+        if (ccount >= nf_count) {
+            redraw = 1;
+            nf_count += vrl_anim_interval;
+            if ((++vrl_image_select) >= VRL_IMAGE_FILES)
+                vrl_image_select = 0;
+        }
     } while (1);
 
-    for (vrl_image_select=0;vrl_image_select < vrl_image_count;vrl_image_select++)
+    for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
 #undef VRL_IMAGE_FILES
 }
