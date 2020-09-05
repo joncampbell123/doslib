@@ -336,9 +336,6 @@ void seq_intro() {
 
             vga_clear_npage();
 
-            if (vrl_image_select < 0 || vrl_image_select >= VRL_IMAGE_FILES)
-                fatal("init seq vrl image out of range %d anim=%d dir=%d",vrl_image_select,anim,vrl_image_dir);
-
             draw_vrl1_vgax_modex(0,0,
                 vrl_image[vrl_image_select].vrl_header,
                 vrl_image[vrl_image_select].vrl_lineoffs,
