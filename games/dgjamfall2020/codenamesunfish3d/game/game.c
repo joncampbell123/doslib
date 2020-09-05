@@ -244,6 +244,7 @@ void fatal(const char *msg,...) {
 /* introductory sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
+#define ANIM_SEQS                   3
 #define VRL_IMAGE_FILES             19
 const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
     "sorcwoo1.vrl",             // 0
@@ -271,11 +272,33 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 /* anim2: single frame 9 (sorcuhhh.vrl) */
 /* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
 
+struct seq_anim_i {
+    unsigned int        duration;       // in ticks
+    unsigned int        frame_rate;     // in Hz
+    int                 init_frame;
+    int                 min_frame;
+    int                 max_frame;
+    unsigned int        flags;
+    signed char         init_dir;
+};
+
+#define SEQANF_PINGPONG     (0x01u)
+
+struct seq_anim_i anim_seq[ANIM_SEQS] = {
+    /*  dur     fr      if      minf    maxf    fl,                 init_dir */
+    {   120*4,  15,     0,      0,      8,      SEQANF_PINGPONG,    1},
+    {   120*1,  1,      9,      9,      9,      0,                  0},
+    {   120*6,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}
+};
+
 void seq_intro() {
-    uint32_t nf_count,ccount;
-    uint16_t vrl_anim_interval;
+    uint32_t nanim_count = 0;
+    uint16_t vrl_anim_interval = 0;
+    uint32_t nf_count = 0,ccount = 0;
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
+    signed char vrl_image_dir = 0;
     int vrl_image_select = 0;
+    unsigned char anim;
     int redraw = 1;
     int c;
 
@@ -289,17 +312,32 @@ void seq_intro() {
         }
     }
 
-    /* anim1 */
-    vrl_anim_interval = (uint16_t)(timer_tick_rate / 30u);
-    vrl_image_select = 0;
+    nanim_count = ccount = counter_read();
 
-    nf_count = counter_read() + vrl_anim_interval;
+    anim = -1; /* anim1 */
 
     do {
+        ccount = counter_read();
+        if (ccount >= nanim_count) {
+            anim++;
+            if (anim >= ANIM_SEQS) break;
+
+            vrl_anim_interval = (uint16_t)(timer_tick_rate / anim_seq[anim].frame_rate);
+            vrl_image_select = anim_seq[anim].init_frame;
+            vrl_image_dir = anim_seq[anim].init_dir;
+            nanim_count += anim_seq[anim].duration;
+            if (nanim_count < ccount) nanim_count = ccount;
+            nf_count = ccount + vrl_anim_interval;
+            redraw = 1;
+        }
+
         if (redraw) {
             redraw = 0;
 
             vga_clear_npage();
+
+            if (vrl_image_select < 0 || vrl_image_select >= VRL_IMAGE_FILES)
+                fatal("init seq vrl image out of range %d anim=%d dir=%d",vrl_image_select,anim,vrl_image_dir);
 
             draw_vrl1_vgax_modex(0,0,
                 vrl_image[vrl_image_select].vrl_header,
@@ -317,7 +355,6 @@ void seq_intro() {
             if (c == 27) break;
         }
 
-        ccount = counter_read();
         if (ccount >= nf_count) {
             unsigned int stp = ((ccount - nf_count) / vrl_anim_interval) + 1u;
 
@@ -326,9 +363,22 @@ void seq_intro() {
             redraw = 1;
             do { /* assume stp != 0 */
                 nf_count += vrl_anim_interval;
-                if ((++vrl_image_select) >= VRL_IMAGE_FILES)
-                    vrl_image_select = 0;
-            } while (--stp != 0u);
+                if (vrl_image_select >= anim_seq[anim].max_frame) {
+                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                        vrl_image_select = anim_seq[anim].max_frame - 1;
+                        vrl_image_dir = -1;
+                    }
+                }
+                else if (vrl_image_select <= anim_seq[anim].min_frame) {
+                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                        vrl_image_select = anim_seq[anim].min_frame + 1;
+                        vrl_image_dir = 1;
+                    }
+                }
+                else {
+                    vrl_image_select += (int)vrl_image_dir; /* sign extend */
+                }
+           } while (--stp != 0u);
 
             if (nf_count < ccount) nf_count = ccount;
         }
@@ -337,6 +387,7 @@ void seq_intro() {
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
 #undef VRL_IMAGE_FILES
+#undef ANIM_SEQS
 }
 
 /*---------------------------------------------------------------------------*/
