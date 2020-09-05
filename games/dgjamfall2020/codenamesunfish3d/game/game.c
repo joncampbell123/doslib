@@ -373,7 +373,27 @@ void seq_intro() {
         if (redraw) {
             redraw = 0;
 
+#if 1//TESTING
+            {
+                unsigned int x,y,p;
+
+                for (p=0;p < 4;p++) {
+                    for (x=p;x < 256;x += 4) {
+                        unsigned char far *rp = (unsigned char far*)MK_FP(atpbseg,x);
+                        VGA_RAM_PTR wp = vga_state.vga_graphics_ram + (x >> 2u);
+
+                        vga_write_sequencer(0x02/*map mask*/,1 << p);
+                        for (y=0;y < 200;y++) {
+                            *wp = *rp;
+                            rp += 256;
+                            wp += 320/4;
+                        }
+                    }
+                }
+            }
+#else
             vga_clear_npage();
+#endif
 
             draw_vrl1_vgax_modex(70,10,
                 vrl_image[vrl_image_select].vrl_header,
