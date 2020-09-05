@@ -355,32 +355,24 @@ void seq_intro() {
             if (c == 27) break;
         }
 
-        if (ccount >= nf_count) {
-            unsigned int stp = ((ccount - nf_count) / vrl_anim_interval) + 1u;
-
-            if (stp > 16) stp = 16;
-
+        while (ccount >= nf_count) {
             redraw = 1;
-            do { /* assume stp != 0 */
-                nf_count += vrl_anim_interval;
-                if (vrl_image_select >= anim_seq[anim].max_frame) {
-                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
-                        vrl_image_select = anim_seq[anim].max_frame - 1;
-                        vrl_image_dir = -1;
-                    }
+            nf_count += vrl_anim_interval;
+            if (vrl_image_select >= anim_seq[anim].max_frame) {
+                if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                    vrl_image_select = anim_seq[anim].max_frame - 1;
+                    vrl_image_dir = -1;
                 }
-                else if (vrl_image_select <= anim_seq[anim].min_frame) {
-                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
-                        vrl_image_select = anim_seq[anim].min_frame + 1;
-                        vrl_image_dir = 1;
-                    }
+            }
+            else if (vrl_image_select <= anim_seq[anim].min_frame) {
+                if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                    vrl_image_select = anim_seq[anim].min_frame + 1;
+                    vrl_image_dir = 1;
                 }
-                else {
-                    vrl_image_select += (int)vrl_image_dir; /* sign extend */
-                }
-            } while (--stp != 0u);
-
-            if (nf_count < ccount) nf_count = ccount;
+            }
+            else {
+                vrl_image_select += (int)vrl_image_dir; /* sign extend */
+            }
         }
 
         ccount = counter_read();
