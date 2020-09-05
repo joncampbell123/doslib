@@ -336,7 +336,7 @@ void seq_intro() {
 
             vga_clear_npage();
 
-            draw_vrl1_vgax_modex(0,0,
+            draw_vrl1_vgax_modex(70,10,
                 vrl_image[vrl_image_select].vrl_header,
                 vrl_image[vrl_image_select].vrl_lineoffs,
                 vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
