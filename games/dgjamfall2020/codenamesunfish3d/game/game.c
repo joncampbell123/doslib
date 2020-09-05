@@ -320,15 +320,11 @@ void seq_intro() {
     }
 
     nanim_count = ccount = counter_read();
-
-    anim = -1; /* anim1 */
+    anim = -1; /* increment to zero in loop */
 
     do {
-        ccount = counter_read();
         if (ccount >= nanim_count) {
-            anim++;
-            if (anim >= ANIM_SEQS) break;
-
+            if ((++anim) >= ANIM_SEQS) break;
             vrl_anim_interval = (uint16_t)(timer_tick_rate / anim_seq[anim].frame_rate);
             vrl_image_select = anim_seq[anim].init_frame;
             vrl_image_dir = anim_seq[anim].init_dir;
@@ -382,10 +378,12 @@ void seq_intro() {
                 else {
                     vrl_image_select += (int)vrl_image_dir; /* sign extend */
                 }
-           } while (--stp != 0u);
+            } while (--stp != 0u);
 
             if (nf_count < ccount) nf_count = ccount;
         }
+
+        ccount = counter_read();
     } while (1);
 
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
