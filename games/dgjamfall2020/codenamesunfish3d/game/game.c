@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -114,42 +115,6 @@ int pal_load_to_vga(unsigned int offset,unsigned int count,const char *path) {
     return 0;
 }
 
-#define VRL_IMAGE_FILES             19
-
-int                     vrl_image_count = 0;
-int                     vrl_image_select = 0;
-struct vrl_image        vrl_image[VRL_IMAGE_FILES] = { {NULL,NULL,NULL,0} };
-
-const char *image_file[VRL_IMAGE_FILES] = {
-    "sorcwoo1.vrl",             // 0
-    "sorcwoo2.vrl",
-    "sorcwoo3.vrl",
-    "sorcwoo4.vrl",
-    "sorcwoo5.vrl",
-    "sorcwoo6.vrl",             // 5
-    "sorcwoo7.vrl",
-    "sorcwoo8.vrl",
-    "sorcwoo9.vrl",
-    "sorcuhhh.vrl",
-    "sorcbwo1.vrl",             // 10
-    "sorcbwo2.vrl",
-    "sorcbwo3.vrl",
-    "sorcbwo4.vrl",
-    "sorcbwo5.vrl",
-    "sorcbwo6.vrl",             // 15
-    "sorcbwo7.vrl",
-    "sorcbwo8.vrl",
-    "sorcbwo9.vrl"
-                                // 19
-};
-
-void load_seq(void) {
-    while (vrl_image_count < VRL_IMAGE_FILES) {
-        if (load_vrl(&vrl_image[vrl_image_count],image_file[vrl_image_count])) break;
-        vrl_image_count++;
-    }
-}
-
 #define VGA_PAGE_FIRST          0x0000
 #define VGA_PAGE_SECOND         0x4000
 
@@ -199,42 +164,65 @@ void restore_text_mode() {
     int10_setmode(3);
 }
 
-int main() {
+void fatal(const char *msg,...) {
+    va_list va;
+
+    restore_text_mode();
+
+    printf("FATAL ERROR: ");
+
+    va_start(va,msg);
+    vprintf(msg,va);
+    va_end(va);
+    printf("\n");
+
+    exit(1);
+}
+
+/*---------------------------------------------------------------------------*/
+/* introductory sequence                                                     */
+/*---------------------------------------------------------------------------*/
+
+#define VRL_IMAGE_FILES             19
+const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
+    "sorcwoo1.vrl",             // 0
+    "sorcwoo2.vrl",
+    "sorcwoo3.vrl",
+    "sorcwoo4.vrl",
+    "sorcwoo5.vrl",
+    "sorcwoo6.vrl",             // 5
+    "sorcwoo7.vrl",
+    "sorcwoo8.vrl",
+    "sorcwoo9.vrl",
+    "sorcuhhh.vrl",
+    "sorcbwo1.vrl",             // 10
+    "sorcbwo2.vrl",
+    "sorcbwo3.vrl",
+    "sorcbwo4.vrl",
+    "sorcbwo5.vrl",
+    "sorcbwo6.vrl",             // 15
+    "sorcbwo7.vrl",
+    "sorcbwo8.vrl",
+    "sorcbwo9.vrl"
+                                // 19
+};
+/* anim1: ping pong loop 0-8 (sorcwoo1.vrl to sorcwoo9.vrl) */
+/* anim2: single frame 9 (sorcuhhh.vrl) */
+/* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
+
+void seq_intro() {
+    struct vrl_image vrl_image[VRL_IMAGE_FILES];
+    int vrl_image_select = 0;
+    int vrl_image_count = 0;
     int redraw = 1;
     int c;
 
-    probe_dos();
-	cpu_probe();
-    if (cpu_basic_level < 3) {
-        printf("This game requires a 386 or higher\n");
-        return 1;
-    }
-
-	if (!probe_8254()) {
-		printf("No 8254 detected.\n");
-		return 1;
-	}
-	if (!probe_8259()) {
-		printf("No 8259 detected.\n");
-		return 1;
-	}
-    if (!probe_vga()) {
-        printf("VGA probe failed.\n");
-        return 1;
-    }
-
-#if TARGET_MSDOS == 16
-    probe_emm();            // expanded memory support
-    probe_himem_sys();      // extended memory support
-#endif
-
-    load_seq();
-    if (vrl_image_count == 0)
-        return 1;
-
-    init_vga256unchained();
-
     pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
+
+    for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
+        if (load_vrl(&vrl_image[vrl_image_count],seq_intro_sorc_vrl[vrl_image_count]) != 0)
+            fatal("seq_intro: unable to load VRL %s",seq_intro_sorc_vrl[vrl_image_count]);
+    }
 
     do {
         if (redraw) {
@@ -263,10 +251,46 @@ int main() {
             vrl_image_select = 0;
     } while (1);
 
-    restore_text_mode();
-
     for (vrl_image_select=0;vrl_image_select < vrl_image_count;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
+#undef VRL_IMAGE_FILES
+}
+
+/*---------------------------------------------------------------------------*/
+/* main                                                                      */
+/*---------------------------------------------------------------------------*/
+
+int main() {
+    probe_dos();
+	cpu_probe();
+    if (cpu_basic_level < 3) {
+        printf("This game requires a 386 or higher\n");
+        return 1;
+    }
+
+	if (!probe_8254()) {
+		printf("No 8254 detected.\n");
+		return 1;
+	}
+	if (!probe_8259()) {
+		printf("No 8259 detected.\n");
+		return 1;
+	}
+    if (!probe_vga()) {
+        printf("VGA probe failed.\n");
+        return 1;
+    }
+
+#if TARGET_MSDOS == 16
+    probe_emm();            // expanded memory support
+    probe_himem_sys();      // extended memory support
+#endif
+
+    init_vga256unchained();
+
+    seq_intro();
+
+    restore_text_mode();
 
     return 0;
 }
