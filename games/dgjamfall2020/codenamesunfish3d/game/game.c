@@ -286,9 +286,9 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
-    {   120*4,  15,     0,      0,      8,      SEQANF_PINGPONG,    1},
-    {   120*1,  1,      9,      9,      9,      0,                  0},
-    {   120*6,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}
+    {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1},
+    {   120*4,  1,      9,      9,      9,      0,                  0},
+    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}
 };
 
 void seq_intro() {
