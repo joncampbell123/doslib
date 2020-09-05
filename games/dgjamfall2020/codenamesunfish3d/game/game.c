@@ -209,10 +209,14 @@ void restore_text_mode() {
     int10_setmode(3);
 }
 
+void unhook_irqs() {
+    restore_timer_irq();
+}
+
 void fatal(const char *msg,...) {
     va_list va;
 
-    restore_timer_irq();
+    unhook_irqs();
     restore_text_mode();
 
     printf("FATAL ERROR: ");
@@ -337,7 +341,7 @@ int main() {
 
     seq_intro();
 
-    restore_timer_irq();
+    unhook_irqs();
     restore_text_mode();
 
     return 0;
