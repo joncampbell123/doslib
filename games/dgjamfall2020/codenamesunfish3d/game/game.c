@@ -414,7 +414,9 @@ void seq_intro() {
         ccount = counter_read();
     } while (1);
 
+    /* atomic playboy image seg */
     _dos_freemem(atpbseg);
+    /* VRLs */
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
 #undef ATOMPB_PAL_OFFSET
