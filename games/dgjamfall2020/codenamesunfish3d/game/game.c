@@ -20,6 +20,51 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
+uint32_t counter;
+uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
+uint16_t timer_irq_count;
+uint16_t timer_tick_rate = 120;
+
+void (__interrupt __far *prev_timer_irq)() = NULL;
+static void __interrupt __far timer_irq() { /* IRQ 0 */
+    counter++;
+
+    /* make sure the BIOS below our handler still sees 18.2Hz */
+    {
+        const uint32_t s = (uint32_t)timer_irq_count + (uint32_t)timer_irq_interval;
+        timer_irq_count = (uint16_t)s;
+        if (s >= (uint32_t)0x10000)
+            _chain_intr(prev_timer_irq);
+        else
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 0);
+    }
+}
+
+void init_timer_irq() {
+    if (prev_timer_irq == NULL) {
+        p8259_mask(0);
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 0);
+        prev_timer_irq = _dos_getvect(irq2int(0));
+        _dos_setvect(irq2int(0),timer_irq);
+        timer_irq_interval = T8254_REF_CLOCK_HZ / timer_tick_rate;
+	    write_8254_system_timer(timer_irq_interval);
+        timer_irq_count = 0;
+        counter = 0;
+        p8259_unmask(0);
+    }
+}
+
+void restore_timer_irq() {
+    if (prev_timer_irq != NULL) {
+        p8259_mask(0);
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 0);
+        _dos_setvect(irq2int(0),prev_timer_irq);
+	    write_8254_system_timer(0); /* normal 18.2Hz timer tick */
+        prev_timer_irq = NULL;
+        p8259_unmask(0);
+    }
+}
+
 struct vrl_image {
     struct vrl1_vgax_header*        vrl_header;
     vrl1_vgax_offset_t*             vrl_lineoffs;
@@ -167,6 +212,7 @@ void restore_text_mode() {
 void fatal(const char *msg,...) {
     va_list va;
 
+    restore_timer_irq();
     restore_text_mode();
 
     printf("FATAL ERROR: ");
@@ -286,10 +332,12 @@ int main() {
     probe_himem_sys();      // extended memory support
 #endif
 
+    init_timer_irq();
     init_vga256unchained();
 
     seq_intro();
 
+    restore_timer_irq();
     restore_text_mode();
 
     return 0;
