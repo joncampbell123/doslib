@@ -273,7 +273,7 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 
 void seq_intro() {
     uint32_t nf_count,ccount;
-    uint32_t vrl_anim_interval;
+    uint16_t vrl_anim_interval;
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
     int vrl_image_select = 0;
     int redraw = 1;
@@ -290,7 +290,7 @@ void seq_intro() {
     }
 
     /* anim1 */
-    vrl_anim_interval = timer_tick_rate / 10;
+    vrl_anim_interval = (uint16_t)(timer_tick_rate / 30u);
     vrl_image_select = 0;
 
     nf_count = counter_read() + vrl_anim_interval;
@@ -319,10 +319,18 @@ void seq_intro() {
 
         ccount = counter_read();
         if (ccount >= nf_count) {
+            unsigned int stp = ((ccount - nf_count) / vrl_anim_interval) + 1u;
+
+            if (stp > 16) stp = 16;
+
             redraw = 1;
-            nf_count += vrl_anim_interval;
-            if ((++vrl_image_select) >= VRL_IMAGE_FILES)
-                vrl_image_select = 0;
+            do { /* assume stp != 0 */
+                nf_count += vrl_anim_interval;
+                if ((++vrl_image_select) >= VRL_IMAGE_FILES)
+                    vrl_image_select = 0;
+            } while (--stp != 0u);
+
+            if (nf_count < ccount) nf_count = ccount;
         }
     } while (1);
 
