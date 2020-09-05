@@ -218,7 +218,7 @@ static unsigned int vga_rep_stosw(const unsigned char far * const vp,const uint1
 
 void vga_clear_npage() {
     vga_write_sequencer(0x02/*map mask*/,0xF);
-    vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u);
+    vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
 }
 
 void init_vga256unchained() {
