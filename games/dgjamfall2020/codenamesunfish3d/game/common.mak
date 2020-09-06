@@ -18,7 +18,7 @@ GAME_EXE =     $(SUBDIR)$(HPS)game.$(EXEEXT)
 all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) .symbolic
-	
+
 exe: $(GAME_EXE) final .symbolic
 
 final: $(GAME_EXE)
