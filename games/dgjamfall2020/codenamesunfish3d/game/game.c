@@ -331,11 +331,13 @@ static uint16_t *atpb_sin2048_table = NULL;         // 2048-sample sin(x) quarte
 int atpb_sin2048_lookup(unsigned int a) {
     int r;
 
+    /* sin(0) to sin(pi) is symmetrical across sin(pi/2) */
     if (a & 0x800u)
         r = atpb_sin2048_table[0x7FFu - (a & 0x7FFu)];
     else
         r = atpb_sin2048_table[a & 0x7FFu];
 
+    /* sin(pi) to sin(pi*2) is just the first half with the opposite sign */
     if (a & 0x1000u)
         r = -r;
 
