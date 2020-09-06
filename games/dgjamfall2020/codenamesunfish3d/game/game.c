@@ -313,10 +313,10 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
-    {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
-    {   120*6,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
+    {   120*10, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
+    {   120*8,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
-    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
+    {   120*10, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
 static uint32_t atpb_init_count;
