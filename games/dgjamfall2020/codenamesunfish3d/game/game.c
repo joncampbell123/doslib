@@ -321,14 +321,36 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
 
 static uint32_t atpb_init_count;
 
-// TODO: Replace with fixed pt sin lookup table
-#include <math.h>
-// END TODO
+static uint16_t *atpb_sin2048_table = NULL;         // 2048-sample sin(x) quarter wave lookup table (0....0x7FFF)
+
+/* 0x0000 -> sin(0) */
+/* 0x0800 -> sin(pi*0.5)    0x0800 = 2048
+ * 0x1000 -> sin(pi)        0x1000 = 4096
+ * 0x1800 -> sin(pi*1.5)    0x1800 = 6144
+ * 0x2000 -> sin(pi*2.0)    0x2000 = 8192 */
+int atpb_sin2048_lookup(unsigned int a) {
+    int r;
+
+    if (a & 0x800u)
+        r = atpb_sin2048_table[0x7FFu - (a & 0x7FFu)];
+    else
+        r = atpb_sin2048_table[a & 0x7FFu];
+
+    if (a & 0x1000u)
+        r = -r;
+
+    return r;
+}
+
+inline int atpb_cos2048_lookup(unsigned int a) {
+    return atpb_sin2048_lookup(a + 0x800u);
+}
 
 /* "Second Reality" style rotozoomer because Woooooooooooo */
 void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
+#if 0
 // TODO: Replace with fixed pt sin lookup table
     const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
     const double sc = 1.5 + (sin(a) * 1.2);
@@ -337,6 +359,15 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     const uint16_t sx2 = (uint16_t)(cos(a) *  0x133 * sc);
     const uint16_t sy2 = (uint16_t)(sin(a) * -0x133 * sc);
 // END TODO
+#endif
+
+    // column-step. multiplied 4x because we're rendering only every 4 pixels for smoothness.
+    const uint16_t sx1 = (uint16_t)(((long)atpb_cos2048_lookup(rt * 10ul) *  0x400l) >> 15l);
+    const uint16_t sy1 = (uint16_t)(((long)atpb_sin2048_lookup(rt * 10ul) * -0x400l) >> 15l);
+    // row-step. multiplied by 1.2 (240/200) to compensate for 320x200 non-square pixels. (1.2 * 0x100) = 0x133
+    const uint16_t sx2 = (uint16_t)(((long)atpb_cos2048_lookup(rt * 10ul) *  0x133l) >> 15l);
+    const uint16_t sy2 = (uint16_t)(((long)atpb_sin2048_lookup(rt * 10ul) * -0x133l) >> 15l);
+
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t fcx,fcy;
 
@@ -395,11 +426,21 @@ void seq_intro() {
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
     signed char vrl_image_dir = 0;
     int vrl_image_select = 0;
+    unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
     unsigned char anim;
     int redraw = 1;
     int c;
 
-    unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
+    /* the rotozoomer effect needs a sin lookup table */
+    atpb_sin2048_table = malloc(sizeof(uint16_t) * 2048);
+    if (atpb_sin2048_table == NULL) fatal("sorcwoo.sin missing");
+
+    {
+        int fd = open("sorcwoo.sin",O_RDONLY | O_BINARY);
+        if (fd < 0) fatal("sorcwoo.sin missing");
+        read(fd,atpb_sin2048_table,sizeof(uint16_t) * 2048);
+        close(fd);
+    }
 
     /* atomic playboy background 256x256 */
     {
@@ -524,6 +565,9 @@ void seq_intro() {
         ccount = counter_read();
     } while (1);
 
+    /* sinus table */
+    free(atpb_sin2048_table);
+    atpb_sin2048_table = NULL;
     /* atomic playboy image seg */
     _dos_freemem(atpbseg);
     /* VRLs */
