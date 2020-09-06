@@ -321,13 +321,15 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
     const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
     const double sc = 1.5 + (sin(a) * 1.2);
-    const uint16_t sx = (uint16_t)(cos(a) *  0x100 * sc);
-    const uint16_t sy = (uint16_t)(sin(a) * -0x100 * sc);
+    const uint16_t sx1 = (uint16_t)(cos(a) *  0x400 * sc);
+    const uint16_t sy1 = (uint16_t)(sin(a) * -0x400 * sc);
+    const uint16_t sx2 = (uint16_t)(cos(a) *  0x133 * sc);
+    const uint16_t sy2 = (uint16_t)(sin(a) * -0x133 * sc);
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t cx,cy;
 
-    cx = 0 - ((w / 2u) * sx) - ((h / 2u) *  sy);
-    cy = 0 - ((w / 2u) * sy) - ((h / 2u) * -sx);
+    cx = 0 - ((w / 2u / 4u) * sx1) - ((h / 2u) *  sy2);
+    cy = 0 - ((w / 2u / 4u) * sy1) - ((h / 2u) * -sx2);
     while (w >= 4) {
         register unsigned int ch = h;
         register uint16_t rx = cx,ry = cy;
@@ -340,13 +342,13 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
             const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
             *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
             vo += 80;
-            rx += sy;
-            ry -= sx;
+            rx += sy2;
+            ry -= sx2;
             ch--;
         }
 
-        cx += sx * 4u;
-        cy += sy * 4u;
+        cx += sx1;
+        cy += sy1;
         w -= 4;
     }
 }
