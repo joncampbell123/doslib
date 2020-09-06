@@ -330,31 +330,57 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     const uint16_t sy2 = (uint16_t)(sin(a) * -0x133 * sc);
 // END TODO
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
-    uint16_t cx,cy;
+    uint16_t fcx,fcy;
 
-    cx = 0 - ((w / 2u / 4u) * sx1) - ((h / 2u) *  sy2);
-    cy = 0 - ((w / 2u / 4u) * sy1) - ((h / 2u) * -sx2);
+    fcx = 0 - ((w / 2u / 4u) * sx1) - ((h / 2u) *  sy2);
+    fcy = 0 - ((w / 2u / 4u) * sy1) - ((h / 2u) * -sx2);
+
+// NTS: Because of VGA unchained mode X, this renders the effect in vertical columns rather than horizontal rows
+#if 0/*original C*/
     while (w >= 4) {
         register unsigned int ch = h;
-        register uint16_t rx = cx,ry = cy;
+        register uint16_t frx = fcx,fry = fcy;
         register unsigned vo = cvo++;
 
         vga_write_sequencer(0x02/*map mask*/,0x0F);
 
         while (ch > 0) {
-            const unsigned int io = (ry & 0xFF00u) + (rx >> 8u);
+            const unsigned int io = (fry & 0xFF00u) + (frx >> 8u);
             const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
             *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
             vo += 80;
-            rx += sy2;
-            ry -= sx2;
+            frx += sy2;
+            fry -= sx2;
             ch--;
         }
 
-        cx += sx1;
-        cy += sy1;
+        fcx += sx1;
+        fcy += sy1;
         w -= 4;
     }
+#else
+    while (w >= 4) {
+        register unsigned int ch = h;
+        register uint16_t frx = fcx,fry = fcy;
+        register unsigned vo = cvo++;
+
+        vga_write_sequencer(0x02/*map mask*/,0x0F);
+
+        while (ch > 0) {
+            const unsigned int io = (fry & 0xFF00u) + (frx >> 8u);
+            const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
+            *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
+            vo += 80;
+            frx += sy2;
+            fry -= sx2;
+            ch--;
+        }
+
+        fcx += sx1;
+        fcy += sy1;
+        w -= 4;
+    }
+#endif
 }
 
 void seq_intro() {
@@ -435,11 +461,14 @@ void seq_intro() {
             nf_count = ccount + vrl_anim_interval;
             redraw = 1;
         }
+        else if (1 || anim == 2) {
+            redraw = 1; /* rotozoomer */
+        }
 
         if (redraw) {
             redraw = 0;
 
-            if (anim == 2)
+            if (1 || anim == 2)
                 atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount);
             else {
                 vga_write_sequencer(0x02/*map mask*/,0xF);
