@@ -314,17 +314,21 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
 
 static uint32_t atpb_init_count;
 
+// TODO: Replace with fixed pt sin lookup table
 #include <math.h>
+// END TODO
 
 void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
+// TODO: Replace with fixed pt sin lookup table
     const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
     const double sc = 1.5 + (sin(a) * 1.2);
     const uint16_t sx1 = (uint16_t)(cos(a) *  0x400 * sc);
     const uint16_t sy1 = (uint16_t)(sin(a) * -0x400 * sc);
     const uint16_t sx2 = (uint16_t)(cos(a) *  0x133 * sc);
     const uint16_t sy2 = (uint16_t)(sin(a) * -0x133 * sc);
+// END TODO
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t cx,cy;
 
