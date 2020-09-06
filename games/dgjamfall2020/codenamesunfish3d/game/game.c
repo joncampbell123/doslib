@@ -307,10 +307,49 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
-    {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1},
-    {   120*4,  1,      9,      9,      9,      0,                  0},
-    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}
+    {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
+    {   120*4,  1,      9,      9,      9,      0,                  0}, // 1
+    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 2
 };
+
+static uint32_t atpb_init_count;
+
+#include <math.h>
+
+void atomic_playboy_zoomer(unsigned int x,unsigned int y,unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
+    const uint32_t rt = count - atpb_init_count;
+    const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
+    const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
+    const double sc = 1.5 + (sin(a) * 1.2);
+    const uint16_t sx = (uint16_t)(cos(a) *  0x100 * sc);
+    const uint16_t sy = (uint16_t)(sin(a) * -0x100 * sc);
+    unsigned cvo = FP_OFF(vga_state.vga_graphics_ram) + (y * 80u) + (x >> 2u);
+    uint16_t cx,cy;
+
+    cx = 0;
+    cy = 0;
+    while (w >= 4) {
+        register unsigned int ch = h;
+        register uint16_t rx = cx,ry = cy;
+        register unsigned vo = cvo++;
+
+        vga_write_sequencer(0x02/*map mask*/,0x0F);
+
+        while (ch > 0) {
+            const unsigned int io = (ry & 0xFF00u) + (rx >> 8u);
+            const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
+            *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
+            vo += 80;
+            rx += sy;
+            ry -= sx;
+            ch--;
+        }
+
+        cx += sx * 4u;
+        cy += sy * 4u;
+        w -= 4;
+    }
+}
 
 void seq_intro() {
     uint32_t nanim_count = 0;
@@ -341,8 +380,8 @@ void seq_intro() {
         {
             unsigned int i;
 
-            for (i=0;i < 200;i++) {
-                unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg,i * 256u);
+            for (i=0;i < 256;i++) {
+                unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg + (i * 16u/*paragraphs=256b*/),0);
                 minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
                 minipng_reader_read_idat(rdr,imgptr,256); /* row */
             }
@@ -374,7 +413,7 @@ void seq_intro() {
         }
     }
 
-    nanim_count = ccount = counter_read();
+    atpb_init_count = nanim_count = ccount = counter_read();
     anim = -1; /* increment to zero in loop */
 
     do {
@@ -392,7 +431,10 @@ void seq_intro() {
         if (redraw) {
             redraw = 0;
 
-            vga_clear_npage();
+            if (1 || anim == 2)
+                atomic_playboy_zoomer(0/*x*/,0/*y*/,320/*width*/,200/*height*/,atpbseg,ccount);
+            else
+                vga_clear_npage();
 
             draw_vrl1_vgax_modex(70,10,
                 vrl_image[vrl_image_select].vrl_header,
