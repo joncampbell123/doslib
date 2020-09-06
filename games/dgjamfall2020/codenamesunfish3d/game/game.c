@@ -318,6 +318,7 @@ static uint32_t atpb_init_count;
 #include <math.h>
 // END TODO
 
+/* "Second Reality" style rotozoomer because Woooooooooooo */
 void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
