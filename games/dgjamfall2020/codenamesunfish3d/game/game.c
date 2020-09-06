@@ -326,8 +326,8 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t cx,cy;
 
-    cx = 0;
-    cy = 0;
+    cx = 0 - ((w / 2u) * sx) - ((h / 2u) *  sy);
+    cy = 0 - ((w / 2u) * sy) - ((h / 2u) * -sx);
     while (w >= 4) {
         register unsigned int ch = h;
         register uint16_t rx = cx,ry = cy;
