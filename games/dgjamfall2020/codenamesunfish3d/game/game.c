@@ -31,6 +31,7 @@ struct seq_anim_i {
 };
 
 #define SEQANF_PINGPONG     (0x01u)
+#define SEQANF_OFF          (0x02u)
 
 uint32_t counter;
 uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
@@ -275,7 +276,7 @@ void fatal(const char *msg,...) {
 /* introductory sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
-#define ANIM_SEQS                   3
+#define ANIM_SEQS                   4
 #define VRL_IMAGE_FILES             19
 #define ATOMPB_PAL_OFFSET           0x00
 #define SORC_PAL_OFFSET             0x40
@@ -308,8 +309,9 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
     {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
-    {   120*4,  1,      9,      9,      9,      0,                  0}, // 1
-    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 2
+    {   120*6,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1
+    {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
+    {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
 static uint32_t atpb_init_count;
@@ -459,25 +461,27 @@ void seq_intro() {
             nf_count = ccount + vrl_anim_interval;
             redraw = 1;
         }
-        else if (1 || anim == 2) {
-            redraw = 1; /* rotozoomer */
+        else if (anim == 0 || anim == 3) {
+            redraw = 1; /* always redraw for that super awesome rotozoomer effect :) */
         }
 
         if (redraw) {
             redraw = 0;
 
-            if (1 || anim == 2)
+            if (anim == 0 || anim == 3)
                 atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount);
             else {
                 vga_write_sequencer(0x02/*map mask*/,0xF);
                 vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*168u)/2u);
             }
 
-            draw_vrl1_vgax_modex(70,10,
-                vrl_image[vrl_image_select].vrl_header,
-                vrl_image[vrl_image_select].vrl_lineoffs,
-                vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
-                vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
+            if (!(anim_seq[anim].flags & SEQANF_OFF)) {
+                draw_vrl1_vgax_modex(70,10,
+                    vrl_image[vrl_image_select].vrl_header,
+                    vrl_image[vrl_image_select].vrl_lineoffs,
+                    vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
+                    vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
+            }
 
             vga_swap_pages(); /* current <-> next */
             vga_update_disp_cur_page();
@@ -490,23 +494,26 @@ void seq_intro() {
         }
 
         while (ccount >= nf_count) {
-            redraw = 1;
+            if (!(anim_seq[anim].flags & SEQANF_OFF)) {
+                redraw = 1;
+                if (vrl_image_select >= anim_seq[anim].max_frame) {
+                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                        vrl_image_select = anim_seq[anim].max_frame - 1;
+                        vrl_image_dir = -1;
+                    }
+                }
+                else if (vrl_image_select <= anim_seq[anim].min_frame) {
+                    if (anim_seq[anim].flags & SEQANF_PINGPONG) {
+                        vrl_image_select = anim_seq[anim].min_frame + 1;
+                        vrl_image_dir = 1;
+                    }
+                }
+                else {
+                    vrl_image_select += (int)vrl_image_dir; /* sign extend */
+                }
+            }
+
             nf_count += vrl_anim_interval;
-            if (vrl_image_select >= anim_seq[anim].max_frame) {
-                if (anim_seq[anim].flags & SEQANF_PINGPONG) {
-                    vrl_image_select = anim_seq[anim].max_frame - 1;
-                    vrl_image_dir = -1;
-                }
-            }
-            else if (vrl_image_select <= anim_seq[anim].min_frame) {
-                if (anim_seq[anim].flags & SEQANF_PINGPONG) {
-                    vrl_image_select = anim_seq[anim].min_frame + 1;
-                    vrl_image_dir = 1;
-                }
-            }
-            else {
-                vrl_image_select += (int)vrl_image_dir; /* sign extend */
-            }
         }
 
         ccount = counter_read();
