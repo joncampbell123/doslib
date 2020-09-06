@@ -306,10 +306,15 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 /* anim2: single frame 9 (sorcuhhh.vrl) */
 /* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
 
+/* [0]: sorc "I am the coolest programmer ever woooooooooooo!"
+ * [1]: game sprites "Oh great and awesome programmer. What is our purpose in this game?"
+ * [2]: sorc "Uhm............"
+ * [3]: sorc "I am the coolest programmer ever! I write super awesome code! Wooooooooooooooo!" */
+
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
     {   120*8,  15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
-    {   120*6,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1
+    {   120*6,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
     {   120*8,  30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
