@@ -418,6 +418,8 @@ void seq_intro() {
     atpb_init_count = nanim_count = ccount = counter_read();
     anim = -1; /* increment to zero in loop */
 
+    vga_clear_npage();
+
     do {
         if (ccount >= nanim_count) {
             if ((++anim) >= ANIM_SEQS) break;
@@ -435,8 +437,10 @@ void seq_intro() {
 
             if (anim == 2)
                 atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount);
-            else
-                vga_clear_npage();
+            else {
+                vga_write_sequencer(0x02/*map mask*/,0xF);
+                vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*168u)/2u);
+            }
 
             draw_vrl1_vgax_modex(70,10,
                 vrl_image[vrl_image_select].vrl_header,
