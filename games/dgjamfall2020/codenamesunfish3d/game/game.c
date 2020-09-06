@@ -333,6 +333,7 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t fcx,fcy;
 
+// make sure rotozoomer is centered on screen
     fcx = 0 - ((w / 2u / 4u) * sx1) - ((h / 2u) *  sy2);
     fcy = 0 - ((w / 2u / 4u) * sy1) - ((h / 2u) * -sx2);
 
