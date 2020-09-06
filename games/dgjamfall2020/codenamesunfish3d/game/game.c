@@ -360,20 +360,40 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     }
 #else
     while (w >= 4) {
-        register unsigned int ch = h;
-        register uint16_t frx = fcx,fry = fcy;
-        register unsigned vo = cvo++;
-
         vga_write_sequencer(0x02/*map mask*/,0x0F);
 
-        while (ch > 0) {
-            const unsigned int io = (fry & 0xFF00u) + (frx >> 8u);
-            const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
-            *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
-            vo += 80;
-            frx += sy2;
-            fry -= sx2;
-            ch--;
+        // WARNING: This loop temporarily modifies DS. While DS is altered do not access anything by name in the data segment.
+        //          However variables declared locally in this function are OK because they are allocated from the stack, and
+        //          are referenced using [bp] which uses the stack (SS) register.
+        __asm {
+            mov     cx,h
+            mov     es,vseg
+            mov     di,cvo
+            inc     cvo
+            push    ds
+            mov     ds,imgseg
+            mov     dx,fcx          ; DX = fractional X coord
+            mov     bx,fcy          ; BX = fractional Y coord
+
+crloop:
+            ; SI = (BX & 0xFF00) + (DX >> 8)
+            ;   but DX/BX are the general registers with hi/lo access so
+            ; SI = (BH << 8) + DH
+            ; by the way on anything above a 386 that sort of optimization stuff doesn't help performance.
+            ; later (Pentium Pro) processors don't like it when you alternate between DH/DL and DX because
+            ; of the way the processor works internally.
+            mov     ah,bh
+            mov     al,dh
+            mov     si,ax
+            mov     al,[si]
+            stosb
+            add     di,79           ; stosb / add di,79  is equivalent to  mov es:[di],al / add di,80
+
+            add     dx,sy2
+            sub     bx,sx2
+
+            loop    crloop
+            pop     ds
         }
 
         fcx += sx1;
