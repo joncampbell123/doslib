@@ -344,6 +344,7 @@ int atpb_sin2048_lookup(unsigned int a) {
     return r;
 }
 
+/* cos(x) is just sin(x) shifted by pi/2 (90 degrees) */
 inline int atpb_cos2048_lookup(unsigned int a) {
     return atpb_sin2048_lookup(a + 0x800u);
 }
