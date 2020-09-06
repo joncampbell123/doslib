@@ -336,29 +336,6 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     fcy = 0 - ((w / 2u / 4u) * sy1) - ((h / 2u) * -sx2);
 
 // NTS: Because of VGA unchained mode X, this renders the effect in vertical columns rather than horizontal rows
-#if 0/*original C*/
-    while (w >= 4) {
-        register unsigned int ch = h;
-        register uint16_t frx = fcx,fry = fcy;
-        register unsigned vo = cvo++;
-
-        vga_write_sequencer(0x02/*map mask*/,0x0F);
-
-        while (ch > 0) {
-            const unsigned int io = (fry & 0xFF00u) + (frx >> 8u);
-            const unsigned char c = *((uint8_t far*)(imgseg:>((unsigned char __based(void) *)(io))));
-            *((uint8_t far*)(vseg:>((unsigned char __based(void) *)(vo)))) = c;
-            vo += 80;
-            frx += sy2;
-            fry -= sx2;
-            ch--;
-        }
-
-        fcx += sx1;
-        fcy += sy1;
-        w -= 4;
-    }
-#else
     while (w >= 4) {
         vga_write_sequencer(0x02/*map mask*/,0x0F);
 
@@ -400,7 +377,6 @@ crloop:
         fcy += sy1;
         w -= 4;
     }
-#endif
 }
 
 void seq_intro() {
