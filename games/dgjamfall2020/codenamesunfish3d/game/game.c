@@ -316,14 +316,14 @@ static uint32_t atpb_init_count;
 
 #include <math.h>
 
-void atomic_playboy_zoomer(unsigned int x,unsigned int y,unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
+void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
     const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
     const double sc = 1.5 + (sin(a) * 1.2);
     const uint16_t sx = (uint16_t)(cos(a) *  0x100 * sc);
     const uint16_t sy = (uint16_t)(sin(a) * -0x100 * sc);
-    unsigned cvo = FP_OFF(vga_state.vga_graphics_ram) + (y * 80u) + (x >> 2u);
+    unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t cx,cy;
 
     cx = 0;
@@ -432,7 +432,7 @@ void seq_intro() {
             redraw = 0;
 
             if (1 || anim == 2)
-                atomic_playboy_zoomer(0/*x*/,0/*y*/,320/*width*/,200/*height*/,atpbseg,ccount);
+                atomic_playboy_zoomer(320/*width*/,200/*height*/,atpbseg,ccount);
             else
                 vga_clear_npage();
 
