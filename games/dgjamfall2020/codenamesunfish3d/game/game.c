@@ -350,23 +350,15 @@ inline int atpb_cos2048_lookup(unsigned int a) {
 void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
-#if 0
-// TODO: Replace with fixed pt sin lookup table
-    const double a = ((double)rt * 3.14159 * 2.0) / (timer_tick_rate * 8);
-    const double sc = 1.5 + (sin(a) * 1.2);
-    const uint16_t sx1 = (uint16_t)(cos(a) *  0x400 * sc);
-    const uint16_t sy1 = (uint16_t)(sin(a) * -0x400 * sc);
-    const uint16_t sx2 = (uint16_t)(cos(a) *  0x133 * sc);
-    const uint16_t sy2 = (uint16_t)(sin(a) * -0x133 * sc);
-// END TODO
-#endif
 
+    // scale, to zoom in and out
+    const long scale = ((long)atpb_sin2048_lookup(rt * 5ul) >> 1l) + 0xA000l;
     // column-step. multiplied 4x because we're rendering only every 4 pixels for smoothness.
-    const uint16_t sx1 = (uint16_t)(((long)atpb_cos2048_lookup(rt * 10ul) *  0x400l) >> 15l);
-    const uint16_t sy1 = (uint16_t)(((long)atpb_sin2048_lookup(rt * 10ul) * -0x400l) >> 15l);
+    const uint16_t sx1 = (uint16_t)(((((long)atpb_cos2048_lookup(rt * 10ul) *  0x400l) >> 15l) * scale) >> 15l);
+    const uint16_t sy1 = (uint16_t)(((((long)atpb_sin2048_lookup(rt * 10ul) * -0x400l) >> 15l) * scale) >> 15l);
     // row-step. multiplied by 1.2 (240/200) to compensate for 320x200 non-square pixels. (1.2 * 0x100) = 0x133
-    const uint16_t sx2 = (uint16_t)(((long)atpb_cos2048_lookup(rt * 10ul) *  0x133l) >> 15l);
-    const uint16_t sy2 = (uint16_t)(((long)atpb_sin2048_lookup(rt * 10ul) * -0x133l) >> 15l);
+    const uint16_t sx2 = (uint16_t)(((((long)atpb_cos2048_lookup(rt * 10ul) *  0x133l) >> 15l) * scale) >> 15l);
+    const uint16_t sy2 = (uint16_t)(((((long)atpb_sin2048_lookup(rt * 10ul) * -0x133l) >> 15l) * scale) >> 15l);
 
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
     uint16_t fcx,fcy;
