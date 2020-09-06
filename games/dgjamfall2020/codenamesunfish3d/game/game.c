@@ -434,7 +434,7 @@ void seq_intro() {
             redraw = 0;
 
             if (anim == 2)
-                atomic_playboy_zoomer(320/*width*/,200/*height*/,atpbseg,ccount);
+                atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount);
             else
                 vga_clear_npage();
 
