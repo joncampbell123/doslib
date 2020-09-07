@@ -332,8 +332,8 @@ uint32_t utf8decode(const char **ptr) {
      * 0xFC-0xFD            6-byte UTF-8 TODO
      * 0xF8-0xFB            5-byte UTF-8 TODO
      * 0xF0-0xF7            4-byte UTF-8 TODO
-     * 0xE0-0xEF            3-byte UTF-8 TODO
-     * 0xC0-0xDF            2-byte UTF-8 TODO
+     * 0xE0-0xEF            3-byte UTF-8
+     * 0xC0-0xDF            2-byte UTF-8
      * 0x80-0xBF            invalid (we're in the middle of a UTF-8 char)
      * 0x00-0x7F            1-byte plain ASCII */
     if (ret >= 0xF0) {
