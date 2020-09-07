@@ -729,7 +729,7 @@ crloop:
 
 static const int animtext_init_x = 10;
 static const int animtext_init_y = 168;
-static const unsigned char animtext_color_init = 63;
+static const unsigned char animtext_color_init = 255;
 
 void seq_intro() {
     unsigned char animtext_color = animtext_color_init;
@@ -799,6 +799,10 @@ void seq_intro() {
 
         minipng_reader_close(&rdr);
     }
+
+    /* text color */
+    vga_palette_lseek(0xFF);
+    vga_palette_write(63,63,63);
 
     pal_load_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,"sorcwoo.pal");
 
