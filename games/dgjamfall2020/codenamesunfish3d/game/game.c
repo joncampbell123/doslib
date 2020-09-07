@@ -619,6 +619,31 @@ unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsign
 #define PACK_REQ                    0x15
 
 uint32_t sorc_pack_offsets[PACK_REQ+1];
+/* PACK contents:
+
+    sorcwoo.pal             // 0 (0x00)
+    sorcwoo.sin
+    sorcwoo1.vrl
+    sorcwoo2.vrl
+    sorcwoo3.vrl
+    sorcwoo4.vrl            // 5 (0x05)
+    sorcwoo5.vrl
+    sorcwoo6.vrl
+    sorcwoo7.vrl
+    sorcwoo8.vrl
+    sorcwoo9.vrl            // 10 (0x0A)
+    sorcuhhh.vrl
+    sorcbwo1.vrl
+    sorcbwo2.vrl
+    sorcbwo3.vrl
+    sorcbwo4.vrl            // 15 (0x0F)
+    sorcbwo5.vrl
+    sorcbwo6.vrl
+    sorcbwo7.vrl
+    sorcbwo8.vrl
+    sorcbwo9.vrl            // 20 (0x14)
+                            //=21 (0x15)
+ */
 
 /* VRL files start at index 2 in the pack file */
 /* anim1: ping pong loop 0-8 (sorcwoo1.vrl to sorcwoo9.vrl) */
