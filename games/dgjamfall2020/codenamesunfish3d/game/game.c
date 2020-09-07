@@ -778,6 +778,41 @@ static const int animtext_init_x = 10;
 static const int animtext_init_y = 168;
 static const unsigned char animtext_color_init = 255;
 
+/* atomic playboy background 256x256 */
+int rzbkload(unsigned atpbseg,const char *path) {
+    struct minipng_reader *rdr;
+
+    /* WARNING: Code assumes 16-bit large memory model! */
+
+    if ((rdr=minipng_reader_open(path)) == NULL)
+        return -1;
+
+    if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count < 64) {
+        minipng_reader_close(&rdr);
+        return -1;
+    }
+
+    {
+        unsigned int i;
+
+        for (i=0;i < 256;i++) {
+            unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg + (i * 16u/*paragraphs=256b*/),0);
+            minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
+            minipng_reader_read_idat(rdr,imgptr,256); /* row */
+        }
+
+        {
+            const unsigned char *p = (const unsigned char*)(rdr->plte);
+            vga_palette_lseek(ATOMPB_PAL_OFFSET);
+            for (i=0;i < 64;i++)
+                vga_palette_write(p[(i*3)+0]>>2,p[(i*3)+1]>>2,p[(i*3)+2]>>2);
+        }
+    }
+
+    minipng_reader_close(&rdr);
+    return 0;
+}
+
 void seq_intro() {
     unsigned char animtext_bright = 63;
     unsigned char animtext_color = animtext_color_init;
@@ -824,38 +859,12 @@ void seq_intro() {
     lseek(packfd,sorc_pack_offsets[1],SEEK_SET);
     read(packfd,atpb_sin2048_table,sizeof(uint16_t) * 2048);
 
-    /* atomic playboy background 256x256 */
-    {
-        struct minipng_reader *rdr;
+    /* rotozoomer background */
+    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
+        fatal("seq_intro: failed atmpbrz.png");
 
-        /* WARNING: Code assumes 16-bit large memory model! */
-
-        if ((rdr=minipng_reader_open("atmpbrz.png")) == NULL)
-            fatal("seq_intro: failed atmpbrz.png");
-        if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count < 64)
-            fatal("seq_intro: failed atmpbrz.png");
-        if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
-            fatal("seq_intro: failed atmpbrz.png");
-
-        {
-            unsigned int i;
-
-            for (i=0;i < 256;i++) {
-                unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg + (i * 16u/*paragraphs=256b*/),0);
-                minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
-                minipng_reader_read_idat(rdr,imgptr,256); /* row */
-            }
-
-            {
-                const unsigned char *p = (const unsigned char*)(rdr->plte);
-                vga_palette_lseek(ATOMPB_PAL_OFFSET);
-                for (i=0;i < 64;i++)
-                    vga_palette_write(p[(i*3)+0]>>2,p[(i*3)+1]>>2,p[(i*3)+2]>>2);
-            }
-        }
-
-        minipng_reader_close(&rdr);
-    }
+    if (rzbkload(atpbseg,"atmpbrz.png"))
+        fatal("atmpbrz.png");
 
     /* text color */
     vga_palette_lseek(0xFF);
