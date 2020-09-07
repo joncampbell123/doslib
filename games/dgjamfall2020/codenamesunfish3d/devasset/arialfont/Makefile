@@ -6,7 +6,7 @@ clean:
 	rm -f $(APPS) arialsmall_final.png arialmed_final.png ariallarge_final.png
 
 fontproc: fontproc.c
-	gcc -lpng -o $@ $<
+	gcc -lpng -lz -o $@ $<
 
 fonts: fontproc
 	./fontproc -i arialsmall_0.png -o arialsmall_final.png -f arialsmall.fnt
