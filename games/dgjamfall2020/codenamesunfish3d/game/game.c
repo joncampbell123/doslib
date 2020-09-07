@@ -825,15 +825,6 @@ void seq_intro() {
                     vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
             }
 
-            {
-                const char *str = "Hello world! ©¼Üá†yes"; // <- UTF-8 text!
-                unsigned int x=5,y=15;
-                uint32_t c;
-
-                while ((c = utf8decode(&str)) != 0ul)
-                    x = font_bmp_draw_chardef(arial_medium,font_bmp_unicode_to_chardef(arial_medium,c),x,y,0x5F);
-            }
-
             vga_swap_pages(); /* current <-> next */
             vga_update_disp_cur_page();
             vga_wait_for_vsync(); /* wait for vsync */
