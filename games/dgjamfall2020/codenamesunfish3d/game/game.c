@@ -614,7 +614,7 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
     {   120*12, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
     {   120*12, 1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
-    {   120*13, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
+    {   120*14, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
 /* message strings.
@@ -631,7 +631,7 @@ const char *anim_text[ANIM_SEQS] = {
     // 2
     "\x01Uhm\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.", // no fade out, abrupt change
     // 3
-    "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x04\x01Wooooooooooooo!\x03\x03\x03\x04"
+    "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x04\x01Wooooooooooooo my code is so cool!\x03\x03\x03\x04"
 };
 
 static uint32_t atpb_init_count;
