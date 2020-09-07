@@ -53,6 +53,8 @@ unsigned int        chardef_count = 0;
 struct kerndef      kerndefs[MAX_KERNS];
 unsigned int        kerndef_count = 0;
 
+unsigned int        img_used_w=0,img_used_h=0;
+
 int read_fnt(void) {
     FILE *fp;
 
@@ -129,7 +131,22 @@ int read_fnt(void) {
         }
     }
 
+    {
+        unsigned int i;
+
+        img_used_w = img_used_h = 0;
+        for (i=0;i < chardef_count;i++) {
+            struct chardef *cdef = &chardefs[i];
+
+            if (img_used_w < (cdef->x+cdef->w))
+                img_used_w = (cdef->x+cdef->w);
+            if (img_used_h < (cdef->y+cdef->h))
+                img_used_h = (cdef->y+cdef->h);
+        }
+    }
+
     printf("font: %u chardefs, %u kerndefs\n",chardef_count,kerndef_count);
+    printf("uses: %u x %u\n",img_used_w,img_used_h);
 
     fclose(fp);
     return 0;
