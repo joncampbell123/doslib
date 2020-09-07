@@ -25,7 +25,7 @@ static int              gen_png_filter_method = 0;
 static png_byte         gen_png_trns[256];
 static int              gen_png_trns_count = 0;
 
-static char             temp[512];
+static char             temp[4096];
 
 #define MAX_CHARS       512
 #define MAX_KERNS       512
