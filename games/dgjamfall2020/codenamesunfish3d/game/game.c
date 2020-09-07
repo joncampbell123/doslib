@@ -497,6 +497,18 @@ int font_bmp_do_load(struct font_bmp **fnt,const char *path) {
     return 0;
 }
 
+static inline int font_bmp_do_load_arial_large() {
+    return font_bmp_do_load(&arial_large,"ariallrg.png");
+}
+
+static inline int font_bmp_do_load_arial_medium() {
+    return font_bmp_do_load(&arial_medium,"arialmed.png");
+}
+
+static inline int font_bmp_do_load_arial_small() {
+    return font_bmp_do_load(&arial_small,"arialsml.png");
+}
+
 /* yes, we use unicode (UTF-8) strings here in this DOS application! */
 int font_bmp_unicode_to_chardef(struct font_bmp *fnt,uint32_t c) {
     if (fnt != NULL && c < 0x10000ul) {
@@ -916,11 +928,11 @@ int main() {
     probe_himem_sys();      // extended memory support
 #endif
 
-    if (font_bmp_do_load(&arial_small,"arialsml.png"))
+    if (font_bmp_do_load_arial_small())
         fatal("cannot load arial font");
-    if (font_bmp_do_load(&arial_medium,"arialmed.png"))
+    if (font_bmp_do_load_arial_medium())
         fatal("cannot load arial font");
-    if (font_bmp_do_load(&arial_large,"ariallrg.png"))
+    if (font_bmp_do_load_arial_large())
         fatal("cannot load arial font");
 
     init_timer_irq();
