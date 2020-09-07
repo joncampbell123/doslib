@@ -865,7 +865,7 @@ void seq_intro() {
             vga_wait_for_vsync(); /* wait for vsync */
         }
 
-        if (ccount >= atcount) {
+        while (ccount >= atcount) {
             uint32_t last_atcount = atcount;
 
             atcount += at_interval;
@@ -912,8 +912,6 @@ void seq_intro() {
                         break;
                 }
             }
-
-            if (atcount < ccount) atcount = ccount;
         }
 
         if (kbhit()) {
