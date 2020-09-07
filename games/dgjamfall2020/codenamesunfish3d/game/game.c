@@ -336,10 +336,21 @@ uint32_t utf8decode(const char **ptr) {
      * 0xC0-0xDF            2-byte UTF-8 TODO
      * 0x80-0xBF            invalid (we're in the middle of a UTF-8 char)
      * 0x00-0x7F            1-byte plain ASCII */
-    if (ret >= 0xC0) { /* 2-byte */
+    if (ret >= 0xF0) {
+        ret = 0;
+    }
+    else if (ret >= 0xE0) { /* 3-byte */
+        /* [1110 xxxx] [10xx xxxx] [10xx xxxx]  4+6+6 = 16 bits */
+        ret = (ret & 0xFul) << 12ul;
+        if (((*p) & 0xC0) != 0x80) { ret=0; goto stop; }
+        ret += (((unsigned char)(*p++)) & 0x3Ful) << 6ul;
+        if (((*p) & 0xC0) != 0x80) { ret=0; goto stop; }
+        ret += ((unsigned char)(*p++)) & 0x3Ful;
+    }
+    else if (ret >= 0xC0) { /* 2-byte */
         /* [110x xxxx] [10xx xxxx]  5+6 = 11 bits */
         ret = (ret & 0x1Ful) << 6ul;
-        if (((*p) & 0xC0) != 0x80) goto stop;
+        if (((*p) & 0xC0) != 0x80) { ret=0; goto stop; }
         ret += ((unsigned char)(*p++)) & 0x3Ful;
     }
     else if (ret >= 0x80) { /* invalid */
@@ -808,20 +819,20 @@ void seq_intro() {
             }
 
             {
-                const char *str = "Hello world! ©¼ Üá"; // <- UTF-8 text!
-                unsigned int x=5,y=15,i=64;
-                char c;
+                const char *str = "Hello world! ©¼Üá†yes"; // <- UTF-8 text!
+                unsigned int x=5,y=15;
+                uint32_t c;
 
-                while ((c = utf8decode(&str)) != 0ul && --i != 0)
+                while ((c = utf8decode(&str)) != 0ul)
                     x = font_bmp_draw_chardef(arial_medium,font_bmp_unicode_to_chardef(arial_medium,c),x,y,0x5F);
             }
 
             {
                 const char *str = "Hello world!";
-                unsigned int x=5,y=28,i=64;
-                char c;
+                unsigned int x=5,y=28;
+                uint32_t c;
 
-                while ((c = utf8decode(&str)) != 0ul && --i != 0)
+                while ((c = utf8decode(&str)) != 0ul)
                     x = font_bmp_draw_chardef(arial_large,font_bmp_unicode_to_chardef(arial_large,c),x,y,0x5F);
             }
 
