@@ -808,7 +808,7 @@ void seq_intro() {
             }
 
             {
-                const char *str = "Hello world!";
+                const char *str = "Hello world! ©¼ Üá"; // <- UTF-8 text!
                 unsigned int x=5,y=15,i=64;
                 char c;
 
