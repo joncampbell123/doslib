@@ -273,6 +273,111 @@ void fatal(const char *msg,...) {
 }
 
 /*---------------------------------------------------------------------------*/
+/* font handling                                                             */
+/*---------------------------------------------------------------------------*/
+
+#pragma pack(push,1)
+struct chardef {
+/* char id=32   x=178   y=65    width=3     height=1     xoffset=-1    yoffset=15    xadvance=4     page=0  chnl=15 */
+    uint16_t        id;             /* unicode code value */
+    uint8_t         x,y;            /* starting x and y (upper left corner). These images are 256x256 so it's fine to use uint8_t */
+    uint8_t         w,h;            /* width and height at x,y */
+    int8_t          xoffset,yoffset;/* offset from draw position to draw */
+    int8_t          xadvance;       /* how many to advance */
+    /* ignored: page */
+    /* ignored: chnl */
+};
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct kerndef {
+/* kerning first=32  second=65  amount=-1 */
+    uint16_t        first;
+    uint16_t        second;
+    int8_t          amount;
+};
+#pragma pack(pop)
+
+struct font_bmp {
+    unsigned char*          fontbmp;        /* 1-bit font */
+    unsigned int            stride;         /* bytes per row */
+    unsigned int            height;         /* height of bitmap */
+    unsigned int            chardef_count;  /* number of chardefs */
+    unsigned int            kerndef_count;  /* number of kerndefs */
+    struct chardef*         chardef;        /* array of chardef */
+    struct kerndef*         kerndef;        /* array of kerndef */
+};
+
+void font_bmp_free(struct font_bmp **fnt);
+
+struct font_bmp *font_bmp_load(const char *path) {
+    struct font_bmp *fnt = calloc(1,sizeof(struct font_bmp));
+    struct minipng_reader *rdr = NULL;
+
+    if (fnt != NULL) {
+        if ((rdr=minipng_reader_open(path)) == NULL)
+            goto fail;
+        if (minipng_reader_parse_head(rdr))
+            goto fail;
+        if (rdr->ihdr.width > 512 || rdr->ihdr.width < 8 || rdr->ihdr.height > 512 || rdr->ihdr.height < 8)
+            goto fail;
+
+        fnt->stride = (rdr->ihdr.width + 7u) / 8u;
+        fnt->height = rdr->ihdr.height;
+
+        if ((fnt->fontbmp=malloc(fnt->stride*fnt->height)) == NULL)
+            goto fail;
+
+        {
+            unsigned int i;
+            unsigned char *imgptr = fnt->fontbmp;
+            for (i=0;i < fnt->height;i++) {
+                minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
+                minipng_reader_read_idat(rdr,imgptr,fnt->stride); /* row */
+                imgptr += fnt->stride;
+            }
+        }
+
+        minipng_reader_close(&rdr);
+    }
+
+    return fnt;
+fail:
+    minipng_reader_close(&rdr);
+    font_bmp_free(&fnt);
+    return NULL;
+}
+
+void font_bmp_free(struct font_bmp **fnt) {
+    if (*fnt != NULL) {
+        if ((*fnt)->fontbmp) free((*fnt)->fontbmp);
+        (*fnt)->fontbmp = NULL;
+
+        if ((*fnt)->chardef) free((*fnt)->chardef);
+        (*fnt)->chardef = NULL;
+
+        if ((*fnt)->kerndef) free((*fnt)->kerndef);
+        (*fnt)->kerndef = NULL;
+
+        free(*fnt);
+        *fnt = NULL;
+    }
+}
+
+struct font_bmp*                    arial_small = NULL;
+struct font_bmp*                    arial_medium = NULL;
+struct font_bmp*                    arial_large = NULL;
+
+int font_bmp_do_load(struct font_bmp **fnt,const char *path) {
+    if (*fnt == NULL) {
+        if ((*fnt = font_bmp_load(path)) == NULL)
+            return -1;
+    }
+
+    return 0;
+}
+
+/*---------------------------------------------------------------------------*/
 /* introductory sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
@@ -606,7 +711,12 @@ int main() {
     init_timer_irq();
     init_vga256unchained();
 
+    if (font_bmp_do_load(&arial_medium,"arialmed.png"))
+        fatal("cannot load med arial font");
+
     seq_intro();
+
+    font_bmp_free(&arial_medium);
 
     unhook_irqs();
     restore_text_mode();
