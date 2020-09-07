@@ -340,6 +340,32 @@ struct font_bmp *font_bmp_load(const char *path) {
             minipng_reader_reset_idat(rdr);
         }
 
+        {
+            uint16_t count;
+
+            /* look for chardef and kerndef structures */
+            while (minipng_reader_next_chunk(rdr) == 0) {
+                if (rdr->chunk_data_header.type == minipng_chunk_fourcc('c','D','E','Z')) {
+                    if (fnt->chardef == NULL) {
+                        if (read(rdr->fd,&count,2) != 2) goto fail;
+                        fnt->chardef_count = count;
+                        if (count != 0 && count < (0xFF00 / sizeof(struct chardef))) {
+                            if ((fnt->chardef = malloc(count * sizeof(struct chardef))) == NULL) goto fail;
+                        }
+                    }
+                }
+                else if (rdr->chunk_data_header.type == minipng_chunk_fourcc('k','D','E','Z')) {
+                    if (fnt->kerndef == NULL) {
+                        if (read(rdr->fd,&count,2) != 2) goto fail;
+                        fnt->kerndef_count = count;
+                        if (count != 0 && count < (0xFF00u / sizeof(struct kerndef))) {
+                            if ((fnt->kerndef = malloc(count * sizeof(struct kerndef))) == NULL) goto fail;
+                        }
+                    }
+                }
+            }
+        }
+
         minipng_reader_close(&rdr);
     }
 
