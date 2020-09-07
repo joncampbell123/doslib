@@ -3,7 +3,7 @@ APPS=fontproc
 all: $(APPS)
 
 clean:
-	rm -f $(APPS) arialsmall_final.png arialmed_final.png ariallarge_final.png
+	rm -f $(APPS)
 
 fontproc: fontproc.c
 	gcc -lpng -lz -o $@ $<
