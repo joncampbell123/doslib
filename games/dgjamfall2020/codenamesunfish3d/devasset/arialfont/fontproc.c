@@ -406,6 +406,13 @@ int main(int argc,char **argv) {
         return 1;
     if (read_fnt())
         return 1;
+
+    /* crop the PNG to the part actually used by the font */
+    if (img_used_w != 0 && gen_png_width > img_used_w)
+        gen_png_width = img_used_w;
+    if (img_used_h != 0 && gen_png_height > img_used_h)
+        gen_png_height = img_used_h;
+
     if (save_out_png())
         return 1;
 
