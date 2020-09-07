@@ -27,7 +27,7 @@ void minipng_reader_reset_idat(struct minipng_reader *rdr) {
 
     if (rdr->compr_zlib.next_in != NULL) {
         inflateEnd(&(rdr->compr_zlib));
-        memset(&(rdr->compr_zlib),0,sizeof(*rdr));
+        memset(&(rdr->compr_zlib),0,sizeof(rdr->compr_zlib));
     }
 }
 
