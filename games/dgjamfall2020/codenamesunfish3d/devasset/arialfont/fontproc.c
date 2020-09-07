@@ -411,7 +411,40 @@ static int save_out_png(void) {
             *((int8_t  *)(d+8)) = cdef->xadvance;
         }
 
-        png_write_chunk(png_context, (png_const_bytep)("cDEF"), temp, sz);
+        if (sz >= 96) {
+            z_stream z;
+            int err;
+
+            memset(&z,0,sizeof(z));
+            z.next_in = temp;
+            z.avail_in = sz;
+            z.next_out = temp2;
+            z.avail_out = sizeof(temp2);
+            if (deflateInit(&z, 9) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+
+            if (deflate(&z,Z_NO_FLUSH) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+            if (deflate(&z,Z_FULL_FLUSH) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+            if (z.avail_in != 0) {
+                fprintf(stderr,"Deflate ran out of room\n");
+                return 1;
+            }
+
+            deflateEnd(&z);
+
+            png_write_chunk(png_context, (png_const_bytep)("cDEZ"), temp2, (int)((unsigned char*)z.next_out - (unsigned char*)temp2));
+        }
+        else {
+            png_write_chunk(png_context, (png_const_bytep)("cDEF"), temp, sz);
+        }
     }
 
     /* kerndef */
@@ -430,7 +463,40 @@ static int save_out_png(void) {
             *((int8_t  *)(d+4)) = kdef->amount;
         }
 
-        png_write_chunk(png_context, (png_const_bytep)("kDEF"), temp, sz);
+        if (sz >= 96) {
+            z_stream z;
+            int err;
+
+            memset(&z,0,sizeof(z));
+            z.next_in = temp;
+            z.avail_in = sz;
+            z.next_out = temp2;
+            z.avail_out = sizeof(temp2);
+            if (deflateInit(&z, 9) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+
+            if (deflate(&z,Z_NO_FLUSH) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+            if (deflate(&z,Z_FULL_FLUSH) != Z_OK) {
+                fprintf(stderr,"Deflate error\n");
+                return 1;
+            }
+            if (z.avail_in != 0) {
+                fprintf(stderr,"Deflate ran out of room\n");
+                return 1;
+            }
+
+            deflateEnd(&z);
+
+            png_write_chunk(png_context, (png_const_bytep)("kDEZ"), temp2, (int)((unsigned char*)z.next_out - (unsigned char*)temp2));
+        }
+        else {
+            png_write_chunk(png_context, (png_const_bytep)("kDEF"), temp, sz);
+        }
     }
 
     /* success */
