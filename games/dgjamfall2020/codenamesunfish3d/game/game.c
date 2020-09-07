@@ -897,8 +897,8 @@ void seq_intro() {
             if ((++anim) >= ANIM_SEQS) break;
 
             if (anim == 0) {
-                if (rzbkload(atpbseg,"crcbrz.png"))
-                    fatal("crcbrz.png");
+                if (rzbkload(atpbseg,"wxpbrz.png"))
+                    fatal("wxpbrz.png");
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
                 if (rzbkload(atpbseg,"atmpbrz.png"))
