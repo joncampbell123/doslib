@@ -5,6 +5,7 @@
 
 #include <png.h>    /* libpng */
 
+static char*            in_fnt = NULL;
 static char*            in_png = NULL;
 static char*            out_png = NULL;
 
@@ -34,7 +35,7 @@ static void free_gen_png(void) {
 }
 
 static void help(void) {
-    fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
+    fprintf(stderr,"fontproc -i <input PNG> -o <output PNG> -f <FNT description>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
     fprintf(stderr,"rearranging the palette to match palette PNG.\n");
 }
@@ -61,6 +62,10 @@ static int parse_argv(int argc,char **argv) {
                 if ((out_png = argv[i++]) == NULL)
                     return 1;
             }
+            else if (!strcmp(a,"f")) {
+                if ((in_fnt = argv[i++]) == NULL)
+                    return 1;
+            }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
                 return 1;
@@ -70,6 +75,11 @@ static int parse_argv(int argc,char **argv) {
             fprintf(stderr,"Unexpected arg %s\n",a);
             return 1;
         }
+    }
+
+    if (in_fnt == NULL) {
+        fprintf(stderr,"Input -f fnt required\n");
+        return 1;
     }
 
     if (in_png == NULL) {
