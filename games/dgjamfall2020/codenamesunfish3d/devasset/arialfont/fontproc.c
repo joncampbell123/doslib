@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <png.h>    /* libpng */
@@ -22,6 +23,117 @@ static int              gen_png_compression_method = 0;
 static int              gen_png_filter_method = 0;
 static png_byte         gen_png_trns[256];
 static int              gen_png_trns_count = 0;
+
+static char             temp[512];
+
+#define MAX_CHARS       512
+#define MAX_KERNS       512
+
+struct chardef {
+/* char id=32   x=178   y=65    width=3     height=1     xoffset=-1    yoffset=15    xadvance=4     page=0  chnl=15 */
+    uint16_t        id;             /* unicode code value */
+    uint8_t         x,y;            /* starting x and y (upper left corner). These images are 256x256 so it's fine to use uint8_t */
+    uint8_t         w,h;            /* width and height at x,y */
+    int8_t          xoffset,yoffset;/* offset from draw position to draw */
+    int8_t          xadvance;       /* how many to advance */
+    /* ignored: page */
+    /* ignored: chnl */
+};
+
+struct kerndef {
+/* kerning first=32  second=65  amount=-1 */
+    uint16_t        first;
+    uint16_t        second;
+    int8_t          amount;
+};
+
+struct chardef      chardefs[MAX_CHARS];
+unsigned int        chardef_count = 0;
+
+struct kerndef      kerndefs[MAX_KERNS];
+unsigned int        kerndef_count = 0;
+
+int read_fnt(void) {
+    FILE *fp;
+
+    if (chardef_count != 0 || kerndef_count != 0)
+        return -1;
+
+    if ((fp=fopen(in_fnt,"r")) == NULL)
+        return -1;
+
+    while (!feof(fp) && !ferror(fp)) {
+        if (fgets(temp,sizeof(temp),fp) == NULL) break;
+
+        if (!strncmp(temp,"char ",5)) {
+            if (chardef_count < MAX_CHARS) {
+                struct chardef *cdef = &chardefs[chardef_count++];
+                char *s = temp+5;
+                char *name;
+
+                while (*s != 0 && *s != '\n') {
+                    /* char id=32   x=178   y=65    width=3     height=1     xoffset=-1    yoffset=15    xadvance=4     page=0  chnl=15 */
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == 0 || *s == '\n') break;
+
+                    name = s;
+                    while (*s != 0 && *s != '=') s++;
+                    if (*s == '=') *s++ = 0; /* ASCIIZ snip */
+
+                    if (!strcmp(name,"id"))
+                        cdef->id = strtoul(s,&s,10);
+                    else if (!strcmp(name,"x"))
+                        cdef->x = strtoul(s,&s,10);
+                    else if (!strcmp(name,"y"))
+                        cdef->y = strtoul(s,&s,10);
+                    else if (!strcmp(name,"width"))
+                        cdef->w = strtoul(s,&s,10);
+                    else if (!strcmp(name,"height"))
+                        cdef->h = strtoul(s,&s,10);
+                    else if (!strcmp(name,"xoffset"))
+                        cdef->xoffset = strtol(s,&s,10);
+                    else if (!strcmp(name,"yoffset"))
+                        cdef->yoffset = strtol(s,&s,10);
+                    else if (!strcmp(name,"xadvance"))
+                        cdef->xadvance = strtol(s,&s,10);
+
+                    while (*s != 0 && *s != ' ') s++;
+                }
+            }
+        }
+        else if (!strncmp(temp,"kerning ",8)) {
+            if (chardef_count < MAX_CHARS) {
+                struct kerndef *kdef = &kerndefs[kerndef_count++];
+                char *s = temp+8;
+                char *name;
+
+                while (*s != 0 && *s != '\n') {
+                    /* kerning first=32  second=65  amount=-1 */
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == 0 || *s == '\n') break;
+
+                    name = s;
+                    while (*s != 0 && *s != '=') s++;
+                    if (*s == '=') *s++ = 0; /* ASCIIZ snip */
+
+                    if (!strcmp(name,"first"))
+                        kdef->first = strtoul(s,&s,10);
+                    else if (!strcmp(name,"second"))
+                        kdef->second = strtoul(s,&s,10);
+                    else if (!strcmp(name,"amount"))
+                        kdef->amount = strtol(s,&s,10);
+
+                    while (*s != 0 && *s != ' ') s++;
+                }
+            }
+        }
+    }
+
+    printf("font: %u chardefs, %u kerndefs\n",chardef_count,kerndef_count);
+
+    fclose(fp);
+    return 0;
+}
 
 static void free_gen_png(void) {
     if (gen_png_image) {
@@ -267,6 +379,8 @@ int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
 
+    if (read_fnt())
+        return 1;
     if (load_in_png())
         return 1;
     if (save_out_png())
