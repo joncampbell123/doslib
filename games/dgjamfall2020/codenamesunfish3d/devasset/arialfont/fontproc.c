@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <endian.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -348,6 +349,7 @@ static int save_out_png(void) {
     png_infop png_context_info = NULL;
     png_infop png_context_end = NULL;
     FILE *fp = NULL;
+    unsigned int i;
     int ret = 1;
 
     if (out_png == NULL)
@@ -384,6 +386,33 @@ static int save_out_png(void) {
     png_write_info(png_context, png_context_info);
     png_write_rows(png_context, gen_png_image_rows, gen_png_height);
     png_write_end(png_context, NULL);
+
+    /* chardef */
+    png_write_chunk_start(png_context, (png_const_bytep)("cDEF"), (2/*id*/+1/*x*/+1/*y*/+1/*w*/+1/*h*/+1/*xoffset*/+1/*yoffset*/+1/*xadvance*/) * chardef_count);
+    for (i=0;i < chardef_count;i++) {
+        struct chardef *cdef = &chardefs[i];
+        *((uint16_t*)(temp+0)) = htole16(cdef->id);
+        *((uint8_t *)(temp+2)) = cdef->x;
+        *((uint8_t *)(temp+3)) = cdef->y;
+        *((uint8_t *)(temp+4)) = cdef->w;
+        *((uint8_t *)(temp+5)) = cdef->h;
+        *((int8_t  *)(temp+6)) = cdef->xoffset;
+        *((int8_t  *)(temp+7)) = cdef->yoffset;
+        *((int8_t  *)(temp+8)) = cdef->xadvance;
+        png_write_chunk_data(png_context, temp, (2/*id*/+1/*x*/+1/*y*/+1/*w*/+1/*h*/+1/*xoffset*/+1/*yoffset*/+1/*xadvance*/));
+    }
+    png_write_chunk_end(png_context);
+
+    /* kerndef */
+    png_write_chunk_start(png_context, (png_const_bytep)("kDEF"), (2/*first*/+2/*second*/+1/*amount*/) * kerndef_count);
+    for (i=0;i < kerndef_count;i++) {
+        struct kerndef *kdef = &kerndefs[i];
+        *((uint16_t*)(temp+0)) = htole16(kdef->first);
+        *((uint16_t*)(temp+2)) = htole16(kdef->second);
+        *((int8_t  *)(temp+4)) = kdef->amount;
+        png_write_chunk_data(png_context, temp, (2/*first*/+2/*second*/+1/*amount*/));
+    }
+    png_write_chunk_end(png_context);
 
     /* success */
     ret = 0;
