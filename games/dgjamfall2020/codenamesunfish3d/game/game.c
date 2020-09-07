@@ -272,6 +272,51 @@ void fatal(const char *msg,...) {
     exit(1);
 }
 
+int file_zlib_decompress(int fd,unsigned char *buf,unsigned int sz,uint32_t srcsz) {
+#define TMP_SZ 1024
+    unsigned char *tmp;
+    z_stream z;
+    int r = -1;
+
+    if (fd < 0) return -1;
+    if ((tmp=malloc(TMP_SZ)) == NULL) return -1;
+
+    memset(&z,0,sizeof(z));
+    z.next_out = buf;
+    z.avail_out = sz;
+    z.next_in = tmp;
+    z.avail_in = 0;
+    if (inflateInit2(&z,15/*max window size 32KB*/) != Z_OK) goto fail;
+
+    while (z.avail_out != 0) {
+        if (z.avail_in == 0) {
+            if (srcsz != 0) {
+                const uint32_t rsz = (srcsz < TMP_SZ) ? srcsz : TMP_SZ;
+                if (read(fd,tmp,rsz) != rsz) goto fail2;
+                z.avail_in = rsz;
+                z.next_in = tmp;
+                srcsz -= rsz;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (inflate(&z,Z_SYNC_FLUSH) != Z_OK) break;
+    }
+
+    if (z.avail_out == 0) r = 0;
+
+    free(tmp);
+    return r;
+fail2:
+    inflateEnd(&z);
+fail:
+    free(tmp);
+    return -1;
+#undef TMP_SZ
+}
+
 /*---------------------------------------------------------------------------*/
 /* font handling                                                             */
 /*---------------------------------------------------------------------------*/
@@ -351,6 +396,7 @@ struct font_bmp *font_bmp_load(const char *path) {
                         fnt->chardef_count = count;
                         if (count != 0 && count < (0xFF00 / sizeof(struct chardef))) {
                             if ((fnt->chardef = malloc(count * sizeof(struct chardef))) == NULL) goto fail;
+                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->chardef),count * sizeof(struct chardef),rdr->chunk_data_header.length-2ul)) goto fail;
                         }
                     }
                 }
@@ -360,6 +406,7 @@ struct font_bmp *font_bmp_load(const char *path) {
                         fnt->kerndef_count = count;
                         if (count != 0 && count < (0xFF00u / sizeof(struct kerndef))) {
                             if ((fnt->kerndef = malloc(count * sizeof(struct kerndef))) == NULL) goto fail;
+                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->kerndef),count * sizeof(struct kerndef),rdr->chunk_data_header.length-2ul)) goto fail;
                         }
                     }
                 }
@@ -736,11 +783,11 @@ int main() {
     probe_himem_sys();      // extended memory support
 #endif
 
-    init_timer_irq();
-    init_vga256unchained();
-
     if (font_bmp_do_load(&arial_medium,"arialmed.png"))
         fatal("cannot load med arial font");
+
+    init_timer_irq();
+    init_vga256unchained();
 
     seq_intro();
 
