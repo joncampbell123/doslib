@@ -752,7 +752,7 @@ void seq_intro() {
                 unsigned int i,x=5,y=5;
 
                 for (i=0;i < arial_medium->chardef_count;i++) {
-                    x = font_bmp_draw_chardef(arial_medium,i/*cdef*/,x,y,0x5F);
+                    x = font_bmp_draw_chardef(arial_large,i/*cdef*/,x,y,0x5F);
                     if (x >= 300) {
                         x = 5;
                         y += 16;
@@ -840,15 +840,21 @@ int main() {
     probe_himem_sys();      // extended memory support
 #endif
 
+    if (font_bmp_do_load(&arial_small,"arialsml.png"))
+        fatal("cannot load arial font");
     if (font_bmp_do_load(&arial_medium,"arialmed.png"))
-        fatal("cannot load med arial font");
+        fatal("cannot load arial font");
+    if (font_bmp_do_load(&arial_large,"ariallrg.png"))
+        fatal("cannot load arial font");
 
     init_timer_irq();
     init_vga256unchained();
 
     seq_intro();
 
+    font_bmp_free(&arial_small);
     font_bmp_free(&arial_medium);
+    font_bmp_free(&arial_large);
 
     unhook_irqs();
     restore_text_mode();
