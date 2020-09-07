@@ -957,14 +957,16 @@ void seq_intro() {
             if (*animtext != 0) {
                 switch (*animtext) {
                     case 0x01: // clear text
-                        animtext_bright = 63;
-                        vga_palette_lseek(0xFF);
-                        vga_palette_write(animtext_bright,animtext_bright,animtext_bright);
                         animtext_x = animtext_init_x;
                         animtext_y = animtext_init_y;
                         vga_write_sequencer(0x02/*map mask*/,0x0F);
                         vga_rep_stosw((unsigned char far*)MK_FP(0xA000,((320u/4u)*168u)+VGA_PAGE_FIRST),0,((320u/4u)*(200u-168u))/2u);
                         vga_rep_stosw((unsigned char far*)MK_FP(0xA000,((320u/4u)*168u)+VGA_PAGE_SECOND),0,((320u/4u)*(200u-168u))/2u);
+
+                        animtext_bright = 63;
+                        vga_palette_lseek(0xFF);
+                        vga_palette_write(animtext_bright,animtext_bright,animtext_bright);
+
                         animtext++;
                         break;
                     case 0x02: // 1/4-sec pause
