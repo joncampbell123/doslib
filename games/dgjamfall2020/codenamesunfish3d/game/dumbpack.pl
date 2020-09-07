@@ -16,20 +16,21 @@ die "no output file" if ($i == @ARGV);
 $dstfile = $ARGV[$i];
 
 my @offsets;
-my $ofs = 2 + (2 * @srcfiles);
+my $ofs = 2 + (4 * (@srcfiles + 1));
 
 for ($i=0;$i < @srcfiles;$i++) {
     my $sz = -s $srcfiles[$i];
     push(@offsets,$ofs);
     $ofs += $sz;
 }
+push(@offsets,$ofs);
 
 open(OUT,">",$dstfile) || die;
 binmode(OUT);
 
 print OUT pack("v",scalar(@srcfiles));
-for ($i=0;$i < @srcfiles;$i++) {
-    print OUT pack("v",$offsets[$i]);
+for ($i=0;$i < @offsets;$i++) {
+    print OUT pack("V",$offsets[$i]);
 }
 
 my $buf;

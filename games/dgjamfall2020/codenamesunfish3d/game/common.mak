@@ -34,6 +34,9 @@ final: $(GAME_EXE)
 	@bash -c 'for i in 1 2 3 4 5 6 7 8 9; do cp ../devasset/woo-sorcerer-character/set2/REDOWIDER1-colorkey-matte-alpha-720p.mov-199.52-225.61.mov-uhhhhhh-wooooooo.mov-23.64-23.96.mov.00$$i.png.cropped.png.palunord.png.palord.png.vrl final/sorcbwo$$i.vrl; done'
 	# rotozoomer sin (quarter) table
 	@cp sin2048.bin final/sorcwoo.sin
+	# pack it up
+	@bash -c 'cd final && ../dumbpack.pl sorcwoo.pal sorcwoo.sin sorcwoo{1,2,3,4,5,6,7,8,9}.vrl sorcuhhh.vrl sorcbwo{1,2,3,4,5,6,7,8,9}.vrl -- sorcwoo.vrp'
+	@bash -c 'cd final && rm sorcwoo.pal sorcwoo.sin sorcwoo{1,2,3,4,5,6,7,8,9}.vrl sorcuhhh.vrl sorcbwo{1,2,3,4,5,6,7,8,9}.vrl'
 	# fonts
 	@cp ../devasset/arialfont/ariallarge_final.png final/ariallrg.png
 	@cp ../devasset/arialfont/arialmed_final.png   final/arialmed.png

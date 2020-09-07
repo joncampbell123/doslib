@@ -20,6 +20,8 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
+unsigned char common_tmp_small[1024];
+
 struct seq_anim_i {
     unsigned int        duration;       // in ticks
     unsigned int        frame_rate;     // in Hz
@@ -107,6 +109,42 @@ void free_vrl(struct vrl_image *img) {
     }
     img->vrl_header = NULL;
     img->bufsz = 0;
+}
+
+int load_vrl_fd(struct vrl_image *img,int fd,unsigned long sz) {
+    struct vrl1_vgax_header *vrl_header;
+    vrl1_vgax_offset_t *vrl_lineoffs;
+    unsigned char *buffer = NULL;
+    unsigned int bufsz = 0;
+
+    {
+        if (sz < sizeof(*vrl_header)) goto fail;
+        if (sz >= 65535UL) goto fail;
+
+        bufsz = (unsigned int)sz;
+        buffer = malloc(bufsz);
+        if (buffer == NULL) goto fail;
+
+        if ((unsigned int)read(fd,buffer,bufsz) < bufsz) goto fail;
+
+        vrl_header = (struct vrl1_vgax_header*)buffer;
+        if (memcmp(vrl_header->vrl_sig,"VRL1",4) || memcmp(vrl_header->fmt_sig,"VGAX",4)) goto fail;
+        if (vrl_header->width == 0 || vrl_header->height == 0) goto fail;
+    }
+
+    /* preprocess the sprite to generate line offsets */
+    vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+    if (vrl_lineoffs == NULL) goto fail;
+
+    img->vrl_header = vrl_header;
+    img->vrl_lineoffs = vrl_lineoffs;
+    img->buffer = buffer;
+    img->bufsz = bufsz;
+
+    return 0;
+fail:
+    if (buffer != NULL) free(buffer);
+    return 1;
 }
 
 int load_vrl(struct vrl_image *img,const char *path) {
@@ -578,6 +616,10 @@ unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsign
 #define VRL_IMAGE_FILES             19
 #define ATOMPB_PAL_OFFSET           0x00
 #define SORC_PAL_OFFSET             0x40
+#define PACK_REQ                    0x15
+
+uint32_t sorc_pack_offsets[PACK_REQ+1];
+
 const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
     "sorcwoo1.vrl",             // 0
     "sorcwoo2.vrl",
@@ -750,6 +792,7 @@ void seq_intro() {
     unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
     unsigned char anim;
     int redraw = 1;
+    int packfd;
     int c;
 
     /* need arial medium */
@@ -758,16 +801,24 @@ void seq_intro() {
 
     animtext_fnt = arial_medium;
 
-    /* the rotozoomer effect needs a sin lookup table */
-    atpb_sin2048_table = malloc(sizeof(uint16_t) * 2048);
-    if (atpb_sin2048_table == NULL) fatal("sorcwoo.sin missing");
+    /* our assets are in a pack now */
+    if ((packfd=open("sorcwoo.vrp",O_RDONLY|O_BINARY)) < 0)
+        fatal("cannot open sorcwoo pack");
 
     {
-        int fd = open("sorcwoo.sin",O_RDONLY | O_BINARY);
-        if (fd < 0) fatal("sorcwoo.sin missing");
-        read(fd,atpb_sin2048_table,sizeof(uint16_t) * 2048);
-        close(fd);
+        uint16_t count;
+        if (read(packfd,&count,2) != 2 || count < PACK_REQ)
+            fatal("cannot open sorcwoo pack");
     }
+
+    if (read(packfd,sorc_pack_offsets,(PACK_REQ+1)*4) != ((PACK_REQ+1)*4))
+        fatal("cannot open sorcwoo pack");
+
+    /* the rotozoomer effect needs a sin lookup table */
+    atpb_sin2048_table = malloc(sizeof(uint16_t) * 2048);
+    if (atpb_sin2048_table == NULL) fatal("sorcwoo.sin");
+    lseek(packfd,sorc_pack_offsets[1],SEEK_SET);
+    read(packfd,atpb_sin2048_table,sizeof(uint16_t) * 2048);
 
     /* atomic playboy background 256x256 */
     {
@@ -806,13 +857,17 @@ void seq_intro() {
     vga_palette_lseek(0xFF);
     vga_palette_write(63,63,63);
 
-    pal_load_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,"sorcwoo.pal");
+    /* sorc palette */
+    lseek(packfd,sorc_pack_offsets[0],SEEK_SET);
+    read(packfd,common_tmp_small,32*3);
+    pal_buf_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,common_tmp_small);
 
     {
         unsigned int vrl_image_count = 0;
         for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
-            if (load_vrl(&vrl_image[vrl_image_count],seq_intro_sorc_vrl[vrl_image_count]) != 0)
-                fatal("seq_intro: unable to load VRL %s",seq_intro_sorc_vrl[vrl_image_count]);
+            lseek(packfd,sorc_pack_offsets[2+vrl_image_count],SEEK_SET);
+            if (load_vrl_fd(&vrl_image[vrl_image_count],packfd,sorc_pack_offsets[2+1+vrl_image_count] - sorc_pack_offsets[2+vrl_image_count]) != 0)
+                fatal("seq_intro: unable to load VRL %u at %lu",vrl_image_count,sorc_pack_offsets[2+vrl_image_count]);
 
                 vrl_palrebase(
                     vrl_image[vrl_image_count].vrl_header,
@@ -973,10 +1028,13 @@ void seq_intro() {
     /* VRLs */
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
+
+    close(packfd);
 #undef ATOMPB_PAL_OFFSET
 #undef SORC_PAL_OFFSET
 #undef VRL_IMAGE_FILES
 #undef ANIM_SEQS
+#undef PACK_REQ
 }
 
 /*---------------------------------------------------------------------------*/
