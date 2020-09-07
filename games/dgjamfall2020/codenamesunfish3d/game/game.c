@@ -307,6 +307,7 @@ int file_zlib_decompress(int fd,unsigned char *buf,unsigned int sz,uint32_t srcs
 
     if (z.avail_out == 0) r = 0;
 
+    inflateEnd(&z);
     free(tmp);
     return r;
 fail2:
