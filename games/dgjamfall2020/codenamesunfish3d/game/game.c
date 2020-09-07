@@ -787,7 +787,7 @@ int rzbkload(unsigned atpbseg,const char *path) {
     if ((rdr=minipng_reader_open(path)) == NULL)
         return -1;
 
-    if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count < 64) {
+    if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count == 0) {
         minipng_reader_close(&rdr);
         return -1;
     }
@@ -804,7 +804,7 @@ int rzbkload(unsigned atpbseg,const char *path) {
         {
             const unsigned char *p = (const unsigned char*)(rdr->plte);
             vga_palette_lseek(ATOMPB_PAL_OFFSET);
-            for (i=0;i < 64;i++)
+            for (i=0;i < rdr->plte_count;i++)
                 vga_palette_write(p[(i*3)+0]>>2,p[(i*3)+1]>>2,p[(i*3)+2]>>2);
         }
     }
@@ -863,9 +863,6 @@ void seq_intro() {
     if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
         fatal("seq_intro: failed atmpbrz.png");
 
-    if (rzbkload(atpbseg,"atmpbrz.png"))
-        fatal("atmpbrz.png");
-
     /* text color */
     vga_palette_lseek(0xFF);
     vga_palette_write(63,63,63);
@@ -898,6 +895,16 @@ void seq_intro() {
     do {
         if (ccount >= nanim_count) {
             if ((++anim) >= ANIM_SEQS) break;
+
+            if (anim == 0) {
+                if (rzbkload(atpbseg,"crcbrz.png"))
+                    fatal("crcbrz.png");
+            }
+            else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
+                if (rzbkload(atpbseg,"atmpbrz.png"))
+                    fatal("atmpbrz.png");
+            }
+
             vrl_anim_interval = (uint16_t)(timer_tick_rate / anim_seq[anim].frame_rate);
             vrl_image_select = anim_seq[anim].init_frame;
             vrl_image_dir = anim_seq[anim].init_dir;
