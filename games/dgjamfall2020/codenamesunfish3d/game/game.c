@@ -620,28 +620,7 @@ unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsign
 
 uint32_t sorc_pack_offsets[PACK_REQ+1];
 
-const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
-    "sorcwoo1.vrl",             // 0
-    "sorcwoo2.vrl",
-    "sorcwoo3.vrl",
-    "sorcwoo4.vrl",
-    "sorcwoo5.vrl",
-    "sorcwoo6.vrl",             // 5
-    "sorcwoo7.vrl",
-    "sorcwoo8.vrl",
-    "sorcwoo9.vrl",
-    "sorcuhhh.vrl",
-    "sorcbwo1.vrl",             // 10
-    "sorcbwo2.vrl",
-    "sorcbwo3.vrl",
-    "sorcbwo4.vrl",
-    "sorcbwo5.vrl",
-    "sorcbwo6.vrl",             // 15
-    "sorcbwo7.vrl",
-    "sorcbwo8.vrl",
-    "sorcbwo9.vrl"
-                                // 19
-};
+/* VRL files start at index 2 in the pack file */
 /* anim1: ping pong loop 0-8 (sorcwoo1.vrl to sorcwoo9.vrl) */
 /* anim2: single frame 9 (sorcuhhh.vrl) */
 /* anim3: ping pong loop 10-18 (sorcbwo1.vrl to sorcbwo9.vrl) */
