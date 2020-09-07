@@ -611,26 +611,27 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
-    {   120*10, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
+    {   120*12, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
     {   120*12, 1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
-    {   120*12, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
+    {   120*13, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
 /* message strings.
  * \n   moves to the next line
  * \x01 clears the text
  * \x02 pauses for 1/4th of a second
- * \x03 pauses for 1 second */
+ * \x03 pauses for 1 second
+ * \x04 fade out text */
 const char *anim_text[ANIM_SEQS] = {
     // 0
-    "\x01I am the coolest programmer ever!\nI write super awesome optimized code!\x03\x03\x03\x01Wooooooo I'm so cool!",
+    "\x01I am the coolest programmer ever!\nI write super awesome optimized code!\x03\x03\x03\x04\x01Wooooooo I'm so cool!\x03\x03\x03\x04",
     // 1
-    "\x01Oh great and awesome programmer and\ncreator of our game world.\x03\x03\x03\x01What is our purpose in this game?",
+    "\x01Oh great and awesome programmer and\ncreator of our game world.\x03\x03\x03\x04\x01What is our purpose in this game?\x03\x03\x03\x04",
     // 2
-    "\x01Uhm\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.",
+    "\x01Uhm\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.", // no fade out, abrupt change
     // 3
-    "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x01Wooooooooooooo!"
+    "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x04\x01Wooooooooooooo!\x03\x03\x03\x04"
 };
 
 static uint32_t atpb_init_count;
@@ -732,6 +733,7 @@ static const int animtext_init_y = 168;
 static const unsigned char animtext_color_init = 255;
 
 void seq_intro() {
+    unsigned char animtext_bright = 63;
     unsigned char animtext_color = animtext_color_init;
     const unsigned char at_interval = 120u / 20ul; /* 20 chars/second */
     int animtext_lineheight = 14;
@@ -873,6 +875,9 @@ void seq_intro() {
             if (*animtext != 0) {
                 switch (*animtext) {
                     case 0x01: // clear text
+                        animtext_bright = 63;
+                        vga_palette_lseek(0xFF);
+                        vga_palette_write(animtext_bright,animtext_bright,animtext_bright);
                         animtext_x = animtext_init_x;
                         animtext_y = animtext_init_y;
                         vga_write_sequencer(0x02/*map mask*/,0x0F);
@@ -887,6 +892,21 @@ void seq_intro() {
                     case 0x03: // 1-sec pause
                         atcount = last_atcount + 120ul;
                         animtext++;
+                        break;
+                    case 0x04: // fade out
+                        if (animtext_bright > 0) {
+                            atcount = last_atcount + (120ul / 60ul);
+                            if (animtext_bright >= 4)
+                                animtext_bright -= 4;
+                            else
+                                animtext_bright = 0;
+
+                            vga_palette_lseek(0xFF);
+                            vga_palette_write(animtext_bright,animtext_bright,animtext_bright);
+                        }
+                        else {
+                            animtext++; /* do not advance until fade out */
+                        }
                         break;
                     case '\n': // newline
                         animtext_x = animtext_init_x;
