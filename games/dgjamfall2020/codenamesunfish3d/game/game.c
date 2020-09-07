@@ -318,6 +318,39 @@ fail:
 #undef TMP_SZ
 }
 
+/* decode UTF-8 unicode character.
+ * returns 0 at end of string or on invalid encoding */
+/* [https://en.wikipedia.org/wiki/UTF-8] */
+uint32_t utf8decode(const char **ptr) {
+    const char *p = *ptr;
+    uint32_t ret = 0;
+
+    if (p == NULL) return 0;
+    ret = (unsigned char)(*p++);
+
+    /* 0xFE-0xFF            invalid
+     * 0xFC-0xFD            6-byte UTF-8 TODO
+     * 0xF8-0xFB            5-byte UTF-8 TODO
+     * 0xF0-0xF7            4-byte UTF-8 TODO
+     * 0xE0-0xEF            3-byte UTF-8 TODO
+     * 0xC0-0xDF            2-byte UTF-8 TODO
+     * 0x80-0xBF            invalid (we're in the middle of a UTF-8 char)
+     * 0x00-0x7F            1-byte plain ASCII */
+    if (ret >= 0xC0) { /* 2-byte */
+        /* [110x xxxx] [10xx xxxx]  5+6 = 11 bits */
+        ret = (ret & 0x1Ful) << 6ul;
+        if (((*p) & 0xC0) != 0x80) goto stop;
+        ret += ((unsigned char)(*p++)) & 0x3Ful;
+    }
+    else if (ret >= 0x80) { /* invalid */
+        ret = 0;
+    }
+
+stop:
+    *ptr = p;
+    return ret;
+}
+
 /*---------------------------------------------------------------------------*/
 /* font handling                                                             */
 /*---------------------------------------------------------------------------*/
@@ -454,14 +487,14 @@ int font_bmp_do_load(struct font_bmp **fnt,const char *path) {
 }
 
 /* yes, we use unicode (UTF-8) strings here in this DOS application! */
-int font_bmp_unicode_to_chardef(struct font_bmp *fnt,unsigned int c) {
-    if (fnt != NULL) {
+int font_bmp_unicode_to_chardef(struct font_bmp *fnt,uint32_t c) {
+    if (fnt != NULL && c < 0x10000ul) {
         if (fnt->chardef != NULL) {
             unsigned int i;
 
             /* NTS: I know, this is very inefficient. Later revisions will add a faster method */
             for (i=0;i < fnt->chardef_count;i++) {
-                if (fnt->chardef[i].id == c)
+                if (fnt->chardef[i].id == (uint16_t)c)
                     return i;
             }
         }
@@ -768,27 +801,27 @@ void seq_intro() {
             {
                 const char *str = "Hello world! Tiny text!";
                 unsigned int x=5,y=5;
-                char c;
+                uint32_t c;
 
-                while ((c = (*str++)) != 0)
+                while ((c = utf8decode(&str)) != 0ul)
                     x = font_bmp_draw_chardef(arial_small,font_bmp_unicode_to_chardef(arial_small,c),x,y,0x5F);
             }
 
             {
                 const char *str = "Hello world!";
-                unsigned int x=5,y=15;
+                unsigned int x=5,y=15,i=64;
                 char c;
 
-                while ((c = (*str++)) != 0)
+                while ((c = utf8decode(&str)) != 0ul && --i != 0)
                     x = font_bmp_draw_chardef(arial_medium,font_bmp_unicode_to_chardef(arial_medium,c),x,y,0x5F);
             }
 
             {
                 const char *str = "Hello world!";
-                unsigned int x=5,y=28;
+                unsigned int x=5,y=28,i=64;
                 char c;
 
-                while ((c = (*str++)) != 0)
+                while ((c = utf8decode(&str)) != 0ul && --i != 0)
                     x = font_bmp_draw_chardef(arial_large,font_bmp_unicode_to_chardef(arial_large,c),x,y,0x5F);
             }
 
