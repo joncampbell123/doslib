@@ -336,6 +336,8 @@ struct font_bmp *font_bmp_load(const char *path) {
                 minipng_reader_read_idat(rdr,imgptr,fnt->stride); /* row */
                 imgptr += fnt->stride;
             }
+
+            minipng_reader_reset_idat(rdr);
         }
 
         minipng_reader_close(&rdr);
