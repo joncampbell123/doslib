@@ -899,20 +899,27 @@ void seq_intro() {
             if (anim == 0) {
                 if (rzbkload(atpbseg,"wxpbrz.png"))
                     fatal("wxpbrz.png");
+
+                nanim_count = ccount = counter_read();
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
                 if (rzbkload(atpbseg,"atmpbrz.png"))
                     fatal("atmpbrz.png");
+
+                nanim_count = ccount = counter_read();
             }
 
             vrl_anim_interval = (uint16_t)(timer_tick_rate / anim_seq[anim].frame_rate);
             vrl_image_select = anim_seq[anim].init_frame;
             vrl_image_dir = anim_seq[anim].init_dir;
+
+            nf_count = nanim_count + vrl_anim_interval;
+            atcount = nanim_count + at_interval;
+
+            animtext = anim_text[anim];
+
             nanim_count += anim_seq[anim].duration;
             if (nanim_count < ccount) nanim_count = ccount;
-            nf_count = ccount + vrl_anim_interval;
-            atcount = ccount + at_interval;
-            animtext = anim_text[anim];
             redraw = 1;
         }
         else if (anim == 0 || anim == 3) {
