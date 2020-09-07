@@ -316,7 +316,7 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
     {   120*10, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
     {   120*8,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
-    {   120*10, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
+    {   120*12, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
 static uint32_t atpb_init_count;
@@ -516,7 +516,7 @@ void seq_intro() {
             }
 
             if (!(anim_seq[anim].flags & SEQANF_OFF)) {
-                draw_vrl1_vgax_modex(70,10,
+                draw_vrl1_vgax_modex(70,0,
                     vrl_image[vrl_image_select].vrl_header,
                     vrl_image[vrl_image_select].vrl_lineoffs,
                     vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
