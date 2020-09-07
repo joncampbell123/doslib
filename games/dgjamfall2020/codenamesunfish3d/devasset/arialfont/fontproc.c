@@ -393,7 +393,7 @@ static int save_out_png(void) {
     /* chardef */
     {
         const unsigned int unitsz = (2/*id*/+1/*x*/+1/*y*/+1/*w*/+1/*h*/+1/*xoffset*/+1/*yoffset*/+1/*xadvance*/); /* == 9 */
-        unsigned int sz = unitsz * chardef_count;
+        const unsigned int sz = unitsz * chardef_count;
 
         assert(sz <= sizeof(temp));
 
@@ -415,15 +415,23 @@ static int save_out_png(void) {
     }
 
     /* kerndef */
-    png_write_chunk_start(png_context, (png_const_bytep)("kDEF"), (2/*first*/+2/*second*/+1/*amount*/) * kerndef_count);
-    for (i=0;i < kerndef_count;i++) {
-        struct kerndef *kdef = &kerndefs[i];
-        *((uint16_t*)(temp+0)) = htole16(kdef->first);
-        *((uint16_t*)(temp+2)) = htole16(kdef->second);
-        *((int8_t  *)(temp+4)) = kdef->amount;
-        png_write_chunk_data(png_context, temp, (2/*first*/+2/*second*/+1/*amount*/));
+    {
+        const unsigned int unitsz = (2/*first*/+2/*second*/+1/*amount*/); /* == 5 */
+        const unsigned int sz = unitsz * kerndef_count;
+
+        assert(sz <= sizeof(temp));
+
+        for (i=0;i < kerndef_count;i++) {
+            const struct kerndef *kdef = &kerndefs[i];
+            unsigned char *d = temp + (i * unitsz);
+
+            *((uint16_t*)(d+0)) = htole16(kdef->first);
+            *((uint16_t*)(d+2)) = htole16(kdef->second);
+            *((int8_t  *)(d+4)) = kdef->amount;
+        }
+
+        png_write_chunk(png_context, (png_const_bytep)("kDEF"), temp, sz);
     }
-    png_write_chunk_end(png_context);
 
     /* success */
     ret = 0;
