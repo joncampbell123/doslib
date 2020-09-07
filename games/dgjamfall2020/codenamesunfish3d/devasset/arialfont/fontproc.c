@@ -148,6 +148,12 @@ int read_fnt(void) {
     printf("font: %u chardefs, %u kerndefs\n",chardef_count,kerndef_count);
     printf("uses: %u x %u\n",img_used_w,img_used_h);
 
+    /* 1bpp PNGs encode 8 bits per pixel whether or not you use all of them */
+    if (gen_png_bit_depth == 1)
+        img_used_w = (img_used_w + 7u) & (~7u);
+
+    printf("crop: %u x %u\n",img_used_w,img_used_h);
+
     fclose(fp);
     return 0;
 }
@@ -396,9 +402,9 @@ int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
 
-    if (read_fnt())
-        return 1;
     if (load_in_png())
+        return 1;
+    if (read_fnt())
         return 1;
     if (save_out_png())
         return 1;
