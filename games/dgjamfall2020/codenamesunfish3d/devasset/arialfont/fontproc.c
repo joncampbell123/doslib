@@ -425,11 +425,7 @@ static int save_out_png(void) {
                 return 1;
             }
 
-            if (deflate(&z,Z_NO_FLUSH) != Z_OK) {
-                fprintf(stderr,"Deflate error\n");
-                return 1;
-            }
-            if (deflate(&z,Z_FULL_FLUSH) != Z_OK) {
+            if (deflate(&z,Z_FINISH) != Z_STREAM_END) {
                 fprintf(stderr,"Deflate error\n");
                 return 1;
             }
@@ -477,11 +473,7 @@ static int save_out_png(void) {
                 return 1;
             }
 
-            if (deflate(&z,Z_NO_FLUSH) != Z_OK) {
-                fprintf(stderr,"Deflate error\n");
-                return 1;
-            }
-            if (deflate(&z,Z_FULL_FLUSH) != Z_OK) {
+            if (deflate(&z,Z_FINISH) != Z_STREAM_END) {
                 fprintf(stderr,"Deflate error\n");
                 return 1;
             }
