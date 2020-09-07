@@ -723,6 +723,10 @@ void seq_intro() {
     int redraw = 1;
     int c;
 
+    /* need arial medium */
+    if (font_bmp_do_load_arial_medium())
+        fatal("cannot load arial font");
+
     /* the rotozoomer effect needs a sin lookup table */
     atpb_sin2048_table = malloc(sizeof(uint16_t) * 2048);
     if (atpb_sin2048_table == NULL) fatal("sorcwoo.sin missing");
@@ -822,30 +826,12 @@ void seq_intro() {
             }
 
             {
-                const char *str = "Hello world! Tiny text!";
-                unsigned int x=5,y=5;
-                uint32_t c;
-
-                while ((c = utf8decode(&str)) != 0ul)
-                    x = font_bmp_draw_chardef(arial_small,font_bmp_unicode_to_chardef(arial_small,c),x,y,0x5F);
-            }
-
-            {
                 const char *str = "Hello world! ©¼Üá†yes"; // <- UTF-8 text!
                 unsigned int x=5,y=15;
                 uint32_t c;
 
                 while ((c = utf8decode(&str)) != 0ul)
                     x = font_bmp_draw_chardef(arial_medium,font_bmp_unicode_to_chardef(arial_medium,c),x,y,0x5F);
-            }
-
-            {
-                const char *str = "Hello world!";
-                unsigned int x=5,y=28;
-                uint32_t c;
-
-                while ((c = utf8decode(&str)) != 0ul)
-                    x = font_bmp_draw_chardef(arial_large,font_bmp_unicode_to_chardef(arial_large,c),x,y,0x5F);
             }
 
             vga_swap_pages(); /* current <-> next */
@@ -927,13 +913,6 @@ int main() {
     probe_emm();            // expanded memory support
     probe_himem_sys();      // extended memory support
 #endif
-
-    if (font_bmp_do_load_arial_small())
-        fatal("cannot load arial font");
-    if (font_bmp_do_load_arial_medium())
-        fatal("cannot load arial font");
-    if (font_bmp_do_load_arial_large())
-        fatal("cannot load arial font");
 
     init_timer_irq();
     init_vga256unchained();
