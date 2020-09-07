@@ -413,13 +413,17 @@ static int save_out_png(void) {
 
         if (sz >= 96) {
             z_stream z;
-            int err;
+
+            /* add a 16-bit unsigned int at the start so the program reading this
+             * knows how much memory to allocate instead of guessing and possibly
+             * causing buffer overruns or problems reading. */
+            *((uint16_t*)(temp2+0)) = htole16(chardef_count);
 
             memset(&z,0,sizeof(z));
             z.next_in = temp;
             z.avail_in = sz;
-            z.next_out = temp2;
-            z.avail_out = sizeof(temp2);
+            z.next_out = temp2+2;
+            z.avail_out = sizeof(temp2)-2;
             if (deflateInit(&z, 9) != Z_OK) {
                 fprintf(stderr,"Deflate error\n");
                 return 1;
@@ -461,13 +465,17 @@ static int save_out_png(void) {
 
         if (sz >= 96) {
             z_stream z;
-            int err;
+
+            /* add a 16-bit unsigned int at the start so the program reading this
+             * knows how much memory to allocate instead of guessing and possibly
+             * causing buffer overruns or problems reading. */
+            *((uint16_t*)(temp2+0)) = htole16(kerndef_count);
 
             memset(&z,0,sizeof(z));
             z.next_in = temp;
             z.avail_in = sz;
-            z.next_out = temp2;
-            z.avail_out = sizeof(temp2);
+            z.next_out = temp2+2;
+            z.avail_out = sizeof(temp2)-2;
             if (deflateInit(&z, 9) != Z_OK) {
                 fprintf(stderr,"Deflate error\n");
                 return 1;
