@@ -617,6 +617,22 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
     {   120*12, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
 
+/* message strings.
+ * \n   moves to the next line
+ * \x01 clears the text
+ * \x02 pauses for 1/4th of a second
+ * \x03 pauses for 1 second */
+const char *anim_text[ANIM_SEQS] = {
+    // 0
+    "\x01I am the coolest programmer ever!\nI write super awesome optimized code!\x03\x01Wooooooo I'm so cool!",
+    // 1
+    "\x01Oh great and awesome programmer and creator of our game world.\nWhat is our purpose in this game?",
+    // 2
+    "\x01Uhm\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.",
+    // 3
+    "\x01I write super optimized clever awesome highly portable code! I am the coolest programmer ever!\nWooooooooooooo!"
+};
+
 static uint32_t atpb_init_count;
 
 static uint16_t *atpb_sin2048_table = NULL;         // 2048-sample sin(x) quarter wave lookup table (0....0x7FFF)
@@ -711,10 +727,21 @@ crloop:
     }
 }
 
+static const int animtext_init_x = 10;
+static const int animtext_init_y = 168;
+static const unsigned char animtext_color_init = 63;
+
 void seq_intro() {
+    unsigned char animtext_color = animtext_color_init;
+    const unsigned char at_interval = 120u / 20ul; /* 20 chars/second */
+    int animtext_lineheight = 14;
+    int animtext_x = animtext_init_x;
+    int animtext_y = animtext_init_y;
+    struct font_bmp *animtext_fnt = NULL;
+    const char *animtext = "";
     uint32_t nanim_count = 0;
     uint16_t vrl_anim_interval = 0;
-    uint32_t nf_count = 0,ccount = 0;
+    uint32_t nf_count = 0,ccount = 0,atcount = 0;
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
     signed char vrl_image_dir = 0;
     int vrl_image_select = 0;
@@ -726,6 +753,8 @@ void seq_intro() {
     /* need arial medium */
     if (font_bmp_do_load_arial_medium())
         fatal("cannot load arial font");
+
+    animtext_fnt = arial_medium;
 
     /* the rotozoomer effect needs a sin lookup table */
     atpb_sin2048_table = malloc(sizeof(uint16_t) * 2048);
@@ -787,7 +816,7 @@ void seq_intro() {
         }
     }
 
-    atpb_init_count = nanim_count = ccount = counter_read();
+    atpb_init_count = atcount = nanim_count = ccount = counter_read();
     anim = -1; /* increment to zero in loop */
 
     vga_clear_npage();
@@ -801,6 +830,8 @@ void seq_intro() {
             nanim_count += anim_seq[anim].duration;
             if (nanim_count < ccount) nanim_count = ccount;
             nf_count = ccount + vrl_anim_interval;
+            atcount = ccount + at_interval;
+            animtext = anim_text[anim];
             redraw = 1;
         }
         else if (anim == 0 || anim == 3) {
@@ -828,6 +859,57 @@ void seq_intro() {
             vga_swap_pages(); /* current <-> next */
             vga_update_disp_cur_page();
             vga_wait_for_vsync(); /* wait for vsync */
+        }
+
+        if (ccount >= atcount) {
+            uint32_t last_atcount = atcount;
+
+            atcount += at_interval;
+
+            if (*animtext != 0) {
+                switch (*animtext) {
+                    case 0x01: // clear text
+                        animtext_x = animtext_init_x;
+                        animtext_y = animtext_init_y;
+                        vga_write_sequencer(0x02/*map mask*/,0x0F);
+                        vga_rep_stosw((unsigned char far*)MK_FP(0xA000,((320u/4u)*168u)+VGA_PAGE_FIRST),0,((320u/4u)*(200u-168u))/2u);
+                        vga_rep_stosw((unsigned char far*)MK_FP(0xA000,((320u/4u)*168u)+VGA_PAGE_SECOND),0,((320u/4u)*(200u-168u))/2u);
+                        animtext++;
+                        break;
+                    case 0x02: // 1/4-sec pause
+                        atcount = last_atcount + (120ul / 4ul);
+                        animtext++;
+                        break;
+                    case 0x03: // 1-sec pause
+                        atcount = last_atcount + 120ul;
+                        animtext++;
+                        break;
+                    case '\n': // newline
+                        animtext_x = animtext_init_x;
+                        animtext_y += animtext_lineheight;//FIXME: Font should specify height
+                        animtext++;
+                        break;
+                    default: // print text
+                        {
+                            const uint32_t c = utf8decode(&animtext);
+                            if (c != 0ul) {
+                                unsigned char far *sp = vga_state.vga_graphics_ram;
+                                const uint32_t cdef = font_bmp_unicode_to_chardef(animtext_fnt,c);
+
+                                vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_FIRST);
+                                font_bmp_draw_chardef(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
+
+                                vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_SECOND);
+                                animtext_x = font_bmp_draw_chardef(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
+
+                                vga_state.vga_graphics_ram = sp;
+                            }
+                        }
+                        break;
+                }
+            }
+
+            if (atcount < ccount) atcount = ccount;
         }
 
         if (kbhit()) {
