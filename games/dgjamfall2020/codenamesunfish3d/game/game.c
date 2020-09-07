@@ -385,24 +385,23 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
             push    ds
             mov     ds,imgseg
             mov     dx,fcx          ; DX = fractional X coord
-            mov     bx,fcy          ; BX = fractional Y coord
+            mov     si,fcy          ; SI = fractional Y coord
 
 crloop:
-            ; SI = (BX & 0xFF00) + (DX >> 8)
+            ; BX = (SI & 0xFF00) + (DX >> 8)
             ;   but DX/BX are the general registers with hi/lo access so
-            ; SI = (BH << 8) + DH
+            ; BX = (SI & 0xFF00) + DH
             ; by the way on anything above a 386 that sort of optimization stuff doesn't help performance.
             ; later (Pentium Pro) processors don't like it when you alternate between DH/DL and DX because
-            ; of the way the processor works internally.
-            mov     ah,bh
-            mov     al,dh
-            mov     si,ax
-            mov     al,[si]
+            ; of the way the processor works internally regarding out of order execution and register renaming.
+            mov     bx,si
+            mov     bl,dh
+            mov     al,[bx]
             stosb
             add     di,79           ; stosb / add di,79  is equivalent to  mov es:[di],al / add di,80
 
             add     dx,sy2
-            sub     bx,sx2
+            sub     si,sx2
 
             loop    crloop
             pop     ds
