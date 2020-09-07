@@ -453,6 +453,23 @@ int font_bmp_do_load(struct font_bmp **fnt,const char *path) {
     return 0;
 }
 
+/* yes, we use unicode (UTF-8) strings here in this DOS application! */
+int font_bmp_unicode_to_chardef(struct font_bmp *fnt,unsigned int c) {
+    if (fnt != NULL) {
+        if (fnt->chardef != NULL) {
+            unsigned int i;
+
+            /* NTS: I know, this is very inefficient. Later revisions will add a faster method */
+            for (i=0;i < fnt->chardef_count;i++) {
+                if (fnt->chardef[i].id == c)
+                    return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsigned int x,unsigned int y,unsigned char color) {
     unsigned int nx = x;
 
@@ -749,15 +766,30 @@ void seq_intro() {
             }
 
             {
-                unsigned int i,x=5,y=5;
+                const char *str = "Hello world! Tiny text!";
+                unsigned int x=5,y=5;
+                char c;
 
-                for (i=0;i < arial_medium->chardef_count;i++) {
-                    x = font_bmp_draw_chardef(arial_large,i/*cdef*/,x,y,0x5F);
-                    if (x >= 300) {
-                        x = 5;
-                        y += 16;
-                    }
-                }
+                while ((c = (*str++)) != 0)
+                    x = font_bmp_draw_chardef(arial_small,font_bmp_unicode_to_chardef(arial_small,c),x,y,0x5F);
+            }
+
+            {
+                const char *str = "Hello world!";
+                unsigned int x=5,y=15;
+                char c;
+
+                while ((c = (*str++)) != 0)
+                    x = font_bmp_draw_chardef(arial_medium,font_bmp_unicode_to_chardef(arial_medium,c),x,y,0x5F);
+            }
+
+            {
+                const char *str = "Hello world!";
+                unsigned int x=5,y=28;
+                char c;
+
+                while ((c = (*str++)) != 0)
+                    x = font_bmp_draw_chardef(arial_large,font_bmp_unicode_to_chardef(arial_large,c),x,y,0x5F);
             }
 
             vga_swap_pages(); /* current <-> next */
