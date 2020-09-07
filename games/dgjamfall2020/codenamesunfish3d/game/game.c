@@ -612,7 +612,7 @@ const char *seq_intro_sorc_vrl[VRL_IMAGE_FILES] = {
 struct seq_anim_i anim_seq[ANIM_SEQS] = {
     /*  dur     fr      if      minf    maxf    fl,                 init_dir */
     {   120*10, 15,     0,      0,      8,      SEQANF_PINGPONG,    1}, // 0
-    {   120*8,  1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
+    {   120*10, 1,      0,      0,      0,      SEQANF_OFF,         0}, // 1 [sorc disappears]
     {   120*4,  1,      9,      9,      9,      0,                  0}, // 2
     {   120*12, 30,     10,     10,     18,     SEQANF_PINGPONG,    1}  // 3
 };
@@ -624,13 +624,13 @@ struct seq_anim_i anim_seq[ANIM_SEQS] = {
  * \x03 pauses for 1 second */
 const char *anim_text[ANIM_SEQS] = {
     // 0
-    "\x01I am the coolest programmer ever!\nI write super awesome optimized code!\x03\x01Wooooooo I'm so cool!",
+    "\x01I am the coolest programmer ever!\nI write super awesome optimized code!\x03\x03\x03\x01Wooooooo I'm so cool!",
     // 1
-    "\x01Oh great and awesome programmer and creator of our game world.\nWhat is our purpose in this game?",
+    "\x01Oh great and awesome programmer and\ncreator of our game world.\x03\x03\x03\x01What is our purpose in this game?",
     // 2
     "\x01Uhm\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.\x02.",
     // 3
-    "\x01I write super optimized clever awesome highly portable code! I am the coolest programmer ever!\nWooooooooooooo!"
+    "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x01Wooooooooooooo!"
 };
 
 static uint32_t atpb_init_count;
