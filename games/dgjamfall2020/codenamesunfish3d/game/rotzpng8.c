@@ -35,7 +35,7 @@
 #include "rotozoom.h"
 
 /* atomic playboy background 256x256 */
-int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path) {
+int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path,unsigned char palofs) {
     struct minipng_reader *rdr;
 
     /* WARNING: Code assumes 16-bit large memory model! */
@@ -59,7 +59,7 @@ int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path) {
 
         {
             const unsigned char *p = (const unsigned char*)(rdr->plte);
-            vga_palette_lseek(ATOMPB_PAL_OFFSET);
+            vga_palette_lseek(palofs);
             for (i=0;i < rdr->plte_count;i++)
                 vga_palette_write(p[(i*3)+0]>>2,p[(i*3)+1]>>2,p[(i*3)+2]>>2);
         }

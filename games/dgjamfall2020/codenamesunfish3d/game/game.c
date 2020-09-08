@@ -169,13 +169,13 @@ void seq_intro() {
             if ((++anim) >= ANIM_SEQS) break;
 
             if (anim == 0) {
-                if (rotozoomerpngload(rotozoomerimgseg,"wxpbrz.png"))
+                if (rotozoomerpngload(rotozoomerimgseg,"wxpbrz.png",ATOMPB_PAL_OFFSET))
                     fatal("wxpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
-                if (rotozoomerpngload(rotozoomerimgseg,"atmpbrz.png"))
+                if (rotozoomerpngload(rotozoomerimgseg,"atmpbrz.png",ATOMPB_PAL_OFFSET))
                     fatal("atmpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
