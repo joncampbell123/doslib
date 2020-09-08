@@ -21,6 +21,7 @@
 #include <fmt/minipng/minipng.h>
 
 #include "timer.h"
+#include "vrlimg.h"
 #include "unicode.h"
 #include "commtmp.h"
 
@@ -40,34 +41,6 @@ struct seq_anim_i {
 
 #define SEQANF_PINGPONG     (0x01u)
 #define SEQANF_OFF          (0x02u)
-
-/*---------------------------------------------------------------------------*/
-/* VRL image structure                                                       */
-/*---------------------------------------------------------------------------*/
-
-struct vrl_image {
-    struct vrl1_vgax_header*        vrl_header;
-    vrl1_vgax_offset_t*             vrl_lineoffs;
-    unsigned char*                  buffer;
-    unsigned int                    bufsz;
-};
-
-/*---------------------------------------------------------------------------*/
-/* free VRL                                                                  */
-/*---------------------------------------------------------------------------*/
-
-void free_vrl(struct vrl_image *img) {
-    if (img->buffer != NULL) {
-        free(img->buffer);
-        img->buffer = NULL;
-    }
-    if (img->vrl_lineoffs != NULL) {
-        free(img->vrl_lineoffs);
-        img->vrl_lineoffs = NULL;
-    }
-    img->vrl_header = NULL;
-    img->bufsz = 0;
-}
 
 /*---------------------------------------------------------------------------*/
 /* load VRL from file descriptor at current position, specified size         */
