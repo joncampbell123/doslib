@@ -197,6 +197,22 @@ int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path) {
     return 0;
 }
 
+unsigned rotozoomer_imgalloc(void) {
+    unsigned s;
+
+    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&s) != 0)
+        return 0;
+
+    return s;
+}
+
+void rotozoomer_imgfree(unsigned *s) {
+    if (*s != 0) {
+        _dos_freemem(*s);
+        *s = 0;
+    }
+}
+
 void seq_intro() {
     uint32_t rotozoomer_init_count;
     unsigned char animtext_bright = 63;
@@ -227,16 +243,10 @@ void seq_intro() {
         fatal("cannot open sorcwoo pack");
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
+    if ((rotozoomerimgseg=rotozoomer_imgalloc()) == 0)
+        fatal("rotozoomer bkgnd");
 
     animtext_fnt = arial_medium;
-
-    /* our assets are in a pack now */
-
-    /* the rotozoomer effect needs a sin lookup table */
-
-    /* rotozoomer background */
-    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&rotozoomerimgseg) != 0)
-        fatal("seq_intro: failed atmpbrz.png");
 
     /* text color */
     vga_palette_lseek(0xFF);
@@ -427,7 +437,7 @@ void seq_intro() {
     /* sinus table */
     sin2048fps16_free();
     /* atomic playboy image seg */
-    _dos_freemem(rotozoomerimgseg);
+    rotozoomer_imgfree(&rotozoomerimgseg);
     /* VRLs */
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
