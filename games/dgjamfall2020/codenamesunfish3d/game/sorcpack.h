@@ -28,3 +28,5 @@ extern struct dumbpack *sorc_pack;
                             //=21 (0x15)
  */
 
+int sorc_pack_open(void);
+

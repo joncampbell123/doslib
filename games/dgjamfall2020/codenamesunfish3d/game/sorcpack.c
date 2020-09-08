@@ -35,3 +35,12 @@
 
 struct dumbpack *sorc_pack = NULL;
 
+int sorc_pack_open(void) {
+    if (sorc_pack == NULL) {
+        if ((sorc_pack=dumbpack_open("sorcwoo.vrp")) == NULL)
+            return -1;
+    }
+
+    return 0;
+}
+

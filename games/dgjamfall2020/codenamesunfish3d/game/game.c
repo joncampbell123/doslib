@@ -223,12 +223,12 @@ void seq_intro() {
     /* need arial medium */
     if (font_bmp_do_load_arial_medium())
         fatal("cannot load arial font");
+    if (sorc_pack_open())
+        fatal("cannot open sorcwoo pack");
 
     animtext_fnt = arial_medium;
 
     /* our assets are in a pack now */
-    if ((sorc_pack=dumbpack_open("sorcwoo.vrp")) == NULL)
-        fatal("cannot open sorcwoo pack");
     if (sorc_pack->offset_count < PACK_REQ)
         fatal("cannot open sorcwoo pack");
 
