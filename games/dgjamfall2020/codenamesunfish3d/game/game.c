@@ -740,7 +740,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_CLEAR,     SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE,0,NULL},
+    {SEQAEV_TEXT_CLEAR,     SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE},
     {SEQAEV_TEXT,           SEQAEV_TEXT_FLAG_NOWAIT,0,"Instant text display!\nWoo yeah!"},
     {SEQAEV_TEXT_FADEIN,    0,          0,          NULL},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
