@@ -163,7 +163,7 @@ static const int animtext_init_y = 168;
 static const unsigned char animtext_color_init = 255;
 
 /* atomic playboy background 256x256 */
-int rzbkload(unsigned rotozoomerimgseg,const char *path) {
+int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path) {
     struct minipng_reader *rdr;
 
     /* WARNING: Code assumes 16-bit large memory model! */
@@ -272,13 +272,13 @@ void seq_intro() {
             if ((++anim) >= ANIM_SEQS) break;
 
             if (anim == 0) {
-                if (rzbkload(rotozoomerimgseg,"wxpbrz.png"))
+                if (rotozoomerpngload(rotozoomerimgseg,"wxpbrz.png"))
                     fatal("wxpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
-                if (rzbkload(rotozoomerimgseg,"atmpbrz.png"))
+                if (rotozoomerpngload(rotozoomerimgseg,"atmpbrz.png"))
                     fatal("atmpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
