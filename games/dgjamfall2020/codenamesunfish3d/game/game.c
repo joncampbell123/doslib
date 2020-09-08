@@ -20,7 +20,15 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
+/*---------------------------------------------------------------------------*/
+/* common tmp buffers                                                        */
+/*---------------------------------------------------------------------------*/
+
 unsigned char common_tmp_small[1024];
+
+/*---------------------------------------------------------------------------*/
+/* animation sequence defs                                                   */
+/*---------------------------------------------------------------------------*/
 
 struct seq_anim_i {
     unsigned int        duration;       // in ticks
@@ -34,6 +42,10 @@ struct seq_anim_i {
 
 #define SEQANF_PINGPONG     (0x01u)
 #define SEQANF_OFF          (0x02u)
+
+/*---------------------------------------------------------------------------*/
+/* timer tick management                                                     */
+/*---------------------------------------------------------------------------*/
 
 uint32_t counter;
 uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
@@ -91,12 +103,20 @@ void restore_timer_irq() {
     }
 }
 
+/*---------------------------------------------------------------------------*/
+/* VRL image structure                                                       */
+/*---------------------------------------------------------------------------*/
+
 struct vrl_image {
     struct vrl1_vgax_header*        vrl_header;
     vrl1_vgax_offset_t*             vrl_lineoffs;
     unsigned char*                  buffer;
     unsigned int                    bufsz;
 };
+
+/*---------------------------------------------------------------------------*/
+/* free VRL                                                                  */
+/*---------------------------------------------------------------------------*/
 
 void free_vrl(struct vrl_image *img) {
     if (img->buffer != NULL) {
@@ -110,6 +130,10 @@ void free_vrl(struct vrl_image *img) {
     img->vrl_header = NULL;
     img->bufsz = 0;
 }
+
+/*---------------------------------------------------------------------------*/
+/* load VRL from file descriptor at current position, specified size         */
+/*---------------------------------------------------------------------------*/
 
 int load_vrl_fd(struct vrl_image *img,int fd,unsigned long sz) {
     struct vrl1_vgax_header *vrl_header;
@@ -146,6 +170,10 @@ fail:
     if (buffer != NULL) free(buffer);
     return 1;
 }
+
+/*---------------------------------------------------------------------------*/
+/* load VRL from file                                                        */
+/*---------------------------------------------------------------------------*/
 
 int load_vrl(struct vrl_image *img,const char *path) {
     struct vrl1_vgax_header *vrl_header;
@@ -193,6 +221,10 @@ fail:
     return 1;
 }
 
+/*---------------------------------------------------------------------------*/
+/* write buffer to VGA palette                                               */
+/*---------------------------------------------------------------------------*/
+
 void pal_buf_to_vga(unsigned int offset,unsigned int count,unsigned char *palette) {
     unsigned int i;
 
@@ -200,27 +232,9 @@ void pal_buf_to_vga(unsigned int offset,unsigned int count,unsigned char *palett
     for (i=0;i < count;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
 }
 
-int pal_load_to_vga(unsigned int offset,unsigned int count,const char *path) {
-    unsigned char *palette;
-    int fd,ret=-1;
-
-    /* load color palette */
-    fd = open(path,O_RDONLY|O_BINARY);
-    if (fd >= 0) {
-        palette = malloc(3u*count);
-        if (palette != NULL) {
-            read(fd,palette,3u*count);
-            close(fd);
-
-            pal_buf_to_vga(offset,count,palette);
-
-            free(palette);
-            ret = 0;
-        }
-    }
-
-    return 0;
-}
+/*---------------------------------------------------------------------------*/
+/* vga page flipping management                                              */
+/*---------------------------------------------------------------------------*/
 
 #define VGA_PAGE_FIRST          0x0000
 #define VGA_PAGE_SECOND         0x4000
@@ -229,11 +243,19 @@ int pal_load_to_vga(unsigned int offset,unsigned int count,const char *path) {
 VGA_RAM_PTR orig_vga_graphics_ram;
 unsigned int vga_cur_page,vga_next_page;
 
+/*---------------------------------------------------------------------------*/
+/* vga, swap current and next page pointers (not yet CRTC)                   */
+/*---------------------------------------------------------------------------*/
+
 void vga_swap_pages() {
     vga_cur_page = vga_next_page;
     vga_next_page = (vga_next_page ^ 0x4000) & 0x7FFF;
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
 }
+
+/*---------------------------------------------------------------------------*/
+/* vga, update current page to hardware (reprogram CRTC)                     */
+/*---------------------------------------------------------------------------*/
 
 void vga_update_disp_cur_page() {
     /* make sure the CRTC is not in the blanking portions or vsync
@@ -248,6 +270,10 @@ void vga_update_disp_cur_page() {
     vga_set_start_location(vga_cur_page);
 }
 
+/*---------------------------------------------------------------------------*/
+/* vga fast memory clear function                                            */
+/*---------------------------------------------------------------------------*/
+
 static unsigned int vga_rep_stosw(const unsigned char far * const vp,const uint16_t v,const unsigned int wc);
 #pragma aux vga_rep_stosw = \
     "rep stosw" \
@@ -255,10 +281,18 @@ static unsigned int vga_rep_stosw(const unsigned char far * const vp,const uint1
     modify [di cx] \
     value [di];
 
+/*---------------------------------------------------------------------------*/
+/* clear next VGA page                                                       */
+/*---------------------------------------------------------------------------*/
+
 void vga_clear_npage() {
     vga_write_sequencer(0x02/*map mask*/,0xF);
     vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
 }
+
+/*---------------------------------------------------------------------------*/
+/* set VGA 256-color mode unchained                                          */
+/*---------------------------------------------------------------------------*/
 
 void init_vga256unchained() {
     vga_cur_page=VGA_PAGE_FIRST;
@@ -286,13 +320,25 @@ void init_vga256unchained() {
     vga_set_start_location(vga_cur_page);
 }
 
+/*---------------------------------------------------------------------------*/
+/* restore text mode (and possibly DOS prompt)                               */
+/*---------------------------------------------------------------------------*/
+
 void restore_text_mode() {
     int10_setmode(3);
 }
 
+/*---------------------------------------------------------------------------*/
+/* unhook IRQ call                                                           */
+/*---------------------------------------------------------------------------*/
+
 void unhook_irqs() {
     restore_timer_irq();
 }
+
+/*---------------------------------------------------------------------------*/
+/* fatal abort                                                               */
+/*---------------------------------------------------------------------------*/
 
 void fatal(const char *msg,...) {
     va_list va;
@@ -309,6 +355,10 @@ void fatal(const char *msg,...) {
 
     exit(1);
 }
+
+/*------------------------------------------------------------------------------------*/
+/* help routine: read zlib data from file of size srcsz, decompress to buf of size sz */
+/*------------------------------------------------------------------------------------*/
 
 int file_zlib_decompress(int fd,unsigned char *buf,unsigned int sz,uint32_t srcsz) {
 #define TMP_SZ 1024
@@ -355,6 +405,10 @@ fail:
     return -1;
 #undef TMP_SZ
 }
+
+/*---------------------------------------------------------------------------*/
+/* utf-8 unicode decoding                                                    */
+/*---------------------------------------------------------------------------*/
 
 /* decode UTF-8 unicode character.
  * returns 0 at end of string or on invalid encoding */
