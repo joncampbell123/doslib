@@ -393,8 +393,11 @@ struct seqcanvas_layer_t {
 #define SEQAF_END                   (1u << 1u)
 #define SEQAF_TEXT_PALCOLOR_UPDATE  (1u << 2u)
 
+/* param1 of SEQAEV_TEXT_CLEAR */
+#define SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE (1u << 0u)
+
 /* param1 of SEQAEV_TEXT */
-#define SEQAEV_TEXT_FLAG_NOWAIT     (1u << 0u)
+#define SEQAEV_TEXT_FLAG_NOWAIT         (1u << 0u)
 
 enum {
     SEQAEV_END=0,                   /* end of sequence */
@@ -534,10 +537,13 @@ void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     sa->text.x = sa->text.home_x;
     sa->text.y = sa->text.home_y;
     sa->text.color = 0xFF;
-    sa->text.palcolor[0] = sa->text.def_palcolor[0];
-    sa->text.palcolor[1] = sa->text.def_palcolor[1];
-    sa->text.palcolor[2] = sa->text.def_palcolor[2];
-    sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+
+    if (!(e->param1 & SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE)) {
+        sa->text.palcolor[0] = sa->text.def_palcolor[0];
+        sa->text.palcolor[1] = sa->text.def_palcolor[1];
+        sa->text.palcolor[2] = sa->text.def_palcolor[2];
+        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+    }
 
     if (sa->text.home_y < sa->text.end_y) {
         vga_write_sequencer(0x02/*map mask*/,0xF);
@@ -699,7 +705,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT_CLEAR,     SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE,0,NULL},
     {SEQAEV_TEXT,           SEQAEV_TEXT_FLAG_NOWAIT,0,"Instant text display!\nWoo yeah!"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
