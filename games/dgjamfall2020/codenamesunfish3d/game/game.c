@@ -55,7 +55,7 @@ uint16_t timer_irq_count;
 uint16_t timer_tick_rate = 120;
 
 /* must disable interrupts temporarily to avoid incomplete read */
-uint32_t counter_read() {
+uint32_t read_timer_counter() {
     uint32_t tmp;
 
     SAVE_CPUFLAGS( _cli() ) {
@@ -898,7 +898,7 @@ void seq_intro() {
         }
     }
 
-    atpb_init_count = atcount = nanim_count = ccount = counter_read();
+    atpb_init_count = atcount = nanim_count = ccount = read_timer_counter();
     anim = -1; /* increment to zero in loop */
 
     vga_clear_npage();
@@ -911,13 +911,13 @@ void seq_intro() {
                 if (rzbkload(atpbseg,"wxpbrz.png"))
                     fatal("wxpbrz.png");
 
-                nanim_count = ccount = counter_read();
+                nanim_count = ccount = read_timer_counter();
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
                 if (rzbkload(atpbseg,"atmpbrz.png"))
                     fatal("atmpbrz.png");
 
-                nanim_count = ccount = counter_read();
+                nanim_count = ccount = read_timer_counter();
             }
 
             vrl_anim_interval = (uint16_t)(timer_tick_rate / anim_seq[anim].frame_rate);
@@ -1057,7 +1057,7 @@ void seq_intro() {
             nf_count += vrl_anim_interval;
         }
 
-        ccount = counter_read();
+        ccount = read_timer_counter();
     } while (1);
 
     /* sinus table */
