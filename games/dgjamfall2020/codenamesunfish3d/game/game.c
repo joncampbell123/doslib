@@ -26,6 +26,7 @@
 #include "unicode.h"
 #include "commtmp.h"
 #include "fzlibdec.h"
+#include "fataexit.h"
 
 /*---------------------------------------------------------------------------*/
 /* animation sequence defs                                                   */
@@ -78,34 +79,6 @@ void vga_update_disp_cur_page() {
 void vga_clear_npage() {
     vga_write_sequencer(0x02/*map mask*/,0xF);
     vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
-}
-
-/*---------------------------------------------------------------------------*/
-/* unhook IRQ call                                                           */
-/*---------------------------------------------------------------------------*/
-
-void unhook_irqs() {
-    restore_timer_irq();
-}
-
-/*---------------------------------------------------------------------------*/
-/* fatal abort                                                               */
-/*---------------------------------------------------------------------------*/
-
-void fatal(const char *msg,...) {
-    va_list va;
-
-    unhook_irqs();
-    restore_text_mode();
-
-    printf("FATAL ERROR: ");
-
-    va_start(va,msg);
-    vprintf(msg,va);
-    va_end(va);
-    printf("\n");
-
-    exit(1);
 }
 
 /*---------------------------------------------------------------------------*/
