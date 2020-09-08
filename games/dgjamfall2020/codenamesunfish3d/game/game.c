@@ -32,6 +32,7 @@
 #include "fzlibdec.h"
 #include "fataexit.h"
 #include "sorcpack.h"
+#include "rotozoom.h"
 
 /*---------------------------------------------------------------------------*/
 /* animation sequence defs                                                   */
@@ -195,22 +196,6 @@ int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path) {
 
     minipng_reader_close(&rdr);
     return 0;
-}
-
-unsigned rotozoomer_imgalloc(void) {
-    unsigned s;
-
-    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&s) != 0)
-        return 0;
-
-    return s;
-}
-
-void rotozoomer_imgfree(unsigned *s) {
-    if (*s != 0) {
-        _dos_freemem(*s);
-        *s = 0;
-    }
 }
 
 void seq_intro() {
