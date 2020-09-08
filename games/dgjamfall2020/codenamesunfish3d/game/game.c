@@ -349,16 +349,18 @@ enum seqcanvas_layer_what {
 union seqcanvas_layeru_t;
 
 struct seqcanvas_memsetfill {
-    unsigned int                    start_y,end_y;
+    unsigned int                    h;                  /* where to fill */
 };
 
 struct seqcanvas_rotozoom {
     unsigned                        imgseg;             /* segment containing 256x256 image to rotozoom */
     uint32_t                        time_base;          /* counter time base to rotozoom by or (~0ul) if not to automatically rotozoom */
+    unsigned int                    h;                  /* how many scanlines */
 };
 
 struct seqcanvas_vrl {
     struct vrl_image*               vrl;                /* vrl image to draw */
+    unsigned int                    x,y;                /* where to draw */
 };
 
 struct seqcanvas_callback {
@@ -386,11 +388,15 @@ struct seqcanvas_layer_t {
     union seqcanvas_layeru_t        rop;
 };
 
+#define SEQAF_REDRAW                (1u << 0u)          /* redraw the canvas and page flip to screen */
+
 struct seqanim_t {
     /* what to draw (back to front) */
-    unsigned int                    canvas_obj_alloc; /* how much is allocated */
-    unsigned int                    canvas_obj_count; /* how much to draw */
+    unsigned int                    canvas_obj_alloc;   /* how much is allocated */
+    unsigned int                    canvas_obj_count;   /* how much to draw */
     struct seqcanvas_layer_t*       canvas_obj;
+    /* state flags */
+    unsigned int                    flags;
 };
 
 void seqcanvas_text_free_text(struct seqcanvas_text *t) {
@@ -459,6 +465,12 @@ void seqanim_free(struct seqanim_t **sa) {
 /*---------------------------------------------------------------------------*/
 
 void seq_intro(void) {
+    struct seqanim_t *sanim;
+
+    if ((sanim=seqanim_alloc()) == NULL)
+        fatal("seqanim");
+
+    seqanim_free(&sanim);
 }
 
 /*---------------------------------------------------------------------------*/
