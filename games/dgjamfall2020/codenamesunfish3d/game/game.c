@@ -95,11 +95,8 @@ const char *anim_text[ANIM_SEQS] = {
     "\x01I write super optimized clever awesome\nportable code! I am awesome programmer!\x03\x03\x03\x03\x04\x01Wooooooooooooo my code is so cool!\x03\x03\x03\x04"
 };
 
-static uint32_t atpb_init_count;
-
 /* "Second Reality" style rotozoomer because Woooooooooooo */
-void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
-    const uint32_t rt = count - atpb_init_count;
+void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,const uint32_t rt) {
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
 
     // scale, to zoom in and out
@@ -201,6 +198,7 @@ int rzbkload(unsigned atpbseg,const char *path) {
 }
 
 void seq_intro() {
+    uint32_t atpb_init_count;
     unsigned char animtext_bright = 63;
     unsigned char animtext_color = animtext_color_init;
     const unsigned char at_interval = 120u / 20ul; /* 20 chars/second */
@@ -307,7 +305,7 @@ void seq_intro() {
             redraw = 0;
 
             if (anim == 0 || anim == 3)
-                atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount);
+                atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount - atpb_init_count);
             else {
                 vga_write_sequencer(0x02/*map mask*/,0xF);
                 vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*168u)/2u);
