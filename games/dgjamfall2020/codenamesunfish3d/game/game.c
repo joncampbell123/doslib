@@ -404,6 +404,7 @@ enum {
     SEQAEV_TEXT_CLEAR,              /* clear/reset/home text */
     SEQAEV_TEXT,                    /* print text (UTF-8 string pointed to by 'params') with control codes embedded as well */
     SEQAEV_TEXT_FADEOUT,            /* fade out (palette entry for) text. param1 is how much to subtract from R/G/B. At 120Hz a value of 255 is just over 2 seconds. 0 means use default. */
+    SEQAEV_TEXT_FADEIN,             /* fade in to RGB 888 in param2, or if param2 == 0 to default palette color. param1 same as FADEOUT */
     SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
     SEQAEV_SYNC,                    /* set next event time to now */
     SEQAEV_USER_EVENT,              /* user event (function loop does whatever) */
@@ -596,6 +597,37 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
     }
 }
 
+void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+    const unsigned char sub = (e->param1 != 0) ? e->param1 : 8;
+    uint8_t color[3];
+    unsigned int i;
+
+    if (e->param2 != 0) {
+        color[0] = (unsigned char)(e->param2 >> 16u);
+        color[1] = (unsigned char)(e->param2 >>  8u);
+        color[2] = (unsigned char)(e->param2 >>  0u);
+    }
+    else {
+        color[0] = sa->text.def_palcolor[0];
+        color[1] = sa->text.def_palcolor[1];
+        color[2] = sa->text.def_palcolor[2];
+    }
+
+    for (i=0;i < 3;i++) {
+        const unsigned int s = (unsigned int)sa->text.palcolor[i] + (unsigned int)sub;
+
+        if (s < (unsigned int)color[i])
+            sa->text.palcolor[i] = (unsigned char)s;
+        else
+            sa->text.palcolor[i] = color[i];
+    }
+
+    if (sa->text.palcolor[0] == color[0] && sa->text.palcolor[1] == color[1] && sa->text.palcolor[2] == color[2])
+        (sa->events)++; /* next */
+    else
+        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+}
+
 void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     const unsigned char sub = (e->param1 != 0) ? e->param1 : 8;
     unsigned int i;
@@ -634,6 +666,9 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     break;
                 case SEQAEV_TEXT_FADEOUT:
                     seqanim_step_text_fadeout(sa,e);
+                    break;
+                case SEQAEV_TEXT_FADEIN:
+                    seqanim_step_text_fadein(sa,e);
                     break;
                 case SEQAEV_WAIT:
                     sa->next_event += e->param1;
@@ -707,6 +742,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_CLEAR,     SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE,0,NULL},
     {SEQAEV_TEXT,           SEQAEV_TEXT_FLAG_NOWAIT,0,"Instant text display!\nWoo yeah!"},
+    {SEQAEV_TEXT_FADEIN,    0,          0,          NULL},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
