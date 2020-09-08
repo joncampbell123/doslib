@@ -17,4 +17,5 @@ struct vrl_image {
 
 void free_vrl(struct vrl_image *img);
 int load_vrl(struct vrl_image *img,const char *path);
+int load_vrl_fd(struct vrl_image *img,int fd,unsigned long sz);
 
