@@ -98,7 +98,7 @@ static inline int font_bmp_do_load_arial_small() {
     return font_bmp_do_load(&arial_small,"arialsml.png");
 }
 
-unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsigned int x,unsigned int y,unsigned char color) {
+unsigned int font_bmp_draw_chardef_vga8u(struct font_bmp *fnt,unsigned int cdef,unsigned int x,unsigned int y,unsigned char color) {
     unsigned int nx = x;
 
     if (fnt != NULL) {
@@ -539,10 +539,10 @@ void seq_intro() {
                                 const uint32_t cdef = font_bmp_unicode_to_chardef(animtext_fnt,c);
 
                                 vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_FIRST);
-                                font_bmp_draw_chardef(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
+                                font_bmp_draw_chardef_vga8u(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
 
                                 vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_SECOND);
-                                animtext_x = font_bmp_draw_chardef(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
+                                animtext_x = font_bmp_draw_chardef_vga8u(animtext_fnt,cdef,animtext_x,animtext_y,animtext_color);
 
                                 vga_state.vga_graphics_ram = sp;
                             }
