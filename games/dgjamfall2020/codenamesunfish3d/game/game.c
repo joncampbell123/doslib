@@ -407,7 +407,7 @@ enum {
     SEQAEV_TEXT_FADEIN,             /* fade in to RGB 888 in param2, or if param2 == 0 to default palette color. param1 same as FADEOUT */
     SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
     SEQAEV_SYNC,                    /* set next event time to now */
-    SEQAEV_USER_EVENT,              /* user event (function loop does whatever) */
+    SEQAEV_SEQUENCE,                /* sequence event (function calling animator catches this value and does something) */
 
     SEQAEV_MAX
 };
