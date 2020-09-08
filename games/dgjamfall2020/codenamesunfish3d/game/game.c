@@ -31,6 +31,69 @@
 #include "fzlibdec.h"
 #include "fataexit.h"
 
+struct dumbpack {
+    int                 fd;
+    uint32_t*           offset;
+    unsigned int        offset_count;
+};
+
+void dumbpack_close(struct dumbpack **d);
+
+struct dumbpack *dumbpack_open(const char *path) {
+    struct dumbpack *d = calloc(1,sizeof(struct dumbpack));
+
+    if (d != NULL) {
+        d->fd = open(path,O_RDONLY | O_BINARY);
+        if (d->fd < 0) goto fail;
+
+        {
+            uint16_t count;
+            if (read(d->fd,&count,2) != 2) goto fail;
+            d->offset_count = (unsigned int)count;
+        }
+
+        if (d->offset_count >= (0xFF00u / sizeof(uint32_t))) goto fail;
+        if ((d->offset=malloc(sizeof(uint32_t) * (d->offset_count + 1))) == NULL) goto fail;
+        if (read(d->fd,d->offset,sizeof(uint32_t) * (d->offset_count + 1)) != (sizeof(uint32_t) * (d->offset_count + 1))) goto fail;
+    }
+
+    return d;
+fail:
+    dumbpack_close(&d);
+    return NULL;
+}
+
+void dumbpack_close(struct dumbpack **d) {
+    if (*d != NULL) {
+        if ((*d)->fd >= 0) close((*d)->fd);
+        (*d)->fd = -1;
+
+        if ((*d)->offset != NULL) free((*d)->offset);
+        (*d)->offset = NULL;
+
+        free(*d);
+        *d = NULL;
+    }
+}
+
+uint32_t dumbpack_ent_offset(struct dumbpack *p,unsigned int x) {
+    if (p != NULL) {
+        if (p->offset != NULL && x < p->offset_count)
+            return p->offset[x];
+    }
+
+    return 0ul;
+}
+
+uint32_t dumbpack_ent_size(struct dumbpack *p,unsigned int x) {
+    if (p != NULL) {
+        if (p->offset != NULL && x < p->offset_count)
+            return p->offset[x+1] - p->offset[x];
+    }
+
+    return 0ul;
+}
+
 /*---------------------------------------------------------------------------*/
 /* animation sequence defs                                                   */
 /*---------------------------------------------------------------------------*/
@@ -58,7 +121,7 @@ struct seq_anim_i {
 #define SORC_PAL_OFFSET             0x40
 #define PACK_REQ                    0x15
 
-uint32_t sorc_pack_offsets[PACK_REQ+1];
+struct dumbpack *sorc_pack = NULL;
 /* PACK contents:
 
     sorcwoo.pal             // 0 (0x00)
@@ -243,7 +306,6 @@ void seq_intro() {
     unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
     unsigned char anim;
     int redraw = 1;
-    int packfd;
     int c;
 
     /* need arial medium */
@@ -253,23 +315,16 @@ void seq_intro() {
     animtext_fnt = arial_medium;
 
     /* our assets are in a pack now */
-    if ((packfd=open("sorcwoo.vrp",O_RDONLY|O_BINARY)) < 0)
+    if ((sorc_pack=dumbpack_open("sorcwoo.vrp")) == NULL)
         fatal("cannot open sorcwoo pack");
-
-    {
-        uint16_t count;
-        if (read(packfd,&count,2) != 2 || count < PACK_REQ)
-            fatal("cannot open sorcwoo pack");
-    }
-
-    if (read(packfd,sorc_pack_offsets,(PACK_REQ+1)*4) != ((PACK_REQ+1)*4))
+    if (sorc_pack->offset_count < PACK_REQ)
         fatal("cannot open sorcwoo pack");
 
     /* the rotozoomer effect needs a sin lookup table */
     sin2048fps16_table = malloc(sizeof(uint16_t) * 2048);
     if (sin2048fps16_table == NULL) fatal("sorcwoo.sin");
-    lseek(packfd,sorc_pack_offsets[1],SEEK_SET);
-    read(packfd,sin2048fps16_table,sizeof(uint16_t) * 2048);
+    lseek(sorc_pack->fd,dumbpack_ent_offset(sorc_pack,1),SEEK_SET);
+    read(sorc_pack->fd,sin2048fps16_table,sizeof(uint16_t) * 2048);
 
     /* rotozoomer background */
     if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
@@ -280,16 +335,16 @@ void seq_intro() {
     vga_palette_write(63,63,63);
 
     /* sorc palette */
-    lseek(packfd,sorc_pack_offsets[0],SEEK_SET);
-    read(packfd,common_tmp_small,32*3);
+    lseek(sorc_pack->fd,dumbpack_ent_offset(sorc_pack,0),SEEK_SET);
+    read(sorc_pack->fd,common_tmp_small,32*3);
     pal_buf_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,common_tmp_small);
 
     {
         unsigned int vrl_image_count = 0;
         for (vrl_image_count=0;vrl_image_count < VRL_IMAGE_FILES;vrl_image_count++) {
-            lseek(packfd,sorc_pack_offsets[2+vrl_image_count],SEEK_SET);
-            if (load_vrl_fd(&vrl_image[vrl_image_count],packfd,sorc_pack_offsets[2+1+vrl_image_count] - sorc_pack_offsets[2+vrl_image_count]) != 0)
-                fatal("seq_intro: unable to load VRL %u at %lu",vrl_image_count,sorc_pack_offsets[2+vrl_image_count]);
+            lseek(sorc_pack->fd,dumbpack_ent_offset(sorc_pack,2+vrl_image_count),SEEK_SET);
+            if (load_vrl_fd(&vrl_image[vrl_image_count],sorc_pack->fd,dumbpack_ent_size(sorc_pack,2+vrl_image_count)) != 0)
+                fatal("seq_intro: unable to load VRL %u",vrl_image_count);
 
                 vrl_palrebase(
                     vrl_image[vrl_image_count].vrl_header,
@@ -468,8 +523,8 @@ void seq_intro() {
     /* VRLs */
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
-
-    close(packfd);
+    /* sorc pack */
+    dumbpack_close(&sorc_pack);
 #undef ATOMPB_PAL_OFFSET
 #undef SORC_PAL_OFFSET
 #undef VRL_IMAGE_FILES
