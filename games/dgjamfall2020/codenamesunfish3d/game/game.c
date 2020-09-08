@@ -537,7 +537,8 @@ void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
 
     if (sa->text.home_y < sa->text.end_y) {
         vga_write_sequencer(0x02/*map mask*/,0xF);
-        vga_rep_stosw(vga_state.vga_graphics_ram + (sa->text.home_y*80u),0,((320u/4u)*(sa->text.end_y - sa->text.home_y))/2u);
+        vga_rep_stosw(orig_vga_graphics_ram + VGA_PAGE_FIRST + (sa->text.home_y*80u),0,((320u/4u)*(sa->text.end_y - sa->text.home_y))/2u);
+        vga_rep_stosw(orig_vga_graphics_ram + VGA_PAGE_SECOND + (sa->text.home_y*80u),0,((320u/4u)*(sa->text.end_y - sa->text.home_y))/2u);
     }
 }
 
@@ -552,10 +553,10 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
         unsigned char far *sp = vga_state.vga_graphics_ram;
         const uint32_t cdef = font_bmp_unicode_to_chardef(sa->text.font,c);
 
-        vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_FIRST);
+        vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_FIRST;
         font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
 
-        vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_SECOND);
+        vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_SECOND;
         sa->text.x = font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
 
         vga_state.vga_graphics_ram = sp;
@@ -644,6 +645,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello world!"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Doh!"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_END}
