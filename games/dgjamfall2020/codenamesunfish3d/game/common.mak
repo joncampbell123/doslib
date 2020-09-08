@@ -44,8 +44,8 @@ final: $(GAME_EXE)
 	@cp ../devasset/arialfont/arialsmall_final.png final/arialsml.png
 
 !ifdef GAME_EXE
-$(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj
-	%write tmp.cmd option quiet option map=$(GAME_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)game.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj file $(SUBDIR)$(HPS)vrlimg.obj file $(SUBDIR)$(HPS)vrlldf.obj file $(SUBDIR)$(HPS)vrlldfd.obj file $(SUBDIR)$(HPS)fzlibdec.obj name $(GAME_EXE)
+$(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj
+	%write tmp.cmd option quiet option map=$(GAME_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)game.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj file $(SUBDIR)$(HPS)vrlimg.obj file $(SUBDIR)$(HPS)vrlldf.obj file $(SUBDIR)$(HPS)vrlldfd.obj file $(SUBDIR)$(HPS)fzlibdec.obj file $(SUBDIR)$(HPS)vmode.obj file $(SUBDIR)$(HPS)vmodet.obj file $(SUBDIR)$(HPS)vmode8bu.obj name $(GAME_EXE)
 	@wlink @tmp.cmd
 !endif
 

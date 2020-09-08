@@ -21,6 +21,7 @@
 #include <fmt/minipng/minipng.h>
 
 #include "timer.h"
+#include "vmode.h"
 #include "vrlimg.h"
 #include "unicode.h"
 #include "commtmp.h"
@@ -42,17 +43,6 @@ struct seq_anim_i {
 
 #define SEQANF_PINGPONG     (0x01u)
 #define SEQANF_OFF          (0x02u)
-
-/*---------------------------------------------------------------------------*/
-/* vga page flipping management                                              */
-/*---------------------------------------------------------------------------*/
-
-#define VGA_PAGE_FIRST          0x0000
-#define VGA_PAGE_SECOND         0x4000
-
-/* VGA unchained page flipping state for all code here */
-VGA_RAM_PTR orig_vga_graphics_ram;
-unsigned int vga_cur_page,vga_next_page;
 
 /*---------------------------------------------------------------------------*/
 /* vga, swap current and next page pointers (not yet CRTC)                   */
@@ -88,44 +78,6 @@ void vga_update_disp_cur_page() {
 void vga_clear_npage() {
     vga_write_sequencer(0x02/*map mask*/,0xF);
     vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
-}
-
-/*---------------------------------------------------------------------------*/
-/* set VGA 256-color mode unchained                                          */
-/*---------------------------------------------------------------------------*/
-
-void init_vga256unchained() {
-    vga_cur_page=VGA_PAGE_FIRST;
-    vga_next_page=VGA_PAGE_SECOND;
-
-    int10_setmode(19);
-    update_state_from_vga();
-
-    /* Real hardware testing results show that the VGA BIOS will set up chained 256-color mode
-     * and only clear the bytes drawn and accessible by that. If you switch on unchained mode X,
-     * the junk between the chained DWORDs become visible (not cleared by VGA BIOS). So before
-     * we switch to it, use the DAC mask to blank the display first, then switch on unchained
-     * mode, clear video memory, then unblank the display by restoring the mask. */
-    outp(0x3C6,0x00); // DAC mask: set to 0 to blank display
-
-    vga_enable_256color_modex(); // VGA mode X (unchained)
-
-    vga_write_sequencer(0x02/*map mask*/,0xF); // zero the video memory
-    vga_rep_stosw(vga_state.vga_graphics_ram,0,0x8000u/2u);
-
-    outp(0x3C6,0xFF); // DAC mask: restore display
-
-    orig_vga_graphics_ram = vga_state.vga_graphics_ram;
-    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
-    vga_set_start_location(vga_cur_page);
-}
-
-/*---------------------------------------------------------------------------*/
-/* restore text mode (and possibly DOS prompt)                               */
-/*---------------------------------------------------------------------------*/
-
-void restore_text_mode() {
-    int10_setmode(3);
 }
 
 /*---------------------------------------------------------------------------*/
