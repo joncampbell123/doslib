@@ -24,19 +24,6 @@
 
 static uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
 static uint16_t timer_irq_count;
-uint16_t timer_tick_rate = 120;
-uint32_t timer_counter;
-
-/* must disable interrupts temporarily to avoid incomplete read */
-uint32_t read_timer_counter() {
-    uint32_t tmp;
-
-    SAVE_CPUFLAGS( _cli() ) {
-        tmp = timer_counter;
-    } RESTORE_CPUFLAGS();
-
-    return tmp;
-}
 
 /* IRQ 0 interrupt handler (timer tick) */
 static void (__interrupt __far *prev_timer_irq)() = NULL;
@@ -52,6 +39,20 @@ static void __interrupt __far timer_irq() { /* IRQ 0 */
         else
             p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 0);
     }
+}
+
+uint16_t timer_tick_rate = 120;
+uint32_t timer_counter;
+
+/* must disable interrupts temporarily to avoid incomplete read */
+uint32_t read_timer_counter() {
+    uint32_t tmp;
+
+    SAVE_CPUFLAGS( _cli() ) {
+        tmp = timer_counter;
+    } RESTORE_CPUFLAGS();
+
+    return tmp;
 }
 
 /* init timer IRQ */
