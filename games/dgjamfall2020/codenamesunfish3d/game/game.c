@@ -542,6 +542,14 @@ void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     }
 }
 
+unsigned int seqanim_text_height(struct seqanim_t *sa) {
+    // FIXME: font_bmp needs to define line height!
+    if (sa->text.font == arial_medium)
+        return 16;
+
+    return 0;
+}
+
 void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct seqanim_event_t *e) {
     uint32_t c;
 
@@ -550,18 +558,28 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
 
     c = utf8decode(&(sa->text.msg));
     if (c != 0) {
-        unsigned char far *sp = vga_state.vga_graphics_ram;
-        const uint32_t cdef = font_bmp_unicode_to_chardef(sa->text.font,c);
+        switch (c) {
+            case '\n': {
+                const unsigned int lh = seqanim_text_height(sa);
+                sa->text.x = sa->text.home_x;
+                sa->text.y += lh;
+                if (sa->text.y > (sa->text.end_y - lh)) sa->text.y = (sa->text.end_y - lh);
+                } break;
+            default: {
+                unsigned char far *sp = vga_state.vga_graphics_ram;
+                const uint32_t cdef = font_bmp_unicode_to_chardef(sa->text.font,c);
 
-        vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_FIRST;
-        font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
+                vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_FIRST;
+                font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
 
-        vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_SECOND;
-        sa->text.x = font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
+                vga_state.vga_graphics_ram = orig_vga_graphics_ram + VGA_PAGE_SECOND;
+                sa->text.x = font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
 
-        vga_state.vga_graphics_ram = sp;
+                vga_state.vga_graphics_ram = sp;
 
-        sa->next_event += sa->text.delay;
+                sa->next_event += sa->text.delay;
+                } break;
+        }
     }
     else {
         (sa->events)++; /* next */
@@ -643,7 +661,7 @@ void seqanim_redraw(struct seqanim_t *sa) {
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Hello world!"},
+    {SEQAEV_TEXT,           0,          0,          "Hello world!\nHow are you?"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Doh!"},
