@@ -586,6 +586,10 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                 case SEQAEV_TEXT:
                     seqanim_step_text(sa,nowcount,e); /* will advance sa->events */
                     break;
+                case SEQAEV_WAIT:
+                    sa->next_event += e->param1;
+                    (sa->events)++; /* next */
+                    break;
                 case SEQAEV_SYNC:
                     sa->next_event = nowcount;
                     (sa->events)++; /* next */
