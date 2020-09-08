@@ -149,6 +149,13 @@ inline int cos2048fps16_lookup(unsigned int a) {
     return sin2048fps16_lookup(a + 0x800u);
 }
 
+void sin2048fps16_free(void) {
+    if (sin2048fps16_table != NULL) {
+        free(sin2048fps16_table);
+        sin2048fps16_table = NULL;
+    }
+}
+
 /* "Second Reality" style rotozoomer because Woooooooooooo */
 void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32_t count) {
     const uint32_t rt = count - atpb_init_count;
@@ -489,8 +496,7 @@ void seq_intro() {
     } while (1);
 
     /* sinus table */
-    free(sin2048fps16_table);
-    sin2048fps16_table = NULL;
+    sin2048fps16_free();
     /* atomic playboy image seg */
     _dos_freemem(atpbseg);
     /* VRLs */
