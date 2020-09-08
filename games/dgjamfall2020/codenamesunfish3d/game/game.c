@@ -34,6 +34,7 @@
 #include "sorcpack.h"
 #include "rotozoom.h"
 
+#if 0//OLD CODE
 /*---------------------------------------------------------------------------*/
 /* animation sequence defs                                                   */
 /*---------------------------------------------------------------------------*/
@@ -330,6 +331,134 @@ void seq_intro() {
 #undef VRL_IMAGE_FILES
 #undef ANIM_SEQS
 #undef PACK_REQ
+}
+#endif
+
+/* sequence animation engine (for VGA page flipping animation) */
+enum seqcanvas_layer_what {
+    SEQCL_NONE=0,                                       /* nothing */
+    SEQCL_MSETFILL,                                     /* msetfill */
+    SEQCL_ROTOZOOM,                                     /* rotozoom */
+    SEQCL_VRL,                                          /* vrl */
+    SEQCL_CALLBACK,                                     /* callback */
+    SEQCL_TEXT,                                         /* text */
+
+    SEQCL_MAX
+};
+
+union seqcanvas_layeru_t;
+
+struct seqcanvas_memsetfill {
+    unsigned int                    start_y,end_y;
+};
+
+struct seqcanvas_rotozoom {
+    unsigned                        imgseg;             /* segment containing 256x256 image to rotozoom */
+    uint32_t                        time_base;          /* counter time base to rotozoom by or (~0ul) if not to automatically rotozoom */
+};
+
+struct seqcanvas_vrl {
+    struct vrl_image*               vrl;                /* vrl image to draw */
+};
+
+struct seqcanvas_callback {
+    void                            (*fn)(union seqcanvas_layeru_t *layer);
+    uint32_t                        param1,param2;
+};
+
+struct seqcanvas_text {
+    unsigned int                    textcdef_length;
+    uint16_t*                       textcdef;           /* text to draw (as chardef indexes) */
+    struct font_bmp*                font;               /* font to use */
+    int                             x,y;                /* where to start drawing */
+};
+
+union seqcanvas_layeru_t {
+    struct seqcanvas_memsetfill     msetfill;           /* memset (solid color) */
+    struct seqcanvas_rotozoom       rotozoom;           /* draw a rotozoomer */
+    struct seqcanvas_vrl            vrl;                /* draw VRL image */
+    struct seqcanvas_callback       callback;           /* callback function */
+    struct seqcanvas_text           text;               /* draw text */
+};
+
+struct seqcanvas_layer_t {
+    unsigned char                   what;
+    union seqcanvas_layeru_t        rop;
+};
+
+struct seqanim_t {
+    /* what to draw (back to front) */
+    unsigned int                    canvas_obj_alloc; /* how much is allocated */
+    unsigned int                    canvas_obj_count; /* how much to draw */
+    struct seqcanvas_layer_t*       canvas_obj;
+};
+
+void seqcanvas_text_free_text(struct seqcanvas_text *t) {
+    if (t->textcdef) {
+        free(t->textcdef);
+        t->textcdef = NULL;
+    }
+}
+
+int seqcanvas_text_alloc_text(struct seqcanvas_text *t,unsigned int len) {
+    seqcanvas_text_free_text(t);
+    if (len != 0 && len < 1024) {
+        t->textcdef_length = len;
+        if ((t->textcdef=malloc(sizeof(uint16_t) * len)) == NULL)
+            return -1;
+    }
+    return 0;
+}
+
+void seqcanvas_clear_layer(struct seqcanvas_layer_t *l) {
+    switch (l->what) {
+        case SEQCL_TEXT:
+            seqcanvas_text_free_text(&(l->rop.text));
+            break;
+    }
+
+    l->what = SEQCL_NONE;    
+}
+
+int seqanim_alloc_canvas(struct seqanim_t *sa,unsigned int max) {
+    if (sa->canvas_obj == NULL) {
+        if (max > 64) return -1;
+        sa->canvas_obj_alloc = max;
+        sa->canvas_obj_count = 0;
+        if ((sa->canvas_obj=calloc(max,sizeof(struct seqcanvas_layer_t))) == NULL) return -1; /* calloc will zero fill */
+    }
+
+    return 0;
+}
+
+void seqanim_free_canvas(struct seqanim_t *sa) {
+    unsigned int i;
+
+    if (sa->canvas_obj) {
+        for (i=0;i < sa->canvas_obj_alloc;i++) seqcanvas_clear_layer(&(sa->canvas_obj[i]));   
+        free(sa->canvas_obj);
+        sa->canvas_obj=NULL;
+    }
+}
+
+struct seqanim_t *seqanim_alloc(void) {
+    struct seqanim_t *sa = calloc(1,sizeof(struct seqanim_t));
+    return sa;
+}
+
+void seqanim_free(struct seqanim_t **sa) {
+    if (*sa != NULL) {
+        seqanim_free_canvas(*sa);
+        free(*sa);
+        *sa = NULL;
+    }
+}
+
+/*---------------------------------------------------------------------------*/
+/* introduction sequence                                                     */
+/*---------------------------------------------------------------------------*/
+
+void seq_intro(void) {
 }
 
 /*---------------------------------------------------------------------------*/
