@@ -393,6 +393,9 @@ struct seqcanvas_layer_t {
 #define SEQAF_END                   (1u << 1u)
 #define SEQAF_TEXT_PALCOLOR_UPDATE  (1u << 2u)
 
+/* param1 of SEQAEV_TEXT */
+#define SEQAEV_TEXT_FLAG_NOWAIT     (1u << 0u)
+
 enum {
     SEQAEV_END=0,                   /* end of sequence */
     SEQAEV_TEXT_CLEAR,              /* clear/reset/home text */
@@ -577,7 +580,8 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
 
                 vga_state.vga_graphics_ram = sp;
 
-                sa->next_event += sa->text.delay;
+                if (!(e->param1 & SEQAEV_TEXT_FLAG_NOWAIT))
+                    sa->next_event += sa->text.delay;
                 } break;
         }
     }
@@ -689,10 +693,17 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "Hello world!\nHow are you?"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Doh!"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           SEQAEV_TEXT_FLAG_NOWAIT,0,"Instant text display!\nWoo yeah!"},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
     {SEQAEV_END}
 };
 
