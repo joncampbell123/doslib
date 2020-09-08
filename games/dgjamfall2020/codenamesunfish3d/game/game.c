@@ -49,7 +49,7 @@ struct seq_anim_i {
 /* timer tick management                                                     */
 /*---------------------------------------------------------------------------*/
 
-uint32_t counter;
+uint32_t timer_counter;
 uint16_t timer_irq_interval; /* PIT clock ticks per IRQ */
 uint16_t timer_irq_count;
 uint16_t timer_tick_rate = 120;
@@ -59,7 +59,7 @@ uint32_t counter_read() {
     uint32_t tmp;
 
     SAVE_CPUFLAGS( _cli() ) {
-        tmp = counter;
+        tmp = timer_counter;
     } RESTORE_CPUFLAGS();
 
     return tmp;
@@ -68,7 +68,7 @@ uint32_t counter_read() {
 /* IRQ 0 interrupt handler (timer tick) */
 void (__interrupt __far *prev_timer_irq)() = NULL;
 static void __interrupt __far timer_irq() { /* IRQ 0 */
-    counter++;
+    timer_counter++;
 
     /* make sure the BIOS below our handler still sees 18.2Hz */
     {
@@ -91,7 +91,7 @@ void init_timer_irq() {
         timer_irq_interval = T8254_REF_CLOCK_HZ / timer_tick_rate;
 	    write_8254_system_timer(timer_irq_interval);
         timer_irq_count = 0;
-        counter = 0;
+        timer_counter = 0;
         p8259_unmask(0);
     }
 }
