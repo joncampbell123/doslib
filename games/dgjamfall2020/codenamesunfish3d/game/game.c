@@ -145,7 +145,7 @@ int sin2048fps16_lookup(unsigned int a) {
 }
 
 /* cos(x) is just sin(x) shifted by pi/2 (90 degrees) */
-inline int atpb_cos2048_lookup(unsigned int a) {
+inline int cos2048fps16_lookup(unsigned int a) {
     return sin2048fps16_lookup(a + 0x800u);
 }
 
@@ -157,10 +157,10 @@ void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,uint32
     // scale, to zoom in and out
     const long scale = ((long)sin2048fps16_lookup(rt * 5ul) >> 1l) + 0xA000l;
     // column-step. multiplied 4x because we're rendering only every 4 pixels for smoothness.
-    const uint16_t sx1 = (uint16_t)(((((long)atpb_cos2048_lookup(rt * 10ul) *  0x400l) >> 15l) * scale) >> 15l);
+    const uint16_t sx1 = (uint16_t)(((((long)cos2048fps16_lookup(rt * 10ul) *  0x400l) >> 15l) * scale) >> 15l);
     const uint16_t sy1 = (uint16_t)(((((long)sin2048fps16_lookup(rt * 10ul) * -0x400l) >> 15l) * scale) >> 15l);
     // row-step. multiplied by 1.2 (240/200) to compensate for 320x200 non-square pixels. (1.2 * 0x100) = 0x133
-    const uint16_t sx2 = (uint16_t)(((((long)atpb_cos2048_lookup(rt * 10ul) *  0x133l) >> 15l) * scale) >> 15l);
+    const uint16_t sx2 = (uint16_t)(((((long)cos2048fps16_lookup(rt * 10ul) *  0x133l) >> 15l) * scale) >> 15l);
     const uint16_t sy2 = (uint16_t)(((((long)sin2048fps16_lookup(rt * 10ul) * -0x133l) >> 15l) * scale) >> 15l);
 
     unsigned cvo = FP_OFF(vga_state.vga_graphics_ram);
