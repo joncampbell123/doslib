@@ -662,7 +662,7 @@ void seqanim_update_text_palcolor(struct seqanim_t *sa) {
 }
 
 void seqanim_redraw(struct seqanim_t *sa) {
-    unsigned int oflags = sa->flags;
+    const unsigned int oflags = sa->flags;
 
     if (sa->flags & SEQAF_REDRAW) {
         seqanim_draw(sa);
