@@ -397,6 +397,7 @@ enum {
     SEQAEV_END=0,                   /* end of sequence */
     SEQAEV_TEXT_CLEAR,              /* clear/reset/home text */
     SEQAEV_TEXT,                    /* print text (UTF-8 string pointed to by 'params') with control codes embedded as well */
+    SEQAEV_TEXT_FADEOUT,            /* fade out (palette entry for) text. param1 is how much to subtract from R/G/B. At 120Hz a value of 255 is just over 2 seconds. 0 means use default. */
     SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
     SEQAEV_SYNC,                    /* set next event time to now */
     SEQAEV_USER_EVENT,              /* user event (function loop does whatever) */
@@ -585,6 +586,23 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
     }
 }
 
+void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+    const unsigned char sub = (e->param1 != 0) ? e->param1 : 8;
+    unsigned int i;
+
+    for (i=0;i < 3;i++) {
+        if (sa->text.palcolor[i] >= sub)
+            sa->text.palcolor[i] -= sub;
+        else
+            sa->text.palcolor[i] = 0;
+    }
+
+    if ((sa->text.palcolor[0] | sa->text.palcolor[1] | sa->text.palcolor[2]) == 0)
+        (sa->events)++; /* next */
+    else
+        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+}
+
 void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
     if (nowcount >= sa->next_event) {
         if (sa->events == NULL) {
@@ -603,6 +621,9 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     break;
                 case SEQAEV_TEXT:
                     seqanim_step_text(sa,nowcount,e); /* will advance sa->events */
+                    break;
+                case SEQAEV_TEXT_FADEOUT:
+                    seqanim_step_text_fadeout(sa,e);
                     break;
                 case SEQAEV_WAIT:
                     sa->next_event += e->param1;
@@ -641,15 +662,20 @@ void seqanim_update_text_palcolor(struct seqanim_t *sa) {
 }
 
 void seqanim_redraw(struct seqanim_t *sa) {
+    unsigned int oflags = sa->flags;
+
     if (sa->flags & SEQAF_REDRAW) {
         seqanim_draw(sa);
 
         vga_swap_pages(); /* current <-> next */
         vga_update_disp_cur_page();
-        vga_wait_for_vsync(); /* wait for vsync */
     }
     if (sa->flags & SEQAF_TEXT_PALCOLOR_UPDATE) {
         seqanim_update_text_palcolor(sa);
+    }
+
+    if (oflags & (SEQAF_REDRAW|SEQAF_TEXT_PALCOLOR_UPDATE)) {
+        vga_wait_for_vsync(); /* wait for vsync */
     }
 }
 
@@ -662,9 +688,11 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello world!\nHow are you?"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Doh!"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_END}
 };
 
