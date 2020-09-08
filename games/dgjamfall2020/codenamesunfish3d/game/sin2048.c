@@ -64,12 +64,24 @@ void sin2048fps16_free(void) {
 
 int sin2048fps16_open(void) {
     if (sin2048fps16_table == NULL) {
-        uint32_t ofs = dumbpack_ent_offset(sorc_pack,1);
-        uint32_t sz = dumbpack_ent_size(sorc_pack,1);
-        if (ofs == 0ul || sz < (sizeof(uint16_t) * 2048)) return -1;
-        if (lseek(sorc_pack->fd,ofs,SEEK_SET) != ofs) return -1;
-        if ((sin2048fps16_table=malloc(sizeof(uint16_t) * 2048)) == NULL) return -1;
-        read(sorc_pack->fd,sin2048fps16_table,sizeof(uint16_t) * 2048);
+        if (sorc_pack_open() == 0) {
+            uint32_t ofs = dumbpack_ent_offset(sorc_pack,1);
+            uint32_t sz = dumbpack_ent_size(sorc_pack,1);
+
+            if (ofs == 0ul || sz < (sizeof(uint16_t) * 2048))
+                return -1;
+
+            if (lseek(sorc_pack->fd,ofs,SEEK_SET) != ofs)
+                return -1;
+
+            if ((sin2048fps16_table=malloc(sizeof(uint16_t) * 2048)) == NULL)
+                return -1;
+
+            read(sorc_pack->fd,sin2048fps16_table,sizeof(uint16_t) * 2048);
+        }
+        else {
+            return -1;
+        }
     }
 
     return 0;
