@@ -161,7 +161,7 @@ void fatal(const char *msg,...) {
 /*---------------------------------------------------------------------------*/
 
 #pragma pack(push,1)
-struct chardef {
+struct font_bmp_chardef {
 /* char id=32   x=178   y=65    width=3     height=1     xoffset=-1    yoffset=15    xadvance=4     page=0  chnl=15 */
     uint16_t        id;             /* unicode code value */
     uint8_t         x,y;            /* starting x and y (upper left corner). These images are 256x256 so it's fine to use uint8_t */
@@ -183,13 +183,13 @@ struct kerndef {
 #pragma pack(pop)
 
 struct font_bmp {
-    unsigned char*          fontbmp;        /* 1-bit font */
-    unsigned int            stride;         /* bytes per row */
-    unsigned int            height;         /* height of bitmap */
-    unsigned int            chardef_count;  /* number of chardefs */
-    unsigned int            kerndef_count;  /* number of kerndefs */
-    struct chardef*         chardef;        /* array of chardef */
-    struct kerndef*         kerndef;        /* array of kerndef */
+    unsigned char*                  fontbmp;        /* 1-bit font */
+    unsigned int                    stride;         /* bytes per row */
+    unsigned int                    height;         /* height of bitmap */
+    unsigned int                    chardef_count;  /* number of chardefs */
+    unsigned int                    kerndef_count;  /* number of kerndefs */
+    struct font_bmp_chardef*        chardef;        /* array of chardef */
+    struct kerndef*                 kerndef;        /* array of kerndef */
 };
 
 void font_bmp_free(struct font_bmp **fnt);
@@ -233,9 +233,9 @@ struct font_bmp *font_bmp_load(const char *path) {
                     if (fnt->chardef == NULL) {
                         if (read(rdr->fd,&count,2) != 2) goto fail;
                         fnt->chardef_count = count;
-                        if (count != 0 && count < (0xFF00 / sizeof(struct chardef))) {
-                            if ((fnt->chardef = malloc(count * sizeof(struct chardef))) == NULL) goto fail;
-                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->chardef),count * sizeof(struct chardef),rdr->chunk_data_header.length-2ul)) goto fail;
+                        if (count != 0 && count < (0xFF00 / sizeof(struct font_bmp_chardef))) {
+                            if ((fnt->chardef = malloc(count * sizeof(struct font_bmp_chardef))) == NULL) goto fail;
+                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->chardef),count * sizeof(struct font_bmp_chardef),rdr->chunk_data_header.length-2ul)) goto fail;
                         }
                     }
                 }
@@ -325,7 +325,7 @@ unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsign
 
     if (fnt != NULL) {
         if (fnt->chardef != NULL && cdef < fnt->chardef_count) {
-            const struct chardef *cdent = fnt->chardef + cdef;
+            const struct font_bmp_chardef *cdent = fnt->chardef + cdef;
             x += (unsigned int)((int)cdent->xoffset);
             y += (unsigned int)((int)cdent->yoffset);
             nx += (unsigned int)((int)cdent->xadvance);
