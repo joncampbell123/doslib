@@ -174,7 +174,7 @@ struct font_bmp_chardef {
 #pragma pack(pop)
 
 #pragma pack(push,1)
-struct kerndef {
+struct font_bmp_kerndef {
 /* kerning first=32  second=65  amount=-1 */
     uint16_t        first;
     uint16_t        second;
@@ -189,7 +189,7 @@ struct font_bmp {
     unsigned int                    chardef_count;  /* number of chardefs */
     unsigned int                    kerndef_count;  /* number of kerndefs */
     struct font_bmp_chardef*        chardef;        /* array of chardef */
-    struct kerndef*                 kerndef;        /* array of kerndef */
+    struct font_bmp_kerndef*        kerndef;        /* array of kerndef */
 };
 
 void font_bmp_free(struct font_bmp **fnt);
@@ -243,9 +243,9 @@ struct font_bmp *font_bmp_load(const char *path) {
                     if (fnt->kerndef == NULL) {
                         if (read(rdr->fd,&count,2) != 2) goto fail;
                         fnt->kerndef_count = count;
-                        if (count != 0 && count < (0xFF00u / sizeof(struct kerndef))) {
-                            if ((fnt->kerndef = malloc(count * sizeof(struct kerndef))) == NULL) goto fail;
-                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->kerndef),count * sizeof(struct kerndef),rdr->chunk_data_header.length-2ul)) goto fail;
+                        if (count != 0 && count < (0xFF00u / sizeof(struct font_bmp_kerndef))) {
+                            if ((fnt->kerndef = malloc(count * sizeof(struct font_bmp_kerndef))) == NULL) goto fail;
+                            if (file_zlib_decompress(rdr->fd,(unsigned char*)(fnt->kerndef),count * sizeof(struct font_bmp_kerndef),rdr->chunk_data_header.length-2ul)) goto fail;
                         }
                     }
                 }
