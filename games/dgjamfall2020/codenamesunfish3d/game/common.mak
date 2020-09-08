@@ -44,8 +44,8 @@ final: $(GAME_EXE)
 	@cp ../devasset/arialfont/arialsmall_final.png final/arialsml.png
 
 !ifdef GAME_EXE
-$(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj
-	%write tmp.cmd option quiet option map=$(GAME_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)game.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj name $(GAME_EXE)
+$(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj
+	%write tmp.cmd option quiet option map=$(GAME_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)game.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj name $(GAME_EXE)
 	@wlink @tmp.cmd
 !endif
 
