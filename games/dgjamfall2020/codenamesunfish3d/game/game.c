@@ -321,15 +321,10 @@ void seq_intro() {
         ccount = read_timer_counter();
     } while (1);
 
-    /* sinus table */
-    sin2048fps16_free();
-    /* atomic playboy image seg */
-    rotozoomer_imgfree(&rotozoomerimgseg);
     /* VRLs */
+    rotozoomer_imgfree(&rotozoomerimgseg);
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
-    /* sorc pack */
-    dumbpack_close(&sorc_pack);
 #undef ATOMPB_PAL_OFFSET
 #undef SORC_PAL_OFFSET
 #undef VRL_IMAGE_FILES
@@ -374,6 +369,7 @@ int main() {
 
     seq_intro();
 
+    sin2048fps16_free();
     font_bmp_free(&arial_small);
     font_bmp_free(&arial_medium);
     font_bmp_free(&arial_large);
