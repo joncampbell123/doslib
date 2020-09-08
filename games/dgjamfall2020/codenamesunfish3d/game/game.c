@@ -96,7 +96,7 @@ const char *anim_text[ANIM_SEQS] = {
 };
 
 /* "Second Reality" style rotozoomer because Woooooooooooo */
-void atomic_playboy_zoomer(unsigned int w,unsigned int h,__segment imgseg,const uint32_t rt) {
+void rotozoomer_fast_effect(unsigned int w,unsigned int h,__segment imgseg,const uint32_t rt) {
     const __segment vseg = FP_SEG(vga_state.vga_graphics_ram);
 
     // scale, to zoom in and out
@@ -163,7 +163,7 @@ static const int animtext_init_y = 168;
 static const unsigned char animtext_color_init = 255;
 
 /* atomic playboy background 256x256 */
-int rzbkload(unsigned atpbseg,const char *path) {
+int rzbkload(unsigned rotozoomerimgseg,const char *path) {
     struct minipng_reader *rdr;
 
     /* WARNING: Code assumes 16-bit large memory model! */
@@ -180,7 +180,7 @@ int rzbkload(unsigned atpbseg,const char *path) {
         unsigned int i;
 
         for (i=0;i < 256;i++) {
-            unsigned char far *imgptr = (unsigned char far*)MK_FP(atpbseg + (i * 16u/*paragraphs=256b*/),0);
+            unsigned char far *imgptr = (unsigned char far*)MK_FP(rotozoomerimgseg + (i * 16u/*paragraphs=256b*/),0);
             minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
             minipng_reader_read_idat(rdr,imgptr,256); /* row */
         }
@@ -198,7 +198,7 @@ int rzbkload(unsigned atpbseg,const char *path) {
 }
 
 void seq_intro() {
-    uint32_t atpb_init_count;
+    uint32_t rotozoomer_init_count;
     unsigned char animtext_bright = 63;
     unsigned char animtext_color = animtext_color_init;
     const unsigned char at_interval = 120u / 20ul; /* 20 chars/second */
@@ -213,7 +213,7 @@ void seq_intro() {
     struct vrl_image vrl_image[VRL_IMAGE_FILES];
     signed char vrl_image_dir = 0;
     int vrl_image_select = 0;
-    unsigned atpbseg; /* atomic playboy 256x256 background DOS segment value */
+    unsigned rotozoomerimgseg; /* atomic playboy 256x256 background DOS segment value */
     unsigned char anim;
     int redraw = 1;
     int c;
@@ -235,7 +235,7 @@ void seq_intro() {
     /* the rotozoomer effect needs a sin lookup table */
 
     /* rotozoomer background */
-    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
+    if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&rotozoomerimgseg) != 0)
         fatal("seq_intro: failed atmpbrz.png");
 
     /* text color */
@@ -262,7 +262,7 @@ void seq_intro() {
         }
     }
 
-    atpb_init_count = atcount = nanim_count = ccount = read_timer_counter();
+    rotozoomer_init_count = atcount = nanim_count = ccount = read_timer_counter();
     anim = -1; /* increment to zero in loop */
 
     vga_clear_npage();
@@ -272,13 +272,13 @@ void seq_intro() {
             if ((++anim) >= ANIM_SEQS) break;
 
             if (anim == 0) {
-                if (rzbkload(atpbseg,"wxpbrz.png"))
+                if (rzbkload(rotozoomerimgseg,"wxpbrz.png"))
                     fatal("wxpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
             }
             else if (anim == 2) { /* use the idle downtime of the "uhhhhhhhh" to load it */
-                if (rzbkload(atpbseg,"atmpbrz.png"))
+                if (rzbkload(rotozoomerimgseg,"atmpbrz.png"))
                     fatal("atmpbrz.png");
 
                 nanim_count = ccount = read_timer_counter();
@@ -305,7 +305,7 @@ void seq_intro() {
             redraw = 0;
 
             if (anim == 0 || anim == 3)
-                atomic_playboy_zoomer(320/*width*/,168/*height*/,atpbseg,ccount - atpb_init_count);
+                rotozoomer_fast_effect(320/*width*/,168/*height*/,rotozoomerimgseg,ccount - rotozoomer_init_count);
             else {
                 vga_write_sequencer(0x02/*map mask*/,0xF);
                 vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*168u)/2u);
@@ -427,7 +427,7 @@ void seq_intro() {
     /* sinus table */
     sin2048fps16_free();
     /* atomic playboy image seg */
-    _dos_freemem(atpbseg);
+    _dos_freemem(rotozoomerimgseg);
     /* VRLs */
     for (vrl_image_select=0;vrl_image_select < VRL_IMAGE_FILES;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
