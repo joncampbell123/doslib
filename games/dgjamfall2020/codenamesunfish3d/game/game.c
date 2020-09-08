@@ -82,19 +82,21 @@ void vga_clear_npage() {
     vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
 }
 
-struct font_bmp*                    arial_small = NULL;
-struct font_bmp*                    arial_medium = NULL;
 struct font_bmp*                    arial_large = NULL;
 
-static inline int font_bmp_do_load_arial_large() {
+int font_bmp_do_load_arial_large() {
     return font_bmp_do_load(&arial_large,"ariallrg.png");
 }
 
-static inline int font_bmp_do_load_arial_medium() {
+struct font_bmp*                    arial_medium = NULL;
+
+int font_bmp_do_load_arial_medium() {
     return font_bmp_do_load(&arial_medium,"arialmed.png");
 }
 
-static inline int font_bmp_do_load_arial_small() {
+struct font_bmp*                    arial_small = NULL;
+
+int font_bmp_do_load_arial_small() {
     return font_bmp_do_load(&arial_small,"arialsml.png");
 }
 
