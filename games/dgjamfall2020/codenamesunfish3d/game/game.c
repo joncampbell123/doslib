@@ -98,50 +98,6 @@ static inline int font_bmp_do_load_arial_small() {
     return font_bmp_do_load(&arial_small,"arialsml.png");
 }
 
-unsigned int font_bmp_draw_chardef_vga8u(struct font_bmp *fnt,unsigned int cdef,unsigned int x,unsigned int y,unsigned char color) {
-    unsigned int nx = x;
-
-    if (fnt != NULL) {
-        if (fnt->chardef != NULL && cdef < fnt->chardef_count) {
-            const struct font_bmp_chardef *cdent = fnt->chardef + cdef;
-            x += (unsigned int)((int)cdent->xoffset);
-            y += (unsigned int)((int)cdent->yoffset);
-            nx += (unsigned int)((int)cdent->xadvance);
-            if (x < 640 && y < 400) {
-                const unsigned char *sp = fnt->fontbmp + (fnt->stride * cdent->y) + (cdent->x >> 3u);
-                unsigned char *dp = vga_state.vga_graphics_ram + (80u * y) + (x >> 2u);
-                unsigned char sm = 0x80u >> (cdent->x & 7u);
-                unsigned char dm = 1 << (x & 3u);
-                unsigned int sw = cdent->w;
-
-                while (sw-- > 0) {
-                    unsigned int sh = cdent->h;
-                    const unsigned char *rsp = sp;
-                    unsigned char *rdp = dp;
-
-                    vga_write_sequencer(0x02/*map mask*/,dm);
-                    while (sh-- > 0) {
-                        if ((*rsp) & sm) *rdp = color;
-                        rsp += fnt->stride;
-                        rdp += 80u;
-                    }
-
-                    if ((dm <<= 1u) & 0xF0) {
-                        dm = 1u;
-                        dp++;
-                    }
-                    if ((sm >>= 1u) == 0) {
-                        sm = 0x80;
-                        sp++;
-                    }
-                }
-            }
-        }
-    }
-
-    return nx;
-}
-
 /*---------------------------------------------------------------------------*/
 /* introductory sequence                                                     */
 /*---------------------------------------------------------------------------*/
