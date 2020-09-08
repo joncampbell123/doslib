@@ -1036,8 +1036,10 @@ int main() {
     }
 
 #if TARGET_MSDOS == 16
+# if 0 // not using it yet
     probe_emm();            // expanded memory support
     probe_himem_sys();      // extended memory support
+# endif
 #endif
 
     init_timer_irq();
