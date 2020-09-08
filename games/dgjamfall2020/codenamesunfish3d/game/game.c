@@ -63,6 +63,7 @@ uint32_t counter_read() {
     return tmp;
 }
 
+/* IRQ 0 interrupt handler (timer tick) */
 void (__interrupt __far *prev_timer_irq)() = NULL;
 static void __interrupt __far timer_irq() { /* IRQ 0 */
     counter++;
@@ -78,6 +79,7 @@ static void __interrupt __far timer_irq() { /* IRQ 0 */
     }
 }
 
+/* init timer IRQ */
 void init_timer_irq() {
     if (prev_timer_irq == NULL) {
         p8259_mask(0);
@@ -92,6 +94,7 @@ void init_timer_irq() {
     }
 }
 
+/* restore timer IRQ */
 void restore_timer_irq() {
     if (prev_timer_irq != NULL) {
         p8259_mask(0);
