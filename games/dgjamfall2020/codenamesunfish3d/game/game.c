@@ -482,6 +482,7 @@ int main() {
     font_bmp_free(&arial_small);
     font_bmp_free(&arial_medium);
     font_bmp_free(&arial_large);
+    dumbpack_close(&sorc_pack);
 
     unhook_irqs();
     restore_text_mode();
