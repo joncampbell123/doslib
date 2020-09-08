@@ -98,23 +98,6 @@ static inline int font_bmp_do_load_arial_small() {
     return font_bmp_do_load(&arial_small,"arialsml.png");
 }
 
-/* yes, we use unicode (UTF-8) strings here in this DOS application! */
-int font_bmp_unicode_to_chardef(struct font_bmp *fnt,uint32_t c) {
-    if (fnt != NULL && c < 0x10000ul) {
-        if (fnt->chardef != NULL) {
-            unsigned int i;
-
-            /* NTS: I know, this is very inefficient. Later revisions will add a faster method */
-            for (i=0;i < fnt->chardef_count;i++) {
-                if (fnt->chardef[i].id == (uint16_t)c)
-                    return i;
-            }
-        }
-    }
-
-    return -1;
-}
-
 unsigned int font_bmp_draw_chardef(struct font_bmp *fnt,unsigned int cdef,unsigned int x,unsigned int y,unsigned char color) {
     unsigned int nx = x;
 

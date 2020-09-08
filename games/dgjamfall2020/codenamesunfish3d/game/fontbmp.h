@@ -33,6 +33,7 @@ struct font_bmp {
     struct font_bmp_kerndef*        kerndef;        /* array of kerndef */
 };
 
+int font_bmp_unicode_to_chardef(struct font_bmp *fnt,uint32_t c);
 int font_bmp_do_load(struct font_bmp **fnt,const char *path);
 struct font_bmp *font_bmp_load(const char *path);
 void font_bmp_free(struct font_bmp **fnt);
