@@ -30,6 +30,7 @@
 #include "sin2048.h"
 #include "fzlibdec.h"
 #include "fataexit.h"
+#include "sorcpack.h"
 
 uint16_t *sin2048fps16_table = NULL;         // 2048-sample sin(x) quarter wave lookup table (0....0x7FFF)
 
@@ -59,5 +60,18 @@ void sin2048fps16_free(void) {
         free(sin2048fps16_table);
         sin2048fps16_table = NULL;
     }
+}
+
+int sin2048fps16_open(void) {
+    if (sin2048fps16_table == NULL) {
+        uint32_t ofs = dumbpack_ent_offset(sorc_pack,1);
+        uint32_t sz = dumbpack_ent_size(sorc_pack,1);
+        if (ofs == 0ul || sz < (sizeof(uint16_t) * 2048)) return -1;
+        if (lseek(sorc_pack->fd,ofs,SEEK_SET) != ofs) return -1;
+        if ((sin2048fps16_table=malloc(sizeof(uint16_t) * 2048)) == NULL) return -1;
+        read(sorc_pack->fd,sin2048fps16_table,sizeof(uint16_t) * 2048);
+    }
+
+    return 0;
 }
 

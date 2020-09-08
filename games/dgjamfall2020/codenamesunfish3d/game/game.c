@@ -225,18 +225,16 @@ void seq_intro() {
         fatal("cannot load arial font");
     if (sorc_pack_open())
         fatal("cannot open sorcwoo pack");
+    if (sorc_pack->offset_count < PACK_REQ)
+        fatal("cannot open sorcwoo pack");
+    if (sin2048fps16_open())
+        fatal("cannot open sin2048");
 
     animtext_fnt = arial_medium;
 
     /* our assets are in a pack now */
-    if (sorc_pack->offset_count < PACK_REQ)
-        fatal("cannot open sorcwoo pack");
 
     /* the rotozoomer effect needs a sin lookup table */
-    sin2048fps16_table = malloc(sizeof(uint16_t) * 2048);
-    if (sin2048fps16_table == NULL) fatal("sorcwoo.sin");
-    lseek(sorc_pack->fd,dumbpack_ent_offset(sorc_pack,1),SEEK_SET);
-    read(sorc_pack->fd,sin2048fps16_table,sizeof(uint16_t) * 2048);
 
     /* rotozoomer background */
     if (_dos_allocmem(0x1000/*paragrahs==64KB*/,&atpbseg) != 0)
