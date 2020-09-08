@@ -86,15 +86,6 @@ struct font_bmp*                    arial_small = NULL;
 struct font_bmp*                    arial_medium = NULL;
 struct font_bmp*                    arial_large = NULL;
 
-int font_bmp_do_load(struct font_bmp **fnt,const char *path) {
-    if (*fnt == NULL) {
-        if ((*fnt = font_bmp_load(path)) == NULL)
-            return -1;
-    }
-
-    return 0;
-}
-
 static inline int font_bmp_do_load_arial_large() {
     return font_bmp_do_load(&arial_large,"ariallrg.png");
 }
