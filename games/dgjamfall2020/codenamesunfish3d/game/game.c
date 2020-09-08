@@ -576,6 +576,10 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
             case 0x02:
                 sa->next_event += 120u;
                 break;
+            case 0x10:
+                if (*(sa->text.msg) == 0) break; /* even as a two-byte sequence please don't allow 0x00 to avoid confusion with end of string */
+                sa->text.delay = *(sa->text.msg++) - 1u;
+                break;
             case '\n': {
                 const unsigned int lh = seqanim_text_height(sa);
                 sa->text.x = sa->text.home_x;
@@ -661,9 +665,11 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
 
             switch (sa->events->what) {
                 case SEQAEV_END:
+                    sa->next_event = nowcount;
                     sa->flags |= SEQAF_END;
                     break;
                 case SEQAEV_TEXT_CLEAR:
+                    sa->next_event = nowcount;
                     seqanim_text_clear(sa,e);
                     (sa->events)++; /* next */
                     break;
@@ -737,12 +743,12 @@ void seqanim_redraw(struct seqanim_t *sa) {
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Hello world!\nHow are you?"},
+    {SEQAEV_TEXT,           0,          0,          "Hello world!\n" "\x10\x3C"/*slow down*/ "How are you?"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Doh! \x02Uhm\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01."},
+    {SEQAEV_TEXT,           0,          0,          "Hey, blah blah blah blah blah! \x02" "\x10\x01"/*instant*/ "Uhm\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01."},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
