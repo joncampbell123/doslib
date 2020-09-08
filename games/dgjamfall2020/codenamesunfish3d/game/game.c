@@ -573,6 +573,9 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
             case 0x01:
                 sa->next_event += 120u / 4u;
                 break;
+            case 0x02:
+                sa->next_event += 120u;
+                break;
             case '\n': {
                 const unsigned int lh = seqanim_text_height(sa);
                 sa->text.x = sa->text.home_x;
@@ -739,7 +742,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Doh! Uhm\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01."},
+    {SEQAEV_TEXT,           0,          0,          "Doh! \x02Uhm\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01."},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
