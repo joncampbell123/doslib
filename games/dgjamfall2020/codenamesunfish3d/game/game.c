@@ -545,7 +545,7 @@ void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
 unsigned int seqanim_text_height(struct seqanim_t *sa) {
     // FIXME: font_bmp needs to define line height!
     if (sa->text.font == arial_medium)
-        return 16;
+        return 14;
 
     return 0;
 }
@@ -563,7 +563,6 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
                 const unsigned int lh = seqanim_text_height(sa);
                 sa->text.x = sa->text.home_x;
                 sa->text.y += lh;
-                if (sa->text.y > (sa->text.end_y - lh)) sa->text.y = (sa->text.end_y - lh);
                 } break;
             default: {
                 unsigned char far *sp = vga_state.vga_graphics_ram;
@@ -671,7 +670,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
 void seq_intro(void) {
 #define ANIM_HEIGHT         168
-#define ANIM_TEXT_TOP       170
+#define ANIM_TEXT_TOP       168
 #define ANIM_TEXT_LEFT      5
 #define ANIM_TEXT_RIGHT     310
 #define ANIM_TEXT_BOTTOM    198
