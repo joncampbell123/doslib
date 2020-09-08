@@ -44,17 +44,6 @@ struct seq_anim_i {
 #define SEQANF_OFF          (0x02u)
 
 /*---------------------------------------------------------------------------*/
-/* write buffer to VGA palette                                               */
-/*---------------------------------------------------------------------------*/
-
-void pal_buf_to_vga(unsigned int offset,unsigned int count,unsigned char *palette) {
-    unsigned int i;
-
-    vga_palette_lseek(offset);
-    for (i=0;i < count;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
-}
-
-/*---------------------------------------------------------------------------*/
 /* vga page flipping management                                              */
 /*---------------------------------------------------------------------------*/
 
@@ -91,17 +80,6 @@ void vga_update_disp_cur_page() {
     vga_wait_for_hsync_end();
     vga_set_start_location(vga_cur_page);
 }
-
-/*---------------------------------------------------------------------------*/
-/* vga fast memory clear function                                            */
-/*---------------------------------------------------------------------------*/
-
-static unsigned int vga_rep_stosw(const unsigned char far * const vp,const uint16_t v,const unsigned int wc);
-#pragma aux vga_rep_stosw = \
-    "rep stosw" \
-    parm [es di] [ax] [cx] \
-    modify [di cx] \
-    value [di];
 
 /*---------------------------------------------------------------------------*/
 /* clear next VGA page                                                       */
