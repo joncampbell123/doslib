@@ -8,3 +8,7 @@ extern unsigned int vga_cur_page,vga_next_page;
 void restore_text_mode();
 void init_vga256unchained();
 
+void vga_swap_pages();
+void vga_clear_npage();
+void vga_update_disp_cur_page();
+

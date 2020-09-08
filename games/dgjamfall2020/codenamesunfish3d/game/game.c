@@ -48,42 +48,6 @@ struct seq_anim_i {
 #define SEQANF_OFF          (0x02u)
 
 /*---------------------------------------------------------------------------*/
-/* vga, swap current and next page pointers (not yet CRTC)                   */
-/*---------------------------------------------------------------------------*/
-
-void vga_swap_pages() {
-    vga_cur_page = vga_next_page;
-    vga_next_page = (vga_next_page ^ 0x4000) & 0x7FFF;
-    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
-}
-
-/*---------------------------------------------------------------------------*/
-/* vga, update current page to hardware (reprogram CRTC)                     */
-/*---------------------------------------------------------------------------*/
-
-void vga_update_disp_cur_page() {
-    /* make sure the CRTC is not in the blanking portions or vsync
-     * so that we're not changing offset during a time the CRTC might
-     * latch the new display offset.
-     *
-     * caller is expected to wait for vsync start at some point to
-     * keep time with vertical refresh or bad things (flickering)
-     * happen. */
-    vga_wait_for_vsync_end();
-    vga_wait_for_hsync_end();
-    vga_set_start_location(vga_cur_page);
-}
-
-/*---------------------------------------------------------------------------*/
-/* clear next VGA page                                                       */
-/*---------------------------------------------------------------------------*/
-
-void vga_clear_npage() {
-    vga_write_sequencer(0x02/*map mask*/,0xF);
-    vga_rep_stosw(vga_state.vga_graphics_ram,0,0x4000u/2u); /* 16KB (8KB 16-bit WORDS) */
-}
-
-/*---------------------------------------------------------------------------*/
 /* introductory sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
