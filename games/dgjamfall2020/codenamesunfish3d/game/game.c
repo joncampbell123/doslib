@@ -350,6 +350,7 @@ union seqcanvas_layeru_t;
 
 struct seqcanvas_memsetfill {
     unsigned int                    h;                  /* where to fill */
+    unsigned char                   c;                  /* with what */
 };
 
 struct seqcanvas_rotozoom {
@@ -389,12 +390,51 @@ struct seqcanvas_layer_t {
 };
 
 #define SEQAF_REDRAW                (1u << 0u)          /* redraw the canvas and page flip to screen */
+#define SEQAF_END                   (1u << 1u)
+#define SEQAF_TEXT_PALCOLOR_UPDATE  (1u << 2u)
+
+enum {
+    SEQAEV_END=0,                   /* end of sequence */
+    SEQAEV_TEXT_CLEAR,              /* clear/reset/home text */
+    SEQAEV_TEXT,                    /* print text (UTF-8 string pointed to by 'params') with control codes embedded as well */
+    SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
+    SEQAEV_SYNC,                    /* set next event time to now */
+    SEQAEV_USER_EVENT,              /* user event (function loop does whatever) */
+
+    SEQAEV_MAX
+};
+
+struct seqanim_event_t {
+    unsigned char                   what;
+    uint32_t                        param1,param2;
+    const char*                     params;
+};
+
+struct seqanim_text_t {
+    int                             home_x,home_y;      /* home position when clearing text. also used on newline. */
+    int                             end_x,end_y;        /* right margin, bottom margin */
+    int                             x,y;                /* current position */
+    unsigned char                   color;              /* current color */
+    struct font_bmp*                font;               /* current font */
+    uint32_t                        delay;              /* printout delay */
+    struct font_bmp*                def_font;           /* default font */
+    uint32_t                        def_delay;          /* printout delay */
+    uint8_t                         palcolor[3];        /* VGA palette color */
+    uint8_t                         def_palcolor[3];    /* default VGA palette color */
+    const char*                     msg;                /* UTF-8 string to print */
+};
 
 struct seqanim_t {
     /* what to draw (back to front) */
     unsigned int                    canvas_obj_alloc;   /* how much is allocated */
     unsigned int                    canvas_obj_count;   /* how much to draw */
     struct seqcanvas_layer_t*       canvas_obj;
+    /* when to process next event */
+    uint32_t                        next_event;         /* counter value */
+    /* events to process, provided by caller (not allocated) */
+    const struct seqanim_event_t*   events;
+    /* text print (dialogue) state */
+    struct seqanim_text_t           text;
     /* state flags */
     unsigned int                    flags;
 };
@@ -413,6 +453,7 @@ int seqcanvas_text_alloc_text(struct seqcanvas_text *t,unsigned int len) {
         if ((t->textcdef=malloc(sizeof(uint16_t) * len)) == NULL)
             return -1;
     }
+
     return 0;
 }
 
@@ -449,6 +490,16 @@ void seqanim_free_canvas(struct seqanim_t *sa) {
 
 struct seqanim_t *seqanim_alloc(void) {
     struct seqanim_t *sa = calloc(1,sizeof(struct seqanim_t));
+
+    if (sa != NULL) {
+        sa->text.color = 0xFF;
+        sa->text.font = sa->text.def_font = arial_medium; /* hope you loaded this before calling this alloc or you will have to assign this yourself! */
+        sa->text.delay = sa->text.def_delay = 120 / 20;
+        sa->text.palcolor[0] = sa->text.def_palcolor[0] = 255;
+        sa->text.palcolor[1] = sa->text.def_palcolor[1] = 255;
+        sa->text.palcolor[2] = sa->text.def_palcolor[2] = 255;
+    }
+
     return sa;
 }
 
@@ -460,17 +511,192 @@ void seqanim_free(struct seqanim_t **sa) {
     }
 }
 
+static inline int seqanim_running(struct seqanim_t *sa) {
+    if (sa->flags & SEQAF_END)
+        return 0;
+
+    return 1;
+}
+
+static inline void seqanim_set_redraw_everything_flag(struct seqanim_t *sa) {
+    sa->flags |= SEQAF_REDRAW | SEQAF_TEXT_PALCOLOR_UPDATE;
+}
+
+void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+    (void)e; // unused
+
+    sa->text.delay = sa->text.def_delay;
+    sa->text.font = sa->text.def_font;
+    sa->text.x = sa->text.home_x;
+    sa->text.y = sa->text.home_y;
+    sa->text.color = 0xFF;
+    sa->text.palcolor[0] = sa->text.def_palcolor[0];
+    sa->text.palcolor[1] = sa->text.def_palcolor[1];
+    sa->text.palcolor[2] = sa->text.def_palcolor[2];
+    sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+
+    if (sa->text.home_y < sa->text.end_y) {
+        vga_write_sequencer(0x02/*map mask*/,0xF);
+        vga_rep_stosw(vga_state.vga_graphics_ram + (sa->text.home_y*80u),0,((320u/4u)*(sa->text.end_y - sa->text.home_y))/2u);
+    }
+}
+
+void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct seqanim_event_t *e) {
+    uint32_t c;
+
+    (void)nowcount; // unused
+    (void)e; // unused
+
+    c = utf8decode(&(sa->text.msg));
+    if (c != 0) {
+        unsigned char far *sp = vga_state.vga_graphics_ram;
+        const uint32_t cdef = font_bmp_unicode_to_chardef(sa->text.font,c);
+
+        vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_FIRST);
+        font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
+
+        vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xA000,VGA_PAGE_SECOND);
+        sa->text.x = font_bmp_draw_chardef_vga8u(sa->text.font,cdef,sa->text.x,sa->text.y,sa->text.color);
+
+        vga_state.vga_graphics_ram = sp;
+
+        sa->next_event += sa->text.delay;
+    }
+    else {
+        (sa->events)++; /* next */
+    }
+}
+
+void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
+    if (nowcount >= sa->next_event) {
+        if (sa->events == NULL) {
+            sa->flags |= SEQAF_END;
+        }
+        else {
+            const struct seqanim_event_t *e = sa->events;
+
+            switch (sa->events->what) {
+                case SEQAEV_END:
+                    sa->flags |= SEQAF_END;
+                    break;
+                case SEQAEV_TEXT_CLEAR:
+                    seqanim_text_clear(sa,e);
+                    (sa->events)++; /* next */
+                    break;
+                case SEQAEV_TEXT:
+                    seqanim_step_text(sa,nowcount,e); /* will advance sa->events */
+                    break;
+                case SEQAEV_SYNC:
+                    sa->next_event = nowcount;
+                    (sa->events)++; /* next */
+                    break;
+                default:
+                    (sa->events)++; /* next */
+                    break;
+            }
+
+            if (sa->events != e) {
+                /* some init required for next event */
+                switch (sa->events->what) {
+                    case SEQAEV_TEXT:
+                        sa->text.msg = sa->events->params;
+                        break;
+                }
+            }
+        }
+    }
+}
+
+void seqanim_draw(struct seqanim_t *sa) {
+    sa->flags &= ~SEQAF_REDRAW;
+}
+
+void seqanim_update_text_palcolor(struct seqanim_t *sa) {
+    sa->flags &= ~SEQAF_TEXT_PALCOLOR_UPDATE;
+
+    vga_palette_lseek(sa->text.color);
+    vga_palette_write(sa->text.palcolor[0]>>2u,sa->text.palcolor[1]>>2u,sa->text.palcolor[2]>>2u);
+}
+
+void seqanim_redraw(struct seqanim_t *sa) {
+    if (sa->flags & SEQAF_REDRAW) {
+        seqanim_draw(sa);
+
+        vga_swap_pages(); /* current <-> next */
+        vga_update_disp_cur_page();
+        vga_wait_for_vsync(); /* wait for vsync */
+    }
+    if (sa->flags & SEQAF_TEXT_PALCOLOR_UPDATE) {
+        seqanim_update_text_palcolor(sa);
+    }
+}
+
 /*---------------------------------------------------------------------------*/
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
+const struct seqanim_event_t seq_intro_events[] = {
+//  what                    param1,     param2,     params
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Hello world!"},
+    {SEQAEV_WAIT,           120*5,      0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Doh!"},
+    {SEQAEV_WAIT,           120*1,      0,          NULL},
+    {SEQAEV_END}
+};
+
 void seq_intro(void) {
+#define ANIM_HEIGHT         168
+#define ANIM_TEXT_TOP       170
+#define ANIM_TEXT_LEFT      5
+#define ANIM_TEXT_RIGHT     310
+#define ANIM_TEXT_BOTTOM    198
     struct seqanim_t *sanim;
+    uint32_t nowcount;
+    int c;
+
+    /* if we load this now, seqanim can automatically use it */
+    if (font_bmp_do_load_arial_medium())
+        fatal("arial");
 
     if ((sanim=seqanim_alloc()) == NULL)
         fatal("seqanim");
+    if (seqanim_alloc_canvas(sanim,32))
+        fatal("seqanim");
+
+    sanim->next_event = read_timer_counter();
+
+    sanim->events = seq_intro_events;
+
+    sanim->text.home_x = sanim->text.x = ANIM_TEXT_LEFT;
+    sanim->text.home_y = sanim->text.y = ANIM_TEXT_TOP;
+    sanim->text.end_x = ANIM_TEXT_RIGHT;
+    sanim->text.end_y = ANIM_TEXT_BOTTOM;
+
+    /* canvas obj #0: black fill */
+    {
+        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[0]);
+        c->rop.msetfill.h = ANIM_HEIGHT;
+        c->rop.msetfill.c = 0x7;
+        c->what = SEQCL_MSETFILL;
+    }
+
+    seqanim_set_redraw_everything_flag(sanim);
+
+    while (seqanim_running(sanim)) {
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) break;
+        }
+
+        nowcount = read_timer_counter();
+
+        seqanim_step(sanim,nowcount);
+        seqanim_redraw(sanim);
+    }
 
     seqanim_free(&sanim);
+#undef ANIM_HEIGHT
 }
 
 /*---------------------------------------------------------------------------*/
