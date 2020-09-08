@@ -2,6 +2,7 @@
 #ifndef __DOSLIB_HW_VGA_VGA_H
 #define __DOSLIB_HW_VGA_VGA_H
 
+#include <stdio.h>
 #include <conio.h>
 
 #include <hw/cpu/cpu.h>
@@ -393,6 +394,15 @@ static inline void vga_palette_write(unsigned char r,unsigned char g,unsigned ch
 	outp(0x3C9,g);
 	outp(0x3C9,b);
 }
+
+void pal_buf_to_vga(unsigned int offset,unsigned int count,unsigned char *palette);
+
+static unsigned int vga_rep_stosw(const unsigned char far * const vp,const uint16_t v,const unsigned int wc);
+#pragma aux vga_rep_stosw = \
+    "rep stosw" \
+    parm [es di] [ax] [cx] \
+    modify [di cx] \
+    value [di];
 
 static inline unsigned char vga_in_vsync() {
 	return (inp(vga_state.vga_base_3x0 + 0xA) & 0x8);

@@ -58,7 +58,7 @@ MCGACAPM_EXE = $(SUBDIR)$(HPS)mcgacapm.$(EXEEXT)
 ! endif
 !endif
 
-$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj $(SUBDIR)$(HPS)vgaclks.obj $(SUBDIR)$(HPS)vgabicur.obj $(SUBDIR)$(HPS)vgasetmm.obj $(SUBDIR)$(HPS)vgarcrtc.obj $(SUBDIR)$(HPS)vgasemo.obj $(SUBDIR)$(HPS)vgaseco.obj $(SUBDIR)$(HPS)vgacrtcc.obj $(SUBDIR)$(HPS)vgacrtcr.obj $(SUBDIR)$(HPS)vgacrtcs.obj $(SUBDIR)$(HPS)vgasplit.obj $(SUBDIR)$(HPS)vgamodex.obj $(SUBDIR)$(HPS)vga9wide.obj $(SUBDIR)$(HPS)vgaalfpl.obj $(SUBDIR)$(HPS)vgaselcs.obj $(SUBDIR)$(HPS)vgastloc.obj $(SUBDIR)$(HPS)vrl1xlof.obj $(SUBDIR)$(HPS)vrl1xdrw.obj $(SUBDIR)$(HPS)vrl1ydrw.obj $(SUBDIR)$(HPS)vrl1xdrs.obj $(SUBDIR)$(HPS)vgawm1bc.obj $(SUBDIR)$(HPS)pcjrmem.obj $(SUBDIR)$(HPS)vgattyp8.obj $(SUBDIR)$(HPS)vgattyg.obj $(SUBDIR)$(HPS)vgattyj.obj $(SUBDIR)$(HPS)vrlrbasp.obj
+$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj $(SUBDIR)$(HPS)vgaclks.obj $(SUBDIR)$(HPS)vgabicur.obj $(SUBDIR)$(HPS)vgasetmm.obj $(SUBDIR)$(HPS)vgarcrtc.obj $(SUBDIR)$(HPS)vgasemo.obj $(SUBDIR)$(HPS)vgaseco.obj $(SUBDIR)$(HPS)vgacrtcc.obj $(SUBDIR)$(HPS)vgacrtcr.obj $(SUBDIR)$(HPS)vgacrtcs.obj $(SUBDIR)$(HPS)vgasplit.obj $(SUBDIR)$(HPS)vgamodex.obj $(SUBDIR)$(HPS)vga9wide.obj $(SUBDIR)$(HPS)vgaalfpl.obj $(SUBDIR)$(HPS)vgaselcs.obj $(SUBDIR)$(HPS)vgastloc.obj $(SUBDIR)$(HPS)vrl1xlof.obj $(SUBDIR)$(HPS)vrl1xdrw.obj $(SUBDIR)$(HPS)vrl1ydrw.obj $(SUBDIR)$(HPS)vrl1xdrs.obj $(SUBDIR)$(HPS)vgawm1bc.obj $(SUBDIR)$(HPS)pcjrmem.obj $(SUBDIR)$(HPS)vgattyp8.obj $(SUBDIR)$(HPS)vgattyg.obj $(SUBDIR)$(HPS)vgattyj.obj $(SUBDIR)$(HPS)vrlrbasp.obj $(SUBDIR)$(HPS)vgapalb.obj
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj      -+$(SUBDIR)$(HPS)herc.obj     -+$(SUBDIR)$(HPS)tseng.obj
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vgach3c0.obj -+$(SUBDIR)$(HPS)vgastget.obj -+$(SUBDIR)$(HPS)vgatxt50.obj
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vgaclks.obj  -+$(SUBDIR)$(HPS)vgabicur.obj -+$(SUBDIR)$(HPS)vgasetmm.obj
@@ -69,7 +69,7 @@ $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tse
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vrl1xlof.obj -+$(SUBDIR)$(HPS)vrl1xdrw.obj -+$(SUBDIR)$(HPS)vrl1ydrw.obj
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vrl1xdrs.obj -+$(SUBDIR)$(HPS)vgawm1bc.obj -+$(SUBDIR)$(HPS)pcjrmem.obj
 	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vgattyp8.obj -+$(SUBDIR)$(HPS)vgattyg.obj  -+$(SUBDIR)$(HPS)vgattyj.obj
-	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vrlrbasp.obj
+	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vrlrbasp.obj -+$(SUBDIR)$(HPS)vgapalb.obj
 
 $(HW_VGATTY_LIB): $(SUBDIR)$(HPS)vgatty.obj $(HW_VGA_LIB)
 	wlib -q -b -c $(HW_VGATTY_LIB) -+$(SUBDIR)$(HPS)vgatty.obj
