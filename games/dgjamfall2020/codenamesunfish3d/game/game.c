@@ -954,7 +954,7 @@ void seq_com_put_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev)
 
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
-    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot 0
+    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear rotozoomer slot 0
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
@@ -993,7 +993,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
-    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // slot 0 Windows XP background
+    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // rotozoomer slot 0 (param2) Windows XP background (param1)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1001,7 +1001,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // slot 0 to canvas layer 0
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
@@ -1021,13 +1021,13 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 Second Reality "atomic playboy"
+    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // rotozoomer slot 0 (param2) Second Reality "atomic playboy" (param1)
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     // no fade out, abrupt jump to next part
 
     /* Begins waving hands, another demo effect appears */
 
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // slot 0 to canvas layer 0
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
