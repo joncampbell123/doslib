@@ -955,7 +955,7 @@ void seq_com_put_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev)
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot 0
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -1010,7 +1010,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character and room */
 
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
@@ -1032,7 +1032,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0 (we free next, avoid use after free!)
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1). Get the rotozoomer off because we free it next. Avoid use after free!
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
 
     /* game character returns outside */
