@@ -55,6 +55,12 @@ the poor user playing this game can get around. Alright, let's start!"
   a reference to some Windows 3.1 games seen on Shovelware Diggers). The
   credit screen could have that ever-classic over-used 90s Photoshop "Lens
   flare" effect on it (wonder why nobody uses that one anymore, hm?)
+- Sound effects in the game will be common audio clips ripped from other
+  DOS games, movie clips, i.e. the state of sound effects in the early
+  1990s when it was new and novel (wooo!). They will be played as often
+  as possible as part of the joke about "Expanded Continuous Sound" and some
+  games will be made loud and obnoxious like the DOS port of Llamatron
+  (because wooo digitized sound).
 - Like Action 52, it will be made of shitty art resources as 2D topdown
   shooter or tank games that are obvious copy paste versions of each other
   and (intentionally made) glitches.
