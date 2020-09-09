@@ -879,7 +879,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "So he spends his life writing incredibly\noptimized clever useless code."},
+    {SEQAEV_TEXT,           0,          0,          "So he spent his life writing incredibly\noptimized clever useless code."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
@@ -891,7 +891,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* someone in the crowd */
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Oh...\x01 come on!\x01 That's just mean!"},
+    {SEQAEV_TEXT,           0,          0,          "Oh come on!\x01 That's just mean!"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
