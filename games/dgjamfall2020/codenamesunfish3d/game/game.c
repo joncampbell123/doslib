@@ -716,11 +716,6 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
     }
 }
 
-void seqanim_draw_canvasobj_none(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
-    (void)sa;
-    (void)cl;
-}
-
 void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
