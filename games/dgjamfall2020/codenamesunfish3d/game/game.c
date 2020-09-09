@@ -404,6 +404,7 @@ struct seqcanvas_layer_t {
 enum {
     SEQAEV_END=0,                   /* end of sequence */
     SEQAEV_TEXT_CLEAR,              /* clear/reset/home text */
+    SEQAEV_TEXT_COLOR,              /* change text (palette) color on clear */
     SEQAEV_TEXT,                    /* print text (UTF-8 string pointed to by 'params') with control codes embedded as well */
     SEQAEV_TEXT_FADEOUT,            /* fade out (palette entry for) text. param1 is how much to subtract from R/G/B. At 120Hz a value of 255 is just over 2 seconds. 0 means use default. */
     SEQAEV_TEXT_FADEIN,             /* fade in to RGB 888 in param2, or if param2 == 0 to default palette color. param1 same as FADEOUT */
@@ -532,6 +533,17 @@ static inline int seqanim_running(struct seqanim_t *sa) {
 
 static inline void seqanim_set_redraw_everything_flag(struct seqanim_t *sa) {
     sa->flags |= SEQAF_REDRAW | SEQAF_TEXT_PALCOLOR_UPDATE;
+}
+
+void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+    if (e->param1 == 0) {
+        sa->text.def_palcolor[0] = sa->text.def_palcolor[1] = sa->text.def_palcolor[2] = 0xFFu;
+    }
+    else {
+        sa->text.def_palcolor[0] = (unsigned char)(e->param1 >> 16ul);
+        sa->text.def_palcolor[1] = (unsigned char)(e->param1 >>  8ul);
+        sa->text.def_palcolor[2] = (unsigned char)(e->param1 >>  0ul);
+    }
 }
 
 void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
@@ -677,6 +689,10 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     seqanim_text_clear(sa,e);
                     (sa->events)++; /* next */
                     break;
+                case SEQAEV_TEXT_COLOR:
+                    seqanim_text_color(sa,e);
+                    (sa->events)++; /* next */
+                    break;
                 case SEQAEV_TEXT:
                     seqanim_step_text(sa,nowcount,e); /* will advance sa->events */
                     break;
@@ -798,6 +814,7 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -807,21 +824,25 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x30" "----"},
     // no fade out, interrupted speaking
 
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "But what is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hm? What?"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Our purpose? What is the story? The goal?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -836,6 +857,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
+    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
@@ -843,6 +865,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character and room */
 
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -850,6 +873,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* Mr. Woo Sorcerer, blank background, downcast */
 
+    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     // no fade out, abrupt jump to next part
@@ -863,6 +887,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character returns outside */
 
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02*ahem*"},
     {SEQAEV_WAIT,           120/4,      0,          NULL},
@@ -890,6 +915,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* someone in the crowd */
 
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh come on!\x01 That's just mean!"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -897,6 +923,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character */
 
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Okay... okay...\x01 he spends his life writing\nincredible useless optimized code."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
