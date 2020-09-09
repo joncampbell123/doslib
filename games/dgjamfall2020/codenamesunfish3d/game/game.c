@@ -336,14 +336,14 @@ void seq_intro() {
 
 /* sequence animation engine (for VGA page flipping animation) */
 enum seqcanvas_layer_what {
-    SEQCL_NONE=0,                                       /* nothing */
-    SEQCL_MSETFILL,                                     /* msetfill */
-    SEQCL_ROTOZOOM,                                     /* rotozoom */
-    SEQCL_VRL,                                          /* vrl */
-    SEQCL_CALLBACK,                                     /* callback */
-    SEQCL_TEXT,                                         /* text */
+    SEQCL_NONE=0,                                       /* 0   nothing */
+    SEQCL_MSETFILL,                                     /* 1   msetfill */
+    SEQCL_ROTOZOOM,                                     /* 2   rotozoom */
+    SEQCL_VRL,                                          /* 3   vrl */
+    SEQCL_CALLBACK,                                     /* 4   callback */
 
-    SEQCL_MAX
+    SEQCL_TEXT,                                         /* 5   text */
+    SEQCL_MAX                                           /* 6   */
 };
 
 union seqcanvas_layeru_t;
@@ -707,8 +707,34 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
     }
 }
 
+void seqanim_draw_canvasobj_null(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+}
+
+typedef void (*seqanim_draw_canvasobj_func)(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+
+const seqanim_draw_canvasobj_func seqanim_draw_canvasobj_functbl[SEQCL_MAX] = {
+    seqanim_draw_canvasobj_null,                        // 0   SEQCL_NONE
+    seqanim_draw_canvasobj_null,                        // 1   SEQCL_MSETFILL
+    seqanim_draw_canvasobj_null,                        // 2   SEQCL_ROTOZOOM
+    seqanim_draw_canvasobj_null,                        // 3   SEQCL_VRL
+    seqanim_draw_canvasobj_null,                        // 4   SEQCL_CALLBACK
+
+    seqanim_draw_canvasobj_null                         // 5   SEQCL_TEXT
+};
+
+void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    if (cl->what < SEQCL_MAX)
+        seqanim_draw_canvasobj_functbl[cl->what](sa,cl);
+}
+
 void seqanim_draw(struct seqanim_t *sa) {
     sa->flags &= ~SEQAF_REDRAW;
+
+    if (sa->canvas_obj != NULL) {
+        unsigned int i;
+        for (i=0;i < sa->canvas_obj_count;i++)
+            seqanim_draw_canvasobj(sa,&(sa->canvas_obj[i]));
+    }
 }
 
 void seqanim_update_text_palcolor(struct seqanim_t *sa) {
