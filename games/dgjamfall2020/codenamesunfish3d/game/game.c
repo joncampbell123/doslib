@@ -800,38 +800,38 @@ const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x40" "---"},
+    {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x30" "----"},
     // no fade out, interrupted speaking
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "But what is our purpose in this game?"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hm? What?"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Our purpose? What is the story? The goal?"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
@@ -845,7 +845,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     /* Mr. Woo Sorcerer, blank background, downcast */
