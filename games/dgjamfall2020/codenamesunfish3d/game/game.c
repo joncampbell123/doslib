@@ -881,7 +881,7 @@ void seq_com_load_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev
 
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
-    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot
+    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot 0
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -919,7 +919,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
-    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // Windows XP background
+    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // slot 0 Windows XP background
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -946,7 +946,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
-    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // Second Reality "atomic playboy"
+    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 Second Reality "atomic playboy"
     // no fade out, abrupt jump to next part
 
     /* Begins waving hands, another demo effect appears */
@@ -955,7 +955,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
-    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // we're done with the rotozoomer, free it
+    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
 
     /* game character returns outside */
 
