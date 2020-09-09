@@ -708,13 +708,23 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
 }
 
 void seqanim_draw_canvasobj_null(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    (void)sa;
+    (void)cl;
+}
+
+void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    if (cl->rop.msetfill.h != 0) {
+        const uint16_t w = (uint16_t)cl->rop.msetfill.c + ((uint16_t)cl->rop.msetfill.c << 8u);
+        vga_write_sequencer(0x02/*map mask*/,0xF);
+        vga_rep_stosw(vga_state.vga_graphics_ram,w,((320u/4u)*cl->rop.msetfill.h)/2u);
+    }
 }
 
 typedef void (*seqanim_draw_canvasobj_func)(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
 
 const seqanim_draw_canvasobj_func seqanim_draw_canvasobj_functbl[SEQCL_MAX] = {
     seqanim_draw_canvasobj_null,                        // 0   SEQCL_NONE
-    seqanim_draw_canvasobj_null,                        // 1   SEQCL_MSETFILL
+    seqanim_draw_canvasobj_msetfill,                    // 1   SEQCL_MSETFILL
     seqanim_draw_canvasobj_null,                        // 2   SEQCL_ROTOZOOM
     seqanim_draw_canvasobj_null,                        // 3   SEQCL_VRL
     seqanim_draw_canvasobj_null,                        // 4   SEQCL_CALLBACK
@@ -818,6 +828,7 @@ void seq_intro(void) {
     /* canvas obj #0: black fill */
     {
         struct seqcanvas_layer_t *c = &(sanim->canvas_obj[0]);
+        if (sanim->canvas_obj_count < 1) sanim->canvas_obj_count = 1;
         c->rop.msetfill.h = ANIM_HEIGHT;
         c->rop.msetfill.c = 0x7;
         c->what = SEQCL_MSETFILL;
