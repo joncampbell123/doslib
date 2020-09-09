@@ -408,7 +408,7 @@ enum {
     SEQAEV_TEXT_FADEIN,             /* fade in to RGB 888 in param2, or if param2 == 0 to default palette color. param1 same as FADEOUT */
     SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
     SEQAEV_SYNC,                    /* set next event time to now */
-    SEQAEV_CUSTOM,                  /* custom event, specific to function/code */
+    SEQAEV_CALLBACK,                /* custom event (callback funcptr 'params') */
 
     SEQAEV_MAX
 };
