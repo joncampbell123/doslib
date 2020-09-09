@@ -47,7 +47,8 @@ the poor user playing this game can get around. Alright, let's start!"
 - Intro screen will use a loop of the "Whoo! Yeah!" from the NES cartridge and
   the "make your selection now" clip.
 - Title screen will be deliberately made to look like a Microsoft Paint
-  abomination with some fancy font used to type the title. Mr. Woo sorcerer
+  abomination (meaning the rudimentary paint program seen in Windows 3.1
+  through XP) with some fancy font used to type the title. Mr. Woo sorcerer
   will be drawn as if by some nerd who thinks of himself as a powerful
   wizard or something (glowy eyes, lightning from hands, etc.)
 - Jokes about woo: "Stereo Sound" and "Expanded Continuous Sound" (this being
