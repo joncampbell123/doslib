@@ -798,9 +798,11 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 #define ANIM_HEIGHT         168
 
+#define ANIM_BKGND_CANVAS   0
+
 void seq_intro_set_fill_color(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
-    struct seqcanvas_layer_t *c = &(sa->canvas_obj[0]);
-    if (sa->canvas_obj_count < 1) sa->canvas_obj_count = 1;
+    struct seqcanvas_layer_t *c = &(sa->canvas_obj[ANIM_BKGND_CANVAS]);
+
     c->rop.msetfill.h = ANIM_HEIGHT;
     c->rop.msetfill.c = ev->param1;
     c->what = SEQCL_MSETFILL;
@@ -858,10 +860,11 @@ void seq_intro(void) {
     sanim->text.end_x = ANIM_TEXT_RIGHT;
     sanim->text.end_y = ANIM_TEXT_BOTTOM;
 
+    sanim->canvas_obj_count = 1;
+
     /* canvas obj #0: black fill */
     {
-        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[0]);
-        if (sanim->canvas_obj_count < 1) sanim->canvas_obj_count = 1;
+        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[ANIM_BKGND_CANVAS]);
         c->rop.msetfill.h = ANIM_HEIGHT;
         c->rop.msetfill.c = 0x7;
         c->what = SEQCL_MSETFILL;
