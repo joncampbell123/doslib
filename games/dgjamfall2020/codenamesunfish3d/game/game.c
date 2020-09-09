@@ -797,7 +797,6 @@ void seqanim_redraw(struct seqanim_t *sa) {
 /*---------------------------------------------------------------------------*/
 
 const struct seqanim_event_t seq_intro_events[] = {
-#if 0
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
@@ -866,7 +865,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02*ahem*"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120/4,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -917,7 +916,6 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "So he lives to this day writing... \x01Well...\x01\nnothing of significance. Just woo."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
-#endif
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Since the creator of this game doesn't seem\nto care for us or the story, we're on our own."},
