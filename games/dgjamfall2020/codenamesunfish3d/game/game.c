@@ -731,21 +731,15 @@ void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
-typedef void (*seqanim_draw_canvasobj_func)(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
-
-const seqanim_draw_canvasobj_func seqanim_draw_canvasobj_functbl[SEQCL_MAX] = {
-    seqanim_draw_canvasobj_none,                        // 0   SEQCL_NONE
-    seqanim_draw_canvasobj_msetfill,                    // 1   SEQCL_MSETFILL
-    seqanim_draw_canvasobj_none,                        // 2   SEQCL_ROTOZOOM
-    seqanim_draw_canvasobj_none,                        // 3   SEQCL_VRL
-    seqanim_draw_canvasobj_none,                        // 4   SEQCL_CALLBACK
-
-    seqanim_draw_canvasobj_none                         // 5   SEQCL_TEXT
-};
-
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
-    if (cl->what < SEQCL_MAX)
-        seqanim_draw_canvasobj_functbl[cl->what](sa,cl);
+    switch (cl->what) {
+        case SEQCL_MSETFILL:
+            seqanim_draw_canvasobj_msetfill(sa,cl);
+            break;
+        case SEQCL_NONE:
+        default:
+            break;
+    }
 }
 
 void seqanim_draw(struct seqanim_t *sa) {
