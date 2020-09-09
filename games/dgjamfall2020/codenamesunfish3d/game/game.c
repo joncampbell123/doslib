@@ -375,6 +375,7 @@ struct seqcanvas_text {
     uint16_t*                       textcdef;           /* text to draw (as chardef indexes) */
     struct font_bmp*                font;               /* font to use */
     int                             x,y;                /* where to start drawing */
+    unsigned char                   color;
 };
 
 union seqcanvas_layeru_t {
@@ -726,10 +727,29 @@ void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
+void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    (void)sa;
+
+    if (cl->rop.text.textcdef != NULL && cl->rop.text.font != NULL) {
+        int x = cl->rop.text.x,y = cl->rop.text.y;
+        unsigned int i;
+
+        for (i=0;i < cl->rop.text.textcdef_length;i++)
+            x = font_bmp_draw_chardef_vga8u(cl->rop.text.font,cl->rop.text.textcdef[i],x,y,cl->rop.text.color);
+    }
+}
+
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     switch (cl->what) {
         case SEQCL_MSETFILL:
             seqanim_draw_canvasobj_msetfill(sa,cl);
+            break;
+        case SEQCL_CALLBACK:
+            if (cl->rop.callback.fn != NULL)
+                cl->rop.callback.fn(sa,cl);
+            break;
+        case SEQCL_TEXT:
+            seqanim_draw_canvasobj_text(sa,cl);
             break;
         case SEQCL_NONE:
         default:
