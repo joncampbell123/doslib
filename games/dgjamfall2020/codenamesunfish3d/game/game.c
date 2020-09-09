@@ -796,21 +796,6 @@ void seqanim_redraw(struct seqanim_t *sa) {
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
-#define ANIM_HEIGHT         168
-
-#define ANIM_BKGND_CANVAS   0
-
-void seq_intro_set_fill_color(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
-    struct seqcanvas_layer_t *c = &(sa->canvas_obj[ANIM_BKGND_CANVAS]);
-
-    c->rop.msetfill.h = ANIM_HEIGHT;
-    c->rop.msetfill.c = ev->param1;
-    c->what = SEQCL_MSETFILL;
-    sa->flags |= SEQAF_REDRAW;
-
-    (sa->events)++; /* next */
-}
-
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -819,7 +804,6 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_intro_set_fill_color},
     {SEQAEV_TEXT,           0,          0,          "Hey, blah blah blah blah blah! \x02" "\x10\x01"/*instant*/ "Uhm" "\x10\x2E" "................"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -834,6 +818,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 };
 
 void seq_intro(void) {
+#define ANIM_HEIGHT         168
 #define ANIM_TEXT_TOP       168
 #define ANIM_TEXT_LEFT      5
 #define ANIM_TEXT_RIGHT     310
@@ -860,13 +845,13 @@ void seq_intro(void) {
     sanim->text.end_x = ANIM_TEXT_RIGHT;
     sanim->text.end_y = ANIM_TEXT_BOTTOM;
 
-    sanim->canvas_obj_count = 2;
+    sanim->canvas_obj_count = 1;
 
     /* canvas obj #0: black fill */
     {
-        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[ANIM_BKGND_CANVAS]);
+        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[0]);
         c->rop.msetfill.h = ANIM_HEIGHT;
-        c->rop.msetfill.c = 0x7;
+        c->rop.msetfill.c = 0;
         c->what = SEQCL_MSETFILL;
     }
 
