@@ -448,6 +448,8 @@ struct seqanim_t {
     unsigned int                    flags;
 };
 
+typedef void (*seqcl_callback_funcptr)(struct seqanim_t *sa,const struct seqanim_event_t *ev);
+
 void seqcanvas_text_free_text(struct seqcanvas_text *t) {
     if (t->textcdef) {
         free(t->textcdef);
@@ -690,6 +692,12 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                 case SEQAEV_SYNC:
                     sa->next_event = nowcount;
                     (sa->events)++; /* next */
+                    break;
+                case SEQAEV_CALLBACK:
+                    if (sa->events->params != NULL)
+                        ((seqcl_callback_funcptr)(sa->events->params))(sa,sa->events);
+                    else
+                        (sa->events)++; /* next */
                     break;
                 default:
                     (sa->events)++; /* next */
