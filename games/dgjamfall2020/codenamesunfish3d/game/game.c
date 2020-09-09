@@ -799,12 +799,12 @@ void seqanim_redraw(struct seqanim_t *sa) {
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day in this world."},
+    {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world doing\nour thing as a society" "\x10\x40" "---"},
+    {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x40" "---"},
     // no fade out, interrupted speaking
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -837,7 +837,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write cool clever\nhighly optimized code! Woooooooo!"},
+    {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
@@ -857,7 +857,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* Begins waving hands, another demo effect appears */
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer who writes clever\nawesome optimized code! Wooooooooo!"},
+    {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
