@@ -860,7 +860,7 @@ void seq_intro(void) {
     sanim->text.end_x = ANIM_TEXT_RIGHT;
     sanim->text.end_y = ANIM_TEXT_BOTTOM;
 
-    sanim->canvas_obj_count = 1;
+    sanim->canvas_obj_count = 2;
 
     /* canvas obj #0: black fill */
     {
@@ -868,6 +868,23 @@ void seq_intro(void) {
         c->rop.msetfill.h = ANIM_HEIGHT;
         c->rop.msetfill.c = 0x7;
         c->what = SEQCL_MSETFILL;
+    }
+
+    /* test */
+    {
+        struct seqcanvas_layer_t *c = &(sanim->canvas_obj[ANIM_BKGND_CANVAS+1]);
+        c->rop.text.font = arial_medium;
+        c->rop.text.color = 15;
+        c->rop.text.x = 50;
+        c->rop.text.y = 50;
+        c->what = SEQCL_TEXT;
+
+        if (seqcanvas_text_alloc_text(&(c->rop.text),4))
+            fatal("text");
+        c->rop.text.textcdef[0] = 0;
+        c->rop.text.textcdef[1] = 1;
+        c->rop.text.textcdef[2] = 2;
+        c->rop.text.textcdef[3] = 3;
     }
 
     seqanim_set_redraw_everything_flag(sanim);
