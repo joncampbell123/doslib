@@ -748,7 +748,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Hey, blah blah blah blah blah! \x02" "\x10\x01"/*instant*/ "Uhm\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01.\x01."},
+    {SEQAEV_TEXT,           0,          0,          "Hey, blah blah blah blah blah! \x02" "\x10\x01"/*instant*/ "Uhm" "\x10\x2E" "................"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
