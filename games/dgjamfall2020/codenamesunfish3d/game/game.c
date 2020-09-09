@@ -799,19 +799,66 @@ void seqanim_redraw(struct seqanim_t *sa) {
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Hello world!\n" "\x10\x3C"/*slow down*/ "How are you?"},
-    {SEQAEV_WAIT,           120*5,      0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day in this world."},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Hey, blah blah blah blah blah! \x02" "\x10\x01"/*instant*/ "Uhm" "\x10\x2E" "................"},
-    {SEQAEV_WAIT,           120*1,      0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world doing\nour thing as a society" "\x10\x40" "---"},
+    // no fade out, interrupted speaking
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "But what is our purpose in this game?"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_CLEAR,     SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE},
-    {SEQAEV_TEXT,           SEQAEV_TEXT_FLAG_NOWAIT,0,"Instant text display!\nWoo yeah!"},
-    {SEQAEV_TEXT_FADEIN,    0,          0,          NULL},
-    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Hm? What?"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Our purpose? What is the story? The goal?"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* walk to a door. screen fades out, fades in to room with only the one person. */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* cut to Mr. Woo Sorcerer in front of a demo effect */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write cool clever\nhighly optimized code! Woooooooo!"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* game character and room */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* Mr. Woo Sorcerer, blank background, downcast */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
+    // no fade out, abrupt jump to next part
+
+    /* Begins waving hands, another demo effect appears */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer who writes clever\nawesome optimized code! Wooooooooo!"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_END}
