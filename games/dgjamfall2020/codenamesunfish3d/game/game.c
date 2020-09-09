@@ -812,8 +812,77 @@ void seqanim_redraw(struct seqanim_t *sa) {
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
+#define MAX_RTIMG           1
+
+/* rotozoomer images */
+enum {
+    RZOOM_NONE=0,       /* i.e. clear the slot and free memory */
+    RZOOM_WXP,
+    RZOOM_ATPB
+};
+
+unsigned int seq_com_anim_h = 0;
+
+struct seq_com_rotozoom_state {
+    unsigned            imgseg;
+    unsigned            rzoom_index;
+};
+
+struct seq_com_rotozoom_state seq_com_rotozoom_image[MAX_RTIMG] = { {0,0} };
+
+void seq_com_cleanup(void) {
+    struct seq_com_rotozoom_state *rs;
+    unsigned int i;
+
+    for (i=0;i < MAX_RTIMG;i++) {
+        rs = &seq_com_rotozoom_image[i];
+        rotozoomer_imgfree(&(rs->imgseg));
+    }
+}
+
+/* param1: what
+ * param2: slot */
+void seq_com_load_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seq_com_rotozoom_state *rs;
+
+    /* catch errors */
+    if (ev->param2 >= MAX_RTIMG) fatal("rotozoom image index out of range");
+    rs = &seq_com_rotozoom_image[ev->param2];
+
+    if (ev->param1 == RZOOM_NONE) {
+        rotozoomer_imgfree(&(rs->imgseg));
+    }
+    else {
+        if (rs->imgseg == 0) {
+            if ((rs->imgseg=rotozoomer_imgalloc()) == 0)
+                fatal("rotozoom image fail to allocate");
+        }
+
+        if (rs->rzoom_index != (unsigned)ev->param1) {
+            switch (ev->param1) {
+                case RZOOM_WXP:
+                    if (rotozoomerpngload(rs->imgseg,"wxpbrz.png",0))
+                        fatal("wxpbrz.png");
+                    break;
+                case RZOOM_ATPB:
+                    if (rotozoomerpngload(rs->imgseg,"atmpbrz.png",0))
+                        fatal("atmpbrz.png");
+                    break;
+                default:
+                    fatal("rotozoom image unknown image code");
+                    break;
+            };
+        }
+    }
+
+    rs->rzoom_index = (unsigned)ev->param1;
+    (sa->events)++; /* next */
+}
+
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
+    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot
+
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
@@ -850,6 +919,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
+    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // Windows XP background
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -876,6 +946,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
+    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // Second Reality "atomic playboy"
     // no fade out, abrupt jump to next part
 
     /* Begins waving hands, another demo effect appears */
@@ -884,6 +955,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // we're done with the rotozoomer, free it
 
     /* game character returns outside */
 
@@ -979,6 +1051,8 @@ void seq_intro(void) {
     uint32_t nowcount;
     int c;
 
+    seq_com_anim_h = ANIM_HEIGHT;
+
     /* if we load this now, seqanim can automatically use it */
     if (font_bmp_do_load_arial_medium())
         fatal("arial");
@@ -1062,6 +1136,7 @@ int main() {
 
     seq_intro();
 
+    seq_com_cleanup();
     sin2048fps16_free();
     font_bmp_free(&arial_small);
     font_bmp_free(&arial_medium);
