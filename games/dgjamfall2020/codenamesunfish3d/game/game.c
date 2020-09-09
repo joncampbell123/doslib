@@ -993,7 +993,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
-    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // rotozoomer slot 0 (param2) Windows XP background (param1)
+    {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1021,7 +1021,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // rotozoomer slot 0 (param2) Second Reality "atomic playboy" (param1)
+    {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Second Reality "atomic playboy" (param1)
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     // no fade out, abrupt jump to next part
 
