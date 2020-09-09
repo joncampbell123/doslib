@@ -797,6 +797,7 @@ void seqanim_redraw(struct seqanim_t *sa) {
 /*---------------------------------------------------------------------------*/
 
 const struct seqanim_event_t seq_intro_events[] = {
+#if 0
 //  what                    param1,     param2,     params
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
@@ -860,6 +861,85 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* game character returns outside */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02*ahem*"},
+    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "There once was a master programmer with\nincredible programming skills."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "But he also had an incredible ego and was\nan incredible perfectionist."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "So he spent his life writing incredibly\noptimized clever useless code."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Then one day he ate one too many nachos\nand died of a heart attack. \x02The end."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* someone in the crowd */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Oh...\x01 come on!\x01 That's just mean!"},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    /* game character */
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Okay... okay...\x01 he spends his life writing\nincredible useless optimized code."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "He created whole OSes but cared not\nfor utility and end user."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "He created whole game worlds, but cared\nnot for the inhabitants."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "So he lives to this day writing... \x01Well...\x01\nnothing of significance. Just woo."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+#endif
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Since the creator of this game doesn't seem\nto care for us or the story, we're on our own."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "So let's go make our own mini games so that\nthis game has something the user can play."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "I made a 3D maze-like overworld that\nconnects them all together for the user."},
+    {SEQAEV_WAIT,           120*2,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_TEXT,           0,          0,          "Alright, let's get started!"},
+    {SEQAEV_WAIT,           120*1,      0,          NULL},
+    {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+/* screen fades out. Hammering, sawing, construction noises. */
 
     {SEQAEV_END}
 };
