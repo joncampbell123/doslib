@@ -50,9 +50,11 @@ the poor user playing this game can get around. Alright, let's start!"
   abomination (meaning the rudimentary paint program seen in Windows 3.1
   through XP) with some fancy font used to type the title. Mr. Woo sorcerer
   will be drawn as if by some nerd who thinks of himself as a powerful
-  wizard or something (glowy eyes, lightning from hands, etc.)
+  wizard or something (glowy eyes, lightning from hands, staff of power, etc.)
 - Jokes about woo: "Stereo Sound" and "Expanded Continuous Sound" (this being
-  a reference to some Windows 3.1 games seen on Shovelware Diggers)
+  a reference to some Windows 3.1 games seen on Shovelware Diggers). The
+  credit screen could have that ever-classic over-used 90s Photoshop "Lens
+  flare" effect on it (wonder why nobody uses that one anymore, hm?)
 - Like Action 52, it will be made of shitty art resources as 2D topdown
   shooter or tank games that are obvious copy paste versions of each other
   and (intentionally made) glitches.
