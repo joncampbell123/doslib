@@ -394,6 +394,7 @@ struct seqcanvas_layer_t {
 #define SEQAF_REDRAW                (1u << 0u)          /* redraw the canvas and page flip to screen */
 #define SEQAF_END                   (1u << 1u)
 #define SEQAF_TEXT_PALCOLOR_UPDATE  (1u << 2u)
+#define SEQAF_USER_HURRY_UP         (1u << 3u)          /* this is set if the user hits a key to speed up the dialogue */
 
 /* param1 of SEQAEV_TEXT_CLEAR */
 #define SEQAEV_TEXT_CLEAR_FLAG_NOPALUPDATE (1u << 0u)
@@ -584,6 +585,7 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
     (void)nowcount; // unused
     (void)e; // unused
 
+again:
     c = utf8decode(&(sa->text.msg));
     if (c != 0) {
         switch (c) {
@@ -618,8 +620,16 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
                     sa->next_event += sa->text.delay;
                 } break;
         }
+
+        if (sa->flags & SEQAF_USER_HURRY_UP)
+            goto again;
     }
     else {
+        if (sa->flags & SEQAF_USER_HURRY_UP) {
+            sa->next_event = sa->current_time;
+            sa->flags &= ~SEQAF_USER_HURRY_UP;
+        }
+
         (sa->events)++; /* next */
     }
 }
@@ -649,6 +659,7 @@ void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t 
             sa->text.palcolor[i] = color[i];
     }
 
+    sa->flags &= ~SEQAF_USER_HURRY_UP;
     if (sa->text.palcolor[0] == color[0] && sa->text.palcolor[1] == color[1] && sa->text.palcolor[2] == color[2])
         (sa->events)++; /* next */
     else
@@ -666,10 +677,16 @@ void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t
             sa->text.palcolor[i] = 0;
     }
 
+    sa->flags &= ~SEQAF_USER_HURRY_UP;
     if ((sa->text.palcolor[0] | sa->text.palcolor[1] | sa->text.palcolor[2]) == 0)
         (sa->events)++; /* next */
     else
         sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+}
+
+void seqanim_hurryup(struct seqanim_t *sa,const uint32_t nowcount) {
+    sa->next_event = sa->current_time = nowcount;
+    sa->flags |= SEQAF_USER_HURRY_UP;
 }
 
 void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
@@ -705,7 +722,11 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     seqanim_step_text_fadein(sa,e);
                     break;
                 case SEQAEV_WAIT:
-                    sa->next_event += e->param1;
+                    if (sa->flags & SEQAF_USER_HURRY_UP)
+                        sa->flags &= ~SEQAF_USER_HURRY_UP;
+                    else
+                        sa->next_event += e->param1;
+
                     (sa->events)++; /* next */
                     break;
                 case SEQAEV_SYNC:
@@ -1168,7 +1189,10 @@ void seq_intro(void) {
     while (seqanim_running(sanim)) {
         if (kbhit()) {
             c = getch();
-            if (c == 27) break;
+            if (c == 27)
+                break;
+            else if (c == ' ')
+                seqanim_hurryup(sanim,read_timer_counter());
         }
 
         nowcount = read_timer_counter();
