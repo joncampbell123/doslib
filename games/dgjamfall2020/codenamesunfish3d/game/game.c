@@ -347,6 +347,7 @@ enum seqcanvas_layer_what {
 };
 
 union seqcanvas_layeru_t;
+struct seqcanvas_layer_t;
 
 struct seqcanvas_memsetfill {
     unsigned int                    h;                  /* where to fill */
@@ -365,7 +366,7 @@ struct seqcanvas_vrl {
 };
 
 struct seqcanvas_callback {
-    void                            (*fn)(union seqcanvas_layeru_t *layer);
+    void                            (*fn)(struct seqanim_t *sa,struct seqcanvas_layer_t *layer);
     uint32_t                        param1,param2;
 };
 
@@ -713,6 +714,8 @@ void seqanim_draw_canvasobj_null(struct seqanim_t *sa,struct seqcanvas_layer_t *
 }
 
 void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    (void)sa;
+
     if (cl->rop.msetfill.h != 0) {
         const uint16_t w = (uint16_t)cl->rop.msetfill.c + ((uint16_t)cl->rop.msetfill.c << 8u);
         vga_write_sequencer(0x02/*map mask*/,0xF);
