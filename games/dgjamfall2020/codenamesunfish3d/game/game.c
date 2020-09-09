@@ -441,6 +441,7 @@ struct seqanim_t {
     unsigned int                    canvas_obj_count;   /* how much to draw */
     struct seqcanvas_layer_t*       canvas_obj;
     /* when to process next event */
+    uint32_t                        current_time;
     uint32_t                        next_event;         /* counter value */
     /* events to process, provided by caller (not allocated) */
     const struct seqanim_event_t*   events;
@@ -672,6 +673,7 @@ void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t
 }
 
 void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
+    sa->current_time = nowcount;
     if (nowcount >= sa->next_event) {
         if (sa->events == NULL) {
             sa->flags |= SEQAF_END;
@@ -755,10 +757,25 @@ void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *
     }
 }
 
+void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    (void)sa;
+
+    if (cl->rop.rotozoom.imgseg != 0 && cl->rop.rotozoom.h != 0) {
+        rotozoomer_fast_effect(320/*width*/,cl->rop.rotozoom.h/*height*/,cl->rop.rotozoom.imgseg,sa->current_time - cl->rop.rotozoom.time_base);
+
+        /* unless time_base == (~0ul) rotozoomer always redraws */
+        if (cl->rop.rotozoom.time_base != (~0ul))
+            sa->flags |= SEQAF_REDRAW;
+    }
+}
+
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     switch (cl->what) {
         case SEQCL_MSETFILL:
             seqanim_draw_canvasobj_msetfill(sa,cl);
+            break;
+        case SEQCL_ROTOZOOM:
+            seqanim_draw_canvasobj_rotozoom(sa,cl);
             break;
         case SEQCL_CALLBACK:
             if (cl->rop.callback.fn != NULL)
@@ -879,9 +896,62 @@ void seq_com_load_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev
     (sa->events)++; /* next */
 }
 
+/* param1: color
+ * param2: canvas layer */
+void seq_com_put_solidcolor(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    if (sa->canvas_obj_count <= ev->param2)
+        sa->canvas_obj_count = ev->param2+1u;
+
+    /* change to rotozoomer */
+    co->what = SEQCL_MSETFILL;
+    co->rop.msetfill.h = seq_com_anim_h;
+    co->rop.msetfill.c = (ev->param1 & 0xFFu) | ((ev->param1 & 0xFFu) << 8u);
+
+    /* changed canvas, make redraw */
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
+/* param1: slot
+ * param2: canvas layer */
+void seq_com_put_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seq_com_rotozoom_state *rs;
+    struct seqcanvas_layer_t* co;
+
+    /* catch errors */
+    if (ev->param1 >= MAX_RTIMG) fatal("rotozoom image index out of range");
+    rs = &seq_com_rotozoom_image[ev->param1];
+
+    if (rs->imgseg == 0) fatal("attempt to place unallocated rotozoom");
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    if (sa->canvas_obj_count <= ev->param2)
+        sa->canvas_obj_count = ev->param2+1u;
+
+    /* change to rotozoomer */
+    co->what = SEQCL_ROTOZOOM;
+    co->rop.rotozoom.imgseg = rs->imgseg;
+    co->rop.rotozoom.time_base = sa->next_event;
+    co->rop.rotozoom.h = seq_com_anim_h;
+
+    /* changed canvas, make redraw */
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear slot 0
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -927,6 +997,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // slot 0 to canvas layer 0
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
@@ -935,6 +1006,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character and room */
 
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
@@ -945,16 +1017,18 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 Second Reality "atomic playboy"
+    {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     // no fade out, abrupt jump to next part
 
     /* Begins waving hands, another demo effect appears */
 
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // slot 0 to canvas layer 0
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // slot 0 solid fill 0 (we free next, avoid use after free!)
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
 
     /* game character returns outside */
@@ -1056,6 +1130,10 @@ void seq_intro(void) {
     /* if we load this now, seqanim can automatically use it */
     if (font_bmp_do_load_arial_medium())
         fatal("arial");
+
+    /* seqanim rotozoomer needs sin2048 */
+    if (sin2048fps16_open())
+        fatal("cannot open sin2048");
 
     if ((sanim=seqanim_alloc()) == NULL)
         fatal("seqanim");
