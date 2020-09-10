@@ -1093,6 +1093,10 @@ void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *
     minipng_reader_close(&rdr);
     free(row);
 
+    /* loading eats time depending on how fast DOS and the underlying storage device are.
+     * It's even possible some weirdo will run this off a 1.44MB floppy. */
+    sa->next_event = sa->current_time = read_timer_counter();
+
     (sa->events)++; /* next */
 }
 
