@@ -935,10 +935,6 @@ struct seq_com_vrl_image_state {
 
 struct seq_com_vrl_image_state seq_com_vrl_image[MAX_VRLIMG] = { { NULL,0 } };
 
-void seq_com_stop_anim(struct seq_com_anim_i *ani) {
-    memset(ani,0,sizeof(*ani));
-}
-
 void seq_com_cleanup(void) {
     unsigned int i;
 
