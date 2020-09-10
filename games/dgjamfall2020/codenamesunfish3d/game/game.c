@@ -1280,8 +1280,8 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
-    {SEQAEV_PAUSE,          0,          0,          NULL}, // or else one letter of text appears while Mr. Wooo is on the screen before screen updates
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -1292,6 +1292,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim1 (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -1303,6 +1304,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -1313,6 +1315,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Second Reality "atomic playboy" (param1)
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Uhm" "\x10\x29" ".........."},
     // no fade out, abrupt jump to next part
 
@@ -1322,6 +1325,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       1,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload uhhh (param2==2)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -1329,6 +1333,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
+    {SEQAEV_PAUSE,          0,          0,          NULL},
 
     /* game character returns outside */
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
