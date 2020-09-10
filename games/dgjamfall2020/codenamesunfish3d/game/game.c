@@ -1356,7 +1356,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Then one day he ate one too many nachos\nand died of a heart attack. \x02The end."},
+    {SEQAEV_TEXT,           0,          0,          "Then one day he ate one too many nachos\nand died of a heart attack. The end."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
