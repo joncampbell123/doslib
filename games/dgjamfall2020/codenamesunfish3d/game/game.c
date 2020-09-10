@@ -868,6 +868,8 @@ void seqanim_redraw(struct seqanim_t *sa) {
 #define MAX_RTIMG           2
 #define MAX_VRLIMG          64
 
+#define SORC_PAL_OFFSET             0x40
+
 /* rotozoomer images */
 enum {
     RZOOM_NONE=0,       /* i.e. clear the slot and free memory */
@@ -989,6 +991,26 @@ void seq_com_put_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev)
     (sa->events)++; /* next */
 }
 
+void seq_com_init_mr_woo(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    uint32_t ofs;
+
+    (void)sa;
+    (void)ev;
+
+    if (sorc_pack_open())
+        fatal("mr_woo_init");
+    if ((ofs=dumbpack_ent_offset(sorc_pack,0)) == 0ul)
+        fatal("mr_woo_init");
+    if (lseek(sorc_pack->fd,ofs,SEEK_SET) != ofs)
+        fatal("mr_woo_init");
+    if (read(sorc_pack->fd,common_tmp_small,32*3) != (32*3)) // 32 colors
+        fatal("mr_woo_init");
+
+    pal_buf_to_vga(/*offset*/SORC_PAL_OFFSET,/*count*/32,common_tmp_small);
+
+    (sa->events)++; /* next */
+}
+
 /*---------------------------------------------------------------------------*/
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
@@ -1035,6 +1057,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_init_mr_woo}, // initialize code and data for Mr. Wooo Sorcerer (param1==0 load palette)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
