@@ -1011,6 +1011,15 @@ void seq_com_init_mr_woo(struct seqanim_t *sa,const struct seqanim_event_t *ev) 
     (sa->events)++; /* next */
 }
 
+void gen_res_free(void) {
+    seq_com_cleanup();
+    sin2048fps16_free();
+    font_bmp_free(&arial_small);
+    font_bmp_free(&arial_medium);
+    font_bmp_free(&arial_large);
+    dumbpack_close(&sorc_pack);
+}
+
 /*---------------------------------------------------------------------------*/
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
@@ -1287,13 +1296,7 @@ int main() {
 
     seq_intro();
 
-    seq_com_cleanup();
-    sin2048fps16_free();
-    font_bmp_free(&arial_small);
-    font_bmp_free(&arial_medium);
-    font_bmp_free(&arial_large);
-    dumbpack_close(&sorc_pack);
-
+    gen_res_free();
     unhook_irqs();
     restore_text_mode();
 
