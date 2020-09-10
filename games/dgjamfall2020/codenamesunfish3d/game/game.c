@@ -673,11 +673,16 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 #define SORC_VRL_END                (0x20+19)/*0x33*/
 
-/* rotozoomer images */
+/* rotozoomer images (256x256) */
 enum {
     RZOOM_NONE=0,       /* i.e. clear the slot and free memory */
     RZOOM_WXP,
     RZOOM_ATPB
+};
+
+/* vram images (used for static images that do not change, loaded into unused VRAM rather than system RAM) */
+enum {
+    VRAMIMG_TMPLIE              /* interior "temple" shot 320x168 */
 };
 
 unsigned int seq_com_anim_h = 0;
@@ -998,6 +1003,79 @@ void seq_com_put_nothing(struct seqanim_t *sa,const struct seqanim_event_t *ev) 
     (sa->events)++; /* next */
 }
 
+/* param1: image | (palofs << 8u)
+ * param2: vram offset */
+void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    unsigned char palofs;
+    struct minipng_reader *rdr;
+    unsigned int imgw,imgh;
+    unsigned char *row;
+    const char *path;
+    unsigned int i,x;
+    uint16_t ofs,tof;
+
+    (void)sa;
+
+    switch (ev->param1&0xFFu) {
+        case VRAMIMG_TMPLIE:
+            path = "tmplie.png";
+            palofs = (unsigned char)(ev->param1 >> 8u);
+            imgw = 320;
+            imgh = 168;
+            break;
+        default:
+            fatal("vram_image unknown index");
+            break;
+    }
+
+    if (ev->param2 >= 0x10000ul || ((uint32_t)ev->param2+(((uint32_t)imgw/4ul)*(uint32_t)imgh)) > 0x10000ul)
+        fatal("vram_image offset too large");
+
+    ofs = (uint16_t)(ev->param2);
+
+    if ((rdr=minipng_reader_open(path)) == NULL)
+        fatal("vram_image png error %s",path);
+    if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count == 0 || rdr->ihdr.width != imgw || rdr->ihdr.height != imgh || rdr->ihdr.bit_depth != 8)
+        fatal("vram_image png error %s",path);
+    if ((row=malloc(imgw)) == NULL)
+        fatal("vram_image png error %s",path);
+
+    {
+        const unsigned char *p = (const unsigned char*)(rdr->plte);
+        vga_palette_lseek(palofs);
+        for (i=0;i < rdr->plte_count;i++)
+            vga_palette_write(p[(i*3)+0]>>2,p[(i*3)+1]>>2,p[(i*3)+2]>>2);
+    }
+
+    for (i=0;i < imgh;i++) {
+        minipng_reader_read_idat(rdr,row,1); /* pad byte */
+        minipng_reader_read_idat(rdr,row,imgw); /* row */
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);
+        for (x=0,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x] + palofs;
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);
+        for (x=1,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x] + palofs;
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);
+        for (x=2,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x] + palofs;
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);
+        for (x=3,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x] + palofs;
+
+        ofs += imgw/4u;
+    }
+
+    minipng_reader_close(&rdr);
+    free(row);
+
+    (sa->events)++; /* next */
+}
+
 void gen_res_free(void) {
     seq_com_cleanup();
     sin2048fps16_free();
@@ -1053,6 +1131,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
+    {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_init_mr_woo}, // initialize code and data for Mr. Wooo Sorcerer (load palette) (Future dev: param1 select func)
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
