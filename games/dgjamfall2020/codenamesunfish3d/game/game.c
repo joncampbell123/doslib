@@ -1369,7 +1369,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
-    {SEQAEV_WAIT,           120*3,      0,          NULL},
+    {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1). Get the rotozoomer off because we free it next. Avoid use after free!
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
