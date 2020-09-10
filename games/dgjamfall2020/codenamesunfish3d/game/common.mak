@@ -27,6 +27,7 @@ final: $(GAME_EXE)
 	@cp dos86l/game.exe final/game.exe
 	@cp ../devasset/winxp.png final/wxpbrz.png
 	@cp ../devasset/atomicplayboy-256x256.png final/atmpbrz.png
+	@cp ../devasset/godtemplestonebehance.320x200.png final/tmplie.png
 	# Sorcerer palette. Uses only 32 colors.
 	@dd if=../devasset/woo-sorcerer-character/set2/palette.png.pal of=final/sorcwoo.pal bs=3 count=32
 	# VRLs
