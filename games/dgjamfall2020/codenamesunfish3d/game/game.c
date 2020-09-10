@@ -97,6 +97,7 @@ struct seqcanvas_text {
 };
 
 /* in unchained 256-color mode, VGA write mode 1 and copying from offscreen RAM can be an efficient means to bitblt (4 pixels at once per R/W!) */
+/* NOTE: If the image fills the screen horizontally and matches the stride of the screen, rows==1 and length=rows*height is perfectly legitimate */
 struct seqcanvas_bitblt {
     uint16_t                        src,dst;            /* src, dest video ram locations. This is unchained 256-color mode, therefore multiple of 4 pixels */
     uint16_t                        length;             /* how much to copy per row (4-pixel planar byte) */
