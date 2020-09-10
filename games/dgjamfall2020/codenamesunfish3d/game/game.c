@@ -865,7 +865,8 @@ void seqanim_redraw(struct seqanim_t *sa) {
     }
 }
 
-#define MAX_RTIMG           1
+#define MAX_RTIMG           2
+#define MAX_VRLIMG          64
 
 /* rotozoomer images */
 enum {
@@ -882,15 +883,15 @@ struct seq_com_rotozoom_state {
 };
 
 struct seq_com_rotozoom_state seq_com_rotozoom_image[MAX_RTIMG] = { {0,0} };
+struct vrl_image seq_com_vrl_image[MAX_VRLIMG] = { { NULL } };
 
 void seq_com_cleanup(void) {
-    struct seq_com_rotozoom_state *rs;
     unsigned int i;
 
-    for (i=0;i < MAX_RTIMG;i++) {
-        rs = &seq_com_rotozoom_image[i];
-        rotozoomer_imgfree(&(rs->imgseg));
-    }
+    for (i=0;i < MAX_RTIMG;i++)
+        rotozoomer_imgfree(&(seq_com_rotozoom_image[i].imgseg));
+    for (i=0;i < MAX_VRLIMG;i++)
+        free_vrl(&seq_com_vrl_image[i]);
 }
 
 /* param1: what
