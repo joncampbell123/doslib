@@ -551,6 +551,7 @@ void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e) {
 void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     (void)e; // unused
 
+    sa->text.msg = NULL;
     sa->text.delay = sa->text.def_delay;
     sa->text.font = sa->text.def_font;
     sa->text.x = sa->text.home_x;
@@ -586,6 +587,9 @@ void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct
 
     (void)nowcount; // unused
     (void)e; // unused
+
+    if (sa->text.msg == NULL)
+        sa->text.msg = sa->events->params;
 
 again:
     c = utf8decode(&(sa->text.msg));
@@ -679,10 +683,14 @@ void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t 
     }
 
     sa->flags &= ~SEQAF_USER_HURRY_UP;
-    if (sa->text.palcolor[0] == color[0] && sa->text.palcolor[1] == color[1] && sa->text.palcolor[2] == color[2])
+    if (sa->text.palcolor[0] == color[0] && sa->text.palcolor[1] == color[1] && sa->text.palcolor[2] == color[2]) {
         (sa->events)++; /* next */
-    else
+        sa->next_event = sa->current_time;
+    }
+    else {
         sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+        sa->next_event++;
+    }
 }
 
 void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e) {
@@ -697,10 +705,14 @@ void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t
     }
 
     sa->flags &= ~SEQAF_USER_HURRY_UP;
-    if ((sa->text.palcolor[0] | sa->text.palcolor[1] | sa->text.palcolor[2]) == 0)
+    if ((sa->text.palcolor[0] | sa->text.palcolor[1] | sa->text.palcolor[2]) == 0) {
         (sa->events)++; /* next */
-    else
+        sa->next_event = sa->current_time;
+    }
+    else {
         sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+        sa->next_event++;
+    }
 }
 
 void seqanim_hurryup(struct seqanim_t *sa,const uint32_t nowcount) {
@@ -736,10 +748,10 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     break;
                 case SEQAEV_TEXT_FADEOUT:
                     seqanim_step_text_fadeout(sa,e);
-                    return;
+                    break;
                 case SEQAEV_TEXT_FADEIN:
                     seqanim_step_text_fadein(sa,e);
-                    return;
+                    break;
                 case SEQAEV_WAIT:
                     if (sa->flags & SEQAF_USER_HURRY_UP)
                         sa->flags &= ~SEQAF_USER_HURRY_UP;
@@ -747,7 +759,7 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                         sa->next_event += e->param1;
 
                     (sa->events)++; /* next */
-                    return;
+                    break;
                 case SEQAEV_SYNC:
                     sa->next_event = nowcount;
                     (sa->events)++; /* next */
@@ -761,15 +773,6 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                 default:
                     (sa->events)++; /* next */
                     break;
-            }
-
-            if (sa->events != e) {
-                /* some init required for next event */
-                switch (sa->events->what) {
-                    case SEQAEV_TEXT:
-                        sa->text.msg = sa->events->params;
-                        break;
-                }
             }
         }
     }
@@ -1271,6 +1274,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
+    {SEQAEV_SYNC,           0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
