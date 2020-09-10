@@ -809,6 +809,18 @@ void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
+void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    (void)sa;
+
+    if (cl->rop.vrl.vrl != NULL) {
+        draw_vrl1_vgax_modex(cl->rop.vrl.x,cl->rop.vrl.y,
+            cl->rop.vrl.vrl->vrl_header,
+            cl->rop.vrl.vrl->vrl_lineoffs,
+            cl->rop.vrl.vrl->buffer+sizeof(*(cl->rop.vrl.vrl->vrl_header)),
+            cl->rop.vrl.vrl->bufsz-sizeof(*(cl->rop.vrl.vrl->vrl_header)));
+    }
+}
+
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     switch (cl->what) {
         case SEQCL_MSETFILL:
@@ -816,6 +828,9 @@ void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
             break;
         case SEQCL_ROTOZOOM:
             seqanim_draw_canvasobj_rotozoom(sa,cl);
+            break;
+        case SEQCL_VRL:
+            seqanim_draw_canvasobj_vrl(sa,cl);
             break;
         case SEQCL_CALLBACK:
             if (cl->rop.callback.fn != NULL)
@@ -870,11 +885,50 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 #define SORC_PAL_OFFSET             0x40
 
+/* 0-8 anim1 9 frames */
+#define SORC_VRL_ANIM1_OFFSET       (0x20+0)/*0x20*/
+
+/* 9 still "uhhhh" frame */
+#define SORC_VRL_STILL_UHH          (0x20+9)/*0x29*/
+
+/* 10-18 anim2 9 frames */
+#define SORC_VRL_ANIM2_OFFSET       (0x20+10)/*0x2A*/
+
+#define SORC_VRL_END                (0x20+19)/*0x33*/
+
 /* rotozoomer images */
 enum {
     RZOOM_NONE=0,       /* i.e. clear the slot and free memory */
     RZOOM_WXP,
     RZOOM_ATPB
+};
+
+enum {
+    VRLIMG_NONE=0,
+
+    VRLIMG_SORC_ANIM1_FRAME1,
+    VRLIMG_SORC_ANIM1_FRAME2,
+    VRLIMG_SORC_ANIM1_FRAME3,
+    VRLIMG_SORC_ANIM1_FRAME4,
+    VRLIMG_SORC_ANIM1_FRAME5,
+    VRLIMG_SORC_ANIM1_FRAME6,
+    VRLIMG_SORC_ANIM1_FRAME7,
+    VRLIMG_SORC_ANIM1_FRAME8,
+    VRLIMG_SORC_ANIM1_FRAME9,
+
+    VRLIMG_SORC_STILL_UHH,
+
+    VRLIMG_SORC_ANIM2_FRAME1,
+    VRLIMG_SORC_ANIM2_FRAME2,
+    VRLIMG_SORC_ANIM2_FRAME3,
+    VRLIMG_SORC_ANIM2_FRAME4,
+    VRLIMG_SORC_ANIM2_FRAME5,
+    VRLIMG_SORC_ANIM2_FRAME6,
+    VRLIMG_SORC_ANIM2_FRAME7,
+    VRLIMG_SORC_ANIM2_FRAME8,
+    VRLIMG_SORC_ANIM2_FRAME9,
+
+    VRLIMG_SORC_ANIM2_MAX
 };
 
 unsigned int seq_com_anim_h = 0;
@@ -885,7 +939,13 @@ struct seq_com_rotozoom_state {
 };
 
 struct seq_com_rotozoom_state seq_com_rotozoom_image[MAX_RTIMG] = { {0,0} };
-struct vrl_image seq_com_vrl_image[MAX_VRLIMG] = { { NULL } };
+
+struct seq_com_vrl_image_state {
+    struct vrl_image    vrl;
+    unsigned            vrl_index;
+};
+
+struct seq_com_vrl_image_state seq_com_vrl_image[MAX_VRLIMG] = { { NULL,0 } };
 
 void seq_com_cleanup(void) {
     unsigned int i;
@@ -893,7 +953,7 @@ void seq_com_cleanup(void) {
     for (i=0;i < MAX_RTIMG;i++)
         rotozoomer_imgfree(&(seq_com_rotozoom_image[i].imgseg));
     for (i=0;i < MAX_VRLIMG;i++)
-        free_vrl(&seq_com_vrl_image[i]);
+        free_vrl(&(seq_com_vrl_image[i].vrl));
 }
 
 /* param1: what
@@ -1011,6 +1071,147 @@ void seq_com_init_mr_woo(struct seqanim_t *sa,const struct seqanim_event_t *ev) 
     (sa->events)++; /* next */
 }
 
+int seq_com_load_vrl_from_dumbpack(const unsigned vrl_slot,struct dumbpack * const pack,const unsigned packoff) {
+    uint32_t ofs,sz;
+
+    if (vrl_slot >= MAX_VRLIMG)
+        fatal("load_vrl_slot out of range");
+
+    if ((ofs=dumbpack_ent_offset(pack,packoff)) == 0ul)
+        return 1;
+    if ((sz=dumbpack_ent_size(pack,packoff)) == 0ul)
+        return 1;
+    if (lseek(pack->fd,ofs,SEEK_SET) != ofs)
+        return 1;
+    if (load_vrl_fd(&(seq_com_vrl_image[vrl_slot].vrl),pack->fd,sz) != 0)
+        return 1;
+
+    vrl_palrebase(
+        seq_com_vrl_image[vrl_slot].vrl.vrl_header,
+        seq_com_vrl_image[vrl_slot].vrl.vrl_lineoffs,
+        seq_com_vrl_image[vrl_slot].vrl.buffer+sizeof(*(seq_com_vrl_image[vrl_slot].vrl.vrl_header)),
+        SORC_PAL_OFFSET);
+
+    return 0;
+}
+
+/* param1: which anim sequence
+ *    0 = anim1
+ *    1 = uhhhh
+ *    2 = anim2
+ * param2: flags
+ *    bit 0: required load
+ *    bit 1: unload */
+void seq_com_load_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    unsigned vrl_slot,vrl_count,packoff;
+    struct dumbpack *pack;
+
+    (void)sa;
+
+    if (sorc_pack_open())
+        fatal("mr_woo_init");
+
+    switch (ev->param1) {
+        case 0://anim1
+            packoff = 2;
+            pack = sorc_pack;
+            vrl_slot = SORC_VRL_ANIM1_OFFSET;
+            vrl_count = 9;
+            break;
+        case 1://uhhhhh
+            packoff = 2+9;
+            pack = sorc_pack;
+            vrl_slot = SORC_VRL_STILL_UHH;
+            vrl_count = 1;
+            break;
+        case 2://anim2
+            packoff = 2+9+1;
+            pack = sorc_pack;
+            vrl_slot = SORC_VRL_ANIM2_OFFSET;
+            vrl_count = 9;
+            break;
+        default:
+            fatal("load_mr_woo_anim out of range");
+            break;
+    };
+
+    while (vrl_count != 0u) {
+        if (ev->param2 & 2u) { /* unload */
+            if (vrl_slot < MAX_VRLIMG)
+                free_vrl(&(seq_com_vrl_image[vrl_slot].vrl));
+        }
+        else {
+            if (seq_com_load_vrl_from_dumbpack(vrl_slot,pack,packoff)) {
+                if (ev->param2 & 1u) /* required load */
+                    goto fatalload;
+            }
+        }
+
+        vrl_count--;
+        vrl_slot++;
+        packoff++;
+    }
+
+    (sa->events)++; /* next */
+    return;
+fatalload:
+    fatal("sorcwooloadanim");
+}
+
+/* param1: animation
+ * param2: canvas layer */
+void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    if (sa->canvas_obj_count <= ev->param2)
+        sa->canvas_obj_count = ev->param2+1u;
+
+    co->what = SEQCL_VRL;
+    co->rop.vrl.x = 70;
+    co->rop.vrl.y = 0;
+
+    switch (ev->param1) {
+        case 0://anim1
+            co->rop.vrl.vrl = &seq_com_vrl_image[SORC_VRL_ANIM1_OFFSET].vrl;
+            break;
+        case 1://uhhhhh
+            co->rop.vrl.vrl = &seq_com_vrl_image[SORC_VRL_STILL_UHH].vrl;
+            break;
+        case 2://anim2
+            co->rop.vrl.vrl = &seq_com_vrl_image[SORC_VRL_ANIM2_OFFSET].vrl;
+            break;
+        default:
+            fatal("put_mr_woo_anim out of range");
+            break;
+    };
+
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
+/* param1: animation
+ * param2: canvas layer */
+void seq_com_put_nothing(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    co->what = SEQCL_NONE;
+
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
 void gen_res_free(void) {
     seq_com_cleanup();
     sin2048fps16_free();
@@ -1067,6 +1268,9 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_init_mr_woo}, // initialize code and data for Mr. Wooo Sorcerer (load palette) (Future dev: param1 select func)
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
+    {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
+    {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1075,11 +1279,13 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim1 (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
 
     /* game character and room */
 
@@ -1092,6 +1298,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* Mr. Woo Sorcerer, blank background, downcast */
 
+    {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_put_mr_woo_anim}, // put "uhhhh" (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Second Reality "atomic playboy" (param1)
@@ -1100,6 +1307,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* Begins waving hands, another demo effect appears */
 
+    {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim2 (param1) to canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
@@ -1107,9 +1315,12 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1). Get the rotozoomer off because we free it next. Avoid use after free!
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
 
     /* game character returns outside */
-
+    {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim1 (required param2==2)
+    {SEQAEV_CALLBACK,       1,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload uhhh (required param2==2)
+    {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (required param2==2)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02\x11\x21*ahem*"},
