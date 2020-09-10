@@ -1207,7 +1207,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
     switch (ev->param1) {
         case 0://anim1
             co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
-            co->rop.vrl.anim.frame_delay = 120 / 20;
+            co->rop.vrl.anim.frame_delay = 120 / 15;
             co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM1_OFFSET;
             co->rop.vrl.anim.max_frame = SORC_VRL_ANIM1_OFFSET + 8;
             co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
@@ -1220,7 +1220,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
             break;
         case 2://anim2
             co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
-            co->rop.vrl.anim.frame_delay = 120 / 40;
+            co->rop.vrl.anim.frame_delay = 120 / 30;
             co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM2_OFFSET;
             co->rop.vrl.anim.max_frame = SORC_VRL_ANIM2_OFFSET + 8;
             co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
