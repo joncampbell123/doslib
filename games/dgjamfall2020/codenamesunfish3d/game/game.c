@@ -801,8 +801,15 @@ void seqanim_step(struct seqanim_t *sa) {
         for (i=0;i < sa->canvas_obj_count;i++) {
             cl = &(sa->canvas_obj[i]);
             if (cl->what == SEQCL_VRL) {
-                if (cl->rop.vrl.anim.anim_callback != NULL && sa->current_time >= cl->rop.vrl.anim.next_frame)
-                    cl->rop.vrl.anim.anim_callback(sa,cl);
+                if (cl->rop.vrl.anim.anim_callback != NULL) {
+                    uint32_t pt;
+
+                    while (sa->current_time >= cl->rop.vrl.anim.next_frame) {
+                        pt = cl->rop.vrl.anim.next_frame;
+                        cl->rop.vrl.anim.anim_callback(sa,cl);
+                        if (pt >= cl->rop.vrl.anim.next_frame) break; // break now if no change or backwards
+                    }
+                }
             }
         }
     }
