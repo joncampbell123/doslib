@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <assert.h>
+#include <malloc.h>
 #include <fcntl.h>
 #include <math.h>
 #include <dos.h>
@@ -1527,6 +1528,14 @@ void seq_intro(void) {
 #undef ANIM_HEIGHT
 }
 
+/* ------------- */
+
+void check_heap() {
+    const int r = _heapchk();
+    if (!(r == _HEAPOK || r == _HEAPEMPTY))
+        fatal("C runtime reports corrupt heap");
+}
+
 /*---------------------------------------------------------------------------*/
 /* main                                                                      */
 /*---------------------------------------------------------------------------*/
@@ -1565,6 +1574,7 @@ int main() {
     seq_intro();
 
     gen_res_free();
+    check_heap();
     unhook_irqs();
     restore_text_mode();
 
