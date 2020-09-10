@@ -26,6 +26,7 @@ final: $(GAME_EXE)
 	@mkdir final
 	@cp dos86l/game.exe final/game.exe
 	@cp ../devasset/winxp.png final/wxpbrz.png
+	@cp ../devasset/towncenter.png final/twnctr.png
 	@cp ../devasset/atomicplayboy-256x256.png final/atmpbrz.png
 	@cp ../devasset/godtemplestonebehance.320x200.png final/tmplie.png
 	# Sorcerer palette. Uses only 32 colors.

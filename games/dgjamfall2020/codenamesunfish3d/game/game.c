@@ -688,6 +688,7 @@ enum {
 /* vram images (used for static images that do not change, loaded into unused VRAM rather than system RAM) */
 enum {
     VRAMIMG_TMPLIE,                 /* interior "temple" shot 320x168 */
+    VRAMIMG_TWNCNTR,                /* exterior "town center" shot 320x168 */
 
     VRAMIMG_MAX
 };
@@ -1032,7 +1033,11 @@ void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *
     switch (ev->param1&0xFFu) {
         case VRAMIMG_TMPLIE:
             path = "tmplie.png";
-            palofs = (unsigned char)(ev->param1 >> 8u);
+            imgw = 320;
+            imgh = 168;
+            break;
+        case VRAMIMG_TWNCNTR:
+            path = "twnctr.png";
             imgw = 320;
             imgh = 168;
             break;
@@ -1045,6 +1050,7 @@ void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *
         fatal("vram_image offset too large");
 
     ofs = (uint16_t)(ev->param2);
+    palofs = (unsigned char)(ev->param1 >> 8u);
     seq_com_vramimg[ev->param1&0xFFu].vramoff = ofs;
 
     if ((rdr=minipng_reader_open(path)) == NULL)
@@ -1102,6 +1108,7 @@ void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *e
 
     switch (ev->param1&0xFFu) {
         case VRAMIMG_TMPLIE:
+        case VRAMIMG_TWNCNTR:
             co->rop.bitblt.src = seq_com_vramimg[ev->param1].vramoff;
             co->rop.bitblt.dst = 0;
             co->rop.bitblt.length = (320u/4u)*168u;
@@ -1138,6 +1145,9 @@ const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear rotozoomer slot 0
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
+    {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
+    {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR|(0x80ul<<8ul),0xC000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x80 load to 0xC000 in planar unchained VRAM for bitblt
+    {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -1176,7 +1186,6 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
-    {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_init_mr_woo}, // initialize code and data for Mr. Wooo Sorcerer (load palette) (Future dev: param1 select func)
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
@@ -1234,7 +1243,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1). Get the rotozoomer off because we free it next. Avoid use after free!
+    {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
