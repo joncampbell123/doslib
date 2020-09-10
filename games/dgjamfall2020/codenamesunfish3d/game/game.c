@@ -1135,34 +1135,50 @@ void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *e
 uint32_t seq_com_pal_anim_base;
 
 /* param1: flags
- *   bit 0: 1=blank palette after saving */
+ *   bit 0: 1=blank palette after saving
+ * param2: what to save  (start | (count << 16u)) */
 void seq_com_save_palette(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    unsigned int start,count;
     unsigned int i;
+
+    start = (unsigned int)(ev->param2 & 0xFFu);
+    count = (unsigned int)((ev->param2 >> 16u) & 0x1FFu);
+    if ((start+count) > 256)
+        fatal("save_palette out of range");
 
     seq_com_pal_anim_base = sa->current_time;
 
-    vga_read_PAL(0,common_tmp_small,256);
+    vga_read_PAL(start,common_tmp_small+start,count);
 
     if (ev->param1 & 0x1u) {
-        vga_palette_lseek(0);
-        for (i=0;i < 256;i++)
-            vga_palette_write(0,0,0);
+        vga_palette_lseek(start);
+        for (i=0;i < count;i++) vga_palette_write(0,0,0);
+        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
     }
 
     (sa->events)++; /* next */
 }
 
 /* param1: how fast to fade */
+/* param2: flags
+ *  bit 0: fade out */
 void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
-    unsigned int m;
-    unsigned int i;
+    unsigned int m,em,i;
 
     (void)ev;
 
     {
         uint32_t r = (sa->current_time - seq_com_pal_anim_base) * (ev->param1 ? ev->param1 : 8);
-        if (r > 256) r = 256;
-        m = (unsigned int)r;
+        if (r > 256ul) r = 256ul;
+
+        if (ev->param2 & 1u) {
+            m = 256u - (unsigned int)r;
+            em = 0;
+        }
+        else {
+            m = (unsigned int)r;
+            em = 256;
+        }
     }
 
     vga_palette_lseek(0);
@@ -1174,7 +1190,9 @@ void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_even
     }
 
     sa->next_event = sa->current_time + 1u;
-    if (m >= 256)
+    sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
+
+    if (m == em)
         (sa->events)++; /* next */
 }
 
@@ -1198,7 +1216,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR|(0x80ul<<8ul),0xC000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x80 load to 0xC000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
-    {SEQAEV_CALLBACK,       1,          0,          (const char*)seq_com_save_palette}, // save VGA palette and (param1) blank it too
+    {SEQAEV_CALLBACK,       1,          (0x00ul | (0x100ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette and (param1) blank it too
     {SEQAEV_PAUSE,          0,          0,          NULL}, //let it render
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
@@ -1237,6 +1255,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
 
+    {SEQAEV_CALLBACK,       0,          (0x00ul | (0x100ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette and (param1)
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_fadein_saved_palette}, // fade out saved VGA palette
+
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
@@ -1245,8 +1266,13 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
+    {SEQAEV_CALLBACK,       1,          (0x00ul | (0x60ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette new colors and (param1) blank it too
+
+    {SEQAEV_PAUSE,          0,          0,          NULL}, // render
+
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
+
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
@@ -1296,11 +1322,16 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
     {SEQAEV_WAIT,           120*5,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_CALLBACK,       0,          (0x00ul | (0x100ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette and (param1)
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_fadein_saved_palette}, // fade out saved VGA palette
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
     {SEQAEV_PAUSE,          0,          0,          NULL},
+
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
     /* game character returns outside */
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
@@ -1381,6 +1412,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
 /* screen fades out. Hammering, sawing, construction noises. */
+
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_fadein_saved_palette}, // fade out saved VGA palette
 
     {SEQAEV_END}
 };
