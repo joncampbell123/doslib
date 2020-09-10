@@ -1130,7 +1130,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear rotozoomer slot 0
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
 
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1140,25 +1140,25 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x30" "----"},
     // no fade out, interrupted speaking
 
-    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "But what is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hm? What?"},
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Our purpose? What is the story? The goal?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1184,7 +1184,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim1 (param1) to canvas layer 1 (param2)
-    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL}, //RRGGBB cyan
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
@@ -1197,7 +1197,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* game character and room */
 
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
@@ -1208,7 +1208,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_put_mr_woo_anim}, // put "uhhhh" (param1) to canvas layer 1 (param2)
-    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL}, //RRGGBB cyan
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_CALLBACK,       RZOOM_ATPB, 0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Second Reality "atomic playboy" (param1)
     {SEQAEV_PAUSE,          0,          0,          NULL},
@@ -1232,7 +1232,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_PAUSE,          0,          0,          NULL},
 
     /* game character returns outside */
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02\x11\x21*ahem*"},
     {SEQAEV_WAIT,           120/4,      0,          NULL},
@@ -1260,7 +1260,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* someone in the crowd */
 
-    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh come on!\x01 That's just mean!"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1268,7 +1268,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character */
 
-    {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
+    {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Okay... okay...\x01 he spends his life writing\nincredible useless optimized code."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
