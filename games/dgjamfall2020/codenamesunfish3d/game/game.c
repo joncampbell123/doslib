@@ -1296,6 +1296,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
+    {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim1 (required param2==2)
 
     /* game character and room */
 
@@ -1318,6 +1319,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* Begins waving hands, another demo effect appears */
 
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim2 (param1) to canvas layer 1 (param2)
+    {SEQAEV_CALLBACK,       1,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload uhhh (required param2==2)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "I am super awesome programmer. I write\nawesome optimized code! Wooooooooo!"},
@@ -1326,11 +1328,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1). Get the rotozoomer off because we free it next. Avoid use after free!
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
+    {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (required param2==2)
 
     /* game character returns outside */
-    {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim1 (required param2==2)
-    {SEQAEV_CALLBACK,       1,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload uhhh (required param2==2)
-    {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (required param2==2)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02\x11\x21*ahem*"},
