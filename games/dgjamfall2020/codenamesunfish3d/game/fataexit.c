@@ -23,6 +23,7 @@
 #include "timer.h"
 #include "vmode.h"
 #include "vrlimg.h"
+#include "dbgheap.h"
 #include "unicode.h"
 #include "commtmp.h"
 #include "fzlibdec.h"
@@ -45,6 +46,8 @@ void fatal(const char *msg,...) {
 
     unhook_irqs();
     restore_text_mode();
+
+    dbg_heap_list();
 
     printf("FATAL ERROR: ");
 
