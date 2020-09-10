@@ -865,10 +865,6 @@ void seqanim_redraw(struct seqanim_t *sa) {
     }
 }
 
-/*---------------------------------------------------------------------------*/
-/* introduction sequence                                                     */
-/*---------------------------------------------------------------------------*/
-
 #define MAX_RTIMG           1
 
 /* rotozoomer images */
@@ -991,6 +987,10 @@ void seq_com_put_rotozoom(struct seqanim_t *sa,const struct seqanim_event_t *ev)
 
     (sa->events)++; /* next */
 }
+
+/*---------------------------------------------------------------------------*/
+/* introduction sequence                                                     */
+/*---------------------------------------------------------------------------*/
 
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
