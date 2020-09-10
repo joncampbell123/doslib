@@ -687,8 +687,16 @@ enum {
 
 /* vram images (used for static images that do not change, loaded into unused VRAM rather than system RAM) */
 enum {
-    VRAMIMG_TMPLIE              /* interior "temple" shot 320x168 */
+    VRAMIMG_TMPLIE,                 /* interior "temple" shot 320x168 */
+
+    VRAMIMG_MAX
 };
+
+struct seq_com_vramimg_state {
+    uint16_t            vramoff;
+};
+
+struct seq_com_vramimg_state seq_com_vramimg[VRAMIMG_MAX] = { {0} };
 
 unsigned int seq_com_anim_h = 0;
 
@@ -1037,6 +1045,7 @@ void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *
         fatal("vram_image offset too large");
 
     ofs = (uint16_t)(ev->param2);
+    seq_com_vramimg[ev->param1&0xFFu].vramoff = ofs;
 
     if ((rdr=minipng_reader_open(path)) == NULL)
         fatal("vram_image png error %s",path);
@@ -1093,7 +1102,7 @@ void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *e
 
     switch (ev->param1&0xFFu) {
         case VRAMIMG_TMPLIE:
-            co->rop.bitblt.src = 0x8000; // FIXME
+            co->rop.bitblt.src = seq_com_vramimg[ev->param1].vramoff;
             co->rop.bitblt.dst = 0;
             co->rop.bitblt.length = (320u/4u)*168u;
             co->rop.bitblt.rows = 1;
