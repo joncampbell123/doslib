@@ -349,6 +349,15 @@ enum seqcanvas_layer_what {
 union seqcanvas_layeru_t;
 struct seqcanvas_layer_t;
 
+struct seqcanvas_anim_t {
+    void                (*anim_callback)(struct seqanim_t *sa,struct seqcanvas_layer_t *ca);
+    unsigned int        frame_delay;
+    int                 cur_frame;
+    int                 min_frame;
+    int                 max_frame;
+    unsigned char       flags;
+};
+
 struct seqcanvas_memsetfill {
     unsigned int                    h;                  /* where to fill */
     unsigned char                   c;                  /* with what */
@@ -360,9 +369,14 @@ struct seqcanvas_rotozoom {
     unsigned int                    h;                  /* how many scanlines */
 };
 
+#define SEQANF_ANIMATE              (1u << 0u)
+#define SEQANF_PINGPONG             (1u << 1u)
+#define SEQANF_REVERSE              (1u << 2u)
+
 struct seqcanvas_vrl {
     struct vrl_image*               vrl;                /* vrl image to draw */
     unsigned int                    x,y;                /* where to draw */
+    struct seqcanvas_anim_t         anim;
 };
 
 struct seqcanvas_callback {
@@ -778,6 +792,19 @@ void seqanim_step(struct seqanim_t *sa) {
             }
         }
     }
+
+    if (sa->canvas_obj != NULL) {
+        struct seqcanvas_layer_t *cl;
+        unsigned int i;
+
+        for (i=0;i < sa->canvas_obj_count;i++) {
+            cl = &(sa->canvas_obj[i]);
+            if (cl->what == SEQCL_VRL) {
+                if (cl->rop.vrl.anim.anim_callback != NULL)
+                    cl->rop.vrl.anim.anim_callback(sa,cl);
+            }
+        }
+    }
 }
 
 void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
@@ -884,18 +911,6 @@ void seqanim_redraw(struct seqanim_t *sa) {
         vga_wait_for_vsync(); /* wait for vsync */
     }
 }
-
-struct seq_com_anim_i {
-    unsigned int        frame_delay;
-    int                 cur_frame;
-    int                 min_frame;
-    int                 max_frame;
-    unsigned int        flags;
-    signed char         init_dir;
-};
-
-#define SEQANF_ENABLE       (0x01u)
-#define SEQANF_PINGPONG     (0x02u)
 
 #define MAX_RTIMG           2
 #define MAX_VRLIMG          64
@@ -1150,6 +1165,26 @@ fatalload:
     fatal("sorcwooloadanim");
 }
 
+void seq_com_vrl_anim_cb(struct seqanim_t *sa,struct seqcanvas_layer_t *ca) {
+    if (ca->rop.vrl.anim.flags & SEQANF_ANIMATE) {
+        if (ca->rop.vrl.anim.flags & SEQANF_REVERSE) {
+            if ((--ca->rop.vrl.anim.cur_frame) < ca->rop.vrl.anim.min_frame) {
+                ca->rop.vrl.anim.cur_frame = ca->rop.vrl.anim.min_frame + 1;
+                ca->rop.vrl.anim.flags &= ~SEQANF_REVERSE;
+            }
+        }
+        else {
+            if ((++ca->rop.vrl.anim.cur_frame) > ca->rop.vrl.anim.max_frame) {
+                ca->rop.vrl.anim.cur_frame = ca->rop.vrl.anim.max_frame - 1;
+                ca->rop.vrl.anim.flags |= SEQANF_REVERSE;
+            }
+        }
+
+        sa->flags |= SEQAF_REDRAW;
+        ca->rop.vrl.vrl = &seq_com_vrl_image[ca->rop.vrl.anim.cur_frame].vrl;
+    }
+}
+
 /* param1: animation
  * param2: canvas layer */
 void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
@@ -1169,30 +1204,24 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
 
     switch (ev->param1) {
         case 0://anim1
-#if 0
-            ani->frame_delay = 120 / 15;
-            ani->cur_frame = ani->min_frame = SORC_VRL_ANIM1_OFFSET;
-            ani->max_frame = SORC_VRL_ANIM1_OFFSET + 8;
-            ani->flags = SEQANF_PINGPONG;
-            ani->init_dir = 1;
-#endif
+            co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
+            co->rop.vrl.anim.frame_delay = 120 / 15;
+            co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM1_OFFSET;
+            co->rop.vrl.anim.max_frame = SORC_VRL_ANIM1_OFFSET + 8;
+            co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
             break;
         case 1://uhhhhh
-#if 0
-            ani->frame_delay = 32767;
-            ani->cur_frame = ani->min_frame = ani->max_frame = SORC_VRL_STILL_UHH;
-            ani->flags = 0;
-            ani->init_dir = 0;
-#endif
+            co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
+            co->rop.vrl.anim.frame_delay = 32767;
+            co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = co->rop.vrl.anim.max_frame = SORC_VRL_STILL_UHH;
+            co->rop.vrl.anim.flags = 0;
             break;
         case 2://anim2
-#if 0
-            ani->frame_delay = 120 / 30;
-            ani->cur_frame = ani->min_frame = SORC_VRL_ANIM2_OFFSET;
-            ani->max_frame = SORC_VRL_ANIM2_OFFSET + 8;
-            ani->flags = SEQANF_PINGPONG;
-            ani->init_dir = 1;
-#endif
+            co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
+            co->rop.vrl.anim.frame_delay = 120 / 15;
+            co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM2_OFFSET;
+            co->rop.vrl.anim.max_frame = SORC_VRL_ANIM2_OFFSET + 8;
+            co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
             break;
         default:
             fatal("put_mr_woo_anim out of range");
@@ -1200,7 +1229,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
     };
 
     sa->flags |= SEQAF_REDRAW;
-//    co->rop.vrl.vrl = &seq_com_vrl_image[ani->cur_frame].vrl;
+    co->rop.vrl.vrl = &seq_com_vrl_image[co->rop.vrl.anim.cur_frame].vrl;
 
     (sa->events)++; /* next */
 }
