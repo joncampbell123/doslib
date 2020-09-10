@@ -411,12 +411,12 @@ void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t 
     }
 
     sa->flags &= ~SEQAF_USER_HURRY_UP;
+    sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
     if (sa->text.palcolor[0] == color[0] && sa->text.palcolor[1] == color[1] && sa->text.palcolor[2] == color[2]) {
         (sa->events)++; /* next */
         sa->next_event = sa->current_time;
     }
     else {
-        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
         sa->next_event++;
     }
 }
@@ -433,12 +433,12 @@ void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t
     }
 
     sa->flags &= ~SEQAF_USER_HURRY_UP;
+    sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
     if ((sa->text.palcolor[0] | sa->text.palcolor[1] | sa->text.palcolor[2]) == 0) {
         (sa->events)++; /* next */
         sa->next_event = sa->current_time;
     }
     else {
-        sa->flags |= SEQAF_TEXT_PALCOLOR_UPDATE;
         sa->next_event++;
     }
 }
@@ -1132,6 +1132,52 @@ void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *e
     (sa->events)++; /* next */
 }
 
+uint32_t seq_com_pal_anim_base;
+
+/* param1: flags
+ *   bit 0: 1=blank palette after saving */
+void seq_com_save_palette(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    unsigned int i;
+
+    seq_com_pal_anim_base = sa->current_time;
+
+    vga_read_PAL(0,common_tmp_small,256);
+
+    if (ev->param1 & 0x1u) {
+        vga_palette_lseek(0);
+        for (i=0;i < 256;i++)
+            vga_palette_write(0,0,0);
+    }
+
+    (sa->events)++; /* next */
+}
+
+/* param1: how fast to fade */
+void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    unsigned int m;
+    unsigned int i;
+
+    (void)ev;
+
+    {
+        uint32_t r = (sa->current_time - seq_com_pal_anim_base) * (ev->param1 ? ev->param1 : 8);
+        if (r > 256) r = 256;
+        m = (unsigned int)r;
+    }
+
+    vga_palette_lseek(0);
+    for (i=0;i < 256;i++) {
+        vga_palette_write(
+            (unsigned char)(((unsigned int)common_tmp_small[(i*3u)+0u]*m)>>8u),
+            (unsigned char)(((unsigned int)common_tmp_small[(i*3u)+1u]*m)>>8u),
+            (unsigned char)(((unsigned int)common_tmp_small[(i*3u)+2u]*m)>>8u));
+    }
+
+    sa->next_event = sa->current_time + 1u;
+    if (m >= 256)
+        (sa->events)++; /* next */
+}
+
 void gen_res_free(void) {
     seq_com_cleanup();
     sin2048fps16_free();
@@ -1152,6 +1198,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR|(0x80ul<<8ul),0xC000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x80 load to 0xC000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
+    {SEQAEV_CALLBACK,       1,          0,          (const char*)seq_com_save_palette}, // save VGA palette and (param1) blank it too
+    {SEQAEV_PAUSE,          0,          0,          NULL}, //let it render
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
