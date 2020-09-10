@@ -582,10 +582,9 @@ unsigned int seqanim_text_height(struct seqanim_t *sa) {
     return 0;
 }
 
-void seqanim_step_text(struct seqanim_t *sa,const uint32_t nowcount,const struct seqanim_event_t *e) {
+void seqanim_step_text(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     uint32_t c;
 
-    (void)nowcount; // unused
     (void)e; // unused
 
     if (sa->text.msg == NULL)
@@ -715,14 +714,17 @@ void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t
     }
 }
 
-void seqanim_hurryup(struct seqanim_t *sa,const uint32_t nowcount) {
-    sa->next_event = sa->current_time = nowcount;
-    sa->flags |= SEQAF_USER_HURRY_UP;
+void seqanim_set_time(struct seqanim_t *sa,const uint32_t t) {
+    sa->current_time = t;
 }
 
-void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
-    sa->current_time = nowcount;
-    while (nowcount >= sa->next_event) {
+void seqanim_hurryup(struct seqanim_t *sa) {
+    sa->flags |= SEQAF_USER_HURRY_UP;
+    sa->next_event = sa->current_time;
+}
+
+void seqanim_step(struct seqanim_t *sa) {
+    while (sa->current_time >= sa->next_event) {
         if (sa->events == NULL) {
             sa->flags |= SEQAF_END;
         }
@@ -731,11 +733,11 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
 
             switch (sa->events->what) {
                 case SEQAEV_END:
-                    sa->next_event = nowcount;
+                    sa->next_event = sa->current_time;
                     sa->flags |= SEQAF_END;
                     return;
                 case SEQAEV_TEXT_CLEAR:
-                    sa->next_event = nowcount;
+                    sa->next_event = sa->current_time;
                     seqanim_text_clear(sa,e);
                     (sa->events)++; /* next */
                     break;
@@ -744,7 +746,7 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     (sa->events)++; /* next */
                     break;
                 case SEQAEV_TEXT:
-                    seqanim_step_text(sa,nowcount,e); /* will advance sa->events */
+                    seqanim_step_text(sa,e); /* will advance sa->events */
                     break;
                 case SEQAEV_TEXT_FADEOUT:
                     seqanim_step_text_fadeout(sa,e);
@@ -754,14 +756,14 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     break;
                 case SEQAEV_WAIT:
                     if (sa->flags & SEQAF_USER_HURRY_UP)
-                        sa->flags &= ~SEQAF_USER_HURRY_UP;
+                        sa->next_event = sa->current_time;
                     else
                         sa->next_event += e->param1;
 
                     (sa->events)++; /* next */
                     break;
                 case SEQAEV_SYNC:
-                    sa->next_event = nowcount;
+                    sa->next_event = sa->current_time;
                     (sa->events)++; /* next */
                     break;
                 case SEQAEV_CALLBACK:
@@ -1155,6 +1157,10 @@ void seq_com_load_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t 
         packoff++;
     }
 
+    /* loading eats time depending on how fast DOS and the underlying storage device are.
+     * It's even possible some weirdo will run this off a 1.44MB floppy. */
+    sa->next_event = sa->current_time = read_timer_counter();
+
     (sa->events)++; /* next */
     return;
 fatalload:
@@ -1414,7 +1420,6 @@ void seq_intro(void) {
 #define ANIM_TEXT_RIGHT     310
 #define ANIM_TEXT_BOTTOM    198
     struct seqanim_t *sanim;
-    uint32_t nowcount;
     int c;
 
     seq_com_anim_h = ANIM_HEIGHT;
@@ -1460,13 +1465,14 @@ void seq_intro(void) {
             c = getch();
             if (c == 27)
                 break;
-            else if (c == ' ')
-                seqanim_hurryup(sanim,read_timer_counter());
+            else if (c == ' ') {
+                seqanim_set_time(sanim,read_timer_counter());
+                seqanim_hurryup(sanim);
+            }
         }
 
-        nowcount = read_timer_counter();
-
-        seqanim_step(sanim,nowcount);
+        seqanim_set_time(sanim,read_timer_counter());
+        seqanim_step(sanim);
         seqanim_redraw(sanim);
     }
 
