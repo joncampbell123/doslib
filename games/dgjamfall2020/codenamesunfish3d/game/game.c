@@ -410,7 +410,7 @@ enum {
     SEQAEV_TEXT_FADEOUT,            /* fade out (palette entry for) text. param1 is how much to subtract from R/G/B. At 120Hz a value of 255 is just over 2 seconds. 0 means use default. */
     SEQAEV_TEXT_FADEIN,             /* fade in to RGB 888 in param2, or if param2 == 0 to default palette color. param1 same as FADEOUT */
     SEQAEV_WAIT,                    /* pause for 'param1' tick counts */
-    SEQAEV_SYNC,                    /* set next event time to now */
+    SEQAEV_PAUSE,                   /* pause (such as to present contents on screen) */
     SEQAEV_CALLBACK,                /* custom event (callback funcptr 'params') */
 
     SEQAEV_MAX
@@ -762,8 +762,8 @@ void seqanim_step(struct seqanim_t *sa) {
 
                     (sa->events)++; /* next */
                     break;
-                case SEQAEV_SYNC:
-                    sa->next_event = sa->current_time;
+                case SEQAEV_PAUSE:
+                    sa->next_event = sa->current_time+1u; /* to break the loop */
                     (sa->events)++; /* next */
                     break;
                 case SEQAEV_CALLBACK:
@@ -1280,7 +1280,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
-    {SEQAEV_SYNC,           0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
