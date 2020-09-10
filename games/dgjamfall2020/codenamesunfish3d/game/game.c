@@ -885,6 +885,17 @@ void seqanim_redraw(struct seqanim_t *sa) {
     }
 }
 
+struct seq_com_anim_i {
+    unsigned int        frame_delay;
+    int                 init_frame;
+    int                 min_frame;
+    int                 max_frame;
+    unsigned int        flags;
+    signed char         init_dir;
+};
+
+#define SEQANF_PINGPONG     (0x01u)
+
 #define MAX_RTIMG           2
 #define MAX_VRLIMG          64
 
@@ -908,34 +919,6 @@ enum {
     RZOOM_ATPB
 };
 
-enum {
-    VRLIMG_NONE=0,
-
-    VRLIMG_SORC_ANIM1_FRAME1,
-    VRLIMG_SORC_ANIM1_FRAME2,
-    VRLIMG_SORC_ANIM1_FRAME3,
-    VRLIMG_SORC_ANIM1_FRAME4,
-    VRLIMG_SORC_ANIM1_FRAME5,
-    VRLIMG_SORC_ANIM1_FRAME6,
-    VRLIMG_SORC_ANIM1_FRAME7,
-    VRLIMG_SORC_ANIM1_FRAME8,
-    VRLIMG_SORC_ANIM1_FRAME9,
-
-    VRLIMG_SORC_STILL_UHH,
-
-    VRLIMG_SORC_ANIM2_FRAME1,
-    VRLIMG_SORC_ANIM2_FRAME2,
-    VRLIMG_SORC_ANIM2_FRAME3,
-    VRLIMG_SORC_ANIM2_FRAME4,
-    VRLIMG_SORC_ANIM2_FRAME5,
-    VRLIMG_SORC_ANIM2_FRAME6,
-    VRLIMG_SORC_ANIM2_FRAME7,
-    VRLIMG_SORC_ANIM2_FRAME8,
-    VRLIMG_SORC_ANIM2_FRAME9,
-
-    VRLIMG_SORC_ANIM2_MAX
-};
-
 unsigned int seq_com_anim_h = 0;
 
 struct seq_com_rotozoom_state {
@@ -946,8 +929,7 @@ struct seq_com_rotozoom_state {
 struct seq_com_rotozoom_state seq_com_rotozoom_image[MAX_RTIMG] = { {0,0} };
 
 struct seq_com_vrl_image_state {
-    struct vrl_image    vrl;
-    unsigned            vrl_index;
+    struct vrl_image        vrl;
 };
 
 struct seq_com_vrl_image_state seq_com_vrl_image[MAX_VRLIMG] = { { NULL,0 } };
