@@ -736,10 +736,10 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                     break;
                 case SEQAEV_TEXT_FADEOUT:
                     seqanim_step_text_fadeout(sa,e);
-                    break;
+                    return;
                 case SEQAEV_TEXT_FADEIN:
                     seqanim_step_text_fadein(sa,e);
-                    break;
+                    return;
                 case SEQAEV_WAIT:
                     if (sa->flags & SEQAF_USER_HURRY_UP)
                         sa->flags &= ~SEQAF_USER_HURRY_UP;
@@ -747,7 +747,7 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                         sa->next_event += e->param1;
 
                     (sa->events)++; /* next */
-                    break;
+                    return;
                 case SEQAEV_SYNC:
                     sa->next_event = nowcount;
                     (sa->events)++; /* next */
