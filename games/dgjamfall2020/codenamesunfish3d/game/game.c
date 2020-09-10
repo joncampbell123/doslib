@@ -575,6 +575,8 @@ unsigned int seqanim_text_height(struct seqanim_t *sa) {
     // FIXME: font_bmp needs to define line height!
     if (sa->text.font == arial_medium)
         return 14;
+    if (sa->text.font == arial_small)
+        return 10;
 
     return 0;
 }
@@ -598,6 +600,23 @@ again:
             case 0x10:
                 if (*(sa->text.msg) == 0) break; /* even as a two-byte sequence please don't allow 0x00 to avoid confusion with end of string */
                 sa->text.delay = *(sa->text.msg++) - 1u;
+                break;
+            case 0x11:
+                if (*(sa->text.msg) == 0) break; /* even as a two-byte sequence please don't allow 0x00 to avoid confusion with end of string */
+                switch (*(sa->text.msg)) {
+                    case 0x20: // arial medium
+                        sa->text.font = arial_medium;
+                        (sa->text.msg)++;
+                        break;
+                    case 0x21: // small arial
+                        sa->text.font = arial_small;
+                        (sa->text.msg)++;
+                        break;
+                    case 0x22: // small arial
+                        sa->text.font = arial_large;
+                        (sa->text.msg)++;
+                        break;
+                };
                 break;
             case '\n': {
                 const unsigned int lh = seqanim_text_height(sa);
@@ -1060,7 +1079,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02*ahem*"},
+    {SEQAEV_TEXT,           0,          0,          "Alright,\x01 there is no story. So I'll just make\none up to get things started. \x02\x11\x21*ahem*"},
     {SEQAEV_WAIT,           120/4,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
@@ -1153,6 +1172,8 @@ void seq_intro(void) {
     seq_com_anim_h = ANIM_HEIGHT;
 
     /* if we load this now, seqanim can automatically use it */
+    if (font_bmp_do_load_arial_small())
+        fatal("arial");
     if (font_bmp_do_load_arial_medium())
         fatal("arial");
 
