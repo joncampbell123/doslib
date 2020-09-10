@@ -710,7 +710,7 @@ void seqanim_hurryup(struct seqanim_t *sa,const uint32_t nowcount) {
 
 void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
     sa->current_time = nowcount;
-    if (nowcount >= sa->next_event) {
+    while (nowcount >= sa->next_event) {
         if (sa->events == NULL) {
             sa->flags |= SEQAF_END;
         }
@@ -721,7 +721,7 @@ void seqanim_step(struct seqanim_t *sa,const uint32_t nowcount) {
                 case SEQAEV_END:
                     sa->next_event = nowcount;
                     sa->flags |= SEQAF_END;
-                    break;
+                    return;
                 case SEQAEV_TEXT_CLEAR:
                     sa->next_event = nowcount;
                     seqanim_text_clear(sa,e);
