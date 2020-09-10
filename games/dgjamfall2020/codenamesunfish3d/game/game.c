@@ -45,7 +45,8 @@ enum seqcanvas_layer_what {
     SEQCL_CALLBACK,                                     /* 4   callback */
 
     SEQCL_TEXT,                                         /* 5   text */
-    SEQCL_MAX                                           /* 6   */
+    SEQCL_BITBLT,                                       /* 6   bitblt (copy one VRAM location to another) */
+    SEQCL_MAX                                           /* 7   */
 };
 
 union seqcanvas_layeru_t;
@@ -95,12 +96,22 @@ struct seqcanvas_text {
     unsigned char                   color;
 };
 
+/* in unchained 256-color mode, VGA write mode 1 and copying from offscreen RAM can be an efficient means to bitblt (4 pixels at once per R/W!) */
+struct seqcanvas_bitblt {
+    uint16_t                        src,dst;            /* src, dest video ram locations. This is unchained 256-color mode, therefore multiple of 4 pixels */
+    uint16_t                        length;             /* how much to copy per row (4-pixel planar byte) */
+    uint16_t                        src_step;           /* source stride for copy (4-pixel planar byte) */
+    uint16_t                        dst_step;           /* dest stride for copy (4-pixel planar byte) */
+    uint16_t                        rows;               /* rows */
+};
+
 union seqcanvas_layeru_t {
     struct seqcanvas_memsetfill     msetfill;           /* memset (solid color) */
     struct seqcanvas_rotozoom       rotozoom;           /* draw a rotozoomer */
     struct seqcanvas_vrl            vrl;                /* draw VRL image */
     struct seqcanvas_callback       callback;           /* callback function */
     struct seqcanvas_text           text;               /* draw text */
+    struct seqcanvas_bitblt         bitblt;             /* bitblt (copy VRAM to another VRAM location) */
 };
 
 struct seqcanvas_layer_t {
@@ -563,6 +574,26 @@ void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *c
     }
 }
 
+void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    const uint16_t sst = cl->rop.bitblt.src_step;
+    const uint16_t dst = cl->rop.bitblt.dst_step;
+    const uint16_t len = cl->rop.bitblt.length;
+    uint16_t rc = cl->rop.bitblt.rows;
+    uint16_t s = cl->rop.bitblt.src;
+    uint16_t d = cl->rop.bitblt.dst;
+
+    (void)sa;
+
+    vga_write_sequencer(0x02/*map mask*/,0xF);
+    vga_setup_wm1_block_copy();
+    while (rc-- != 0u) {
+        vga_wm1_mem_block_copy(d,s,len);
+        s += sst;
+        d += dst;
+    }
+    vga_restore_rm0wm0();
+}
+
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     switch (cl->what) {
         case SEQCL_MSETFILL:
@@ -580,6 +611,9 @@ void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
             break;
         case SEQCL_TEXT:
             seqanim_draw_canvasobj_text(sa,cl);
+            break;
+        case SEQCL_BITBLT:
+            seqanim_draw_canvasobj_bitblt(sa,cl);
             break;
         case SEQCL_NONE:
         default:
