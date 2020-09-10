@@ -576,14 +576,17 @@ void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *c
 }
 
 void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+    unsigned char far * const ovga = vga_state.vga_graphics_ram;
     const uint16_t sst = cl->rop.bitblt.src_step;
     const uint16_t dst = cl->rop.bitblt.dst_step;
     const uint16_t len = cl->rop.bitblt.length;
     uint16_t rc = cl->rop.bitblt.rows;
     uint16_t s = cl->rop.bitblt.src;
-    uint16_t d = cl->rop.bitblt.dst;
+    uint16_t d = cl->rop.bitblt.dst + FP_OFF(vga_state.vga_graphics_ram);
 
     (void)sa;
+
+    vga_state.vga_graphics_ram = MK_FP(0xA000,0x0000);
 
     vga_write_sequencer(0x02/*map mask*/,0xF);
     vga_setup_wm1_block_copy();
@@ -593,6 +596,8 @@ void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t
         d += dst;
     }
     vga_restore_rm0wm0();
+
+    vga_state.vga_graphics_ram = ovga;
 }
 
 void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
@@ -1076,6 +1081,37 @@ void seq_com_load_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *
     (sa->events)++; /* next */
 }
 
+/* param1: vram image
+ * param2: canvas layer */
+void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    switch (ev->param1&0xFFu) {
+        case VRAMIMG_TMPLIE:
+            co->rop.bitblt.src = 0x8000; // FIXME
+            co->rop.bitblt.dst = 0;
+            co->rop.bitblt.length = (320u/4u)*168u;
+            co->rop.bitblt.rows = 1;
+            co->rop.bitblt.src_step = 0;
+            co->rop.bitblt.dst_step = 0;
+            break;
+        default:
+            fatal("vram_image unknown index");
+            break;
+    }
+
+    co->what = SEQCL_BITBLT;
+
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
 void gen_res_free(void) {
     seq_com_cleanup();
     sin2048fps16_free();
@@ -1137,6 +1173,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
+    {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
@@ -1159,7 +1196,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character and room */
 
-    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
+    {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
@@ -1169,6 +1206,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* Mr. Woo Sorcerer, blank background, downcast */
 
+    {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_put_mr_woo_anim}, // put "uhhhh" (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL},
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
