@@ -351,6 +351,7 @@ struct seqcanvas_layer_t;
 
 struct seqcanvas_anim_t {
     void                (*anim_callback)(struct seqanim_t *sa,struct seqcanvas_layer_t *ca);
+    uint32_t            next_frame;
     unsigned int        frame_delay;
     int                 cur_frame;
     int                 min_frame;
@@ -800,7 +801,7 @@ void seqanim_step(struct seqanim_t *sa) {
         for (i=0;i < sa->canvas_obj_count;i++) {
             cl = &(sa->canvas_obj[i]);
             if (cl->what == SEQCL_VRL) {
-                if (cl->rop.vrl.anim.anim_callback != NULL)
+                if (cl->rop.vrl.anim.anim_callback != NULL && sa->current_time >= cl->rop.vrl.anim.next_frame)
                     cl->rop.vrl.anim.anim_callback(sa,cl);
             }
         }
@@ -1182,6 +1183,7 @@ void seq_com_vrl_anim_cb(struct seqanim_t *sa,struct seqcanvas_layer_t *ca) {
 
         sa->flags |= SEQAF_REDRAW;
         ca->rop.vrl.vrl = &seq_com_vrl_image[ca->rop.vrl.anim.cur_frame].vrl;
+        ca->rop.vrl.anim.next_frame += ca->rop.vrl.anim.frame_delay;
     }
 }
 
@@ -1205,7 +1207,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
     switch (ev->param1) {
         case 0://anim1
             co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
-            co->rop.vrl.anim.frame_delay = 120 / 15;
+            co->rop.vrl.anim.frame_delay = 120 / 20;
             co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM1_OFFSET;
             co->rop.vrl.anim.max_frame = SORC_VRL_ANIM1_OFFSET + 8;
             co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
@@ -1218,7 +1220,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
             break;
         case 2://anim2
             co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
-            co->rop.vrl.anim.frame_delay = 120 / 15;
+            co->rop.vrl.anim.frame_delay = 120 / 35;
             co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_ANIM2_OFFSET;
             co->rop.vrl.anim.max_frame = SORC_VRL_ANIM2_OFFSET + 8;
             co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
@@ -1230,6 +1232,7 @@ void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *
 
     sa->flags |= SEQAF_REDRAW;
     co->rop.vrl.vrl = &seq_com_vrl_image[co->rop.vrl.anim.cur_frame].vrl;
+    co->rop.vrl.anim.next_frame = sa->current_time + co->rop.vrl.anim.frame_delay;
 
     (sa->events)++; /* next */
 }
