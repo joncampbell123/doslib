@@ -1312,6 +1312,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
@@ -1336,6 +1337,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "I am a super awesome programmer! I write\nclever highly optimized code! Woooooooo!"},
     {SEQAEV_WAIT,           120*3,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim1 (param2==2)
 
