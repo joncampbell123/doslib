@@ -25,7 +25,15 @@ extern struct dumbpack *sorc_pack;
     sorcbwo7.vrl
     sorcbwo8.vrl
     sorcbwo9.vrl            // 20 (0x14)
-                            //=21 (0x15)
+    gmch1.pal
+    gmch2.pal
+    gmch3.pal
+    gmch4.pal
+    gmch1.vrl               // 25 (0x19)
+    gmch2.vrl
+    gmch3.vrl
+    gmch4.vrl
+                            //=29 (0x1D)
  */
 
 int sorc_pack_open(void);
