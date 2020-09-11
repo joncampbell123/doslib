@@ -117,6 +117,10 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Input PNG not paletted\n");
         return 1;
     }
+    if (!(png_bit_depth == 4 || png_bit_depth == 8)) {
+        fprintf(stderr,"Unsupported PNG bit depth %u\n",png_bit_depth);
+        return 1;
+    }
 
     {
         png_color* pal = NULL;
@@ -204,6 +208,22 @@ int main(int argc,char **argv) {
     }
 
     png_read_rows(png_context, src_pcx_rows, NULL, png_height);
+
+    if (png_bit_depth == 4) { /* need to expand */
+        unsigned int y;
+        for (y=0;y < png_height;y++) {
+            unsigned int x = (png_width+1u) & (~1u);
+            unsigned char *d = src_pcx_rows[y] + x;
+            unsigned char *s = src_pcx_rows[y] + (x>>1u);
+            while (x != 0u) {
+                x -= 2u;
+                d -= 2u;
+                s--;
+                d[0] = s[0] >> 4u;
+                d[1] = s[0] & 0xFu;
+            }
+        }
+    }
 
     png_destroy_read_struct(&png_context,&png_context_info,&png_context_end);
 
