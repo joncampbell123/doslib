@@ -1437,6 +1437,10 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       1,          (0x00ul | (0x60ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette new colors and (param1) blank it too. 0x00-0x3F new rotozoomer, 0x40-0x5F Mr. Wooo
 
     {SEQAEV_PAUSE,          0,          0,          NULL}, // render
+
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(120ul/*x*/<<10ul)|(/*y*/135ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
@@ -1445,6 +1449,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* cut to Mr. Woo Sorcerer in front of a demo effect */
 
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_put_nothing}, // clear canvas layer 5
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_rotozoom}, // put rotozoomer slot 0 (param1) to canvas layer 0 (param2)
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_mr_woo_anim}, // put anim1 (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL}, //RRGGBB cyan
@@ -1459,6 +1464,9 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* game character and room */
 
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(120ul/*x*/<<10ul)|(/*y*/135ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
@@ -1470,6 +1478,7 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* Mr. Woo Sorcerer, blank background, downcast */
 
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_put_nothing}, // clear canvas layer 5
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_put_mr_woo_anim}, // put "uhhhh" (param1) to canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0x00FFFFul, 0,          NULL}, //RRGGBB cyan
