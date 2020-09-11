@@ -1365,6 +1365,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_PAUSE,          0,          0,          NULL}, //let it render
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Welcome one and all to a new day\nin this world."},
@@ -1375,11 +1378,17 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "A day where we all mill about in this world\ndoing our thing as a society" "\x10\x30" "----"},
     // no fade out, interrupted speaking
 
+    // mouth, talking, secondary char, replace on canvas with new position
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(112ul/*x*/<<10ul)|(/*y*/53ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "But what is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -1387,11 +1396,17 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_WAIT,           120*1,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
+    // mouth, talking, secondary char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(112ul/*x*/<<10ul)|(/*y*/53ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Our purpose? What is the story? The goal?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -1409,6 +1424,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_put_nothing}, // clear canvas layer 2
     {SEQAEV_CALLBACK,       0,          3,          (const char*)seq_com_put_nothing}, // clear canvas layer 3
     {SEQAEV_CALLBACK,       0,          4,          (const char*)seq_com_put_nothing}, // clear canvas layer 4
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_put_nothing}, // clear canvas layer 5
     {SEQAEV_PAUSE,          0,          0,          NULL}, // render
 
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
@@ -1489,6 +1505,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     /* game character returns outside */
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
@@ -1518,6 +1537,9 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* someone in the crowd */
 
+    // mouth, talking, secondary char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(112ul/*x*/<<10ul)|(/*y*/53ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
     {SEQAEV_TEXT_COLOR,     0xFFFF00ul, 0,          NULL}, //RRGGBB yellow
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Oh come on!\x01 That's just mean!"},
@@ -1525,6 +1547,9 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
 
     /* game character */
+
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
