@@ -60,6 +60,12 @@ struct seqcanvas_anim_t {
     int                 min_frame;
     int                 max_frame;
     unsigned char       flags;
+
+    /* movement */
+    int                 base_x,base_y;
+    int                 move_x,move_y;
+    unsigned int        move_duration;
+    uint32_t            move_base;
 };
 
 struct seqcanvas_memsetfill {
@@ -1306,6 +1312,47 @@ void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_even
         (sa->events)++; /* next */
 }
 
+/* param1:
+ * param2: canvas layer */
+void seq_com_begin_anim_move(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    if (co->what != SEQCL_VRL) fatal("anim move when not VRL");
+
+    co->rop.vrl.anim.base_x = co->rop.vrl.x;
+    co->rop.vrl.anim.base_y = co->rop.vrl.y;
+    co->rop.vrl.anim.move_x = 0;
+    co->rop.vrl.anim.move_y = 0;
+    co->rop.vrl.anim.move_duration = 0;
+    co->rop.vrl.anim.move_base = sa->current_time;
+
+    (sa->events)++; /* next */
+}
+
+/* param1: x | (y << 10) | (duration << 20ul)
+ * param2: canvas layer */
+void seq_com_do_anim_move(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+
+    if (co->what != SEQCL_VRL) fatal("anim move when not VRL");
+
+    co->rop.vrl.anim.move_x = (ev->param1 & 0x3FFul);
+    co->rop.vrl.anim.move_y = ((ev->param1 >> 10ul) & 0x3FFul);
+    co->rop.vrl.anim.move_duration = ((ev->param1 >> 20ul) & 0x3FFul);
+
+    (sa->events)++; /* next */
+}
+
 /* param1: vrl image | (x << 10) | (y << 20) | (hflip << 30)
  * param2: canvas layer */
 void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
@@ -1427,7 +1474,15 @@ const struct seqanim_event_t seq_intro_events[] = {
     // mouth, talking, main char
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(300ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
-    {SEQAEV_TEXT,           0,          0,          "I'll ask the programmer."},
+    {SEQAEV_TEXT,           0,          0,          "I'll ask "},
+
+    /* begins moving */
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_begin_anim_move},
+    {SEQAEV_CALLBACK,       (20ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),1,(const char*)seq_com_do_anim_move},
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_begin_anim_move},
+    {SEQAEV_CALLBACK,       (20ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),5,(const char*)seq_com_do_anim_move},
+
+    {SEQAEV_TEXT,           0,          0,          "the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
