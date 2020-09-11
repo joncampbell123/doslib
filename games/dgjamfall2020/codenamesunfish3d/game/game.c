@@ -723,6 +723,7 @@ void seqanim_redraw(struct seqanim_t *sa) {
 #define SORC_VRL_END                (0x20+19)/*0x33*/
 
 #define SORC_VRL_GAMESCHARS_VRLBASE (0x33+0)/*0x33*/
+#define SORC_VRL_GAMECHRMOUTH_BASE  (0x37+0)/*0x37*/
 
 /* rotozoomer images (256x256) */
 enum {
@@ -1223,6 +1224,12 @@ void seq_com_load_games_chars(struct seqanim_t *sa,const struct seqanim_event_t 
     if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+3,sorc_pack,28,0xD0)) //gmch4.vrl
         goto fatalload;
     if (seq_com_load_pal_from_dumbpack(0xD0,sorc_pack,24)) //gmch4.pal
+        goto fatalload;
+
+    /* mouth (shares palette with gmch1.vrl) */
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMECHRMOUTH_BASE+0,sorc_pack,29,0xA0)) //gmchm1.vrl
+        goto fatalload;
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMECHRMOUTH_BASE+1,sorc_pack,30,0xA0)) //gmchm2.vrl
         goto fatalload;
 
     /* loading eats time depending on how fast DOS and the underlying storage device are.
