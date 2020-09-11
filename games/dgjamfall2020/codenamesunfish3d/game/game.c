@@ -678,6 +678,8 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 #define SORC_VRL_END                (0x20+19)/*0x33*/
 
+#define SORC_VRL_GAMESCHARS_VRLBASE (0x33+0)/*0x33*/
+
 /* rotozoomer images (256x256) */
 enum {
     RZOOM_NONE=0,       /* i.e. clear the slot and free memory */
@@ -858,6 +860,26 @@ int seq_com_load_vrl_from_dumbpack(const unsigned vrl_slot,struct dumbpack * con
         seq_com_vrl_image[vrl_slot].vrl.vrl_lineoffs,
         seq_com_vrl_image[vrl_slot].vrl.buffer+sizeof(*(seq_com_vrl_image[vrl_slot].vrl.vrl_header)),
         SORC_PAL_OFFSET);
+
+    return 0;
+}
+
+int seq_com_load_pal_from_dumbpack(const unsigned char pal,struct dumbpack * const pack,const unsigned packoff) {
+    uint32_t ofs,sz;
+
+    if ((ofs=dumbpack_ent_offset(pack,packoff)) == 0ul)
+        return 1;
+    if ((sz=dumbpack_ent_size(pack,packoff)) == 0ul)
+        return 1;
+    if (lseek(pack->fd,ofs,SEEK_SET) != ofs)
+        return 1;
+    if (sz > sizeof(common_tmp_small))
+        return 1;
+    if (read(pack->fd,common_tmp_small,sz) != sz)
+        return 1;
+
+    sz /= 3;
+    vga_write_PAL(pal,common_tmp_small,(unsigned int)sz);
 
     return 0;
 }
@@ -1132,6 +1154,40 @@ void seq_com_put_vram_image(struct seqanim_t *sa,const struct seqanim_event_t *e
     (sa->events)++; /* next */
 }
 
+void seq_com_load_games_chars(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    (void)sa;
+    (void)ev;
+
+    if (sorc_pack_open())
+        fatal("mr_woo_init");
+
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+0,sorc_pack,25)) //gmch1.vrl
+        goto fatalload;
+    if (seq_com_load_pal_from_dumbpack(0xA0,sorc_pack,21)) //gmch1.pal
+        goto fatalload;
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+1,sorc_pack,26)) //gmch2.vrl
+        goto fatalload;
+    if (seq_com_load_pal_from_dumbpack(0xB0,sorc_pack,22)) //gmch2.pal
+        goto fatalload;
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+2,sorc_pack,27)) //gmch3.vrl
+        goto fatalload;
+    if (seq_com_load_pal_from_dumbpack(0xC0,sorc_pack,23)) //gmch3.pal
+        goto fatalload;
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+3,sorc_pack,28)) //gmch4.vrl
+        goto fatalload;
+    if (seq_com_load_pal_from_dumbpack(0xD0,sorc_pack,24)) //gmch4.pal
+        goto fatalload;
+
+    /* loading eats time depending on how fast DOS and the underlying storage device are.
+     * It's even possible some weirdo will run this off a 1.44MB floppy. */
+    sa->next_event = sa->current_time = read_timer_counter();
+
+    (sa->events)++; /* next */
+    return;
+fatalload:
+    fatal("gameschars");
+}
+
 uint32_t seq_com_pal_anim_base;
 
 /* param1: flags
@@ -1212,6 +1268,7 @@ void gen_res_free(void) {
 const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear rotozoomer slot 0
+    {SEQAEV_CALLBACK,       0,          3,          (const char*)seq_com_load_games_chars}, // load games chars
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_put_solidcolor}, // canvas layer 0 (param2) solid fill 0 (param1)
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE|(0x60ul<<8ul),0x8000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x60 load to 0x8000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR|(0x80ul<<8ul),0xC000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x80 load to 0xC000 in planar unchained VRAM for bitblt
