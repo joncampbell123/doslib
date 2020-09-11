@@ -1,0 +1,6 @@
+- Game character walking/movement during dialogue
+- "Oh come on! That's just mean" make pouting disgusted version of game
+  sprite.
+- Make your own damn sprites. Ripping off Final Finatasy sprites is fine
+  for game dev and TESTING but in the end you need to make your own!
+
