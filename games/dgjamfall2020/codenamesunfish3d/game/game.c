@@ -76,6 +76,7 @@ struct seqcanvas_rotozoom {
 #define SEQANF_ANIMATE              (1u << 0u)
 #define SEQANF_PINGPONG             (1u << 1u)
 #define SEQANF_REVERSE              (1u << 2u)
+#define SEQANF_HFLIP                (1u << 3u)
 
 struct seqcanvas_vrl {
     struct vrl_image*               vrl;                /* vrl image to draw */
@@ -563,15 +564,58 @@ void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
+/////TODO
+
+#include <hw/vga/vrl1xdrc.h>
+
+void draw_vrl1_vgax_modex_hflip(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+#if TARGET_MSDOS == 32
+	unsigned char *draw;
+#else
+	unsigned char far *draw;
+#endif
+	unsigned int vram_offset = (y * vga_state.vga_draw_stride) + (x >> 2),sx;
+	unsigned int vramlimit = vga_state.vga_draw_stride_limit;
+	unsigned char vga_plane = (x & 3);
+	unsigned char *s;
+
+    (void)datasz;
+
+	/* draw one by one */
+	for (sx=0;sx < hdr->width;sx++) {
+		draw = vga_state.vga_graphics_ram + vram_offset;
+		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
+		s = data + lineoffs[hdr->width-sx-1];
+		draw_vrl1_vgax_modex_strip(draw,s);
+
+		/* end of a vertical strip. next line? */
+		if ((++vga_plane) == 4) {
+			if (--vramlimit == 0) break;
+			vram_offset++;
+			vga_plane = 0;
+		}
+	}
+}
+/////////
+
 void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
     if (cl->rop.vrl.vrl != NULL) {
-        draw_vrl1_vgax_modex(cl->rop.vrl.x,cl->rop.vrl.y,
-            cl->rop.vrl.vrl->vrl_header,
-            cl->rop.vrl.vrl->vrl_lineoffs,
-            cl->rop.vrl.vrl->buffer+sizeof(*(cl->rop.vrl.vrl->vrl_header)),
-            cl->rop.vrl.vrl->bufsz-sizeof(*(cl->rop.vrl.vrl->vrl_header)));
+        if (cl->rop.vrl.anim.flags & SEQANF_HFLIP) {
+            draw_vrl1_vgax_modex_hflip(cl->rop.vrl.x,cl->rop.vrl.y,
+                    cl->rop.vrl.vrl->vrl_header,
+                    cl->rop.vrl.vrl->vrl_lineoffs,
+                    cl->rop.vrl.vrl->buffer+sizeof(*(cl->rop.vrl.vrl->vrl_header)),
+                    cl->rop.vrl.vrl->bufsz-sizeof(*(cl->rop.vrl.vrl->vrl_header)));
+        }
+        else {
+            draw_vrl1_vgax_modex(cl->rop.vrl.x,cl->rop.vrl.y,
+                cl->rop.vrl.vrl->vrl_header,
+                cl->rop.vrl.vrl->vrl_lineoffs,
+                cl->rop.vrl.vrl->buffer+sizeof(*(cl->rop.vrl.vrl->vrl_header)),
+                cl->rop.vrl.vrl->bufsz-sizeof(*(cl->rop.vrl.vrl->vrl_header)));
+        }
     }
 }
 
@@ -1274,6 +1318,9 @@ void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
     co->rop.vrl.y = (unsigned int)((ev->param1 >> 20ul) & 0x3FFul);
     co->rop.vrl.vrl = &seq_com_vrl_image[ev->param1 & 0x3FFul].vrl;
     memset(&(co->rop.vrl.anim),0,sizeof(co->rop.vrl.anim));
+
+    if (ev->param1 & (1ul << 30ul))
+        co->rop.vrl.anim.flags |= SEQANF_HFLIP;
 
     sa->flags |= SEQAF_REDRAW;
 
