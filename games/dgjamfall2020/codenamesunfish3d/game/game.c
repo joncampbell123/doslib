@@ -1329,6 +1329,16 @@ void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
     if (ev->param1 & (1ul << 30ul))
         co->rop.vrl.anim.flags |= SEQANF_HFLIP;
 
+    switch (ev->param1 & 0x3FFul) {
+        case SORC_VRL_GAMECHRMOUTH_BASE:
+            co->rop.vrl.anim.frame_delay = 120 / 6;
+            co->rop.vrl.anim.cur_frame = co->rop.vrl.anim.min_frame = SORC_VRL_GAMECHRMOUTH_BASE;
+            co->rop.vrl.anim.max_frame = SORC_VRL_GAMECHRMOUTH_BASE + 1;
+            co->rop.vrl.anim.flags = SEQANF_PINGPONG | SEQANF_ANIMATE;
+            co->rop.vrl.anim.anim_callback = seq_com_vrl_anim_cb;
+            break;
+    };
+
     sa->flags |= SEQAF_REDRAW;
 
     (sa->events)++; /* next */
