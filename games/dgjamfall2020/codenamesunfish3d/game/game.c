@@ -459,6 +459,8 @@ void seqanim_hurryup(struct seqanim_t *sa) {
     sa->next_event = sa->current_time;
 }
 
+void seq_com_vrl_anim_movement(struct seqanim_t *sa,struct seqcanvas_layer_t *ca);
+
 void seqanim_step(struct seqanim_t *sa) {
     while (sa->current_time >= sa->next_event) {
         if (sa->events == NULL) {
@@ -522,6 +524,7 @@ void seqanim_step(struct seqanim_t *sa) {
         for (i=0;i < sa->canvas_obj_count;i++) {
             cl = &(sa->canvas_obj[i]);
             if (cl->what == SEQCL_VRL) {
+                seq_com_vrl_anim_movement(sa,cl);
                 if (cl->rop.vrl.anim.anim_callback != NULL) {
                     uint32_t pt;
 
@@ -1026,6 +1029,31 @@ void seq_com_vrl_anim_cb(struct seqanim_t *sa,struct seqcanvas_layer_t *ca) {
     }
 }
 
+void seq_com_vrl_anim_movement(struct seqanim_t *sa,struct seqcanvas_layer_t *ca) {
+    if (ca->rop.vrl.anim.move_duration != 0u) {
+        int32_t rel = (int32_t)(sa->current_time - ca->rop.vrl.anim.move_base); /* to make signed multiply easier in next steps */
+        unsigned char eof = 0;
+        int dx,dy;
+
+        if (rel > (int32_t)ca->rop.vrl.anim.move_duration) {
+            rel = (int32_t)ca->rop.vrl.anim.move_duration;
+            eof = 1;
+        }
+        else {
+            sa->flags |= SEQAF_REDRAW;
+            if (rel < 0l) rel = 0l;
+        }
+
+        dx = (int)((rel * ca->rop.vrl.anim.move_x) / (int32_t)ca->rop.vrl.anim.move_duration);
+        dy = (int)((rel * ca->rop.vrl.anim.move_y) / (int32_t)ca->rop.vrl.anim.move_duration);
+
+        ca->rop.vrl.x = ca->rop.vrl.anim.base_x + dx;
+        ca->rop.vrl.y = ca->rop.vrl.anim.base_y + dy;
+
+        if (eof) ca->rop.vrl.anim.move_duration = 0;
+    }
+}
+
 /* param1: animation
  * param2: canvas layer */
 void seq_com_put_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
@@ -1478,9 +1506,9 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* begins moving */
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_begin_anim_move},
-    {SEQAEV_CALLBACK,       (20ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),1,(const char*)seq_com_do_anim_move},
+    {SEQAEV_CALLBACK,       (40ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),1,(const char*)seq_com_do_anim_move},
     {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_begin_anim_move},
-    {SEQAEV_CALLBACK,       (20ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),5,(const char*)seq_com_do_anim_move},
+    {SEQAEV_CALLBACK,       (40ul/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),5,(const char*)seq_com_do_anim_move},
 
     {SEQAEV_TEXT,           0,          0,          "the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
