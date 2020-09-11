@@ -1420,7 +1420,14 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
-    {SEQAEV_TEXT,           0,          0,          "Good question! I'll ask the programmer."},
+    {SEQAEV_TEXT,           0,          0,          "Good question! "},
+
+    /* turn around, to enter temple */
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(1ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+    // mouth, talking, main char
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(300ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(1ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+
+    {SEQAEV_TEXT,           0,          0,          "I'll ask the programmer."},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
