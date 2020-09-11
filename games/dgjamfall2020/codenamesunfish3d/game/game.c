@@ -1350,6 +1350,8 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_CALLBACK,       1,          (0x00ul | (0x100ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette and (param1) blank it too
 
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+3ul)/*vrl*/)|(130ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),4,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+2ul)/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/40ul<<20ul)|(1ul/*hflip*/<<30ul),3,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+1ul)/*vrl*/)|(140ul/*x*/<<10ul)|(/*y*/76ul<<20ul)|(1ul/*hflip*/<<30ul),2,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
@@ -1398,6 +1400,8 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       0,          2,          (const char*)seq_com_put_nothing}, // clear canvas layer 2
+    {SEQAEV_CALLBACK,       0,          3,          (const char*)seq_com_put_nothing}, // clear canvas layer 3
+    {SEQAEV_CALLBACK,       0,          4,          (const char*)seq_com_put_nothing}, // clear canvas layer 4
     {SEQAEV_PAUSE,          0,          0,          NULL}, // render
 
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
@@ -1469,6 +1473,8 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
 
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+3ul)/*vrl*/)|(130ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),4,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+2ul)/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/40ul<<20ul)|(1ul/*hflip*/<<30ul),3,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+1ul)/*vrl*/)|(140ul/*x*/<<10ul)|(/*y*/76ul<<20ul)|(1ul/*hflip*/<<30ul),2,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
