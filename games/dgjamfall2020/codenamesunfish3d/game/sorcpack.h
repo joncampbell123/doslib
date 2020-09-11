@@ -33,7 +33,9 @@ extern struct dumbpack *sorc_pack;
     gmch2.vrl
     gmch3.vrl
     gmch4.vrl
-                            //=29 (0x1D)
+    gmchm1.vrl
+    gmchm2.vrl              // 30 (0x1E)
+                            //=31 (0x1F)
  */
 
 int sorc_pack_open(void);
