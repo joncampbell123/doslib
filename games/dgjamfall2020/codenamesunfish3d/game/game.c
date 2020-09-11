@@ -840,7 +840,7 @@ void seq_com_init_mr_woo(struct seqanim_t *sa,const struct seqanim_event_t *ev) 
     (sa->events)++; /* next */
 }
 
-int seq_com_load_vrl_from_dumbpack(const unsigned vrl_slot,struct dumbpack * const pack,const unsigned packoff) {
+int seq_com_load_vrl_from_dumbpack(const unsigned vrl_slot,struct dumbpack * const pack,const unsigned packoff,const unsigned char paloff) {
     uint32_t ofs,sz;
 
     if (vrl_slot >= MAX_VRLIMG)
@@ -859,13 +859,14 @@ int seq_com_load_vrl_from_dumbpack(const unsigned vrl_slot,struct dumbpack * con
         seq_com_vrl_image[vrl_slot].vrl.vrl_header,
         seq_com_vrl_image[vrl_slot].vrl.vrl_lineoffs,
         seq_com_vrl_image[vrl_slot].vrl.buffer+sizeof(*(seq_com_vrl_image[vrl_slot].vrl.vrl_header)),
-        SORC_PAL_OFFSET);
+        paloff);
 
     return 0;
 }
 
 int seq_com_load_pal_from_dumbpack(const unsigned char pal,struct dumbpack * const pack,const unsigned packoff) {
     uint32_t ofs,sz;
+    unsigned int i;
 
     if ((ofs=dumbpack_ent_offset(pack,packoff)) == 0ul)
         return 1;
@@ -879,7 +880,9 @@ int seq_com_load_pal_from_dumbpack(const unsigned char pal,struct dumbpack * con
         return 1;
 
     sz /= 3;
-    vga_write_PAL(pal,common_tmp_small,(unsigned int)sz);
+    vga_palette_lseek(pal);
+    for (i=0;i < (unsigned int)sz;i++)
+        vga_palette_write(common_tmp_small[(i*3)+0]>>2,common_tmp_small[(i*3)+1]>>2,common_tmp_small[(i*3)+2]>>2);
 
     return 0;
 }
@@ -930,7 +933,7 @@ void seq_com_load_mr_woo_anim(struct seqanim_t *sa,const struct seqanim_event_t 
                 free_vrl(&(seq_com_vrl_image[vrl_slot].vrl));
         }
         else {
-            if (seq_com_load_vrl_from_dumbpack(vrl_slot,pack,packoff)) {
+            if (seq_com_load_vrl_from_dumbpack(vrl_slot,pack,packoff,SORC_PAL_OFFSET)) {
                 if (ev->param2 & 1u) /* required load */
                     goto fatalload;
             }
@@ -1161,19 +1164,19 @@ void seq_com_load_games_chars(struct seqanim_t *sa,const struct seqanim_event_t 
     if (sorc_pack_open())
         fatal("mr_woo_init");
 
-    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+0,sorc_pack,25)) //gmch1.vrl
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+0,sorc_pack,25,0xA0)) //gmch1.vrl
         goto fatalload;
     if (seq_com_load_pal_from_dumbpack(0xA0,sorc_pack,21)) //gmch1.pal
         goto fatalload;
-    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+1,sorc_pack,26)) //gmch2.vrl
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+1,sorc_pack,26,0xB0)) //gmch2.vrl
         goto fatalload;
     if (seq_com_load_pal_from_dumbpack(0xB0,sorc_pack,22)) //gmch2.pal
         goto fatalload;
-    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+2,sorc_pack,27)) //gmch3.vrl
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+2,sorc_pack,27,0xC0)) //gmch3.vrl
         goto fatalload;
     if (seq_com_load_pal_from_dumbpack(0xC0,sorc_pack,23)) //gmch3.pal
         goto fatalload;
-    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+3,sorc_pack,28)) //gmch4.vrl
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMESCHARS_VRLBASE+3,sorc_pack,28,0xD0)) //gmch4.vrl
         goto fatalload;
     if (seq_com_load_pal_from_dumbpack(0xD0,sorc_pack,24)) //gmch4.pal
         goto fatalload;
