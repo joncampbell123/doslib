@@ -1269,9 +1269,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       1,          (0x00ul | (0x60ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette new colors and (param1) blank it too. 0x00-0x3F new rotozoomer, 0x40-0x5F Mr. Wooo
 
     {SEQAEV_PAUSE,          0,          0,          NULL}, // render
-
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
-
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_TEXT,           0,          0,          "Hello, games programmer?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
@@ -1329,7 +1327,6 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
     {SEQAEV_PAUSE,          0,          0,          NULL},
-
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
