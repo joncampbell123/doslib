@@ -1408,7 +1408,13 @@ void seq_com_do_anim_move(struct seqanim_t *sa,const struct seqanim_event_t *ev)
     if (co->what != SEQCL_VRL) fatal("anim move when not VRL");
 
     co->rop.vrl.anim.move_x = (ev->param1 & 0x3FFul);
+    if (co->rop.vrl.anim.move_x & 0x200)
+        co->rop.vrl.anim.move_x -= 0x400;
+
     co->rop.vrl.anim.move_y = ((ev->param1 >> 10ul) & 0x3FFul);
+    if (co->rop.vrl.anim.move_y & 0x200)
+        co->rop.vrl.anim.move_y -= 0x400;
+
     co->rop.vrl.anim.move_duration = ((ev->param1 >> 20ul) & 0x3FFul);
 
     (sa->events)++; /* next */
@@ -1640,17 +1646,20 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
 
+    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(325ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl},
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+3ul)/*vrl*/)|(130ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),4,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+2ul)/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/40ul<<20ul)|(1ul/*hflip*/<<30ul),3,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       ((SORC_VRL_GAMESCHARS_VRLBASE+1ul)/*vrl*/)|(140ul/*x*/<<10ul)|(/*y*/76ul<<20ul)|(1ul/*hflip*/<<30ul),2,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
-    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(320ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
 
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
-    // mouth, talking, main char
-    {SEQAEV_CALLBACK,       ((SORC_VRL_GAMECHRMOUTH_BASE+0ul)/*vrl*/)|(285ul/*x*/<<10ul)|(/*y*/85ul<<20ul)|(0ul/*hflip*/<<30ul),5,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_begin_anim_move},
+    {SEQAEV_CALLBACK,       ((-40l&0x3FFul)/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),1,(const char*)seq_com_do_anim_move},
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_begin_anim_move},
+    {SEQAEV_CALLBACK,       ((-40l&0x3FFul)/*x*/)|(0/*y*/<<10ul)|(60ul/*duration ticks*/<<20ul),5,(const char*)seq_com_do_anim_move},
 
     /* game character returns outside */
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
