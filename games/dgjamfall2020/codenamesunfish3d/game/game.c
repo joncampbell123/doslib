@@ -1252,6 +1252,31 @@ void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_even
         (sa->events)++; /* next */
 }
 
+/* param1: vrl image | (x << 10) | (y << 20) | (hflip << 30)
+ * param2: canvas layer */
+void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
+    struct seqcanvas_layer_t* co;
+
+    (void)sa;
+
+    if (ev->param2 >= sa->canvas_obj_alloc) fatal("canvas obj index out of range");
+    co = &(sa->canvas_obj[ev->param2]);
+    if ((ev->param1 & 0x3FFul) >= MAX_VRLIMG) fatal("vrl index out of range");
+
+    if (sa->canvas_obj_count <= ev->param2)
+        sa->canvas_obj_count = ev->param2+1u;
+
+    co->what = SEQCL_VRL;
+    co->rop.vrl.x = (unsigned int)((ev->param1 >> 10ul) & 0x3FFul);
+    co->rop.vrl.y = (unsigned int)((ev->param1 >> 20ul) & 0x3FFul);
+    co->rop.vrl.vrl = &seq_com_vrl_image[ev->param1 & 0x3FFul].vrl;
+    memset(&(co->rop.vrl.anim),0,sizeof(co->rop.vrl.anim));
+
+    sa->flags |= SEQAF_REDRAW;
+
+    (sa->events)++; /* next */
+}
+
 void gen_res_free(void) {
     seq_com_cleanup();
     sin2048fps16_free();
@@ -1274,6 +1299,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR|(0x80ul<<8ul),0xC000ul,(const char*)seq_com_load_vram_image}, // load tmplie and offset by 0x80 load to 0xC000 in planar unchained VRAM for bitblt
     {SEQAEV_CALLBACK,       VRAMIMG_TWNCNTR,0,      (const char*)seq_com_put_vram_image}, // take VRAMIMG_TWNCNTR (param1) put into canvas layer 0 (param2) via BitBlt
     {SEQAEV_CALLBACK,       1,          (0x00ul | (0x100ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette and (param1) blank it too
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_PAUSE,          0,          0,          NULL}, //let it render
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
 
@@ -1317,12 +1343,16 @@ const struct seqanim_event_t seq_intro_events[] = {
 
     /* walk to a door. screen fades out, fades in to room with only the one person. */
 
+    {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
+    {SEQAEV_PAUSE,          0,          0,          NULL}, // render
+
     {SEQAEV_CALLBACK,       RZOOM_WXP,  0,          (const char*)seq_com_load_rotozoom}, // load rotozoomer slot 0 (param2) with 256x256 Windows XP background (param1)
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_init_mr_woo}, // initialize code and data for Mr. Wooo Sorcerer (load palette) (Future dev: param1 select func)
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim1 (required param2==1)
     {SEQAEV_CALLBACK,       1,          1,          (const char*)seq_com_load_mr_woo_anim}, // load uhhh (required param2==1)
     {SEQAEV_CALLBACK,       2,          1,          (const char*)seq_com_load_mr_woo_anim}, // load anim2 (required param2==1)
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_CALLBACK,       1,          (0x00ul | (0x60ul << 16ul)),(const char*)seq_com_save_palette}, // save VGA palette new colors and (param1) blank it too. 0x00-0x3F new rotozoomer, 0x40-0x5F Mr. Wooo
 
     {SEQAEV_PAUSE,          0,          0,          NULL}, // render
@@ -1349,6 +1379,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     /* game character and room */
 
     {SEQAEV_CALLBACK,       VRAMIMG_TMPLIE,0,       (const char*)seq_com_put_vram_image}, // take VRAMIMG_TMPLIE (param1) put into canvas layer 0 (param2) via BitBlt
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(100ul/*x*/<<10ul)|(/*y*/120ul<<20ul)|(1ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_TEXT_COLOR,     0,          0,          NULL}, //default
     {SEQAEV_TEXT_CLEAR,     0,          0,          NULL},
     {SEQAEV_PAUSE,          0,          0,          NULL},
@@ -1383,6 +1414,7 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // slot 0 we're done with the rotozoomer, free it
     {SEQAEV_CALLBACK,       0,          1,          (const char*)seq_com_put_nothing}, // clear canvas layer 1
     {SEQAEV_CALLBACK,       2,          2,          (const char*)seq_com_load_mr_woo_anim}, // unload anim2 (param2==2)
+    {SEQAEV_CALLBACK,       (SORC_VRL_GAMESCHARS_VRLBASE/*vrl*/)|(280ul/*x*/<<10ul)|(/*y*/70ul<<20ul)|(0ul/*hflip*/<<30ul),1,(const char*)seq_com_put_mr_vrl}, // main game char canvas layer 1 (param2)
     {SEQAEV_PAUSE,          0,          0,          NULL},
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_save_palette}, // save nothing of the VGA palette but reset anim timer
     {SEQAEV_CALLBACK,       0,          0,          (const char*)seq_com_fadein_saved_palette}, // fade in saved VGA palette
