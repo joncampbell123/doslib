@@ -1485,6 +1485,8 @@ const struct seqanim_event_t seq_intro_events[] = {
     {SEQAEV_TEXT,           0,          0,          "Oh super awesome games programmer.\nWhat is our purpose in this game?"},
     {SEQAEV_WAIT,           120*2,      0,          NULL},
     {SEQAEV_TEXT_FADEOUT,   0,          0,          NULL},
+    {SEQAEV_CALLBACK,       0,          5,          (const char*)seq_com_put_nothing}, // clear canvas layer 5. Hide the mouth so it doesn't look like the game froze mid-animation during load.
+    {SEQAEV_PAUSE,          0,          0,          NULL},
 
     /* Mr. Woo Sorcerer, blank background, downcast */
 
