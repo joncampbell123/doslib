@@ -3,4 +3,7 @@
   sprite.
 - Make your own damn sprites. Ripping off Final Finatasy sprites is fine
   for game dev and TESTING but in the end you need to make your own!
+- Dialog/cutscene array needs a "clear entire canvas" command.
+- Put VRL command needs a variant that can place something (i.e. the mouth)
+  relative to another VRL already on canvas so mouth animation is easier.
 
