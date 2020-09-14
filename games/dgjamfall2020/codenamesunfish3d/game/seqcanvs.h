@@ -165,4 +165,29 @@ static inline void seqanim_set_redraw_everything_flag(struct seqanim_t *sa) {
 }
 
 void seq_com_vrl_anim_movement(struct seqanim_t *sa,struct seqcanvas_layer_t *ca);
+void seqcanvas_text_free_text(struct seqcanvas_text *t);
+int seqcanvas_text_alloc_text(struct seqcanvas_text *t,unsigned int len);
+void seqcanvas_clear_layer(struct seqcanvas_layer_t *l);
+int seqanim_alloc_canvas(struct seqanim_t *sa,unsigned int max);
+void seqanim_free_canvas(struct seqanim_t *sa);
+struct seqanim_t *seqanim_alloc(void);
+void seqanim_free(struct seqanim_t **sa);
+void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e);
+void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e);
+unsigned int seqanim_text_height(struct seqanim_t *sa);
+void seqanim_step_text(struct seqanim_t *sa,const struct seqanim_event_t *e);
+void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t *e);
+void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e);
+void seqanim_set_time(struct seqanim_t *sa,const uint32_t t);
+void seqanim_hurryup(struct seqanim_t *sa);
+void seqanim_step(struct seqanim_t *sa);
+void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl);
+void seqanim_draw(struct seqanim_t *sa);
+void seqanim_update_text_palcolor(struct seqanim_t *sa);
+void seqanim_redraw(struct seqanim_t *sa);
 
