@@ -374,7 +374,7 @@ void seqanim_step(struct seqanim_t *sa) {
     }
 }
 
-void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
     if (cl->rop.msetfill.h != 0) {
@@ -384,7 +384,7 @@ void seqanim_draw_canvasobj_msetfill(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
-void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
     if (cl->rop.text.textcdef != NULL && cl->rop.text.font != NULL) {
@@ -396,7 +396,7 @@ void seqanim_draw_canvasobj_text(struct seqanim_t *sa,struct seqcanvas_layer_t *
     }
 }
 
-void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
     if (cl->rop.rotozoom.imgseg != 0 && cl->rop.rotozoom.h != 0) {
@@ -408,7 +408,7 @@ void seqanim_draw_canvasobj_rotozoom(struct seqanim_t *sa,struct seqcanvas_layer
     }
 }
 
-void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     (void)sa;
 
     if (cl->rop.vrl.vrl != NULL) {
@@ -429,7 +429,7 @@ void seqanim_draw_canvasobj_vrl(struct seqanim_t *sa,struct seqcanvas_layer_t *c
     }
 }
 
-void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     unsigned char far * const ovga = vga_state.vga_graphics_ram;
     const uint16_t sst = cl->rop.bitblt.src_step;
     const uint16_t dst = cl->rop.bitblt.dst_step;
@@ -454,7 +454,7 @@ void seqanim_draw_canvasobj_bitblt(struct seqanim_t *sa,struct seqcanvas_layer_t
     vga_state.vga_graphics_ram = ovga;
 }
 
-void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
+static void seqanim_draw_canvasobj(struct seqanim_t *sa,struct seqcanvas_layer_t *cl) {
     switch (cl->what) {
         case SEQCL_MSETFILL:
             seqanim_draw_canvasobj_msetfill(sa,cl);
