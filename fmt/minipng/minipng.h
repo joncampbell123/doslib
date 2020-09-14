@@ -44,13 +44,13 @@ struct minipng_chunk {
 };
 
 struct minipng_reader {
-    char*                   err_msg;
-    off_t                   chunk_data_offset;
-    off_t                   next_chunk_start;
-    struct minipng_chunk    chunk_data_header;
-    int                     fd;
+    char*                       err_msg;
+    off_t                       chunk_data_offset;
+    off_t                       next_chunk_start;
+    struct minipng_chunk        chunk_data_header;
+    int                         fd;
 
-    struct minipng_IHDR     ihdr;
+    struct minipng_IHDR         ihdr;
 
     struct minipng_PLTE_color*  plte;
     unsigned int                plte_count;
