@@ -45,6 +45,12 @@
 /* introduction sequence                                                     */
 /*---------------------------------------------------------------------------*/
 
+#define ANIM_HEIGHT         168
+#define ANIM_TEXT_TOP       168
+#define ANIM_TEXT_LEFT      5
+#define ANIM_TEXT_RIGHT     310
+#define ANIM_TEXT_BOTTOM    198
+
 static const struct seqanim_event_t seq_intro_events[] = {
 //  what                    param1,     param2,     params
     {SEQAEV_CALLBACK,       RZOOM_NONE, 0,          (const char*)seq_com_load_rotozoom}, // clear rotozoomer slot 0
@@ -332,11 +338,6 @@ static const struct seqanim_event_t seq_intro_events[] = {
 };
 
 void seq_intro(void) {
-#define ANIM_HEIGHT         168
-#define ANIM_TEXT_TOP       168
-#define ANIM_TEXT_LEFT      5
-#define ANIM_TEXT_RIGHT     310
-#define ANIM_TEXT_BOTTOM    198
     struct seqanim_t *sanim;
     int c;
 
@@ -395,6 +396,5 @@ void seq_intro(void) {
     }
 
     seqanim_free(&sanim);
-#undef ANIM_HEIGHT
 }
 
