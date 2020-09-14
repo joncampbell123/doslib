@@ -172,8 +172,6 @@ int seqanim_alloc_canvas(struct seqanim_t *sa,unsigned int max);
 void seqanim_free_canvas(struct seqanim_t *sa);
 struct seqanim_t *seqanim_alloc(void);
 void seqanim_free(struct seqanim_t **sa);
-void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e);
-void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e);
 unsigned int seqanim_text_height(struct seqanim_t *sa);
 void seqanim_set_time(struct seqanim_t *sa,const uint32_t t);
 void seqanim_hurryup(struct seqanim_t *sa);

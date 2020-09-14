@@ -110,7 +110,7 @@ void seqanim_free(struct seqanim_t **sa) {
     }
 }
 
-void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+static void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     if (e->param1 == 0) {
         sa->text.def_palcolor[0] = sa->text.def_palcolor[1] = sa->text.def_palcolor[2] = 0xFFu;
     }
@@ -121,7 +121,7 @@ void seqanim_text_color(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     }
 }
 
-void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+static void seqanim_text_clear(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     (void)e; // unused
 
     sa->text.msg = NULL;
