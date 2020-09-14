@@ -10,3 +10,6 @@ make -C ../../../../hw/vga png2vrl || exit 1
 ../../../../hw/vga/png2vrl -i gmchm1.png -o gmchm1.vrl -p gmchm1.pal || exit 1
 ../../../../hw/vga/png2vrl -i gmchm2.png -o gmchm2.vrl -p gmchm2.pal || exit 1
 
+# NTS: Oh, come on! That's just mean! Raised arms.
+../../../../hw/vga/png2vrl -i gmch3oco.png -o gmch3oco.vrl -p gmch3oco.pal || exit 1
+
