@@ -40,6 +40,7 @@
 
 #define MAX_RTIMG           2
 #define MAX_VRLIMG          64
+#define MAX_VRAMIMG         2
 
 #define SORC_PAL_OFFSET             0x40
 
@@ -68,16 +69,14 @@ enum {
 /* vram images (used for static images that do not change, loaded into unused VRAM rather than system RAM) */
 enum {
     VRAMIMG_TMPLIE,                 /* interior "temple" shot 320x168 */
-    VRAMIMG_TWNCNTR,                /* exterior "town center" shot 320x168 */
-
-    VRAMIMG_MAX
+    VRAMIMG_TWNCNTR                 /* exterior "town center" shot 320x168 */
 };
 
 struct seq_com_vramimg_state {
     uint16_t            vramoff;
 };
 
-struct seq_com_vramimg_state seq_com_vramimg[VRAMIMG_MAX] = { {0} };
+struct seq_com_vramimg_state seq_com_vramimg[MAX_VRAMIMG] = { {0} };
 
 unsigned int seq_com_anim_h = 0;
 
