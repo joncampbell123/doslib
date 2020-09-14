@@ -38,9 +38,9 @@
 #include "rotozoom.h"
 #include "seqcanvs.h"
 
-#define MAX_RTIMG           2
-#define MAX_VRLIMG          64
-#define MAX_VRAMIMG         2
+#define MAX_RTIMG                   2
+#define MAX_VRLIMG                  64
+#define MAX_VRAMIMG                 2
 
 #define SORC_PAL_OFFSET             0x40
 
