@@ -766,6 +766,7 @@ void seqanim_redraw(struct seqanim_t *sa) {
 
 #define SORC_VRL_GAMESCHARS_VRLBASE (0x33+0)/*0x33*/
 #define SORC_VRL_GAMECHRMOUTH_BASE  (0x37+0)/*0x37*/
+#define SORC_VRL_GAMECHROHCOMEON    (0x39+0)/*0x39*/
 
 /* rotozoomer images (256x256) */
 enum {
@@ -1297,6 +1298,10 @@ void seq_com_load_games_chars(struct seqanim_t *sa,const struct seqanim_event_t 
     if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMECHRMOUTH_BASE+0,sorc_pack,29,0xA0)) //gmchm1.vrl
         goto fatalload;
     if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMECHRMOUTH_BASE+1,sorc_pack,30,0xA0)) //gmchm2.vrl
+        goto fatalload;
+
+    /* Oh come on! That's just mean! (gmch3oco.vrl same palette as gmch3.vrl) */
+    if (seq_com_load_vrl_from_dumbpack(SORC_VRL_GAMECHROHCOMEON+0,sorc_pack,31,0xC0))
         goto fatalload;
 
     /* loading eats time depending on how fast DOS and the underlying storage device are.
