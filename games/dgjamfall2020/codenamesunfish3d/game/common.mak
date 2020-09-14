@@ -38,12 +38,13 @@ final: $(GAME_EXE)
 	@bash -c 'for i in 1 2 3 4; do cp ../devasset/gmch$$i.vrl final/gmch$$i.vrl; done'
 	@bash -c 'for i in 1 2 3 4; do dd if=../devasset/gmch$$i.pal of=final/gmch$$i.pal count=16 bs=3; done'
 	@bash -c 'for i in 1 2; do cp ../devasset/gmchm$$i.vrl final/gmchm$$i.vrl; done'
+	@bash -c 'for i in 3; do cp ../devasset/"gmch$$i"oco.vrl final/"gmch$$i"oco.vrl; done'
 	# rotozoomer sin (quarter) table
 	@cp sin2048.bin final/sorcwoo.sin
 	# pack it up
-	@bash -c 'cd final && ../dumbpack.pl sorcwoo.pal sorcwoo.sin sorcwoo{1,2,3,4,5,6,7,8,9}.vrl sorcuhhh.vrl sorcbwo{1,2,3,4,5,6,7,8,9}.vrl gmch{1,2,3,4}.pal gmch{1,2,3,4}.vrl gmchm{1,2}.vrl -- sorcwoo.vrp'
+	@bash -c 'cd final && ../dumbpack.pl sorcwoo.pal sorcwoo.sin sorcwoo{1,2,3,4,5,6,7,8,9}.vrl sorcuhhh.vrl sorcbwo{1,2,3,4,5,6,7,8,9}.vrl gmch{1,2,3,4}.pal gmch{1,2,3,4}.vrl gmchm{1,2}.vrl gmch3oco.vrl -- sorcwoo.vrp'
 	@bash -c 'cd final && rm sorcwoo.pal sorcwoo.sin sorcwoo{1,2,3,4,5,6,7,8,9}.vrl sorcuhhh.vrl sorcbwo{1,2,3,4,5,6,7,8,9}.vrl'
-	@bash -c 'cd final && rm gmch{1,2,3,4}.{vrl,pal} gmchm{1,2}.vrl'
+	@bash -c 'cd final && rm gmch{1,2,3,4}.{vrl,pal} gmchm{1,2}.vrl gmch3oco.vrl'
 	# fonts
 	@cp ../devasset/arialfont/ariallarge_final.png final/ariallrg.png
 	@cp ../devasset/arialfont/arialmed_final.png   final/arialmed.png
