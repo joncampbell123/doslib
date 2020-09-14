@@ -19,7 +19,7 @@ static void __interrupt __far timer_irq() { /* IRQ 0 */
     {
         const uint32_t s = (uint32_t)timer_irq_count + (uint32_t)timer_irq_interval;
         timer_irq_count = (uint16_t)s;
-        if (s >= (uint32_t)0x10000)
+        if (s >= (uint32_t)0x10000ul)
             _chain_intr(prev_timer_irq);
         else
             p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 0);
