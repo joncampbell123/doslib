@@ -155,7 +155,7 @@ unsigned int seqanim_text_height(struct seqanim_t *sa) {
     return 0;
 }
 
-void seqanim_step_text(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+static void seqanim_step_text(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     uint32_t c;
 
     (void)e; // unused
@@ -229,7 +229,7 @@ again:
     }
 }
 
-void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+static void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     const unsigned char sub = (e->param1 != 0) ? e->param1 : 8;
     uint8_t color[3];
     unsigned int i;
@@ -265,7 +265,7 @@ void seqanim_step_text_fadein(struct seqanim_t *sa,const struct seqanim_event_t 
     }
 }
 
-void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e) {
+static void seqanim_step_text_fadeout(struct seqanim_t *sa,const struct seqanim_event_t *e) {
     const unsigned char sub = (e->param1 != 0) ? e->param1 : 8;
     unsigned int i;
 
