@@ -14,6 +14,12 @@
  * AT extended codes (0xE0 <xx>) are 0x80+(xx&0x7F). Have fun. */
 enum {
     KBDS_ESCAPE=                0x001u,
+    KBDS_LCTRL=                 0x01Du,
+    KBDS_LSHIFT=                0x02Au,
+    KBDS_RSHIFT=                0x036u,
+    KBDS_LALT=                  0x038u,
+    KBDS_RCTRL=                 0x09Du,
+    KBDS_RALT=                  0x0B8u,
     KBDS_PAUSE=                 0x100u,
     KBDS_UNKNOWN=               0x101u
 };
