@@ -396,5 +396,8 @@ void seq_intro(void) {
     }
 
     seqanim_free(&sanim);
+
+    gen_res_free();
+    check_heap();
 }
 
