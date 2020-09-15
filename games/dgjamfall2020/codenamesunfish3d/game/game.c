@@ -249,6 +249,11 @@ int main() {
         printf("VGA probe failed.\n");
         return 1;
     }
+    if (!(vga_state.vga_flags & VGA_IS_VGA)) {
+        printf("This game requires VGA\n");
+        return 1;
+    }
+    detect_keyboard();
 
 #if TARGET_MSDOS == 16
 # if 0 // not using it yet
@@ -258,7 +263,6 @@ int main() {
 #endif
 
 #if 1//TEST
-    detect_keyboard();
     init_keyboard_irq();
     while (1) {
         int k = kbd_buf_read();
