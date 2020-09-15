@@ -10,6 +10,14 @@
 /* keyboard controller looks/acts like XT keyboard */
 #define KBDF_XT                 (1u << 1u)
 
+/* keyboard codes in this game. These are XT compatible codes.
+ * AT extended codes (0xE0 <xx>) are 0x80+(xx&0x7F). Have fun. */
+enum {
+    KBDS_ESCAPE=                0x001u,
+    KBDS_PAUSE=                 0x100u,
+    KBDS_UNKNOWN=               0x101u
+};
+
 extern unsigned char            kbdown[KBDOWN_BYTES]; /* bitfield */
 extern unsigned char            kbd_flags;
 

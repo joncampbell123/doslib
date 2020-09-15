@@ -88,9 +88,10 @@ int main(int argc,char **argv) {
         while (1) {
             int k = kbd_buf_read();
             if (k >= 0) printf("0x%x\n",k);
-            if (k == 1/*ESC*/) break;
+            if (k == KBDS_ESCAPE) break;
         }
 
+        printf("Dropping back to DOS.\n");
         unhook_irqs(); // including keyboard
         return 0;
     }
