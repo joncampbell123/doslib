@@ -90,9 +90,8 @@ int main(int argc,char **argv) {
             if (k >= 0) printf("0x%x\n",k);
             if (k == 1/*ESC*/) break;
         }
-        restore_keyboard_irq();
 
-        unhook_irqs();
+        unhook_irqs(); // including keyboard
         return 0;
     }
 

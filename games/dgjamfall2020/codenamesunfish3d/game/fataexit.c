@@ -26,6 +26,7 @@
 #include "dbgheap.h"
 #include "unicode.h"
 #include "commtmp.h"
+#include "keyboard.h"
 #include "fzlibdec.h"
 #include "fataexit.h"
 
@@ -35,6 +36,7 @@
 
 void unhook_irqs() {
     restore_timer_irq();
+    restore_keyboard_irq();
 }
 
 /*---------------------------------------------------------------------------*/
