@@ -21,6 +21,10 @@ static inline void kbdown_set(const unsigned int k) {
     kbdown[k>>3u] |= (1u << (k & 7u));
 }
 
+static inline unsigned int kbdown_test(const unsigned int k) {
+    return !!(kbdown[k>>3u] & (1u << (k & 7u)));
+}
+
 int kbd_buf_read(void);
 void detect_keyboard();
 void init_keyboard_irq();
