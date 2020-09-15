@@ -50,16 +50,8 @@
  * If the hook is not installed, you must use INT 16h, or DOS input functions like getch() and kbhit().
  * Do not use getch and kbhit with the hook installed, they won't pick up anything. */
 
-/* 0x00-0x7F: Standard single byte keys
- * 0x80-0xFF: 0xE0 <xx> double byte keys
- * 0x100:     Pause key was hit (no way to detect if still held)
- * 0x101:     Unknown codes */
-unsigned char kbdown[KBDOWN_BYTES]; /* bitfield */
-
 static uint16_t kbd_buf[KBD_BUF_SIZE];
 static unsigned char kbd_buf_head,kbd_buf_tail;/*write to the head, read from the tail*/
-
-unsigned char kbd_flags = 0;
 
 static void (__interrupt __far *prev_kbirq)() = NULL;
 
@@ -70,6 +62,13 @@ static void (__interrupt __far *prev_kbirq)() = NULL;
 static unsigned char kbseqbuf[3];
 static unsigned char kbseqbufp/*pos*/,kbseqbufm/*length*/;
 
+/* 0x00-0x7F: Standard single byte keys
+ * 0x80-0xFF: 0xE0 <xx> double byte keys
+ * 0x100:     Pause key was hit (no way to detect if still held)
+ * 0x101:     Unknown codes */
+unsigned char kbdown[KBDOWN_BYTES]; /* bitfield */
+unsigned char kbd_flags = 0;
+
 /* do not call with interrupts enabled and the IRQ handler installed */
 static void kbd_buf_add(const unsigned int k) {
     const unsigned char nh = (kbd_buf_head+1u)&KBD_BUF_MASK;
@@ -79,17 +78,12 @@ static void kbd_buf_add(const unsigned int k) {
     }
 }
 
-int kbd_buf_read(void) {
-    int r = -1;
-
-    SAVE_CPUFLAGS( _cli() ) {
-        if (kbd_buf_tail != kbd_buf_head) {
-            r = (int)kbd_buf[kbd_buf_tail];
-            kbd_buf_tail = (kbd_buf_tail+1u)&KBD_BUF_MASK;
-        }
-    } RESTORE_CPUFLAGS();
-
-    return r;
+static void kbdbuf_reset() {
+    memset(kbdown,0,sizeof(kbdown));
+    kbd_buf_tail = 0;
+    kbd_buf_head = 0;
+    kbseqbufp = 0;
+    kbseqbufm = 1;
 }
 
 static inline void kbirq_on_input_code(/*in kbseqbuf*/) {
@@ -167,12 +161,17 @@ static void __interrupt __far kbirq_at() { /* AT keyboard handler (ones that are
     p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1);
 }
 
-static void kbdbuf_reset() {
-    memset(kbdown,0,sizeof(kbdown));
-    kbd_buf_tail = 0;
-    kbd_buf_head = 0;
-    kbseqbufp = 0;
-    kbseqbufm = 1;
+int kbd_buf_read(void) {
+    int r = -1;
+
+    SAVE_CPUFLAGS( _cli() ) {
+        if (kbd_buf_tail != kbd_buf_head) {
+            r = (int)kbd_buf[kbd_buf_tail];
+            kbd_buf_tail = (kbd_buf_tail+1u)&KBD_BUF_MASK;
+        }
+    } RESTORE_CPUFLAGS();
+
+    return r;
 }
 
 /* detect keyboard (TODO) */
