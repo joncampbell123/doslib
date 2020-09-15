@@ -48,7 +48,7 @@
 /* main                                                                      */
 /*---------------------------------------------------------------------------*/
 
-int main() {
+int main(int argc,char **argv) {
     probe_dos();
 	cpu_probe();
     if (cpu_basic_level < 3) {
@@ -81,15 +81,20 @@ int main() {
 # endif
 #endif
 
-#if 1//TEST
-    init_keyboard_irq();
-    while (1) {
-        int k = kbd_buf_read();
-        if (k >= 0) printf("0x%x\n",k);
-        if (k == 1/*ESC*/) break;
+    if (argc > 1 && !strcmp(argv[1],"KBTEST")) {
+        printf("Keyboard test. Hit keys to see scan codes. ESC to exit.\n");
+
+        init_keyboard_irq();
+        while (1) {
+            int k = kbd_buf_read();
+            if (k >= 0) printf("0x%x\n",k);
+            if (k == 1/*ESC*/) break;
+        }
+        restore_keyboard_irq();
+
+        unhook_irqs();
+        return 0;
     }
-    restore_keyboard_irq();
-#endif
 
     init_timer_irq();
     init_vga256unchained();
