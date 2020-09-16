@@ -118,6 +118,12 @@ void game_loop(void) {
                 angle -= (3.14 * 2.0 * 4) / 360.0;
             if (kbdown_test(KBDS_RIGHT_ARROW))
                 angle += (3.14 * 2.0 * 4) / 360.0;
+
+            planeX = sin(angle);
+            planeY = cos(angle) * 0.66;
+            dirX = sin(angle + ((3.14 * 3.0) / 2.0));
+            dirY = cos(angle + ((3.14 * 3.0) / 2.0));
+
             if (kbdown_test(KBDS_UP_ARROW)) {
                 posX += dirX / 16;
                 posY += dirY / 16;
@@ -126,11 +132,6 @@ void game_loop(void) {
                 posX -= dirX / 16;
                 posY -= dirY / 16;
             }
-
-            planeX = sin(angle);
-            planeY = cos(angle) * 0.66;
-            dirX = sin(angle + ((3.14 * 3.0) / 2.0));
-            dirY = cos(angle + ((3.14 * 3.0) / 2.0));
 
             vga_write_sequencer(0x02/*map mask*/,0xF);
             vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
