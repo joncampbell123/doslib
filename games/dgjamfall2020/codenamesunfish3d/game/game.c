@@ -98,10 +98,10 @@ void game_loop(void) {
         unsigned int x,y,w=320;
         double cameraX,planeX,planeY/*camera plane direction*/,dirX,dirY/*player direction*/,posX,posY/*player pos*/;
         double rayDirX,rayDirY,sideDistX,sideDistY,deltaDistX,deltaDistY,perpWallDist,wallX;
-        double angle = (3.14 * 2.0) / 4.0;
         int mapX,mapY,stepX,stepY,h;
         unsigned char color;
         int texWidth = 64;
+        double angle = 0;
         char hit,side;
         int texX;
 
@@ -119,10 +119,10 @@ void game_loop(void) {
             if (kbdown_test(KBDS_RIGHT_ARROW))
                 angle += (3.14 * 2.0 * 4) / 360.0;
 
-            planeX = sin(angle);
-            planeY = cos(angle) * 0.66;
-            dirX = sin(angle + ((3.14 * 3.0) / 2.0));
-            dirY = cos(angle + ((3.14 * 3.0) / 2.0));
+            planeX = sin(angle + (3.14 / 2.0));
+            planeY = cos(angle + (3.14 / 2.0)) * 0.66;
+            dirX = sin(angle);
+            dirY = cos(angle);
 
             if (kbdown_test(KBDS_UP_ARROW)) {
                 posX += dirX / 16;
