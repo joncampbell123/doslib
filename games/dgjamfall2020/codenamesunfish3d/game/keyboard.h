@@ -18,8 +18,16 @@ enum {
     KBDS_LSHIFT=                0x02Au,
     KBDS_RSHIFT=                0x036u,
     KBDS_LALT=                  0x038u,
+    KBDS_KEYPAD_8=              0x048u, /* up arrow if not numlock and compatible with XT */
+    KBDS_KEYPAD_4=              0x04Bu, /* left arrow if not numlock and compatible with XT */
+    KBDS_KEYPAD_6=              0x04Du, /* right arrow if not numlock and compatible with XT */
+    KBDS_KEYPAD_2=              0x050u, /* down arrow if not numlock and compatible with XT */
     KBDS_RCTRL=                 0x09Du,
     KBDS_RALT=                  0x0B8u,
+    KBDS_UP_ARROW=              0x0C8u,
+    KBDS_LEFT_ARROW=            0x0CBu,
+    KBDS_RIGHT_ARROW=           0x0CDu,
+    KBDS_DOWN_ARROW=            0x0D0u,
     KBDS_PAUSE=                 0x100u,
     KBDS_UNKNOWN=               0x101u
 };
