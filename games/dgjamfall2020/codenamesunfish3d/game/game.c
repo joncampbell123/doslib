@@ -93,7 +93,7 @@ void game_loop(void) {
 
     init_keyboard_irq();
 
-/////////// REWRITE THIS USING FIXED POINT
+/////////// REWRITE THIS USING FIXED POINT. This isn't even my code, just something to study.
     {
         unsigned int x,y,w=320;
         double cameraX,planeX,planeY/*camera plane direction*/,dirX,dirY/*player direction*/,posX,posY/*player pos*/;
