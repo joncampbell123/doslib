@@ -102,7 +102,6 @@ void game_loop(void) {
         unsigned int angle2048 = 0;
         unsigned char color;
         int texWidth = 64;
-//      double angle = 0;
         char hit,side;
         int texX;
 
@@ -120,16 +119,10 @@ void game_loop(void) {
             if (kbdown_test(KBDS_RIGHT_ARROW))
                 angle2048 += 0x20u;
 
-//          angle = ((double)angle2048 * 3.14 * 2.0) / 2048.0;
-
             planeX = (double)sin2048fps16_lookup(angle2048 + 0x800u) / 32768.0;
             planeY = (double)cos2048fps16_lookup(angle2048 + 0x800u) / 32768.0;
             dirX = (double)sin2048fps16_lookup(angle2048) / 32768.0;
             dirY = (double)cos2048fps16_lookup(angle2048) / 32768.0;
-//          planeX = sin(angle + (3.14 / 2.0));
-//          planeY = cos(angle + (3.14 / 2.0)) * 0.66;
-//          dirX = sin(angle);
-//          dirY = cos(angle);
 
             if (kbdown_test(KBDS_UP_ARROW)) {
                 posX += dirX / 16;
