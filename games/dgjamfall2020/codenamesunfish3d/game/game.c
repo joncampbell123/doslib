@@ -131,6 +131,13 @@ static inline void game_set_linedef_ss(const unsigned i,const unsigned s,const u
     game_lineseg[i].sidedef[1] = ~0u;
 }
 
+static inline void game_set_sidedef(const unsigned i,const unsigned tex,int8_t xoff,int8_t yoff,unsigned int sector) {
+    game_sidedef[i].texture = tex;
+    game_sidedef[i].xoffset = xoff;
+    game_sidedef[i].yoffset = yoff;
+    game_sidedef[i].sector = sector;
+}
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
@@ -161,6 +168,8 @@ void game_loop(void) {
     game_set_linedef_ss(1,  1,      2,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
+
+    game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/);
 
     init_keyboard_irq();
 
