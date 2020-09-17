@@ -44,185 +44,69 @@
 
 #include <hw/8042/8042.h>
 
-#define GAMERC_MAPW         64
-#define GAMERC_MAPH         64
-
-struct gamerc_elem_t {
-    uint8_t         type;
-    uint8_t         flags;
+struct game_2dvec_t {
+    int32_t         x,y;
 };
 
-#define GRCMF_OPAQUE                (1u << 0u)
+#define GAME_VERTICES       128
+struct game_2dvec_t         game_vertex[GAME_VERTICES];
 
-#define GRCMXY(x,y)                 (((y) * GAMERC_MAPW) + (x))
+/* from start to end, the wall is a line and faces 90 degrees to the right from the line, DOOM style.
+ *
+ *       ^
+ *       |
+ *   end +
+ *       |
+ *       |
+ *       |-----> faces this way
+ *       |
+ *       |
+ * start +
+ */
+struct game_2dlineseg_t {
+    uint16_t                start,end;                  /* vertex indices */
+    uint16_t                flags;
+    uint16_t                sidedef[2];
+};
 
-#define GRC_STD_WALL_HEIGHT         ((uint32_t)128ul << (uint32_t)16ul)
-#define GRC_STD_TEXTURE_HEIGHT      ((uint32_t)64ul << (uint32_t)16ul)
+#define GAME_LINESEG        128
+struct game_2dlineseg_t     game_lineseg[GAME_LINESEG];
 
-struct gamerc_elem_t                gamerc_map[GAMERC_MAPW * GAMERC_MAPH];
+struct game_2dsidedef_t {
+    uint8_t                 texture;
+    int8_t                  xoffset,yoffset;
+    uint8_t                 sector;                     /* which sector this faces */
+};
 
-#include <math.h>
+#define GAME_SIDEDEFS       128
+struct game_2dsidedef_t     game_sidedef[GAME_SIDEDEFS];
 
 void game_loop(void) {
     unsigned int i;
+    unsigned int x;
 
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
-    for (i=0;i < GAMERC_MAPW;i++) {
-        gamerc_map[GRCMXY(i,0)].type = 1;
-        gamerc_map[GRCMXY(i,0)].flags = GRCMF_OPAQUE;
-
-        gamerc_map[GRCMXY(i,GAMERC_MAPH-1)].type = 1;
-        gamerc_map[GRCMXY(i,GAMERC_MAPH-1)].flags = GRCMF_OPAQUE;
-    }
-
-    for (i=0;i < GAMERC_MAPH;i++) {
-        gamerc_map[GRCMXY(0,i)].type = 1;
-        gamerc_map[GRCMXY(0,i)].flags = GRCMF_OPAQUE;
-
-        gamerc_map[GRCMXY(GAMERC_MAPW-1,i)].type = 1;
-        gamerc_map[GRCMXY(GAMERC_MAPW-1,i)].flags = GRCMF_OPAQUE;
-    }
-
-    for (i=0;i < GAMERC_MAPW;i += 2) {
-        gamerc_map[GRCMXY(i,8)].type = 1;
-        gamerc_map[GRCMXY(i,8)].flags = GRCMF_OPAQUE;
-    }
-
     init_keyboard_irq();
 
-/////////// REWRITE THIS USING FIXED POINT. This isn't even my code, just something to study.
-    {
-        unsigned int x,y,w=320;
-        double cameraX,planeX,planeY/*camera plane direction*/,dirX,dirY/*player direction*/,posX,posY/*player pos*/;
-        double rayDirX,rayDirY,sideDistX,sideDistY,deltaDistX,deltaDistY,perpWallDist,wallX;
-        int mapX,mapY,stepX,stepY,h;
-        unsigned int angle2048 = 0;
-        unsigned char color;
-        int texWidth = 64;
-        char hit,side;
-        int texX;
+    vga_palette_lseek(0);
+    for (x=0;x < 64;x++) vga_palette_write(x,x,x);
 
-        vga_palette_lseek(0);
-        for (x=0;x < 64;x++) vga_palette_write(x,x,x);
+    while (1) {
+        if (kbdown_test(KBDS_ESCAPE)) break;
 
-        posX = 4.0;
-        posY = 4.0;
+        /* clear screen */
+        vga_write_sequencer(0x02/*map mask*/,0xF);
+        vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
 
-        while (1) {
-            if (kbdown_test(KBDS_ESCAPE)) break;
+        /*  */
 
-            if (kbdown_test(KBDS_LEFT_ARROW))
-                angle2048 -= 0x20u;
-            if (kbdown_test(KBDS_RIGHT_ARROW))
-                angle2048 += 0x20u;
-
-            planeX = (double)sin2048fps16_lookup(angle2048 + 0x800u) / 32768.0;
-            planeY = (double)cos2048fps16_lookup(angle2048 + 0x800u) / 32768.0;
-            dirX = (double)sin2048fps16_lookup(angle2048) / 32768.0;
-            dirY = (double)cos2048fps16_lookup(angle2048) / 32768.0;
-
-            if (kbdown_test(KBDS_UP_ARROW)) {
-                posX += dirX / 16;
-                posY += dirY / 16;
-            }
-            if (kbdown_test(KBDS_DOWN_ARROW)) {
-                posX -= dirX / 16;
-                posY -= dirY / 16;
-            }
-
-            vga_write_sequencer(0x02/*map mask*/,0xF);
-            vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
-
-            for (x=0;x < w;x++) {
-                cameraX = (double)(2 * x) / (double)w - 1.0;
-                rayDirX = dirX + (planeX * cameraX);
-                rayDirY = dirY + (planeY * cameraX);
-                mapX = (int)floor(posX);
-                mapY = (int)floor(posY);
-                deltaDistX = sqrt(1 + (rayDirY * rayDirY) / (rayDirX * rayDirX));
-                deltaDistY = sqrt(1 + (rayDirX * rayDirX) / (rayDirY * rayDirY));
-                side = 0;
-                hit = 0;
-
-                if (rayDirX < 0)
-                {
-                    stepX = -1;
-                    sideDistX = (posX - mapX) * deltaDistX;
-                }
-                else
-                {
-                    stepX = 1;
-                    sideDistX = (mapX + 1.0 - posX) * deltaDistX;
-                }
-                if (rayDirY < 0)
-                {
-                    stepY = -1;
-                    sideDistY = (posY - mapY) * deltaDistY;
-                }
-                else
-                {
-                    stepY = 1;
-                    sideDistY = (mapY + 1.0 - posY) * deltaDistY;
-                }
-
-                //perform DDA
-                while (hit == 0)
-                {
-                    //jump to next map square, OR in x-direction, OR in y-direction
-                    if (sideDistX < sideDistY)
-                    {
-                        sideDistX += deltaDistX;
-                        mapX += stepX;
-                        side = 0;
-                    }
-                    else
-                    {
-                        sideDistY += deltaDistY;
-                        mapY += stepY;
-                        side = 1;
-                    }
-                    //Check if ray has hit a wall
-                    if (gamerc_map[GRCMXY(mapX,mapY)].type != 0) hit = 1;
-                }
-
-                //Calculate distance of perpendicular ray (Euclidean distance will give fisheye effect!)
-                if (side == 0) perpWallDist = (mapX - posX + (1 - stepX) / 2) / rayDirX;
-                else           perpWallDist = (mapY - posY + (1 - stepY) / 2) / rayDirY;
-
-                if (side == 0) wallX = posY + perpWallDist * rayDirY;
-                else           wallX = posX + perpWallDist * rayDirX;
-                wallX -= floor(wallX);
-
-                //x coordinate on the texture
-                texX = (int)(wallX * (double)(texWidth));
-                if(side == 0 && rayDirX > 0) texX = texWidth - texX - 1;
-                if(side == 1 && rayDirY < 0) texX = texWidth - texX - 1;
-
-                h = (int)(2048 / (perpWallDist * 18));
-                if (h > 63) h = 63;
-                color = h;
-
-                if (texX & 4) color >>= 1u; 
-
-                h = (int)(160 / perpWallDist);
-                if (h > 200) h = 200;
-
-                vga_write_sequencer(0x02/*map mask*/,1u << (x & 3u));
-
-                y = (200u-h)/2u;
-                while (y < ((200u+h)/2u)) {
-                    vga_state.vga_graphics_ram[(y*(320u/4u))+(x>>2u)] = color;
-                    y++;
-                }
-            }
-
-            vga_swap_pages(); /* current <-> next */
-            vga_update_disp_cur_page();
-            vga_wait_for_vsync(); /* wait for vsync */
-        }
+        /* present to screen, flip pages, wait for vsync */
+        vga_swap_pages(); /* current <-> next */
+        vga_update_disp_cur_page();
+        vga_wait_for_vsync(); /* wait for vsync */
     }
 
     restore_keyboard_irq();
