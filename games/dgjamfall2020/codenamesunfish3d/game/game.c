@@ -123,7 +123,7 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
-#define GAME_MIN_Z          (1ul << 14ul)
+#define GAME_MIN_Z          (1l << 14l)
 
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
     const int32_t dist = d2->y;
@@ -157,13 +157,27 @@ void game_project_lineseg(const unsigned int i) {
             side = 0;
         }
 
+#if 0 // DEBUG pos
+        {
+            int x = 0,y = (14 * i);
+            char tmp[32];
+            char *s=tmp;
+
+            sprintf(tmp,"%ld,%ld %ld,%ld",pr1.x,pr1.y,pr2.x,pr2.y);
+            while (*s != 0) {
+                font_bmp_draw_chardef_vga8u(arial_medium,font_bmp_unicode_to_chardef(arial_medium,*s++),x,y,15);
+                x += 9;
+            }
+        }
+#endif
+
+        if (side)
+            return;
+
         if (pr1.y < GAME_MIN_Z && pr2.y < GAME_MIN_Z) {
             return;
         }
-        else if (pr1.y < GAME_MIN_Z) {
-            return;
-        }
-        else if (pr2.y < GAME_MIN_Z) {
+        else if (pr1.y < GAME_MIN_Z || pr2.y < GAME_MIN_Z) {
             return;
         }
 
@@ -261,6 +275,11 @@ void game_loop(void) {
     unsigned int i;
     unsigned int x;
 
+#if 0//DEBUG
+    if (font_bmp_do_load_arial_medium())
+        fatal("arial");
+#endif
+
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
@@ -286,19 +305,14 @@ void game_loop(void) {
     game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
     game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
 
-    game_set_vertexfip(4,   -1l << 15l,     0l << 16l); /* -1, 1 */
-    game_set_vertexfip(5,    1l << 15l,     0l << 16l); /*  1, 1 */
-
-    game_vertex_max = 6;
+    game_vertex_max = 4;
 
     game_set_linedef_ss(0,  0,      1,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(1,  1,      2,  0x0000/*flags*/,            0/*sidedef*/);
-//    game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
+    game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
 
-    game_set_linedef_ss(4,  4,      5,  0x0000/*flags*/,            0/*sidedef*/);
-
-    game_lineseg_max = 5;
+    game_lineseg_max = 4;
 
     game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/);
 
