@@ -53,6 +53,8 @@ uint64_t                    game_angle;
 
 #define GAME_VERTICES       128
 struct game_2dvec_t         game_vertex[GAME_VERTICES];
+struct game_2dvec_t         game_vertexrot[GAME_VERTICES];
+unsigned                    game_vertex_max;
 
 /* from start to end, the wall is a line and faces 90 degrees to the right from the line, DOOM style.
  *
@@ -74,6 +76,7 @@ struct game_2dlineseg_t {
 
 #define GAME_LINESEG        128
 struct game_2dlineseg_t     game_lineseg[GAME_LINESEG];
+unsigned                    game_lineseg_max;
 
 struct game_2dsidedef_t {
     uint8_t                 texture;
@@ -168,6 +171,9 @@ void game_loop(void) {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
+    game_vertex_max = 0;
+    game_lineseg_max = 0;
+
     /* init pos */
     game_position.x = 0;
     game_position.y = 0;
@@ -210,6 +216,11 @@ void game_loop(void) {
         /* project and render */
         game_vslice_alloc = 0;
         for (i=0;i < GAME_VSLICE_DRAW;i++) game_vslice_draw[i] = ~0u;
+
+        for (i=0;i < game_vertex_max;i++) {
+            /* TODO: 2D rotation based on player angle */
+            game_vertexrot[i] = game_vertex[i];
+        }
 
         /* present to screen, flip pages, wait for vsync */
         vga_swap_pages(); /* current <-> next */
