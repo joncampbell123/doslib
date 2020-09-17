@@ -45,8 +45,11 @@
 #include <hw/8042/8042.h>
 
 struct game_2dvec_t {
-    int32_t         x,y;
+    int32_t         x,y;    /* 16.16 fixed point */
 };
+
+struct game_2dvec_t         game_position;
+uint64_t                    game_angle;
 
 #define GAME_VERTICES       128
 struct game_2dvec_t         game_vertex[GAME_VERTICES];
@@ -115,6 +118,11 @@ void game_texture_freeall(void) {
         game_texture_free(&game_texture[i]);
 }
 
+static inline void game_set_vertexfip(const unsigned i,int32_t x,int32_t y) {
+    game_vertex[i].x = x;
+    game_vertex[i].y = y;
+}
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
@@ -122,6 +130,22 @@ void game_loop(void) {
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
+
+    /* init pos */
+    game_position.x = 0;
+    game_position.y = 0;
+    game_angle = 0; /* looking straight ahead */
+
+    /*    0---->1           point 0 at -1, 1 | point 1 at  1, 1
+     *   /|\    |
+     *    |  x  |           x at 0, 0        | y increases ahead of user at angle == 0, x increases to the right
+     *    |    \|/
+     *    3<----2           point 3 at -1,-1 | point 2 at  1,-1
+     */
+    game_set_vertexfip(0,   -1l << 16l,     1l << 16l); /* -1, 1 */
+    game_set_vertexfip(1,    1l << 16l,     1l << 16l); /*  1, 1 */
+    game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
+    game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
 
     init_keyboard_irq();
 
