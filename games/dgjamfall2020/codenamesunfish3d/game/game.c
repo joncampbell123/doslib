@@ -89,6 +89,9 @@ struct game_2dsector_t {
 #define GAME_SECTORS        16
 struct game_2dsector_t      game_sector[GAME_SECTORS];
 
+/* No BSP tree, sorry. The 3D "overworld" is too simple and less important to need it.
+ * Also no monsters and cacodemons to shoot. */
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
