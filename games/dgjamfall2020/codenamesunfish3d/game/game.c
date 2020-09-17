@@ -123,6 +123,8 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
+#define GAME_MIN_Z          (1ul << 14ul)
+
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
     const int32_t dist = d2->y;
 
@@ -134,9 +136,6 @@ int32_t game_3dto2d(struct game_2dvec_t *d2) {
 
 void game_project_lineseg(const unsigned int i) {
     struct game_2dlineseg_t *lseg = &game_lineseg[i];
-
-    /* reject linesegs behind the camera */
-    if (game_vertexrot[lseg->start].y < 256l && game_vertexrot[lseg->end].y < 256l) return;
 
     /* 3D to 2D project */
     /* if the vertices are backwards, we're looking at the opposite side */
@@ -158,6 +157,16 @@ void game_project_lineseg(const unsigned int i) {
             side = 0;
         }
 
+        if (pr1.y < GAME_MIN_Z && pr2.y < GAME_MIN_Z) {
+            return;
+        }
+        else if (pr1.y < GAME_MIN_Z) {
+            return;
+        }
+        else if (pr2.y < GAME_MIN_Z) {
+            return;
+        }
+
         d1 = game_3dto2d(&pr1);
         d2 = game_3dto2d(&pr2);
 
@@ -177,9 +186,9 @@ void game_project_lineseg(const unsigned int i) {
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
-                const int32_t id = d1 + (((d2 - d1) * (int32_t)(x - ix)) / ixd);
-                if (id >= 256l) {
-                    const int32_t d = (int32_t)((1ll << 32ll) / (int64_t)id);
+                const int32_t id = d1 + (int32_t)((((int64_t)(d2 - d1) * (int64_t)(x - ix)) / (int64_t)ixd));
+                const int32_t d = (int32_t)((1ll << 32ll) / (int64_t)id);
+                if (d >= GAME_MIN_Z) {
                     const unsigned pri = game_vslice_draw[x];
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
