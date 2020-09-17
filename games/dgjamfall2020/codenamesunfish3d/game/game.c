@@ -136,11 +136,13 @@ void game_loop(void) {
     game_position.y = 0;
     game_angle = 0; /* looking straight ahead */
 
-    /*    0---->1           point 0 at -1, 1 | point 1 at  1, 1
-     *   /|\    |
-     *    |  x  |           x at 0, 0        | y increases ahead of user at angle == 0, x increases to the right
-     *    |    \|/
-     *    3<----2           point 3 at -1,-1 | point 2 at  1,-1
+    /*    0------------>1           point 0 at -1, 1 | point 1 at  1, 1
+     *   /|\            |
+     *    |             |
+     *    |      x      |           x at 0, 0        | y increases ahead of user at angle == 0, x increases to the right
+     *    |             |
+     *    |            \|/
+     *    3<------------2           point 3 at -1,-1 | point 2 at  1,-1
      */
     game_set_vertexfip(0,   -1l << 16l,     1l << 16l); /* -1, 1 */
     game_set_vertexfip(1,    1l << 16l,     1l << 16l); /*  1, 1 */
