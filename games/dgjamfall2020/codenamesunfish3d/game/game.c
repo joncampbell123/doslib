@@ -81,6 +81,14 @@ struct game_2dsidedef_t {
 #define GAME_SIDEDEFS       128
 struct game_2dsidedef_t     game_sidedef[GAME_SIDEDEFS];
 
+struct game_2dsector_t {
+    int16_t                 top,bottom;
+    uint8_t                 floor,ceiling;
+};
+
+#define GAME_SECTORS        16
+struct game_2dsector_t      game_sector[GAME_SECTORS];
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
