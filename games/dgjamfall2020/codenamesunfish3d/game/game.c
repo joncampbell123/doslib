@@ -178,7 +178,18 @@ void game_project_lineseg(const unsigned int i) {
             return;
         }
         else if (pr1.y < GAME_MIN_Z || pr2.y < GAME_MIN_Z) {
+            int32_t dx = pr2.x - pr1.x;
+            int32_t dy = pr2.y - pr1.y;
+
+            if (dx == 0l) {
+                if (pr1.y < GAME_MIN_Z)
+                    pr1.y = GAME_MIN_Z;
+                if (pr2.y < GAME_MIN_Z)
+                    pr2.y = GAME_MIN_Z;
+            }
+            else {
             return;
+            }
         }
 
         d1 = game_3dto2d(&pr1);
