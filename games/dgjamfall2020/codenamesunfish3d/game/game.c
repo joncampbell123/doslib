@@ -99,7 +99,21 @@ struct game_2dtexture_t {
 };
 
 #define GAME_TEXTURES       8
-struct game_2dtexture_t     game_texture[GAME_TEXTURES];
+struct game_2dtexture_t     game_texture[GAME_TEXTURES] = { {NULL} };
+
+void game_texture_free(struct game_2dtexture_t *t) {
+    if (t->tex != NULL) {
+        free(t->tex);
+        t->tex = NULL;
+    }
+}
+
+void game_texture_freeall(void) {
+    unsigned int i;
+
+    for (i=0;i < GAME_TEXTURES;i++)
+        game_texture_free(&game_texture[i]);
+}
 
 void game_loop(void) {
     unsigned int i;
@@ -130,6 +144,7 @@ void game_loop(void) {
     }
 
     restore_keyboard_irq();
+    game_texture_freeall();
 }
 
 /*---------------------------------------------------------------------------*/
