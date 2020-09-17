@@ -113,7 +113,8 @@ struct game_vslice_t {
 };
 
 #define GAME_VSLICE_MAX     2048
-struct game_vslice_t        game_vslices[GAME_VSLICE_MAX];
+struct game_vslice_t        game_vslice[GAME_VSLICE_MAX];
+unsigned                    game_vslice_alloc;
 
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
@@ -206,7 +207,9 @@ void game_loop(void) {
         vga_write_sequencer(0x02/*map mask*/,0xF);
         vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
 
-        /*  */
+        /* project and render */
+        game_vslice_alloc = 0;
+        for (i=0;i < GAME_VSLICE_DRAW;i++) game_vslice_draw[i] = ~0u;
 
         /* present to screen, flip pages, wait for vsync */
         vga_swap_pages(); /* current <-> next */
