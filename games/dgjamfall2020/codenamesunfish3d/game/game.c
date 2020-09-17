@@ -123,11 +123,13 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
-int32_t game_3dto2d(struct game_2dvec_t *d2,const struct game_2dvec_t *d3) {
-    d2->x = ((int32_t)(160l << 16l)) + (int32_t)(((int64_t)d3->x << (16ll + 6ll)) / (int64_t)d3->y); /* fixed point 16.16 division */
+int32_t game_3dto2d(struct game_2dvec_t *d2) {
+    const int32_t dist = d2->y;
+
+    d2->x = ((int32_t)(160l << 16l)) + (int32_t)(((int64_t)d2->x << (16ll + 6ll)) / (int64_t)d2->y); /* fixed point 16.16 division */
     d2->y = 100l << 16l;
 
-    return d3->y;
+    return dist;
 }
 
 void game_project_lineseg(const unsigned int i) {
@@ -146,15 +148,18 @@ void game_project_lineseg(const unsigned int i) {
         int ix,ixd;
 
         if (game_vertexrot[lseg->start].x > game_vertexrot[lseg->end].x) {
-            d1 = game_3dto2d(&pr1,&game_vertexrot[lseg->end]);
-            d2 = game_3dto2d(&pr2,&game_vertexrot[lseg->start]);
+            pr1 = game_vertexrot[lseg->end];
+            pr2 = game_vertexrot[lseg->start];
             side = 1;
         }
         else {
-            d1 = game_3dto2d(&pr1,&game_vertexrot[lseg->start]);
-            d2 = game_3dto2d(&pr2,&game_vertexrot[lseg->end]);
+            pr1 = game_vertexrot[lseg->start];
+            pr2 = game_vertexrot[lseg->end];
             side = 0;
         }
+
+        d1 = game_3dto2d(&pr1);
+        d2 = game_3dto2d(&pr2);
 
         d1 = (int32_t)((1ll << 32ll) / (int64_t)d1);
         d2 = (int32_t)((1ll << 32ll) / (int64_t)d2);
