@@ -69,7 +69,7 @@ struct game_2dvec_t         game_vertex[GAME_VERTICES];
 struct game_2dlineseg_t {
     uint16_t                start,end;                  /* vertex indices */
     uint16_t                flags;
-    uint16_t                sidedef[2];
+    uint16_t                sidedef[2];                 /* [0]=front side       [1]=opposite side */
 };
 
 #define GAME_LINESEG        128
@@ -123,6 +123,11 @@ static inline void game_set_vertexfip(const unsigned i,int32_t x,int32_t y) {
     game_vertex[i].y = y;
 }
 
+static inline void game_set_linedef(const unsigned i,const unsigned s,const unsigned e) {
+    game_lineseg[i].start = s;
+    game_lineseg[i].end = e;
+}
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
@@ -148,6 +153,11 @@ void game_loop(void) {
     game_set_vertexfip(1,    1l << 16l,     1l << 16l); /*  1, 1 */
     game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
     game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
+
+    game_set_linedef(0,     0,      1);
+    game_set_linedef(1,     1,      2);
+    game_set_linedef(2,     2,      3);
+    game_set_linedef(3,     3,      0);
 
     init_keyboard_irq();
 
