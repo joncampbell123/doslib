@@ -104,6 +104,20 @@ struct game_2dtexture_t {
 #define GAME_TEXTURES       8
 struct game_2dtexture_t     game_texture[GAME_TEXTURES] = { {NULL} };
 
+struct game_vslice_t {
+    int16_t                 top,bottom;         /* total slice including floor to ceiling */
+    int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
+    unsigned                sector;
+    unsigned                sidedef;
+    unsigned                next;               /* next to draw or ~0u */
+};
+
+#define GAME_VSLICE_MAX     2048
+struct game_vslice_t        game_vslices[GAME_VSLICE_MAX];
+
+#define GAME_VSLICE_DRAW    320
+unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
+
 void game_texture_free(struct game_2dtexture_t *t) {
     if (t->tex != NULL) {
         free(t->tex);
