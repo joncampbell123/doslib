@@ -122,6 +122,38 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
+int32_t game_3dto2d(struct game_2dvec_t *d2,const struct game_2dvec_t *d3) {
+    d2->x = (int32_t)(((int64_t)d3->x << 16ll) / (int64_t)d3->y); /* fixed point 16.16 division */
+    d2->y = 0l;
+
+    return d3->y;
+}
+
+void game_project_lineseg(const unsigned int i) {
+    unsigned side;
+    struct game_2dlineseg_t *lseg = &game_lineseg[i];
+    struct game_2dvec_t *p1 = &game_vertexrot[lseg->start];
+    struct game_2dvec_t *p2 = &game_vertexrot[lseg->end];
+
+    /* reject linesegs behind the camera */
+    if (p1->y < 256l && p2->y < 256l) return;
+
+    /* if the vertices are backwards, we're looking at the opposite side */
+    if (p1->x > p2->x)
+        side = 1;
+    else
+        side = 0;
+
+    /* 3D to 2D project */
+    {
+        struct game_2dvec_t pr1,pr2;
+        int32_t di1,di2;
+
+        di1 = game_3dto2d(&pr1,p1);
+        di2 = game_3dto2d(&pr2,p2);
+    }
+}
+
 void game_texture_free(struct game_2dtexture_t *t) {
     if (t->tex != NULL) {
         free(t->tex);
@@ -223,8 +255,12 @@ void game_loop(void) {
 
         for (i=0;i < game_vertex_max;i++) {
             /* TODO: 2D rotation based on player angle */
+            /* TODO: Perhaps only the line segments we draw */
             game_vertexrot[i] = game_vertex[i];
         }
+
+        for (i=0;i < game_lineseg_max;i++)
+            game_project_lineseg(i);
 
         /* present to screen, flip pages, wait for vsync */
         vga_swap_pages(); /* current <-> next */
