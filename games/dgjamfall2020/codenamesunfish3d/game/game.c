@@ -85,7 +85,7 @@ struct game_2dsidedef_t {
 struct game_2dsidedef_t     game_sidedef[GAME_SIDEDEFS];
 
 struct game_2dsector_t {
-    int16_t                 top,bottom;
+    int32_t                 top,bottom;
     uint8_t                 floor,ceiling;
 };
 
@@ -131,11 +131,18 @@ static inline void game_set_linedef_ss(const unsigned i,const unsigned s,const u
     game_lineseg[i].sidedef[1] = ~0u;
 }
 
-static inline void game_set_sidedef(const unsigned i,const unsigned tex,int8_t xoff,int8_t yoff,unsigned int sector) {
+static inline void game_set_sidedef(const unsigned i,const unsigned tex,const int8_t xoff,const int8_t yoff,const unsigned int sector) {
     game_sidedef[i].texture = tex;
     game_sidedef[i].xoffset = xoff;
     game_sidedef[i].yoffset = yoff;
     game_sidedef[i].sector = sector;
+}
+
+static inline void game_set_sector(const unsigned i,const int32_t top,const int32_t bottom,const unsigned floor,const unsigned ceil) {
+    game_sector[i].top = top;
+    game_sector[i].bottom = bottom;
+    game_sector[i].floor = floor;
+    game_sector[i].ceiling = ceil;
 }
 
 void game_loop(void) {
@@ -170,6 +177,8 @@ void game_loop(void) {
     game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
 
     game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/);
+
+    game_set_sector(0,       1l << 16l/*top*/,      -1l << 16l/*bottom*/,       0/*floor*/,     1/*ceiling*/);
 
     init_keyboard_irq();
 
