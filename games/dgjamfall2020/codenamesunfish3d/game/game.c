@@ -113,6 +113,7 @@ struct game_vslice_t {
     unsigned                sector;
     unsigned                sidedef;
     unsigned                next;               /* next to draw or ~0u */
+    int32_t                 dist;
 };
 
 #define GAME_VSLICE_MAX     2048
@@ -123,34 +124,78 @@ unsigned                    game_vslice_alloc;
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
 int32_t game_3dto2d(struct game_2dvec_t *d2,const struct game_2dvec_t *d3) {
-    d2->x = (int32_t)(((int64_t)d3->x << 16ll) / (int64_t)d3->y); /* fixed point 16.16 division */
-    d2->y = 0l;
+    d2->x = ((int32_t)(160l << 16l)) + (int32_t)(((int64_t)d3->x << (16ll + 6ll)) / (int64_t)d3->y); /* fixed point 16.16 division */
+    d2->y = 100l << 16l;
 
     return d3->y;
 }
 
 void game_project_lineseg(const unsigned int i) {
-    unsigned side;
     struct game_2dlineseg_t *lseg = &game_lineseg[i];
-    struct game_2dvec_t *p1 = &game_vertexrot[lseg->start];
-    struct game_2dvec_t *p2 = &game_vertexrot[lseg->end];
 
     /* reject linesegs behind the camera */
-    if (p1->y < 256l && p2->y < 256l) return;
-
-    /* if the vertices are backwards, we're looking at the opposite side */
-    if (p1->x > p2->x)
-        side = 1;
-    else
-        side = 0;
+    if (game_vertexrot[lseg->start].y < 256l && game_vertexrot[lseg->end].y < 256l) return;
 
     /* 3D to 2D project */
+    /* if the vertices are backwards, we're looking at the opposite side */
     {
         struct game_2dvec_t pr1,pr2;
-        int32_t di1,di2;
+        int32_t d1,d2;
+        unsigned side;
+        int x1,x2,x;
+        int ix,ixd;
 
-        di1 = game_3dto2d(&pr1,p1);
-        di2 = game_3dto2d(&pr2,p2);
+        if (game_vertexrot[lseg->start].x > game_vertexrot[lseg->end].x) {
+            d1 = game_3dto2d(&pr1,&game_vertexrot[lseg->end]);
+            d2 = game_3dto2d(&pr2,&game_vertexrot[lseg->start]);
+            side = 1;
+        }
+        else {
+            d1 = game_3dto2d(&pr1,&game_vertexrot[lseg->start]);
+            d2 = game_3dto2d(&pr2,&game_vertexrot[lseg->end]);
+            side = 0;
+        }
+
+        d1 = (int32_t)((1ll << 32ll) / (int64_t)d1);
+        d2 = (int32_t)((1ll << 32ll) / (int64_t)d2);
+
+        ix = x1 = (int)(pr1.x >> 16l);
+        if (x1 < 0) {
+            x1 = 0;
+        }
+
+        x2 = (int)(pr2.x >> 16l);
+        ixd = x2 - ix;
+        if (x2 > 320) {
+            x2 = 320;
+        }
+
+        for (x=x1;x < x2;x++) {
+            if (game_vslice_alloc < GAME_VSLICE_MAX) {
+                const int32_t id = d1 + (((d2 - d1) * (int32_t)(x - ix)) / ixd);
+                if (id >= 256l) {
+                    const int32_t d = (int32_t)((1ll << 32ll) / (int64_t)id);
+                    const unsigned pri = game_vslice_draw[x];
+                    const unsigned vsi = game_vslice_alloc++;
+                    struct game_vslice_t *vs = &game_vslice[vsi];
+                    int32_t h = (int32_t)(((int64_t)64ll << (int64_t)16ll) / (int64_t)d);
+
+                    vs->top = 0;
+                    vs->bottom = 0;
+                    vs->ceil = (int)(((100l << 1l) - h) >> 1l);
+                    vs->floor = (int)(((100l << 1l) + h) >> 1l);
+                    vs->next = pri;
+                    vs->dist = d;
+
+                    if (pri != (~0u)) {
+                        if (vs->dist > game_vslice[pri].dist)
+                            continue;
+                    }
+
+                    game_vslice_draw[x] = vsi;
+                }
+            }
+        }
     }
 }
 
@@ -196,6 +241,9 @@ static inline void game_set_sector(const unsigned i,const int32_t top,const int3
 }
 
 void game_loop(void) {
+    struct game_vslice_t *vsl;
+    unsigned int x2;
+    unsigned int o;
     unsigned int i;
     unsigned int x;
 
@@ -245,6 +293,15 @@ void game_loop(void) {
     while (1) {
         if (kbdown_test(KBDS_ESCAPE)) break;
 
+        if (kbdown_test(KBDS_UP_ARROW))
+            game_position.y += 0x10000l / 60l;
+        if (kbdown_test(KBDS_DOWN_ARROW))
+            game_position.y -= 0x10000l / 60l;
+        if (kbdown_test(KBDS_LEFT_ARROW))
+            game_position.x -= 0x10000l / 60l;
+        if (kbdown_test(KBDS_RIGHT_ARROW))
+            game_position.x += 0x10000l / 60l;
+
         /* clear screen */
         vga_write_sequencer(0x02/*map mask*/,0xF);
         vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
@@ -257,10 +314,32 @@ void game_loop(void) {
             /* TODO: 2D rotation based on player angle */
             /* TODO: Perhaps only the line segments we draw */
             game_vertexrot[i] = game_vertex[i];
+            game_vertexrot[i].x -= game_position.x;
+            game_vertexrot[i].y -= game_position.y;
         }
 
         for (i=0;i < game_lineseg_max;i++)
             game_project_lineseg(i);
+
+        for (i=0;i < GAME_VSLICE_DRAW;i++) {
+            vga_write_sequencer(0x02/*map mask*/,1u << (i & 3u));
+            if (game_vslice_draw[i] != (~0u)) {
+                unsigned char c;
+
+                vsl = &game_vslice[game_vslice_draw[i]];
+                c = (vsl->dist >= (0x10000l>>1l)) ? ((63l << (16l-1l)) / vsl->dist) : 63;
+                x2 = (unsigned int)(vsl->floor < 0 ? 0 : vsl->floor);
+                x = (unsigned int)(vsl->ceil < 0 ? 0 : vsl->ceil);
+                if (x2 > 200) x2 = 200;
+                if (x > 200) x = 200;
+                o = (i >> 2u) + (x * 80u);
+                while (x < x2) {
+                    vga_state.vga_graphics_ram[o] = c;
+                    o += 80u;
+                    x++;
+                }
+            }
+        }
 
         /* present to screen, flip pages, wait for vsync */
         vga_swap_pages(); /* current <-> next */
