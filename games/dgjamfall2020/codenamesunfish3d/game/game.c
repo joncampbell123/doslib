@@ -192,10 +192,14 @@ void game_loop(void) {
     game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
     game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
 
+    game_vertex_max = 4;
+
     game_set_linedef_ss(0,  0,      1,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(1,  1,      2,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
+
+    game_lineseg_max = 4;
 
     game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/);
 
