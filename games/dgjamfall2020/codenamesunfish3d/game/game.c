@@ -58,7 +58,7 @@ struct game_2dvec_t         game_vertex[GAME_VERTICES];
  *   end +
  *       |
  *       |
- *       |-----> faces this way
+ *       |-----> faces this way (sidedef 0)
  *       |
  *       |
  * start +
