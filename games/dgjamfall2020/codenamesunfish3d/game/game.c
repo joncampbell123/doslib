@@ -123,9 +123,12 @@ static inline void game_set_vertexfip(const unsigned i,int32_t x,int32_t y) {
     game_vertex[i].y = y;
 }
 
-static inline void game_set_linedef(const unsigned i,const unsigned s,const unsigned e) {
+static inline void game_set_linedef_ss(const unsigned i,const unsigned s,const unsigned e,const uint16_t flags,const unsigned sd) {
     game_lineseg[i].start = s;
     game_lineseg[i].end = e;
+    game_lineseg[i].flags = flags;
+    game_lineseg[i].sidedef[0] = sd;
+    game_lineseg[i].sidedef[1] = ~0u;
 }
 
 void game_loop(void) {
@@ -154,10 +157,10 @@ void game_loop(void) {
     game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
     game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
 
-    game_set_linedef(0,     0,      1);
-    game_set_linedef(1,     1,      2);
-    game_set_linedef(2,     2,      3);
-    game_set_linedef(3,     3,      0);
+    game_set_linedef_ss(0,  0,      1,  0x0000/*flags*/,            0/*sidedef*/);
+    game_set_linedef_ss(1,  1,      2,  0x0000/*flags*/,            0/*sidedef*/);
+    game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
+    game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
 
     init_keyboard_irq();
 
