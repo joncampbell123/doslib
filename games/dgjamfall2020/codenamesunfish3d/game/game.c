@@ -92,6 +92,15 @@ struct game_2dsector_t      game_sector[GAME_SECTORS];
 /* No BSP tree, sorry. The 3D "overworld" is too simple and less important to need it.
  * Also no monsters and cacodemons to shoot. */
 
+#define GAME_TEXTURE_W      64
+#define GAME_TEXTURE_H      64
+struct game_2dtexture_t {
+    unsigned char*          tex;        /* 64x64 texture = 2^6 * 2^6 = 2^12 = 4096 bytes = 4KB */
+};
+
+#define GAME_TEXTURES       8
+struct game_2dtexture_t     game_texture[GAME_TEXTURES];
+
 void game_loop(void) {
     unsigned int i;
     unsigned int x;
