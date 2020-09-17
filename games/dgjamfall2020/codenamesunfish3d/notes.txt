@@ -87,6 +87,3 @@ for the game jam, of course.
 
 Sound Blaster and Adlib support, of course!
 
-Overworld 3D engine will of course use Wolf3D style raycasting, because
-that is easy to code.
-
