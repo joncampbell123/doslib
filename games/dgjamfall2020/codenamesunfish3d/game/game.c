@@ -188,7 +188,7 @@ void game_project_lineseg(const unsigned int i) {
                     pr2.y = GAME_MIN_Z;
             }
             else {
-            return;
+                return;
             }
         }
 
@@ -368,6 +368,7 @@ void game_loop(void) {
         for (i=0;i < GAME_VSLICE_DRAW;i++) {
             vga_write_sequencer(0x02/*map mask*/,1u << (i & 3u));
             if (game_vslice_draw[i] != (~0u)) {
+                __segment vs = FP_SEG(vga_state.vga_graphics_ram);
                 unsigned char c;
 
                 vsl = &game_vslice[game_vslice_draw[i]];
@@ -376,11 +377,11 @@ void game_loop(void) {
                 x = (unsigned int)(vsl->ceil < 0 ? 0 : vsl->ceil);
                 if (x2 > 200) x2 = 200;
                 if (x > 200) x = 200;
-                o = (i >> 2u) + (x * 80u);
-                while (x < x2) {
-                    vga_state.vga_graphics_ram[o] = c;
+                o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
+                x2 -= x;
+                while (x2-- != 0u) {
+                    *((unsigned char far*)(vs:>o)) = c;
                     o += 80u;
-                    x++;
                 }
             }
         }
