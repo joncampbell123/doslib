@@ -124,6 +124,39 @@ unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
 #define GAME_MIN_Z          (1l << 12l)
 
+#define GAMETEX_LOAD_PAL0   (1u << 0u)
+
+void game_texture_load(const unsigned i,const char *path,const unsigned f) {
+    struct minipng_reader *rdr;
+    unsigned int ri;
+
+    if (game_texture[i].tex != NULL)
+        return;
+
+    if ((rdr=minipng_reader_open(path)) == NULL)
+        fatal("gametex png error %s",path);
+    if (minipng_reader_parse_head(rdr) || rdr->plte == NULL || rdr->plte_count == 0 || rdr->ihdr.width != 64 || rdr->ihdr.height != 64 || rdr->ihdr.bit_depth != 8)
+        fatal("gametex png error %s",path);
+    if ((game_texture[i].tex=malloc(64*64)) == NULL)
+        fatal("gametex png error %s",path);
+
+    for (ri=0;ri < 64;ri++) {
+        unsigned char *row = game_texture[i].tex + (ri * 64);
+        minipng_reader_read_idat(rdr,row,1); /* pad byte */
+        minipng_reader_read_idat(rdr,row,64); /* row */
+    }
+
+    if (f & GAMETEX_LOAD_PAL0) {
+        unsigned char *pal = (unsigned char*)rdr->plte;
+        unsigned int x;
+
+        vga_palette_lseek(0);
+        for (x=0;x < rdr->plte_count;x++) vga_palette_write(pal[x*3+0]>>2,pal[x*3+1]>>2,pal[x*3+2]>>2);
+    }
+
+    minipng_reader_close(&rdr);
+}
+
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
     const int32_t dist = d2->y >> 2l;
 
@@ -312,6 +345,11 @@ void game_loop(void) {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
+    game_texture_load(0,"watx0001.png",GAMETEX_LOAD_PAL0);
+    game_texture_load(1,"watx0002.png",0);
+    game_texture_load(2,"watx0003.png",0);
+    game_texture_load(3,"watx0004.png",0);
+
     game_vertex_max = 0;
     game_lineseg_max = 0;
 
@@ -347,9 +385,6 @@ void game_loop(void) {
     game_set_sector(0,       1l << 16l/*top*/,      -1l << 16l/*bottom*/,       0/*floor*/,     1/*ceiling*/);
 
     init_keyboard_irq();
-
-    vga_palette_lseek(0);
-    for (x=0;x < 64;x++) vga_palette_write(x,x,x);
 
     while (1) {
         if (kbdown_test(KBDS_ESCAPE)) break;
