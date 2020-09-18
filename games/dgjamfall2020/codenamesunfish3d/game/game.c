@@ -177,10 +177,8 @@ void game_project_lineseg(const unsigned int i) {
             int32_t dy = pr2.y - pr1.y;
 
             if (dx == 0l) {
-                if (pr1.y < GAME_MIN_Z)
-                    pr1.y = GAME_MIN_Z;
-                if (pr2.y < GAME_MIN_Z)
-                    pr2.y = GAME_MIN_Z;
+                if (pr1.y < GAME_MIN_Z) pr1.y = GAME_MIN_Z;
+                if (pr2.y < GAME_MIN_Z) pr2.y = GAME_MIN_Z;
             }
             else {
                 return;
