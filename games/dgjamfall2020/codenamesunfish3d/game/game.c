@@ -225,7 +225,7 @@ void game_project_lineseg(const unsigned int i) {
                         continue;
                 }
 
-                {
+                if (d >= GAME_MIN_Z) {
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
                     int32_t h = (int32_t)(((int64_t)64ll << (int64_t)16ll) / (int64_t)d);
