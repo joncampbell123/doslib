@@ -486,6 +486,10 @@ void game_loop(void) {
                     ts = (uint16_t)(s & 0xFFFFul);
                     tf = 0;
                 }
+
+                o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
+                x2 -= x;
+
                 {
                     int16_t y = vsl->ceil;
                     while ((y++) < 0) {
@@ -497,9 +501,6 @@ void game_loop(void) {
                         }
                     }
                 }
-
-                o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
-                x2 -= x;
 
                 do {
                     *((unsigned char far*)(vs:>o)) = *tp;
