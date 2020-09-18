@@ -173,8 +173,8 @@ void game_project_lineseg(const unsigned int i) {
             return;
         }
         else if (pr1.y < GAME_MIN_Z || pr2.y < GAME_MIN_Z) {
-            int32_t dx = pr2.x - pr1.x;
-            int32_t dy = pr2.y - pr1.y;
+            const int32_t dx = pr2.x - pr1.x;
+            const int32_t dy = pr2.y - pr1.y;
 
             if (dx == 0l) {
                 if (pr1.y < GAME_MIN_Z) pr1.y = GAME_MIN_Z;
@@ -182,12 +182,12 @@ void game_project_lineseg(const unsigned int i) {
             }
             else {
                 if (pr2.y < GAME_MIN_Z) {
-                    int32_t cdy = GAME_MIN_Z - pr1.y;
+                    const int32_t cdy = GAME_MIN_Z - pr1.y;
                     pr2.x = pr1.x + (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
                     pr2.y = GAME_MIN_Z;
                 }
                 else if (pr1.y < GAME_MIN_Z) {
-                    int32_t cdy = GAME_MIN_Z - pr2.y;
+                    const int32_t cdy = GAME_MIN_Z - pr2.y;
                     pr1.x = pr2.x + (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
                     pr1.y = GAME_MIN_Z;
                 }
