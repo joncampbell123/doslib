@@ -225,7 +225,7 @@ void game_project_lineseg(const unsigned int i) {
                         continue;
                 }
 
-                if (d >= GAME_MIN_Z) {
+                {
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
                     int32_t h = (int32_t)(((int64_t)64ll << (int64_t)16ll) / (int64_t)d);
@@ -379,10 +379,11 @@ void game_loop(void) {
 
                 vsl = &game_vslice[game_vslice_draw[i]];
                 c = (vsl->dist >= (0x10000l>>1l)) ? ((63l << (16l-1l)) / vsl->dist) : 63;
-                x2 = (unsigned int)(vsl->floor < 0 ? 0 : vsl->floor);
-                x = (unsigned int)(vsl->ceil < 0 ? 0 : vsl->ceil);
+                x2 = (unsigned int)((vsl->floor) < 0 ? 0 : vsl->floor);
+                x = (unsigned int)((vsl->ceil) < 0 ? 0 : vsl->ceil);
                 if (x2 > 200) x2 = 200;
                 if (x > 200) x = 200;
+                if (x > x2) continue;
                 o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
                 x2 -= x;
                 while (x2-- != 0u) {
