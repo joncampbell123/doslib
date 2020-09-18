@@ -224,16 +224,17 @@ void game_project_lineseg(const unsigned int i) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
                 const int32_t id = d1 + (int32_t)((((int64_t)(d2 - d1) * (int64_t)(x - ix)) / (int64_t)ixd));
                 const int32_t d = (int32_t)((1ll << 32ll) / (int64_t)id);
+                const unsigned pri = game_vslice_draw[x];
+
+                if (pri != (~0u)) {
+                    if (d > game_vslice[pri].dist)
+                        continue;
+                }
+
                 if (d >= GAME_MIN_Z) {
-                    const unsigned pri = game_vslice_draw[x];
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
                     int32_t h = (int32_t)(((int64_t)64ll << (int64_t)16ll) / (int64_t)d);
-
-                    if (pri != (~0u)) {
-                        if (d > game_vslice[pri].dist)
-                            continue;
-                    }
 
                     vs->top = 0;
                     vs->bottom = 0;
