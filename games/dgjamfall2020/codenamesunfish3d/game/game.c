@@ -80,6 +80,7 @@ unsigned                    game_lineseg_max;
 
 struct game_2dsidedef_t {
     uint8_t                 texture;
+    unsigned                texture_render_w;
     int8_t                  xoffset,yoffset;
     uint8_t                 sector;                     /* which sector this faces */
 };
@@ -171,10 +172,12 @@ int32_t game_3dto2d(struct game_2dvec_t *d2) {
 #define ZPRECSHIFT              (8)
 void game_project_lineseg(const unsigned int i) {
     struct game_2dlineseg_t *lseg = &game_lineseg[i];
+    struct game_2dsidedef_t *sdef;
 
     /* 3D to 2D project */
     /* if the vertices are backwards, we're looking at the opposite side */
     {
+        unsigned sidedef;
         struct game_2dvec_t pr1,pr2;
         int32_t od1,od2,tmax;
         int32_t d1,d2;
@@ -233,8 +236,10 @@ void game_project_lineseg(const unsigned int i) {
             side = 1;
         }
 
-        if (lseg->sidedef[side] == (~0u))
+        if ((sidedef=lseg->sidedef[side]) == (~0u))
             return;
+
+        sdef = &game_sidedef[sidedef];
 
         od1 = d1;
         d1 = (1l << (32l - (int32_t)ZPRECSHIFT)) / (int32_t)d1;         /* d1 = 1/z1 */
@@ -249,7 +254,10 @@ void game_project_lineseg(const unsigned int i) {
         ixd = x2 - ix;
         if (x2 > 320) x2 = 320;
 
-        tmax = (64l << (16l + 8l)) / od2;
+        if (sdef->texture_render_w != 0u)
+            tmax = (int32_t)(((int64_t)sdef->texture_render_w << (16ll + 8ll)) / (int64_t)od2);
+        else
+            tmax = (64l << (16l + 8l)) / od2;
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
@@ -271,12 +279,12 @@ void game_project_lineseg(const unsigned int i) {
 
                     vs->top = 0;
                     vs->bottom = 0;
-                    vs->sidedef = lseg->sidedef[side];
+                    vs->sidedef = sidedef;
                     vs->ceil = (int)(((100l << 1l) - h) >> 1l);
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
                     vs->next = pri;
                     vs->dist = d;
-                    vs->tex_n = 0;
+                    vs->tex_n = sdef->texture;
                     vs->tex_x = (tx >> 8u) & 0x3Fu;
 
                     game_vslice_draw[x] = vsi;
@@ -322,7 +330,8 @@ static inline void game_set_linedef_sd(const unsigned i,const unsigned s,const u
     game_lineseg[i].sidedef[1] = sd2;
 }
 
-static inline void game_set_sidedef(const unsigned i,const unsigned tex,const int8_t xoff,const int8_t yoff,const unsigned int sector) {
+static inline void game_set_sidedef(const unsigned i,const unsigned tex,const int8_t xoff,const int8_t yoff,const unsigned int sector,const unsigned int texw) {
+    game_sidedef[i].texture_render_w = texw;
     game_sidedef[i].texture = tex;
     game_sidedef[i].xoffset = xoff;
     game_sidedef[i].yoffset = yoff;
@@ -382,7 +391,7 @@ void game_loop(void) {
 
     game_lineseg_max = 4;
 
-    game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/);
+    game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/,    64*8/*texture w*/);
 
     game_set_sector(0,       1l << 16l/*top*/,      -1l << 16l/*bottom*/,       0/*floor*/,     1/*ceiling*/);
 
