@@ -49,6 +49,8 @@ final: $(GAME_EXE)
 	@cp ../devasset/arialfont/ariallarge_final.png final/ariallrg.png
 	@cp ../devasset/arialfont/arialmed_final.png   final/arialmed.png
 	@cp ../devasset/arialfont/arialsmall_final.png final/arialsml.png
+	# wall textures
+	@bash -c 'cd final && for i in 1 2 3 4; do cp ../../devasset/walltx0/watx000$$i.24bpp.png.palunord.png.palord.png watx000$$i.png; done'
 
 !ifdef GAME_EXE
 $(GAME_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)game.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj $(SUBDIR)$(HPS)fataexit.obj $(SUBDIR)$(HPS)fontbmp.obj $(SUBDIR)$(HPS)fontbmpd.obj $(SUBDIR)$(HPS)fontbmcu.obj $(SUBDIR)$(HPS)fbvga8ud.obj $(SUBDIR)$(HPS)f_aria_l.obj $(SUBDIR)$(HPS)f_aria_m.obj $(SUBDIR)$(HPS)f_aria_s.obj $(SUBDIR)$(HPS)vut8u.obj $(SUBDIR)$(HPS)sin2048.obj $(SUBDIR)$(HPS)dumbpack.obj $(SUBDIR)$(HPS)sorcpack.obj $(SUBDIR)$(HPS)rotzfx8u.obj $(SUBDIR)$(HPS)rotzimg.obj $(SUBDIR)$(HPS)rotzpng8.obj $(SUBDIR)$(HPS)dbgheap.obj $(SUBDIR)$(HPS)vrldraw.obj $(SUBDIR)$(HPS)seqcanvs.obj $(SUBDIR)$(HPS)seqcomm.obj $(SUBDIR)$(HPS)freein1.obj $(SUBDIR)$(HPS)cs_intro.obj $(SUBDIR)$(HPS)keyboard.obj
