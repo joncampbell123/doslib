@@ -469,7 +469,8 @@ void game_loop(void) {
 
             while (vslice != (~0u)) {
                 __segment vs = FP_SEG(vga_state.vga_graphics_ram);
-                unsigned char *tptr;
+                __segment texs;
+                unsigned texo;
                 uint16_t tf,ts,tw;
 
                 vsl = &game_vslice[vslice];
@@ -479,7 +480,8 @@ void game_loop(void) {
                 if (x > 200) x = 200;
                 if (x >= x2) continue;
 
-                tptr = game_texture[vsl->tex_n].tex + (vsl->tex_x * 64u);
+                texs = FP_SEG(game_texture[vsl->tex_n].tex);
+                texo = FP_OFF(game_texture[vsl->tex_n].tex) + (vsl->tex_x * 64u);
                 {
                     const uint32_t s = (0x10000ul * 64ul) / (uint32_t)(vsl->floor - vsl->ceil);
                     tw = (uint16_t)(s >> 16ul);
@@ -493,21 +495,21 @@ void game_loop(void) {
                 {
                     int16_t y = vsl->ceil;
                     while ((y++) < 0) {
-                        tptr += tw;
+                        texo += tw;
                         {
                             const uint16_t s = ts + tf;
-                            if (s < tf) tptr++;
+                            if (s < tf) texo++;
                             tf = s;
                         }
                     }
                 }
 
                 do {
-                    *((unsigned char far*)(vs:>o)) = *tptr;
-                    tptr += tw;
+                    *((unsigned char far*)(vs:>o)) = *((unsigned char far*)(texs:>texo));
+                    texo += tw;
                     {
                         const uint16_t s = ts + tf;
-                        if (s < tf) tptr++;
+                        if (s < tf) texo++;
                         tf = s;
                     }
                     o += 80u;
