@@ -230,17 +230,17 @@ void game_project_lineseg(const unsigned int i) {
                     struct game_vslice_t *vs = &game_vslice[vsi];
                     int32_t h = (int32_t)(((int64_t)64ll << (int64_t)16ll) / (int64_t)d);
 
+                    if (pri != (~0u)) {
+                        if (d > game_vslice[pri].dist)
+                            continue;
+                    }
+
                     vs->top = 0;
                     vs->bottom = 0;
                     vs->ceil = (int)(((100l << 1l) - h) >> 1l);
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
                     vs->next = pri;
                     vs->dist = d;
-
-                    if (pri != (~0u)) {
-                        if (vs->dist > game_vslice[pri].dist)
-                            continue;
-                    }
 
                     game_vslice_draw[x] = vsi;
                 }
