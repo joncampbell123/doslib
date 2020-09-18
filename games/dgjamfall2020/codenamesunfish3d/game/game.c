@@ -164,11 +164,6 @@ void game_project_lineseg(const unsigned int i) {
         }
 #endif
 
-#if 0
-        if (side)
-            return;
-#endif
-
         if (pr1.y < GAME_MIN_Z && pr2.y < GAME_MIN_Z) {
             return;
         }
@@ -215,6 +210,9 @@ void game_project_lineseg(const unsigned int i) {
 
             side = 1;
         }
+
+        if (side)
+            return;
 
         d1 = (int32_t)((1ll << 32ll) / (int64_t)d1);
         d2 = (int32_t)((1ll << 32ll) / (int64_t)d2);
