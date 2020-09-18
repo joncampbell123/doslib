@@ -524,9 +524,8 @@ void game_loop(void) {
                         mov     bx,ts
 yal1:                   or      cx,cx                   ; if CX < 0
                         jns     yal1e
-                        add     di,dx                   ; texo += tw
                         add     ax,bx                   ; tf += ts
-                        adc     di,0                    ; texo += CF
+                        adc     di,dx                   ; texo += CF + tw
                         inc     cx                      ; CX++ aka y++
                         jmp     short yal1
 yal1e:                  mov     texo,di
@@ -553,9 +552,8 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
                     mov         bl,[si]
                     mov         es:[di],bl
                     add         di,80               ; o += 80
-                    add         si,dx               ; texo += tw
                     add         ax,bp               ; ts += tf
-                    adc         si,0                ; texo += CF
+                    adc         si,dx               ; texo += tw + CF
                     loop        yal1
                     pop         bp
                     pop         ds
