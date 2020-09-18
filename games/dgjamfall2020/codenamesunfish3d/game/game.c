@@ -169,6 +169,7 @@ int32_t game_3dto2d(struct game_2dvec_t *d2) {
     return dist;
 }
 
+#define TEXPRECIS               (4)
 #define ZPRECSHIFT              (8)
 void game_project_lineseg(const unsigned int i) {
     struct game_2dlineseg_t *lseg = &game_lineseg[i];
@@ -255,9 +256,9 @@ void game_project_lineseg(const unsigned int i) {
         if (x2 > 320) x2 = 320;
 
         if (sdef->texture_render_w != 0u)
-            tmax = (int32_t)(((int64_t)sdef->texture_render_w << (16ll + 8ll)) / (int64_t)od2);
+            tmax = (int32_t)(((int64_t)sdef->texture_render_w << (16ll + (int64_t)TEXPRECIS)) / (int64_t)od2);
         else
-            tmax = (64l << (16l + 8l)) / od2;
+            tmax = (64l << (16l + (int32_t)TEXPRECIS)) / od2;
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
@@ -285,7 +286,7 @@ void game_project_lineseg(const unsigned int i) {
                     vs->next = pri;
                     vs->dist = d;
                     vs->tex_n = sdef->texture;
-                    vs->tex_x = (tx >> 8u) & 0x3Fu;
+                    vs->tex_x = (tx >> TEXPRECIS) & 0x3Fu;
 
                     game_vslice_draw[x] = vsi;
                 }
