@@ -421,14 +421,15 @@ void game_loop(void) {
     game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
     game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
 
-    game_set_linedef_ss(4,  4,      5,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(5,  5,      6,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(6,  6,      7,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(7,  7,      4,  0x0000/*flags*/,            0/*sidedef*/);
+    game_set_linedef_ss(4,  4,      5,  0x0000/*flags*/,            1/*sidedef*/);
+    game_set_linedef_ss(5,  5,      6,  0x0000/*flags*/,            1/*sidedef*/);
+    game_set_linedef_ss(6,  6,      7,  0x0000/*flags*/,            1/*sidedef*/);
+    game_set_linedef_ss(7,  7,      4,  0x0000/*flags*/,            1/*sidedef*/);
 
     game_lineseg_max = 8;
 
     game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/,    64*8/*texture w*/);
+    game_set_sidedef(1,     1/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/,    64*2/*texture w*/);
 
     game_set_sector(0,       1l << 16l/*top*/,      -1l << 16l/*bottom*/,       0/*floor*/,     1/*ceiling*/);
 
