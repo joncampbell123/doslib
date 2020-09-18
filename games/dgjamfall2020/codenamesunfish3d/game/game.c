@@ -446,16 +446,27 @@ void game_loop(void) {
                 if (x > 200) x = 200;
                 if (x >= x2) continue;
 
-                o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
-                x2 -= x;
-
                 tp = game_texture[vsl->tex_n].tex + vsl->tex_x;
                 {
-                    const uint32_t s = (0x10000ul * 64ul) / (uint32_t)x2;
+                    const uint32_t s = (0x10000ul * 64ul) / (uint32_t)(vsl->floor - vsl->ceil);
                     tw = (uint16_t)(s >> 16ul);
                     ts = (uint16_t)(s & 0xFFFFul);
                     tf = 0;
                 }
+                {
+                    int16_t y = vsl->ceil;
+                    while ((y++) < 0) {
+                        tp += tw * 64u;
+                        {
+                            const uint16_t s = ts + tf;
+                            if (s < tf) tp += 64u;
+                            tf = s;
+                        }
+                    }
+                }
+
+                o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
+                x2 -= x;
 
                 do {
                     *((unsigned char far*)(vs:>o)) = *tp;
