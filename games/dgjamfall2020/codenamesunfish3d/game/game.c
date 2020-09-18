@@ -494,6 +494,23 @@ void game_loop(void) {
 
                 {
                     int16_t y = vsl->ceil;
+                    __asm {
+                        mov     cx,y
+                        mov     di,texo
+                        mov     dx,tw
+                        mov     ax,tf
+                        mov     bx,ts
+yal1:                   or      cx,cx                   ; if CX < 0
+                        jns     yal1e
+                        add     di,dx                   ; texo += tw
+                        add     ax,bx                   ; tf += ts
+                        adc     di,0                    ; texo += CF
+                        inc     cx                      ; CX++ aka y++
+                        jmp     short yal1
+yal1e:                  mov     texo,di
+                        mov     tf,ax
+                    }
+#if 0
                     while ((y++) < 0) {
                         texo += tw;
                         {
@@ -502,8 +519,36 @@ void game_loop(void) {
                             tf = s;
                         }
                     }
+#endif
                 }
 
+                /* do not access data local variables between PUSH DS and POP DS.
+                 * local stack allocated variables are fine until the PUSH BP because most compilers
+                 * including Open Watcom code locals access as some form of MOV ...,[BP+n] */
+                __asm {
+                    mov         cx,x2
+                    mov         si,texo
+                    mov         di,o
+                    mov         dx,tw
+                    mov         ax,tf
+                    mov         bx,ts
+                    push        ds
+                    mov         es,vs
+                    mov         ds,texs
+                    push        bp
+                    mov         bp,bx
+yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf  BP = ts  BX = (left aside for pixel copy)
+                    mov         bl,[si]
+                    mov         es:[di],bl
+                    add         di,80               ; o += 80
+                    add         si,dx               ; texo += tw
+                    add         ax,bp               ; ts += tf
+                    adc         si,0                ; texo += CF
+                    loop        yal1
+                    pop         bp
+                    pop         ds
+                }
+#if 0
                 do {
                     *((unsigned char far*)(vs:>o)) = *((unsigned char far*)(texs:>texo));
                     texo += tw;
@@ -514,6 +559,7 @@ void game_loop(void) {
                     }
                     o += 80u;
                 } while ((--x2) != 0u);
+#endif
 
                 vslice = vsl->next;
             }
