@@ -510,16 +510,6 @@ yal1:                   or      cx,cx                   ; if CX < 0
 yal1e:                  mov     texo,di
                         mov     tf,ax
                     }
-#if 0
-                    while ((y++) < 0) {
-                        texo += tw;
-                        {
-                            const uint16_t s = ts + tf;
-                            if (s < tf) texo++;
-                            tf = s;
-                        }
-                    }
-#endif
                 }
 
                 /* do not access data local variables between PUSH DS and POP DS.
@@ -548,18 +538,6 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
                     pop         bp
                     pop         ds
                 }
-#if 0
-                do {
-                    *((unsigned char far*)(vs:>o)) = *((unsigned char far*)(texs:>texo));
-                    texo += tw;
-                    {
-                        const uint16_t s = ts + tf;
-                        if (s < tf) texo++;
-                        tf = s;
-                    }
-                    o += 80u;
-                } while ((--x2) != 0u);
-#endif
 
                 vslice = vsl->next;
             }
