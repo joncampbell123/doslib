@@ -112,6 +112,8 @@ struct game_vslice_t {
     int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
     unsigned                sidedef;
     unsigned                next;               /* next to draw or ~0u */
+    uint8_t                 tex_n;
+    uint8_t                 tex_x;
     int32_t                 dist;
 };
 
@@ -274,8 +276,8 @@ void game_project_lineseg(const unsigned int i) {
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
                     vs->next = pri;
                     vs->dist = d;
-
-                    if (tx & 0x400u) vs->dist = 0x7FFFF;
+                    vs->tex_n = 0;
+                    vs->tex_x = (tx >> 8u) & 0x3Fu;
 
                     game_vslice_draw[x] = vsi;
                 }
