@@ -197,7 +197,7 @@ void game_project_lineseg(const unsigned int i) {
             side = 1;
         }
 
-        if (side)
+        if (lseg->sidedef[side] == (~0u))
             return;
 
         d1 = (int32_t)((1ll << 32ll) / (int64_t)d1);
@@ -265,6 +265,14 @@ static inline void game_set_linedef_ss(const unsigned i,const unsigned s,const u
     game_lineseg[i].flags = flags;
     game_lineseg[i].sidedef[0] = sd;
     game_lineseg[i].sidedef[1] = ~0u;
+}
+
+static inline void game_set_linedef_sd(const unsigned i,const unsigned s,const unsigned e,const uint16_t flags,const unsigned sd,const unsigned sd2) {
+    game_lineseg[i].start = s;
+    game_lineseg[i].end = e;
+    game_lineseg[i].flags = flags;
+    game_lineseg[i].sidedef[0] = sd;
+    game_lineseg[i].sidedef[1] = sd2;
 }
 
 static inline void game_set_sidedef(const unsigned i,const unsigned tex,const int8_t xoff,const int8_t yoff,const unsigned int sector) {
