@@ -123,7 +123,7 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
-#define GAME_MIN_Z          (1l << 8l)
+#define GAME_MIN_Z          (1l << 11l)
 
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
     const int32_t dist = d2->y;
