@@ -141,7 +141,7 @@ void game_project_lineseg(const unsigned int i) {
     /* if the vertices are backwards, we're looking at the opposite side */
     {
         struct game_2dvec_t pr1,pr2;
-        int32_t od1,od2;
+        int32_t od1,od2,tmax;
         int32_t d1,d2;
         unsigned side;
         int x1,x2,x;
@@ -214,6 +214,8 @@ void game_project_lineseg(const unsigned int i) {
         ixd = x2 - ix;
         if (x2 > 320) x2 = 320;
 
+        tmax = (64l << (16l + 8l)) / od2;
+
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
                 const int32_t id = d1 + (((d2 - d1) * (x - ix)) / ixd);     /* interpolate between 1/z1 and 1/z2 */
@@ -226,6 +228,8 @@ void game_project_lineseg(const unsigned int i) {
                 }
 
                 if (d >= GAME_MIN_Z) {
+                    const int32_t tid = (tmax * (x - ix)) / ixd;
+                    const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id;
                     const int32_t h = (64l << 16l) / d;
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
@@ -237,6 +241,8 @@ void game_project_lineseg(const unsigned int i) {
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
                     vs->next = pri;
                     vs->dist = d;
+
+                    if (tx & 0x400u) vs->dist = 0x7FFFF;
 
                     game_vslice_draw[x] = vsi;
                 }
