@@ -210,15 +210,11 @@ void game_project_lineseg(const unsigned int i) {
         d2 = (int32_t)((1ll << 32ll) / (int64_t)d2);
 
         ix = x1 = (int)(pr1.x >> 16l);
-        if (x1 < 0) {
-            x1 = 0;
-        }
+        if (x1 < 0) x1 = 0;
 
         x2 = (int)(pr2.x >> 16l);
         ixd = x2 - ix;
-        if (x2 > 320) {
-            x2 = 320;
-        }
+        if (x2 > 320) x2 = 320;
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
