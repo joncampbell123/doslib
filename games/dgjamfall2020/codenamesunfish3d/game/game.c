@@ -150,20 +150,6 @@ void game_project_lineseg(const unsigned int i) {
         pr2 = game_vertexrot[lseg->end];
         side = 0;
 
-#if 0 // DEBUG pos
-        {
-            int x = 0,y = (14 * i);
-            char tmp[32];
-            char *s=tmp;
-
-            sprintf(tmp,"%ld,%ld %ld,%ld",pr1.x,pr1.y,pr2.x,pr2.y);
-            while (*s != 0) {
-                font_bmp_draw_chardef_vga8u(arial_medium,font_bmp_unicode_to_chardef(arial_medium,*s++),x,y,15);
-                x += 9;
-            }
-        }
-#endif
-
         if (pr1.y < GAME_MIN_Z && pr2.y < GAME_MIN_Z) {
             return;
         }
@@ -301,11 +287,6 @@ void game_loop(void) {
     unsigned int o;
     unsigned int i;
     unsigned int x;
-
-#if 0//DEBUG
-    if (font_bmp_do_load_arial_medium())
-        fatal("arial");
-#endif
 
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
