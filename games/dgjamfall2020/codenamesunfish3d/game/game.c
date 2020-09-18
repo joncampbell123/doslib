@@ -228,8 +228,8 @@ void game_project_lineseg(const unsigned int i) {
                 }
 
                 if (d >= GAME_MIN_Z) {
-                    const int32_t tid = (tmax * (x - ix)) / ixd;
-                    const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id;
+                    const int32_t tid = (tmax * (x - ix)) / ixd;            /* interpolate between 0 and 1/u (texture mapping) */
+                    const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; /* texture map u coord = 1 / tid */
                     const int32_t h = (64l << 16l) / d;
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
