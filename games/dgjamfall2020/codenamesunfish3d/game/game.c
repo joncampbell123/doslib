@@ -459,10 +459,10 @@ void game_loop(void) {
 
                 do {
                     *((unsigned char far*)(vs:>o)) = *tp;
-                    tp += tw * 80u;
+                    tp += tw * 64u;
                     {
                         const uint16_t s = ts + tf;
-                        if (s < tf) tp += 80u;
+                        if (s < tf) tp += 64u;
                         tf = s;
                     }
                     o += 80u;
