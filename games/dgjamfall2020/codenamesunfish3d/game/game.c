@@ -297,7 +297,7 @@ void game_project_lineseg(const unsigned int i) {
                     vs->sidedef = sidedef;
                     vs->ceil = (int)(((100l << 1l) - h) >> 1l);
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
-                    vs->next = pri;
+                    vs->next = (~0u);
                     vs->dist = d;
                     vs->tex_n = sdef->texture;
                     vs->tex_x = (tx >> TEXPRECIS) & 0x3Fu;
