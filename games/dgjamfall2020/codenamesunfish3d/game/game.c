@@ -383,13 +383,14 @@ void game_loop(void) {
                 x = (unsigned int)((vsl->ceil) < 0 ? 0 : vsl->ceil);
                 if (x2 > 200) x2 = 200;
                 if (x > 200) x = 200;
-                if (x > x2) continue;
+                if (x >= x2) continue;
+
                 o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
                 x2 -= x;
-                while (x2-- != 0u) {
+                do {
                     *((unsigned char far*)(vs:>o)) = c;
                     o += 80u;
-                }
+                } while ((--x2) != 0u);
             }
         }
 
