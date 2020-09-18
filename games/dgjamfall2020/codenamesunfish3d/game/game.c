@@ -465,7 +465,7 @@ void game_loop(void) {
                 if (x > 200) x = 200;
                 if (x >= x2) continue;
 
-                tp = game_texture[vsl->tex_n].tex + vsl->tex_x;
+                tp = game_texture[vsl->tex_n].tex + (vsl->tex_x * 64u);
                 {
                     const uint32_t s = (0x10000ul * 64ul) / (uint32_t)(vsl->floor - vsl->ceil);
                     tw = (uint16_t)(s >> 16ul);
@@ -475,10 +475,10 @@ void game_loop(void) {
                 {
                     int16_t y = vsl->ceil;
                     while ((y++) < 0) {
-                        tp += tw * 64u;
+                        tp += tw;
                         {
                             const uint16_t s = ts + tf;
-                            if (s < tf) tp += 64u;
+                            if (s < tf) tp++;
                             tf = s;
                         }
                     }
@@ -489,10 +489,10 @@ void game_loop(void) {
 
                 do {
                     *((unsigned char far*)(vs:>o)) = *tp;
-                    tp += tw * 64u;
+                    tp += tw;
                     {
                         const uint16_t s = ts + tf;
-                        if (s < tf) tp += 64u;
+                        if (s < tf) tp++;
                         tf = s;
                     }
                     o += 80u;
