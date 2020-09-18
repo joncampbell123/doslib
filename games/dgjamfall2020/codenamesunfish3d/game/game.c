@@ -363,9 +363,8 @@ void game_loop(void) {
         for (i=0;i < game_vertex_max;i++) {
             /* TODO: 2D rotation based on player angle */
             /* TODO: Perhaps only the line segments we draw */
-            game_vertexrot[i] = game_vertex[i];
-            game_vertexrot[i].x -= game_position.x;
-            game_vertexrot[i].y -= game_position.y;
+            game_vertexrot[i].x = game_vertex[i].x - game_position.x;
+            game_vertexrot[i].y = game_vertex[i].y - game_position.y;
         }
 
         for (i=0;i < game_lineseg_max;i++)
