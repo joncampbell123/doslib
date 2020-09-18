@@ -343,14 +343,20 @@ void game_loop(void) {
     while (1) {
         if (kbdown_test(KBDS_ESCAPE)) break;
 
-        if (kbdown_test(KBDS_UP_ARROW))
-            game_position.y += 0x10000l / 60l;
-        if (kbdown_test(KBDS_DOWN_ARROW))
-            game_position.y -= 0x10000l / 60l;
+        if (kbdown_test(KBDS_UP_ARROW)) {
+            const unsigned ga = game_angle >> 5u;
+            game_position.x += (int32_t)sin2048fps16_lookup(ga) / 30l;
+            game_position.y += (int32_t)cos2048fps16_lookup(ga) / 30l;
+        }
+        if (kbdown_test(KBDS_DOWN_ARROW)) {
+            const unsigned ga = game_angle >> 5u;
+            game_position.x -= (int32_t)sin2048fps16_lookup(ga) / 30l;
+            game_position.y -= (int32_t)cos2048fps16_lookup(ga) / 30l;
+        }
         if (kbdown_test(KBDS_LEFT_ARROW))
-            game_position.x -= 0x10000l / 60l;
+            game_angle -= 0x10000l / 60l;
         if (kbdown_test(KBDS_RIGHT_ARROW))
-            game_position.x += 0x10000l / 60l;
+            game_angle += 0x10000l / 60l;
 
         /* clear screen */
         vga_write_sequencer(0x02/*map mask*/,0xF);
@@ -365,6 +371,14 @@ void game_loop(void) {
             /* TODO: Perhaps only the line segments we draw */
             game_vertexrot[i].x = game_vertex[i].x - game_position.x;
             game_vertexrot[i].y = game_vertex[i].y - game_position.y;
+
+            {
+                const unsigned ga = game_angle >> 5u;
+                const int64_t inx = ((int64_t)game_vertexrot[i].x * (int64_t)cos2048fps16_lookup(ga)) - ((int64_t)game_vertexrot[i].y * (int64_t)sin2048fps16_lookup(ga));
+                const int64_t iny = ((int64_t)game_vertexrot[i].y * (int64_t)cos2048fps16_lookup(ga)) + ((int64_t)game_vertexrot[i].x * (int64_t)sin2048fps16_lookup(ga));
+                game_vertexrot[i].x = (int32_t)(inx >> 15ll);
+                game_vertexrot[i].y = (int32_t)(iny >> 15ll);
+            }
         }
 
         for (i=0;i < game_lineseg_max;i++)
