@@ -131,6 +131,7 @@ unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
 void game_texture_load(const unsigned i,const char *path,const unsigned f) {
     struct minipng_reader *rdr;
+    unsigned char *row;
     unsigned int ri;
 
     if (game_texture[i].tex != NULL)
@@ -142,11 +143,23 @@ void game_texture_load(const unsigned i,const char *path,const unsigned f) {
         fatal("gametex png error %s",path);
     if ((game_texture[i].tex=malloc(64*64)) == NULL)
         fatal("gametex png error %s",path);
+    if ((row=malloc(64)) == NULL)
+        fatal("gametex png error %s",path);
 
     for (ri=0;ri < 64;ri++) {
-        unsigned char *row = game_texture[i].tex + (ri * 64);
         minipng_reader_read_idat(rdr,row,1); /* pad byte */
         minipng_reader_read_idat(rdr,row,64); /* row */
+
+        {
+            unsigned int x;
+            unsigned char *srow = row;
+            unsigned char *drow = game_texture[i].tex + ri;
+
+            for (x=0;x < 64;x++) {
+                *drow = *srow++;
+                drow += 64;
+            }
+        }
     }
 
     if (f & GAMETEX_LOAD_PAL0) {
@@ -158,6 +171,7 @@ void game_texture_load(const unsigned i,const char *path,const unsigned f) {
     }
 
     minipng_reader_close(&rdr);
+    free(row);
 }
 
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
