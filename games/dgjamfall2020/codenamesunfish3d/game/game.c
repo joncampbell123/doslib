@@ -146,16 +146,9 @@ void game_project_lineseg(const unsigned int i) {
         int x1,x2,x;
         int ix,ixd;
 
-        if (game_vertexrot[lseg->start].x > game_vertexrot[lseg->end].x) {
-            pr1 = game_vertexrot[lseg->end];
-            pr2 = game_vertexrot[lseg->start];
-            side = 1;
-        }
-        else {
-            pr1 = game_vertexrot[lseg->start];
-            pr2 = game_vertexrot[lseg->end];
-            side = 0;
-        }
+        pr1 = game_vertexrot[lseg->start];
+        pr2 = game_vertexrot[lseg->end];
+        side = 0;
 
 #if 0 // DEBUG pos
         {
@@ -171,8 +164,10 @@ void game_project_lineseg(const unsigned int i) {
         }
 #endif
 
+#if 0
         if (side)
             return;
+#endif
 
         if (pr1.y < GAME_MIN_Z && pr2.y < GAME_MIN_Z) {
             return;
@@ -194,6 +189,22 @@ void game_project_lineseg(const unsigned int i) {
 
         d1 = game_3dto2d(&pr1);
         d2 = game_3dto2d(&pr2);
+
+        if (pr1.x > pr2.x) {
+            struct game_2dvec_t tpr;
+            int32_t td;
+
+            tpr = pr1;
+            td = d1;
+
+            pr1 = pr2;
+            d1 = d2;
+
+            pr2 = tpr;
+            d2 = td;
+
+            side = 1;
+        }
 
         d1 = (int32_t)((1ll << 32ll) / (int64_t)d1);
         d2 = (int32_t)((1ll << 32ll) / (int64_t)d2);
