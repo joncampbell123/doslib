@@ -122,12 +122,12 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
-#define GAME_MIN_Z          (1l << 11l)
+#define GAME_MIN_Z          (1l << 12l)
 
 int32_t game_3dto2d(struct game_2dvec_t *d2) {
-    const int32_t dist = d2->y;
+    const int32_t dist = d2->y >> 2l;
 
-    d2->x = ((int32_t)(160l << 16l)) + (int32_t)(((int64_t)d2->x << (16ll + 6ll)) / (int64_t)d2->y); /* fixed point 16.16 division */
+    d2->x = ((int32_t)(160l << 16l)) + (int32_t)(((int64_t)d2->x << (16ll + 6ll)) / (int64_t)dist); /* fixed point 16.16 division */
     d2->y = 100l << 16l;
 
     return dist;
@@ -310,18 +310,18 @@ void game_loop(void) {
     game_position.y = 0;
     game_angle = 0; /* looking straight ahead */
 
-    /*    0------------>1           point 0 at -1, 1 | point 1 at  1, 1
+    /*    0------------>1           point 0 at -4, 4 | point 1 at  4, 4
      *   /|\     |      |
      *    |             |
      *    |--    x    --|           x at 0, 0        | y increases ahead of user at angle == 0, x increases to the right
      *    |             |
      *    |      |     \|/
-     *    3<------------2           point 3 at -1,-1 | point 2 at  1,-1
+     *    3<------------2           point 3 at -4,-4 | point 2 at  4,-4
      */
-    game_set_vertexfip(0,   -1l << 16l,     1l << 16l); /* -1, 1 */
-    game_set_vertexfip(1,    1l << 16l,     1l << 16l); /*  1, 1 */
-    game_set_vertexfip(2,    1l << 16l,    -1l << 16l); /*  1,-1 */
-    game_set_vertexfip(3,   -1l << 16l,    -1l << 16l); /* -1,-1 */
+    game_set_vertexfip(0,   -4l << 16l,     4l << 16l); /* -4, 4 */
+    game_set_vertexfip(1,    4l << 16l,     4l << 16l); /*  4, 4 */
+    game_set_vertexfip(2,    4l << 16l,    -4l << 16l); /*  4,-4 */
+    game_set_vertexfip(3,   -4l << 16l,    -4l << 16l); /* -4,-4 */
 
     game_vertex_max = 4;
 
