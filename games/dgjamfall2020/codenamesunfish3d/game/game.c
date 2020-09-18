@@ -348,6 +348,7 @@ static inline void game_set_sector(const unsigned i,const int32_t top,const int3
 
 void game_loop(void) {
     struct game_vslice_t *vsl;
+    uint32_t prev,cur;
     unsigned int x2;
     unsigned int o;
     unsigned int i;
@@ -398,23 +399,28 @@ void game_loop(void) {
 
     init_keyboard_irq();
 
+    cur = read_timer_counter();
+
     while (1) {
+        prev = cur;
+        cur = read_timer_counter();
+
         if (kbdown_test(KBDS_ESCAPE)) break;
 
         if (kbdown_test(KBDS_UP_ARROW)) {
             const unsigned ga = game_angle >> 5u;
-            game_position.x += (int32_t)sin2048fps16_lookup(ga) / 30l;
-            game_position.y += (int32_t)cos2048fps16_lookup(ga) / 30l;
+            game_position.x += ((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
+            game_position.y += ((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
         }
         if (kbdown_test(KBDS_DOWN_ARROW)) {
             const unsigned ga = game_angle >> 5u;
-            game_position.x -= (int32_t)sin2048fps16_lookup(ga) / 30l;
-            game_position.y -= (int32_t)cos2048fps16_lookup(ga) / 30l;
+            game_position.x -= ((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
+            game_position.y -= ((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
         }
         if (kbdown_test(KBDS_LEFT_ARROW))
-            game_angle -= 0x10000l / 60l;
+            game_angle -= (((int32_t)(cur - prev)) << 14l) / 60l;
         if (kbdown_test(KBDS_RIGHT_ARROW))
-            game_angle += 0x10000l / 60l;
+            game_angle += (((int32_t)(cur - prev)) << 14l) / 60l;
 
         /* clear screen */
         vga_write_sequencer(0x02/*map mask*/,0xF);
