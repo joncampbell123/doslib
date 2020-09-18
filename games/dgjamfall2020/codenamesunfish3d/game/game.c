@@ -436,10 +436,10 @@ void game_loop(void) {
             vga_write_sequencer(0x02/*map mask*/,1u << (i & 3u));
             if (game_vslice_draw[i] != (~0u)) {
                 __segment vs = FP_SEG(vga_state.vga_graphics_ram);
-                unsigned char c;
+                unsigned char *tp;
+                uint16_t tf,ts,tw;
 
                 vsl = &game_vslice[game_vslice_draw[i]];
-                c = (vsl->dist >= (0x10000l>>1l)) ? ((63l << (16l-1l)) / vsl->dist) : 63;
                 x2 = (unsigned int)((vsl->floor) < 0 ? 0 : vsl->floor);
                 x = (unsigned int)((vsl->ceil) < 0 ? 0 : vsl->ceil);
                 if (x2 > 200) x2 = 200;
@@ -448,8 +448,23 @@ void game_loop(void) {
 
                 o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
                 x2 -= x;
+
+                tp = game_texture[vsl->tex_n].tex + vsl->tex_x;
+                {
+                    const uint32_t s = (0x10000ul * 64ul) / (uint32_t)x2;
+                    tw = (uint16_t)(s >> 16ul);
+                    ts = (uint16_t)(s & 0xFFFFul);
+                    tf = 0;
+                }
+
                 do {
-                    *((unsigned char far*)(vs:>o)) = c;
+                    *((unsigned char far*)(vs:>o)) = *tp;
+                    tp += tw * 80u;
+                    {
+                        const uint16_t s = ts + tf;
+                        if (s < tf) tp += 80u;
+                        tf = s;
+                    }
                     o += 80u;
                 } while ((--x2) != 0u);
             }
