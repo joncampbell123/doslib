@@ -560,23 +560,11 @@ void game_loop(void) {
                 o = (i >> 2u) + (x * 80u) + FP_OFF(vga_state.vga_graphics_ram);
                 x2 -= x;
 
-                {
-                    int16_t y = vsl->ceil;
-                    __asm {
-                        mov     cx,y
-                        mov     di,texo
-                        mov     dx,tw
-                        mov     ax,tf
-                        mov     bx,ts
-yal1:                   or      cx,cx                   ; if CX < 0
-                        jns     yal1e
-                        add     ax,bx                   ; tf += ts
-                        adc     di,dx                   ; texo += CF + tw
-                        inc     cx                      ; CX++ aka y++
-                        jmp     short yal1
-yal1e:                  mov     texo,di
-                        mov     tf,ax
-                    }
+                if (vsl->ceil < 0) {
+                    uint32_t adv = ((uint32_t)(-vsl->ceil) * (uint32_t)(ts)) + (uint32_t)(tf);
+                    texo += (uint16_t)(-vsl->ceil) * (uint16_t)(tw);
+                    texo += (uint16_t)(adv >> 16ul);
+                    tf = (uint16_t)(adv);
                 }
 
                 /* do not access data local variables between PUSH DS and POP DS.
