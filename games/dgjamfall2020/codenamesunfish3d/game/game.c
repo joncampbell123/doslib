@@ -306,7 +306,7 @@ void game_project_lineseg(const unsigned int i) {
                     vs->sidedef = sidedef;
                     vs->ceil = (int)(((100l << 1l) - h) >> 1l);
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
-                    vs->next = (~0u);
+                    vs->next = pri;
                     vs->dist = d;
                     vs->tex_n = sdef->texture;
                     vs->tex_x = (tx >> TEXPRECIS) & 0x3Fu;
@@ -369,7 +369,11 @@ static inline void game_set_sector(const unsigned i,const int32_t top,const int3
     game_sector[i].ceiling = ceil;
 }
 
+#define MAX_VSLICE_DRAW     8
+
 void game_loop(void) {
+    unsigned int vslice_draw_count;
+    uint16_t vslice_draw[MAX_VSLICE_DRAW];
     struct game_vslice_t *vsl;
     uint32_t prev,cur;
     unsigned int x2;
@@ -508,16 +512,24 @@ void game_loop(void) {
             game_project_lineseg(i);
 
         for (i=0;i < GAME_VSLICE_DRAW;i++) {
-            unsigned int vslice = game_vslice_draw[i];
+            uint16_t vslice,vi;
+
+            vslice_draw_count = 0;
+            vslice = game_vslice_draw[i];
+            while (vslice != (~0u) && vslice_draw_count < MAX_VSLICE_DRAW) {
+                vslice_draw[vslice_draw_count++] = vslice;
+                vslice = game_vslice[vslice].next;
+            }
 
             vga_write_sequencer(0x02/*map mask*/,1u << (i & 3u));
 
-            while (vslice != (~0u)) {
+            for (vi=vslice_draw_count;vi != 0;) {
                 __segment vs = FP_SEG(vga_state.vga_graphics_ram);
                 __segment texs;
                 unsigned texo;
                 uint16_t tf,ts,tw;
 
+                vslice = vslice_draw[--vi];
                 vsl = &game_vslice[vslice];
                 x2 = (unsigned int)((vsl->floor) < 0 ? 0 : vsl->floor);
                 x = (unsigned int)((vsl->ceil) < 0 ? 0 : vsl->ceil);
