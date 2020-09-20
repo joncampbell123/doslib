@@ -353,8 +353,7 @@ void game_project_lineseg(const unsigned int i) {
                         mov     ebx,u2
                         sub     ebx,u1                  ; ebx = u2 - u1
                         imul    ebx                     ; edx:eax = (x - ix) * (u2 - u1)
-                        mov     bx,ixd
-                        movsx   ebx,bx                  ; ebx = ixd
+                        movsx   ebx,ixd                 ; ebx = ixd
                         idiv    ebx                     ; eax = ((x - ix) * (u2 - u1)) / ixd
                         add     eax,u1                  ; eax = u1 + (((x - ix) * (u2 - u1)) / ixd)
                         mov     tid,eax
