@@ -81,20 +81,14 @@ unsigned                    game_lineseg_max;
 struct game_2dsidedef_t {
     uint8_t                 texture;
     unsigned                texture_render_w;
-    int8_t                  xoffset,yoffset;
-    uint8_t                 sector;                     /* which sector this faces */
 };
 
 #define GAME_SIDEDEFS       128
 struct game_2dsidedef_t     game_sidedef[GAME_SIDEDEFS];
 
 struct game_2dsector_t {
-    int32_t                 top,bottom;
     uint8_t                 floor,ceiling;
 };
-
-#define GAME_SECTORS        16
-struct game_2dsector_t      game_sector[GAME_SECTORS];
 
 /* No BSP tree, sorry. The 3D "overworld" is too simple and less important to need it.
  * Also no monsters and cacodemons to shoot. */
@@ -435,19 +429,9 @@ static inline void game_set_linedef_sd(const unsigned i,const unsigned s,const u
     game_lineseg[i].sidedef[1] = sd2;
 }
 
-static inline void game_set_sidedef(const unsigned i,const unsigned tex,const int8_t xoff,const int8_t yoff,const unsigned int sector,const unsigned int texw) {
+static inline void game_set_sidedef(const unsigned i,const unsigned tex,const unsigned int texw) {
     game_sidedef[i].texture_render_w = texw;
     game_sidedef[i].texture = tex;
-    game_sidedef[i].xoffset = xoff;
-    game_sidedef[i].yoffset = yoff;
-    game_sidedef[i].sector = sector;
-}
-
-static inline void game_set_sector(const unsigned i,const int32_t top,const int32_t bottom,const unsigned floor,const unsigned ceil) {
-    game_sector[i].top = top;
-    game_sector[i].bottom = bottom;
-    game_sector[i].floor = floor;
-    game_sector[i].ceiling = ceil;
 }
 
 #define MAX_VSLICE_DRAW     8
@@ -522,10 +506,8 @@ void game_loop(void) {
 
     game_lineseg_max = 8;
 
-    game_set_sidedef(0,     0/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/,    64*8/*texture w*/);
-    game_set_sidedef(1,     1/*texture*/,   0/*xoff*/,  0/*yoff*/,  0/*sector*/,    64*2/*texture w*/);
-
-    game_set_sector(0,       1l << 16l/*top*/,      -1l << 16l/*bottom*/,       0/*floor*/,     1/*ceiling*/);
+    game_set_sidedef(0,     0/*texture*/,   64*8/*texture w*/);
+    game_set_sidedef(1,     1/*texture*/,   64*2/*texture w*/);
 
     init_keyboard_irq();
 
