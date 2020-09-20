@@ -288,9 +288,38 @@ void game_project_lineseg(const unsigned int i) {
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
+#if 1/*ASM*/
+                const unsigned pri = game_vslice_draw[x];
+                int32_t id,d;
+
+                /* id = d1 + (((d2 - d1) * (x - ix)) / ixd); */     /* interpolate between 1/z1 and 1/z2 */
+                __asm {
+                    .386
+                    mov     ax,x
+                    sub     ax,ix
+                    movsx   eax,ax                  ; eax = x - ix
+                    mov     ebx,d2
+                    sub     ebx,d1                  ; ebx = d2 - d1
+                    imul    ebx                     ; edx:eax = (x - ix) * (d2 - d1)
+                    mov     bx,ixd
+                    movsx   ebx,bx                  ; ebx = ixd
+                    idiv    ebx                     ; eax = ((x - ix) * (d2 - d1)) / ixd
+                    add     eax,d1                  ; eax = u1 + (((x - ix) * (d2 - d1)) / ixd)
+                    mov     id,eax
+                }
+                /* d = (1l << (32l - (int32_t)ZPRECSHIFT)) / id; */ /* d = 1 / id */
+                __asm {
+                    .386
+                    xor     edx,edx
+                    mov     eax,0x1000000           ; 1 << (32 - 8) = 1 << 24 = 0x01000000
+                    idiv    id
+                    mov     d,eax
+                }
+#else
                 const int32_t id = d1 + (((d2 - d1) * (x - ix)) / ixd);     /* interpolate between 1/z1 and 1/z2 */
                 const int32_t d = (1l << (32l - (int32_t)ZPRECSHIFT)) / id; /* d = 1 / id */
                 const unsigned pri = game_vslice_draw[x];
+#endif
 
                 if (pri != (~0u)) {
                     if (d > game_vslice[pri].dist) {
