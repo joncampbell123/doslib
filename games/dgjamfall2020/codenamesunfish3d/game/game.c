@@ -300,18 +300,59 @@ void game_project_lineseg(const unsigned int i) {
                 }
 
                 {
-                    const int32_t tid = u1 + (((u2 - u1) * (x - ix)) / ixd);      /* interpolate between 1/u1 and 1/u2 (texture mapping) */
-                    const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; /* texture map u coord = 1 / tid */
-                    const int32_t h = (64l << 16l) / d;
+#if 1/*ASM*/
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
+                    int32_t tid,tx;
+                    int h;
+
+                    /* tid = u1 + (((u2 - u1) * (x - ix)) / ixd); */     /* interpolate between 1/u1 and 1/u2 (texture mapping) */
+                    __asm {
+                        .386
+                        mov     ax,x
+                        sub     ax,ix
+                        movsx   eax,ax                  ; eax = x - ix
+                        mov     ebx,u2
+                        sub     ebx,u1                  ; ebx = u2 - u1
+                        imul    ebx                     ; edx:eax = (x - ix) * (u2 - u1)
+                        mov     bx,ixd
+                        movsx   ebx,bx                  ; ebx = ixd
+                        idiv    ebx                     ; eax = ((x - ix) * (u2 - u1)) / ixd
+                        add     eax,u1                  ; eax = u1 + (((x - ix) * (u2 - u1)) / ixd)
+                        mov     tid,eax
+                    }
+                    /* tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; */ /* texture map u coord = 1 / tid */
+                    __asm {
+                        .386
+                        xor     edx,edx
+                        mov     eax,tid
+                        mov     cl,8                ; (16 - 8)
+                        shl     eax,cl
+                        idiv    id
+                        mov     tx,eax
+                    }
+                    /* h = (64l << 16l) / d; */
+                    __asm {
+                        .386
+                        xor     edx,edx
+                        mov     eax,0x400000        ; (64l << 16l) = 0x40 << 16l = 0x400000
+                        idiv    d
+                        mov     h,ax
+                    }
+#else/*C*/
+                    const int32_t tid = u1 + (((u2 - u1) * (x - ix)) / ixd);      /* interpolate between 1/u1 and 1/u2 (texture mapping) */
+                    const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; /* texture map u coord = 1 / tid */
+                    const int h = (int)((64l << 16l) / d);
+                    const unsigned vsi = game_vslice_alloc++;
+                    struct game_vslice_t *vs = &game_vslice[vsi];
+#endif
 
                     vs->top = 0;
                     vs->bottom = 0;
                     vs->flags = 0;
                     vs->sidedef = sidedef;
-                    vs->ceil = (int)(((100l << 1l) - h) >> 1l);
-                    vs->floor = (int)(((100l << 1l) + h) >> 1l);
+                    vs->ceil = (int)(((100 << 1) - h) >> 1);
+                    vs->floor = (int)(((100 << 1) + h) >> 1);
 
                     if (vs->flags & VSF_TRANSPARENT)
                         vs->next = pri;
