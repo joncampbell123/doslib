@@ -229,7 +229,7 @@ void game_project_lineseg(const unsigned int i) {
                 else if (pr1.y < GAME_MIN_Z) {
                     const int32_t cdy = GAME_MIN_Z - pr2.y;
                     const int32_t cdx = (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
-                    u1 = 0x10000l - (int32_t)(((int64_t)(0x10000l - u1) * (int64_t)cdx) / (int64_t)dx);
+                    u1 = 0x10000l - (int32_t)(((int64_t)(0x10000l - u1) * (int64_t)-cdx) / (int64_t)dx);
                     pr1.x = pr2.x + cdx;
                     pr1.y = GAME_MIN_Z;
                 }
