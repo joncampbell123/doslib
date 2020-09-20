@@ -183,7 +183,7 @@ int32_t game_3dto2d(struct game_2dvec_t *d2) {
     return dist;
 }
 
-#define TEXPRECIS               (4)
+#define TEXPRECIS               (0)
 #define ZPRECSHIFT              (8)
 void game_project_lineseg(const unsigned int i) {
     struct game_2dlineseg_t *lseg = &game_lineseg[i];
@@ -194,12 +194,15 @@ void game_project_lineseg(const unsigned int i) {
     {
         unsigned sidedef;
         struct game_2dvec_t pr1,pr2;
-        int32_t od1,od2,tmax;
+        int32_t od1,od2;
+        int32_t  u1,u2;
         int32_t d1,d2;
         unsigned side;
         int x1,x2,x;
         int ix,ixd;
 
+        u1 = 0;
+        u2 = 0x10000ul;
         pr1 = game_vertexrot[lseg->start];
         pr2 = game_vertexrot[lseg->end];
         side = 0;
@@ -218,12 +221,16 @@ void game_project_lineseg(const unsigned int i) {
             else {
                 if (pr2.y < GAME_MIN_Z) {
                     const int32_t cdy = GAME_MIN_Z - pr1.y;
-                    pr2.x = pr1.x + (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
+                    const int32_t cdx = (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
+                    u2 = (int32_t)(((int64_t)u2 * (int64_t)cdx) / (int64_t)dx);
+                    pr2.x = pr1.x + cdx;
                     pr2.y = GAME_MIN_Z;
                 }
                 else if (pr1.y < GAME_MIN_Z) {
                     const int32_t cdy = GAME_MIN_Z - pr2.y;
-                    pr1.x = pr2.x + (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
+                    const int32_t cdx = (int32_t)(((int64_t)cdy * (int64_t)dx) / (int64_t)dy);
+                    u1 = 0x10000l - (int32_t)(((int64_t)(0x10000l - u1) * (int64_t)cdx) / (int64_t)dx);
+                    pr1.x = pr2.x + cdx;
                     pr1.y = GAME_MIN_Z;
                 }
                 else {
@@ -237,16 +244,20 @@ void game_project_lineseg(const unsigned int i) {
 
         if (pr1.x > pr2.x) {
             struct game_2dvec_t tpr;
+            uint16_t tu;
             int32_t td;
 
             tpr = pr1;
             td = d1;
+            tu = u1;
 
             pr1 = pr2;
             d1 = d2;
+            u1 = u2;
 
             pr2 = tpr;
             d2 = td;
+            u2 = tu;
 
             side = 1;
         }
@@ -269,10 +280,8 @@ void game_project_lineseg(const unsigned int i) {
         ixd = x2 - ix;
         if (x2 > 320) x2 = 320;
 
-        if (sdef->texture_render_w != 0u)
-            tmax = (int32_t)(((int64_t)sdef->texture_render_w << (16ll + (int64_t)TEXPRECIS)) / (int64_t)od2);
-        else
-            tmax = (64l << (16l + (int32_t)TEXPRECIS)) / od2;
+        u1 = (int32_t)((((int64_t)sdef->texture_render_w << (int64_t)TEXPRECIS) * (int64_t)u1) / (int64_t)od1);
+        u2 = (int32_t)((((int64_t)sdef->texture_render_w << (int64_t)TEXPRECIS) * (int64_t)u2) / (int64_t)od2);
 
         for (x=x1;x < x2;x++) {
             if (game_vslice_alloc < GAME_VSLICE_MAX) {
@@ -286,7 +295,7 @@ void game_project_lineseg(const unsigned int i) {
                 }
 
                 if (d >= GAME_MIN_Z) {
-                    const int32_t tid = (tmax * (x - ix)) / ixd;            /* interpolate between 0 and 1/u (texture mapping) */
+                    const int32_t tid = u1 + (((u2 - u1) * (x - ix)) / ixd);      /* interpolate between 1/u1 and 1/u2 (texture mapping) */
                     const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; /* texture map u coord = 1 / tid */
                     const int32_t h = (64l << 16l) / d;
                     const unsigned vsi = game_vslice_alloc++;
