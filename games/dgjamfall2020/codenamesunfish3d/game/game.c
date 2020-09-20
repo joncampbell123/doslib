@@ -112,11 +112,14 @@ struct game_vslice_t {
     int16_t                 top,bottom;         /* total slice including floor to ceiling */
     int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
     unsigned                sidedef;
+    unsigned                flags;
     unsigned                next;               /* next to draw or ~0u */
     uint8_t                 tex_n;
     uint8_t                 tex_x;
     int32_t                 dist;
 };
+
+#define VSF_TRANSPARENT     (1u << 0u)
 
 #define GAME_VSLICE_MAX     2048
 struct game_vslice_t        game_vslice[GAME_VSLICE_MAX];
@@ -290,8 +293,10 @@ void game_project_lineseg(const unsigned int i) {
                 const unsigned pri = game_vslice_draw[x];
 
                 if (pri != (~0u)) {
-                    if (d > game_vslice[pri].dist)
-                        continue;
+                    if (d > game_vslice[pri].dist) {
+                        if (!(game_vslice[pri].flags & VSF_TRANSPARENT))
+                            continue;
+                    }
                 }
 
                 if (d >= GAME_MIN_Z) {
@@ -303,10 +308,16 @@ void game_project_lineseg(const unsigned int i) {
 
                     vs->top = 0;
                     vs->bottom = 0;
+                    vs->flags = 0;
                     vs->sidedef = sidedef;
                     vs->ceil = (int)(((100l << 1l) - h) >> 1l);
                     vs->floor = (int)(((100l << 1l) + h) >> 1l);
-                    vs->next = pri;
+
+                    if (vs->flags & VSF_TRANSPARENT)
+                        vs->next = pri;
+                    else
+                        vs->next = (~0u);
+
                     vs->dist = d;
                     vs->tex_n = sdef->texture;
                     vs->tex_x = (tx >> TEXPRECIS) & 0x3Fu;
