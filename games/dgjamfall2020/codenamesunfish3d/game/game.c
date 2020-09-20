@@ -299,7 +299,7 @@ void game_project_lineseg(const unsigned int i) {
                     }
                 }
 
-                if (d >= GAME_MIN_Z) {
+                {
                     const int32_t tid = u1 + (((u2 - u1) * (x - ix)) / ixd);      /* interpolate between 1/u1 and 1/u2 (texture mapping) */
                     const int32_t tx = (tid << (16l - (int32_t)ZPRECSHIFT)) / id; /* texture map u coord = 1 / tid */
                     const int32_t h = (64l << 16l) / d;
