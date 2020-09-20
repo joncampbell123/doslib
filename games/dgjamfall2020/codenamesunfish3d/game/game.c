@@ -322,7 +322,7 @@ void game_project_lineseg(const unsigned int i) {
                     }
                 }
 
-                {
+                if (d >= GAME_MIN_Z) {
 #if 1/*ASM*/
                     const unsigned vsi = game_vslice_alloc++;
                     struct game_vslice_t *vs = &game_vslice[vsi];
