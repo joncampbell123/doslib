@@ -50,6 +50,7 @@ struct game_2dvec_t {
 
 struct game_2dvec_t         game_position;
 uint64_t                    game_angle;
+int                         game_current_room;
 
 #define GAME_VERTICES       128
 struct game_2dvec_t         game_vertex[GAME_VERTICES];
@@ -85,10 +86,7 @@ struct game_2dsidedef_t {
 
 #define GAME_SIDEDEFS       128
 struct game_2dsidedef_t     game_sidedef[GAME_SIDEDEFS];
-
-struct game_2dsector_t {
-    uint8_t                 floor,ceiling;
-};
+unsigned                    game_sidedef_max;
 
 /* No BSP tree, sorry. The 3D "overworld" is too simple and less important to need it.
  * Also no monsters and cacodemons to shoot. */
@@ -422,33 +420,131 @@ void game_texture_freeall(void) {
         game_texture_free(&game_texture[i]);
 }
 
+struct game_room_bound {
+    struct game_2dvec_t             tl,br;      /* top left, bottom right */
+
+    unsigned                        vertex_count;
+    const struct game_2dvec_t*      vertex;
+
+    unsigned                        lineseg_count;
+    const struct game_2dlineseg_t*  lineseg;
+
+    unsigned                        sidedef_count;
+    const struct game_2dsidedef_t*  sidedef;
+
+    const struct game_room_bound*   bound_check_also;       /* adjacent rooms to check boundaries as well */
+};
+
 /* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
 #define TOFP(x)         ((int32_t)((x) * 0x10000l))
+#define TEXFP(x)        ((unsigned)((x) * 64u))
 
-static inline void game_set_vertexfip(const unsigned i,int32_t x,int32_t y) {
-    game_vertex[i].x = x;
-    game_vertex[i].y = y;
+const struct game_2dvec_t           game_room1_vertices[] = {
+    {   TOFP(  -4.00),  TOFP(   4.00)   },                          // 0
+    {   TOFP(   4.00),  TOFP(   4.00)   },                          // 1
+    {   TOFP(   4.00),  TOFP(  -4.00)   },                          // 2
+    {   TOFP(  -4.00),  TOFP(  -4.00)   }                           // 3
+};                                                                  //=4
+
+const struct game_2dlineseg_t       game_room1_linesegs[] = {
+    {                                                               // 0
+        0,  1,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 0, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 1
+        1,  2,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 0, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 2
+        2,  3,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 0, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 3
+        3,  0,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 0, (~0u) }                                                //  sidedef (front, back)
+    }
+};                                                                  //=4
+
+const struct game_2dsidedef_t       game_room1_sidedefs[] = {
+    {                                                               // 0
+        0,                                                          //  texture
+        TEXFP(8)                                                    //  texture width
+    }
+};                                                                  //=1
+
+const struct game_room_bound        game_room1 = {
+    {   TOFP(  -6.00),  TOFP(   6.00)   },                          // tl (x,y)
+    {   TOFP(   6.00),  TOFP(  -6.00)   },                          // br (x,y)
+
+    4,                                                              // vertex count
+    game_room1_vertices,                                            // vertices
+
+    4,                                                              // lineseg count
+    game_room1_linesegs,                                            // linesegs
+
+    1,                                                              // sidedef count
+    game_room1_sidedefs,                                            // sidedefs
+
+    NULL                                                            // no adjacent rooms to bounds check
+};
+
+void game_clear_level(void) {
+    game_vertex_max = 0;
+    game_lineseg_max = 0;
+    game_sidedef_max = 0;
 }
 
-static inline void game_set_linedef_ss(const unsigned i,const unsigned s,const unsigned e,const uint16_t flags,const unsigned sd) {
-    game_lineseg[i].start = s;
-    game_lineseg[i].end = e;
-    game_lineseg[i].flags = flags;
-    game_lineseg[i].sidedef[0] = sd;
-    game_lineseg[i].sidedef[1] = ~0u;
-}
+void game_load_room(const struct game_room_bound *room) {
+    const unsigned base_vertex=game_vertex_max,base_sidedef=game_sidedef_max;
 
-static inline void game_set_linedef_sd(const unsigned i,const unsigned s,const unsigned e,const uint16_t flags,const unsigned sd,const unsigned sd2) {
-    game_lineseg[i].start = s;
-    game_lineseg[i].end = e;
-    game_lineseg[i].flags = flags;
-    game_lineseg[i].sidedef[0] = sd;
-    game_lineseg[i].sidedef[1] = sd2;
-}
+    if ((game_vertex_max+room->vertex_count) > GAME_VERTICES)
+        fatal("game_load_room too many vertices");
+    if ((game_lineseg_max+room->lineseg_count) > GAME_LINESEG)
+        fatal("game_load_room too many lineseg");
+    if ((game_sidedef_max+room->sidedef_count) > GAME_SIDEDEFS)
+        fatal("game_load_room too many sidedef");
 
-static inline void game_set_sidedef(const unsigned i,const unsigned tex,const unsigned int texw) {
-    game_sidedef[i].texture_render_w = texw;
-    game_sidedef[i].texture = tex;
+    {
+        unsigned i;
+        const struct game_2dvec_t *s = room->vertex;
+        struct game_2dvec_t *d = game_vertex+game_vertex_max;
+
+        for (i=0;i < room->vertex_count;i++,d++,s++)
+            *d = *s;
+
+        game_vertex_max += room->vertex_count;
+    }
+
+    {
+        unsigned i;
+        const struct game_2dlineseg_t *s = room->lineseg;
+        struct game_2dlineseg_t *d = game_lineseg+game_lineseg_max;
+
+        for (i=0;i < room->lineseg_count;i++,d++,s++) {
+            d->sidedef[0] = s->sidedef[0] + base_sidedef;
+            d->sidedef[1] = s->sidedef[1] + base_sidedef;
+            d->start = s->start + base_vertex;
+            d->end = s->end + base_vertex;
+            d->flags = s->flags;
+        }
+
+        game_lineseg_max += room->lineseg_count;
+    }
+
+    {
+        unsigned i;
+        const struct game_2dsidedef_t *s = room->sidedef;
+        struct game_2dsidedef_t *d = game_sidedef+game_sidedef_max;
+
+        for (i=0;i < room->sidedef_count;i++,d++,s++)
+            *d = *s;
+
+        game_sidedef_max += room->sidedef_count;
+    }
 }
 
 void game_loop(void) {
@@ -473,57 +569,16 @@ void game_loop(void) {
 
     game_vertex_max = 0;
     game_lineseg_max = 0;
+    game_sidedef_max = 0;
 
     /* init pos */
+    game_current_room = -1;
     game_position.x = 0;
     game_position.y = 0;
     game_angle = 0; /* looking straight ahead */
 
-    /*    0------------>1           point 0 at -4, 4 | point 1 at  4, 4
-     *   /|\     |      |
-     *    |             |
-     *    |--    x    --|           x at 0, 0        | y increases ahead of user at angle == 0, x increases to the right
-     *    |             |
-     *    |      |     \|/
-     *    3<------------2           point 3 at -4,-4 | point 2 at  4,-4
-     */
-    game_set_vertexfip(0,TOFP(-4),TOFP( 4)); /* -4, 4 */
-    game_set_vertexfip(1,TOFP( 4),TOFP( 4)); /*  4, 4 */
-    game_set_vertexfip(2,TOFP( 4),TOFP(-4)); /*  4,-4 */
-    game_set_vertexfip(3,TOFP(-4),TOFP(-4)); /* -4,-4 */
-
-    /*           |
-     *    4<------------7
-     *    |            /|\
-     *    |             |
-     *  --|      x      |--
-     *    |             |
-     *   \|/            |
-     *    5------------>6
-     *           |
-     */
-
-    game_set_vertexfip(4,TOFP(-1),TOFP( 1)); /* -1, 1 */
-    game_set_vertexfip(5,TOFP(-1),TOFP(-1)); /* -1,-1 */
-    game_set_vertexfip(6,TOFP( 1),TOFP(-1)); /*  1,-1 */
-    game_set_vertexfip(7,TOFP( 1),TOFP( 1)); /*  1, 1 */
-
-    game_vertex_max = 8;
-
-    game_set_linedef_ss(0,  0,      1,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(1,  1,      2,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(2,  2,      3,  0x0000/*flags*/,            0/*sidedef*/);
-    game_set_linedef_ss(3,  3,      0,  0x0000/*flags*/,            0/*sidedef*/);
-
-    game_set_linedef_ss(4,  4,      5,  0x0000/*flags*/,            1/*sidedef*/);
-    game_set_linedef_ss(5,  5,      6,  0x0000/*flags*/,            1/*sidedef*/);
-    game_set_linedef_ss(6,  6,      7,  0x0000/*flags*/,            1/*sidedef*/);
-    game_set_linedef_ss(7,  7,      4,  0x0000/*flags*/,            1/*sidedef*/);
-
-    game_lineseg_max = 8;
-
-    game_set_sidedef(0,     0/*texture*/,   64*8/*texture w*/);
-    game_set_sidedef(1,     1/*texture*/,   64*2/*texture w*/);
+    game_clear_level();
+    game_load_room(&game_room1);
 
     init_keyboard_irq();
 
