@@ -432,7 +432,7 @@ struct game_room_bound {
     unsigned                        sidedef_count;
     const struct game_2dsidedef_t*  sidedef;
 
-    const struct game_room_bound*   bound_check_also;       /* adjacent rooms to check boundaries as well */
+    const struct game_room_bound*   also;       /* adjacent rooms to check boundaries as well and render */
 };
 
 /* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
@@ -562,14 +562,30 @@ unsigned point_in_room(const struct game_2dvec_t *pt,const struct game_room_boun
     return 0;
 }
 
+const struct game_room_bound* game_cur_room;
+
+void game_load_room_and_adj(const struct game_room_bound* room) {
+    game_load_room(room);
+
+    {
+        const struct game_room_bound* also = room->also;
+        while (also != NULL) {
+            game_load_room(also);
+            also++;
+        }
+    }
+}
+
 void game_load_room_from_pos(void) {
     const struct game_room_bound **rooms = game_rooms;
 
+    game_cur_room = NULL;
     game_clear_level();
 
     while (*rooms != NULL) {
         if (point_in_room(&game_position,*rooms)) {
-            game_load_room(*rooms);
+            game_load_room_and_adj(*rooms);
+            game_cur_room = *rooms;
             break;
         }
     }
@@ -600,6 +616,7 @@ void game_loop(void) {
     game_sidedef_max = 0;
 
     /* init pos */
+    game_cur_room = NULL;
     game_current_room = -1;
     game_position.x = 0;
     game_position.y = 0;
