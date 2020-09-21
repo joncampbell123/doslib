@@ -439,6 +439,9 @@ struct game_room_bound {
 #define TOFP(x)         ((int32_t)((x) * 0x10000l))
 #define TEXFP(x)        ((unsigned)((x) * 64u))
 
+extern const struct game_room_bound         game_room1;
+extern const struct game_room_bound         game_room2;
+
 /*  5    0                              #5 = -4.0, 6.0      #0 = -3.0, 6.0      #1 = -3.0, 4.0
  * /|\ --|
  *  |   \|/
@@ -503,6 +506,11 @@ const struct game_2dsidedef_t       game_room1_sidedefs[] = {
     }
 };                                                                  //=3
 
+const struct game_room_bound*       game_room1_adj[] = {
+    &game_room2,
+    NULL
+};
+
 const struct game_room_bound        game_room1 = {
     {   TOFP(  -6.00),  TOFP(  -6.00)   },                          // tl (x,y)
     {   TOFP(   6.00),  TOFP(   6.00)   },                          // br (x,y)
@@ -516,7 +524,7 @@ const struct game_room_bound        game_room1 = {
     3,                                                              // sidedef count
     game_room1_sidedefs,                                            // sidedefs
 
-    NULL                                                            // no adjacent rooms to render
+    game_room1_adj                                                  // adjacent rooms
 };
 
 /*
@@ -564,6 +572,11 @@ const struct game_2dsidedef_t       game_room2_sidedefs[] = {
     }
 };                                                                  //=1
 
+const struct game_room_bound*       game_room2_adj[] = {
+    &game_room1,
+    NULL
+};
+
 const struct game_room_bound        game_room2 = {
     {   TOFP( -16.00),  TOFP(   6.00)   },                          // tl (x,y)
     {   TOFP(  -3.00),  TOFP(  16.00)   },                          // br (x,y)
@@ -577,7 +590,7 @@ const struct game_room_bound        game_room2 = {
     1,                                                              // sidedef count
     game_room2_sidedefs,                                            // sidedefs
 
-    NULL                                                            // no adjacent rooms to render
+    game_room2_adj                                                  // adjacent rooms
 };
 
 const struct game_room_bound*       game_rooms[] = {
