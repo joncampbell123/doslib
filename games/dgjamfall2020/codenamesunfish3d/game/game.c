@@ -722,11 +722,9 @@ void game_load_room_and_adj(const struct game_room_bound* room) {
 void game_load_room_from_pos(void) {
     const struct game_room_bound **rooms = game_rooms;
 
-    game_cur_room = NULL;
-    game_clear_level();
-
     while (*rooms != NULL) {
         if (point_in_room(&game_position,*rooms)) {
+            game_clear_level();
             game_load_room_and_adj(*rooms);
             game_cur_room = *rooms;
             break;
