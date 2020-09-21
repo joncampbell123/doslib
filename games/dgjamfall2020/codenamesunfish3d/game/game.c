@@ -432,7 +432,7 @@ struct game_room_bound {
     unsigned                        sidedef_count;
     const struct game_2dsidedef_t*  sidedef;
 
-    const struct game_room_bound*   also;       /* adjacent rooms to check boundaries as well and render */
+    const struct game_room_bound**  also;       /* adjacent rooms to check boundaries as well and render */
 };
 
 /* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
@@ -657,9 +657,9 @@ void game_load_room_and_adj(const struct game_room_bound* room) {
     game_load_room(room);
 
     {
-        const struct game_room_bound* also = room->also;
-        while (also != NULL) {
-            game_load_room(also);
+        const struct game_room_bound** also = room->also;
+        while (*also != NULL) {
+            game_load_room(*also);
             also++;
         }
     }
