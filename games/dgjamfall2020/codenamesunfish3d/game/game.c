@@ -120,7 +120,7 @@ unsigned                    game_vslice_alloc;
 #define GAME_VSLICE_DRAW    320
 unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 
-#define GAME_MIN_Z          (1l << 13l)
+#define GAME_MIN_Z          (1l << 14l)
 
 #define GAMETEX_LOAD_PAL0   (1u << 0u)
 
