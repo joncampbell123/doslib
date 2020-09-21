@@ -477,8 +477,8 @@ const struct game_2dsidedef_t       game_room1_sidedefs[] = {
 };                                                                  //=1
 
 const struct game_room_bound        game_room1 = {
-    {   TOFP(  -6.00),  TOFP(   6.00)   },                          // tl (x,y)
-    {   TOFP(   6.00),  TOFP(  -6.00)   },                          // br (x,y)
+    {   TOFP(  -6.00),  TOFP(  -6.00)   },                          // tl (x,y)
+    {   TOFP(   6.00),  TOFP(   6.00)   },                          // br (x,y)
 
     4,                                                              // vertex count
     game_room1_vertices,                                            // vertices
@@ -490,6 +490,11 @@ const struct game_room_bound        game_room1 = {
     game_room1_sidedefs,                                            // sidedefs
 
     NULL                                                            // no adjacent rooms to bounds check
+};
+
+const struct game_room_bound*       game_rooms[] = {
+    &game_room1,
+    NULL
 };
 
 void game_clear_level(void) {
@@ -547,6 +552,29 @@ void game_load_room(const struct game_room_bound *room) {
     }
 }
 
+unsigned point_in_room(const struct game_2dvec_t *pt,const struct game_room_bound *room) {
+    if (pt->x >= room->tl.x && pt->x <= room->br.x) {
+        if (pt->y >= room->tl.y && pt->y <= room->br.y) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void game_load_room_from_pos(void) {
+    const struct game_room_bound **rooms = game_rooms;
+
+    game_clear_level();
+
+    while (*rooms != NULL) {
+        if (point_in_room(&game_position,*rooms)) {
+            game_load_room(*rooms);
+            break;
+        }
+    }
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -577,8 +605,7 @@ void game_loop(void) {
     game_position.y = 0;
     game_angle = 0; /* looking straight ahead */
 
-    game_clear_level();
-    game_load_room(&game_room1);
+    game_load_room_from_pos();
 
     init_keyboard_irq();
 
