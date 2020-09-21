@@ -658,9 +658,11 @@ void game_load_room_and_adj(const struct game_room_bound* room) {
 
     {
         const struct game_room_bound** also = room->also;
-        while (*also != NULL) {
-            game_load_room(*also);
-            also++;
+        if (also != NULL) {
+            while (*also != NULL) {
+                game_load_room(*also);
+                also++;
+            }
         }
     }
 }
