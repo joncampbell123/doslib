@@ -439,18 +439,32 @@ struct game_room_bound {
 #define TOFP(x)         ((int32_t)((x) * 0x10000l))
 #define TEXFP(x)        ((unsigned)((x) * 64u))
 
+/*  5    0
+ * /|\ --|
+ *  |   \|/
+ *  |    1--------------->2
+ *  |--          |        |
+ *  |                     |
+ *  |                   --|
+ *  |                     |
+ *  |          |         \|/
+ *  4<--------------------3
+ */
+
 const struct game_2dvec_t           game_room1_vertices[] = {
-    {   TOFP(  -4.00),  TOFP(   4.00)   },                          // 0
-    {   TOFP(   4.00),  TOFP(   4.00)   },                          // 1
-    {   TOFP(   4.00),  TOFP(  -4.00)   },                          // 2
-    {   TOFP(  -4.00),  TOFP(  -4.00)   }                           // 3
-};                                                                  //=4
+    {   TOFP(  -3.00),  TOFP(   6.00)   },                          // 0
+    {   TOFP(  -3.00),  TOFP(   4.00)   },                          // 1
+    {   TOFP(   4.00),  TOFP(   4.00)   },                          // 2
+    {   TOFP(   4.00),  TOFP(  -4.00)   },                          // 3
+    {   TOFP(  -4.00),  TOFP(  -4.00)   },                          // 4
+    {   TOFP(  -4.00),  TOFP(   6.00)   }                           // 5
+};                                                                  //=6
 
 const struct game_2dlineseg_t       game_room1_linesegs[] = {
     {                                                               // 0
         0,  1,                                                      //  vertices (start,end)
         0,                                                          //  flags
-        { 0, (~0u) }                                                //  sidedef (front, back)
+        { 2, (~0u) }                                                //  sidedef (front, back)
     },
     {                                                               // 1
         1,  2,                                                      //  vertices (start,end)
@@ -463,30 +477,43 @@ const struct game_2dlineseg_t       game_room1_linesegs[] = {
         { 0, (~0u) }                                                //  sidedef (front, back)
     },
     {                                                               // 3
-        3,  0,                                                      //  vertices (start,end)
+        3,  4,                                                      //  vertices (start,end)
         0,                                                          //  flags
         { 0, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 4
+        4,  5,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 1, (~0u) }                                                //  sidedef (front, back)
     }
-};                                                                  //=4
+};                                                                  //=5
 
 const struct game_2dsidedef_t       game_room1_sidedefs[] = {
     {                                                               // 0
         0,                                                          //  texture
-        TEXFP(8)                                                    //  texture width
+        TEXFP(8)                                                    //  texture width (-4 to 4)
+    },
+    {                                                               // 1
+        0,                                                          //  texture
+        TEXFP(10)                                                   //  texture width (-4 to 6)
+    },
+    {                                                               // 2
+        0,                                                          //  texture
+        TEXFP(2)                                                    //  texture width (4 to 6)
     }
-};                                                                  //=1
+};                                                                  //=3
 
 const struct game_room_bound        game_room1 = {
     {   TOFP(  -6.00),  TOFP(  -6.00)   },                          // tl (x,y)
-    {   TOFP(   6.00),  TOFP(   6.00)   },                          // br (x,y)
+    {   TOFP(   6.00),  TOFP(  12.00)   },                          // br (x,y)
 
-    4,                                                              // vertex count
+    6,                                                              // vertex count
     game_room1_vertices,                                            // vertices
 
-    4,                                                              // lineseg count
+    5,                                                              // lineseg count
     game_room1_linesegs,                                            // linesegs
 
-    1,                                                              // sidedef count
+    3,                                                              // sidedef count
     game_room1_sidedefs,                                            // sidedefs
 
     NULL                                                            // no adjacent rooms to render
