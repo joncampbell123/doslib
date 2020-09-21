@@ -439,7 +439,7 @@ struct game_room_bound {
 #define TOFP(x)         ((int32_t)((x) * 0x10000l))
 #define TEXFP(x)        ((unsigned)((x) * 64u))
 
-/*  5    0
+/*  5    0                              #5 = -4.0, 6.0      #0 = -3.0, 6.0      #1 = -3.0, 4.0
  * /|\ --|
  *  |   \|/
  *  |    1--------------->2
