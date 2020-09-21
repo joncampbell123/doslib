@@ -519,7 +519,7 @@ const struct game_room_bound        game_room1 = {
     NULL                                                            // no adjacent rooms to render
 };
 
-/*  
+/*
  *  4    0                              #1 = -3.0, 6.0     connects to #0 in room1
  * /|\    -\                            #0 = -13.0, 16.0
  *  |       -\                          #2 = -4.0, 6.0     connects to #5 in room1
