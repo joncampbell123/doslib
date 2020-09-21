@@ -632,8 +632,8 @@ void game_load_room(const struct game_room_bound *room) {
         struct game_2dlineseg_t *d = game_lineseg+game_lineseg_max;
 
         for (i=0;i < room->lineseg_count;i++,d++,s++) {
-            d->sidedef[0] = s->sidedef[0] + base_sidedef;
-            d->sidedef[1] = s->sidedef[1] + base_sidedef;
+            d->sidedef[0] = (s->sidedef[0] != (~0u)) ? (s->sidedef[0] + base_sidedef) : (~0u);
+            d->sidedef[1] = (s->sidedef[1] != (~0u)) ? (s->sidedef[1] + base_sidedef) : (~0u);
             d->start = s->start + base_vertex;
             d->end = s->end + base_vertex;
             d->flags = s->flags;
