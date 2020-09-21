@@ -447,9 +447,9 @@ extern const struct game_room_bound         game_room2;
  *  |   \|/
  *  |    1--------------->2
  *  |--          |        |
- *  |                     |
- *  |                   --|
- *  |                     |
+ *  |    6<--9            |
+ *  |   \|/ /|\         --|
+ *  |    7-->8            |
  *  |          |         \|/
  *  4<--------------------3
  */
@@ -460,8 +460,12 @@ const struct game_2dvec_t           game_room1_vertices[] = {
     {   TOFP(   4.00),  TOFP(   4.00)   },                          // 2
     {   TOFP(   4.00),  TOFP(  -4.00)   },                          // 3
     {   TOFP(  -4.00),  TOFP(  -4.00)   },                          // 4
-    {   TOFP(  -4.00),  TOFP(   6.00)   }                           // 5
-};                                                                  //=6
+    {   TOFP(  -4.00),  TOFP(   6.00)   },                          // 5
+    {   TOFP(  -3.00),  TOFP(   3.00)   },                          // 6
+    {   TOFP(  -3.00),  TOFP(   2.00)   },                          // 7
+    {   TOFP(  -2.00),  TOFP(   2.00)   },                          // 8
+    {   TOFP(  -2.00),  TOFP(   3.00)   }                           // 9
+};                                                                  //=10
 
 const struct game_2dlineseg_t       game_room1_linesegs[] = {
     {                                                               // 0
@@ -488,8 +492,28 @@ const struct game_2dlineseg_t       game_room1_linesegs[] = {
         4,  5,                                                      //  vertices (start,end)
         0,                                                          //  flags
         { 1, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 5
+        6,  7,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 3, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 6
+        7,  8,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 3, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 7
+        8,  9,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 3, (~0u) }                                                //  sidedef (front, back)
+    },
+    {                                                               // 8
+        9,  6,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 3, (~0u) }                                                //  sidedef (front, back)
     }
-};                                                                  //=5
+};                                                                  //=9
 
 const struct game_2dsidedef_t       game_room1_sidedefs[] = {
     {                                                               // 0
@@ -503,8 +527,12 @@ const struct game_2dsidedef_t       game_room1_sidedefs[] = {
     {                                                               // 2
         0,                                                          //  texture
         TEXFP(2)                                                    //  texture width (4 to 6)
+    },
+    {                                                               // 3
+        2,                                                          //  texture
+        TEXFP(1)                                                    //  texture width (3 to 2)
     }
-};                                                                  //=3
+};                                                                  //=4
 
 const struct game_room_bound*       game_room1_adj[] = {
     &game_room2,
@@ -515,13 +543,13 @@ const struct game_room_bound        game_room1 = {
     {   TOFP(  -6.00),  TOFP(  -6.00)   },                          // tl (x,y)
     {   TOFP(   6.00),  TOFP(   6.00)   },                          // br (x,y)
 
-    6,                                                              // vertex count
+    10,                                                             // vertex count
     game_room1_vertices,                                            // vertices
 
-    5,                                                              // lineseg count
+    9,                                                              // lineseg count
     game_room1_linesegs,                                            // linesegs
 
-    3,                                                              // sidedef count
+    4,                                                              // sidedef count
     game_room1_sidedefs,                                            // sidedefs
 
     game_room1_adj                                                  // adjacent rooms
