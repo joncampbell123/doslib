@@ -489,7 +489,7 @@ const struct game_room_bound        game_room1 = {
     1,                                                              // sidedef count
     game_room1_sidedefs,                                            // sidedefs
 
-    NULL                                                            // no adjacent rooms to bounds check
+    NULL                                                            // no adjacent rooms to render
 };
 
 const struct game_room_bound*       game_rooms[] = {
