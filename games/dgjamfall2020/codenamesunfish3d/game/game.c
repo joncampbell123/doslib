@@ -422,6 +422,9 @@ void game_texture_freeall(void) {
         game_texture_free(&game_texture[i]);
 }
 
+/* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
+#define TOFP(x)         ((int32_t)((x) * 0x10000l))
+
 static inline void game_set_vertexfip(const unsigned i,int32_t x,int32_t y) {
     game_vertex[i].x = x;
     game_vertex[i].y = y;
@@ -448,9 +451,8 @@ static inline void game_set_sidedef(const unsigned i,const unsigned tex,const un
     game_sidedef[i].texture = tex;
 }
 
-#define MAX_VSLICE_DRAW     8
-
 void game_loop(void) {
+#define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
     uint16_t vslice_draw[MAX_VSLICE_DRAW];
     struct game_vslice_t *vsl;
@@ -485,10 +487,10 @@ void game_loop(void) {
      *    |      |     \|/
      *    3<------------2           point 3 at -4,-4 | point 2 at  4,-4
      */
-    game_set_vertexfip(0,   -4l << 16l,     4l << 16l); /* -4, 4 */
-    game_set_vertexfip(1,    4l << 16l,     4l << 16l); /*  4, 4 */
-    game_set_vertexfip(2,    4l << 16l,    -4l << 16l); /*  4,-4 */
-    game_set_vertexfip(3,   -4l << 16l,    -4l << 16l); /* -4,-4 */
+    game_set_vertexfip(0,TOFP(-4),TOFP( 4)); /* -4, 4 */
+    game_set_vertexfip(1,TOFP( 4),TOFP( 4)); /*  4, 4 */
+    game_set_vertexfip(2,TOFP( 4),TOFP(-4)); /*  4,-4 */
+    game_set_vertexfip(3,TOFP(-4),TOFP(-4)); /* -4,-4 */
 
     /*           |
      *    4<------------7
@@ -501,10 +503,10 @@ void game_loop(void) {
      *           |
      */
 
-    game_set_vertexfip(4,   -1l << 16l,     1l << 16l); /* -1, 1 */
-    game_set_vertexfip(5,   -1l << 16l,    -1l << 16l); /* -1,-1 */
-    game_set_vertexfip(6,    1l << 16l,    -1l << 16l); /*  1,-1 */
-    game_set_vertexfip(7,    1l << 16l,     1l << 16l); /*  1, 1 */
+    game_set_vertexfip(4,TOFP(-1),TOFP( 1)); /* -1, 1 */
+    game_set_vertexfip(5,TOFP(-1),TOFP(-1)); /* -1,-1 */
+    game_set_vertexfip(6,TOFP( 1),TOFP(-1)); /*  1,-1 */
+    game_set_vertexfip(7,TOFP( 1),TOFP( 1)); /*  1, 1 */
 
     game_vertex_max = 8;
 
