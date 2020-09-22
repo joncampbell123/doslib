@@ -937,10 +937,15 @@ void game_player_move(const int32_t dx,const int32_t dy) {
             miny = v2->y; maxy = v1->y;
         }
 
-        if (ldx != 0l && game_position.x >= minx && game_position.x <= maxx) {
+        if (ldx != 0l && game_position.x >= (minx - wall_clipxwidth) && game_position.x <= (maxx + wall_clipxwidth)) {
             /* y = mx + b          m = ldy/ldx    b = v1->y */
-            const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
+            int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
             unsigned side = ldx < 0l ? 1 : 0;
+
+            if (ly > maxy)
+                ly = maxy;
+            if (ly < miny)
+                ly = miny;
 
             if (oy < ly) {
                 if (game_position.y > (ly - wall_clipywidth) && lseg->sidedef[side] != (~0u) && dy > 0l)
@@ -951,10 +956,15 @@ void game_player_move(const int32_t dx,const int32_t dy) {
                     game_position.y = (ly + wall_clipywidth);
             }
         }
-        if (ldy != 0l && game_position.y >= miny && game_position.y <= maxy) {
+        if (ldy != 0l && game_position.y >= (miny - wall_clipxwidth) && game_position.y <= (maxy + wall_clipxwidth)) {
             /* x = my + b          m = ldx/ldy    b = v1->x */
-            const int32_t lx = v1->x + (int32_t)(((int64_t)ldx * (int64_t)(game_position.y - v1->y)) / (int64_t)ldy);
+            int32_t lx = v1->x + (int32_t)(((int64_t)ldx * (int64_t)(game_position.y - v1->y)) / (int64_t)ldy);
             unsigned side = ldy >= 0l ? 1 : 0;
+
+            if (lx > maxx)
+                lx = maxx;
+            if (lx < minx)
+                lx = minx;
 
             if (ox < lx) {
                 if (game_position.x > (lx - wall_clipywidth) && lseg->sidedef[side] != (~0u) && dx > 0l)
