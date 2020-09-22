@@ -48,6 +48,11 @@ struct game_2dvec_t {
     int32_t         x,y;    /* 16.16 fixed point */
 };
 
+unsigned                    game_flags = 0;
+#define GF_CHEAT_NOCLIP     (1u << 0u)
+
+#define noclip_on()         ((game_flags & GF_CHEAT_NOCLIP) != 0u)
+
 struct game_2dvec_t         game_position;
 uint64_t                    game_angle;
 int                         game_current_room;
@@ -907,6 +912,9 @@ void game_player_move(const int32_t dx,const int32_t dy) {
     game_position.x += dx;
     game_position.y += dy;
 
+    if (noclip_on())
+        return;
+
     for (ls=0;ls < game_lineseg_max;ls++) {
         const struct game_2dlineseg_t *lseg = &game_lineseg[ls];
         const struct game_2dvec_t *v1 = &game_vertex[lseg->start];
@@ -1038,6 +1046,16 @@ void game_loop(void) {
                 game_angle -= (((int32_t)(cur - prev)) << 15l) / 60l;
             if (kbdown_test(KBDS_RIGHT_ARROW))
                 game_angle += (((int32_t)(cur - prev)) << 15l) / 60l;
+        }
+
+        {
+            int c = kbd_buf_read();
+            if (c == 0x2E/*F10*/ && kbdown_test(KBDS_LSHIFT)) {
+                if (kbdown_test(KBDS_LCTRL))
+                    game_flags |= GF_CHEAT_NOCLIP;
+                else
+                    game_flags &= ~GF_CHEAT_NOCLIP;
+            }
         }
 
         /* clear screen */
