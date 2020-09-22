@@ -554,15 +554,15 @@ const struct game_room_bound        game_room1 = {
 /*
  *  5
  * /|\
- *  |    0                              #1 = -3.0, 6.0     connects to #0 in room1
- *  4     -\                            #0 = -13.0, 16.0
- *  |       -\                          #2 = -4.0, 6.0     connects to #5 in room1
- *  |   5     -\                        #3 = -14.0, 6.0
- *  |    \      -\                      #4 = -14.0, 16.0
- *  |     -\   /  -\                    #5 = -14.0, 17.0
- *  |       --6     -\
- *  |                 -\|
- *  3<------------2     1
+ *  |    0-\                            #1 = -3.0, 6.0     connects to #0 in room1
+ *  4       --\                         #0 = -13.0, 16.0
+ *  |          --\                      #2 = -4.0, 6.0     connects to #5 in room1
+ *  |   5         --\                   #3 = -14.0, 6.0
+ *  |    \           --\                #4 = -14.0, 16.0
+ *  |     -\            1               #5 = -14.0, 17.0
+ *  |       --6         |
+ *  |                   |
+ *  3<------------2     |
  *                     /|\
  *                    --|
  *                      |
@@ -571,7 +571,7 @@ const struct game_room_bound        game_room1 = {
 
 const struct game_2dvec_t           game_room2_vertices[] = {
     {   TOFP( -13.00),  TOFP(  16.00)   },                          // 0
-    {   TOFP(  -3.00),  TOFP(   6.00)   },                          // 1
+    {   TOFP(  -3.00),  TOFP(   8.00)   },                          // 1
     {   TOFP(  -4.00),  TOFP(   6.00)   },                          // 2
     {   TOFP( -14.00),  TOFP(   6.00)   },                          // 3
     {   TOFP( -14.00),  TOFP(  16.00)   },                          // 4
@@ -629,7 +629,7 @@ const struct game_2dsidedef_t       game_room2_sidedefs[] = {
     },
     {                                                               // 3
         0,                                                          //  texture
-        TEXFP(1)                                                    //  texture width
+        TEXFP(3)                                                    //  texture width
     }
 };                                                                  //=4
 
