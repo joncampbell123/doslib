@@ -892,8 +892,7 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
-#define wall_clipxwidth (1l << 13l)
-#define wall_clipywidth (1l << 15l)
+#define wall_clipywidth TOFP(0.45)
 
 void game_player_move(const int32_t dx,const int32_t dy) {
     const int32_t ox = game_position.x;
@@ -913,37 +912,50 @@ void game_player_move(const int32_t dx,const int32_t dy) {
         const int32_t ldx = v2->x - v1->x;
         const int32_t ldy = v2->y - v1->y;
 
+        if (v1->x <= v2->x) {
+            if (game_position.x < (v1->x - wall_clipywidth) || game_position.x > (v2->x + wall_clipywidth))
+                continue;
+        }
+        else {
+            if (game_position.x < (v2->x - wall_clipywidth) || game_position.x > (v1->x + wall_clipywidth))
+                continue;
+        }
+
+        if (v1->y <= v2->y) {
+            if (game_position.y < (v1->y - wall_clipywidth) || game_position.y > (v2->y + wall_clipywidth))
+                continue;
+        }
+        else {
+            if (game_position.y < (v2->y - wall_clipywidth) || game_position.y > (v1->y + wall_clipywidth))
+                continue;
+        }
+
         if (labs(ldy) <= labs(ldx)) {
-            if (v1->x <= v2->x) {
-                if (game_position.x < (v1->x - wall_clipxwidth) || game_position.x > (v2->x + wall_clipxwidth))
-                    continue;
+            /* y = mx + b          m = ldy/ldx    b = v1->y */
+            const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
+            unsigned side = ldx < 0l ? 1 : 0;
+
+            if (oy < ly) {
+                if (game_position.y > (ly - wall_clipywidth) && lseg->sidedef[side] != (~0u))
+                    game_position.y = (ly - wall_clipywidth);
             }
             else {
-                if (game_position.x < (v2->x - wall_clipxwidth) || game_position.x > (v1->x + wall_clipxwidth))
-                    continue;
+                if (game_position.y < (ly + wall_clipywidth) && lseg->sidedef[side^1] != (~0u))
+                    game_position.y = (ly + wall_clipywidth);
             }
+        }
+        else {
+            /* x = my + b          m = ldx/ldy    b = v1->x */
+            const int32_t lx = v1->x + (int32_t)(((int64_t)ldx * (int64_t)(game_position.y - v1->y)) / (int64_t)ldy);
+            unsigned side = ldy >= 0l ? 1 : 0;
 
-            if (v1->y <= v2->y) {
-                if (game_position.y < (v1->y - wall_clipywidth) || game_position.y > (v2->y + wall_clipywidth))
-                    continue;
+            if (ox < lx) {
+                if (game_position.x > (lx - wall_clipywidth) && lseg->sidedef[side] != (~0u))
+                    game_position.x = (lx - wall_clipywidth);
             }
             else {
-                if (game_position.y < (v2->y - wall_clipywidth) || game_position.y > (v1->y + wall_clipywidth))
-                    continue;
-            }
-
-            {
-                /* y = mx + b          mx = ldy/ldx    b = v1->y */
-                const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
-
-                if (oy < ly) {
-                    if (game_position.y > (ly - wall_clipywidth))
-                        game_position.y = (ly - wall_clipywidth);
-                }
-                else {
-                    if (game_position.y < (ly + wall_clipywidth))
-                        game_position.y = (ly + wall_clipywidth);
-                }
+                if (game_position.x < (lx + wall_clipywidth) && lseg->sidedef[side^1] != (~0u))
+                    game_position.x = (lx + wall_clipywidth);
             }
         }
     }
