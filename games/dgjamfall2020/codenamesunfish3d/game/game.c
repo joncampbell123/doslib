@@ -892,7 +892,7 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
-#define wall_clipywidth TOFP(0.45)
+#define wall_clipywidth TOFP(0.42)
 
 void game_player_move(const int32_t dx,const int32_t dy) {
     const int32_t ox = game_position.x;
@@ -930,31 +930,31 @@ void game_player_move(const int32_t dx,const int32_t dy) {
                 continue;
         }
 
-        if (labs(ldy) <= labs(ldx)) {
+        if (ldx != 0l) {
             /* y = mx + b          m = ldy/ldx    b = v1->y */
             const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
             unsigned side = ldx < 0l ? 1 : 0;
 
             if (oy < ly) {
-                if (game_position.y > (ly - wall_clipywidth) && lseg->sidedef[side] != (~0u))
+                if (game_position.y > (ly - wall_clipywidth) && lseg->sidedef[side] != (~0u) && dy > 0l)
                     game_position.y = (ly - wall_clipywidth);
             }
             else {
-                if (game_position.y < (ly + wall_clipywidth) && lseg->sidedef[side^1] != (~0u))
+                if (game_position.y < (ly + wall_clipywidth) && lseg->sidedef[side^1] != (~0u) && dy < 0l)
                     game_position.y = (ly + wall_clipywidth);
             }
         }
-        else {
+        if (ldy != 0l) {
             /* x = my + b          m = ldx/ldy    b = v1->x */
             const int32_t lx = v1->x + (int32_t)(((int64_t)ldx * (int64_t)(game_position.y - v1->y)) / (int64_t)ldy);
             unsigned side = ldy >= 0l ? 1 : 0;
 
             if (ox < lx) {
-                if (game_position.x > (lx - wall_clipywidth) && lseg->sidedef[side] != (~0u))
+                if (game_position.x > (lx - wall_clipywidth) && lseg->sidedef[side] != (~0u) && dx > 0l)
                     game_position.x = (lx - wall_clipywidth);
             }
             else {
-                if (game_position.x < (lx + wall_clipywidth) && lseg->sidedef[side^1] != (~0u))
+                if (game_position.x < (lx + wall_clipywidth) && lseg->sidedef[side^1] != (~0u) && dx < 0l)
                     game_position.x = (lx + wall_clipywidth);
             }
         }
