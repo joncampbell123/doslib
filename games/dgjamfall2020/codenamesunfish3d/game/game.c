@@ -892,6 +892,7 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
+#define wall_clipxwidth TOFP(0.15)
 #define wall_clipywidth TOFP(0.42)
 
 void game_player_move(const int32_t dx,const int32_t dy) {
@@ -911,26 +912,31 @@ void game_player_move(const int32_t dx,const int32_t dy) {
         const struct game_2dvec_t *v2 = &game_vertex[lseg->end];
         const int32_t ldx = v2->x - v1->x;
         const int32_t ldy = v2->y - v1->y;
+        int32_t minx,miny,maxx,maxy;
 
         if (v1->x <= v2->x) {
+            minx = v1->x; maxx = v2->x;
             if (game_position.x < (v1->x - wall_clipywidth) || game_position.x > (v2->x + wall_clipywidth))
                 continue;
         }
         else {
+            minx = v2->x; maxx = v1->x;
             if (game_position.x < (v2->x - wall_clipywidth) || game_position.x > (v1->x + wall_clipywidth))
                 continue;
         }
 
         if (v1->y <= v2->y) {
+            miny = v1->y; maxy = v2->y;
             if (game_position.y < (v1->y - wall_clipywidth) || game_position.y > (v2->y + wall_clipywidth))
                 continue;
         }
         else {
+            miny = v2->y; maxy = v1->y;
             if (game_position.y < (v2->y - wall_clipywidth) || game_position.y > (v1->y + wall_clipywidth))
                 continue;
         }
 
-        if (ldx != 0l) {
+        if (ldx != 0l && game_position.x >= (minx - wall_clipxwidth) && game_position.x <= (maxx + wall_clipxwidth)) {
             /* y = mx + b          m = ldy/ldx    b = v1->y */
             const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
             unsigned side = ldx < 0l ? 1 : 0;
@@ -944,7 +950,7 @@ void game_player_move(const int32_t dx,const int32_t dy) {
                     game_position.y = (ly + wall_clipywidth);
             }
         }
-        if (ldy != 0l) {
+        if (ldy != 0l && game_position.y >= (miny - wall_clipxwidth) && game_position.y <= (maxy + wall_clipxwidth)) {
             /* x = my + b          m = ldx/ldy    b = v1->x */
             const int32_t lx = v1->x + (int32_t)(((int64_t)ldx * (int64_t)(game_position.y - v1->y)) / (int64_t)ldy);
             unsigned side = ldy >= 0l ? 1 : 0;
