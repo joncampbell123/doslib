@@ -893,6 +893,9 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
 }
 
 void game_player_move(int32_t dx,int32_t dy) {
+    if (dx == (int32_t)0 && dy == (int32_t)0)
+        return;
+
     game_position.x += dx;
     game_position.y += dy;
 }
