@@ -892,12 +892,61 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
-void game_player_move(int32_t dx,int32_t dy) {
+#define wall_clipxwidth (1l << 13l)
+#define wall_clipywidth (1l << 15l)
+
+void game_player_move(const int32_t dx,const int32_t dy) {
+    const int32_t ox = game_position.x;
+    const int32_t oy = game_position.y;
+    unsigned int ls;
+
     if (dx == (int32_t)0 && dy == (int32_t)0)
         return;
 
     game_position.x += dx;
     game_position.y += dy;
+
+    for (ls=0;ls < game_lineseg_max;ls++) {
+        const struct game_2dlineseg_t *lseg = &game_lineseg[ls];
+        const struct game_2dvec_t *v1 = &game_vertex[lseg->start];
+        const struct game_2dvec_t *v2 = &game_vertex[lseg->end];
+        const int32_t ldx = v2->x - v1->x;
+        const int32_t ldy = v2->y - v1->y;
+
+        if (labs(ldy) <= labs(ldx)) {
+            if (v1->x <= v2->x) {
+                if (game_position.x < (v1->x - wall_clipxwidth) || game_position.x > (v2->x + wall_clipxwidth))
+                    continue;
+            }
+            else {
+                if (game_position.x < (v2->x - wall_clipxwidth) || game_position.x > (v1->x + wall_clipxwidth))
+                    continue;
+            }
+
+            if (v1->y <= v2->y) {
+                if (game_position.y < (v1->y - wall_clipywidth) || game_position.y > (v2->y + wall_clipywidth))
+                    continue;
+            }
+            else {
+                if (game_position.y < (v2->y - wall_clipywidth) || game_position.y > (v1->y + wall_clipywidth))
+                    continue;
+            }
+
+            {
+                /* y = mx + b          mx = ldy/ldx    b = v1->y */
+                const int32_t ly = v1->y + (int32_t)(((int64_t)ldy * (int64_t)(game_position.x - v1->x)) / (int64_t)ldx);
+
+                if (oy < ly) {
+                    if (game_position.y > (ly - wall_clipywidth))
+                        game_position.y = (ly - wall_clipywidth);
+                }
+                else {
+                    if (game_position.y < (ly + wall_clipywidth))
+                        game_position.y = (ly + wall_clipywidth);
+                }
+            }
+        }
+    }
 }
 
 void game_loop(void) {
