@@ -1019,17 +1019,31 @@ void game_loop(void) {
 
         if (kbdown_test(KBDS_ESCAPE)) break;
 
-        if (kbdown_test(KBDS_UP_ARROW)) {
-            const unsigned ga = game_angle >> 5u;
-            game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
-            game_reload_if_needed_on_pos(&game_position);
-        }
-        if (kbdown_test(KBDS_DOWN_ARROW)) {
-            const unsigned ga = game_angle >> 5u;
-            game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l) );
-            game_reload_if_needed_on_pos(&game_position);
-        }
         if (kbdown_test(KBDS_LSHIFT) || kbdown_test(KBDS_RSHIFT)) {
+            if (kbdown_test(KBDS_UP_ARROW)) {
+                const unsigned ga = game_angle >> 5u;
+                game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 15l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 15l) );
+                game_reload_if_needed_on_pos(&game_position);
+            }
+            if (kbdown_test(KBDS_DOWN_ARROW)) {
+                const unsigned ga = game_angle >> 5u;
+                game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
+                game_reload_if_needed_on_pos(&game_position);
+            }
+        }
+        else {
+            if (kbdown_test(KBDS_UP_ARROW)) {
+                const unsigned ga = game_angle >> 5u;
+                game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
+                game_reload_if_needed_on_pos(&game_position);
+            }
+            if (kbdown_test(KBDS_DOWN_ARROW)) {
+                const unsigned ga = game_angle >> 5u;
+                game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l) );
+                game_reload_if_needed_on_pos(&game_position);
+            }
+        }
+        if (kbdown_test(KBDS_LCTRL) || kbdown_test(KBDS_RCTRL)) {
             if (kbdown_test(KBDS_LEFT_ARROW)) {
                 const unsigned ga = game_angle >> 5u;
                 game_player_move(-(((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l) );
