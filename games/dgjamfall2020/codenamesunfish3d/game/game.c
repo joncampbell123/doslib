@@ -892,7 +892,8 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
-#define wall_clipxwidth TOFP(0.15)
+/* These must differ slightly or else you get "stuck" walking into corners */
+#define wall_clipxwidth TOFP(0.41)
 #define wall_clipywidth TOFP(0.42)
 
 void game_player_move(const int32_t dx,const int32_t dy) {
