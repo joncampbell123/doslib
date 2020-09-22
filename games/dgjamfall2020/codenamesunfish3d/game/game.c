@@ -892,6 +892,11 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
+void game_player_move(int32_t x,int32_t y) {
+    game_position.x += x;
+    game_position.y += y;
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -937,27 +942,23 @@ void game_loop(void) {
 
         if (kbdown_test(KBDS_UP_ARROW)) {
             const unsigned ga = game_angle >> 5u;
-            game_position.x += ((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l;
-            game_position.y += ((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l;
+            game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
             game_reload_if_needed_on_pos(&game_position);
         }
         if (kbdown_test(KBDS_DOWN_ARROW)) {
             const unsigned ga = game_angle >> 5u;
-            game_position.x -= ((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
-            game_position.y -= ((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l;
+            game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l) );
             game_reload_if_needed_on_pos(&game_position);
         }
         if (kbdown_test(KBDS_LSHIFT) || kbdown_test(KBDS_RSHIFT)) {
             if (kbdown_test(KBDS_LEFT_ARROW)) {
                 const unsigned ga = game_angle >> 5u;
-                game_position.x -= ((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l;
-                game_position.y -= ((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l;
+                game_player_move(-(((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
             if (kbdown_test(KBDS_RIGHT_ARROW)) {
                 const unsigned ga = game_angle >> 5u;
-                game_position.x += ((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l;
-                game_position.y += ((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l;
+                game_player_move( (((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l), (((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
         }
