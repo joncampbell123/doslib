@@ -892,9 +892,9 @@ void game_reload_if_needed_on_pos(const struct game_2dvec_t *pos) {
     game_load_room_from_pos();
 }
 
-void game_player_move(int32_t x,int32_t y) {
-    game_position.x += x;
-    game_position.y += y;
+void game_player_move(int32_t dx,int32_t dy) {
+    game_position.x += dx;
+    game_position.y += dy;
 }
 
 void game_loop(void) {
