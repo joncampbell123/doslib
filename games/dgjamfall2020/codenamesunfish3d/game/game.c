@@ -925,24 +925,16 @@ void game_player_move(const int32_t dx,const int32_t dy) {
 
         if (v1->x <= v2->x) {
             minx = v1->x; maxx = v2->x;
-            if (game_position.x < (v1->x - wall_clipywidth) || game_position.x > (v2->x + wall_clipywidth))
-                continue;
         }
         else {
             minx = v2->x; maxx = v1->x;
-            if (game_position.x < (v2->x - wall_clipywidth) || game_position.x > (v1->x + wall_clipywidth))
-                continue;
         }
 
         if (v1->y <= v2->y) {
             miny = v1->y; maxy = v2->y;
-            if (game_position.y < (v1->y - wall_clipywidth) || game_position.y > (v2->y + wall_clipywidth))
-                continue;
         }
         else {
             miny = v2->y; maxy = v1->y;
-            if (game_position.y < (v2->y - wall_clipywidth) || game_position.y > (v1->y + wall_clipywidth))
-                continue;
         }
 
         if (ldx != 0l && game_position.x >= minx && game_position.x <= maxx) {
