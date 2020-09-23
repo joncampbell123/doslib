@@ -103,7 +103,7 @@ struct game_2dtexture_t {
 };
 
 #define GAME_TEXTURES       8
-struct game_2dtexture_t     game_texture[GAME_TEXTURES] = { {NULL} };
+struct game_2dtexture_t     game_texture[GAME_TEXTURES];
 
 struct game_vslice_t {
     int16_t                 top,bottom;         /* total slice including floor to ceiling */
@@ -978,6 +978,10 @@ void game_player_move(const int32_t dx,const int32_t dy) {
     }
 }
 
+void game_exe_init(void) {
+    memset(game_texture,0,sizeof(game_texture));
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -1237,6 +1241,8 @@ int main(int argc,char **argv) {
         unhook_irqs(); // including keyboard
         return 0;
     }
+
+    game_exe_init();
 
     init_timer_irq();
     init_vga256unchained();
