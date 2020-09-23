@@ -117,8 +117,10 @@ struct game_vslice_t {
 
 #define VSF_TRANSPARENT     (1u << 0u)
 
+/* we have to allocate this so that Open Watcom doesn't stick the array into FAR_DATA which then
+ * bloats the EXE file with 0x8000 bytes of zeros */
 #define GAME_VSLICE_MAX     2048
-struct game_vslice_t        game_vslice[GAME_VSLICE_MAX];
+struct game_vslice_t*       game_vslice;
 unsigned                    game_vslice_alloc;
 
 #define GAME_VSLICE_DRAW    320
@@ -977,6 +979,14 @@ void game_player_move(const int32_t dx,const int32_t dy) {
 
 void game_exe_init(void) {
     memset(game_texture,0,sizeof(game_texture));
+    game_vslice = NULL;
+}
+
+void game_vslice_free(void) {
+    if (game_vslice != NULL) {
+        free(game_vslice);
+        game_vslice = NULL;
+    }
 }
 
 void game_loop(void) {
@@ -998,6 +1008,10 @@ void game_loop(void) {
     game_texture_load(1,"watx0002.png",0);
     game_texture_load(2,"watx0003.png",0);
     game_texture_load(3,"watx0004.png",0);
+
+    game_vslice = malloc(GAME_VSLICE_MAX * sizeof(struct game_vslice_t));
+    if (game_vslice == NULL)
+        fatal("game_vslice alloc");
 
     game_flags = 0;
     game_vertex_max = 0;
@@ -1185,6 +1199,7 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
 
     restore_keyboard_irq();
     game_texture_freeall();
+    game_vslice_free();
 }
 
 /*---------------------------------------------------------------------------*/
