@@ -663,7 +663,7 @@ const struct game_room_bound        game_room2 = {
  * 15----16
  *  |    |
  *  |    |
- *  |    |
+ *  |1718|
  *  |    |
  * 14    0                              #0  -13.0, 21.0
  * /    \|/                             #1  -13.0, 20.0
@@ -682,6 +682,8 @@ const struct game_room_bound        game_room2 = {
  *                                      #14 -14.0, 21.0
  *                                      #15 -14.0, 25.0
  *                                      #16 -13.0, 25.0
+ *                                      #17 -14.0, 22.0
+ *                                      #18 -13.0, 22.0
  */
 
 const struct game_2dvec_t           game_room3_vertices[] = {
@@ -701,8 +703,10 @@ const struct game_2dvec_t           game_room3_vertices[] = {
     {   TOFP( -15.00),  TOFP(  20.00)   },                          // 13
     {   TOFP( -14.00),  TOFP(  21.00)   },                          // 14
     {   TOFP( -14.00),  TOFP(  25.00)   },                          // 15
-    {   TOFP( -13.00),  TOFP(  25.00)   }                           // 16
-};                                                                  //=17
+    {   TOFP( -13.00),  TOFP(  25.00)   },                          // 16
+    {   TOFP( -14.00),  TOFP(  22.00)   },                          // 17
+    {   TOFP( -13.00),  TOFP(  22.00)   }                           // 18
+};                                                                  //=19
 
 const struct game_2dlineseg_t       game_room3_linesegs[] = {
     // 0->1->2
@@ -773,8 +777,13 @@ const struct game_2dlineseg_t       game_room3_linesegs[] = {
         16,0,                                                       //  vertices (start,end)
         0,                                                          //  flags
         { 2, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 13
+        17,18,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
     }
-};                                                                  //=13
+};                                                                  //=14
 
 const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 0
@@ -792,8 +801,12 @@ const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 3
         3,                                                          //  texture
         TEXFP(1)                                                    //  texture width (-4 to 4)
+    },
+    {                                                               // 4
+        2,                                                          //  texture
+        TEXFP(1)                                                    //  texture width (-4 to 4)
     }
-};                                                                  //=4
+};                                                                  //=5
 
 const struct game_room_bound*       game_room3_adj[] = {
     &game_room2,
@@ -804,13 +817,13 @@ const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
     {   TOFP(  -3.00),  TOFP(  26.00)   },                          // br (x,y)
 
-    17,                                                             // vertex count
+    19,                                                             // vertex count
     game_room3_vertices,                                            // vertices
 
-    13,                                                             // lineseg count
+    14,                                                             // lineseg count
     game_room3_linesegs,                                            // linesegs
 
-    4,                                                              // sidedef count
+    5,                                                              // sidedef count
     game_room3_sidedefs,                                            // sidedefs
 
     game_room3_adj                                                  // adjacent rooms
