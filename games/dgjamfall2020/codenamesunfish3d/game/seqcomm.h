@@ -74,4 +74,5 @@ void seq_com_fadein_saved_palette(struct seqanim_t *sa,const struct seqanim_even
 void seq_com_begin_anim_move(struct seqanim_t *sa,const struct seqanim_event_t *ev);
 void seq_com_do_anim_move(struct seqanim_t *sa,const struct seqanim_event_t *ev);
 void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev);
+void seq_com_exe_init(void);
 

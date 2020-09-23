@@ -1243,6 +1243,7 @@ int main(int argc,char **argv) {
     }
 
     game_exe_init();
+    seq_com_exe_init();
 
     init_timer_irq();
     init_vga256unchained();

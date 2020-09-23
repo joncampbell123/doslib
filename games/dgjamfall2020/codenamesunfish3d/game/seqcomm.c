@@ -704,3 +704,8 @@ void seq_com_put_mr_vrl(struct seqanim_t *sa,const struct seqanim_event_t *ev) {
     (sa->events)++; /* next */
 }
 
+void seq_com_exe_init(void) {
+    memset(seq_com_vramimg,0,sizeof(seq_com_vramimg));
+    memset(seq_com_rotozoom_image,0,sizeof(seq_com_rotozoom_image));
+    memset(seq_com_vrl_image,0,sizeof(seq_com_vrl_image));
+}
