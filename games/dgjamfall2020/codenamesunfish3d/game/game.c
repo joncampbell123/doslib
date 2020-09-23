@@ -48,7 +48,7 @@ struct game_2dvec_t {
     int32_t         x,y;    /* 16.16 fixed point */
 };
 
-unsigned                    game_flags = 0;
+unsigned                    game_flags;
 #define GF_CHEAT_NOCLIP     (1u << 0u)
 
 #define noclip_on()         ((game_flags & GF_CHEAT_NOCLIP) != 0u)
@@ -998,6 +998,7 @@ void game_loop(void) {
     game_texture_load(2,"watx0003.png",0);
     game_texture_load(3,"watx0004.png",0);
 
+    game_flags = 0;
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
