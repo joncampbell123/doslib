@@ -106,7 +106,6 @@ struct game_2dtexture_t {
 struct game_2dtexture_t     game_texture[GAME_TEXTURES];
 
 struct game_vslice_t {
-    int16_t                 top,bottom;         /* total slice including floor to ceiling */
     int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
     unsigned                sidedef;
     unsigned                flags;
@@ -387,8 +386,6 @@ void game_project_lineseg(const unsigned int i) {
                     struct game_vslice_t *vs = &game_vslice[vsi];
 #endif
 
-                    vs->top = 0;
-                    vs->bottom = 0;
                     vs->flags = 0;
                     vs->sidedef = sidedef;
                     vs->ceil = (int)(((100 << 1) - h) >> 1);
