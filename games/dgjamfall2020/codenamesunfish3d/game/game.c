@@ -989,6 +989,11 @@ void game_vslice_free(void) {
     }
 }
 
+void game_vslice_init(void) {
+    game_vslice = malloc(GAME_VSLICE_MAX * sizeof(struct game_vslice_t));
+    if (game_vslice == NULL) fatal("game_vslice alloc");
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -1004,14 +1009,11 @@ void game_loop(void) {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
+    game_vslice_init();
     game_texture_load(0,"watx0001.png",GAMETEX_LOAD_PAL0);
     game_texture_load(1,"watx0002.png",0);
     game_texture_load(2,"watx0003.png",0);
     game_texture_load(3,"watx0004.png",0);
-
-    game_vslice = malloc(GAME_VSLICE_MAX * sizeof(struct game_vslice_t));
-    if (game_vslice == NULL)
-        fatal("game_vslice alloc");
 
     game_flags = 0;
     game_vertex_max = 0;
