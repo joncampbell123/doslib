@@ -1771,10 +1771,10 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
         outp(0x3C7,0); // read from VGA palette index 0
         for (i=0;i < 768;i++) common_tmp_small[i] = inp(0x3C9);
 
-        for (j=0;j < 31;j++) {
+        for (j=0;j < 16;j++) {
             vga_wait_for_vsync(); /* wait for vsync */
             outp(0x3C8,0); // write palette from 0
-            for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i] * (32u-j))>>5u);
+            for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i] * (16u-j))>>4u);
         }
     }
 
