@@ -58,6 +58,7 @@ unsigned                    game_flags;
 struct game_2dvec_t         game_position;
 uint16_t                    game_angle;
 int                         game_current_room;
+uint8_t                     game_minigame_select;
 
 #define GAME_VERTICES       128
 struct game_2dvec_t         game_vertex[GAME_VERTICES];
@@ -121,7 +122,8 @@ unsigned                    game_door_max;
 enum {
     GTT_NONE=0,
     GTT_DOOR,
-    GTT_TEXT
+    GTT_TEXT,
+    GTT_MINIGAME
 };
 
 #define GTF_TRIGGER_ON      (1u << 0u)
@@ -1101,8 +1103,29 @@ const struct game_trigger_t         game_room3_triggers[] = {
         0,                                                          // flags
         0,                                                          // door
         "Minigame #3\n\nWalk through all doors\nto the end of the hall\nto start game"
+    },
+    {                                                               // 10
+        {   TOFP( -15.00),  TOFP(  24.50)   },                      // tl (x,y)
+        {   TOFP( -12.00),  TOFP(  25.50)   },                      // br (x,y)
+        GTT_MINIGAME,                                               // type
+        0,                                                          // flags
+        1                                                           // door (game)
+    },
+    {                                                               // 11
+        {   TOFP( -11.50),  TOFP(  24.50)   },                      // tl (x,y)
+        {   TOFP(  -5.50),  TOFP(  25.50)   },                      // br (x,y)
+        GTT_MINIGAME,                                               // type
+        0,                                                          // flags
+        2                                                           // door (game)
+    },
+    {                                                               // 12
+        {   TOFP(  -0.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(   0.50),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_MINIGAME,                                               // type
+        0,                                                          // flags
+        3                                                           // door (game)
     }
-};                                                                  //=10
+};                                                                  //=13
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
@@ -1122,7 +1145,7 @@ const struct game_room_bound        game_room3 = {
     7,                                                              // door count
     game_room3_doors,                                               // doors
 
-    10,                                                             // trigger count
+    13,                                                             // trigger count
     game_room3_triggers                                             // triggers
 };
 
@@ -1460,6 +1483,9 @@ static void game_trigger_act(const unsigned i,const unsigned on) {
         if (on && game_trigger[i].msg != NULL)
             game_text_char_add(50,50,game_trigger[i].msg);
     }
+    else if (game_trigger[i].type == GTT_MINIGAME) {
+        game_minigame_select = (uint8_t)game_trigger[i].door;
+    }
 }
 
 static void game_trigger_check(void) {
@@ -1493,6 +1519,8 @@ void game_loop(void) {
     unsigned int i;
     unsigned int x;
 
+loop_restart:
+
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
@@ -1513,6 +1541,7 @@ void game_loop(void) {
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
+    game_minigame_select = 0xFFu;
     game_door_max = 0;
 
     /* init pos */
@@ -1531,6 +1560,8 @@ void game_loop(void) {
     while (1) {
         prev = cur;
         cur = read_timer_counter();
+
+        if (game_minigame_select != 0xFFu) break;
 
         if (kbdown_test(KBDS_ESCAPE)) break;
 
@@ -1714,6 +1745,10 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
     restore_keyboard_irq();
     game_texture_freeall();
     game_vslice_free();
+
+    if (game_minigame_select != 0xFFu) {
+        fatal("Unknown minigame %u",game_minigame_select);
+    }
 }
 
 /*---------------------------------------------------------------------------*/
