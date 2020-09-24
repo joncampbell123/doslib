@@ -1118,11 +1118,11 @@ static void game_door_anim(const unsigned i,const uint32_t deltat) {
         const int32_t c = (int32_t)game_door[i].open + (int32_t)game_door[i].open_speed * (int32_t)deltat;
         if (c >= 0xFFFFl && game_door[i].open_speed > 0) {
             game_door[i].open = 0xFFFFu;
-            game_door[i].open_speed *= -1;
+            game_door[i].open_speed = 0;
         }
         else if (c <= 0x0000l && game_door[i].open_speed < 0) {
             game_door[i].open = 0x0000u;
-            game_door[i].open_speed *= -1;
+            game_door[i].open_speed = 0;
         }
         else {
             game_door[i].open = (uint16_t)c;
