@@ -836,7 +836,7 @@ const struct game_room_bound*       game_room3_adj[] = {
 const struct game_door_t            game_room3_doors[] = {
     {                                                               // 0
         0x0000/*open*/,
-        0x0000/*open speed (change per 120Hz tick)*/,
+        0x0100/*open speed (change per 120Hz tick)*/,
         13/*lineseg*/,
         0/*origrot vertex (modified on load)*/
     }
@@ -934,10 +934,10 @@ void game_load_room(const struct game_room_bound *room) {
             *d = *s;
             d->origrot_vertex = (~0u);
             d->door_lineseg += base_lineseg;
-            if (d->door_lineseg < room->lineseg_count) {
+            if (d->door_lineseg < game_lineseg_max) {
                 if (game_vertex_max < GAME_VERTICES) {
                     const unsigned cvertex = game_vertex_max++;
-                    game_vertex[cvertex] = room->vertex[room->lineseg[d->door_lineseg].end];
+                    game_vertex[cvertex] = game_vertex[game_lineseg[d->door_lineseg].end];
                     d->origrot_vertex = cvertex;
                 }
             }
