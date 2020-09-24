@@ -4,6 +4,8 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../../.."
 NOW_BUILDING = DGJF2020
 
+MINGAME3_EXE =	 $(SUBDIR)$(HPS)mingame3.$(EXEEXT)
+MINGAME2_EXE =	 $(SUBDIR)$(HPS)mingame2.$(EXEEXT)
 MINGAME1_EXE =	 $(SUBDIR)$(HPS)mingame1.$(EXEEXT)
 PARTO1_EXE =     $(SUBDIR)$(HPS)parto1.$(EXEEXT)
 GAME_COM =		 $(SUBDIR)$(HPS)game.com
@@ -21,14 +23,16 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) .symbolic
 
-exe: $(PARTO1_EXE) $(MINGAME1_EXE) $(GAME_COM) final .symbolic
+exe: $(PARTO1_EXE) $(MINGAME1_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM) final .symbolic
 
-final: $(PARTO1_EXE) $(MINGAME1_EXE) $(GAME_COM)
+final: $(PARTO1_EXE) $(MINGAME1_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
 	@rm -Rf final
 	@mkdir final
 	@cp dos86l/game.com final/game.com
 	@cp dos86l/parto1.exe final/parto1.exe
 	@cp dos86l/mingame1.exe final/mingame1.exe
+	@cp dos86l/mingame2.exe final/mingame2.exe
+	@cp dos86l/mingame3.exe final/mingame3.exe
 	@cp ../devasset/winxp.png final/wxpbrz.png
 	@cp ../devasset/towncenter.png final/twnctr.png
 	@cp ../devasset/atomicplayboy-256x256.png final/atmpbrz.png
@@ -70,6 +74,18 @@ $(PARTO1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254
 !ifdef MINGAME1_EXE
 $(MINGAME1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mingame1.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj $(SUBDIR)$(HPS)fataexit.obj $(SUBDIR)$(HPS)fontbmp.obj $(SUBDIR)$(HPS)fontbmpd.obj $(SUBDIR)$(HPS)fontbmcu.obj $(SUBDIR)$(HPS)fbvga8ud.obj $(SUBDIR)$(HPS)f_aria_l.obj $(SUBDIR)$(HPS)f_aria_m.obj $(SUBDIR)$(HPS)f_aria_s.obj $(SUBDIR)$(HPS)vut8u.obj $(SUBDIR)$(HPS)sin2048.obj $(SUBDIR)$(HPS)dumbpack.obj $(SUBDIR)$(HPS)sorcpack.obj $(SUBDIR)$(HPS)rotzfx8u.obj $(SUBDIR)$(HPS)rotzimg.obj $(SUBDIR)$(HPS)rotzpng8.obj $(SUBDIR)$(HPS)dbgheap.obj $(SUBDIR)$(HPS)vrldraw.obj $(SUBDIR)$(HPS)seqcanvs.obj $(SUBDIR)$(HPS)seqcomm.obj $(SUBDIR)$(HPS)freein1.obj $(SUBDIR)$(HPS)cs_intro.obj $(SUBDIR)$(HPS)keyboard.obj
 	%write tmp.cmd option quiet option map=$(MINGAME1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mingame1.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj file $(SUBDIR)$(HPS)vrlimg.obj file $(SUBDIR)$(HPS)vrlldf.obj file $(SUBDIR)$(HPS)vrlldfd.obj file $(SUBDIR)$(HPS)fzlibdec.obj file $(SUBDIR)$(HPS)vmode.obj file $(SUBDIR)$(HPS)vmodet.obj file $(SUBDIR)$(HPS)vmode8bu.obj file $(SUBDIR)$(HPS)fataexit.obj file $(SUBDIR)$(HPS)fontbmp.obj file $(SUBDIR)$(HPS)fontbmpd.obj file $(SUBDIR)$(HPS)fontbmcu.obj file $(SUBDIR)$(HPS)fbvga8ud.obj file $(SUBDIR)$(HPS)f_aria_l.obj file $(SUBDIR)$(HPS)f_aria_m.obj file $(SUBDIR)$(HPS)f_aria_s.obj file $(SUBDIR)$(HPS)vut8u.obj file $(SUBDIR)$(HPS)sin2048.obj file $(SUBDIR)$(HPS)dumbpack.obj file $(SUBDIR)$(HPS)sorcpack.obj file $(SUBDIR)$(HPS)rotzfx8u.obj file $(SUBDIR)$(HPS)rotzimg.obj file $(SUBDIR)$(HPS)rotzpng8.obj file $(SUBDIR)$(HPS)dbgheap.obj file $(SUBDIR)$(HPS)vrldraw.obj file $(SUBDIR)$(HPS)seqcanvs.obj file $(SUBDIR)$(HPS)seqcomm.obj file $(SUBDIR)$(HPS)freein1.obj file $(SUBDIR)$(HPS)cs_intro.obj file $(SUBDIR)$(HPS)keyboard.obj name $(MINGAME1_EXE)
+	@wlink @tmp.cmd
+!endif
+
+!ifdef MINGAME2_EXE
+$(MINGAME2_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mingame2.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj $(SUBDIR)$(HPS)fataexit.obj $(SUBDIR)$(HPS)fontbmp.obj $(SUBDIR)$(HPS)fontbmpd.obj $(SUBDIR)$(HPS)fontbmcu.obj $(SUBDIR)$(HPS)fbvga8ud.obj $(SUBDIR)$(HPS)f_aria_l.obj $(SUBDIR)$(HPS)f_aria_m.obj $(SUBDIR)$(HPS)f_aria_s.obj $(SUBDIR)$(HPS)vut8u.obj $(SUBDIR)$(HPS)sin2048.obj $(SUBDIR)$(HPS)dumbpack.obj $(SUBDIR)$(HPS)sorcpack.obj $(SUBDIR)$(HPS)rotzfx8u.obj $(SUBDIR)$(HPS)rotzimg.obj $(SUBDIR)$(HPS)rotzpng8.obj $(SUBDIR)$(HPS)dbgheap.obj $(SUBDIR)$(HPS)vrldraw.obj $(SUBDIR)$(HPS)seqcanvs.obj $(SUBDIR)$(HPS)seqcomm.obj $(SUBDIR)$(HPS)freein1.obj $(SUBDIR)$(HPS)cs_intro.obj $(SUBDIR)$(HPS)keyboard.obj
+	%write tmp.cmd option quiet option map=$(MINGAME2_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mingame2.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj file $(SUBDIR)$(HPS)vrlimg.obj file $(SUBDIR)$(HPS)vrlldf.obj file $(SUBDIR)$(HPS)vrlldfd.obj file $(SUBDIR)$(HPS)fzlibdec.obj file $(SUBDIR)$(HPS)vmode.obj file $(SUBDIR)$(HPS)vmodet.obj file $(SUBDIR)$(HPS)vmode8bu.obj file $(SUBDIR)$(HPS)fataexit.obj file $(SUBDIR)$(HPS)fontbmp.obj file $(SUBDIR)$(HPS)fontbmpd.obj file $(SUBDIR)$(HPS)fontbmcu.obj file $(SUBDIR)$(HPS)fbvga8ud.obj file $(SUBDIR)$(HPS)f_aria_l.obj file $(SUBDIR)$(HPS)f_aria_m.obj file $(SUBDIR)$(HPS)f_aria_s.obj file $(SUBDIR)$(HPS)vut8u.obj file $(SUBDIR)$(HPS)sin2048.obj file $(SUBDIR)$(HPS)dumbpack.obj file $(SUBDIR)$(HPS)sorcpack.obj file $(SUBDIR)$(HPS)rotzfx8u.obj file $(SUBDIR)$(HPS)rotzimg.obj file $(SUBDIR)$(HPS)rotzpng8.obj file $(SUBDIR)$(HPS)dbgheap.obj file $(SUBDIR)$(HPS)vrldraw.obj file $(SUBDIR)$(HPS)seqcanvs.obj file $(SUBDIR)$(HPS)seqcomm.obj file $(SUBDIR)$(HPS)freein1.obj file $(SUBDIR)$(HPS)cs_intro.obj file $(SUBDIR)$(HPS)keyboard.obj name $(MINGAME2_EXE)
+	@wlink @tmp.cmd
+!endif
+
+!ifdef MINGAME3_EXE
+$(MINGAME3_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mingame3.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj $(SUBDIR)$(HPS)fataexit.obj $(SUBDIR)$(HPS)fontbmp.obj $(SUBDIR)$(HPS)fontbmpd.obj $(SUBDIR)$(HPS)fontbmcu.obj $(SUBDIR)$(HPS)fbvga8ud.obj $(SUBDIR)$(HPS)f_aria_l.obj $(SUBDIR)$(HPS)f_aria_m.obj $(SUBDIR)$(HPS)f_aria_s.obj $(SUBDIR)$(HPS)vut8u.obj $(SUBDIR)$(HPS)sin2048.obj $(SUBDIR)$(HPS)dumbpack.obj $(SUBDIR)$(HPS)sorcpack.obj $(SUBDIR)$(HPS)rotzfx8u.obj $(SUBDIR)$(HPS)rotzimg.obj $(SUBDIR)$(HPS)rotzpng8.obj $(SUBDIR)$(HPS)dbgheap.obj $(SUBDIR)$(HPS)vrldraw.obj $(SUBDIR)$(HPS)seqcanvs.obj $(SUBDIR)$(HPS)seqcomm.obj $(SUBDIR)$(HPS)freein1.obj $(SUBDIR)$(HPS)cs_intro.obj $(SUBDIR)$(HPS)keyboard.obj
+	%write tmp.cmd option quiet option map=$(MINGAME3_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mingame3.obj file $(SUBDIR)$(HPS)unicode.obj file $(SUBDIR)$(HPS)timer.obj file $(SUBDIR)$(HPS)commtmp.obj file $(SUBDIR)$(HPS)vrlimg.obj file $(SUBDIR)$(HPS)vrlldf.obj file $(SUBDIR)$(HPS)vrlldfd.obj file $(SUBDIR)$(HPS)fzlibdec.obj file $(SUBDIR)$(HPS)vmode.obj file $(SUBDIR)$(HPS)vmodet.obj file $(SUBDIR)$(HPS)vmode8bu.obj file $(SUBDIR)$(HPS)fataexit.obj file $(SUBDIR)$(HPS)fontbmp.obj file $(SUBDIR)$(HPS)fontbmpd.obj file $(SUBDIR)$(HPS)fontbmcu.obj file $(SUBDIR)$(HPS)fbvga8ud.obj file $(SUBDIR)$(HPS)f_aria_l.obj file $(SUBDIR)$(HPS)f_aria_m.obj file $(SUBDIR)$(HPS)f_aria_s.obj file $(SUBDIR)$(HPS)vut8u.obj file $(SUBDIR)$(HPS)sin2048.obj file $(SUBDIR)$(HPS)dumbpack.obj file $(SUBDIR)$(HPS)sorcpack.obj file $(SUBDIR)$(HPS)rotzfx8u.obj file $(SUBDIR)$(HPS)rotzimg.obj file $(SUBDIR)$(HPS)rotzpng8.obj file $(SUBDIR)$(HPS)dbgheap.obj file $(SUBDIR)$(HPS)vrldraw.obj file $(SUBDIR)$(HPS)seqcanvs.obj file $(SUBDIR)$(HPS)seqcomm.obj file $(SUBDIR)$(HPS)freein1.obj file $(SUBDIR)$(HPS)cs_intro.obj file $(SUBDIR)$(HPS)keyboard.obj name $(MINGAME3_EXE)
 	@wlink @tmp.cmd
 !endif
 

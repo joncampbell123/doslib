@@ -141,12 +141,18 @@ errh_41h:
 
 ; ERR=42h minigame 2
 errh_42h:
+        mov     di,exe_minigame2
+        mov     si,ct_init_mg2
+        call    execit
         mov     di,exe_parto1
         mov     si,ct_after_minigame
         jmp     execagain
 
 ; ERR=43h minigame 3
 errh_43h:
+        mov     di,exe_minigame3
+        mov     si,ct_init_mg3
+        call    execit
         mov     di,exe_parto1
         mov     si,ct_after_minigame
         jmp     execagain
@@ -159,10 +165,16 @@ execiterr:db    'EXEC error',13,10,'$'
 ; That includes number of bytes too.
 exe_parto1:db   'PARTO1.EXE',0
 ct_init_mg1:
+ct_init_mg2:
+ct_init_mg3:
 ct_init_run:db  0                       ; nothing
 ct_after_minigame:db    5,'MGRET',0     ; return from minigame
 
 exe_minigame1:db    'MINGAME1.EXE',0
+
+exe_minigame2:db    'MINGAME2.EXE',0
+
+exe_minigame3:db    'MINGAME3.EXE',0
 
 ; END OF CODE/DATA
         segment .bss
