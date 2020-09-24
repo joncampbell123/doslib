@@ -1145,8 +1145,6 @@ void game_clear_level(void) {
     game_trigger_max = 0;
     game_text_char_max = 0;
     game_door_max = 0;
-
-    game_text_char_add(100,20,"Hello world\nHow are you");
 }
 
 void game_load_room(const struct game_room_bound *room) {
