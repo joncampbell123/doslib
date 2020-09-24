@@ -54,7 +54,7 @@ unsigned                    game_flags;
 #define noclip_on()         ((game_flags & GF_CHEAT_NOCLIP) != 0u)
 
 struct game_2dvec_t         game_position;
-uint64_t                    game_angle;
+uint16_t                    game_angle;
 int                         game_current_room;
 
 #define GAME_VERTICES       128
@@ -108,8 +108,8 @@ struct game_2dtexture_t     game_texture[GAME_TEXTURES];
 struct game_door_t {
     uint16_t                open;               /* door open (0xFFFF) or close (0x0000) state */
     int16_t                 open_speed;         /* door movement */
-    unsigned                door_sidedef;       /* sidedef that defines the door (that swings) */
-    unsigned                origrot_vertex;     /* copy of the original vertex that is rotated for the door anim */
+    unsigned                door_lineseg;       /* lineseg that defines the door (that swings) */
+    unsigned                origrot_vertex;     /* copy of the original vertex that is rotated for the door anim (this is modified on load) */
 };
 
 #define GAME_DOORS          8
@@ -833,6 +833,15 @@ const struct game_room_bound*       game_room3_adj[] = {
     NULL
 };
 
+const struct game_door_t            game_room3_doors[] = {
+    {                                                               // 0
+        0x0000/*open*/,
+        0x0400/*open speed (change per 120Hz tick)*/,
+        13/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
+    }
+};                                                                  //=1
+
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
     {   TOFP(  -3.00),  TOFP(  26.00)   },                          // br (x,y)
@@ -848,8 +857,8 @@ const struct game_room_bound        game_room3 = {
 
     game_room3_adj,                                                 // adjacent rooms
 
-    0,                                                              // door count
-    NULL                                                            // doors
+    1,                                                              // door count
+    game_room3_doors                                                // doors
 };
 
 const struct game_room_bound*       game_rooms[] = {
@@ -867,7 +876,7 @@ void game_clear_level(void) {
 }
 
 void game_load_room(const struct game_room_bound *room) {
-    const unsigned base_vertex=game_vertex_max,base_sidedef=game_sidedef_max;
+    const unsigned base_vertex=game_vertex_max,base_lineseg=game_lineseg_max,base_sidedef=game_sidedef_max;
 
     if ((game_vertex_max+room->vertex_count) > GAME_VERTICES)
         fatal("game_load_room too many vertices");
@@ -921,8 +930,18 @@ void game_load_room(const struct game_room_bound *room) {
         const struct game_door_t *s = room->door;
         struct game_door_t *d = game_door+game_door_max;
 
-        for (i=0;i < room->door_count;i++,d++,s++)
+        for (i=0;i < room->door_count;i++,d++,s++) {
             *d = *s;
+            d->origrot_vertex = (~0u);
+            d->door_lineseg += base_lineseg;
+            if (d->door_lineseg < room->lineseg_count) {
+                if (game_vertex_max < GAME_VERTICES) {
+                    const unsigned cvertex = game_vertex_max++;
+                    game_vertex[cvertex] = room->vertex[room->lineseg[d->door_lineseg].end];
+                    d->origrot_vertex = cvertex;
+                }
+            }
+        }
 
         game_door_max += room->door_count;
     }
@@ -1076,6 +1095,43 @@ void game_vslice_init(void) {
     if (game_vslice == NULL) fatal("game_vslice alloc");
 }
 
+static void game_door_reposition(const unsigned i) {
+    if (game_door[i].open != 0u) {
+        if (game_door[i].origrot_vertex < game_vertex_max) {
+            const struct game_2dvec_t orig = game_vertex[game_door[i].origrot_vertex];
+            const struct game_2dvec_t pivot = game_vertex[game_lineseg[game_door[i].door_lineseg].start];
+            struct game_2dvec_t *mod = &game_vertex[game_lineseg[game_door[i].door_lineseg].end];
+            unsigned ga = game_door[i].open / 33u; /* 0x10000 / 32 = 2048   2048 = 90 degrees  but go a bit more so the door doesn't quite go into the wall */
+            int32_t dx = orig.x - pivot.x;
+            int32_t dy = orig.y - pivot.y;
+            int32_t ndx = (int32_t)((((int64_t)dx * (int64_t)cos2048fps16_lookup(ga)) - ((int64_t)dy * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
+            int32_t ndy = (int32_t)((((int64_t)dy * (int64_t)cos2048fps16_lookup(ga)) + ((int64_t)dx * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
+
+            mod->x = pivot.x + ndx;
+            mod->y = pivot.y + ndy;
+        }
+    }
+}
+
+static void game_door_anim(const unsigned i,const uint32_t deltat) {
+    {
+        const int32_t c = (int32_t)game_door[i].open + (int32_t)game_door[i].open_speed * (int32_t)deltat;
+        if (c >= 0xFFFFl && game_door[i].open_speed > 0) {
+            game_door[i].open = 0xFFFFu;
+            game_door[i].open_speed *= -1;
+        }
+        else if (c <= 0x0000l && game_door[i].open_speed < 0) {
+            game_door[i].open = 0x0000u;
+            game_door[i].open_speed *= -1;
+        }
+        else {
+            game_door[i].open = (uint16_t)c;
+        }
+    }
+
+    game_door_reposition(i);
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -1124,45 +1180,45 @@ void game_loop(void) {
 
         if (kbdown_test(KBDS_LSHIFT) || kbdown_test(KBDS_RSHIFT)) {
             if (kbdown_test(KBDS_UP_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 15l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 15l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
             if (kbdown_test(KBDS_DOWN_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
         }
         else {
             if (kbdown_test(KBDS_UP_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move( (((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l), (((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 30l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
             if (kbdown_test(KBDS_DOWN_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move(-(((int32_t)sin2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga) * (int32_t)(cur - prev)) / 60l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
         }
         if (kbdown_test(KBDS_LCTRL) || kbdown_test(KBDS_RCTRL)) {
             if (kbdown_test(KBDS_LEFT_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move(-(((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l),-(((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
             if (kbdown_test(KBDS_RIGHT_ARROW)) {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 game_player_move( (((int32_t)sin2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l), (((int32_t)cos2048fps16_lookup(ga + 0x800) * (int32_t)(cur - prev)) / 60l) );
                 game_reload_if_needed_on_pos(&game_position);
             }
         }
         else {
             if (kbdown_test(KBDS_LEFT_ARROW))
-                game_angle -= (((int32_t)(cur - prev)) << 15l) / 60l;
+                game_angle -= (((int32_t)(cur - prev)) << 13l) / 60l;
             if (kbdown_test(KBDS_RIGHT_ARROW))
-                game_angle += (((int32_t)(cur - prev)) << 15l) / 60l;
+                game_angle += (((int32_t)(cur - prev)) << 13l) / 60l;
         }
 
         {
@@ -1183,6 +1239,12 @@ void game_loop(void) {
         game_vslice_alloc = 0;
         for (i=0;i < GAME_VSLICE_DRAW;i++) game_vslice_draw[i] = ~0u;
 
+        /* door management */
+        for (i=0;i < game_door_max;i++) {
+            if (game_door[i].open_speed != 0)
+                game_door_anim(i,cur - prev);
+        }
+
         for (i=0;i < game_vertex_max;i++) {
             /* TODO: 2D rotation based on player angle */
             /* TODO: Perhaps only the line segments we draw */
@@ -1190,7 +1252,7 @@ void game_loop(void) {
             game_vertexrot[i].y = game_vertex[i].y - game_position.y;
 
             {
-                const unsigned ga = game_angle >> 5u;
+                const unsigned ga = game_angle >> 3u;
                 const int64_t inx = ((int64_t)game_vertexrot[i].x * (int64_t)cos2048fps16_lookup(ga)) - ((int64_t)game_vertexrot[i].y * (int64_t)sin2048fps16_lookup(ga));
                 const int64_t iny = ((int64_t)game_vertexrot[i].y * (int64_t)cos2048fps16_lookup(ga)) + ((int64_t)game_vertexrot[i].x * (int64_t)sin2048fps16_lookup(ga));
                 game_vertexrot[i].x = (int32_t)(inx >> 15ll);
