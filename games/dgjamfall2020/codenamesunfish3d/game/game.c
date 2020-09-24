@@ -1029,8 +1029,43 @@ const struct game_trigger_t         game_room3_triggers[] = {
         GTT_DOOR,                                                   // type
         0,                                                          // flags
         1                                                           // door
+    },
+    {                                                               // 2
+        {   TOFP( -11.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(  -7.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        2                                                           // door
+    },
+    {                                                               // 3
+        {   TOFP(  -9.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(  -5.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        3                                                           // door
+    },
+    {                                                               // 4
+        {   TOFP(  -7.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(  -3.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        4                                                           // door
+    },
+    {                                                               // 5
+        {   TOFP(  -5.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(  -1.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        5                                                           // door
+    },
+    {                                                               // 6
+        {   TOFP(  -3.50),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(   1.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        6                                                           // door
     }
-};                                                                  //=2
+};                                                                  //=7
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
@@ -1050,7 +1085,7 @@ const struct game_room_bound        game_room3 = {
     7,                                                              // door count
     game_room3_doors,                                               // doors
 
-    2,                                                              // trigger count
+    7,                                                              // trigger count
     game_room3_triggers                                             // triggers
 };
 
