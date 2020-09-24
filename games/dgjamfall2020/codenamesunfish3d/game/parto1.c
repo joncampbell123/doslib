@@ -1534,8 +1534,6 @@ void game_loop(void) {
     unsigned int i;
     unsigned int x;
 
-loop_restart:
-
     /* seqanim rotozoomer needs sin2048 */
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
@@ -1784,23 +1782,6 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
     restore_keyboard_irq();
     game_texture_freeall();
     game_vslice_free();
-
-    if (game_minigame_select != 0xFFu) {
-        switch (game_minigame_select) {
-            case 1: // minigame
-                run_minigame("mingame1.exe");
-                goto loop_restart;
-            case 2: // minigame
-                run_minigame("mingame2.exe");
-                goto loop_restart;
-            case 3: // minigame
-                run_minigame("mingame3.exe");
-                goto loop_restart;
-            default:
-                fatal("Unknown minigame %u",game_minigame_select);
-                break;
-        }
-    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1871,6 +1852,9 @@ int main(int argc,char **argv) {
 
     //debug
     dbg_heap_list();
+
+    if (game_minigame_select != 0xFFu)
+        return 0x40+game_minigame_select;
 
     return 0;
 }
