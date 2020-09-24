@@ -192,14 +192,19 @@ void init_keyboard_irq() {
         prev_kbirq = _dos_getvect(irq2int(1));
         _dos_setvect(irq2int(1),kbirq_at);
         p8259_unmask(1);
+
+        // drain keyboard buffer
         while (kbhit()) getch();
+
+        // alter BIOS keyboard status in case user is holding modifier (shift/ctrl/alt) keys
+        *((unsigned char far*)MK_FP(0x40,0x17)) &= ~0x0F; // clear alt/ctrl/lshift/rshift down status
+        *((unsigned char far*)MK_FP(0x40,0x18))  =  0x00; // clear other key down status
     }
 }
 
 /* restore keyboard IRQ */
 void restore_keyboard_irq() {
     if (prev_kbirq != NULL) {
-        while (kbhit()) getch();
         p8259_mask(1);
         inp(K8042_STATUS);
         inp(K8042_DATA);// flush the 8042
