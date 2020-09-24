@@ -192,12 +192,14 @@ void init_keyboard_irq() {
         prev_kbirq = _dos_getvect(irq2int(1));
         _dos_setvect(irq2int(1),kbirq_at);
         p8259_unmask(1);
+        while (kbhit()) getch();
     }
 }
 
 /* restore keyboard IRQ */
 void restore_keyboard_irq() {
     if (prev_kbirq != NULL) {
+        while (kbhit()) getch();
         p8259_mask(1);
         inp(K8042_STATUS);
         inp(K8042_DATA);// flush the 8042
