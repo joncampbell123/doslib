@@ -1764,6 +1764,20 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
         vga_wait_for_vsync(); /* wait for vsync */
     }
 
+    /* fade out to minigame */
+    if (game_minigame_select != 0xFFu) {
+        unsigned int i,j;
+
+        outp(0x3C7,0); // read from VGA palette index 0
+        for (i=0;i < 768;i++) common_tmp_small[i] = inp(0x3C9);
+
+        for (j=0;j < 31;j++) {
+            vga_wait_for_vsync(); /* wait for vsync */
+            outp(0x3C8,0); // write palette from 0
+            for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i] * (32u-j))>>5u);
+        }
+    }
+
     /* wait for user to let go of arrow keys, etc. */
     while (kbdown_test(KBDS_UP_ARROW) || kbdown_test(KBDS_DOWN_ARROW) || kbdown_test(KBDS_LEFT_ARROW) || kbdown_test(KBDS_RIGHT_ARROW));
 
