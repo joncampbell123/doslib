@@ -192,8 +192,10 @@ void game_texture_load(const unsigned i,const char *path,const unsigned f) {
         fatal("gametex png error %s",path);
 
     for (ri=0;ri < 64;ri++) {
-        minipng_reader_read_idat(rdr,row,1); /* pad byte */
-        minipng_reader_read_idat(rdr,row,64); /* row */
+        if (minipng_reader_read_idat(rdr,row,1) != 1) /* pad byte */
+            fatal("gametex png error %s",path);
+        if (minipng_reader_read_idat(rdr,row,64) != 64) /* row */
+            fatal("gametex png error %s",path);
 
         {
             unsigned int x;
