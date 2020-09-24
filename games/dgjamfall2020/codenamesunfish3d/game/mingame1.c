@@ -7,7 +7,7 @@ int main(int argc,char **argv) {
     (void)argc;
     (void)argv;
 
-    printf("Minigame placeholder. Hit ENTER to continue.\n");
+    printf("Minigame #1 placeholder. Hit ENTER to continue.\n");
     while (getch() != 13);
 
     return 0;
