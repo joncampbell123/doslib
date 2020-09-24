@@ -107,6 +107,7 @@ execitok:
 
 ; get the return code. note that reading it clears it, so save it away.
 ; AH = termination type   0=normal  1=CTRL+C  2=critical error  3=TSR
+; AL = error code
         mov     ah,4Dh
         int     21h
         mov     word [errcode],ax
