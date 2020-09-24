@@ -196,7 +196,7 @@ void init_keyboard_irq() {
         // drain keyboard buffer
         while (kbhit()) getch();
 
-        // alter BIOS keyboard status in case user is holding modifier (shift/ctrl/alt) keys
+        // alter BIOS keyboard status in case user is holding modifier (shift/ctrl/alt) keys [https://www.matrix-bios.nl/system/bda.html]
         *((unsigned char far*)MK_FP(0x40,0x17)) &= ~0x0F; // clear alt/ctrl/lshift/rshift down status
         *((unsigned char far*)MK_FP(0x40,0x18))  =  0x00; // clear other key down status
     }
