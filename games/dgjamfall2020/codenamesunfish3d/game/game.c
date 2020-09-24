@@ -1093,8 +1093,16 @@ const struct game_trigger_t         game_room3_triggers[] = {
         0,                                                          // flags
         0,                                                          // door
         "Minigame #2\n\nGo to the back\nof the room to\nstart game"
+    },
+    {                                                               // 9
+        {   TOFP( -12.00),  TOFP(  16.50)   },                      // tl (x,y)
+        {   TOFP(   1.00),  TOFP(  18.50)   },                      // br (x,y)
+        GTT_TEXT,                                                   // type
+        0,                                                          // flags
+        0,                                                          // door
+        "Minigame #3\n\nWalk through all doors\nto the end of the hall\nto start game"
     }
-};                                                                  //=9
+};                                                                  //=10
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
@@ -1114,7 +1122,7 @@ const struct game_room_bound        game_room3 = {
     7,                                                              // door count
     game_room3_doors,                                               // doors
 
-    9,                                                              // trigger count
+    10,                                                             // trigger count
     game_room3_triggers                                             // triggers
 };
 
