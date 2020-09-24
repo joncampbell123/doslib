@@ -1764,6 +1764,9 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
         vga_wait_for_vsync(); /* wait for vsync */
     }
 
+    /* wait for user to let go of arrow keys, etc. */
+    while (kbdown_test(KBDS_UP_ARROW) || kbdown_test(KBDS_DOWN_ARROW) || kbdown_test(KBDS_LEFT_ARROW) || kbdown_test(KBDS_RIGHT_ARROW));
+
     restore_keyboard_irq();
     game_texture_freeall();
     game_vslice_free();
