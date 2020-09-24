@@ -1556,7 +1556,6 @@ loop_restart:
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
-    game_minigame_select = 0xFFu;
     game_door_max = 0;
 
     /* init pos */
@@ -1565,6 +1564,14 @@ loop_restart:
     game_position.x = 0;
     game_position.y = 0;
     game_angle = 0; /* looking straight ahead */
+
+    /* if coming back from minigame, put the player outside the doors */
+    if (game_minigame_select >= 1u && game_minigame_select <= 3u) {
+        game_position.x = TOFP(-13.50);
+        game_position.y = TOFP( 15.00);
+    }
+
+    game_minigame_select = 0xFFu;
 
     game_load_room_from_pos();
 
