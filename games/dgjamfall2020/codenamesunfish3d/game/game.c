@@ -105,6 +105,17 @@ struct game_2dtexture_t {
 #define GAME_TEXTURES       8
 struct game_2dtexture_t     game_texture[GAME_TEXTURES];
 
+struct game_door_t {
+    uint16_t                open;               /* door open (0xFFFF) or close (0x0000) state */
+    int16_t                 open_speed;         /* door movement */
+    unsigned                door_sidedef;       /* sidedef that defines the door (that swings) */
+    unsigned                origrot_vertex;     /* copy of the original vertex that is rotated for the door anim */
+};
+
+#define GAME_DOORS          8
+struct game_door_t          game_door[GAME_DOORS];
+unsigned                    game_door_max;
+
 struct game_vslice_t {
     int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
     unsigned                sidedef;
@@ -437,6 +448,9 @@ struct game_room_bound {
     const struct game_2dsidedef_t*  sidedef;
 
     const struct game_room_bound**  also;       /* adjacent rooms to check boundaries as well and render */
+
+    unsigned                        door_count;
+    const struct game_door_t*       door;
 };
 
 /* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
@@ -552,7 +566,10 @@ const struct game_room_bound        game_room1 = {
     4,                                                              // sidedef count
     game_room1_sidedefs,                                            // sidedefs
 
-    game_room1_adj                                                  // adjacent rooms
+    game_room1_adj,                                                 // adjacent rooms
+
+    0,                                                              // door count
+    NULL                                                            // doors
 };
 
 /*
@@ -656,7 +673,10 @@ const struct game_room_bound        game_room2 = {
     4,                                                              // sidedef count
     game_room2_sidedefs,                                            // sidedefs
 
-    game_room2_adj                                                  // adjacent rooms
+    game_room2_adj,                                                 // adjacent rooms
+
+    0,                                                              // door count
+    NULL                                                            // doors
 };
 
 /*
@@ -826,7 +846,10 @@ const struct game_room_bound        game_room3 = {
     5,                                                              // sidedef count
     game_room3_sidedefs,                                            // sidedefs
 
-    game_room3_adj                                                  // adjacent rooms
+    game_room3_adj,                                                 // adjacent rooms
+
+    0,                                                              // door count
+    NULL                                                            // doors
 };
 
 const struct game_room_bound*       game_rooms[] = {
@@ -840,6 +863,7 @@ void game_clear_level(void) {
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
+    game_door_max = 0;
 }
 
 void game_load_room(const struct game_room_bound *room) {
@@ -851,6 +875,8 @@ void game_load_room(const struct game_room_bound *room) {
         fatal("game_load_room too many lineseg");
     if ((game_sidedef_max+room->sidedef_count) > GAME_SIDEDEFS)
         fatal("game_load_room too many sidedef");
+    if ((game_door_max+room->door_count) > GAME_DOORS)
+        fatal("game_load_room too many doors");
 
     {
         unsigned i;
@@ -888,6 +914,17 @@ void game_load_room(const struct game_room_bound *room) {
             *d = *s;
 
         game_sidedef_max += room->sidedef_count;
+    }
+
+    {
+        unsigned i;
+        const struct game_door_t *s = room->door;
+        struct game_door_t *d = game_door+game_door_max;
+
+        for (i=0;i < room->door_count;i++,d++,s++)
+            *d = *s;
+
+        game_door_max += room->door_count;
     }
 }
 
@@ -1064,6 +1101,7 @@ void game_loop(void) {
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
+    game_door_max = 0;
 
     /* init pos */
     game_cur_room = NULL;
