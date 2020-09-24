@@ -4,6 +4,9 @@
         bits    16          ; 16-bit real mode
         org     0x100       ; .COM starts at 0x100
 
+; highest error code that means something
+%define HIGHEST_CODE        0x43
+
         segment .text
 
         ; make sure ES = DS = CS
@@ -31,10 +34,24 @@
         ; set up stack
         mov     sp,stack_end-2
 
-        ; run game
+        ; run game. each error exit state says what to do next.
         mov     di,exe_parto1
         mov     si,ct_init_run
+execagain:
         call    execit
+
+        mov     ax,[errcode]
+        or      ah,ah                               ; if the termination is anything other than normal, exit (see INT 21h AH=4Dh)
+        jnz     exit                                ; jump if AH != 0
+
+        cmp     al,40h                              ; error codes less than 40h mean exit to DOS
+        jb      exit
+        cmp     al,HIGHEST_CODE
+        ja      exit
+        sub     al,40h
+        mov     bx,ax
+        add     bx,ax                               ; so BX = (AX - 40h) * 2
+        jmp     word [errcodehandlertable+bx]
 
 exit:
         mov     ah,4Ch
@@ -50,6 +67,8 @@ exit:
 ;   (exit code in [errcode])
 ;   ES = DS = CS
 execit:
+        mov     word [errcode],sp               ; stash the stack pointer in errcode so we can recover it after DOS returns from EXEC
+
         mov     ax,cs
         mov     ds,ax
         mov     es,ax
@@ -83,7 +102,7 @@ execitok:
         mov     es,ax
         cli
         mov     ss,ax
-        mov     sp,stack_end-2
+        mov     sp,[errcode]                    ; restore SP
         sti
 
 ; get the return code. note that reading it clears it, so save it away.
@@ -95,12 +114,44 @@ execitok:
 ; return
         ret
 
+; error code handler table (offset of functions)
+errcodehandlertable:
+        dw      errh_40h
+        dw      errh_41h
+        dw      errh_42h
+        dw      errh_43h
+
+; ERR=40h not yet assigned, dump to DOS
+errh_40h:
+        jmp     exit
+
+; ERR=41h minigame 1
+errh_41h:
+        mov     di,exe_parto1
+        mov     si,ct_after_minigame
+        jmp     execagain
+
+; ERR=42h minigame 2
+errh_42h:
+        mov     di,exe_parto1
+        mov     si,ct_after_minigame
+        jmp     execagain
+
+; ERR=43h minigame 3
+errh_43h:
+        mov     di,exe_parto1
+        mov     si,ct_after_minigame
+        jmp     execagain
+
 ; error message, in MS-DOS friendly ASCII$ format meaning $-terminated
 execiterr:db    'EXEC error',13,10,'$'
 
-; what to run and how
+; what to run and how.
+; note a "command tail" in DOS means literally the data copied to PSP:0x80.
+; That includes number of bytes too.
 exe_parto1:db   'PARTO1.EXE',0
-ct_init_run:db  0                   ; nothing
+ct_init_run:db  0                       ; nothing
+ct_after_minigame:db    5,'MGRET',0     ; return from minigame
 
 ; END OF CODE/DATA
         segment .bss
