@@ -879,17 +879,17 @@ const struct game_2dlineseg_t       game_room3_linesegs[] = {
     {                                                               // 20
         6, 25,                                                      //  vertices (start,end)
         0,                                                          //  flags
-        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+        { 5, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
     },
     {                                                               // 21
         25,26,                                                      //  vertices (start,end)
         0,                                                          //  flags
-        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+        { 0, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
     },
     {                                                               // 22
         26, 7,                                                      //  vertices (start,end)
         0,                                                          //  flags
-        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+        { 5, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
     }
 };                                                                  //=23
 
@@ -913,8 +913,12 @@ const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 4
         2,                                                          //  texture
         TEXFP(1)                                                    //  texture width (-4 to 4)
+    },
+    {                                                               // 5
+        1,                                                          //  texture
+        TEXFP(12)                                                   //  texture width
     }
-};                                                                  //=5
+};                                                                  //=6
 
 const struct game_room_bound*       game_room3_adj[] = {
     &game_room2,
@@ -963,7 +967,7 @@ const struct game_room_bound        game_room3 = {
     23,                                                             // lineseg count
     game_room3_linesegs,                                            // linesegs
 
-    5,                                                              // sidedef count
+    6,                                                              // sidedef count
     game_room3_sidedefs,                                            // sidedefs
 
     game_room3_adj,                                                 // adjacent rooms
