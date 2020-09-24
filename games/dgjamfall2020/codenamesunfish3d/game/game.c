@@ -1213,20 +1213,18 @@ void game_vslice_init(void) {
 }
 
 static void game_door_reposition(const unsigned i) {
-    if (game_door[i].open != 0u) {
-        if (game_door[i].origrot_vertex < game_vertex_max) {
-            const struct game_2dvec_t orig = game_vertex[game_door[i].origrot_vertex];
-            const struct game_2dvec_t pivot = game_vertex[game_lineseg[game_door[i].door_lineseg].start];
-            struct game_2dvec_t *mod = &game_vertex[game_lineseg[game_door[i].door_lineseg].end];
-            unsigned ga = game_door[i].open / 33u; /* 0x10000 / 32 = 2048   2048 = 90 degrees  but go a bit more so the door doesn't quite go into the wall */
-            int32_t dx = orig.x - pivot.x;
-            int32_t dy = orig.y - pivot.y;
-            int32_t ndx = (int32_t)((((int64_t)dx * (int64_t)cos2048fps16_lookup(ga)) - ((int64_t)dy * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
-            int32_t ndy = (int32_t)((((int64_t)dy * (int64_t)cos2048fps16_lookup(ga)) + ((int64_t)dx * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
+    if (game_door[i].origrot_vertex < game_vertex_max) {
+        const struct game_2dvec_t orig = game_vertex[game_door[i].origrot_vertex];
+        const struct game_2dvec_t pivot = game_vertex[game_lineseg[game_door[i].door_lineseg].start];
+        struct game_2dvec_t *mod = &game_vertex[game_lineseg[game_door[i].door_lineseg].end];
+        unsigned ga = game_door[i].open / 33u; /* 0x10000 / 32 = 2048   2048 = 90 degrees  but go a bit more so the door doesn't quite go into the wall */
+        int32_t dx = orig.x - pivot.x;
+        int32_t dy = orig.y - pivot.y;
+        int32_t ndx = (int32_t)((((int64_t)dx * (int64_t)cos2048fps16_lookup(ga)) - ((int64_t)dy * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
+        int32_t ndy = (int32_t)((((int64_t)dy * (int64_t)cos2048fps16_lookup(ga)) + ((int64_t)dx * (int64_t)sin2048fps16_lookup(ga))) >> 15l);
 
-            mod->x = pivot.x + ndx;
-            mod->y = pivot.y + ndy;
-        }
+        mod->x = pivot.x + ndx;
+        mod->y = pivot.y + ndy;
     }
 }
 
