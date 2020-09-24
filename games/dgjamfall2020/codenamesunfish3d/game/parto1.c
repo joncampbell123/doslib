@@ -1508,22 +1508,9 @@ static void game_trigger_check(void) {
     }
 }
 
-void run_minigame(const char *path) {
-    gen_res_free();
-    check_heap();
-    unhook_irqs();
-    restore_text_mode();
-
-    // make Watcom C free up DOS segments
-    _heapmin();
-
-    system("command.com");
-
-    init_timer_irq();
-    init_vga256unchained();
-}
-
-void game_loop(void) {
+/* 0 = normal
+ * 1 = return from minigame */
+void game_loop(const unsigned int game_mode) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
     uint16_t vslice_draw[MAX_VSLICE_DRAW];
@@ -1564,7 +1551,7 @@ void game_loop(void) {
     game_angle = 0; /* looking straight ahead */
 
     /* if coming back from minigame, put the player outside the doors */
-    if (game_minigame_select >= 1u && game_minigame_select <= 3u) {
+    if (game_mode == 1u) {
         game_position.x = TOFP(-13.50);
         game_position.y = TOFP( 15.00);
     }
@@ -1842,8 +1829,13 @@ int main(int argc,char **argv) {
     init_timer_irq();
     init_vga256unchained();
 
-    seq_intro();
-    game_loop();
+    if (argc > 1 && !strcmp(argv[1],"MGRET")) { /* minigame return */
+        game_loop(1);
+    }
+    else {
+        seq_intro();
+        game_loop(0);
+    }
 
     gen_res_free();
     check_heap();
