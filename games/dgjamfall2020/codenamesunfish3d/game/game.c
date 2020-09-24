@@ -116,6 +116,24 @@ struct game_door_t {
 struct game_door_t          game_door[GAME_DOORS];
 unsigned                    game_door_max;
 
+enum {
+    GTT_NONE=0,
+    GTT_DOOR=1
+};
+
+#define GTF_TRIGGER_ON      (1u << 0u)
+
+struct game_trigger_t {
+    struct game_2dvec_t     tl,br;              /* bounding box */
+    uint8_t                 type;
+    uint8_t                 flags;
+    unsigned                door;               /* game door */
+};
+
+#define GAME_TRIGGERS       16
+struct game_trigger_t       game_trigger[GAME_TRIGGERS];
+unsigned                    game_trigger_max;
+
 struct game_vslice_t {
     int16_t                 floor,ceil;         /* wall slice (from floor to ceiling) */
     unsigned                sidedef;
@@ -451,6 +469,9 @@ struct game_room_bound {
 
     unsigned                        door_count;
     const struct game_door_t*       door;
+
+    unsigned                        trigger_count;
+    const struct game_trigger_t*    trigger;
 };
 
 /* NTS: When 'x' is float, you cannot do x << 16 but you can do x * 0x10000 */
@@ -569,7 +590,10 @@ const struct game_room_bound        game_room1 = {
     game_room1_adj,                                                 // adjacent rooms
 
     0,                                                              // door count
-    NULL                                                            // doors
+    NULL,                                                           // doors
+
+    0,                                                              // trigger count
+    NULL                                                            // triggers
 };
 
 /*
@@ -676,7 +700,10 @@ const struct game_room_bound        game_room2 = {
     game_room2_adj,                                                 // adjacent rooms
 
     0,                                                              // door count
-    NULL                                                            // doors
+    NULL,                                                           // doors
+
+    0,                                                              // trigger count
+    NULL                                                            // triggers
 };
 
 /*
@@ -842,6 +869,16 @@ const struct game_door_t            game_room3_doors[] = {
     }
 };                                                                  //=1
 
+const struct game_trigger_t         game_room3_triggers[] = {
+    {                                                               // 0
+        {   TOFP( -15.00),  TOFP(  20.00)   },                      // tl (x,y)
+        {   TOFP( -12.00),  TOFP(  26.00)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        0                                                           // door
+    }
+};                                                                  //=1
+
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
     {   TOFP(  -3.00),  TOFP(  26.00)   },                          // br (x,y)
@@ -858,7 +895,10 @@ const struct game_room_bound        game_room3 = {
     game_room3_adj,                                                 // adjacent rooms
 
     1,                                                              // door count
-    game_room3_doors                                                // doors
+    game_room3_doors,                                               // doors
+
+    1,                                                              // trigger count
+    game_room3_triggers                                             // triggers
 };
 
 const struct game_room_bound*       game_rooms[] = {
@@ -872,11 +912,15 @@ void game_clear_level(void) {
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
+    game_trigger_max = 0;
     game_door_max = 0;
 }
 
 void game_load_room(const struct game_room_bound *room) {
     const unsigned base_vertex=game_vertex_max,base_lineseg=game_lineseg_max,base_sidedef=game_sidedef_max;
+    const unsigned base_trigger=game_trigger_max,base_door=game_door_max;
+
+    (void)base_trigger;
 
     if ((game_vertex_max+room->vertex_count) > GAME_VERTICES)
         fatal("game_load_room too many vertices");
@@ -886,6 +930,8 @@ void game_load_room(const struct game_room_bound *room) {
         fatal("game_load_room too many sidedef");
     if ((game_door_max+room->door_count) > GAME_DOORS)
         fatal("game_load_room too many doors");
+    if ((game_trigger_max+room->trigger_count) > GAME_TRIGGERS)
+        fatal("game_load_room too many triggers");
 
     {
         unsigned i;
@@ -945,6 +991,22 @@ void game_load_room(const struct game_room_bound *room) {
 
         game_door_max += room->door_count;
     }
+
+    {
+        unsigned i;
+        const struct game_trigger_t *s = room->trigger;
+        struct game_trigger_t *d = game_trigger+game_trigger_max;
+
+        for (i=0;i < room->trigger_count;i++,d++,s++) {
+            *d = *s;
+            if (d->type == GTT_DOOR) {
+                d->door += base_door;
+            }
+        }
+
+        game_trigger_max += room->trigger_count;
+    }
+
 }
 
 unsigned point_in_room(const struct game_2dvec_t *pt,const struct game_room_bound *room) {
@@ -1132,6 +1194,34 @@ static void game_door_anim(const unsigned i,const uint32_t deltat) {
     game_door_reposition(i);
 }
 
+static void game_trigger_act(const unsigned i,const unsigned on) {
+    if (game_trigger[i].type == GTT_DOOR) {
+        if (game_trigger[i].door < game_door_max) {
+            game_door[game_trigger[i].door].open_speed = on ? 0x400 : -0x400;
+        }
+    }
+}
+
+static void game_trigger_check(void) {
+    unsigned i;
+
+    for (i=0;i < game_trigger_max;i++) {
+        if (game_position.x >= game_trigger[i].tl.x && game_position.x <= game_trigger[i].br.x &&
+            game_position.y >= game_trigger[i].tl.y && game_position.y <= game_trigger[i].br.y) {
+            if (!(game_trigger[i].flags & GTF_TRIGGER_ON)) {
+                game_trigger[i].flags |= GTF_TRIGGER_ON;
+                game_trigger_act(i,1);
+            }
+        }
+        else {
+            if (game_trigger[i].flags & GTF_TRIGGER_ON) {
+                game_trigger[i].flags &= ~GTF_TRIGGER_ON;
+                game_trigger_act(i,0);
+            }
+        }
+    }
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -1238,6 +1328,9 @@ void game_loop(void) {
         /* project and render */
         game_vslice_alloc = 0;
         for (i=0;i < GAME_VSLICE_DRAW;i++) game_vslice_draw[i] = ~0u;
+
+        /* triggers */
+        game_trigger_check();
 
         /* door management */
         for (i=0;i < game_door_max;i++) {
