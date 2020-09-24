@@ -58,6 +58,8 @@ exit:
         mov     al,byte [errcode]
         int     21h
 
+;---------------------------------------------------------------------------------
+
 ; execit
 ;  in:
 ;   SI = command tail
@@ -114,6 +116,8 @@ execitok:
 
 ; return
         ret
+
+;---------------------------------------------------------------------------------
 
 ; error code handler table (offset of functions)
 errcodehandlertable:
