@@ -53,8 +53,14 @@ int rotozoomerpngload(unsigned rotozoomerimgseg,const char *path,unsigned char p
 
         for (i=0;i < 256;i++) {
             unsigned char far *imgptr = (unsigned char far*)MK_FP(rotozoomerimgseg + (i * 16u/*paragraphs=256b*/),0);
-            minipng_reader_read_idat(rdr,imgptr,1); /* pad byte */
-            minipng_reader_read_idat(rdr,imgptr,256); /* row */
+            if (minipng_reader_read_idat(rdr,imgptr,1) != 1) { /* pad byte */
+                minipng_reader_close(&rdr);
+                return -1;
+            }
+            if (minipng_reader_read_idat(rdr,imgptr,256) != 256) { /* row */
+                minipng_reader_close(&rdr);
+                return -1;
+            }
         }
 
         {
