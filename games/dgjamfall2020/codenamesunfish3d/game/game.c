@@ -1749,10 +1749,16 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
     if (game_minigame_select != 0xFFu) {
         switch (game_minigame_select) {
             case 1: // minigame
+                restore_text_mode();
+                init_vga256unchained();
                 goto loop_restart;
             case 2: // minigame
+                restore_text_mode();
+                init_vga256unchained();
                 goto loop_restart;
             case 3: // minigame
+                restore_text_mode();
+                init_vga256unchained();
                 goto loop_restart;
             default:
                 fatal("Unknown minigame %u",game_minigame_select);
