@@ -132,6 +132,9 @@ errh_40h:
 
 ; ERR=41h minigame 1
 errh_41h:
+        mov     di,exe_minigame1
+        mov     si,ct_init_mg1
+        call    execit
         mov     di,exe_parto1
         mov     si,ct_after_minigame
         jmp     execagain
@@ -155,8 +158,11 @@ execiterr:db    'EXEC error',13,10,'$'
 ; note a "command tail" in DOS means literally the data copied to PSP:0x80.
 ; That includes number of bytes too.
 exe_parto1:db   'PARTO1.EXE',0
+ct_init_mg1:
 ct_init_run:db  0                       ; nothing
 ct_after_minigame:db    5,'MGRET',0     ; return from minigame
+
+exe_minigame1:db    'MINGAME1.EXE',0
 
 ; END OF CODE/DATA
         segment .bss
