@@ -836,7 +836,7 @@ const struct game_room_bound*       game_room3_adj[] = {
 const struct game_door_t            game_room3_doors[] = {
     {                                                               // 0
         0x0000/*open*/,
-        0x0400/*open speed (change per 120Hz tick)*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
         13/*lineseg*/,
         0/*origrot vertex (modified on load)*/
     }
