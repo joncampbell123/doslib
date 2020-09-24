@@ -708,15 +708,15 @@ const struct game_room_bound        game_room2 = {
 
 /*
  * 15----16
- *  |    |
- *  |    |
- *  |1718|
- *  |    |
- * 14    0                              #0  -13.0, 21.0
- * /    \|/                             #1  -13.0, 20.0
- *13     1--->2                         #2  -12.0, 20.0
- *|                                     #3  -12.0, 19.0
- *|      4<---3                         #4  -13.0, 19.0
+ *  |    |         20----21
+ *  |    |          |    |
+ *  |1718|          |    |
+ *  |    |          |    |
+ * 14    0         19    |              #0  -13.0, 21.0
+ * /    \|/      -/ 24   |              #1  -13.0, 20.0
+ *13     1--->2-/     \  |              #2  -12.0, 20.0
+ *|                    23|              #3  -12.0, 19.0
+ *|      4<---3----------22             #4  -13.0, 19.0
  *|     \|/                             #5  -13.0, 18.0
  *12     5--->6                         #6  -12.0, 18.0
  * \                                    #7  -12.0, 17.0
@@ -731,6 +731,12 @@ const struct game_room_bound        game_room2 = {
  *                                      #16 -13.0, 25.0
  *                                      #17 -14.0, 22.0
  *                                      #18 -13.0, 22.0
+ *                                      #19 -11.0, 22.0
+ *                                      #20 -11.0, 25.0
+ *                                      #21  -9.0, 25.0
+ *                                      #22  -9.0, 19.0
+ *                                      #23 -12.0, 19.0
+ *                                      #24 -12.0, 20.0
  */
 
 const struct game_2dvec_t           game_room3_vertices[] = {
@@ -752,8 +758,14 @@ const struct game_2dvec_t           game_room3_vertices[] = {
     {   TOFP( -14.00),  TOFP(  25.00)   },                          // 15
     {   TOFP( -13.00),  TOFP(  25.00)   },                          // 16
     {   TOFP( -14.00),  TOFP(  22.00)   },                          // 17
-    {   TOFP( -13.00),  TOFP(  22.00)   }                           // 18
-};                                                                  //=19
+    {   TOFP( -13.00),  TOFP(  22.00)   },                          // 18
+    {   TOFP( -11.00),  TOFP(  22.00)   },                          // 19
+    {   TOFP( -11.00),  TOFP(  25.00)   },                          // 20
+    {   TOFP(  -6.00),  TOFP(  25.00)   },                          // 21
+    {   TOFP(  -6.00),  TOFP(  19.00)   },                          // 22
+    {   TOFP( -11.00),  TOFP(  22.00)   },                          // 23
+    {   TOFP( -11.00),  TOFP(  19.00)   }                           // 24
+};                                                                  //=25
 
 const struct game_2dlineseg_t       game_room3_linesegs[] = {
     // 0->1->2
@@ -829,8 +841,38 @@ const struct game_2dlineseg_t       game_room3_linesegs[] = {
         17,18,                                                      //  vertices (start,end)
         0,                                                          //  flags
         { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 14
+        2, 19,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 15
+        19,20,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 16
+        20,21,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 17
+        21,22,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 18
+        22, 3,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 19
+        23,24,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 1, 1 }                                                    //  sidedef (front, back) i.e. double-sided
     }
-};                                                                  //=14
+};                                                                  //=20
 
 const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 0
@@ -866,8 +908,14 @@ const struct game_door_t            game_room3_doors[] = {
         0x0000/*open speed (change per 120Hz tick)*/,
         13/*lineseg*/,
         0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 1
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        19/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
     }
-};                                                                  //=1
+};                                                                  //=2
 
 const struct game_trigger_t         game_room3_triggers[] = {
     {                                                               // 0
@@ -876,17 +924,24 @@ const struct game_trigger_t         game_room3_triggers[] = {
         GTT_DOOR,                                                   // type
         0,                                                          // flags
         0                                                           // door
+    },
+    {                                                               // 1
+        {   TOFP( -12.00),  TOFP(  18.50)   },                      // tl (x,y)
+        {   TOFP(  -9.00),  TOFP(  26.00)   },                      // br (x,y)
+        GTT_DOOR,                                                   // type
+        0,                                                          // flags
+        1                                                           // door
     }
-};                                                                  //=1
+};                                                                  //=2
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
     {   TOFP(  -3.00),  TOFP(  26.00)   },                          // br (x,y)
 
-    19,                                                             // vertex count
+    25,                                                             // vertex count
     game_room3_vertices,                                            // vertices
 
-    14,                                                             // lineseg count
+    20,                                                             // lineseg count
     game_room3_linesegs,                                            // linesegs
 
     5,                                                              // sidedef count
@@ -894,10 +949,10 @@ const struct game_room_bound        game_room3 = {
 
     game_room3_adj,                                                 // adjacent rooms
 
-    1,                                                              // door count
+    2,                                                              // door count
     game_room3_doors,                                               // doors
 
-    1,                                                              // trigger count
+    2,                                                              // trigger count
     game_room3_triggers                                             // triggers
 };
 
