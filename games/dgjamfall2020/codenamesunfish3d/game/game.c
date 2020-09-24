@@ -982,8 +982,38 @@ const struct game_door_t            game_room3_doors[] = {
         0x0000/*open speed (change per 120Hz tick)*/,
         19/*lineseg*/,
         0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 2
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        23/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 3
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        24/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 4
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        25/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 5
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        26/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
+    },
+    {                                                               // 6
+        0x0000/*open*/,
+        0x0000/*open speed (change per 120Hz tick)*/,
+        27/*lineseg*/,
+        0/*origrot vertex (modified on load)*/
     }
-};                                                                  //=2
+};                                                                  //=7
 
 const struct game_trigger_t         game_room3_triggers[] = {
     {                                                               // 0
@@ -1017,7 +1047,7 @@ const struct game_room_bound        game_room3 = {
 
     game_room3_adj,                                                 // adjacent rooms
 
-    2,                                                              // door count
+    7,                                                              // door count
     game_room3_doors,                                               // doors
 
     2,                                                              // trigger count
