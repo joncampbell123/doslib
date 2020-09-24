@@ -719,7 +719,7 @@ const struct game_room_bound        game_room2 = {
  *|      4<---3----------22             #4  -13.0, 19.0
  *|     \|/                             #5  -13.0, 18.0
  *12     5--->6--------------25         #6  -12.0, 18.0
- * \                          |         #7  -12.0, 17.0
+ * \            |  |  |  |  | |         #7  -12.0, 17.0
  * 11    8<---7--------------26         #8  -13.0, 17.0
  *       |                              #9  -13.0, 16.0     connects to #0 in room2
  *      \|/                             #10 -14.0, 16.0     UNUSED
@@ -739,6 +739,16 @@ const struct game_room_bound        game_room2 = {
  *                                      #24 -11.0, 19.0
  *                                      #25   0.0, 18.0
  *                                      #26   0.0, 17.0
+ *                                      #27 -10.0, 18.0
+ *                                      #28 -10.0, 17.0
+ *                                      #29  -8.0, 18.0
+ *                                      #30  -8.0, 17.0
+ *                                      #31  -6.0, 18.0
+ *                                      #32  -6.0, 17.0
+ *                                      #33  -4.0, 18.0
+ *                                      #34  -4.0, 17.0
+ *                                      #35  -2.0, 18.0
+ *                                      #36  -2.0, 17.0
  */
 
 const struct game_2dvec_t           game_room3_vertices[] = {
@@ -768,8 +778,18 @@ const struct game_2dvec_t           game_room3_vertices[] = {
     {   TOFP( -11.00),  TOFP(  22.00)   },                          // 23
     {   TOFP( -11.00),  TOFP(  19.00)   },                          // 24
     {   TOFP(   0.00),  TOFP(  18.00)   },                          // 25
-    {   TOFP(   0.00),  TOFP(  17.00)   }                           // 26
-};                                                                  //=27
+    {   TOFP(   0.00),  TOFP(  17.00)   },                          // 26
+    {   TOFP( -10.00),  TOFP(  18.00)   },                          // 27
+    {   TOFP( -10.00),  TOFP(  17.00)   },                          // 28
+    {   TOFP(  -8.00),  TOFP(  18.00)   },                          // 29
+    {   TOFP(  -8.00),  TOFP(  17.00)   },                          // 30
+    {   TOFP(  -6.00),  TOFP(  18.00)   },                          // 31
+    {   TOFP(  -6.00),  TOFP(  17.00)   },                          // 32
+    {   TOFP(  -4.00),  TOFP(  18.00)   },                          // 33
+    {   TOFP(  -4.00),  TOFP(  17.00)   },                          // 34
+    {   TOFP(  -2.00),  TOFP(  18.00)   },                          // 35
+    {   TOFP(  -2.00),  TOFP(  17.00)   }                           // 36
+};                                                                  //=37
 
 const struct game_2dlineseg_t       game_room3_linesegs[] = {
     // 0->1->2
@@ -890,8 +910,33 @@ const struct game_2dlineseg_t       game_room3_linesegs[] = {
         26, 7,                                                      //  vertices (start,end)
         0,                                                          //  flags
         { 5, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 23
+        27,28,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 24
+        29,30,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 25
+        31,32,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 26
+        33,34,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 27
+        35,36,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 4, 4 }                                                    //  sidedef (front, back) i.e. double-sided
     }
-};                                                                  //=23
+};                                                                  //=28
 
 const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 0
@@ -961,10 +1006,10 @@ const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
     {   TOFP(   3.00),  TOFP(  26.00)   },                          // br (x,y)
 
-    27,                                                             // vertex count
+    37,                                                             // vertex count
     game_room3_vertices,                                            // vertices
 
-    23,                                                             // lineseg count
+    28,                                                             // lineseg count
     game_room3_linesegs,                                            // linesegs
 
     6,                                                              // sidedef count
