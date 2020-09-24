@@ -926,8 +926,8 @@ const struct game_trigger_t         game_room3_triggers[] = {
         0                                                           // door
     },
     {                                                               // 1
-        {   TOFP( -12.00),  TOFP(  18.50)   },                      // tl (x,y)
-        {   TOFP(  -9.00),  TOFP(  26.00)   },                      // br (x,y)
+        {   TOFP( -12.25),  TOFP(  18.50)   },                      // tl (x,y)
+        {   TOFP(  -7.00),  TOFP(  26.00)   },                      // br (x,y)
         GTT_DOOR,                                                   // type
         0,                                                          // flags
         1                                                           // door
