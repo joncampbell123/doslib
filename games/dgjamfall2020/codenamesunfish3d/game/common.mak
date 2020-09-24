@@ -5,6 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../../.."
 NOW_BUILDING = DGJF2020
 
 PARTO1_EXE =     $(SUBDIR)$(HPS)parto1.$(EXEEXT)
+GAME_COM =		 $(SUBDIR)$(HPS)game.com
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -19,11 +20,12 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) .symbolic
 
-exe: $(PARTO1_EXE) final .symbolic
+exe: $(PARTO1_EXE) $(GAME_COM) final .symbolic
 
-final: $(PARTO1_EXE)
+final: $(PARTO1_EXE) $(GAME_COM)
 	@rm -Rf final
 	@mkdir final
+	@cp dos86l/game.com final/game.com
 	@cp dos86l/parto1.exe final/parto1.exe
 	@cp ../devasset/winxp.png final/wxpbrz.png
 	@cp ../devasset/towncenter.png final/twnctr.png
@@ -51,6 +53,11 @@ final: $(PARTO1_EXE)
 	@cp ../devasset/arialfont/arialsmall_final.png final/arialsml.png
 	# wall textures
 	@bash -c 'cd final && for i in 1 2 3 4; do cp ../../devasset/walltx0/watx000$$i.24bpp.png.palunord.png.palord.png watx000$$i.png; done'
+
+!ifdef GAME_COM
+$(GAME_COM): game.asm
+	nasm -o $(GAME_COM) -f bin -l $(GAME_COM).lst game.asm
+!endif
 
 !ifdef PARTO1_EXE
 $(PARTO1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)parto1.obj $(SUBDIR)$(HPS)unicode.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)commtmp.obj $(SUBDIR)$(HPS)vrlimg.obj $(SUBDIR)$(HPS)vrlldf.obj $(SUBDIR)$(HPS)vrlldfd.obj $(SUBDIR)$(HPS)fzlibdec.obj $(SUBDIR)$(HPS)vmode.obj $(SUBDIR)$(HPS)vmodet.obj $(SUBDIR)$(HPS)vmode8bu.obj $(SUBDIR)$(HPS)fataexit.obj $(SUBDIR)$(HPS)fontbmp.obj $(SUBDIR)$(HPS)fontbmpd.obj $(SUBDIR)$(HPS)fontbmcu.obj $(SUBDIR)$(HPS)fbvga8ud.obj $(SUBDIR)$(HPS)f_aria_l.obj $(SUBDIR)$(HPS)f_aria_m.obj $(SUBDIR)$(HPS)f_aria_s.obj $(SUBDIR)$(HPS)vut8u.obj $(SUBDIR)$(HPS)sin2048.obj $(SUBDIR)$(HPS)dumbpack.obj $(SUBDIR)$(HPS)sorcpack.obj $(SUBDIR)$(HPS)rotzfx8u.obj $(SUBDIR)$(HPS)rotzimg.obj $(SUBDIR)$(HPS)rotzpng8.obj $(SUBDIR)$(HPS)dbgheap.obj $(SUBDIR)$(HPS)vrldraw.obj $(SUBDIR)$(HPS)seqcanvs.obj $(SUBDIR)$(HPS)seqcomm.obj $(SUBDIR)$(HPS)freein1.obj $(SUBDIR)$(HPS)cs_intro.obj $(SUBDIR)$(HPS)keyboard.obj
