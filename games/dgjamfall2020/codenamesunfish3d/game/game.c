@@ -120,7 +120,8 @@ unsigned                    game_door_max;
 
 enum {
     GTT_NONE=0,
-    GTT_DOOR=1
+    GTT_DOOR,
+    GTT_TEXT
 };
 
 #define GTF_TRIGGER_ON      (1u << 0u)
@@ -130,6 +131,7 @@ struct game_trigger_t {
     uint8_t                 type;
     uint8_t                 flags;
     unsigned                door;               /* game door */
+    const char*             msg;
 };
 
 #define GAME_TRIGGERS       16
@@ -1075,8 +1077,16 @@ const struct game_trigger_t         game_room3_triggers[] = {
         GTT_DOOR,                                                   // type
         0,                                                          // flags
         6                                                           // door
+    },
+    {                                                               // 7
+        {   TOFP( -15.00),  TOFP(  20.00)   },                      // tl (x,y)
+        {   TOFP( -12.00),  TOFP(  26.00)   },                      // br (x,y)
+        GTT_TEXT,                                                   // type
+        0,                                                          // flags
+        0,                                                          // door
+        "Minigame #1\n\nEnter the room to\nstart game"              // message
     }
-};                                                                  //=7
+};                                                                  //=8
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
@@ -1096,7 +1106,7 @@ const struct game_room_bound        game_room3 = {
     7,                                                              // door count
     game_room3_doors,                                               // doors
 
-    7,                                                              // trigger count
+    8,                                                              // trigger count
     game_room3_triggers                                             // triggers
 };
 
@@ -1429,6 +1439,11 @@ static void game_trigger_act(const unsigned i,const unsigned on) {
             game_door[game_trigger[i].door].open_speed = on ? 0x400 : -0x400;
         }
     }
+    else if (game_trigger[i].type == GTT_TEXT) {
+        game_text_char_clear();
+        if (on && game_trigger[i].msg != NULL)
+            game_text_char_add(50,50,game_trigger[i].msg);
+    }
 }
 
 static void game_trigger_check(void) {
@@ -1476,7 +1491,7 @@ void game_loop(void) {
     game_texture_load(3,"watx0004.png",0);
 
     vga_palette_lseek(GAME_PAL_TEXT);
-    vga_palette_write(0,0,63);
+    vga_palette_write(4,4,31);
 
     game_flags = 0;
     game_vertex_max = 0;
