@@ -718,9 +718,9 @@ const struct game_room_bound        game_room2 = {
  *|                    23|              #3  -12.0, 19.0
  *|      4<---3----------22             #4  -13.0, 19.0
  *|     \|/                             #5  -13.0, 18.0
- *12     5--->6                         #6  -12.0, 18.0
- * \                                    #7  -12.0, 17.0
- * 11    8<---7                         #8  -13.0, 17.0
+ *12     5--->6--------------25         #6  -12.0, 18.0
+ * \                          |         #7  -12.0, 17.0
+ * 11    8<---7--------------26         #8  -13.0, 17.0
  *       |                              #9  -13.0, 16.0     connects to #0 in room2
  *      \|/                             #10 -14.0, 16.0     UNUSED
  *       9                              #11 -14.0, 17.0     connects to #4 in room2
@@ -737,6 +737,8 @@ const struct game_room_bound        game_room2 = {
  *                                      #22  -6.0, 19.0
  *                                      #23 -11.0, 22.0
  *                                      #24 -11.0, 19.0
+ *                                      #25   0.0, 18.0
+ *                                      #26   0.0, 17.0
  */
 
 const struct game_2dvec_t           game_room3_vertices[] = {
@@ -764,8 +766,10 @@ const struct game_2dvec_t           game_room3_vertices[] = {
     {   TOFP(  -6.00),  TOFP(  25.00)   },                          // 21
     {   TOFP(  -6.00),  TOFP(  19.00)   },                          // 22
     {   TOFP( -11.00),  TOFP(  22.00)   },                          // 23
-    {   TOFP( -11.00),  TOFP(  19.00)   }                           // 24
-};                                                                  //=25
+    {   TOFP( -11.00),  TOFP(  19.00)   },                          // 24
+    {   TOFP(   0.00),  TOFP(  18.00)   },                          // 25
+    {   TOFP(   0.00),  TOFP(  17.00)   }                           // 26
+};                                                                  //=27
 
 const struct game_2dlineseg_t       game_room3_linesegs[] = {
     // 0->1->2
@@ -871,8 +875,23 @@ const struct game_2dlineseg_t       game_room3_linesegs[] = {
         23,24,                                                      //  vertices (start,end)
         0,                                                          //  flags
         { 1, 1 }                                                    //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 20
+        6, 25,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 21
+        25,26,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
+    },
+    {                                                               // 22
+        26, 7,                                                      //  vertices (start,end)
+        0,                                                          //  flags
+        { 1, (~0u) }                                                //  sidedef (front, back) i.e. double-sided
     }
-};                                                                  //=20
+};                                                                  //=23
 
 const struct game_2dsidedef_t       game_room3_sidedefs[] = {
     {                                                               // 0
@@ -936,12 +955,12 @@ const struct game_trigger_t         game_room3_triggers[] = {
 
 const struct game_room_bound        game_room3 = {
     {   TOFP( -16.00),  TOFP(  15.00)   },                          // tl (x,y)
-    {   TOFP(  -3.00),  TOFP(  26.00)   },                          // br (x,y)
+    {   TOFP(   3.00),  TOFP(  26.00)   },                          // br (x,y)
 
-    25,                                                             // vertex count
+    27,                                                             // vertex count
     game_room3_vertices,                                            // vertices
 
-    20,                                                             // lineseg count
+    23,                                                             // lineseg count
     game_room3_linesegs,                                            // linesegs
 
     5,                                                              // sidedef count
