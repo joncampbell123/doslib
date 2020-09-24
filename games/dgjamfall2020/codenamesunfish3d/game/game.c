@@ -44,6 +44,8 @@
 
 #include <hw/8042/8042.h>
 
+#define GAME_PAL_TEXT       (255u)
+
 struct game_2dvec_t {
     int32_t         x,y;    /* 16.16 fixed point */
 };
@@ -158,6 +160,15 @@ unsigned                    game_vslice_draw[GAME_VSLICE_DRAW];
 #define GAME_MIN_Z          (1l << 14l)
 
 #define GAMETEX_LOAD_PAL0   (1u << 0u)
+
+struct game_text_char_t {
+    uint16_t                c;
+    uint16_t                x,y;
+};
+
+#define GAME_TEXT_CHAR_MAX  256
+struct game_text_char_t     game_text_char[GAME_TEXT_CHAR_MAX];
+unsigned                    game_text_char_max;
 
 void game_texture_load(const unsigned i,const char *path,const unsigned f) {
     struct minipng_reader *rdr;
@@ -1096,12 +1107,46 @@ const struct game_room_bound*       game_rooms[] = {
     NULL
 };
 
+void game_text_char_clear(void) {
+    game_text_char_max = 0;
+}
+
+void game_text_char_add(const uint16_t x,const uint16_t y,const char *str) {
+    uint16_t dx = x,dy = y;
+
+    while (*str != 0) {
+        const uint32_t c = utf8decode(&str);
+        if (c == 0) break;
+        if (c == '\n') {
+            dy += 16;
+            dx = x;
+        }
+        else {
+            const unsigned int cdef = font_bmp_unicode_to_chardef(arial_large,c);
+            if (cdef < arial_large->chardef_count) {
+                if (game_text_char_max >= GAME_TEXT_CHAR_MAX)
+                    fatal("game_text_char_add too many char");
+
+                game_text_char[game_text_char_max].c = cdef;
+                game_text_char[game_text_char_max].x = dx;
+                game_text_char[game_text_char_max].y = dy;
+                game_text_char_max++;
+
+                dx += arial_large->chardef[cdef].xadvance;
+            }
+        }
+    }
+}
+
 void game_clear_level(void) {
     game_vertex_max = 0;
     game_lineseg_max = 0;
     game_sidedef_max = 0;
     game_trigger_max = 0;
+    game_text_char_max = 0;
     game_door_max = 0;
+
+    game_text_char_add(100,20,"Hello world\nHow are you");
 }
 
 void game_load_room(const struct game_room_bound *room) {
@@ -1423,11 +1468,17 @@ void game_loop(void) {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
+    if (font_bmp_do_load_arial_large())
+        fatal("arial");
+
     game_vslice_init();
     game_texture_load(0,"watx0001.png",GAMETEX_LOAD_PAL0);
     game_texture_load(1,"watx0002.png",0);
     game_texture_load(2,"watx0003.png",0);
     game_texture_load(3,"watx0004.png",0);
+
+    vga_palette_lseek(GAME_PAL_TEXT);
+    vga_palette_write(0,0,63);
 
     game_flags = 0;
     game_vertex_max = 0;
@@ -1615,6 +1666,14 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
 
                 vslice = vsl->next;
             }
+        }
+
+        /* text overlay */
+        {
+            unsigned int i;
+
+            for (i=0;i < game_text_char_max;i++)
+                font_bmp_draw_chardef_vga8u(arial_large,game_text_char[i].c,game_text_char[i].x,game_text_char[i].y,GAME_PAL_TEXT);
         }
 
         /* present to screen, flip pages, wait for vsync */
