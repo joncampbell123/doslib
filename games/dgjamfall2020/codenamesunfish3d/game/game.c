@@ -1747,7 +1747,17 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
     game_vslice_free();
 
     if (game_minigame_select != 0xFFu) {
-        fatal("Unknown minigame %u",game_minigame_select);
+        switch (game_minigame_select) {
+            case 1: // minigame
+                goto loop_restart;
+            case 2: // minigame
+                goto loop_restart;
+            case 3: // minigame
+                goto loop_restart;
+            default:
+                fatal("Unknown minigame %u",game_minigame_select);
+                break;
+        }
     }
 }
 
