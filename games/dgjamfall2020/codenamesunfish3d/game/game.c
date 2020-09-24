@@ -1508,6 +1508,21 @@ static void game_trigger_check(void) {
     }
 }
 
+void run_minigame(const char *path) {
+    gen_res_free();
+    check_heap();
+    unhook_irqs();
+    restore_text_mode();
+
+    // make Watcom C free up DOS segments
+    _heapmin();
+
+    system("command.com");
+
+    init_timer_irq();
+    init_vga256unchained();
+}
+
 void game_loop(void) {
 #define MAX_VSLICE_DRAW     8
     unsigned int vslice_draw_count;
@@ -1749,16 +1764,13 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
     if (game_minigame_select != 0xFFu) {
         switch (game_minigame_select) {
             case 1: // minigame
-                restore_text_mode();
-                init_vga256unchained();
+                run_minigame("mingame1.exe");
                 goto loop_restart;
             case 2: // minigame
-                restore_text_mode();
-                init_vga256unchained();
+                run_minigame("mingame2.exe");
                 goto loop_restart;
             case 3: // minigame
-                restore_text_mode();
-                init_vga256unchained();
+                run_minigame("mingame3.exe");
                 goto loop_restart;
             default:
                 fatal("Unknown minigame %u",game_minigame_select);
