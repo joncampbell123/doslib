@@ -6,7 +6,7 @@ NOW_BUILDING = DGJF2020
 
 MINGAME3_EXE =	 $(SUBDIR)$(HPS)mingame3.$(EXEEXT)
 MINGAME2_EXE =	 $(SUBDIR)$(HPS)mingame2.$(EXEEXT)
-MINGAME1_EXE =	 $(SUBDIR)$(HPS)mingame1.$(EXEEXT)
+CRAPTN52_EXE =	 $(SUBDIR)$(HPS)craptn52.$(EXEEXT)
 PARTO1_EXE =     $(SUBDIR)$(HPS)parto1.$(EXEEXT)
 GAME_COM =		 $(SUBDIR)$(HPS)game.com
 
@@ -25,14 +25,14 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) $(COMMON_LIB) .symbolic
 
-exe: $(PARTO1_EXE) $(MINGAME1_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM) final .symbolic
+exe: $(PARTO1_EXE) $(CRAPTN52_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM) final .symbolic
 
-final: $(PARTO1_EXE) $(MINGAME1_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
+final: $(PARTO1_EXE) $(CRAPTN52_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
 	@rm -Rf final
 	@mkdir final
 	@cp dos86l/game.com final/game.com
 	@cp dos86l/parto1.exe final/parto1.exe
-	@cp dos86l/mingame1.exe final/mingame1.exe
+	@cp dos86l/craptn52.exe final/craptn52.exe
 	@cp dos86l/mingame2.exe final/mingame2.exe
 	@cp dos86l/mingame3.exe final/mingame3.exe
 	@cp ../devasset/winxp.png final/wxpbrz.png
@@ -78,9 +78,9 @@ $(PARTO1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254
 	@wlink @tmp.cmd
 !endif
 
-!ifdef MINGAME1_EXE
-$(MINGAME1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(COMMON_LIB) $(SUBDIR)$(HPS)mingame1.obj
-	%write tmp.cmd option quiet option map=$(MINGAME1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mingame1.obj library $(COMMON_LIB) name $(MINGAME1_EXE)
+!ifdef CRAPTN52_EXE
+$(CRAPTN52_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(COMMON_LIB) $(SUBDIR)$(HPS)craptn52.obj
+	%write tmp.cmd option quiet option map=$(CRAPTN52_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)craptn52.obj library $(COMMON_LIB) name $(CRAPTN52_EXE)
 	@wlink @tmp.cmd
 !endif
 

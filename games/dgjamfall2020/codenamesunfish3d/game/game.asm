@@ -170,7 +170,7 @@ ct_init_mg3:
 ct_init_run:db  0                       ; nothing
 ct_after_minigame:db    5,'MGRET',0     ; return from minigame
 
-exe_minigame1:db    'MINGAME1.EXE',0
+exe_minigame1:db    'CRAPTN52.EXE',0
 
 exe_minigame2:db    'MINGAME2.EXE',0
 
