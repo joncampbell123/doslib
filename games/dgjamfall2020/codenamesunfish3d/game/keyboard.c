@@ -25,7 +25,6 @@
 #include "vmode.h"
 #include "fonts.h"
 #include "vrlimg.h"
-#include "freein.h"
 #include "dbgheap.h"
 #include "fontbmp.h"
 #include "unicode.h"
