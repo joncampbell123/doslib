@@ -1777,6 +1777,15 @@ yal1:               ; CX = x2  DS:SI = texs:texo  ES:DI = vs:o  DX = tw  AX = tf
 /* main                                                                      */
 /*---------------------------------------------------------------------------*/
 
+void gen_res_free(void) {
+    seq_com_cleanup();
+    sin2048fps16_free();
+    font_bmp_free(&arial_small);
+    font_bmp_free(&arial_medium);
+    font_bmp_free(&arial_large);
+    dumbpack_close(&sorc_pack);
+}
+
 int main(int argc,char **argv) {
     probe_dos();
 	cpu_probe();
