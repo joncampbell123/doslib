@@ -39,6 +39,8 @@ final: $(PARTO1_EXE) $(CRAPTN52_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
 	@cp ../devasset/towncenter.png final/twnctr.png
 	@cp ../devasset/atomicplayboy-256x256.png final/atmpbrz.png
 	@cp ../devasset/godtemplestonebehance.320x200.png final/tmplie.png
+	@cp ../devasset/cr52ti1.png final/cr52ti1.png
+	@cp ../devasset/cr52ti2.png final/cr52ti2.png
 	# Sorcerer palette. Uses only 32 colors.
 	@dd if=../devasset/woo-sorcerer-character/set2/palette.png.pal of=final/sorcwoo.pal bs=3 count=32
 	# VRLs
