@@ -160,9 +160,9 @@ void woo_title(void) {
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
     vga_set_start_location(vga_cur_page);
 
+    woo_title_display(imgbuf,320,200,"cr52ti1.png");
     now = read_timer_counter();
     next = now + (120u * 5u);
-    woo_title_display(imgbuf,320,200,"cr52ti1.png");
     do {
         now = read_timer_counter();
         if (kbhit()) {
@@ -176,9 +176,9 @@ void woo_title(void) {
         }
     } while (now < next);
 
-    now = read_timer_counter();
-    next = now + (120u * 5u);
     woo_title_display(imgbuf,320,200,"cr52ti2.png");
+    now = read_timer_counter();
+    next = now + (120u * 6u);
     do {
         now = read_timer_counter();
         if (kbhit()) {
