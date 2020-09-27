@@ -327,6 +327,7 @@ struct sndsb_ctx {
 	uint8_t				wari_hack_mode:1;	/* Use DSP command 0x15 instead of 0x14 like "Wari" */
     uint8_t             srate_force_dsp_4xx:1; /* Force use of SB16 "set sample rate" commands even for DSP 1/2/3.xx playback */
     uint8_t             srate_force_dsp_tc:1; /* Force use of SB/SBPro "time constant" commands even for DSP 4.xx playback */
+    uint8_t             force_single_cycle:1;   /* Caller wishes to force single cycle playback, usually because the audio is not intended to loop */
 	uint8_t				dsp_direct_dac_read_after_command;	/* read the DSP write status N times after direct DAC commands */
 	uint8_t				dsp_direct_dac_poll_retry_timeout;	/* poll DSP write status up to N times again before attempting DSP command */
 	const char*			reason_not_supported;	/* from last call can_do() or is_supported() */

@@ -274,6 +274,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	probe_dos();
 	detect_windows();
 
+    cx->force_single_cycle = 0;
     cx->asp_chip_ram_ok = 0;
     cx->asp_chip_ram_size = 0;
     cx->asp_chip_ram_size_probed = 0;
@@ -650,7 +651,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	/* there are known cases where auto-init DMA with single-cycle DSP causes problems:
 	 *   - Some PCI sound cards with emulation drivers in DOS will act funny (Sound Blaster Live! EMU10K1 SB16 emulation)
 	 *   - Pro Audio Spectrum cards will exhibit occasional pops and crackles between DSP blocks (PAS16) */
-	if (cx->sbos || cx->mega_em) {
+	if (cx->sbos || cx->mega_em || cx->force_single_cycle) {
 		cx->chose_autoinit_dma = cx->chose_autoinit_dsp = 0; // except that MEGA-EM and SBOS suck at emulation
 	}
 	else {
@@ -690,7 +691,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 			return 0; /* ADPCM modes do not support stereo or 16 bit nor recording */
 
 		/* if DSP 2.xx mode or higher and ADPCM auto-init enabled, enable autoinit */
-		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit && cx->dsp_autoinit_command) {
+		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit && cx->dsp_autoinit_command && !cx->force_single_cycle) {
 			sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval);
 			cx->chose_autoinit_dsp = 1;
 		}
