@@ -280,8 +280,6 @@ int load_wav_into_buffer(unsigned long *length,unsigned long *srate,unsigned int
     *channels = 0;
     *bits = 0;
 
-    __asm int 3
-
     /* NTS: The RIFF structure of WAV isn't all that hard to handle, and uncompressed PCM data within isn't
      *      difficult to handle at all. WAV was invented back when Microsoft made sensibly designed file
      *      formats instead of overengineered crap like Windows Media. */
