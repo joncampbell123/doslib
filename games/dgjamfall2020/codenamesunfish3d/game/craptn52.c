@@ -47,6 +47,14 @@
 
 struct sndsb_ctx*       sound_blaster_ctx = NULL;
 
+void sound_blaster_unhook_irq(void) {
+    // TODO
+}
+
+void my_unhook_irq(void) {
+    sound_blaster_unhook_irq();
+}
+
 void gen_res_free(void) {
 //    seq_com_cleanup();
 //    sin2048fps16_free();
@@ -56,6 +64,7 @@ void gen_res_free(void) {
 //    dumbpack_close(&sorc_pack);
 
     if (sound_blaster_ctx != NULL) {
+        sndsb_stop_dsp_playback(sound_blaster_ctx);
         sndsb_free_card(sound_blaster_ctx);
         sound_blaster_ctx = NULL;
     }
@@ -292,6 +301,8 @@ int main(int argc,char **argv) {
         printf("Sound Blaster lib init fail.\n");
         return 1;
     }
+
+    other_unhook_irq = my_unhook_irq;
 
     write_8254_system_timer(0);
 

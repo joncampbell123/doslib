@@ -34,7 +34,10 @@
 /* unhook IRQ call                                                           */
 /*---------------------------------------------------------------------------*/
 
+void (*other_unhook_irq)(void) = NULL;
+
 void unhook_irqs() {
+    if (other_unhook_irq != NULL) other_unhook_irq();
     restore_timer_irq();
     restore_keyboard_irq();
 }
