@@ -389,6 +389,7 @@ void woo_title(void) {
                 }
             }
 
+            /* Sound Blaster signalled that the block finished, so stop it. */
             if (sound_blaster_ctx->irq_counter != pirq)
                 break;
         } while (now < next);
