@@ -70,6 +70,8 @@ extern const uint8_t minipng_sig[8];
 
 /* WARNING: This function will expand bytes to a multiple of 8 pixels rounded up. Allocate your buffer accordingly. */
 void minipng_expand1to8(unsigned char *buf,unsigned int pixels);
+/* WARNING: This function will expand bytes to a multiple of 2 pixels rounded up. Allocate your buffer accordingly. */
+void minipng_expand4to8(unsigned char *buf,unsigned int pixels);
 
 struct minipng_reader *minipng_reader_open(const char *path);
 int minipng_reader_rewind(struct minipng_reader *rdr);

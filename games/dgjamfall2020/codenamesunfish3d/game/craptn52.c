@@ -144,22 +144,6 @@ void gen_res_free(void) {
     }
 }
 
-/* WARNING: This function will expand bytes to a multiple of 2 pixels rounded up. Allocate your buffer accordingly. */
-void minipng_expand4to8(unsigned char *buf,unsigned int pixels) {
-    if (pixels > 0) {
-        unsigned int bytes = (pixels + 1u) / 2u;
-        unsigned char *w = buf + (bytes * 2u);
-        buf += bytes;
-
-        do {
-            unsigned char pb = *--buf;
-            w -= 2;
-            w[0] = (pb >> 4u) & 0xFu;
-            w[1] = (pb >> 0u) & 0xFu;
-        } while (--bytes != 0u);
-    }
-}
-
 static struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path) {
     struct minipng_reader *rdr;
     unsigned int y;

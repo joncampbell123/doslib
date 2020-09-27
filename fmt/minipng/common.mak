@@ -4,13 +4,13 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = FMT_MINIPNG_LIB
 
-OBJS =         $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnid.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)miniprid.obj
+OBJS =         $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnid.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipn48.obj $(SUBDIR)$(HPS)miniprid.obj
 
 $(FMT_MINIPNG_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipng.obj -+$(SUBDIR)$(HPS)minipnid.obj
 	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipnph.obj -+$(SUBDIR)$(HPS)minipnrb.obj
 	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipnrw.obj -+$(SUBDIR)$(HPS)minipnx8.obj
-	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)miniprid.obj
+	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)miniprid.obj -+$(SUBDIR)$(HPS)minipn48.obj
 
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 TESTOLD1_EXE = $(SUBDIR)$(HPS)testold1.$(EXEEXT)
