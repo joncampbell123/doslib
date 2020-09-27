@@ -326,6 +326,11 @@ int load_wav_into_buffer(unsigned long *length,unsigned long *srate,unsigned int
             found |= FND_DATA;
             *length = (unsigned long)len;
             if (len > max_length) len = max_length;
+
+            // FIXME: In 16-bit real mode this code can only load up to 64KB - 1 using read()
+            if (len > 0xFFF0ul)
+                len = 0xFFF0ul;
+
             if (len != 0ul) {
                 if (read(fd,buffer,len) != len) goto errout; // WARNING: Assumes large memory model
             }
