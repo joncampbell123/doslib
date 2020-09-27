@@ -48,6 +48,7 @@
 struct dma_8237_allocation*         sound_blaster_dma = NULL; /* DMA buffer */
 struct sndsb_ctx*                   sound_blaster_ctx = NULL;
 
+unsigned char           sound_blaster_stop_on_irq = 0;
 unsigned char           sound_blaster_irq_hook = 0;
 unsigned char           sound_blaster_old_irq_masked = 0; /* very important! If the IRQ was masked prior to running this program there's probably a good reason */
 void                    (interrupt *sound_blaster_old_irq)() = NULL;
@@ -105,10 +106,12 @@ void interrupt sound_blaster_irq() {
 	c = sndsb_interrupt_reason(sound_blaster_ctx);
 	sndsb_interrupt_ack(sound_blaster_ctx,c);
 
-	/* FIXME: The sndsb library should NOT do anything in
-	   send_buffer_again() if it knows playback has not started! */
-	/* for non-auto-init modes, start another buffer */
-	sndsb_irq_continue(sound_blaster_ctx,c);
+    if (!sound_blaster_stop_on_irq) {
+        /* FIXME: The sndsb library should NOT do anything in
+           send_buffer_again() if it knows playback has not started! */
+        /* for non-auto-init modes, start another buffer */
+        sndsb_irq_continue(sound_blaster_ctx,c);
+    }
 
 	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
 	 *      chain to the previous IRQ handler. This is very important considering
@@ -417,9 +420,11 @@ void woo_title(void) {
 
     /* "Make your selection, now" */
     if (sound_blaster_ctx != NULL) {
+        uint8_t odac = sound_blaster_ctx->dsp_autoinit_command,odad = sound_blaster_ctx->dsp_autoinit_dma;
         unsigned long srate;
         unsigned int channels,bits;
         unsigned long length;
+        uint32_t pirq;
 
         sndsb_stop_dsp_playback(sound_blaster_ctx);
 
@@ -430,6 +435,10 @@ void woo_title(void) {
         if (load_wav_into_buffer(&length,&srate,&channels,&bits,sound_blaster_dma->lin,sound_blaster_dma->length,"act52sel.wav") || bits < 8 || bits > 16 || channels < 1 || channels > 2)
             fatal("WAV file act52sel.wav len=%lu srate=%lu ch=%u bits=%u",length,srate,channels,bits);
 
+        /* make it play non-looping by disabling DSP/DMA autoinit, then set a flag telling our SB IRQ handler to stop and not continue playback. */
+        sound_blaster_stop_on_irq = 1;
+        sound_blaster_ctx->dsp_autoinit_command = 0;
+        sound_blaster_ctx->dsp_autoinit_dma = 0;
         sound_blaster_ctx->buffer_irq_interval = length;
         sound_blaster_ctx->buffer_size = length;
         if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
@@ -439,9 +448,11 @@ void woo_title(void) {
         if (!sndsb_begin_dsp_playback(sound_blaster_ctx))
             fatal("sb dsp play");
 
+        pirq = sound_blaster_ctx->irq_counter;
+
         /* TODO this is just debug */
         now = read_timer_counter();
-        next = now + (120u * 6u);
+        next = now + (120u * 3u);
         do {
             now = read_timer_counter();
             if (kbhit()) {
@@ -453,7 +464,14 @@ void woo_title(void) {
                     next = now;
                 }
             }
+
+            if (sound_blaster_ctx->irq_counter != pirq)
+                break;
         } while (now < next);
+
+        sound_blaster_ctx->dsp_autoinit_command = odac;
+        sound_blaster_ctx->dsp_autoinit_dma = odad;
+        sound_blaster_stop_on_irq = 0;
     }
 
 finishnow:
