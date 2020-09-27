@@ -163,7 +163,13 @@ void sound_blaster_hook_irq(void) {
     }
 }
 
+void sound_blaster_stop_playback(void) {
+    if (sound_blaster_ctx != NULL)
+        sndsb_stop_dsp_playback(sound_blaster_ctx);
+}
+
 void my_unhook_irq(void) {
+    sound_blaster_stop_playback();
     sound_blaster_unhook_irq();
 }
 
@@ -175,15 +181,12 @@ void gen_res_free(void) {
 //    font_bmp_free(&arial_large);
 //    dumbpack_close(&sorc_pack);
 
+    sound_blaster_stop_playback();
+    free_sound_blaster_dma();
     if (sound_blaster_ctx != NULL) {
-        sndsb_stop_dsp_playback(sound_blaster_ctx);
-        sound_blaster_unhook_irq();
-
-        /* NTS: This erases the sound card from the list, zeros the struct! */
         sndsb_free_card(sound_blaster_ctx);
         sound_blaster_ctx = NULL;
     }
-    free_sound_blaster_dma();
 }
 
 static struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path) {
