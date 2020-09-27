@@ -133,7 +133,7 @@ static void woo_title_display(unsigned char *imgbuf,unsigned int w,unsigned int 
             for (j=c;j < w;j += 4) *dp++ = sp[j];
         }
 
-        if ((i&15) == 13) {
+        if ((i&7) == 6) {
             vga_wait_for_vsync();
             vga_wait_for_vsync_end();
         }
