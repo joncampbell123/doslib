@@ -54,11 +54,10 @@ void                    (interrupt *sound_blaster_old_irq)() = NULL;
 
 void free_sound_blaster_dma(void) {
     if (sound_blaster_dma != NULL) {
+        sndsb_assign_dma_buffer(sound_blaster_ctx,NULL);
         dma_8237_free_buffer(sound_blaster_dma);
         sound_blaster_dma = NULL;
     }
-
-    sndsb_assign_dma_buffer(sound_blaster_ctx,NULL);
 }
 
 int realloc_sound_blaster_dma(const unsigned buffer_size) {
