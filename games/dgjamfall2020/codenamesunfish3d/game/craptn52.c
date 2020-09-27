@@ -363,6 +363,7 @@ void woo_title(void) {
         if (load_wav_into_buffer(&length,&srate,&channels,&bits,sound_blaster_dma->lin,sound_blaster_dma->length,"act52woo.wav") || bits < 8 || bits > 16 || channels < 1 || channels > 2)
             fatal("WAV file act52woo.wav len=%lu srate=%lu ch=%u bits=%u",length,srate,channels,bits);
 
+        sound_blaster_ctx->buffer_irq_interval = length;
         sound_blaster_ctx->buffer_size = length;
         if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
             fatal("sb prepare dsp");
@@ -413,6 +414,47 @@ void woo_title(void) {
             }
         }
     } while (now < next);
+
+    /* "Make your selection, now" */
+    if (sound_blaster_ctx != NULL) {
+        unsigned long srate;
+        unsigned int channels,bits;
+        unsigned long length;
+
+        sndsb_stop_dsp_playback(sound_blaster_ctx);
+
+        if (realloc_sound_blaster_dma(28u << 10u)) /* 28KB */
+            fatal("Sound Blaster DMA alloc 28KB");
+
+        /* load the WAV file into the DMA buffer, and set the buffer size for it to loop. */
+        if (load_wav_into_buffer(&length,&srate,&channels,&bits,sound_blaster_dma->lin,sound_blaster_dma->length,"act52sel.wav") || bits < 8 || bits > 16 || channels < 1 || channels > 2)
+            fatal("WAV file act52sel.wav len=%lu srate=%lu ch=%u bits=%u",length,srate,channels,bits);
+
+        sound_blaster_ctx->buffer_irq_interval = length;
+        sound_blaster_ctx->buffer_size = length;
+        if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
+            fatal("sb prepare dsp");
+        if (!sndsb_setup_dma(sound_blaster_ctx))
+            fatal("sb dma setup");
+        if (!sndsb_begin_dsp_playback(sound_blaster_ctx))
+            fatal("sb dsp play");
+
+        /* TODO this is just debug */
+        now = read_timer_counter();
+        next = now + (120u * 6u);
+        do {
+            now = read_timer_counter();
+            if (kbhit()) {
+                c = getch();
+                if (c == 27) {
+                    goto finishnow;
+                }
+                else if (c == ' ') {
+                    next = now;
+                }
+            }
+        } while (now < next);
+    }
 
 finishnow:
     free_sound_blaster_dma();
