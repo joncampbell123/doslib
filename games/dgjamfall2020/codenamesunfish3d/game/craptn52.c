@@ -182,6 +182,7 @@ void gen_res_free(void) {
 //    dumbpack_close(&sorc_pack);
 
     sound_blaster_stop_playback();
+    sound_blaster_unhook_irq();
     free_sound_blaster_dma();
     if (sound_blaster_ctx != NULL) {
         sndsb_free_card(sound_blaster_ctx);
@@ -263,6 +264,83 @@ static void woo_title_display(unsigned char *imgbuf,unsigned int w,unsigned int 
     minipng_reader_close(&rdr);
 }
 
+int load_wav_into_buffer(unsigned long *length,unsigned long *srate,unsigned int *channels,unsigned int *bits,unsigned char FAR *buffer,unsigned long max_length,const char *path) {
+#define FND_FMT     (1u << 0u)
+#define FND_DATA    (1u << 1u)
+    unsigned found = 0;
+    off_t scan,stop;
+    uint32_t len;
+    int fd;
+
+    *length = 0;
+    *srate = 0;
+    *channels = 0;
+    *bits = 0;
+
+    __asm int 3
+
+    /* NTS: The RIFF structure of WAV isn't all that hard to handle, and uncompressed PCM data within isn't
+     *      difficult to handle at all. WAV was invented back when Microsoft made sensibly designed file
+     *      formats instead of overengineered crap like Windows Media. */
+    fd = open(path,O_RDONLY | O_BINARY);
+    if (fd < 0) return 1;
+
+    /* 'RIFF' <length> 'WAVE' , length is overall length of WAV file */
+    if (lseek(fd,0,SEEK_SET) != 0) goto errout;
+    if (read(fd,common_tmp_small,12) != 12) goto errout;
+    if (memcmp(common_tmp_small+0,"RIFF",4) != 0 || memcmp(common_tmp_small+8,"WAVE",4) != 0) goto errout;
+    stop = *((uint32_t*)(common_tmp_small+4)) + 8; /* NTS: DOS is little endian and so are WAV structures. <length> is length of data following RIFF <length> */
+
+    /* scan chunks within. Look for 'fmt ' and 'data' */
+    scan = 12;
+    while (scan < stop) {
+        if (lseek(fd,scan,SEEK_SET) != scan) goto errout;
+        if (read(fd,common_tmp_small,8) != 8) goto errout;
+        len = *((uint32_t*)(common_tmp_small+4)); /* length of data following <fourcc> <length> */
+
+        if (!memcmp(common_tmp_small+0,"fmt ",4)) {
+            /* fmt contains WAVEFORMATEX */
+            found |= FND_FMT;
+
+            if (len >= 0x10) {
+                if (read(fd,common_tmp_small,0x10) != 0x10) goto errout;
+                /* typedef struct {
+                    WORD  wFormatTag;               // +0x0
+                    WORD  nChannels;                // +0x2
+                    DWORD nSamplesPerSec;           // +0x4
+                    DWORD nAvgBytesPerSec;          // +0x8
+                    WORD  nBlockAlign;              // +0xC
+                    WORD  wBitsPerSample;           // +0xE
+                    WORD  cbSize;                   // +0x10
+                 } WAVEFORMATEX; */
+                if (*((uint16_t*)(common_tmp_small+0x00)) != 1) goto errout; /* wFormatTag == WAVE_FORMAT_PCM only! */
+                *channels = *((uint16_t*)(common_tmp_small+0x02));
+                *srate = *((uint32_t*)(common_tmp_small+0x04));
+                *bits = *((uint16_t*)(common_tmp_small+0x0E));
+            }
+        }
+        else if (!memcmp(common_tmp_small+0,"data",4)) {
+            found |= FND_DATA;
+            *length = (unsigned long)len;
+            if (len > max_length) len = max_length;
+            if (len != 0ul) {
+                if (read(fd,buffer,len) != len) goto errout; // WARNING: Assumes large memory model
+            }
+        }
+
+        scan += 8ul + len;
+    }
+
+    if (found != (FND_DATA|FND_FMT)) goto errout;
+
+    return 0;
+errout:
+    close(fd);
+    return 1;
+#undef FND_DATA
+#undef FND_FMT
+}
+
 void woo_title(void) {
     unsigned char *imgbuf;
     uint32_t now,next;
@@ -274,8 +352,24 @@ void woo_title(void) {
     /* If using Sound Blaster, allocate a DMA buffer to loop the "Wooo! Yeah!" from Action 52.
      * The WAV file is ~24KB, so allocating 28KB should be fine, along with the "Make your selection now" clip. */
     if (sound_blaster_ctx != NULL) {
+        unsigned long srate;
+        unsigned int channels,bits;
+        unsigned long length;
+
         if (realloc_sound_blaster_dma(28u << 10u)) /* 28KB */
             fatal("Sound Blaster DMA alloc 28KB");
+
+        /* load the WAV file into the DMA buffer, and set the buffer size for it to loop. */
+        if (load_wav_into_buffer(&length,&srate,&channels,&bits,sound_blaster_dma->lin,sound_blaster_dma->length,"act52woo.wav") || bits < 8 || bits > 16 || channels < 1 || channels > 2)
+            fatal("WAV file act52woo.wav len=%lu srate=%lu ch=%u bits=%u",length,srate,channels,bits);
+
+        sound_blaster_ctx->buffer_size = length;
+        if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
+            fatal("sb prepare dsp");
+        if (!sndsb_setup_dma(sound_blaster_ctx))
+            fatal("sb dma setup");
+        if (!sndsb_begin_dsp_playback(sound_blaster_ctx))
+            fatal("sb dsp play");
     }
 
     /* as part of the gag, set the VGA mode X rendering to draw on active display.
