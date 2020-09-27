@@ -271,6 +271,13 @@ void woo_title(void) {
     imgbuf = malloc(320u*200u); // 64000 bytes
     if (imgbuf == NULL) fatal("woo_title imgbuf NULL");
 
+    /* If using Sound Blaster, allocate a DMA buffer to loop the "Wooo! Yeah!" from Action 52.
+     * The WAV file is ~24KB, so allocating 28KB should be fine, along with the "Make your selection now" clip. */
+    if (sound_blaster_ctx != NULL) {
+        if (realloc_sound_blaster_dma(28u << 10u)) /* 28KB */
+            fatal("Sound Blaster DMA alloc 28KB");
+    }
+
     /* as part of the gag, set the VGA mode X rendering to draw on active display.
      * furthermore the code is written to set palette, then draw the code with
      * deliberately poor performance. Going from one title image to another this
@@ -314,6 +321,7 @@ void woo_title(void) {
     } while (now < next);
 
 finishnow:
+    free_sound_blaster_dma();
     free(imgbuf);
 }
 
