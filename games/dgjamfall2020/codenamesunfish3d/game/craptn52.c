@@ -384,7 +384,7 @@ void woo_title(void) {
 
     woo_title_display(imgbuf,320,200,"cr52ti1.png");
     now = read_timer_counter();
-    next = now + (120u * 5u);
+    next = now + (120u * 6u);
     do {
         now = read_timer_counter();
         if (kbhit()) {
@@ -400,7 +400,7 @@ void woo_title(void) {
 
     woo_title_display(imgbuf,320,200,"cr52ti2.png");
     now = read_timer_counter();
-    next = now + (120u * 6u);
+    next = now + (120u * 8u);
     do {
         now = read_timer_counter();
         if (kbhit()) {
