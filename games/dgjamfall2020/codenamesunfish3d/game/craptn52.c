@@ -344,7 +344,6 @@ void woo_title(void) {
 
     /* "Make your selection, now" */
     if (sound_blaster_ctx != NULL) {
-        uint8_t odac = sound_blaster_ctx->dsp_autoinit_command,odad = sound_blaster_ctx->dsp_autoinit_dma;
         unsigned long srate;
         unsigned int channels,bits;
         unsigned long length;
@@ -361,8 +360,7 @@ void woo_title(void) {
 
         /* make it play non-looping by disabling DSP/DMA autoinit, then set a flag telling our SB IRQ handler to stop and not continue playback. */
         sound_blaster_stop_on_irq = 1;
-        sound_blaster_ctx->dsp_autoinit_command = 0;
-        sound_blaster_ctx->dsp_autoinit_dma = 0;
+        sound_blaster_ctx->force_single_cycle = 1;
         sound_blaster_ctx->buffer_irq_interval = length;
         sound_blaster_ctx->buffer_size = length;
         if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
@@ -394,8 +392,7 @@ void woo_title(void) {
                 break;
         } while (now < next);
 
-        sound_blaster_ctx->dsp_autoinit_command = odac;
-        sound_blaster_ctx->dsp_autoinit_dma = odad;
+        sound_blaster_ctx->force_single_cycle = 0;
         sound_blaster_stop_on_irq = 0;
     }
 
