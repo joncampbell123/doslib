@@ -45,11 +45,53 @@
 
 #include <hw/8042/8042.h>
 
-struct sndsb_ctx*       sound_blaster_ctx = NULL;
+struct dma_8237_allocation*         sound_blaster_dma = NULL; /* DMA buffer */
+struct sndsb_ctx*                   sound_blaster_ctx = NULL;
 
 unsigned char           sound_blaster_irq_hook = 0;
 unsigned char           sound_blaster_old_irq_masked = 0; /* very important! If the IRQ was masked prior to running this program there's probably a good reason */
 void                    (interrupt *sound_blaster_old_irq)() = NULL;
+
+void free_sound_blaster_dma(void) {
+    if (sound_blaster_dma != NULL) {
+        dma_8237_free_buffer(sound_blaster_dma);
+        sound_blaster_dma = NULL;
+    }
+
+    sndsb_assign_dma_buffer(sound_blaster_ctx,NULL);
+}
+
+int realloc_sound_blaster_dma(const unsigned buffer_size) {
+    uint32_t choice;
+    int8_t ch;
+
+    if (sound_blaster_dma != NULL) {
+        if (sound_blaster_dma->length >= buffer_size)
+            return 0;
+    }
+
+    free_sound_blaster_dma();
+
+    ch = sndsb_dsp_playback_will_use_dma_channel(sound_blaster_ctx,22050,0/*mono*/,0/*8-bit*/);
+
+    if (ch >= 4)
+        choice = sndsb_recommended_16bit_dma_buffer_size(sound_blaster_ctx,buffer_size);
+    else
+        choice = sndsb_recommended_dma_buffer_size(sound_blaster_ctx,buffer_size);
+
+    if (ch >= 4)
+        sound_blaster_dma = dma_8237_alloc_buffer_dw(choice,16);
+    else
+        sound_blaster_dma = dma_8237_alloc_buffer_dw(choice,8);
+
+    if (sound_blaster_dma == NULL)
+        return 1;
+
+    if (!sndsb_assign_dma_buffer(sound_blaster_ctx,sound_blaster_dma))
+        return 1;
+
+    return 0;
+}
 
 void interrupt sound_blaster_irq() {
 	unsigned char c;
@@ -142,6 +184,7 @@ void gen_res_free(void) {
         sndsb_free_card(sound_blaster_ctx);
         sound_blaster_ctx = NULL;
     }
+    free_sound_blaster_dma();
 }
 
 static struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path) {
