@@ -17,6 +17,7 @@
 #include <hw/dos/himemsys.h>
 #include <hw/vga/vga.h>
 #include <hw/vga/vrl.h>
+#include <hw/8237/8237.h>
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
@@ -207,6 +208,10 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+	if (!probe_8237()) {
+		printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
+		return 1;
+	}
 	if (!probe_8254()) {
 		printf("No 8254 detected.\n");
 		return 1;
