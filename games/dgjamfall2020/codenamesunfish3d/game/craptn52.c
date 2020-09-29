@@ -491,7 +491,7 @@ int woo_menu(void) {
                 sel -= GAMES_PER_COLUMN;
             else {
                 sel += TOTAL_GAMES + GAMES_PER_COLUMN - (TOTAL_GAMES%GAMES_PER_COLUMN);
-                if (sel >= TOTAL_GAMES)
+                while (sel >= TOTAL_GAMES)
                     sel -= GAMES_PER_COLUMN;
             }
 
