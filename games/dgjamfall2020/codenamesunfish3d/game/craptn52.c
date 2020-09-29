@@ -46,6 +46,8 @@
 
 #include <hw/8042/8042.h>
 
+unsigned char FAR*                  vga_8x8_font_ptr;
+
 struct dma_8237_allocation*         sound_blaster_dma = NULL; /* DMA buffer */
 struct sndsb_ctx*                   sound_blaster_ctx = NULL;
 
@@ -268,6 +270,224 @@ static void woo_title_display(unsigned char *imgbuf,unsigned int w,unsigned int 
     minipng_reader_close(&rdr);
 }
 
+#define TOTAL_GAMES                 52
+#define GAMES_PER_COLUMN            9
+#define GAMES_PER_PAGE              18
+#define TOTAL_PAGES                 ((TOTAL_GAMES+GAMES_PER_PAGE-1)/GAMES_PER_PAGE)
+
+static const char *menu_entries[TOTAL_GAMES] = {
+    "Entry1",           // 0
+    "Entry2",           // 1
+    "Entry3",           // 2
+    "Entry4",           // 3
+    "Entry5",           // 4
+    "Entry6",           // 5
+    "Entry7",           // 6
+    "Entry8",           // 7
+    "Entry9",           // 8
+    "Entry10",          // 9
+    "Entry11",          // 10
+    "Entry12",          // 11
+    "Entry13",          // 12
+    "Entry14",          // 13
+    "Entry15",          // 14
+    "Entry16",          // 15
+    "Entry17",          // 16
+    "Entry18",          // 17
+    "Entry19",          // 18
+    "Entry20",          // 19
+    "Entry21",          // 20
+    "Entry22",          // 21
+    "Entry23",          // 22
+    "Entry24",          // 23
+    "Entry25",          // 24
+    "Entry26",          // 25
+    "Entry27",          // 26
+    "Entry28",          // 27
+    "Entry29",          // 28
+    "Entry30",          // 29
+    "Entry31",          // 30
+    "Entry32",          // 31
+    "Entry33",          // 32
+    "Entry34",          // 33
+    "Entry35",          // 34
+    "Entry36",          // 35
+    "Entry37",          // 36
+    "Entry38",          // 37
+    "Entry39",          // 38
+    "Entry40",          // 39
+    "Entry41",          // 40
+    "Entry42",          // 41
+    "Entry43",          // 42
+    "Entry44",          // 43
+    "Entry45",          // 44
+    "Entry46",          // 45
+    "Entry47",          // 46
+    "Entry48",          // 47
+    "Entry49",          // 48
+    "Entry50",          // 49
+    "Entry51",          // 50
+    "Entry52"           // 51
+};
+
+void woo_menu_item_coord(unsigned int *x,unsigned int *y,unsigned int i) {
+    *x = (40u/4u) + ((140u/4u) * (i/GAMES_PER_COLUMN));
+    *y = 40u + ((i%GAMES_PER_COLUMN) * 14u);
+}
+
+static const uint8_t vrev4[16] = {
+    0x0,    // 0000 0000
+    0x8,    // 0001 1000
+    0x4,    // 0010 0100
+    0xC,    // 0011 1100
+    0x2,    // 0100 0010
+    0xA,    // 0101 1010
+    0x6,    // 0110 0110
+    0xE,    // 0111 1110
+    0x1,    // 1000 0001
+    0x9,    // 1001 1001
+    0x5,    // 1010 0101
+    0xD,    // 1011 1101
+    0x3,    // 1100 0011
+    0xB,    // 1101 1011
+    0x7,    // 1110 0111
+    0xF     // 1111 1111
+};
+
+void woo_menu_item_draw_char(unsigned int o,unsigned char c,unsigned char color) {
+    unsigned char FAR *fbmp = vga_8x8_font_ptr + ((unsigned int)c * 8u);
+    unsigned char cb;
+    unsigned int i;
+
+    for (i=0;i < 8;i++) {
+        cb = fbmp[i];
+
+        vga_write_sequencer(0x02/*map mask*/,vrev4[(cb >> 4u) & 0xFu]);
+        vga_state.vga_graphics_ram[o+0] = color;
+
+        vga_write_sequencer(0x02/*map mask*/,vrev4[(cb >> 0u) & 0xFu]);
+        vga_state.vga_graphics_ram[o+1] = color;
+
+        o += 80u;
+    }
+}
+
+void woo_menu_item_draw(unsigned int x,unsigned int y,unsigned int i,unsigned int sel) {
+    /* 'x' is in units of 4 pixels because unchained 256-color mode */
+    const char *str = "";
+    unsigned char color;
+    unsigned int o;
+    char c;
+
+    color = (i == sel) ? 15 : 7;
+
+    o = (y * 80u) + x;
+    if (i < TOTAL_GAMES)
+        str = menu_entries[i];
+
+    while ((c=(*str++)) != 0) {
+        woo_menu_item_draw_char(o,(unsigned char)c,color);
+        o += 2u;
+    }
+}
+
+int woo_menu(void) {
+    unsigned char page = 0,npage;
+    unsigned char redraw = 7;
+    unsigned char done = 0;
+    unsigned int i,x,y;
+    int psel = -1,sel = 0,c;
+
+    /* use INT 16h here */
+    restore_keyboard_irq();
+
+    /* again, no page flipping, drawing directly on screen */ 
+    vga_cur_page = vga_next_page = VGA_PAGE_FIRST;
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+    vga_set_start_location(vga_cur_page);
+
+    page = (unsigned int)sel / (unsigned int)GAMES_PER_PAGE;
+
+    while (!done) {
+        if (redraw) {
+            if (redraw & 1u) {
+                npage = (unsigned int)sel / (unsigned int)GAMES_PER_PAGE;
+                if (page != npage) {
+                    page = npage;
+                    redraw |= 7u;
+                }
+            }
+
+            if (redraw & 4u) { // redraw background
+                vga_write_sequencer(0x02/*map mask*/,0xFu);
+                vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
+                redraw |= 3u; // which means redraw all menu items
+            }
+
+            if (redraw & 2u) { // redraw all menu items
+                for (i=0;i < GAMES_PER_PAGE;i++) {
+                    woo_menu_item_coord(&x,&y,i);
+                    woo_menu_item_draw(x,y,i+(page*GAMES_PER_PAGE),sel);
+                }
+            }
+            else if (redraw & 1u) { // redraw active menu item
+                if (psel != sel) {
+                    woo_menu_item_coord(&x,&y,psel - (page * GAMES_PER_PAGE));
+                    woo_menu_item_draw(x,y,psel,sel);
+                }
+
+                woo_menu_item_coord(&x,&y,sel - (page * GAMES_PER_PAGE));
+                woo_menu_item_draw(x,y,sel,sel);
+            }
+
+            redraw = 0;
+            psel = sel;
+        }
+
+        c = getch();
+        if (c == 0) c = getch() << 8; /* extended IBM key code */
+        if (c == 27) {
+            sel = -1;
+            break;
+        }
+        else if (c == 0x4800) { // up arrow
+            if (sel > 0)
+                sel--;
+            else
+                sel = TOTAL_GAMES - 1;
+
+            redraw |= 1u;
+        }
+        else if (c == 0x5000) { // down arrow
+            sel++;
+            if (sel >= TOTAL_GAMES)
+                sel = 0;
+
+            redraw |= 1u;
+        }
+        else if (c == 0x4B00) { // left arrow
+            if (sel >= GAMES_PER_COLUMN)
+                sel -= GAMES_PER_COLUMN;
+            else {
+                sel += TOTAL_GAMES + GAMES_PER_COLUMN - (TOTAL_GAMES%GAMES_PER_COLUMN);
+                if (sel >= TOTAL_GAMES)
+                    sel -= GAMES_PER_COLUMN;
+            }
+
+            redraw |= 1u;
+        }
+        else if (c == 0x4D00) { // down arrow
+            sel += GAMES_PER_COLUMN;
+            if (sel >= TOTAL_GAMES)
+                sel %= GAMES_PER_COLUMN;
+
+            redraw |= 1u;
+        }
+    }
+
+    return sel;
+}
+
 void woo_title(void) {
     unsigned char *imgbuf;
     uint32_t now,next;
@@ -290,6 +510,8 @@ void woo_title(void) {
         if (load_wav_into_buffer(&length,&srate,&channels,&bits,sound_blaster_dma->lin,sound_blaster_dma->length,"act52woo.wav") || bits < 8 || bits > 16 || channels < 1 || channels > 2)
             fatal("WAV file act52woo.wav len=%lu srate=%lu ch=%u bits=%u",length,srate,channels,bits);
 
+        sound_blaster_stop_on_irq = 0;
+        sound_blaster_ctx->force_single_cycle = 0; /* go ahead, loop */
         sound_blaster_ctx->buffer_irq_interval = length;
         sound_blaster_ctx->buffer_size = length;
         if (!sndsb_prepare_dsp_playback(sound_blaster_ctx,srate,channels>=2?1:0,bits>=16?1:0))
@@ -347,7 +569,6 @@ void woo_title(void) {
         unsigned long srate;
         unsigned int channels,bits;
         unsigned long length;
-        uint32_t pirq;
 
         sndsb_stop_dsp_playback(sound_blaster_ctx);
 
@@ -370,34 +591,10 @@ void woo_title(void) {
         if (!sndsb_begin_dsp_playback(sound_blaster_ctx))
             fatal("sb dsp play");
 
-        pirq = sound_blaster_ctx->irq_counter;
-
-        /* TODO this is just debug */
-        now = read_timer_counter();
-        next = now + (120u * 3u);
-        do {
-            now = read_timer_counter();
-            if (kbhit()) {
-                c = getch();
-                if (c == 27) {
-                    goto finishnow;
-                }
-                else if (c == ' ') {
-                    next = now;
-                }
-            }
-
-            /* Sound Blaster signalled that the block finished, so stop it. */
-            if (sound_blaster_ctx->irq_counter != pirq)
-                break;
-        } while (now < next);
-
-        sound_blaster_ctx->force_single_cycle = 0;
-        sound_blaster_stop_on_irq = 0;
+        /* leave it to run while going to the menu */
     }
 
 finishnow:
-    free_sound_blaster_dma();
     free(imgbuf);
 }
 
@@ -456,6 +653,9 @@ void detect_sound_blaster(void) {
 }
 
 int main(int argc,char **argv) {
+    unsigned char done;
+    int sel;
+
     (void)argc;
     (void)argv;
 
@@ -491,6 +691,9 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    /* as part of the gag, we use the VGA 8x8 BIOS font instead of the nice Arial font */
+    vga_8x8_font_ptr = (unsigned char FAR*)_dos_getvect(0x43); /* Character table (8x8 chars 0x00-0x7F) [http://www.ctyme.com/intr/rb-6169.htm] */
+
     other_unhook_irq = my_unhook_irq;
 
     write_8254_system_timer(0);
@@ -509,6 +712,19 @@ int main(int argc,char **argv) {
     init_vga256unchained();
 
     woo_title();
+
+    done = 0;
+    while (!done) {
+        sel = woo_menu();
+        switch (sel) {
+            case -1:
+                done = 1;
+                break;
+            default:
+                fatal("Unknown menu selection %u",sel);
+                break;
+        }
+    }
 
     gen_res_free();
     check_heap();
