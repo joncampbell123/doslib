@@ -275,60 +275,65 @@ static void woo_title_display(unsigned char *imgbuf,unsigned int w,unsigned int 
 #define GAMES_PER_PAGE              18
 #define TOTAL_PAGES                 ((TOTAL_GAMES+GAMES_PER_PAGE-1)/GAMES_PER_PAGE)
 
-static const char *menu_entries[TOTAL_GAMES] = {
-    "Entry1",           // 0
-    "Entry2",           // 1
-    "Entry3",           // 2
-    "Entry4",           // 3
-    "Entry5",           // 4
-    "Entry6",           // 5
-    "Entry7",           // 6
-    "Entry8",           // 7
-    "Entry9",           // 8
-    "Entry10",          // 9
-    "Entry11",          // 10
-    "Entry12",          // 11
-    "Entry13",          // 12
-    "Entry14",          // 13
-    "Entry15",          // 14
-    "Entry16",          // 15
-    "Entry17",          // 16
-    "Entry18",          // 17
-    "Entry19",          // 18
-    "Entry20",          // 19
-    "Entry21",          // 20
-    "Entry22",          // 21
-    "Entry23",          // 22
-    "Entry24",          // 23
-    "Entry25",          // 24
-    "Entry26",          // 25
-    "Entry27",          // 26
-    "Entry28",          // 27
-    "Entry29",          // 28
-    "Entry30",          // 29
-    "Entry31",          // 30
-    "Entry32",          // 31
-    "Entry33",          // 32
-    "Entry34",          // 33
-    "Entry35",          // 34
-    "Entry36",          // 35
-    "Entry37",          // 36
-    "Entry38",          // 37
-    "Entry39",          // 38
-    "Entry40",          // 39
-    "Entry41",          // 40
-    "Entry42",          // 41
-    "Entry43",          // 42
-    "Entry44",          // 43
-    "Entry45",          // 44
-    "Entry46",          // 45
-    "Entry47",          // 46
-    "Entry48",          // 47
-    "Entry49",          // 48
-    "Entry50",          // 49
-    "Entry51",          // 50
-    "Entry52"           // 51
+struct menu_entry_t {
+    const char*                     title;
+    const char*                     longtitle;
 };
+
+static struct menu_entry_t menu_entries[TOTAL_GAMES] = {
+    {"Entry0",              "Entry #0"},                                // 0
+    {"Entry1",              "Entry #1"},                                // 1
+    {"Entry2",              "Entry #2"},                                // 2
+    {"Entry3",              "Entry #3"},                                // 3
+    {"Entry4",              "Entry #4"},                                // 4
+    {"Entry5",              "Entry #5"},                                // 5
+    {"Entry6",              "Entry #6"},                                // 6
+    {"Entry7",              "Entry #7"},                                // 7
+    {"Entry8",              "Entry #8"},                                // 8
+    {"Entry9",              "Entry #9"},                                // 9
+    {"Entry10",             "Entry #10"},                               // 10
+    {"Entry11",             "Entry #11"},                               // 11
+    {"Entry12",             "Entry #12"},                               // 12
+    {"Entry13",             "Entry #13"},                               // 13
+    {"Entry14",             "Entry #14"},                               // 14
+    {"Entry15",             "Entry #15"},                               // 15
+    {"Entry16",             "Entry #16"},                               // 16
+    {"Entry17",             "Entry #17"},                               // 17
+    {"Entry18",             "Entry #18"},                               // 18
+    {"Entry19",             "Entry #19"},                               // 19
+    {"Entry20",             "Entry #20"},                               // 20
+    {"Entry21",             "Entry #21"},                               // 21
+    {"Entry22",             "Entry #22"},                               // 22
+    {"Entry23",             "Entry #23"},                               // 23
+    {"Entry24",             "Entry #24"},                               // 24
+    {"Entry25",             "Entry #25"},                               // 25
+    {"Entry26",             "Entry #26"},                               // 26
+    {"Entry27",             "Entry #27"},                               // 27
+    {"Entry28",             "Entry #28"},                               // 28
+    {"Entry29",             "Entry #29"},                               // 29
+    {"Entry30",             "Entry #30"},                               // 30
+    {"Entry31",             "Entry #31"},                               // 31
+    {"Entry32",             "Entry #32"},                               // 32
+    {"Entry33",             "Entry #33"},                               // 33
+    {"Entry34",             "Entry #34"},                               // 34
+    {"Entry35",             "Entry #35"},                               // 35
+    {"Entry36",             "Entry #36"},                               // 36
+    {"Entry37",             "Entry #37"},                               // 37
+    {"Entry38",             "Entry #38"},                               // 38
+    {"Entry39",             "Entry #39"},                               // 39
+    {"Entry40",             "Entry #40"},                               // 40
+    {"Entry41",             "Entry #41"},                               // 41
+    {"Entry42",             "Entry #42"},                               // 42
+    {"Entry43",             "Entry #43"},                               // 43
+    {"Entry44",             "Entry #44"},                               // 44
+    {"Entry45",             "Entry #45"},                               // 45
+    {"Entry46",             "Entry #46"},                               // 46
+    {"Entry47",             "Entry #47"},                               // 47
+    {"Entry48",             "Entry #48"},                               // 48
+    {"Entry49",             "Entry #49"},                               // 49
+    {"Entry50",             "Entry #50"},                               // 50
+    {"Entry51",             "Entry #51"}                                // 51
+};                                                                      //=52
 
 void woo_menu_item_coord(unsigned int *x,unsigned int *y,unsigned int i) {
     *x = (40u/4u) + ((140u/4u) * (i/GAMES_PER_COLUMN));
@@ -388,7 +393,7 @@ void woo_menu_item_draw(unsigned int x,unsigned int y,unsigned int i,unsigned in
 
     o = (y * 80u) + x;
     if (i < TOTAL_GAMES)
-        str = menu_entries[i];
+        str = menu_entries[i].title;
 
     while ((c=(*str++)) != 0) {
         woo_menu_item_draw_char(o,(unsigned char)c,color);
