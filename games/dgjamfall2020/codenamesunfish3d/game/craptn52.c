@@ -468,7 +468,7 @@ int woo_menu(void) {
             sel = -1;
             break;
         }
-        else if (c == 13) { // ENTER key
+        else if (c == 13 || c == ' ') { // ENTER key or SPACEBAR
             break;
         }
         else if (c == 0x4800) { // up arrow
