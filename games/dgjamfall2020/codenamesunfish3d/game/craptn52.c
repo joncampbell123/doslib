@@ -463,6 +463,9 @@ int woo_menu(void) {
             sel = -1;
             break;
         }
+        else if (c == 13) { // ENTER key
+            break;
+        }
         else if (c == 0x4800) { // up arrow
             if (sel > 0)
                 sel--;
