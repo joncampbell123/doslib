@@ -415,9 +415,14 @@ int woo_menu(void) {
     vga_palette_lseek(0);
     vga_palette_write(0,0,0);
     vga_palette_lseek(7);
-    vga_palette_write(31,43,43);
+    vga_palette_write(22,35,35);
     vga_palette_lseek(15);
     vga_palette_write(63,63,63);
+
+    vga_palette_lseek(1);
+    vga_palette_write(15,2,2);
+    vga_palette_lseek(2);
+    vga_palette_write(15,15,15);
 
     /* again, no page flipping, drawing directly on screen */ 
     vga_cur_page = vga_next_page = VGA_PAGE_FIRST;
@@ -438,7 +443,13 @@ int woo_menu(void) {
 
             if (redraw & 4u) { // redraw background
                 vga_write_sequencer(0x02/*map mask*/,0xFu);
-                vga_rep_stosw(vga_state.vga_graphics_ram,0,((320u/4u)*200)/2u);
+
+                vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*0u),0x0000,((320u/4u)*200u)/2u);
+                vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*0u),0x0101,((320u/4u)*31u)/2u);
+                vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*31u),0x0202,((320u/4u)*1u)/2u);
+                vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*169u),0x0202,((320u/4u)*1u)/2u);
+                vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*170u),0x0101,((320u/4u)*30u)/2u);
+
                 redraw |= 3u; // which means redraw all menu items
             }
 
