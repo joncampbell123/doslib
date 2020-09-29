@@ -577,6 +577,7 @@ void woo_title(void) {
         }
     } while (now < next);
 
+finishnow:
     /* "Make your selection, now" */
     if (sound_blaster_ctx != NULL) {
         unsigned long srate;
@@ -607,7 +608,6 @@ void woo_title(void) {
         /* leave it to run while going to the menu */
     }
 
-finishnow:
     free(imgbuf);
 }
 
