@@ -401,6 +401,14 @@ int woo_menu(void) {
     /* use INT 16h here */
     restore_keyboard_irq();
 
+    /* palette */
+    vga_palette_lseek(0);
+    vga_palette_write(0,0,0);
+    vga_palette_lseek(7);
+    vga_palette_write(31,43,43);
+    vga_palette_lseek(15);
+    vga_palette_write(63,63,63);
+
     /* again, no page flipping, drawing directly on screen */ 
     vga_cur_page = vga_next_page = VGA_PAGE_FIRST;
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
