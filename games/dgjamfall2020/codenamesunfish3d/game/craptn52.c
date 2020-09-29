@@ -379,6 +379,11 @@ void woo_menu_item_draw(unsigned int x,unsigned int y,unsigned int i,unsigned in
     unsigned int o;
     char c;
 
+    color = (i == sel) ? 7 : 0;
+
+    o = (y * 80u) + x - 2u;
+    woo_menu_item_draw_char(o,(unsigned char)'>',color);
+
     color = (i == sel) ? 15 : 7;
 
     o = (y * 80u) + x;
