@@ -377,6 +377,18 @@ void woo_menu_item_draw_char(unsigned int o,unsigned char c,unsigned char color)
     }
 }
 
+void woo_menu_item_drawstr(unsigned int x,unsigned int y,const char *str,unsigned char color) {
+    /* 'x' is in units of 4 pixels because unchained 256-color mode */
+    unsigned int o;
+    char c;
+
+    o = (y * 80u) + x;
+    while ((c=(*str++)) != 0) {
+        woo_menu_item_draw_char(o,(unsigned char)c,color);
+        o += 2u;
+    }
+}
+
 void woo_menu_item_draw(unsigned int x,unsigned int y,unsigned int i,unsigned int sel) {
     /* 'x' is in units of 4 pixels because unchained 256-color mode */
     const char *str = "";
@@ -480,7 +492,33 @@ int woo_menu(void) {
             break;
         }
         else if (c == 13 || c == ' ') { // ENTER key or SPACEBAR
-            break;
+            const char *title = "?";
+            size_t titlelen;
+
+            /* we take over the screen, signal redraw in case we return to menu */
+            redraw |= 7u;
+
+            vga_write_sequencer(0x02/*map mask*/,0xFu);
+            vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*0u),0x0000,((320u/4u)*200u)/2u);
+
+            if (sel >= 0 && sel < TOTAL_GAMES)
+                title = menu_entries[sel].longtitle;
+
+            titlelen = strlen(title);
+            woo_menu_item_drawstr((320u-(titlelen*8u))/2u/4u,60,title,7);
+
+            woo_menu_item_drawstr(108u/4u,90,"ENTER to start",7);
+            woo_menu_item_drawstr(80u/4u,106,"ESC to return to menu",7);
+
+            while (1) {
+                c = getch();
+                if (c == 0) c = getch() << 8; /* extended IBM key code */
+
+                if (c == 13/*ENTER*/ || c == 27/*ESC*/) break;
+            }
+
+            if (c == 13)
+                break;
         }
         else if (c == 0x4800) { // up arrow
             if (sel > 0)
