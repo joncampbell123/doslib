@@ -21,6 +21,7 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 #include <hw/sndsb/sndsb.h>
+#include <hw/adlib/adlib.h>
 #include <fmt/minipng/minipng.h>
 
 #include "timer.h"
@@ -45,6 +46,10 @@
 #include "ldwavsn.h"
 
 #include <hw/8042/8042.h>
+
+static inline int use_adlib() {
+    return (adlib_fm_voices != 0u);
+}
 
 unsigned char FAR*                  vga_8x8_font_ptr;
 
@@ -419,6 +424,10 @@ int woo_menu(void) {
     unsigned char done = 0;
     unsigned int i,x,y;
     int psel = -1,sel = 0,c;
+    unsigned int trigger_voice = 0;
+    unsigned char nav_voice = 0;
+    uint32_t nav_voice_off = 0;
+    uint32_t now;
 
     /* use INT 16h here */
     restore_keyboard_irq();
@@ -441,9 +450,57 @@ int woo_menu(void) {
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
     vga_set_start_location(vga_cur_page);
 
+    /* setup OPL for menu sound effects */
+    if (use_adlib()) {
+        struct adlib_fm_operator *f;
+
+        f = &adlib_fm[nav_voice].mod;
+        f->mod_multiple = 7;
+        f->total_level = 47;
+        f->attack_rate = 12;
+        f->decay_rate = 7;
+        f->sustain_level = 6;
+        f->release_rate = 8;
+        f->f_number = 580; /* 440Hz middle 'A' */
+        f->octave = 4;
+        f->key_on = 0;
+
+        f = &adlib_fm[nav_voice].car;
+        f->mod_multiple = 2;
+        f->total_level = 47;
+        f->attack_rate = 15;
+        f->decay_rate = 6;
+        f->sustain_level = 6;
+        f->release_rate = 5;
+        f->f_number = 0;
+        f->octave = 0;
+        f->key_on = 0;
+
+        adlib_apply_all();
+    }
+
     page = (unsigned int)sel / (unsigned int)GAMES_PER_PAGE;
 
     while (!done) {
+        now = read_timer_counter();
+
+        if (use_adlib()) {
+            if (trigger_voice & (1u << 0u)) {
+                adlib_fm[nav_voice].mod.key_on = 0;
+                adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
+                adlib_fm[nav_voice].mod.key_on = 1;
+                adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
+                nav_voice_off = now + 120;
+            }
+
+            trigger_voice = 0;
+            if (nav_voice_off != 0 && now >= nav_voice_off) {
+                adlib_fm[nav_voice].mod.key_on = 0;
+                adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
+                nav_voice_off = 0;
+            }
+        }
+
         if (redraw) {
             if (redraw & 1u) {
                 npage = (unsigned int)sel / (unsigned int)GAMES_PER_PAGE;
@@ -485,8 +542,14 @@ int woo_menu(void) {
             psel = sel;
         }
 
-        c = getch();
-        if (c == 0) c = getch() << 8; /* extended IBM key code */
+        if (kbhit()) {
+            c = getch();
+            if (c == 0) c = getch() << 8; /* extended IBM key code */
+        }
+        else {
+            c = 0;
+        }
+
         if (c == 27) {
             sel = -1;
             break;
@@ -527,6 +590,7 @@ int woo_menu(void) {
                 sel = TOTAL_GAMES - 1;
 
             redraw |= 1u;
+            trigger_voice |= (1u << 0u);
         }
         else if (c == 0x5000) { // down arrow
             sel++;
@@ -534,6 +598,7 @@ int woo_menu(void) {
                 sel = 0;
 
             redraw |= 1u;
+            trigger_voice |= (1u << 0u);
         }
         else if (c == 0x4B00) { // left arrow
             if (sel >= GAMES_PER_COLUMN)
@@ -545,6 +610,7 @@ int woo_menu(void) {
             }
 
             redraw |= 1u;
+            trigger_voice |= (1u << 0u);
         }
         else if (c == 0x4D00) { // down arrow
             sel += GAMES_PER_COLUMN;
@@ -552,6 +618,7 @@ int woo_menu(void) {
                 sel %= GAMES_PER_COLUMN;
 
             redraw |= 1u;
+            trigger_voice |= (1u << 0u);
         }
     }
 
@@ -756,9 +823,50 @@ int main(int argc,char **argv) {
         printf("This game requires VGA\n");
         return 1;
     }
-    if (!init_sndsb()) {
+    if (!init_sndsb()) { // will only fail if lib init fails, will succeed whether or not there is Sound Blaster
         printf("Sound Blaster lib init fail.\n");
         return 1;
+    }
+	if (init_adlib()) { // may fail if no OPL at 388h
+        unsigned int i;
+
+        memset(adlib_fm,0,sizeof(adlib_fm));
+        memset(&adlib_reg_bd,0,sizeof(adlib_reg_bd));
+        for (i=0;i < adlib_fm_voices;i++) {
+            struct adlib_fm_operator *f;
+            f = &adlib_fm[i].mod;
+            f->ch_a = f->ch_b = 1; f->ch_c = f->ch_d = 0;
+            f = &adlib_fm[i].car;
+            f->ch_a = f->ch_b = 1; f->ch_c = f->ch_d = 0;
+        }
+
+        for (i=0;i < adlib_fm_voices;i++) {
+            struct adlib_fm_operator *f;
+
+            f = &adlib_fm[i].mod;
+            f->mod_multiple = 1;
+            f->total_level = 63 - 16;
+            f->attack_rate = 15;
+            f->decay_rate = 0;
+            f->sustain_level = 7;
+            f->release_rate = 7;
+            f->f_number = 0x2AE; // C
+            f->octave = 4;
+            f->key_on = 0;
+
+            f = &adlib_fm[i].car;
+            f->mod_multiple = 1;
+            f->total_level = 63 - 16;
+            f->attack_rate = 15;
+            f->decay_rate = 0;
+            f->sustain_level = 7;
+            f->release_rate = 7;
+            f->f_number = 0;
+            f->octave = 0;
+            f->key_on = 0;
+        }
+
+        adlib_apply_all();
     }
 
     /* as part of the gag, we use the VGA 8x8 BIOS font instead of the nice Arial font */
