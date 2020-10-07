@@ -845,6 +845,8 @@ int main(int argc,char **argv) {
 	if (init_adlib()) { // may fail if no OPL at 388h
         unsigned int i;
 
+        printf("Adlib FM detected\n");
+
         memset(adlib_fm,0,sizeof(adlib_fm));
         memset(&adlib_reg_bd,0,sizeof(adlib_reg_bd));
         for (i=0;i < adlib_fm_voices;i++) {
