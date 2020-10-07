@@ -425,8 +425,8 @@ int woo_menu(void) {
     unsigned int i,x,y;
     int psel = -1,sel = 0,c;
     unsigned int trigger_voice = 0;
-    unsigned char nav_voice = 0;
-    uint32_t nav_voice_off = 0;
+    const unsigned char sel_voice = 1;
+    const unsigned char nav_voice = 0;
     uint32_t now;
 
     /* use INT 16h here */
@@ -476,6 +476,9 @@ int woo_menu(void) {
         f->octave = 0;
         f->key_on = 0;
 
+        adlib_fm[sel_voice] = adlib_fm[nav_voice];
+        adlib_fm[sel_voice].mod.octave = 5;
+
         adlib_apply_all();
     }
 
@@ -490,15 +493,9 @@ int woo_menu(void) {
                 adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
                 adlib_fm[nav_voice].mod.key_on = 1;
                 adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
-                nav_voice_off = now + 120;
             }
 
             trigger_voice = 0;
-            if (nav_voice_off != 0 && now >= nav_voice_off) {
-                adlib_fm[nav_voice].mod.key_on = 0;
-                adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
-                nav_voice_off = 0;
-            }
         }
 
         if (redraw) {
@@ -558,6 +555,13 @@ int woo_menu(void) {
             const char *title = "?";
             size_t titlelen;
 
+            if (use_adlib()) {
+                adlib_fm[sel_voice].mod.key_on = 0;
+                adlib_update_groupA0(nav_voice,&adlib_fm[sel_voice]);
+                adlib_fm[sel_voice].mod.key_on = 1;
+                adlib_update_groupA0(nav_voice,&adlib_fm[sel_voice]);
+            }
+
             /* we take over the screen, signal redraw in case we return to menu */
             redraw |= 7u;
 
@@ -578,6 +582,12 @@ int woo_menu(void) {
                 if (c == 0) c = getch() << 8; /* extended IBM key code */
 
                 if (c == 13/*ENTER*/ || c == 27/*ESC*/) break;
+            }
+
+            if (use_adlib()) {
+                adlib_fm[sel_voice].mod.key_on = 0;
+                adlib_update_groupA0(nav_voice,&adlib_fm[sel_voice]);
+                trigger_voice |= (1u << 0u);
             }
 
             if (c == 13)
@@ -621,6 +631,11 @@ int woo_menu(void) {
             trigger_voice |= (1u << 0u);
         }
     }
+
+    adlib_fm[nav_voice].mod.key_on = 0;
+    adlib_update_groupA0(nav_voice,&adlib_fm[nav_voice]);
+    adlib_fm[sel_voice].mod.key_on = 0;
+    adlib_update_groupA0(sel_voice,&adlib_fm[sel_voice]);
 
     return sel;
 }
