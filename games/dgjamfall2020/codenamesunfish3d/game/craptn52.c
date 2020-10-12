@@ -184,9 +184,13 @@ void my_unhook_irq(void) {
     sound_blaster_unhook_irq();
 }
 
+void game_spriteimg_free(void);
+
 void gen_res_free(void) {
+    game_spriteimg_free();
+    sin2048fps16_free();
+
 //    seq_com_cleanup();
-//    sin2048fps16_free();
 //    font_bmp_free(&arial_small);
 //    font_bmp_free(&arial_medium);
 //    font_bmp_free(&arial_large);
@@ -444,6 +448,9 @@ int woo_menu(void) {
     vga_palette_write(15,2,2);
     vga_palette_lseek(2);
     vga_palette_write(15,15,15);
+
+    /* border color (overscan) */
+    vga_write_AC(0x11 | VGA_AC_ENABLE,0x00);
 
     /* again, no page flipping, drawing directly on screen */ 
     vga_cur_page = vga_next_page = VGA_PAGE_FIRST;
@@ -750,6 +757,316 @@ finishnow:
     free(imgbuf);
 }
 
+void load_def_pal() {
+    unsigned int i;
+    int fd;
+
+    fd = open("cr52pal.pal",O_RDONLY|O_BINARY);
+    if (fd >= 0) {
+        read(fd,common_tmp_small,216*3);
+        close(fd);
+
+        vga_palette_lseek(0);
+        for (i=0;i < 216;i++) vga_palette_write(common_tmp_small[i*3+0]>>2u,common_tmp_small[i*3+1]>>2u,common_tmp_small[i*3+2]>>2u);
+    }
+
+    /* border color (overscan) */
+    vga_write_AC(0x11 | VGA_AC_ENABLE,215);
+}
+
+#define NUM_TILES           256
+#define TILES_VRAM_OFFSET   0xC000              /* enough for 4*16*256 */
+
+#define GAME_VSCROLL        (1u << 0u)
+#define GAME_HSCROLL        (1u << 1u)
+
+#define NUM_SPRITEIMG       64
+
+struct game_spriteimg {
+    struct vrl_image        vrl;
+};
+
+struct game_spriteimg       game_spriteimg[NUM_SPRITEIMG];
+
+#define NUM_SPRITES         32
+
+#define GAME_SPRITE_VISIBLE (1u << 0u)
+#define GAME_SPRITE_REDRAW  (1u << 1u)
+#define GAME_SPRITE_HFLIP   (1u << 2u)
+
+struct game_sprite {
+    /* last drawn (for erasure) */
+    unsigned int            ox,oy;
+    unsigned int            ow,oh;
+    /* where to draw */
+    unsigned int            x,y;
+    unsigned int            w,h;
+    /* what to draw */
+    unsigned char           spriteimg;
+    /* other */
+    unsigned char           flags;
+};
+
+unsigned char               game_sprite_max = 0;
+struct game_sprite          game_sprite[NUM_SPRITES];
+
+void game_sprite_hide(unsigned i) {
+    if (i >= NUM_SPRITES)
+        fatal("spriteimgset out of range");
+
+    game_sprite[i].flags &= ~GAME_SPRITE_VISIBLE;
+    game_sprite[i].flags |=  GAME_SPRITE_REDRAW;
+}
+
+void game_sprite_show(unsigned i) {
+    if (i >= NUM_SPRITES)
+        fatal("spriteimgset out of range");
+
+    game_sprite[i].flags |=  GAME_SPRITE_VISIBLE;
+    game_sprite[i].flags |=  GAME_SPRITE_REDRAW;
+}
+
+/* does not change position */
+void game_sprite_imgset(unsigned i,unsigned img) {
+    if (i >= NUM_SPRITES || img >= NUM_SPRITEIMG)
+        fatal("spriteimgset out of range");
+
+    game_sprite[i].spriteimg = img;
+    if (game_spriteimg[i].vrl.buffer != NULL && game_spriteimg[i].vrl.vrl_header != NULL) {
+        game_sprite[i].h = game_spriteimg[i].vrl.vrl_header->height;
+        game_sprite[i].w = game_spriteimg[i].vrl.vrl_header->width;
+    }
+    else {
+        game_sprite[i].h = game_sprite[i].w = 0;
+    }
+
+    game_sprite[i].flags |= GAME_SPRITE_REDRAW;
+    game_sprite[i].flags |= GAME_SPRITE_VISIBLE;
+
+    if (game_sprite_max < (i+1u))
+        game_sprite_max = (i+1u);
+}
+
+void game_sprite_position(unsigned i,unsigned int x,unsigned int y) {
+    if (i >= NUM_SPRITES)
+        fatal("spriteimgpos out of range");
+
+    game_sprite[i].x = x;
+    game_sprite[i].y = y;
+    game_sprite[i].flags |= GAME_SPRITE_REDRAW;
+}
+
+void game_sprite_clear(void) {
+    game_sprite_max = 0;
+}
+
+void game_sprite_init(void) {
+    game_sprite_clear();
+    memset(game_sprite,0,sizeof(game_sprite));
+}
+
+void game_spriteimg_freeimg(struct game_spriteimg *i) {
+    free_vrl(&(i->vrl));
+}
+
+void game_spriteimg_free(void) {
+    unsigned int i;
+
+    for (i=0;i < NUM_SPRITEIMG;i++)
+        game_spriteimg_freeimg(game_spriteimg+i);
+}
+
+void game_spriteimg_loadimg(struct game_spriteimg *i,const char *path) {
+    game_spriteimg_freeimg(i);
+    if (load_vrl(&(i->vrl),path) != 0)
+        fatal("spriteimg fail %s",path);
+}
+
+void game_spriteimg_load(unsigned i,const char *path) {
+    game_spriteimg_loadimg(game_spriteimg+i,path);
+}
+
+unsigned char game_scroll_mode = 0;
+unsigned int game_hscroll = 0;
+unsigned int game_vscroll = 0;
+
+/* noscroll: normal 320 pixel width */
+void game_noscroll_setup(void) {
+    vga_set_stride((vga_state.vga_draw_stride=80u)*4u);
+    game_scroll_mode = 0;
+    game_hscroll = 0;
+    game_vscroll = 0;
+}
+
+/* vscroll: normal 320 pixel width */
+void game_vscroll_setup(void) {
+    vga_set_stride((vga_state.vga_draw_stride=80u)*4u);
+    game_scroll_mode = GAME_VSCROLL;
+    game_hscroll = 0;
+    game_vscroll = 0;
+}
+
+/* hscroll: 336 pixel width */
+void game_hscroll_setup(void) {
+    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
+    game_scroll_mode = GAME_HSCROLL;
+    game_hscroll = 0;
+    game_vscroll = 0;
+}
+
+void load_tiles(uint16_t ofs,uint16_t ostride,const char *path) {
+    struct minipng_reader *rdr;
+    unsigned int imgw,imgh;
+    unsigned char *row;
+    unsigned int i,x;
+    uint16_t tof;
+
+    if ((rdr=minipng_reader_open(path)) == NULL)
+        fatal("vram_image png error %s",path);
+    if (minipng_reader_parse_head(rdr) || rdr->ihdr.width < 4 || rdr->ihdr.width > 32 || (rdr->ihdr.width & 3) != 0 || rdr->ihdr.bit_depth != 8)
+        fatal("vram_image png error %s",path);
+    if ((row=malloc(imgw)) == NULL)
+        fatal("vram_image png error %s",path);
+
+    imgw = rdr->ihdr.width;
+    imgh = rdr->ihdr.height;
+
+    if (ostride == 0)
+        ostride = imgw/4u;
+
+    for (i=0;i < imgh;i++) {
+        minipng_reader_read_idat(rdr,row,1); /* pad byte */
+        minipng_reader_read_idat(rdr,row,imgw); /* row */
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);
+        for (x=0,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x];
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);
+        for (x=1,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x];
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);
+        for (x=2,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x];
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);
+        for (x=3,tof=ofs;x < imgw;x += 4u,tof++)
+            *((unsigned char far*)MK_FP(0xA000,tof)) = row[x];
+
+        ofs += ostride;
+    }
+
+    minipng_reader_close(&rdr);
+    free(row);
+}
+
+void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
+    /* TODO */
+}
+
+void game_draw_sprite(unsigned x,unsigned y,unsigned simg,unsigned flags) {
+    /* assume simg < NUM_SPRITEIMG */
+    if (game_spriteimg[simg].vrl.vrl_header != NULL) {
+        if (flags & GAME_SPRITE_HFLIP) {
+            draw_vrl1_vgax_modexclip_hflip(
+                    x,y,
+                    game_spriteimg[simg].vrl.vrl_header,
+                    game_spriteimg[simg].vrl.vrl_lineoffs,
+                    game_spriteimg[simg].vrl.buffer+sizeof(*(game_spriteimg[simg].vrl.vrl_header)),
+                    game_spriteimg[simg].vrl.bufsz-sizeof(*(game_spriteimg[simg].vrl.vrl_header)));
+        }
+        else {
+            draw_vrl1_vgax_modexclip(
+                    x,y,
+                    game_spriteimg[simg].vrl.vrl_header,
+                    game_spriteimg[simg].vrl.vrl_lineoffs,
+                    game_spriteimg[simg].vrl.buffer+sizeof(*(game_spriteimg[simg].vrl.vrl_header)),
+                    game_spriteimg[simg].vrl.bufsz-sizeof(*(game_spriteimg[simg].vrl.vrl_header)));
+        }
+    }
+}
+
+void game_update_sprites(void) {
+    unsigned int i;
+
+    /* pass 1: draw background beneath all sprites */
+    for (i=0;i < game_sprite_max;i++) {
+        if (game_sprite[i].ow != 0)
+            game_draw_tiles(game_sprite[i].ox,game_sprite[i].oy,game_sprite[i].ow,game_sprite[i].oh);
+
+        if (game_sprite[i].flags & GAME_SPRITE_VISIBLE) {
+            game_sprite[i].ow = game_sprite[i].w;
+            game_sprite[i].oh = game_sprite[i].h;
+            game_sprite[i].ox = game_sprite[i].x;
+            game_sprite[i].oy = game_sprite[i].y;
+        }
+        else {
+            game_sprite[i].ow = 0;
+        }
+    }
+
+    /* pass 2: draw sprites */
+    for (i=0;i < game_sprite_max;i++) {
+        if (game_sprite[i].w != 0)
+            if (game_sprite[i].flags & GAME_SPRITE_VISIBLE)
+                game_draw_sprite(game_sprite[i].x,game_sprite[i].y,game_sprite[i].spriteimg,game_sprite[i].flags);
+    }
+}
+
+void game_0() {
+    if (sin2048fps16_open())
+        fatal("cannot open sin2048");
+
+    vga_cur_page = VGA_PAGE_FIRST;
+    vga_set_start_location(vga_cur_page);
+    vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*0u),0x0000,((320u/4u)*200u)/2u);
+    load_def_pal();
+
+    vga_cur_page = VGA_PAGE_FIRST;
+    vga_next_page = VGA_PAGE_SECOND;
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+    vga_set_start_location(vga_cur_page);
+
+    game_sprite_init();
+    game_noscroll_setup();
+
+    load_tiles(TILES_VRAM_OFFSET,0/*default*/,"cr52bt00.png");
+    game_spriteimg_load(0,"cr52rn00.vrl");
+    game_spriteimg_load(1,"cr52rn01.vrl");
+    game_spriteimg_load(2,"cr52rn02.vrl");
+    game_spriteimg_load(3,"cr52rn03.vrl");
+
+    /* use INT 16h here */
+    restore_keyboard_irq();
+
+    game_sprite_imgset(0,0);
+    game_sprite_position(0,20,20);
+
+    game_sprite_imgset(1,1);
+    game_sprite_position(1,40,40);
+
+    while (1) {
+        if (kbhit()) {
+            if (getch() == 27) break;
+        }
+
+        {
+            uint32_t c = read_timer_counter() * 40ul;
+            game_sprite_position(0,160 + (sin2048fps16_lookup(c) >> 10l),100 + (sin2048fps16_lookup(c / 10u) >> 10l));
+        }
+        {
+            uint32_t c = read_timer_counter() * 30ul;
+            game_sprite_position(1,100 + (sin2048fps16_lookup(c) >> 10l),50 + (sin2048fps16_lookup(c / 10u) >> 10l));
+        }
+
+        game_update_sprites();
+        vga_swap_pages(); /* current <-> next */
+        vga_update_disp_cur_page();
+        vga_wait_for_vsync(); /* wait for vsync */
+    }
+}
+
 /* Sound Blaster detection using hw/sndsb */
 void detect_sound_blaster(void) {
     struct sndsb_ctx* ctx;
@@ -807,6 +1124,8 @@ void detect_sound_blaster(void) {
 int main(int argc,char **argv) {
     unsigned char done;
     int sel;
+
+    memset(game_spriteimg,0,sizeof(game_spriteimg));
 
     (void)argc;
     (void)argv;
@@ -914,6 +1233,9 @@ int main(int argc,char **argv) {
         switch (sel) {
             case -1:
                 done = 1;
+                break;
+            case 0:
+                game_0();
                 break;
             default:
                 fatal("Unknown menu selection %u",sel);
