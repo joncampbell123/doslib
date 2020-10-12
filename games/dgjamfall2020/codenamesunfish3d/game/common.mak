@@ -65,6 +65,10 @@ final: $(PARTO1_EXE) $(CRAPTN52_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
 	@cp ../devasset/arialfont/arialsmall_final.png final/arialsml.png
 	# wall textures
 	@bash -c 'cd final && for i in 1 2 3 4; do cp ../../devasset/walltx0/watx000$$i.24bpp.png.palunord.png.palord.png watx000$$i.png; done'
+	# craption 52 tiles
+	@cp ../devasset/cr52bt00.png final/cr52bt00.png
+	@cp ../devasset/cr52pal.pal  final/cr52pal.pal
+	@cp ../devasset/cr52rl??.vrl ../devasset/cr52rn??.vrl final/
 
 !ifdef GAME_COM
 $(GAME_COM): game.asm
