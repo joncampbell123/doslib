@@ -1133,6 +1133,8 @@ void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned ch
 }
 
 void game_0() {
+    unsigned int i;
+
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
@@ -1160,11 +1162,8 @@ void game_0() {
 
     game_tilecopy(0,0,22,14,game_0_tilemap);
 
-    game_sprite_imgset(0,0);
-    game_sprite_position(0,20,20);
-
-    game_sprite_imgset(1,1);
-    game_sprite_position(1,40,40);
+    for (i=0;i < 32;i++)
+        game_sprite_imgset(i,i%4);
 
     game_draw_tiles_2pages(0,0,320,200);
 
@@ -1173,13 +1172,9 @@ void game_0() {
             if (getch() == 27) break;
         }
 
-        {
-            uint32_t c = read_timer_counter() * 40ul;
-            game_sprite_position(0,160 + (sin2048fps16_lookup(c) >> 10l),100 + (cos2048fps16_lookup(c) >> 10l));
-        }
-        {
-            uint32_t c = read_timer_counter() * 30ul;
-            game_sprite_position(1,100 + (sin2048fps16_lookup(c) >> 10l),50 + (sin2048fps16_lookup(c / 10u) >> 10l));
+        for (i=0;i < 32;i++) {
+            uint32_t c = (read_timer_counter() * 40ul) + (i * 400ul);
+            game_sprite_position(i,160 + (sin2048fps16_lookup(c) >> 10l),100 + (cos2048fps16_lookup(c) >> 10l));
         }
 
         game_update_sprites();
