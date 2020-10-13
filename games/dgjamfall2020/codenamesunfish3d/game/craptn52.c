@@ -1164,7 +1164,7 @@ void game_0() {
 
     game_tilecopy(0,0,22,14,game_0_tilemap);
 
-    for (i=0;i < 10;i++)
+    for (i=0;i < 12;i++)
         game_sprite_imgset(i,i%5);
 
     game_draw_tiles_2pages(0,0,320,200);
@@ -1174,9 +1174,9 @@ void game_0() {
             if (getch() == 27) break;
         }
 
-        for (i=0;i < 10;i++) {
-            uint32_t c = (read_timer_counter() * 40ul) + (i * 800ul);
-            game_sprite_position(i,160 + (sin2048fps16_lookup(c) >> 10l),100 + (cos2048fps16_lookup(c) >> 10l));
+        for (i=0;i < 12;i++) {
+            uint32_t c = (read_timer_counter() * 40ul) + (i * 420ul);
+            game_sprite_position(i,160 + (sin2048fps16_lookup(c) >> 9l),100 + (cos2048fps16_lookup(c) >> 9l));
         }
 
         game_update_sprites();
