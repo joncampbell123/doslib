@@ -996,6 +996,9 @@ l1:     mov     cx,4
     }
 }
 
+#define GAME_TILEMAP_WIDTH      22
+#define GAME_TILEMAP_HEIGHT     14
+
 void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     unsigned i,ir,o,or,ww,oa;
 
@@ -1012,7 +1015,7 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     /* do it */
     oa = vga_state.vga_draw_stride * 16u;
     or = (y * oa) + (x * 4u);
-    ir = (y * 21) + x;
+    ir = (y * GAME_TILEMAP_WIDTH) + x;
     while (h-- > 0) {
         i = ir; o = or; ww = w;
         while (ww-- > 0) {
@@ -1021,7 +1024,7 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
             i++;
         }
 
-        ir += 21u;
+        ir += GAME_TILEMAP_WIDTH;
         or += oa;
     }
 
