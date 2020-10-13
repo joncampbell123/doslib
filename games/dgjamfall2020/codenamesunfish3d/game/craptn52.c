@@ -1157,6 +1157,7 @@ void game_0() {
     game_spriteimg_load(1,"cr52rn01.vrl");
     game_spriteimg_load(2,"cr52rn02.vrl");
     game_spriteimg_load(3,"cr52rn03.vrl");
+    game_spriteimg_load(4,"cr52rn04.vrl");
 
     /* use INT 16h here */
     restore_keyboard_irq();
@@ -1164,7 +1165,7 @@ void game_0() {
     game_tilecopy(0,0,22,14,game_0_tilemap);
 
     for (i=0;i < 10;i++)
-        game_sprite_imgset(i,i%4);
+        game_sprite_imgset(i,i%5);
 
     game_draw_tiles_2pages(0,0,320,200);
 
