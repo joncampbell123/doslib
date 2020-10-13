@@ -886,6 +886,7 @@ void game_spriteimg_load(unsigned i,const char *path) {
     game_spriteimg_loadimg(game_spriteimg+i,path);
 }
 
+unsigned char game_flags = 0;
 unsigned char game_scroll_mode = 0;
 unsigned int game_hscroll = 0;
 unsigned int game_vscroll = 0;
@@ -961,8 +962,72 @@ void load_tiles(uint16_t ofs,uint16_t ostride,const char *path) {
     free(row);
 }
 
+static inline void game_draw_tile(unsigned o,unsigned i) {
+    const unsigned sc = vga_state.vga_draw_stride - 4u;
+    const unsigned char far *d = vga_state.vga_graphics_ram+o;
+    const unsigned char far *s = MK_FP(0xA000,TILES_VRAM_OFFSET + (i*4u*16u));
+
+    __asm {
+        push    ds
+        les     di,d
+        lds     si,s
+        mov     bx,sc
+        mov     dx,16
+l1:     mov     cx,4
+        rep     movsb
+        add     di,bx
+        dec     dx
+        jnz     l1
+        pop     ds
+    }
+}
+
 void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
-    /* TODO */
+    unsigned i,ir,o,or,ww;
+
+    w = (w + x + 15u) >> 4u;
+    h = (h + y + 15u) >> 4u;
+    x >>= 4u;
+    y >>= 4u;
+    w -= x;
+    h -= y;
+
+#if 0
+    /* one extra tile so sprite movement is covered by simple overdraw
+     * so long as they don't move too fast */
+    if (x > 0) { x--; w++; }
+    if (y > 0) { y--; h++; }
+    w++;
+    h++;
+#endif
+
+    /* set up write mode 1 */
+    vga_setup_wm1_block_copy();
+
+    /* do it */
+    or = (y * 80u * 16u) + (x * 4u);
+    ir = (y * 21) + x;
+    while (h-- > 0) {
+        i = ir; o = or; ww = w;
+        while (ww-- > 0) {
+            game_draw_tile(o,i&7);
+            o += 4u;
+            i++;
+        }
+
+        ir += 21u;
+        or += 80u * 16u;
+    }
+
+    /* done */
+    vga_restore_rm0wm0();
+}
+
+void game_draw_tiles_2pages(unsigned x,unsigned y,unsigned w,unsigned h) {
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_cur_page;
+    game_draw_tiles(x,y,w,h);
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+    game_draw_tiles(x,y,w,h);
 }
 
 void game_draw_sprite(unsigned x,unsigned y,unsigned simg,unsigned flags) {
@@ -1045,6 +1110,8 @@ void game_0() {
 
     game_sprite_imgset(1,1);
     game_sprite_position(1,40,40);
+
+    game_draw_tiles_2pages(0,0,320,200);
 
     while (1) {
         if (kbhit()) {
