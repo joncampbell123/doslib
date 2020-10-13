@@ -992,15 +992,6 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     w -= x;
     h -= y;
 
-#if 0
-    /* one extra tile so sprite movement is covered by simple overdraw
-     * so long as they don't move too fast */
-    if (x > 0) { x--; w++; }
-    if (y > 0) { y--; h++; }
-    w++;
-    h++;
-#endif
-
     /* set up write mode 1 */
     vga_setup_wm1_block_copy();
 
