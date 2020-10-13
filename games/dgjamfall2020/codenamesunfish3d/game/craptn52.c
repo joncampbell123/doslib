@@ -847,9 +847,9 @@ void game_sprite_imgset(unsigned i,unsigned img) {
         fatal("spriteimgset out of range");
 
     game_sprite[i].spriteimg = img;
-    if (game_spriteimg[i].vrl.buffer != NULL && game_spriteimg[i].vrl.vrl_header != NULL) {
-        game_sprite[i].h = game_spriteimg[i].vrl.vrl_header->height;
-        game_sprite[i].w = game_spriteimg[i].vrl.vrl_header->width;
+    if (game_spriteimg[img].vrl.buffer != NULL && game_spriteimg[img].vrl.vrl_header != NULL) {
+        game_sprite[i].h = game_spriteimg[img].vrl.vrl_header->height;
+        game_sprite[i].w = game_spriteimg[img].vrl.vrl_header->width;
     }
     else {
         game_sprite[i].h = game_sprite[i].w = 0;
@@ -1162,7 +1162,7 @@ void game_0() {
 
     game_tilecopy(0,0,22,14,game_0_tilemap);
 
-    for (i=0;i < 32;i++)
+    for (i=0;i < 10;i++)
         game_sprite_imgset(i,i%4);
 
     game_draw_tiles_2pages(0,0,320,200);
@@ -1172,8 +1172,8 @@ void game_0() {
             if (getch() == 27) break;
         }
 
-        for (i=0;i < 32;i++) {
-            uint32_t c = (read_timer_counter() * 40ul) + (i * 400ul);
+        for (i=0;i < 10;i++) {
+            uint32_t c = (read_timer_counter() * 40ul) + (i * 800ul);
             game_sprite_position(i,160 + (sin2048fps16_lookup(c) >> 10l),100 + (cos2048fps16_lookup(c) >> 10l));
         }
 
