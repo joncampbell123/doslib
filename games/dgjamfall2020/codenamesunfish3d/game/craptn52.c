@@ -816,6 +816,12 @@ struct game_sprite {
 unsigned char               game_sprite_max = 0;
 struct game_sprite          game_sprite[NUM_SPRITES];
 
+#define GAME_TILEMAP_DISPWIDTH  22
+#define GAME_TILEMAP_WIDTH      ((22u*2u)+1u)
+#define GAME_TILEMAP_HEIGHT     ((14u*2u)+1u)
+
+unsigned char*              game_tilemap = NULL;
+
 void game_sprite_hide(unsigned i) {
     if (i >= NUM_SPRITES)
         fatal("spriteimgset out of range");
@@ -869,10 +875,20 @@ void game_sprite_clear(void) {
 void game_sprite_init(void) {
     game_sprite_clear();
     memset(game_sprite,0,sizeof(game_sprite));
+
+    if (game_tilemap == NULL) {
+        if ((game_tilemap=malloc(GAME_TILEMAP_WIDTH*GAME_TILEMAP_HEIGHT)) == NULL)
+            fatal("game_tilemap == NULL");
+    }
 }
 
 void game_sprite_exit(void) {
     game_normal_setup();
+
+    if (game_tilemap != NULL) {
+        free(game_tilemap);
+        game_tilemap = NULL;
+    }
 }
 
 void game_spriteimg_freeimg(struct game_spriteimg *i) {
@@ -996,9 +1012,6 @@ l1:     mov     cx,4
     }
 }
 
-#define GAME_TILEMAP_WIDTH      22
-#define GAME_TILEMAP_HEIGHT     14
-
 void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     unsigned i,ir,o,or,ww,oa;
 
@@ -1019,9 +1032,8 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     while (h-- > 0) {
         i = ir; o = or; ww = w;
         while (ww-- > 0) {
-            game_draw_tile(o,i&7);
+            game_draw_tile(o,game_tilemap[i++]);
             o += 4u;
-            i++;
         }
 
         ir += GAME_TILEMAP_WIDTH;
@@ -1088,6 +1100,33 @@ void game_update_sprites(void) {
     }
 }
 
+static unsigned char game_0_tilemap[22*14] = {
+/*      01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 */
+/* 01 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 02 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 03 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 04 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 05 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 06 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 07 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 08 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 09 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 10 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 11 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 12 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 13 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+/* 14 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+};
+
+void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned char *map) {
+    while (h-- > 0) {
+        unsigned char *d = game_tilemap + ((y++) * GAME_TILEMAP_WIDTH) + x;
+        unsigned int cw = w;
+
+        while (cw-- > 0) *d++ = *map++;
+    }
+}
+
 void game_0() {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
@@ -1113,6 +1152,8 @@ void game_0() {
 
     /* use INT 16h here */
     restore_keyboard_irq();
+
+    game_tilecopy(0,0,22,14,game_0_tilemap);
 
     game_sprite_imgset(0,0);
     game_sprite_position(0,20,20);
