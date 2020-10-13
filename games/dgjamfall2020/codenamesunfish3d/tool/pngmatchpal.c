@@ -355,17 +355,43 @@ static int remap_png(void) {
         return 0;
 
     {
-        unsigned int i,o;
+        unsigned int i,o,ga,pa;
 
         memset(pal_remap,0xFF,256);
         for (o=0;o < pal_png_pal_count;o++) {
             for (i=0;i < gen_png_pal_count;i++) {
+                ga = pa = 255;
+
+                if (o < pal_png_pal_trns_count)
+                    pa = pal_png_pal_trns[o];
+                if (i < gen_png_trns_count)
+                    ga = gen_png_trns[i];
+
                 if (gen_png_pal[i].red   == pal_png_pal[o].red &&
                     gen_png_pal[i].green == pal_png_pal[o].green &&
-                    gen_png_pal[i].blue  == pal_png_pal[o].blue) {
+                    gen_png_pal[i].blue  == pal_png_pal[o].blue &&
+                    ga                   == pa) {
                     pal_remap[i] = o;
                 }
             }
+        }
+
+        if (pal_png_pal_trns_count == 0 && pal_png_pal_count < 256 && gen_png_trns_count != 0 && gen_png_trns[0] != 0xFF) {
+            unsigned int i;
+
+            fprintf(stderr,"Making up a transparent color\n");
+            /* make up a transparent color */
+            for (i=0;i < pal_png_pal_count;i++) pal_png_pal_trns[i] = 0xFF; // opaque
+            pal_png_pal_trns[pal_png_pal_count] = 0x00; // transparent
+            pal_png_pal_trns_count = pal_png_pal_count+1;
+
+            pal_png_pal[pal_png_pal_count].red = 0xFF;
+            pal_png_pal[pal_png_pal_count].green = 0x00;
+            pal_png_pal[pal_png_pal_count].blue = 0xFF;
+
+            pal_remap[gen_png_trns[0]] = pal_png_pal_count;
+
+            pal_png_pal_count++;
         }
 
         fprintf(stderr,"Remap from in pal (%u ent) to palette (%u ent): ",gen_png_pal_count,pal_png_pal_count);
