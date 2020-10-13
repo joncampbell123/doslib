@@ -47,9 +47,9 @@
 
 #include <hw/8042/8042.h>
 
-/* alternate page offsets big enough for a 336x216 mode */
+/* alternate page offsets big enough for a 352x232 mode */
 #define VGA_GAME_PAGE_FIRST         0x0000
-#define VGA_GAME_PAGE_SECOND        0x4800
+#define VGA_GAME_PAGE_SECOND        0x5000
 
 void game_normal_setup(void);
 
@@ -909,21 +909,21 @@ void game_normal_setup(void) {
 }
 
 void game_noscroll_setup(void) {
-    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
+    vga_set_stride((vga_state.vga_draw_stride=88u)*4u);
     game_scroll_mode = 0;
     game_hscroll = 0;
     game_vscroll = 0;
 }
 
 void game_vscroll_setup(void) {
-    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
+    vga_set_stride((vga_state.vga_draw_stride=88u)*4u);
     game_scroll_mode = GAME_VSCROLL;
     game_hscroll = 0;
     game_vscroll = 0;
 }
 
 void game_hscroll_setup(void) {
-    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
+    vga_set_stride((vga_state.vga_draw_stride=88u)*4u);
     game_scroll_mode = GAME_HSCROLL;
     game_hscroll = 0;
     game_vscroll = 0;
