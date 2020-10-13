@@ -1046,7 +1046,7 @@ void game_draw_sprite(unsigned x,unsigned y,unsigned simg,unsigned flags) {
 void game_update_sprites(void) {
     unsigned int i;
 
-    /* pass 1: draw background beneath all sprites */
+    /* pass 1: draw background beneath all sprites, where the sprite *was* */
     for (i=0;i < game_sprite_max;i++) {
         if (game_sprite[i].ow != 0)
             game_draw_tiles(game_sprite[i].ox,game_sprite[i].oy,game_sprite[i].ow,game_sprite[i].oh);
