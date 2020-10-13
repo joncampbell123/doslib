@@ -801,9 +801,12 @@ struct game_spriteimg       game_spriteimg[NUM_SPRITEIMG];
 #define GAME_SPRITE_HFLIP   (1u << 2u)
 
 struct game_sprite {
-    /* last drawn (for erasure) */
+    /* last drawn 2 frames ago (for erasure). 2 frame delay because page flipping. */
     unsigned int            ox,oy;
     unsigned int            ow,oh;
+    /* last drawn 1 frame ago */
+    unsigned int            px,py;
+    unsigned int            pw,ph;
     /* where to draw */
     unsigned int            x,y;
     unsigned int            w,h;
@@ -1078,18 +1081,20 @@ void game_update_sprites(void) {
 
     /* pass 1: draw background beneath all sprites, where the sprite *was* */
     for (i=0;i < game_sprite_max;i++) {
-        if (game_sprite[i].ow != 0)
+        if (game_sprite[i].ow != 0) {
             game_draw_tiles(game_sprite[i].ox,game_sprite[i].oy,game_sprite[i].ow,game_sprite[i].oh);
 
-        if (game_sprite[i].flags & GAME_SPRITE_VISIBLE) {
-            game_sprite[i].ow = game_sprite[i].w;
-            game_sprite[i].oh = game_sprite[i].h;
-            game_sprite[i].ox = game_sprite[i].x;
-            game_sprite[i].oy = game_sprite[i].y;
+            game_sprite[i].oh = game_sprite[i].ph;
+            game_sprite[i].ox = game_sprite[i].px;
+            game_sprite[i].oy = game_sprite[i].py;
+
+            game_sprite[i].ph = game_sprite[i].h;
+            game_sprite[i].px = game_sprite[i].x;
+            game_sprite[i].py = game_sprite[i].y;
         }
-        else {
-            game_sprite[i].ow = 0;
-        }
+
+        game_sprite[i].ow = game_sprite[i].pw;
+        game_sprite[i].pw = game_sprite[i].w;
     }
 
     /* pass 2: draw sprites */
@@ -1170,7 +1175,7 @@ void game_0() {
 
         {
             uint32_t c = read_timer_counter() * 40ul;
-            game_sprite_position(0,160 + (sin2048fps16_lookup(c) >> 10l),100 + (sin2048fps16_lookup(c / 10u) >> 10l));
+            game_sprite_position(0,160 + (sin2048fps16_lookup(c) >> 10l),100 + (cos2048fps16_lookup(c) >> 10l));
         }
         {
             uint32_t c = read_timer_counter() * 30ul;
