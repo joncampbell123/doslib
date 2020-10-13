@@ -295,8 +295,9 @@ struct menu_entry_t {
     const char*                     longtitle;
 };
 
+/* As part of the Action 52 theme, short and long names do not necessarily match or even spell the same */
 static struct menu_entry_t menu_entries[TOTAL_GAMES] = {
-    {"Entry0",              "Entry #0"},                                // 0
+    {"SmilWar",             "Smiley Wars"},                             // 0
     {"Entry1",              "Entry #1"},                                // 1
     {"Entry2",              "Entry #2"},                                // 2
     {"Entry3",              "Entry #3"},                                // 3
