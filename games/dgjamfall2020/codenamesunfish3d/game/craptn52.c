@@ -1134,7 +1134,23 @@ void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned ch
 }
 
 void game_0() {
-    unsigned int i;
+    /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
+    const unsigned smiley0=0,smiley1=1;
+    /* sprite images */
+    const unsigned smi_smile=1,smi_frown=4,smi_bullet=0,smi_win=2,smi_poo=3;
+    /* player state (center) */
+    unsigned player_x = 90;
+    unsigned player_y = 100;
+    unsigned player_fire_dir = 0; // 0=right 1=down 2=left 3=up
+    /* opponent state (center) */
+    unsigned opp_x = 230;
+    unsigned opp_y = 100;
+    unsigned opp_dir = 255; // 0=right 1=down 2=left 3=up 255=not moving
+    /* smiley size */
+    unsigned smilw = 26,smilh = 26,smilox = 3 - 16,smiloy = 3 - 16;
+    /* other */
+    unsigned int i,amult;
+    uint32_t now,pnow;
 
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
@@ -1159,25 +1175,49 @@ void game_0() {
     game_spriteimg_load(3,"cr52rn03.vrl");
     game_spriteimg_load(4,"cr52rn04.vrl");
 
-    /* use INT 16h here */
-    restore_keyboard_irq();
-
     game_tilecopy(0,0,22,14,game_0_tilemap);
 
-    for (i=0;i < 12;i++)
-        game_sprite_imgset(i,i%5);
+    game_sprite_imgset(smiley0,smi_smile);
+    game_sprite_imgset(smiley1,smi_smile);
 
     game_draw_tiles_2pages(0,0,320,200);
 
+    init_keyboard_irq();
+    now = read_timer_counter();
+
     while (1) {
-        if (kbhit()) {
-            if (getch() == 27) break;
+        pnow = now;
+        now = read_timer_counter();
+
+        amult = now - pnow;
+        if (amult > 4) amult = 4;
+
+        if (kbdown_test(KBDS_ESCAPE)) break;
+
+        if (kbdown_test(KBDS_LEFT_ARROW)) {
+            player_fire_dir = 2; // 0=right 1=down 2=left 3=up
+            if (player_x > smilw)
+                player_x -= amult * 2u;
+        }
+        else if (kbdown_test(KBDS_RIGHT_ARROW)) {
+            player_fire_dir = 0; // 0=right 1=down 2=left 3=up
+            if (player_x < (320-smilw))
+                player_x += amult * 2u;
         }
 
-        for (i=0;i < 12;i++) {
-            uint32_t c = (read_timer_counter() * 40ul) + (i * 420ul);
-            game_sprite_position(i,160 + (sin2048fps16_lookup(c) >> 9l),100 + (cos2048fps16_lookup(c) >> 9l));
+        if (kbdown_test(KBDS_UP_ARROW)) {
+            player_fire_dir = 3; // 0=right 1=down 2=left 3=up
+            if (player_y > smilh)
+                player_y -= amult * 2u;
         }
+        else if (kbdown_test(KBDS_DOWN_ARROW)) {
+            player_fire_dir = 1; // 0=right 1=down 2=left 3=up
+            if (player_y < (200-smilh))
+                player_y += amult * 2u;
+        }
+
+        game_sprite_position(smiley0,player_x - smilw/2,player_y - smilh/2);
+        game_sprite_position(smiley1,opp_x    - smilw/2,opp_y    - smilh/2);
 
         game_update_sprites();
         vga_swap_pages(); /* current <-> next */
@@ -1185,6 +1225,7 @@ void game_0() {
         vga_wait_for_vsync(); /* wait for vsync */
     }
 
+    restore_keyboard_irq();
     game_sprite_exit();
 }
 
