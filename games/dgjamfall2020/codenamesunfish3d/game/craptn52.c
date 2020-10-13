@@ -47,6 +47,12 @@
 
 #include <hw/8042/8042.h>
 
+/* alternate page offsets big enough for a 336x216 mode */
+#define VGA_GAME_PAGE_FIRST         0x0000
+#define VGA_GAME_PAGE_SECOND        0x4800
+
+void game_normal_setup(void);
+
 static inline int use_adlib() {
     return (adlib_fm_voices != 0u);
 }
@@ -865,6 +871,10 @@ void game_sprite_init(void) {
     memset(game_sprite,0,sizeof(game_sprite));
 }
 
+void game_sprite_exit(void) {
+    game_normal_setup();
+}
+
 void game_spriteimg_freeimg(struct game_spriteimg *i) {
     free_vrl(&(i->vrl));
 }
@@ -891,23 +901,27 @@ unsigned char game_scroll_mode = 0;
 unsigned int game_hscroll = 0;
 unsigned int game_vscroll = 0;
 
-/* noscroll: normal 320 pixel width */
-void game_noscroll_setup(void) {
+void game_normal_setup(void) {
     vga_set_stride((vga_state.vga_draw_stride=80u)*4u);
     game_scroll_mode = 0;
     game_hscroll = 0;
     game_vscroll = 0;
 }
 
-/* vscroll: normal 320 pixel width */
+void game_noscroll_setup(void) {
+    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
+    game_scroll_mode = 0;
+    game_hscroll = 0;
+    game_vscroll = 0;
+}
+
 void game_vscroll_setup(void) {
-    vga_set_stride((vga_state.vga_draw_stride=80u)*4u);
+    vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
     game_scroll_mode = GAME_VSCROLL;
     game_hscroll = 0;
     game_vscroll = 0;
 }
 
-/* hscroll: 336 pixel width */
 void game_hscroll_setup(void) {
     vga_set_stride((vga_state.vga_draw_stride=84u)*4u);
     game_scroll_mode = GAME_HSCROLL;
@@ -983,7 +997,7 @@ l1:     mov     cx,4
 }
 
 void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
-    unsigned i,ir,o,or,ww;
+    unsigned i,ir,o,or,ww,oa;
 
     w = (w + x + 15u) >> 4u;
     h = (h + y + 15u) >> 4u;
@@ -996,7 +1010,8 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     vga_setup_wm1_block_copy();
 
     /* do it */
-    or = (y * 80u * 16u) + (x * 4u);
+    oa = vga_state.vga_draw_stride * 16u;
+    or = (y * oa) + (x * 4u);
     ir = (y * 21) + x;
     while (h-- > 0) {
         i = ir; o = or; ww = w;
@@ -1007,7 +1022,7 @@ void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
         }
 
         ir += 21u;
-        or += 80u * 16u;
+        or += oa;
     }
 
     /* done */
@@ -1074,13 +1089,13 @@ void game_0() {
     if (sin2048fps16_open())
         fatal("cannot open sin2048");
 
-    vga_cur_page = VGA_PAGE_FIRST;
+    vga_cur_page = VGA_GAME_PAGE_FIRST;
     vga_set_start_location(vga_cur_page);
     vga_rep_stosw(vga_state.vga_graphics_ram+((320u/4u)*0u),0x0000,((320u/4u)*200u)/2u);
     load_def_pal();
 
-    vga_cur_page = VGA_PAGE_FIRST;
-    vga_next_page = VGA_PAGE_SECOND;
+    vga_cur_page = VGA_GAME_PAGE_FIRST;
+    vga_next_page = VGA_GAME_PAGE_SECOND;
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
     vga_set_start_location(vga_cur_page);
 
@@ -1123,6 +1138,8 @@ void game_0() {
         vga_update_disp_cur_page();
         vga_wait_for_vsync(); /* wait for vsync */
     }
+
+    game_sprite_exit();
 }
 
 /* Sound Blaster detection using hw/sndsb */

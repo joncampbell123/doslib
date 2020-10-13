@@ -35,8 +35,9 @@
 /*---------------------------------------------------------------------------*/
 
 void vga_swap_pages() {
+    const unsigned p = vga_cur_page;
     vga_cur_page = vga_next_page;
-    vga_next_page = (vga_next_page ^ 0x4000) & 0x7FFF;
+    vga_next_page = p;
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
 }
 
