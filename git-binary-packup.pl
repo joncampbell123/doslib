@@ -56,7 +56,7 @@ if (!( -f "$filename.xz" )) {
 
     # build the list
     my $list = '',$fn;
-    open(XX,"for i in bin dos86s dos86l dos86m dos86c dos86h dos86t d9886s d9886l d9886m d9886c d9886h d9886t dos386f win32 win300l win302l win312l win313l win32s3 winnt \*.com \*.exe \*.dlm \*.sys; do find -iname \$i; done |") || die;
+    open(XX,"for i in bin final dos86s dos86l dos86m dos86c dos86h dos86t d9886s d9886l d9886m d9886c d9886h d9886t dos386f win32 win300l win302l win312l win313l win32s3 winnt \*.com \*.exe \*.dlm \*.sys; do find -iname \$i; done |") || die;
     while ($fn = <XX>) {
         chomp $fn;
         $fn =~ s/^\.\///; # find puts ./ in front, remove it
