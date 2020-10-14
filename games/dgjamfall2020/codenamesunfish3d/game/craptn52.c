@@ -1145,7 +1145,7 @@ void game_0() {
     /* opponent state (center) */
     unsigned opp_x = 230;
     unsigned opp_y = 100;
-    unsigned opp_dir = 255; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
+    unsigned opp_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
     /* smiley size */
     unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
@@ -1222,6 +1222,33 @@ void game_0() {
                 if (player_y < (200-smilh))
                     player_y += amult * 2u;
             }
+        }
+
+        switch (opp_dir) {
+            case 0: // moving right
+                if (opp_x < (320-smilw))
+                    opp_x += amult * 2u;
+                else
+                    opp_dir++;
+                break;
+            case 1: // moving down
+                if (opp_y < (200-smilw))
+                    opp_y += amult * 2u;
+                else
+                    opp_dir++;
+                break;
+            case 2: // moving left
+                if (opp_x > smilw)
+                    opp_x -= amult * 2u;
+                else
+                    opp_dir++;
+                break;
+            case 3: // moving up
+                if (opp_y > smilh)
+                    opp_y -= amult * 2u;
+                else
+                    opp_dir=0;
+                break;
         }
 
         game_sprite_position(smiley0,player_x - smilox,player_y - smiloy);
