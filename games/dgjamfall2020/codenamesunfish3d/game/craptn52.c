@@ -1195,30 +1195,30 @@ void game_0() {
         if (kbdown_test(KBDS_ESCAPE)) break;
 
         if (kbdown_test(KBDS_LEFT_ARROW)) {
-            if (player_dir < 4) {
-                player_dir = 2; // 0=right 1=down 2=left 3=up
+            if (player_dir < 5) {
+                player_dir = 2; // 0=right 1=down 2=left 3=up 4=stop
                 if (player_x > smilw)
                     player_x -= amult * 2u;
             }
         }
         else if (kbdown_test(KBDS_RIGHT_ARROW)) {
-            if (player_dir < 4) {
-                player_dir = 0; // 0=right 1=down 2=left 3=up
+            if (player_dir < 5) {
+                player_dir = 0; // 0=right 1=down 2=left 3=up 4=stop
                 if (player_x < (320-smilw))
                     player_x += amult * 2u;
             }
         }
 
         if (kbdown_test(KBDS_UP_ARROW)) {
-            if (player_dir < 4) {
-                player_dir = 3; // 0=right 1=down 2=left 3=up
+            if (player_dir < 5) {
+                player_dir = 3; // 0=right 1=down 2=left 3=up 4=stop
                 if (player_y > smilh)
                     player_y -= amult * 2u;
             }
         }
         else if (kbdown_test(KBDS_DOWN_ARROW)) {
-            if (player_dir < 4) {
-                player_dir = 1; // 0=right 1=down 2=left 3=up
+            if (player_dir < 5) {
+                player_dir = 1; // 0=right 1=down 2=left 3=up 4=stop
                 if (player_y < (200-smilh))
                     player_y += amult * 2u;
             }
