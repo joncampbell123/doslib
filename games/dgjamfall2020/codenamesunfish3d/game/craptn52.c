@@ -1147,7 +1147,7 @@ void game_0() {
     unsigned opp_y = 100;
     unsigned opp_dir = 255; // 0=right 1=down 2=left 3=up 255=not moving 254=frowning
     /* smiley size */
-    unsigned smilw = 26,smilh = 26,smilox = 3 - 16,smiloy = 3 - 16;
+    unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
     unsigned int i,amult;
     uint32_t now,pnow;
@@ -1216,8 +1216,8 @@ void game_0() {
                 player_y += amult * 2u;
         }
 
-        game_sprite_position(smiley0,player_x - smilw/2,player_y - smilh/2);
-        game_sprite_position(smiley1,opp_x    - smilw/2,opp_y    - smilh/2);
+        game_sprite_position(smiley0,player_x - smilox,player_y - smiloy);
+        game_sprite_position(smiley1,opp_x    - smilox,opp_y    - smiloy);
 
         game_update_sprites();
         vga_swap_pages(); /* current <-> next */
