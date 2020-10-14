@@ -1141,11 +1141,11 @@ void game_0() {
     /* player state (center) */
     unsigned player_x = 90;
     unsigned player_y = 100;
-    unsigned player_fire_dir = 0; // 0=right 1=down 2=left 3=up
+    unsigned player_fire_dir = 0; // 0=right 1=down 2=left 3=up 255=not moving 254=frowning
     /* opponent state (center) */
     unsigned opp_x = 230;
     unsigned opp_y = 100;
-    unsigned opp_dir = 255; // 0=right 1=down 2=left 3=up 255=not moving
+    unsigned opp_dir = 255; // 0=right 1=down 2=left 3=up 255=not moving 254=frowning
     /* smiley size */
     unsigned smilw = 26,smilh = 26,smilox = 3 - 16,smiloy = 3 - 16;
     /* other */
