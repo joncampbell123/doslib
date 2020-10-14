@@ -1141,7 +1141,7 @@ void game_0() {
     /* player state (center) */
     unsigned player_x = 90;
     unsigned player_y = 100;
-    unsigned player_fire_dir = 0; // 0=right 1=down 2=left 3=up 255=not moving 254=frowning
+    unsigned player_dir = 0; // 0=right 1=down 2=left 3=up 255=not moving 254=frowning
     /* opponent state (center) */
     unsigned opp_x = 230;
     unsigned opp_y = 100;
@@ -1195,25 +1195,33 @@ void game_0() {
         if (kbdown_test(KBDS_ESCAPE)) break;
 
         if (kbdown_test(KBDS_LEFT_ARROW)) {
-            player_fire_dir = 2; // 0=right 1=down 2=left 3=up
-            if (player_x > smilw)
-                player_x -= amult * 2u;
+            if (player_dir < 4) {
+                player_dir = 2; // 0=right 1=down 2=left 3=up
+                if (player_x > smilw)
+                    player_x -= amult * 2u;
+            }
         }
         else if (kbdown_test(KBDS_RIGHT_ARROW)) {
-            player_fire_dir = 0; // 0=right 1=down 2=left 3=up
-            if (player_x < (320-smilw))
-                player_x += amult * 2u;
+            if (player_dir < 4) {
+                player_dir = 0; // 0=right 1=down 2=left 3=up
+                if (player_x < (320-smilw))
+                    player_x += amult * 2u;
+            }
         }
 
         if (kbdown_test(KBDS_UP_ARROW)) {
-            player_fire_dir = 3; // 0=right 1=down 2=left 3=up
-            if (player_y > smilh)
-                player_y -= amult * 2u;
+            if (player_dir < 4) {
+                player_dir = 3; // 0=right 1=down 2=left 3=up
+                if (player_y > smilh)
+                    player_y -= amult * 2u;
+            }
         }
         else if (kbdown_test(KBDS_DOWN_ARROW)) {
-            player_fire_dir = 1; // 0=right 1=down 2=left 3=up
-            if (player_y < (200-smilh))
-                player_y += amult * 2u;
+            if (player_dir < 4) {
+                player_dir = 1; // 0=right 1=down 2=left 3=up
+                if (player_y < (200-smilh))
+                    player_y += amult * 2u;
+            }
         }
 
         game_sprite_position(smiley0,player_x - smilox,player_y - smiloy);
