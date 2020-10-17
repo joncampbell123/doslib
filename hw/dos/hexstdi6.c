@@ -36,8 +36,8 @@ nothing:
     return r;
 }
 
-int main(int argc,char **argv,char **envp) {
-    int c,esc=0,frame=0;
+int main() {
+    int c,esc=0;
 
     printf("I will show the input from STDIN while running.\n");
     printf("To exit to DOS, hit ESC three times.\n");

@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include <dos.h>
 
-int main(int argc,char **argv,char **envp) {
+int main() {
     int c,esc=0,frame=0;
 
     printf("I will show the input from STDIN while running.\n");
