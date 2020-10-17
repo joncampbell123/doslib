@@ -56,6 +56,8 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk win38631/test.exe ::tw38631.exe
     mcopy -i test.dsk dos86s/testsmrt.exe ::tsmrt86.exe
     mcopy -i test.dsk dos386f/testsmrt.exe ::tsmrt386.exe
+    mcopy -i test.dsk dos86s/hexstdin.exe ::hexstdin.exe
+    mcopy -i test.dsk dos86s/hexstdi2.exe ::hexstdi2.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
