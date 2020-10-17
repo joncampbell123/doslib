@@ -37,6 +37,7 @@ CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.$(EXEEXT)
 ANSI_EXE =	  $(SUBDIR)$(HPS)ansi.$(EXEEXT)
 LOL_EXE =     $(SUBDIR)$(HPS)lol.$(EXEEXT)
 TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.$(EXEEXT)
+HEXSTDI6_EXE =$(SUBDIR)$(HPS)hexstdi6.$(EXEEXT)
 HEXSTDI2_EXE =$(SUBDIR)$(HPS)hexstdi2.$(EXEEXT)
 HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.$(EXEEXT)
@@ -170,7 +171,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(ANSI_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) .symbolic
 
 lib: $(HW_DOS_LIB) .symbolic
 
@@ -478,6 +479,14 @@ $(HEXSTDIN_EXE): $(SUBDIR)$(HPS)hexstdin.obj
 $(HEXSTDI2_EXE): $(SUBDIR)$(HPS)hexstdi2.obj
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hexstdi2.obj name $(HEXSTDI2_EXE)
 	%write tmp.cmd option map=$(HEXSTDI2_EXE).map
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef HEXSTDI6_EXE
+$(HEXSTDI6_EXE): $(SUBDIR)$(HPS)hexstdi6.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hexstdi6.obj name $(HEXSTDI6_EXE)
+	%write tmp.cmd option map=$(HEXSTDI6_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
