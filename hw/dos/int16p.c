@@ -22,6 +22,14 @@
 
 static unsigned char cmd = 0;
 
+static unsigned char bda_brk(void) {
+#if TARGET_MSDOS == 32
+    return *((unsigned char*)0x471);
+#else
+    return *((unsigned char far*)MK_FP(0x40,0x71));
+#endif
+}
+
 static unsigned int int16_getch(void) {
     unsigned char c=cmd;
     unsigned short r=0;
@@ -51,6 +59,7 @@ l1:
 }
 
 int main(int argc,char **argv,char **envp) {
+    unsigned char b1,b2,b3;
     unsigned int c,c2;
     int esc=0;
 
@@ -67,12 +76,19 @@ int main(int argc,char **argv,char **envp) {
     printf("Specify 0 or 0x10 on command line to change.\n");
 
     while (esc < 3) {
+        b1 = bda_brk();
         c = int16_peek();
         if (c != 0xFFFFu) {
+            b2 = bda_brk();
             c2 = int16_getch();
+            b3 = bda_brk();
 
             if ((c&0xFF) == 27) esc++;
             else esc=0;
+
+            if (b1 != b2 || b2 != b3)
+                /* pp=pre-peek pg=pre-getch ag=after-getch */
+                printf("<BRK pp=%02xh pg=%02xh ag=%02xh> ",b1,b2,b3);
 
             if (c == c2)
                 printf("%04xh ",(unsigned int)c);
