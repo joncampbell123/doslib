@@ -42,6 +42,7 @@ HEXSTDI2_EXE =$(SUBDIR)$(HPS)hexstdi2.$(EXEEXT)
 HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.$(EXEEXT)
 INT16_EXE =   $(SUBDIR)$(HPS)int16.$(EXEEXT)
+INT16P_EXE =  $(SUBDIR)$(HPS)int16p.$(EXEEXT)
 !  ifeq TARGET_MSDOS 16
 TESTDPMI_EXE =$(SUBDIR)$(HPS)testdpmi.$(EXEEXT)
 !  endif
@@ -171,7 +172,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(INT16P_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) .symbolic
 
 lib: $(HW_DOS_LIB) .symbolic
 
@@ -495,6 +496,14 @@ $(HEXSTDI6_EXE): $(SUBDIR)$(HPS)hexstdi6.obj
 $(INT16_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)int16.obj
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)int16.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(INT16_EXE)
 	%write tmp.cmd option map=$(INT16_EXE).map
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef INT16P_EXE
+$(INT16P_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)int16p.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)int16p.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(INT16P_EXE)
+	%write tmp.cmd option map=$(INT16P_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
