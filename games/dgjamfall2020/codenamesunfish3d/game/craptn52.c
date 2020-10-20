@@ -1227,8 +1227,11 @@ void game_0() {
             }
         }
 
+        /* opponent: do not move if frowning (i.e. dead) */
+        if (opp_dir == 254) {
+        }
         /* opponent: avoid the player if too close */
-        if (now < opp_turn_next) {
+        else if (now < opp_turn_next) {
             // keep going. The purpose of delaying the check again is to prevent
             // cases where the player can pin the opponent in a corner because
             // the opponent is constantly turning due to player proximity.
