@@ -1138,6 +1138,13 @@ struct game_2d {
 };
 
 /* Smiley Wars */
+/* TODO: Game start text: "Turn that smile upside down! Go!"
+ *       Game text at restart: "You lose!" "You win!" etc.
+ *       WAV file of voice shouting "Turn that smile upside down! Go!"
+ *       Random chance of shot turning opponent into a pile of poo.
+ *       Random chance of opponent turning *you* into a pile of poo.
+ *       WAV file when you turn into poo "You lose! Have a crappy day!"
+ */
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
