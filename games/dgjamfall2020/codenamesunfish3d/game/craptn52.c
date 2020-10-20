@@ -1157,6 +1157,7 @@ void game_0() {
     unsigned opp_turn = 1;
     uint32_t opp_turn_next = 0;
     uint32_t opp_next_fire = 0;
+    uint32_t game_restart = 0;
     struct game_2d opp_bullet = {-1,-1};
     struct game_2d opp_bulletv = {-1,-1};
     /* smiley size */
@@ -1198,11 +1199,28 @@ void game_0() {
     init_keyboard_irq();
     now = read_timer_counter();
 
+    game_restart = 0;
     opp_next_fire = now + 120; // do not fire for 1 sec, give the player a fair chance
 
     while (1) {
         pnow = now;
         now = read_timer_counter();
+
+        if (game_restart != 0 && now >= game_restart) {
+            game_restart = 0;
+
+            opp_next_fire = now + 90; // do not fire for 3/4 sec, give the player a fair chance
+
+            game_sprite_imgset(smiley0,smi_smile);
+            game_sprite_imgset(smiley1,smi_smile);
+
+            player_dir = 0;
+            opp_dir = 0;
+            player_x = 90;
+            player_y = 100;
+            opp_x = 230;
+            opp_y = 100;
+        }
 
         amult = now - pnow;
         if (amult > 4) amult = 4;
@@ -1360,6 +1378,7 @@ void game_0() {
                 game_sprite_imgset(smiley1,smi_frown);
                 player_bullet.x = -1;
                 game_sprite_hide(smileybullet0);
+                game_restart = now + 120*3;
             }
         }
 
@@ -1378,6 +1397,7 @@ void game_0() {
                 game_sprite_imgset(smiley0,smi_frown);
                 opp_bullet.x = -1;
                 game_sprite_hide(smileybullet1);
+                game_restart = now + 120*3;
             }
         }
 
