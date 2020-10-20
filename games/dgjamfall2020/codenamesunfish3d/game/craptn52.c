@@ -1156,6 +1156,7 @@ void game_0() {
     unsigned opp_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
     unsigned opp_turn = 1;
     uint32_t opp_turn_next = 0;
+    uint32_t opp_next_fire = 0;
     struct game_2d opp_bullet = {-1,-1};
     struct game_2d opp_bulletv = {-1,-1};
     /* smiley size */
@@ -1196,6 +1197,8 @@ void game_0() {
 
     init_keyboard_irq();
     now = read_timer_counter();
+
+    opp_next_fire = now + 120; // do not fire for 1 sec, give the player a fair chance
 
     while (1) {
         pnow = now;
@@ -1281,8 +1284,9 @@ void game_0() {
         }
         /* opponent wants to follow player to attack too */
         else {
-            if (opp_bullet.x < 0) {
+            if (now >= opp_next_fire && opp_bullet.x < 0) {
                 if ((rand() % 20) == 0) {
+                    opp_next_fire = now + 60 + ((uint32_t)rand() % 30ul);
                     if (abs(opp_x - player_x) < 30) {
                         opp_bullet.x = opp_x;
                         opp_bullet.y = opp_y;
