@@ -1141,7 +1141,7 @@ struct game_2d {
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
-    const unsigned smileybullet0=2,smileybullet1=2;
+    const unsigned smileybullet0=2,smileybullet1=3;
     /* sprite images */
     const unsigned smi_smile=1,smi_frown=4,smi_bullet=0,smi_win=2,smi_poo=3;
     /* player state (center) */
@@ -1280,16 +1280,37 @@ void game_0() {
             }
         }
         /* opponent wants to follow player to attack too */
-        else if (now >= (opp_turn_next + 15u) && (abs(opp_x - player_x) > 80 && abs(opp_y - player_y) > 80)) {
-            if ((opp_x > player_x && opp_dir == 2) || // right of player, heading left
-                (opp_x < player_x && opp_dir == 0) || // left of player, heading right
-                (opp_y > player_y && opp_dir == 3) || // below player, heading up
-                (opp_y < player_y && opp_dir == 1)) { // above player, heading down
-                // keep going
+        else {
+            if (opp_bullet.x < 0) {
+                if ((rand() % 20) == 0) {
+                    if (abs(opp_x - player_x) < 30) {
+                        opp_bullet.x = opp_x;
+                        opp_bullet.y = opp_y;
+                        opp_bulletv.x = 0;
+                        opp_bulletv.y = (opp_y > player_y) ? -3/*up*/ : 3/*down*/;
+                        game_sprite_imgset(smileybullet1,smi_bullet);
+                    }
+                    else if (abs(opp_y - player_y) < 30) {
+                        opp_bullet.x = opp_x;
+                        opp_bullet.y = opp_y;
+                        opp_bulletv.x = (opp_x > player_x) ? -3/*left*/ : 3/*right*/;
+                        opp_bulletv.y = 0;
+                        game_sprite_imgset(smileybullet1,smi_bullet);
+                    }
+                }
             }
-            else {
-                opp_turn_next = now + 15u + ((uint32_t)rand() % (uint32_t)15ul);
-                opp_dir = (opp_dir + opp_turn) & 3;
+
+            if (now >= (opp_turn_next + 15u) && (abs(opp_x - player_x) > 80 && abs(opp_y - player_y) > 80)) {
+                if ((opp_x > player_x && opp_dir == 2) || // right of player, heading left
+                    (opp_x < player_x && opp_dir == 0) || // left of player, heading right
+                    (opp_y > player_y && opp_dir == 3) || // below player, heading up
+                    (opp_y < player_y && opp_dir == 1)) { // above player, heading down
+                    // keep going
+                }
+                else {
+                    opp_turn_next = now + 15u + ((uint32_t)rand() % (uint32_t)15ul);
+                    opp_dir = (opp_dir + opp_turn) & 3;
+                }
             }
         }
 
@@ -1338,8 +1359,28 @@ void game_0() {
             }
         }
 
+        if (opp_bullet.x >= 0) {
+            opp_bullet.x += opp_bulletv.x * (int)amult;
+            opp_bullet.y += opp_bulletv.y * (int)amult;
+            if (opp_bullet.x >= (320-(smilw/2)) ||
+                opp_bullet.x <= smilox ||
+                opp_bullet.y >= (200-(smilh/2)) ||
+                opp_bullet.y <= smiloy) {
+                opp_bullet.x = -1;
+                game_sprite_hide(smileybullet1);
+            }
+            else if (abs(opp_bullet.x - player_x) < 24 && abs(opp_bullet.y - player_y) < 24) {
+                player_dir = 254; // HIT!
+                game_sprite_imgset(smiley0,smi_frown);
+                opp_bullet.x = -1;
+                game_sprite_hide(smileybullet1);
+            }
+        }
+
         if (player_bullet.x >= 0)
             game_sprite_position(smileybullet0,player_bullet.x - smilox,player_bullet.y - smiloy);
+        if (opp_bullet.x >= 0)
+            game_sprite_position(smileybullet1,opp_bullet.x - smilox,opp_bullet.y - smiloy);
 
         game_sprite_position(smiley0,player_x - smilox,player_y - smiloy);
         game_sprite_position(smiley1,opp_x    - smilox,opp_y    - smiloy);
