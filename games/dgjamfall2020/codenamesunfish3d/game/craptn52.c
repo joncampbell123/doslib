@@ -1133,6 +1133,7 @@ void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned ch
     }
 }
 
+/* Smiley Wars */
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
@@ -1146,6 +1147,7 @@ void game_0() {
     unsigned opp_x = 230;
     unsigned opp_y = 100;
     unsigned opp_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
+    unsigned opp_turn = 1;
     /* smiley size */
     unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
@@ -1224,30 +1226,51 @@ void game_0() {
             }
         }
 
+        /* opponent: avoid the player if too close */
+        if (abs(opp_x - player_x) < 50 && abs(opp_y - player_y) < 50) {
+            if ((opp_x > player_x && opp_dir == 2) || // approaching from the left
+                (opp_x < player_x && opp_dir == 0)) { // approaching from the right
+                opp_turn = (~opp_turn) + 1;
+                if (opp_y < ((200*1)/3) || opp_y > ((200*2)/3))
+                    opp_dir = (opp_x > player_x) ? 0 : 2; // reverse direction right/left
+                else
+                    opp_dir = (opp_dir + opp_turn) & 3;
+            }
+            else if (
+                (opp_y > player_y && opp_dir == 3) || // approaching up from below
+                (opp_y < player_y && opp_dir == 1)) { // approaching down from above
+                opp_turn = (~opp_turn) + 1;
+                if (opp_x < ((320*1)/3) || opp_x > ((320*2)/3))
+                    opp_dir = (opp_y > player_y) ? 1 : 3; // reverse direction up/down
+                else
+                    opp_dir = (opp_dir + opp_turn) & 3;
+            }
+        }
+
         switch (opp_dir) {
             case 0: // moving right
                 if (opp_x < (320-smilw))
                     opp_x += amult * 2u;
                 else
-                    opp_dir++;
+                    opp_dir = (opp_dir + opp_turn) & 3;
                 break;
             case 1: // moving down
                 if (opp_y < (200-smilw))
                     opp_y += amult * 2u;
                 else
-                    opp_dir++;
+                    opp_dir = (opp_dir + opp_turn) & 3;
                 break;
             case 2: // moving left
                 if (opp_x > smilw)
                     opp_x -= amult * 2u;
                 else
-                    opp_dir++;
+                    opp_dir = (opp_dir + opp_turn) & 3;
                 break;
             case 3: // moving up
                 if (opp_y > smilh)
                     opp_y -= amult * 2u;
                 else
-                    opp_dir=0;
+                    opp_dir = (opp_dir + opp_turn) & 3;
                 break;
         }
 
