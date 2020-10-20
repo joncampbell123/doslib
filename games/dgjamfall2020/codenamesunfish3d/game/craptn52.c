@@ -1150,7 +1150,7 @@ void game_0() {
     unsigned opp_turn = 1;
     uint32_t opp_turn_next = 0;
     /* smiley size */
-    unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
+    const unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
     unsigned int i,amult;
     uint32_t now,pnow;
