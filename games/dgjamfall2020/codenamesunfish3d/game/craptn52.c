@@ -1253,6 +1253,9 @@ void game_0() {
                 else
                     opp_dir = (opp_dir + opp_turn) & 3;
             }
+            else {
+                opp_turn_next = now + 12; // 12/120 or 1/10th a second
+            }
         }
 
         switch (opp_dir) {
