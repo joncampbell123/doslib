@@ -1237,11 +1237,11 @@ void game_0() {
         }
 
         if (kbdown_test(KBDS_SPACEBAR)) {
-            if (player_bullet.x < 0) {
+            if (player_bullet.x < 0 && player_dir < 5) {
                 player_bullet.x = player_x;
                 player_bullet.y = player_y;
-                player_bulletv.x = (player_dir == 0/*right*/) ? 3 : (player_dir == 2/*left*/) ? -3 : 0;
-                player_bulletv.y = (player_dir == 1/*down*/)  ? 3 : (player_dir == 3/*up*/)   ? -3 : 0;
+                player_bulletv.x = (player_dir == 0/*right*/) ? 2 : (player_dir == 2/*left*/) ? -2 : 0;
+                player_bulletv.y = (player_dir == 1/*down*/)  ? 2 : (player_dir == 3/*up*/)   ? -2 : 0;
                 game_sprite_imgset(smileybullet0,smi_bullet);
             }
         }
@@ -1287,13 +1287,13 @@ void game_0() {
                         opp_bullet.x = opp_x;
                         opp_bullet.y = opp_y;
                         opp_bulletv.x = 0;
-                        opp_bulletv.y = (opp_y > player_y) ? -3/*up*/ : 3/*down*/;
+                        opp_bulletv.y = (opp_y > player_y) ? -2/*up*/ : 2/*down*/;
                         game_sprite_imgset(smileybullet1,smi_bullet);
                     }
                     else if (abs(opp_y - player_y) < 30) {
                         opp_bullet.x = opp_x;
                         opp_bullet.y = opp_y;
-                        opp_bulletv.x = (opp_x > player_x) ? -3/*left*/ : 3/*right*/;
+                        opp_bulletv.x = (opp_x > player_x) ? -2/*left*/ : 2/*right*/;
                         opp_bulletv.y = 0;
                         game_sprite_imgset(smileybullet1,smi_bullet);
                     }
