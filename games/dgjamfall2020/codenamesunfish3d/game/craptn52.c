@@ -1333,6 +1333,8 @@ void game_0() {
             else if (abs(player_bullet.x - opp_x) < 24 && abs(player_bullet.y - opp_y) < 24) {
                 opp_dir = 254; // HIT!
                 game_sprite_imgset(smiley1,smi_frown);
+                player_bullet.x = -1;
+                game_sprite_hide(smileybullet0);
             }
         }
 
