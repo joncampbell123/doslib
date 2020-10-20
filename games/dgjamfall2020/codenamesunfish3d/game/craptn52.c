@@ -1257,6 +1257,19 @@ void game_0() {
                 opp_turn_next = now + 12; // 12/120 or 1/10th a second
             }
         }
+        /* opponent wants to follow player to attack too */
+        else if (now >= (opp_turn_next + 15u) && (abs(opp_x - player_x) > 80 && abs(opp_y - player_y) > 80)) {
+            if ((opp_x > player_x && opp_dir == 2) || // right of player, heading left
+                (opp_x < player_x && opp_dir == 0) || // left of player, heading right
+                (opp_y > player_y && opp_dir == 3) || // below player, heading up
+                (opp_y < player_y && opp_dir == 1)) { // above player, heading down
+                // keep going
+            }
+            else {
+                opp_turn_next = now + 15u + ((uint32_t)rand() % (uint32_t)15ul);
+                opp_dir = (opp_dir + opp_turn) & 3;
+            }
+        }
 
         switch (opp_dir) {
             case 0: // moving right
