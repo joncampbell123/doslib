@@ -1141,6 +1141,7 @@ struct game_2d {
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
+    const unsigned smileybullet0=2,smileybullet1=2;
     /* sprite images */
     const unsigned smi_smile=1,smi_frown=4,smi_bullet=0,smi_win=2,smi_poo=3;
     /* player state (center) */
@@ -1149,7 +1150,6 @@ void game_0() {
     unsigned player_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
     struct game_2d player_bullet = {-1,-1};
     struct game_2d player_bulletv = {-1,-1};
-    unsigned player_bullet_spriteidx = (~0u);
     /* opponent state (center) */
     unsigned opp_x = 230;
     unsigned opp_y = 100;
@@ -1158,7 +1158,6 @@ void game_0() {
     uint32_t opp_turn_next = 0;
     struct game_2d opp_bullet = {-1,-1};
     struct game_2d opp_bulletv = {-1,-1};
-    unsigned opp_bullet_spriteidx = (~0u);
     /* smiley size */
     const unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
@@ -1237,6 +1236,16 @@ void game_0() {
             }
         }
 
+        if (kbdown_test(KBDS_SPACEBAR)) {
+            if (player_bullet.x < 0) {
+                player_bullet.x = player_x;
+                player_bullet.y = player_y;
+                player_bulletv.x = (player_dir == 0/*right*/) ? 3 : (player_dir == 2/*left*/) ? -3 : 0;
+                player_bulletv.y = (player_dir == 1/*down*/)  ? 3 : (player_dir == 3/*up*/)   ? -3 : 0;
+                game_sprite_imgset(smileybullet0,smi_bullet);
+            }
+        }
+
         /* opponent: do not move if frowning (i.e. dead) */
         if (opp_dir == 254) {
         }
@@ -1310,6 +1319,21 @@ void game_0() {
                     opp_dir = (opp_dir + opp_turn) & 3;
                 break;
         }
+
+        if (player_bullet.x >= 0) {
+            player_bullet.x += player_bulletv.x * (int)amult;
+            player_bullet.y += player_bulletv.y * (int)amult;
+            if (player_bullet.x >= (320-(smilw/2)) ||
+                player_bullet.x <= smilox ||
+                player_bullet.y >= (200-(smilh/2)) ||
+                player_bullet.y <= smiloy) {
+                player_bullet.x = -1;
+                game_sprite_hide(smileybullet0);
+            }
+        }
+
+        if (player_bullet.x >= 0)
+            game_sprite_position(smileybullet0,player_bullet.x - smilox,player_bullet.y - smiloy);
 
         game_sprite_position(smiley0,player_x - smilox,player_y - smiloy);
         game_sprite_position(smiley1,opp_x    - smilox,opp_y    - smiloy);
