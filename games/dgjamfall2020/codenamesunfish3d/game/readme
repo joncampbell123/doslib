@@ -10,3 +10,50 @@ Mini game #1: CRAPTN52.EXE
 Mini game #2: MINGAME2.EXE
 Mini game #3: MINGAME3.EXE
 
+This game is a not-so-serious programming
+experiment written in C and assembly
+using NASM (Netwide Assembler) and
+Open Watcom C. It uses libraries and
+functions from the DOSLIB project for
+VGA, sprite, Sound Blaster and Adlib
+support, and image and compression
+support.
+
+Requirements:
+
+Intel 386SX/8MHz or higher.
+VGA video hardware.
+440KB of conventional DOS memory.
+PC/AT keyboard and keyboard controller.
+
+Recommended DOS configuration:
+
+Intel 386SX/20MHz or higher.
+540KB of conventional DOS memory (does not use EMS/XMS... yet).
+Sound Blaster Pro or higher.
+
+For best compatibility with your DOS system
+please set the BLASTER environment variable.
+To do this, type on the command line OR add
+to your AUTOEXEC.BAT:
+
+   SET BLASTER=A220 I5 D1 T3
+
+   Where I<n> is the IRQ, D<n> is the DMA,
+   and A<n> is the base I/O port of your
+   Sound Blaster. This game does not use
+   the T<n> value.
+
+Some sound card installation utilities will
+add this to your AUTOEXEC.BAT for you when
+you install or configure your sound card.
+
+DOSBox will automatically set the BLASTER
+variable from your dosbox.conf.
+
+If BLASTER is not set, the game will attempt
+to auto-detect the card on port 220h and 240h,
+which will only work if your card also uses
+IRQ 5 or 7 and DMA 1 (classic Sound Blaster
+configuration).
+
