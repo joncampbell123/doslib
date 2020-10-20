@@ -1133,6 +1133,10 @@ void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned ch
     }
 }
 
+struct game_2d {
+    int x,y;
+};
+
 /* Smiley Wars */
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
@@ -1143,12 +1147,18 @@ void game_0() {
     unsigned player_x = 90;
     unsigned player_y = 100;
     unsigned player_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
+    struct game_2d player_bullet = {-1,-1};
+    struct game_2d player_bulletv = {-1,-1};
+    unsigned player_bullet_spriteidx = (~0u);
     /* opponent state (center) */
     unsigned opp_x = 230;
     unsigned opp_y = 100;
     unsigned opp_dir = 0; // 0=right 1=down 2=left 3=up 4=stop 255=not moving 254=frowning
     unsigned opp_turn = 1;
     uint32_t opp_turn_next = 0;
+    struct game_2d opp_bullet = {-1,-1};
+    struct game_2d opp_bulletv = {-1,-1};
+    unsigned opp_bullet_spriteidx = (~0u);
     /* smiley size */
     const unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
