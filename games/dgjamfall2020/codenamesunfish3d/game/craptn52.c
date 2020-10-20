@@ -1164,6 +1164,7 @@ void game_0() {
     const unsigned smilw = 26,smilh = 26,smilox = 32 - 16,smiloy = 32 - 16;
     /* other */
     unsigned int i,amult;
+    unsigned char refade=0;
     uint32_t now,pnow;
 
     if (sin2048fps16_open())
@@ -1208,6 +1209,7 @@ void game_0() {
 
         if (game_restart != 0 && now >= game_restart) {
             game_restart = 0;
+            refade = 1;
 
             opp_next_fire = now + 90; // do not fire for 3/4 sec, give the player a fair chance
 
@@ -1410,9 +1412,33 @@ void game_0() {
         game_sprite_position(smiley1,opp_x    - smilox,opp_y    - smiloy);
 
         game_update_sprites();
+
+        if (refade) {
+            /* fade out */
+            outp(0x3C7,0); // prepare to read from 0
+            for (i=0;i < 768;i++) common_tmp_small[i] = inp(0x3C9);
+
+            for (amult=0;amult < 16;amult++) {
+                vga_wait_for_vsync(); /* wait for vsync */
+                outp(0x3C8,0);
+                for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i]*(16-amult))>>4);
+            }
+        }
+
         vga_swap_pages(); /* current <-> next */
         vga_update_disp_cur_page();
         vga_wait_for_vsync(); /* wait for vsync */
+
+        if (refade) {
+            refade = 0;
+
+            /* fade in */
+            for (amult=0;amult < 16;amult++) {
+                vga_wait_for_vsync(); /* wait for vsync */
+                outp(0x3C8,0);
+                for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i]*amult)>>4);
+            }
+        }
     }
 
     restore_keyboard_irq();
