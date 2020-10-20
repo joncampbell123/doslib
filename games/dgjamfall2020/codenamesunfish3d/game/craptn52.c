@@ -1144,6 +1144,7 @@ struct game_2d {
  *       Random chance of shot turning opponent into a pile of poo.
  *       Random chance of opponent turning *you* into a pile of poo.
  *       WAV file when you turn into poo "You lose! Have a crappy day!"
+ *       If both player and opponent hit each other and frown, show "Nobody wins! It's a tie!"
  */
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
