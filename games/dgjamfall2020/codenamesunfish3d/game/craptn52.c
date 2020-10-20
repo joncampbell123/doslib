@@ -1143,7 +1143,7 @@ void game_0() {
     const unsigned smiley0=0,smiley1=1;
     const unsigned smileybullet0=2,smileybullet1=3;
     /* sprite images */
-    const unsigned smi_smile=1,smi_frown=4,smi_bullet=0,smi_win=2,smi_poo=3;
+    const unsigned smi_smile=1,smi_frown=4,smi_bullet=0;
     /* player state (center) */
     unsigned player_x = 90;
     unsigned player_y = 100;
@@ -1304,7 +1304,7 @@ void game_0() {
         }
         /* opponent wants to follow player to attack too */
         else {
-            if (now >= opp_next_fire && opp_bullet.x < 0) {
+            if (now >= opp_next_fire && opp_bullet.x < 0 && player_dir != 254/*not dead*/) {
                 if ((rand() % 20) == 0) {
                     opp_next_fire = now + 60 + ((uint32_t)rand() % 30ul);
                     if (abs(opp_x - player_x) < 30) {
@@ -1418,7 +1418,7 @@ void game_0() {
             outp(0x3C7,0); // prepare to read from 0
             for (i=0;i < 768;i++) common_tmp_small[i] = inp(0x3C9);
 
-            for (amult=0;amult < 16;amult++) {
+            for (amult=0;amult <= 16;amult++) {
                 vga_wait_for_vsync(); /* wait for vsync */
                 outp(0x3C8,0);
                 for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i]*(16-amult))>>4);
@@ -1433,7 +1433,7 @@ void game_0() {
             refade = 0;
 
             /* fade in */
-            for (amult=0;amult < 16;amult++) {
+            for (amult=0;amult <= 16;amult++) {
                 vga_wait_for_vsync(); /* wait for vsync */
                 outp(0x3C8,0);
                 for (i=0;i < 768;i++) outp(0x3C9,(common_tmp_small[i]*amult)>>4);
