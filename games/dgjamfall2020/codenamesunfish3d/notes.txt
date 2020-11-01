@@ -97,6 +97,19 @@ Craption 52 ideas:
   must guide his rocket through sector 80286 that has been invaded
   by space donkeys. Gameplay of course inspired by DONKEY.BAS.
 
+* Office Space
+
+  Oh no, another space shooter! This time with random sprites of
+  things you'd find in an office supply store including erasers,
+  usb pen drives, rubber bands, pens, etc. you must fight your
+  way to the end to battle The Great Stapler.
+
+  TODO: So what office implement are you the player? It has to be
+        something intentionally dumb and nonsensical of course.
+
+  Level start: Play a clip from "Office Space" of that guy saying
+               "I believe you have my stapler..."
+
 * The Cheetoman (parody of the Cheetahmen)
 
   The Cheetoman (Donald Trump) must fight his way through a level
