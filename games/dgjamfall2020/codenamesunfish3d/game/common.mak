@@ -71,6 +71,7 @@ final: $(PARTO1_EXE) $(CRAPTN52_EXE) $(MINGAME2_EXE) $(MINGAME3_EXE) $(GAME_COM)
 	@cp ../devasset/cr52rl??.vrl ../devasset/cr52rn??.vrl final/
 	# readme
 	@cp readme final/README.TXT
+	@cp devlog final/DEVLOG.TXT
 
 !ifdef GAME_COM
 $(GAME_COM): game.asm
