@@ -87,3 +87,13 @@ for the game jam, of course.
 
 Sound Blaster and Adlib support, of course!
 
+--------------------
+
+Craption 52 ideas:
+
+* DONKEY.BAS... IN SPAAAAAAAACE!
+
+  Bill Gates returning from a meeting on the S. S. Microsoft
+  must guide his rocket through sector 80286 that has been invaded
+  by space donkeys. Gameplay of course inspired by DONKEY.BAS.
+
