@@ -1,0 +1,10 @@
+
+(next version)
+------------------------------------
+- Smiley wars: Fix sprite engine to
+  eliminate redraw error (flashing
+  partial sprite) at game start.
+
+2020/10/20 Initial prototype release
+------------------------------------
+
