@@ -1082,20 +1082,18 @@ void game_update_sprites(void) {
 
     /* pass 1: draw background beneath all sprites, where the sprite *was* */
     for (i=0;i < game_sprite_max;i++) {
-        if (game_sprite[i].ow != 0) {
+        if (game_sprite[i].ow != 0)
             game_draw_tiles(game_sprite[i].ox,game_sprite[i].oy,game_sprite[i].ow,game_sprite[i].oh);
 
-            game_sprite[i].oh = game_sprite[i].ph;
-            game_sprite[i].ox = game_sprite[i].px;
-            game_sprite[i].oy = game_sprite[i].py;
-
-            game_sprite[i].ph = game_sprite[i].h;
-            game_sprite[i].px = game_sprite[i].x;
-            game_sprite[i].py = game_sprite[i].y;
-        }
-
         game_sprite[i].ow = game_sprite[i].pw;
+        game_sprite[i].oh = game_sprite[i].ph;
+        game_sprite[i].ox = game_sprite[i].px;
+        game_sprite[i].oy = game_sprite[i].py;
+
         game_sprite[i].pw = game_sprite[i].w;
+        game_sprite[i].ph = game_sprite[i].h;
+        game_sprite[i].px = game_sprite[i].x;
+        game_sprite[i].py = game_sprite[i].y;
     }
 
     /* pass 2: draw sprites */
