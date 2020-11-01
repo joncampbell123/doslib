@@ -1146,6 +1146,11 @@ struct game_2d {
  *       WAV file when you turn into poo "You lose! Have a crappy day!"
  *       If both player and opponent hit each other and frown, show "Nobody wins! It's a tie!"
  */
+/* Intentional bugs (do not fix):
+ *   - Shooting the oppenent repeatedly should always reset the game over timer,
+ *     allowing the player to possibly infinitely postpone the game reset.
+ *     Because n00b mistakes.
+ */
 void game_0() {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
