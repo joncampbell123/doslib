@@ -46,6 +46,8 @@
 #include "craptn52.h"
 #include "ldwavsn.h"
 
+unsigned char FAR*                  vga_8x8_font_ptr;
+
 static const uint8_t vrev4[16] = {
     0x0,    // 0000 0000
     0x8,    // 0001 1000

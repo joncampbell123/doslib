@@ -99,6 +99,7 @@ void game_spriteimg_free(void);
 void my_unhook_irq(void);
 void gen_res_free(void);
 void load_def_pal(void);
+void woo_title(void);
 
 extern unsigned char FAR*                       vga_8x8_font_ptr;
 

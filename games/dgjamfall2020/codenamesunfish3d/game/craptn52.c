@@ -48,8 +48,6 @@
 
 #include <hw/8042/8042.h>
 
-unsigned char FAR*                  vga_8x8_font_ptr;
-
 void my_unhook_irq(void) {
     sound_blaster_stop_playback();
     sound_blaster_unhook_irq();
