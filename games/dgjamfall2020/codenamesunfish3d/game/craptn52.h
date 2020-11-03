@@ -102,6 +102,8 @@ void load_def_pal(void);
 void woo_title(void);
 int woo_menu(void);
 
+void game_0(void);
+
 extern unsigned char FAR*                       vga_8x8_font_ptr;
 
 extern struct dma_8237_allocation*              sound_blaster_dma;
