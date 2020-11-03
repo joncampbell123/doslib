@@ -32,7 +32,6 @@
 #include "fontbmp.h"
 #include "unicode.h"
 #include "commtmp.h"
-#include "sin2048.h"
 #include "vrldraw.h"
 #include "seqcomm.h"
 #include "keyboard.h"
@@ -108,9 +107,6 @@ void game_smiley_wars(void) {
     unsigned int i,amult;
     unsigned char refade=0;
     uint32_t now,pnow;
-
-    if (sin2048fps16_open())
-        fatal("cannot open sin2048");
 
     vga_cur_page = VGA_GAME_PAGE_FIRST;
     vga_set_start_location(vga_cur_page);
