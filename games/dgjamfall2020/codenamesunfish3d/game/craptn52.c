@@ -770,50 +770,17 @@ void load_def_pal(void) {
     vga_write_AC(0x11 | VGA_AC_ENABLE,215);
 }
 
-#define NUM_TILES           256
-#define TILES_VRAM_OFFSET   0xC000              /* enough for 4*16*256 */
-
-#define GAME_VSCROLL        (1u << 0u)
-#define GAME_HSCROLL        (1u << 1u)
-
-#define NUM_SPRITEIMG       64
-
-struct game_spriteimg {
-    struct vrl_image        vrl;
-};
-
 struct game_spriteimg       game_spriteimg[NUM_SPRITEIMG];
-
-#define NUM_SPRITES         32
-
-#define GAME_SPRITE_VISIBLE (1u << 0u)
-#define GAME_SPRITE_REDRAW  (1u << 1u)
-#define GAME_SPRITE_HFLIP   (1u << 2u)
-
-struct game_sprite {
-    /* last drawn 2 frames ago (for erasure). 2 frame delay because page flipping. */
-    unsigned int            ox,oy;
-    unsigned int            ow,oh;
-    /* last drawn 1 frame ago */
-    unsigned int            px,py;
-    unsigned int            pw,ph;
-    /* where to draw */
-    unsigned int            x,y;
-    unsigned int            w,h;
-    /* what to draw */
-    unsigned char           spriteimg;
-    /* other */
-    unsigned char           flags;
-};
 
 unsigned char               game_sprite_max = 0;
 struct game_sprite          game_sprite[NUM_SPRITES];
 
-#define GAME_TILEMAP_DISPWIDTH  22
-#define GAME_TILEMAP_WIDTH      ((22u*2u)+1u)
-#define GAME_TILEMAP_HEIGHT     ((14u*2u)+1u)
-
 unsigned char*              game_tilemap = NULL;
+
+unsigned char               game_flags = 0;
+unsigned char               game_scroll_mode = 0;
+unsigned int                game_hscroll = 0;
+unsigned int                game_vscroll = 0;
 
 void game_sprite_hide(unsigned i) {
     if (i >= NUM_SPRITES)
@@ -904,11 +871,6 @@ void game_spriteimg_loadimg(struct game_spriteimg *i,const char *path) {
 void game_spriteimg_load(unsigned i,const char *path) {
     game_spriteimg_loadimg(game_spriteimg+i,path);
 }
-
-unsigned char game_flags = 0;
-unsigned char game_scroll_mode = 0;
-unsigned int game_hscroll = 0;
-unsigned int game_vscroll = 0;
 
 void game_normal_setup(void) {
     vga_set_stride((vga_state.vga_draw_stride=80u)*4u);
