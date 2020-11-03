@@ -174,4 +174,3 @@ void sound_blaster_stop_playback(void) {
         sndsb_stop_dsp_playback(sound_blaster_ctx);
 }
 
-

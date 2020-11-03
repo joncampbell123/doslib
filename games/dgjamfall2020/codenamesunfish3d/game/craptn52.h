@@ -95,6 +95,7 @@ void woo_menu_item_drawstr(unsigned int x,unsigned int y,const char *str,unsigne
 struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path);
 void sound_blaster_stop_playback(void);
 void sound_blaster_hook_irq(void);
+void detect_sound_blaster(void);
 void game_spriteimg_free(void);
 void my_unhook_irq(void);
 void gen_res_free(void);
