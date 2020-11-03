@@ -181,8 +181,6 @@ void my_unhook_irq(void) {
     sound_blaster_unhook_irq();
 }
 
-void game_spriteimg_free(void);
-
 void gen_res_free(void) {
     game_spriteimg_free();
     sin2048fps16_free();
@@ -755,7 +753,7 @@ finishnow:
     free(imgbuf);
 }
 
-void load_def_pal() {
+void load_def_pal(void) {
     unsigned int i;
     int fd;
 
