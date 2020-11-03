@@ -43,19 +43,10 @@
 #include "rotozoom.h"
 #include "seqcanvs.h"
 #include "cutscene.h"
+#include "craptn52.h"
 #include "ldwavsn.h"
 
 #include <hw/8042/8042.h>
-
-/* alternate page offsets big enough for a 352x232 mode */
-#define VGA_GAME_PAGE_FIRST         0x0000
-#define VGA_GAME_PAGE_SECOND        0x5000
-
-void game_normal_setup(void);
-
-static inline int use_adlib() {
-    return (adlib_fm_voices != 0u);
-}
 
 unsigned char FAR*                  vga_8x8_font_ptr;
 
