@@ -72,23 +72,6 @@ void gen_res_free(void) {
     }
 }
 
-void load_def_pal(void) {
-    unsigned int i;
-    int fd;
-
-    fd = open("cr52pal.pal",O_RDONLY|O_BINARY);
-    if (fd >= 0) {
-        read(fd,common_tmp_small,216*3);
-        close(fd);
-
-        vga_palette_lseek(0);
-        for (i=0;i < 216;i++) vga_palette_write(common_tmp_small[i*3+0]>>2u,common_tmp_small[i*3+1]>>2u,common_tmp_small[i*3+2]>>2u);
-    }
-
-    /* border color (overscan) */
-    vga_write_AC(0x11 | VGA_AC_ENABLE,215);
-}
-
 struct game_spriteimg       game_spriteimg[NUM_SPRITEIMG];
 
 unsigned char               game_sprite_max = 0;
