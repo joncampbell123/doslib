@@ -90,15 +90,6 @@ static unsigned char game_0_tilemap[22*14] = {
 /* 14 */ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
 };
 
-void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned char *map) {
-    while (h-- > 0) {
-        unsigned char *d = game_tilemap + ((y++) * GAME_TILEMAP_WIDTH) + x;
-        unsigned int cw = w;
-
-        while (cw-- > 0) *d++ = *map++;
-    }
-}
-
 /* Smiley Wars */
 /* TODO: Game start text: "Turn that smile upside down! Go!"
  *       Game text at restart: "You lose!" "You win!" etc.

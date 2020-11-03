@@ -313,3 +313,12 @@ void game_update_sprites(void) {
     }
 }
 
+void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned char *map) {
+    while (h-- > 0) {
+        unsigned char *d = game_tilemap + ((y++) * GAME_TILEMAP_WIDTH) + x;
+        unsigned int cw = w;
+
+        while (cw-- > 0) *d++ = *map++;
+    }
+}
+
