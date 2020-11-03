@@ -947,26 +947,6 @@ void load_tiles(uint16_t ofs,uint16_t ostride,const char *path) {
     free(row);
 }
 
-static inline void game_draw_tile(unsigned o,unsigned i) {
-    const unsigned sc = vga_state.vga_draw_stride - 4u;
-    const unsigned char far *d = vga_state.vga_graphics_ram+o;
-    const unsigned char far *s = MK_FP(0xA000,TILES_VRAM_OFFSET + (i*4u*16u));
-
-    __asm {
-        push    ds
-        les     di,d
-        lds     si,s
-        mov     bx,sc
-        mov     dx,16
-l1:     mov     cx,4
-        rep     movsb
-        add     di,bx
-        dec     dx
-        jnz     l1
-        pop     ds
-    }
-}
-
 void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h) {
     unsigned i,ir,o,or,ww,oa;
 
@@ -1081,10 +1061,6 @@ void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned ch
         while (cw-- > 0) *d++ = *map++;
     }
 }
-
-struct game_2d {
-    int x,y;
-};
 
 /* Smiley Wars */
 /* TODO: Game start text: "Turn that smile upside down! Go!"

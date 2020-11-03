@@ -1,4 +1,8 @@
 
+struct game_2d {
+    int x,y;
+};
+
 #define NUM_TILES           256
 #define TILES_VRAM_OFFSET   0xC000              /* enough for 4*16*256 */
 
@@ -60,6 +64,16 @@ void game_spriteimg_freeimg(struct game_spriteimg *i);
 void game_spriteimg_free(void);
 void game_spriteimg_loadimg(struct game_spriteimg *i,const char *path);
 void game_spriteimg_load(unsigned i,const char *path);
+void game_normal_setup(void);
+void game_noscroll_setup(void);
+void game_vscroll_setup(void);
+void game_hscroll_setup(void);
+void load_tiles(uint16_t ofs,uint16_t ostride,const char *path);
+void game_draw_tiles(unsigned x,unsigned y,unsigned w,unsigned h);
+void game_draw_tiles_2pages(unsigned x,unsigned y,unsigned w,unsigned h);
+void game_draw_sprite(unsigned x,unsigned y,unsigned simg,unsigned flags);
+void game_update_sprites(void);
+void game_tilecopy(unsigned x,unsigned y,unsigned w,unsigned h,const unsigned char *map);
 
 /* alternate page offsets big enough for a 352x232 mode */
 #define VGA_GAME_PAGE_FIRST         0x0000
@@ -90,4 +104,24 @@ extern struct sndsb_ctx*                        sound_blaster_ctx;
 extern unsigned char                            sound_blaster_stop_on_irq;
 extern unsigned char                            sound_blaster_irq_hook;
 extern unsigned char                            sound_blaster_old_irq_masked;
+
+static inline void game_draw_tile(unsigned o,unsigned i) {
+    const unsigned sc = vga_state.vga_draw_stride - 4u;
+    const unsigned char far *d = vga_state.vga_graphics_ram+o;
+    const unsigned char far *s = MK_FP(0xA000,TILES_VRAM_OFFSET + (i*4u*16u));
+
+    __asm {
+        push    ds
+        les     di,d
+        lds     si,s
+        mov     bx,sc
+        mov     dx,16
+l1:     mov     cx,4
+        rep     movsb
+        add     di,bx
+        dec     dx
+        jnz     l1
+        pop     ds
+    }
+}
 
