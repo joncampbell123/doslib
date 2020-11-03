@@ -80,7 +80,7 @@ static unsigned char game_0_tilemap[22*14] = {
  *     allowing the player to possibly infinitely postpone the game reset.
  *     Because n00b mistakes.
  */
-void game_0(void) {
+void game_smiley_wars(void) {
     /* sprite slots: smiley 0 (player) and smiley 1 (opponent) */
     const unsigned smiley0=0,smiley1=1;
     const unsigned smileybullet0=2,smileybullet1=3;

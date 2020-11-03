@@ -186,7 +186,7 @@ int main(int argc,char **argv) {
                 done = 1;
                 break;
             case 0:
-                game_0();
+                game_smiley_wars();
                 break;
             default:
                 fatal("Unknown menu selection %u",sel);
