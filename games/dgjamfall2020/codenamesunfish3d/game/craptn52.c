@@ -74,7 +74,7 @@ void gen_res_free(void) {
     }
 }
 
-static struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path) {
+struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path) {
     struct minipng_reader *rdr;
     unsigned int y;
 

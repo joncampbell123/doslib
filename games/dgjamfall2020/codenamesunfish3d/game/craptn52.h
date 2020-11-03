@@ -85,10 +85,14 @@ static inline int use_adlib() {
 
 void game_normal_setup(void);
 void free_sound_blaster_dma(void);
+void sound_blaster_hook_irq(void);
+void sound_blaster_unhook_irq(void);
+void sound_blaster_stop_playback(void);
 int realloc_sound_blaster_dma(const unsigned buffer_size);
 void woo_menu_item_coord(unsigned int *x,unsigned int *y,unsigned int i);
 void woo_menu_item_draw_char(unsigned int o,unsigned char c,unsigned char color);
 void woo_menu_item_drawstr(unsigned int x,unsigned int y,const char *str,unsigned char color);
+struct minipng_reader *woo_title_load_png(unsigned char *buf,unsigned int w,unsigned int h,const char *path);
 void sound_blaster_stop_playback(void);
 void sound_blaster_hook_irq(void);
 void game_spriteimg_free(void);
