@@ -1,5 +1,5 @@
 
-(next version)
+2020/11/14 Prototype release
 ------------------------------------
 - Smiley wars: Fix sprite engine to
   eliminate redraw error (flashing
@@ -8,3 +8,5 @@
 2020/10/20 Initial prototype release
 ------------------------------------
 
+2020/08/28 Development start
+----------------------------
