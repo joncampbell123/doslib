@@ -65,6 +65,42 @@ struct LineNumber {
     LineNumber() : line(LineNumberUndef), offset(OffsetUndef) { }
 };
 
+struct FixupRef {
+    uint8_t             type;
+    size_t              index;
+
+    static const uint8_t    undefType = 0;
+    static const uint8_t    segdefType = 1;
+    static const uint8_t    grpdefType = 2;
+    static const uint8_t    extdefType = 3;
+
+    FixupRef() : type(undefType), index(~((size_t)0)) { }
+};
+
+struct Fixup {
+    FixupRef            target;
+    FixupRef            frame;
+    uint32_t            target_displacement;
+    uint32_t            location;               /* where in the segment to apply the fixup */
+    uint8_t             relative;
+    uint8_t             locationtype;
+
+    static const uint8_t    undefRelative = 0;
+    static const uint8_t    segmentRelative = 1;
+    static const uint8_t    selfRelative = 2;
+
+    static const uint8_t    undefLocationType = 0;
+    static const uint8_t    lowbyteLocationType = 1;        // low byte (8-bit displacement or low byte of 16-bit)
+    static const uint8_t    offset16LocationType = 2;       // 16-bit offset
+    static const uint8_t    base16LocationType = 3;         // 16-bit base, logical segment base
+    static const uint8_t    far1616LocationType = 4;        // 16:16 (base:offset) FAR pointer
+    static const uint8_t    highbyteLocationType = 5;       // high byte
+    static const uint8_t    offset32LocationType = 6;       // 32-bit offset
+    static const uint8_t    far1632LocationType = 7;        // 16:32 (base:offset) FAR pointer
+
+    Fixup() : target_displacement(0), location(~((uint32_t)0)), relative(undefRelative), locationtype(undefLocationType) { }
+};
+
 struct Segment {
     NameRef             segname;
     NameRef             classname;
@@ -82,6 +118,7 @@ struct Segment {
 
     vector<Extern>      externdef;
     vector<LineNumber>  linenumbers;
+    vector<Fixup>       fixups;
 
     Segment() : segname(NameRefUndef), classname(NameRefUndef), overlayname(NameRefUndef), alignment(0), segment_length(0), segment_data_length(0), use(useUndef) { }
 };
