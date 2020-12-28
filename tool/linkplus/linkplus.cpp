@@ -120,7 +120,13 @@ struct Segment {
     vector<LineNumber>  linenumbers;
     vector<Fixup>       fixups;
 
-    Segment() : segname(NameRefUndef), classname(NameRefUndef), overlayname(NameRefUndef), alignment(0), segment_length(0), segment_data_length(0), use(useUndef) { }
+    unsigned int        flags;
+
+    static const unsigned int cannotHoldData = (1u << 0u);      /* i.e. bss or stack segment */
+
+    vector<uint8_t>     data_contents;          /* data contents defined (not including undefined) */
+
+    Segment() : segname(NameRefUndef), classname(NameRefUndef), overlayname(NameRefUndef), alignment(0), segment_length(0), segment_data_length(0), use(useUndef), flags(0) { }
 };
 
 struct GroupDefRec {
