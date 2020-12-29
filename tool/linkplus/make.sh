@@ -3,17 +3,17 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
-#dos=1 # MS-DOS
+dos=1 # MS-DOS
 #dostiny=1 # MS-DOS tiny model
 #doshuge=1 # MS-DOS huge model
 #dospc98=1 # MS-DOS PC-98
 #win30=1 # Windows 3.0
 #win31=1 # Windows 3.1
-#winnt=1 # Windows NT
-#win32=1 # Windows 9x/NT/XP/Vista/etc.
+winnt=1 # Windows NT
+win32=1 # Windows 9x/NT/XP/Vista/etc.
 #win32s=1 # Windows 3.1 + Win32s
 #os216=1 # OS/2 16-bit 286
-#os232=1 # OS/2 32-bit 386
+os232=1 # OS/2 32-bit 386
 #win386=1
 #win38631=1
 
