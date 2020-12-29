@@ -39,7 +39,7 @@ enum {
 
 #define MAX_GROUPS                      256
 
-static const char*                      dosdrv_header_symbol = "_dosdrv_header";
+static string                           dosdrv_header_symbol = "_dosdrv_header";
 
 static FILE*                            map_fp = NULL;
 
@@ -3277,9 +3277,9 @@ int main(int argc,char **argv) {
             struct link_symbol *sym;
             unsigned long ofs;
 
-            sym = find_link_symbol(dosdrv_header_symbol,in_fileRefUndef,in_fileModuleRefUndef);
+            sym = find_link_symbol(dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
             if (sym == NULL) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol);
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol.c_str());
                 return 1;
             }
             assert(sym->name != NULL);
@@ -3287,7 +3287,7 @@ int main(int argc,char **argv) {
             segdef = find_link_segment(sym->segdef);
             if (segdef == NULL) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) missing SEGDEF '%s'\n",
-                    dosdrv_header_symbol,sym->segdef);
+                    dosdrv_header_symbol.c_str(),sym->segdef);
                 return 1;
             }
 
@@ -3299,13 +3299,13 @@ int main(int argc,char **argv) {
             ofs = sym->offset + frag->offset;
             if (ofs != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) has nonzero offset 0x%lx within segment '%s'\n",
-                    dosdrv_header_symbol,ofs,sym->segdef);
+                    dosdrv_header_symbol.c_str(),ofs,sym->segdef);
                 return 1;
             }
 
             if (segdef->linear_offset != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
-                    dosdrv_header_symbol,sym->segdef,segdef->linear_offset);
+                    dosdrv_header_symbol.c_str(),sym->segdef,segdef->linear_offset);
                 return 1;
             }
 
