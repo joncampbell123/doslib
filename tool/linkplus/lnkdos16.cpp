@@ -55,7 +55,7 @@ static char                             hex_output_tmpfile[1024];
 
 static vector<string>                   in_file;
 
-static unsigned int                     current_in_file = 0;
+static size_t                           current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
 static unsigned int                     want_stack_size = 4096;
@@ -1953,7 +1953,6 @@ int segment_def_arrange(void) {
 int main(int argc,char **argv) {
     unsigned char diddump = 0;
     unsigned char pass;
-    unsigned int inf;
     int i,fd,ret;
     char *a;
 
@@ -2094,15 +2093,14 @@ int main(int argc,char **argv) {
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
-        for (inf=0;inf < in_file.size();inf++) {
-            assert(!in_file[inf].empty());
+        for (current_in_file=0;current_in_file < in_file.size();current_in_file++) {
+            assert(!in_file[current_in_file].empty());
 
-            fd = open(in_file[inf].c_str(),O_RDONLY|O_BINARY);
+            fd = open(in_file[current_in_file].c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
             }
-            current_in_file = inf;
 
             // prepare parsing
             if ((omf_state=omf_context_create()) == NULL) {
@@ -2118,7 +2116,7 @@ int main(int argc,char **argv) {
             do {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
-                    if (apply_FIXUPP(omf_state,0,inf,current_in_mod,pass))
+                    if (apply_FIXUPP(omf_state,0,current_in_file,current_in_mod,pass))
                         return 1;
                     omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
@@ -2188,7 +2186,7 @@ int main(int argc,char **argv) {
                             /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
                              *       LPUBDEF means the symbols are not visible outside the module. */
 
-                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, inf, current_in_mod, pass))
+                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, current_in_file, current_in_mod, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
@@ -2218,7 +2216,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count, inf, current_in_mod, pass))
+                            if (segdef_add(omf_state, p_count, current_in_file, current_in_mod, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -2358,7 +2356,7 @@ int main(int argc,char **argv) {
                 diddump = 1;
             }
 
-            if (apply_FIXUPP(omf_state,0,inf,current_in_mod,pass))
+            if (apply_FIXUPP(omf_state,0,current_in_file,current_in_mod,pass))
                 return 1;
             omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
@@ -2594,8 +2592,10 @@ int main(int argc,char **argv) {
              * is at 0x100 */
             if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                 unsigned long segrel = 0;
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
+                unsigned int linkseg;
+
+                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                    struct link_segdef *sd = &link_segments[linkseg];
                     struct link_segdef *gd = sd->groupname != NULL ? find_link_segment_by_grpdef(sd->groupname) : 0;
                     struct link_segdef *cd = sd->classname != NULL ? find_link_segment_by_class(sd->classname) : 0;
 
@@ -2621,8 +2621,10 @@ int main(int argc,char **argv) {
                 }
             }
             else if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
+                unsigned int linkseg;
+
+                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                    struct link_segdef *sd = &link_segments[linkseg];
 
                     sd->segment_relative = 0;
                     sd->segment_base = com_segbase;
@@ -2642,19 +2644,20 @@ int main(int argc,char **argv) {
             /* decide where the segments end up in the executable */
             {
                 unsigned long ofs = 0;
+                unsigned int linkseg;
 
                 if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                     /* TODO: EXE header */
                 }
 
-                for (inf=link_segments_count;inf > 0;) {
-                    struct link_segdef *sd = &link_segments[--inf];
+                for (linkseg=link_segments_count;linkseg > 0;) {
+                    struct link_segdef *sd = &link_segments[--linkseg];
 
                     if (!sd->noemit) break;
                 }
 
-                for (;inf > 0;) {
-                    struct link_segdef *sd = &link_segments[--inf];
+                for (;linkseg > 0;) {
+                    struct link_segdef *sd = &link_segments[--linkseg];
 
                     if (sd->noemit) {
                         fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
@@ -2668,8 +2671,8 @@ int main(int argc,char **argv) {
                     }
                 }
 
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
+                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                    struct link_segdef *sd = &link_segments[linkseg];
 
                     if (sd->noemit) break;
 
@@ -2681,8 +2684,8 @@ int main(int argc,char **argv) {
                      *      in fact, maybe computing file offset at this phase was a bad idea... :( */
                 }
 
-                for (;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
+                for (;linkseg < link_segments_count;linkseg++) {
+                    struct link_segdef *sd = &link_segments[linkseg];
 
                     assert(sd->noemit != 0);
                 }
@@ -2690,8 +2693,10 @@ int main(int argc,char **argv) {
 
             /* allocate in-memory copy of the segments */
             {
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
+                unsigned int linkseg;
+
+                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                    struct link_segdef *sd = &link_segments[linkseg];
 
                     assert(sd->image_ptr == NULL);
                     if (sd->segment_length != 0 && !sd->noemit) {
@@ -2808,6 +2813,7 @@ int main(int argc,char **argv) {
                         struct exe_relocation *rel = &exe_relocation_table[0];
                         struct seg_fragment *frag;
                         struct link_segdef *lsg;
+                        unsigned int reloc;
                         unsigned long roff;
 
                         if (tsg != NULL) {
@@ -2816,7 +2822,7 @@ int main(int argc,char **argv) {
                         }
 
                         assert((d+exe_relocation_table.size()) <= f);
-                        for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
+                        for (reloc=0;reloc < exe_relocation_table.size();reloc++,rel++) {
                             lsg = find_link_segment(rel->segname.c_str());
                             if (lsg == NULL) {
                                 fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
@@ -2836,7 +2842,7 @@ int main(int argc,char **argv) {
                                 return 1;
                             }
 
-                            d[inf] = (uint16_t)roff;
+                            d[reloc] = (uint16_t)roff;
                         }
                     }
 
@@ -3219,8 +3225,9 @@ int main(int argc,char **argv) {
                     struct seg_fragment *frag;
                     struct link_segdef *lsg;
                     unsigned long rseg,roff;
+                    unsigned int reloc;
 
-                    for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
+                    for (reloc=0;reloc < exe_relocation_table.size();reloc++,rel++) {
                         lsg = find_link_segment(rel->segname.c_str());
                         if (lsg == NULL) {
                             fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
@@ -3378,20 +3385,24 @@ int main(int argc,char **argv) {
             }
         }
 
-        for (inf=0;inf < link_segments_count;inf++) {
-            struct link_segdef *sd = &link_segments[inf];
+        {
+            unsigned int linkseg;
 
-            if (sd->segment_length == 0 || sd->noemit) continue;
+            for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                struct link_segdef *sd = &link_segments[linkseg];
 
-            if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
-                fprintf(stderr,"Seek error\n");
-                return 1;
-            }
+                if (sd->segment_length == 0 || sd->noemit) continue;
 
-            assert(sd->image_ptr != NULL);
-            if ((unsigned long)write(fd,sd->image_ptr,sd->segment_length) != sd->segment_length) {
-                fprintf(stderr,"Write error\n");
-                return 1;
+                if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
+                    fprintf(stderr,"Seek error\n");
+                    return 1;
+                }
+
+                assert(sd->image_ptr != NULL);
+                if ((unsigned long)write(fd,sd->image_ptr,sd->segment_length) != sd->segment_length) {
+                    fprintf(stderr,"Write error\n");
+                    return 1;
+                }
             }
         }
 
