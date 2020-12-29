@@ -46,12 +46,14 @@ typedef size_t                          in_fileRef;             /* index into in
 typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
 typedef uint32_t                        segmentSize;
 typedef uint32_t                        segmentBase;
+typedef size_t                          fragmentRef;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
+static const fragmentRef                fragmentRefUndef = ~((fragmentRef)0u);
 
 #define MAX_GROUPS                      256
 
@@ -176,10 +178,10 @@ enum {
 
 struct exe_relocation {
     string                              segname;
-    unsigned int                        fragment;
+    fragmentRef                         fragment;
     unsigned long                       offset;
 
-    exe_relocation() : fragment(~0u), offset(0) { }
+    exe_relocation() : fragment(fragmentRefUndef), offset(0) { }
 };
 
 static vector<struct exe_relocation>    exe_relocation_table;
@@ -204,12 +206,12 @@ struct link_symbol {
     string                              segdef;             /* belongs to segdef */
     string                              groupdef;           /* belongs to groupdef */
     unsigned long                       offset;             /* offset within fragment */
-    unsigned short                      fragment;           /* which fragment it belongs to */
+    fragmentRef                         fragment;           /* which fragment it belongs to */
     in_fileRef                          in_file;            /* from which file */
     in_fileModuleRef                    in_module;          /* from which module */
     unsigned int                        is_local:1;         /* is local symbol */
 
-    link_symbol() : offset(0), fragment(0), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
+    link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
 static vector<struct link_symbol>       link_symbols;
@@ -603,8 +605,8 @@ void dump_link_relocations(void) {
         struct exe_relocation *rel = &exe_relocation_table[i++];
 
         if (cmdoptions.verbose) {
-            fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
-                i,rel->segname.c_str(),rel->fragment,rel->offset);
+            fprintf(stderr,"relocation[%u]: seg='%s' frag=%lu offset=0x%lx\n",
+                i,rel->segname.c_str(),(unsigned long)rel->fragment,rel->offset);
         }
 
         if (map_fp != NULL) {
@@ -691,8 +693,8 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     while (i < link_symbols.size()) {
         struct link_symbol *sym = &link_symbols[i++];
 
-        fprintf(hfp,"/*symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u*/\n",
-                i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,sym->fragment,
+        fprintf(hfp,"/*symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u*/\n",
+                i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,(unsigned long)sym->fragment,
                 get_in_file(sym->in_file),sym->in_module,sym->is_local);
 
         {
@@ -762,8 +764,8 @@ void dump_link_symbols(void) {
             struct link_symbol *sym = &link_symbols[i++];
 
             if (cmdoptions.verbose) {
-                fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
-                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,sym->fragment,
+                fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u\n",
+                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,(unsigned long)sym->fragment,
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
@@ -1386,7 +1388,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1414,7 +1416,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
@@ -1453,7 +1455,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1482,7 +1484,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
