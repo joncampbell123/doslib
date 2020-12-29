@@ -294,7 +294,7 @@ struct link_symbol *new_link_symbol(const char *name) {
 
         sym->name = strdup(name);
 
-        sym->in_file = (unsigned short)(~0u);
+        sym->in_file = in_fileRefUndef;
     }
 
     return sym;
@@ -347,8 +347,8 @@ void link_symbols_free(void) {
 #define MAX_SEGMENTS                    256
 
 struct seg_fragment {
-    unsigned short                      in_file;
-    unsigned short                      in_module;
+    in_fileRef                          in_file;
+    in_fileModuleRef                    in_module;
     unsigned short                      segidx;
     unsigned long                       offset;
     unsigned long                       fragment_length;
@@ -641,7 +641,7 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     {
         struct seg_fragment *f = &sg->fragments[sg->fragments_count++];
         sg->fragments_read = sg->fragments_count;
-        f->in_file = (unsigned short)(~0u);
+        f->in_file = in_fileRefUndef;
         return f;
     }
 }
