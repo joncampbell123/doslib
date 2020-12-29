@@ -212,6 +212,7 @@ struct link_symbol {
     unsigned int                        is_local:1;         /* is local symbol */
 
     link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
+    link_symbol(const link_symbol &o) : name(o.name), segdef(o.segdef), groupdef(o.groupdef), offset(o.offset), fragment(o.fragment), in_file(o.in_file), in_module(o.in_module), is_local(o.is_local) { }
 };
 
 static vector<struct link_symbol>       link_symbols;
