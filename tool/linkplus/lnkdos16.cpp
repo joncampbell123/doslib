@@ -39,6 +39,7 @@ enum {
 
 #define MAX_GROUPS                      256
 
+/* this could be removed entirely thanks to std::vector<> */
 #define MAX_IN_FILES                    256
 
 static const char*                      dosdrv_header_symbol = "_dosdrv_header";
@@ -55,8 +56,8 @@ static string                           hex_output;
 static char                             hex_output_name[1024];
 static char                             hex_output_tmpfile[1024];
 
-static char*                            in_file[MAX_IN_FILES];
-static unsigned int                     in_file_count = 0;
+static vector<string>                   in_file;
+
 static unsigned int                     current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
@@ -66,9 +67,9 @@ const char *get_in_file(unsigned int idx) {
     if (idx >= 0xFFFFu)
         return "<internal>";
 
-    if (idx < MAX_IN_FILES) {
-        if (in_file[idx] != NULL)
-            return in_file[idx];
+    if (idx < in_file.size()) {
+        if (!in_file[idx].empty())
+            return in_file[idx].c_str();
     }
 
     return "";
@@ -1968,14 +1969,14 @@ int main(int argc,char **argv) {
             do { a++; } while (*a == '-');
 
             if (!strcmp(a,"i")) {
-                if (in_file_count >= MAX_IN_FILES) {
+                if (in_file.size() >= MAX_IN_FILES) {
                     fprintf(stderr,"Too many input files\n");
                     return 1;
                 }
 
-                in_file[in_file_count] = argv[i++];
-                if (in_file[in_file_count] == NULL) return 1;
-                in_file_count++;
+                char *s = argv[i++];
+                if (s == NULL) return 1;
+                in_file.push_back(s); /* constructs std::string from char* */
             }
             else if (!strcmp(a,"hsym")) {
                 a = argv[i++];
@@ -2076,7 +2077,7 @@ int main(int argc,char **argv) {
         setbuf(map_fp,NULL);
     }
 
-    if (in_file_count == 0) {
+    if (in_file.empty()) { /* is the vector empty? */
         help();
         return 1;
     }
@@ -2101,10 +2102,10 @@ int main(int argc,char **argv) {
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
-        for (inf=0;inf < in_file_count;inf++) {
-            assert(in_file[inf] != NULL);
+        for (inf=0;inf < in_file.size();inf++) {
+            assert(!in_file[inf].empty());
 
-            fd = open(in_file[inf],O_RDONLY|O_BINARY);
+            fd = open(in_file[inf].c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
