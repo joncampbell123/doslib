@@ -20,10 +20,10 @@ linux-host:
 	mkdir -p linux-host
 
 $(LNKDOS16): linux-host/lnkdos16.o $(OMFLIB)
-	gcc -o $@ $^
+	g++ -o $@ $^
 
-linux-host/%.o : %.c
-	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $^
+linux-host/%.o : %.cpp
+	g++ -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu++03 -c -o $@ $^
 
 clean:
 	rm -f linux-host/lnkdos16 linux-host/*.o linux-host/*.a
