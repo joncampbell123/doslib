@@ -37,29 +37,6 @@ enum {
 
 //================================== PROGRAM ================================
 
-#define MAX_GROUPS                      256
-
-static string                           dosdrv_header_symbol = "_dosdrv_header";
-
-static FILE*                            map_fp = NULL;
-
-struct cmdoptions {
-    unsigned int                        hex_split:1;
-    unsigned int                        hex_cpp:1;
-    unsigned int                        do_dosseg:1;
-    unsigned int                        verbose:1;
-
-    string                              hex_output;
-    string                              out_file;
-    string                              map_file;
-
-    vector<string>                      in_file;
-
-    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
-};
-
-static cmdoptions                       cmdoptions;
-
 /* <file ref> <module index ref>
  *
  * for .obj files, file ref is an index and module index ref is zero.
@@ -76,10 +53,33 @@ static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModule
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
 
+#define MAX_GROUPS                      256
+
+
+static FILE*                            map_fp = NULL;
+
+struct cmdoptions {
+    unsigned int                        hex_split:1;
+    unsigned int                        hex_cpp:1;
+    unsigned int                        do_dosseg:1;
+    unsigned int                        verbose:1;
+
+    segmentSize                         want_stack_size;
+
+    string                              dosdrv_header_symbol;
+    string                              hex_output;
+    string                              out_file;
+    string                              map_file;
+
+    vector<string>                      in_file;
+
+    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), want_stack_size(4096), dosdrv_header_symbol("_dosdrv_header") { }
+};
+
+static cmdoptions                       cmdoptions;
+
 static in_fileRef                       current_in_file = 0;
 static in_fileModuleRef                 current_in_file_module = 0;
-
-static segmentSize                      want_stack_size = 4096;
 
 const char *get_in_file(const in_fileRef idx) {
     if (idx == in_fileRefUndef)
@@ -1990,7 +1990,7 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"hsym")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
-                dosdrv_header_symbol = a;
+                cmdoptions.dosdrv_header_symbol = a;
             }
             else if (!strcmp(a,"pflat")) {
                 prefer_flat = 1;
@@ -1998,7 +1998,7 @@ int main(int argc,char **argv) {
             else if (!strncmp(a,"stack",5)) {
                 a += 5;
                 if (!isxdigit(*a)) return 1;
-                want_stack_size = strtoul(a,NULL,16);
+                cmdoptions.want_stack_size = strtoul(a,NULL,16);
             }
             else if (!strncmp(a,"com",3)) {
                 a += 3;
@@ -2393,7 +2393,7 @@ int main(int argc,char **argv) {
                 if (stacksg != NULL) {
                     assert(stacksg->image_ptr == NULL);
 
-                    if (stacksg->segment_length < want_stack_size) {
+                    if (stacksg->segment_length < cmdoptions.want_stack_size) {
                         struct seg_fragment *frag;
 
                         frag = alloc_link_segment_fragment(stacksg);
@@ -2403,9 +2403,9 @@ int main(int argc,char **argv) {
                         frag->offset = stacksg->segment_length;
                         frag->segidx = (int)(stacksg + 1 - (&link_segments[0]));
                         frag->attr = stacksg->attr;
-                        frag->fragment_length = want_stack_size - stacksg->segment_length;
+                        frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
 
-                        stacksg->segment_length = want_stack_size;
+                        stacksg->segment_length = cmdoptions.want_stack_size;
                     }
                 }
             }
@@ -3117,8 +3117,8 @@ int main(int argc,char **argv) {
                         fprintf(map_fp,"* Warning, no STACK class segment defined\n");
 
                     init_ss = 0;
-                    init_sp = resident_size + want_stack_size;
-                    stack_size = want_stack_size;
+                    init_sp = resident_size + cmdoptions.want_stack_size;
+                    stack_size = cmdoptions.want_stack_size;
                     while (init_sp > 0xFF00ul) {
                         init_sp -= 0x100;
                         init_ss += 0x10;
@@ -3281,9 +3281,9 @@ int main(int argc,char **argv) {
             struct link_symbol *sym;
             unsigned long ofs;
 
-            sym = find_link_symbol(dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+            sym = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
             if (sym == NULL) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol.c_str());
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",cmdoptions.dosdrv_header_symbol.c_str());
                 return 1;
             }
             assert(sym->name != NULL);
@@ -3291,7 +3291,7 @@ int main(int argc,char **argv) {
             segdef = find_link_segment(sym->segdef);
             if (segdef == NULL) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) missing SEGDEF '%s'\n",
-                    dosdrv_header_symbol.c_str(),sym->segdef);
+                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef);
                 return 1;
             }
 
@@ -3303,13 +3303,13 @@ int main(int argc,char **argv) {
             ofs = sym->offset + frag->offset;
             if (ofs != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) has nonzero offset 0x%lx within segment '%s'\n",
-                    dosdrv_header_symbol.c_str(),ofs,sym->segdef);
+                    cmdoptions.dosdrv_header_symbol.c_str(),ofs,sym->segdef);
                 return 1;
             }
 
             if (segdef->linear_offset != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
-                    dosdrv_header_symbol.c_str(),sym->segdef,segdef->linear_offset);
+                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef,segdef->linear_offset);
                 return 1;
             }
 
