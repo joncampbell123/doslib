@@ -551,6 +551,7 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     {
         struct seg_fragment *f = &sg->fragments[sg->fragments_count++];
         sg->fragments_read = sg->fragments_count;
+        f->in_module = in_fileModuleRefUndef;
         f->in_file = in_fileRefUndef;
         return f;
     }
@@ -776,7 +777,7 @@ void dump_link_symbols(void) {
                 assert(sym->fragment < sg->fragments_count);
                 frag = &sg->fragments[sym->fragment];
 
-                fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
+                fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
                         sym->name.c_str(),
                         sym->is_local?'L':'G',
                         sg->segment_relative&0xfffful,
@@ -784,8 +785,14 @@ void dump_link_symbols(void) {
                         sg->linear_offset + frag->offset + sym->offset,
                         sym->segdef.c_str(),
                         frag->offset + sym->offset,
-                        get_in_file(sym->in_file),
-                        sym->in_module);
+                        get_in_file(sym->in_file));
+
+                if (sym->in_module != in_fileModuleRefUndef) {
+                    fprintf(map_fp,":%u",
+                            sym->in_module);
+                }
+
+                fprintf(map_fp,"\n");
             }
         }
 
@@ -982,14 +989,21 @@ void dump_link_segments(void) {
                         strcpy(range2,"---------------------");
                     }
 
-                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s':%u\n",
+                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
                             frag->attr.f.f.use32?32:16,
                             "",
                             "",
                             "",
                             range1,
                             range2,
-                            get_in_file(frag->in_file),frag->in_module);
+                            get_in_file(frag->in_file));
+
+                    if (frag->in_module != in_fileModuleRefUndef) {
+                        fprintf(map_fp,":%u",
+                                frag->in_module);
+                    }
+
+                    fprintf(map_fp,"\n");
                 }
             }
         }
