@@ -58,7 +58,7 @@ struct cmdoptions {
 };
 
 static cmdoptions                       cmdoptions;
-static char                             hex_output_name[1024];
+static string                           hex_output_name;
 static char                             hex_output_tmpfile[1024];
 
 static vector<string>                   in_file;
@@ -1973,8 +1973,6 @@ int main(int argc,char **argv) {
     int i,fd,ret;
     char *a;
 
-    hex_output_name[0] = 0;
-
     for (i=1;i < argc;) {
         a = argv[i++];
 
@@ -3431,25 +3429,20 @@ int main(int argc,char **argv) {
 
             {
                 const char *i = out_file.c_str();
-                size_t o = 0;
 
                 while (*i != 0) {
                     char c = *i++;
 
                     if (isalpha(c) || isdigit(c) || c == '_') {
                         if (i == out_file && isdigit(c)) /* symbols cannot start with digits */
-                            hex_output_name[o++] = '_';
+                            hex_output_name += '_';
 
-                        hex_output_name[o++] = c;
+                        hex_output_name += c;
                     }
                     else {
-                        hex_output_name[o++] = '_';
+                        hex_output_name += '_';
                     }
-
-                    if ((o+16) >= sizeof(hex_output_name)) break;
                 }
-
-                hex_output_name[o] = 0;
             }
 
             sz = lseek(fd,0,SEEK_END);
@@ -3467,7 +3460,7 @@ int main(int argc,char **argv) {
                 return 1;
             }
 
-            fprintf(hfp,"const uint8_t %s_bin[%lu] = {\n",hex_output_name,sz);
+            fprintf(hfp,"const uint8_t %s_bin[%lu] = {\n",hex_output_name.c_str(),sz);
 
             count = 0;
             lseek(fd,0,SEEK_SET);
@@ -3495,13 +3488,13 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name,sz);
+                fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name.c_str(),sz);
             }
 
-            fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
+            fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name.c_str(),(unsigned long)sz);
 
-            dump_hex_segments(hfp, hex_output_name);
-            dump_hex_symbols(hfp, hex_output_name);
+            dump_hex_segments(hfp, hex_output_name.c_str());
+            dump_hex_symbols(hfp, hex_output_name.c_str());
 
             fclose(hfp);
         }
