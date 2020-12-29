@@ -3427,13 +3427,13 @@ int main(int argc,char **argv) {
             int rd,x;
 
             {
-                const char *i = cmdoptions.out_file.c_str();
+                string::iterator i = cmdoptions.out_file.begin();
 
-                while (*i != 0) {
-                    char c = *i++;
+                while (i != cmdoptions.out_file.end()) {
+                    char c = *(i++);
 
                     if (isalpha(c) || isdigit(c) || c == '_') {
-                        if (i == cmdoptions.out_file.c_str() && isdigit(c)) /* symbols cannot start with digits */
+                        if (i == cmdoptions.out_file.begin() && isdigit(c)) /* symbols cannot start with digits */
                             hex_output_name += '_';
 
                         hex_output_name += c;
