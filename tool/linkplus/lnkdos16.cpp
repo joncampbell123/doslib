@@ -156,7 +156,7 @@ enum {
 };
 
 struct exe_relocation {
-    char*                               segname;
+    string                              segname;
     unsigned int                        fragment;
     unsigned long                       offset;
 };
@@ -172,17 +172,7 @@ struct exe_relocation *new_exe_relocation(void) {
     return &exe_relocation_table[idx];
 }
 
-void free_exe_relocation_entry(struct exe_relocation *r) {
-    if (r->segname != NULL) {
-        free(r->segname);
-        r->segname = NULL;
-    }
-}
-
 void free_exe_relocations(void) {
-    unsigned int i;
-
-    for (i=0;i < exe_relocation_table.size();i++) free_exe_relocation_entry(&exe_relocation_table[i]);
     exe_relocation_table.clear();
 }
 
@@ -688,20 +678,16 @@ void dump_link_relocations(void) {
     while (i < exe_relocation_table.size()) {
         struct exe_relocation *rel = &exe_relocation_table[i++];
 
-        assert(rel->segname != NULL);
-
         if (verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
-                i,rel->segname,rel->fragment,rel->offset);
+                i,rel->segname.c_str(),rel->fragment,rel->offset);
         }
 
         if (map_fp != NULL) {
             struct seg_fragment *frag;
             struct link_segdef *sg;
 
-            assert(rel->segname != NULL);
-
-            sg = find_link_segment(rel->segname);
+            sg = find_link_segment(rel->segname.c_str());
             assert(sg != NULL);
 
             assert(sg->fragments != NULL);
@@ -713,7 +699,7 @@ void dump_link_relocations(void) {
                 sg->segment_relative&0xfffful,
                 sg->segment_offset + frag->offset + rel->offset,
                 sg->linear_offset + frag->offset + rel->offset,
-                rel->segname,frag->offset + rel->offset,
+                rel->segname.c_str(),frag->offset + rel->offset,
                 get_in_file(frag->in_file),frag->in_module);
         }
     }
@@ -1488,12 +1474,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                             assert(current_link_segment->fragments_read > 0);
                             assert(current_link_segment->name != NULL);
-                            reloc->segname = strdup(current_link_segment->name);
+                            reloc->segname = current_link_segment->name;
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1516,12 +1502,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                         assert(current_link_segment->fragments_read > 0);
                         assert(current_link_segment->name != NULL);
-                        reloc->segname = strdup(current_link_segment->name);
+                        reloc->segname = current_link_segment->name;
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
@@ -1555,12 +1541,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                             assert(current_link_segment->fragments_read > 0);
                             assert(current_link_segment->name != NULL);
-                            reloc->segname = strdup(current_link_segment->name);
+                            reloc->segname = current_link_segment->name;
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1584,12 +1570,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                         assert(current_link_segment->fragments_read > 0);
                         assert(current_link_segment->name != NULL);
-                        reloc->segname = strdup(current_link_segment->name);
+                        reloc->segname = current_link_segment->name;
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
@@ -2834,10 +2820,9 @@ int main(int argc,char **argv) {
 
                         assert((d+exe_relocation_table.size()) <= f);
                         for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
-                            assert(rel->segname != NULL);
-                            lsg = find_link_segment(rel->segname);
+                            lsg = find_link_segment(rel->segname.c_str());
                             if (lsg == NULL) {
-                                fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname);
+                                fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
                                 return 1;
                             }
 
@@ -3239,10 +3224,9 @@ int main(int argc,char **argv) {
                     unsigned long rseg,roff;
 
                     for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
-                        assert(rel->segname != NULL);
-                        lsg = find_link_segment(rel->segname);
+                        lsg = find_link_segment(rel->segname.c_str());
                         if (lsg == NULL) {
-                            fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname);
+                            fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
                             return 1;
                         }
 
