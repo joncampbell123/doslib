@@ -39,9 +39,6 @@ enum {
 
 #define MAX_GROUPS                      256
 
-/* this could be removed entirely thanks to std::vector<> */
-#define MAX_IN_FILES                    256
-
 static const char*                      dosdrv_header_symbol = "_dosdrv_header";
 
 static string                           out_file;
@@ -1969,11 +1966,6 @@ int main(int argc,char **argv) {
             do { a++; } while (*a == '-');
 
             if (!strcmp(a,"i")) {
-                if (in_file.size() >= MAX_IN_FILES) {
-                    fprintf(stderr,"Too many input files\n");
-                    return 1;
-                }
-
                 char *s = argv[i++];
                 if (s == NULL) return 1;
                 in_file.push_back(s); /* constructs std::string from char* */
