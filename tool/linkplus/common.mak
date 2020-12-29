@@ -20,7 +20,7 @@ LNKDOS16_EXE = $(SUBDIR)$(HPS)lnkdos16.$(EXEEXT)
 	@$(CC) @tmp.cmd
 
 .CPP.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) -xs $[@
 	@$(CXX) @tmp.cmd
 
 all: lib exe

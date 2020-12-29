@@ -1,6 +1,3 @@
-/* FIXME: This code (and omfsegfl) should be consolidated into a library for
- *        reading/writing OMF files. */
-/* TODO: For COM and DRV output (non-EXE), emitting symbols to STACK should be forbidden because we cannot predict the stack location */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -18,6 +15,11 @@ extern "C" {
 #include <fmt/omf/omf.h>
 #include <fmt/omf/omfcstr.h>
 }
+
+using namespace std;
+
+#include <vector>
+#include <string>
 
 #if defined(_MSC_VER)
 # define strcasecmp strcmpi
@@ -159,22 +161,15 @@ struct exe_relocation {
     unsigned long                       offset;
 };
 
-static struct exe_relocation*           exe_relocation_table = NULL;
-static size_t                           exe_relocation_table_count = 0;
-static size_t                           exe_relocation_table_alloc = 0;
+static vector<struct exe_relocation>    exe_relocation_table;
 
 struct exe_relocation *new_exe_relocation(void) {
-    if (exe_relocation_table == NULL) {
-        exe_relocation_table_count = 0;
-        exe_relocation_table_alloc = 4096;
-        exe_relocation_table = (struct exe_relocation*)malloc(sizeof(struct exe_relocation) * exe_relocation_table_alloc);
-        if (exe_relocation_table == NULL) return NULL;
-    }
+    if (exe_relocation_table.empty())
+        exe_relocation_table.reserve(4096);
 
-    if (exe_relocation_table_count >= exe_relocation_table_alloc)
-        return NULL;
-
-    return exe_relocation_table + (exe_relocation_table_count++);
+    const size_t idx = exe_relocation_table.size();
+    exe_relocation_table.resize(idx + (size_t)1);
+    return &exe_relocation_table[idx];
 }
 
 void free_exe_relocation_entry(struct exe_relocation *r) {
@@ -187,13 +182,8 @@ void free_exe_relocation_entry(struct exe_relocation *r) {
 void free_exe_relocations(void) {
     unsigned int i;
 
-    if (exe_relocation_table) {
-        for (i=0;i < exe_relocation_table_count;i++) free_exe_relocation_entry(exe_relocation_table + i);
-        free(exe_relocation_table);
-        exe_relocation_table = NULL;
-        exe_relocation_table_count = 0;
-        exe_relocation_table_alloc = 0;
-    }
+    for (i=0;i < exe_relocation_table.size();i++) free_exe_relocation_entry(&exe_relocation_table[i]);
+    exe_relocation_table.clear();
 }
 
 static unsigned int                     output_format = OFMT_COM;
@@ -687,15 +677,15 @@ unsigned int omf_align_code_to_bytes(const unsigned int x) {
 void dump_link_relocations(void) {
     unsigned int i=0;
 
-    if (exe_relocation_table == NULL) return;
+    if (exe_relocation_table.empty()) return;
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
-        fprintf(map_fp,"Relocation table: %u entries\n",(unsigned int)exe_relocation_table_count);
+        fprintf(map_fp,"Relocation table: %u entries\n",(unsigned int)exe_relocation_table.size());
         fprintf(map_fp,"---------------------------------------\n");
     }
 
-    while (i < exe_relocation_table_count) {
+    while (i < exe_relocation_table.size()) {
         struct exe_relocation *rel = &exe_relocation_table[i++];
 
         assert(rel->segname != NULL);
@@ -2476,15 +2466,13 @@ int main(int argc,char **argv) {
             {
                 /* COMREL relocation + patch code */
                 if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
-                    output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+                    output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                     /* make a new segment attached to the end, containing the relocation
                      * table and the patch up code, which becomes the new entry point. */
                     struct seg_fragment *tfrag;
                     struct seg_fragment *frag;
                     struct link_segdef *tsg;
                     struct link_segdef *sg;
-
-                    assert(exe_relocation_table != NULL);
 
                     sg = find_link_segment("__COMREL_RELOC");
                     if (sg == NULL) {
@@ -2528,7 +2516,7 @@ int main(int argc,char **argv) {
                         tfrag = frag;
                     }
 
-                    tsg->segment_length += exe_relocation_table_count * 2;
+                    tsg->segment_length += exe_relocation_table.size() * (size_t)2;
 
                     if (output_format == OFMT_DOSDRV)
                         sg->segment_length += sizeof(dosdrvrel_entry_point);
@@ -2738,7 +2726,7 @@ int main(int argc,char **argv) {
 
             /* COMREL relocation + patch code */
             if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
-                output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+                output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 /* make a new segment attached to the end, containing the relocation
                  * table and the patch up code, which becomes the new entry point. */
                 struct link_segdef *sg;
@@ -2785,8 +2773,6 @@ int main(int argc,char **argv) {
                     unsigned long old_init_ip,init_ip;
                     unsigned long ro,po;
 
-                    assert(exe_relocation_table != NULL);
-
                     if (tsg != NULL) {
                         ro = tfrag->offset;
                         assert((ro + tfrag->fragment_length) <= tsg->segment_length);
@@ -2797,7 +2783,7 @@ int main(int argc,char **argv) {
                         ro = frag->offset;
                         assert((ro + frag->fragment_length) <= sg->segment_length);
 
-                        po = ro + (exe_relocation_table_count * 2);
+                        po = ro + (exe_relocation_table.size() * (size_t)2);
                     }
 
                     if (output_format == OFMT_DOSDRV) {
@@ -2836,7 +2822,7 @@ int main(int argc,char **argv) {
                     {
                         uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
                         uint16_t *f = (uint16_t*)(sg->image_ptr + sg->segment_length);
-                        struct exe_relocation *rel = exe_relocation_table;
+                        struct exe_relocation *rel = &exe_relocation_table[0];
                         struct seg_fragment *frag;
                         struct link_segdef *lsg;
                         unsigned long roff;
@@ -2846,8 +2832,8 @@ int main(int argc,char **argv) {
                             f = (uint16_t*)(tsg->image_ptr + sg->segment_length);
                         }
 
-                        assert((d+exe_relocation_table_count) <= f);
-                        for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
+                        assert((d+exe_relocation_table.size()) <= f);
+                        for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
                             assert(rel->segname != NULL);
                             lsg = find_link_segment(rel->segname);
                             if (lsg == NULL) {
@@ -2863,7 +2849,7 @@ int main(int argc,char **argv) {
 
                             roff = rel->offset + lsg->linear_offset + frag->offset + com_segbase;
 
-                            if (roff >= (0xFF00u - (exe_relocation_table_count * 2u))) {
+                            if (roff >= (0xFF00u - (exe_relocation_table.size() * (size_t)2u))) {
                                 fprintf(stderr,"COM relocation entry is non-representable\n");
                                 return 1;
                             }
@@ -2879,7 +2865,7 @@ int main(int argc,char **argv) {
                         assert((d+sizeof(dosdrvrel_entry_point)) <= f);
                         memcpy(d,dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
 
-                        *((uint16_t*)(d+dosdrvrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+                        *((uint16_t*)(d+dosdrvrel_entry_point_CX_COUNT)) = exe_relocation_table.size();
 
                         if (tsg != NULL)
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
@@ -2961,7 +2947,7 @@ int main(int argc,char **argv) {
                         assert((d+sizeof(comrel_entry_point)) <= f);
                         memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
 
-                        *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+                        *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table.size();
 
                         if (tsg != NULL)
                             *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
@@ -3072,10 +3058,10 @@ int main(int argc,char **argv) {
             }
             o_header_size = header_size;
 
-            if (exe_relocation_table_count != 0) {
+            if (!exe_relocation_table.empty()) {
                 assert(header_size >= 0x20);
                 relocation_table_offset = header_size;
-                header_size += (exe_relocation_table_count * 4ul);
+                header_size += (exe_relocation_table.size() * (size_t)4ul);
             }
 
             /* header_size must be a multiple of 16 */
@@ -3233,9 +3219,9 @@ int main(int argc,char **argv) {
                 // no relocation table (yet)
                 // no overlay
 
-                if (exe_relocation_table_count != 0) {
+                if (!exe_relocation_table.empty()) {
                     *((uint16_t*)(tmp+24)) = (uint16_t)relocation_table_offset;
-                    *((uint16_t*)(tmp+6)) = (uint16_t)exe_relocation_table_count;
+                    *((uint16_t*)(tmp+6)) = (uint16_t)exe_relocation_table.size();
                 }
             }
 
@@ -3245,14 +3231,14 @@ int main(int argc,char **argv) {
                 }
             }
 
-            if (exe_relocation_table_count != 0) {
+            if (!exe_relocation_table.empty()) {
                 if ((unsigned long)lseek(fd,relocation_table_offset,SEEK_SET) == relocation_table_offset) {
-                    struct exe_relocation *rel = exe_relocation_table;
+                    struct exe_relocation *rel = &exe_relocation_table[0];
                     struct seg_fragment *frag;
                     struct link_segdef *lsg;
                     unsigned long rseg,roff;
 
-                    for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
+                    for (inf=0;inf < exe_relocation_table.size();inf++,rel++) {
                         assert(rel->segname != NULL);
                         lsg = find_link_segment(rel->segname);
                         if (lsg == NULL) {
@@ -3345,7 +3331,7 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"\n");
             }
 
-            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 unsigned char *hdr_p;
                 unsigned char *reloc_p;
                 struct link_segdef *rsegdef;
