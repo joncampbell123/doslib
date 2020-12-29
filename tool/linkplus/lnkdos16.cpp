@@ -52,11 +52,12 @@ struct cmdoptions {
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
 
+    string                              hex_output;
+
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
 };
 
 static cmdoptions                       cmdoptions;
-static string                           hex_output;
 static char                             hex_output_name[1024];
 static char                             hex_output_tmpfile[1024];
 
@@ -2006,7 +2007,7 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"hex")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
-                hex_output = a;
+                cmdoptions.hex_output = a;
             }
             else if (!strcmp(a,"hexcpp")) {
                 cmdoptions.hex_cpp = true;
@@ -3422,7 +3423,7 @@ int main(int argc,char **argv) {
             }
         }
 
-        if (!hex_output.empty()) {
+        if (!cmdoptions.hex_output.empty()) {
             unsigned char tmp[16];
             long sz,count=0;
             FILE *hfp;
@@ -3454,10 +3455,10 @@ int main(int argc,char **argv) {
             sz = lseek(fd,0,SEEK_END);
 
             if (cmdoptions.hex_split) {
-                sprintf(hex_output_tmpfile,"%s.%s",hex_output.c_str(),cmdoptions.hex_cpp ? "cpp" : "c");
+                sprintf(hex_output_tmpfile,"%s.%s",cmdoptions.hex_output.c_str(),cmdoptions.hex_cpp ? "cpp" : "c");
             }
             else {
-                strcpy(hex_output_tmpfile,hex_output.c_str());
+                strcpy(hex_output_tmpfile,cmdoptions.hex_output.c_str());
             }
 
             hfp = fopen(hex_output_tmpfile,"w");
@@ -3486,7 +3487,7 @@ int main(int argc,char **argv) {
             if (cmdoptions.hex_split) {
                 fclose(hfp);
 
-                sprintf(hex_output_tmpfile,"%s.h",hex_output.c_str());
+                sprintf(hex_output_tmpfile,"%s.h",cmdoptions.hex_output.c_str());
 
                 hfp = fopen(hex_output_tmpfile,"w");
                 if (hfp == NULL) {
