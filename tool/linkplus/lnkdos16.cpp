@@ -223,7 +223,7 @@ struct link_symbol *new_link_symbol(const char *name) {
     link_symbols.resize(idx + (size_t)1);
     struct link_symbol *sym = &link_symbols[idx];
 
-    sym->name = strdup(name);
+    sym->name = name;
     sym->in_file = in_fileRefUndef;
     return sym;
 }
