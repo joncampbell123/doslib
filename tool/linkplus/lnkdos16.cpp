@@ -2588,6 +2588,7 @@ int main(int argc,char **argv) {
 
                         frag->offset = 0;
                         frag->fragment_length = sg->segment_length;
+                        frag->in_file = in_fileRefInternal;
                         frag->attr = sg->attr;
 
                         if (sg->segment_length > 0) {
@@ -2596,6 +2597,7 @@ int main(int argc,char **argv) {
                             sym = new_link_symbol("__COM_ENTRY_JMP_INS");
                             if (sym == NULL) return 1;
                             sym->offset = 0;
+                            sym->in_file = in_fileRefInternal;
                             sym->fragment = (int)(frag - &sg->fragments[0]);
                             sym->segdef = strdup("__COM_ENTRY_JMP");
                         }
@@ -2802,6 +2804,7 @@ int main(int argc,char **argv) {
                     sym = find_link_symbol("__COMREL_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
+                    sym->in_file = in_fileRefInternal;
                     sym->groupdef = strdup("DGROUP");
                     if (tsg != NULL) {
                         sym->segdef = strdup("__COMREL_RELOCTBL");
@@ -2817,6 +2820,7 @@ int main(int argc,char **argv) {
                     sym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_ENTRY");
+                    sym->in_file = in_fileRefInternal;
                     sym->groupdef = strdup("DGROUP");
                     sym->segdef = strdup("__COMREL_RELOC");
                     sym->fragment = sg->fragments_count-1;
@@ -2882,6 +2886,7 @@ int main(int argc,char **argv) {
                             sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",in_fileRefUndef,in_fileModuleRefUndef);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
+                            sym->in_file = in_fileRefInternal;
                             sym->groupdef = strdup("DGROUP");
                             sym->segdef = strdup("__COMREL_RELOC");
                             sym->fragment = sg->fragments_count-1;
@@ -2892,6 +2897,7 @@ int main(int argc,char **argv) {
                             sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR",in_fileRefUndef,in_fileModuleRefUndef);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
+                            sym->in_file = in_fileRefInternal;
                             sym->groupdef = strdup("DGROUP");
                             sym->segdef = strdup("__COMREL_RELOC");
                             sym->fragment = sg->fragments_count-1;
