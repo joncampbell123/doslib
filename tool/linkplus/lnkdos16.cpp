@@ -46,10 +46,16 @@ static string                           out_file;
 static string                           map_file;
 static FILE*                            map_fp = NULL;
 
-static bool                             hex_split = false;
-static bool                             hex_cpp = false;
-static bool                             do_dosseg = true;
+struct cmdoptions {
+    bool                                hex_split;
+    bool                                hex_cpp;
+    bool                                do_dosseg;
+    bool                                verbose;
 
+    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
+};
+
+static cmdoptions                       cmdoptions;
 static string                           hex_output;
 static char                             hex_output_name[1024];
 static char                             hex_output_tmpfile[1024];
@@ -89,8 +95,6 @@ const char *get_in_file(unsigned int idx) {
 }
 
 struct omf_context_t*                   omf_state = NULL;
-
-static bool                             verbose = false;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
 static segmentBase                      com_segbase = segmentBaseUndef;
@@ -690,7 +694,7 @@ void dump_link_relocations(void) {
     while (i < exe_relocation_table.size()) {
         struct exe_relocation *rel = &exe_relocation_table[i++];
 
-        if (verbose) {
+        if (cmdoptions.verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
                 i,rel->segname.c_str(),rel->fragment,rel->offset);
         }
@@ -855,7 +859,7 @@ void dump_link_symbols(void) {
             fprintf(map_fp,"---------------------------------------\n");
         }
 
-        if (verbose || map_fp != NULL)
+        if (cmdoptions.verbose || map_fp != NULL)
             qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
                 pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
@@ -863,7 +867,7 @@ void dump_link_symbols(void) {
             struct link_symbol *sym = &link_symbols[i++];
             if (sym->name == NULL) continue;
 
-            if (verbose) {
+            if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
                         i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
@@ -1023,7 +1027,7 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        if (verbose) {
+        if (cmdoptions.verbose) {
             fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
                     i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
                     sg->attr.f.f.use32,
@@ -1070,7 +1074,7 @@ void dump_link_segments(void) {
             for (f=0;f < sg->fragments_count;f++) {
                 struct seg_fragment *frag = &sg->fragments[f];
 
-                if (verbose) {
+                if (cmdoptions.verbose) {
                     fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
                             f,get_in_file(frag->in_file),frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
                 }
@@ -1219,7 +1223,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
     }
 
-    if (verbose)
+    if (cmdoptions.verbose)
         fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx in frag ofs=0x%lx\n",
                 segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset,frag->offset);
 
@@ -1490,7 +1494,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
-                            if (verbose)
+                            if (cmdoptions.verbose)
                                 fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                         }
 
@@ -1518,7 +1522,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
-                        if (verbose)
+                        if (cmdoptions.verbose)
                             fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                     }
 
@@ -1557,7 +1561,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
-                            if (verbose)
+                            if (cmdoptions.verbose)
                                 fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                         }
 
@@ -1586,7 +1590,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
-                        if (verbose)
+                        if (cmdoptions.verbose)
                             fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname.c_str(),reloc->fragment,reloc->offset);
                     }
 
@@ -1728,7 +1732,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             }
         }
 
-        if (verbose)
+        if (cmdoptions.verbose)
             fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
                     first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
 
@@ -1800,7 +1804,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             lsg = find_link_segment(name);
             if (lsg != NULL) {
                 /* it is an error to change attributes */
-                if (verbose)
+                if (cmdoptions.verbose)
                     fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
                 lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
@@ -1811,7 +1815,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 }
             }
             else {
-                if (verbose)
+                if (cmdoptions.verbose)
                     fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
 
                 lsg = new_link_segment(name);
@@ -1850,7 +1854,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 f->attr = sg->attr;
             }
 
-            if (verbose)
+            if (cmdoptions.verbose)
                 fprintf(stderr,"Start segment='%s' load=0x%lx\n",
                         lsg->name, lsg->load_base);
         }
@@ -1926,7 +1930,7 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
     if (ctx->FIXUPPs.omf_FIXUPPS != NULL)
         dump_FIXUPP(stdout,omf_state,1);
 
-    if (verbose)
+    if (cmdoptions.verbose)
         printf("----END-----\n");
 }
 
@@ -1942,7 +1946,7 @@ int segment_def_arrange(void) {
             if (m != 0ul) ofs += sd->initial_alignment - m;
         }
 
-        if (verbose)
+        if (cmdoptions.verbose)
             fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
                     inf,ofs,sd->segment_length);
 
@@ -2005,10 +2009,10 @@ int main(int argc,char **argv) {
                 hex_output = a;
             }
             else if (!strcmp(a,"hexcpp")) {
-                hex_cpp = true;
+                cmdoptions.hex_cpp = true;
             }
             else if (!strcmp(a,"hexsplit")) {
-                hex_split = true;
+                cmdoptions.hex_split = true;
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
@@ -2046,13 +2050,13 @@ int main(int argc,char **argv) {
                 out_file = s;
             }
             else if (!strcmp(a,"v")) {
-                verbose = true;
+                cmdoptions.verbose = true;
             }
             else if (!strcmp(a,"dosseg")) {
-                do_dosseg = true;
+                cmdoptions.do_dosseg = true;
             }
             else if (!strcmp(a,"no-dosseg")) {
-                do_dosseg = false;
+                cmdoptions.do_dosseg = false;
             }
             else {
                 help();
@@ -2119,7 +2123,7 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Failed to init OMF parsing state\n");
                 return 1;
             }
-            omf_state->flags.verbose = (verbose > 0);
+            omf_state->flags.verbose = (cmdoptions.verbose > 0);
 
             diddump = 0;
             current_in_file_module = 0;
@@ -2133,12 +2137,12 @@ int main(int argc,char **argv) {
                     omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
                     if (omf_record_is_modend(&omf_state->record)) {
-                        if (!diddump && verbose) {
+                        if (!diddump && cmdoptions.verbose) {
                             my_dumpstate(omf_state);
                             diddump = 1;
                         }
 
-                        if (verbose)
+                        if (cmdoptions.verbose)
                             printf("----- next module -----\n");
 
                         ret = omf_context_next_lib_module_fd(omf_state,fd);
@@ -2302,7 +2306,7 @@ int main(int argc,char **argv) {
                                 frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
                                 target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
 
-                                if (verbose) {
+                                if (cmdoptions.verbose) {
                                     printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
                                             ModuleType,
                                             ModuleType&0x80?1:0,
@@ -2322,7 +2326,7 @@ int main(int argc,char **argv) {
                                     const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
                                     const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
 
-                                    if (verbose)
+                                    if (cmdoptions.verbose)
                                         fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
 
                                     if (*framename != 0 && *targetname != 0) {
@@ -2363,7 +2367,7 @@ int main(int argc,char **argv) {
                 }
             } while (1);
 
-            if (!diddump && verbose) {
+            if (!diddump && cmdoptions.verbose) {
                 my_dumpstate(omf_state);
                 diddump = 1;
             }
@@ -2406,7 +2410,7 @@ int main(int argc,char **argv) {
 
             owlink_default_sort_seg();
 
-            if (do_dosseg)
+            if (cmdoptions.do_dosseg)
                 owlink_dosseg_sort_order();
 
             {
@@ -2549,7 +2553,7 @@ int main(int argc,char **argv) {
                         com_entry_insert = 3;
                         sg->segment_length = com_entry_insert;
 
-                        if (verbose)
+                        if (cmdoptions.verbose)
                             fprintf(stderr,"Entry point needed for relocateable .COM\n");
                     }
                     /* COM */
@@ -2914,7 +2918,7 @@ int main(int argc,char **argv) {
                         init_ip = po + sg->segment_offset;
 
                         /* change entry point to new entry point */
-                        if (verbose) {
+                        if (cmdoptions.verbose) {
                             fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
                             fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
                         }
@@ -3123,7 +3127,7 @@ int main(int argc,char **argv) {
                 if (resident_size < ofs) resident_size = ofs;
             }
 
-            if (verbose) {
+            if (cmdoptions.verbose) {
                 fprintf(stderr,"EXE header:                    0x%lx\n",header_size);
                 fprintf(stderr,"EXE resident size with header: 0x%lx\n",resident_size);
                 fprintf(stderr,"EXE resident size:             0x%lx\n",resident_size - header_size);
@@ -3165,7 +3169,7 @@ int main(int argc,char **argv) {
                 init_cs = entry_seg_link_target->segment_relative;
                 init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
 
-                if (verbose)
+                if (cmdoptions.verbose)
                     fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
             }
             else {
@@ -3182,7 +3186,7 @@ int main(int argc,char **argv) {
                }
             }
 
-            if (verbose)
+            if (cmdoptions.verbose)
                 fprintf(stderr,"EXE header size: %lu\n",header_size);
 
             assert(resident_size >= disk_size);
@@ -3193,7 +3197,7 @@ int main(int argc,char **argv) {
             tmp[0] = 'M';
             tmp[1] = 'Z';
 
-            if (verbose) {
+            if (cmdoptions.verbose) {
                 fprintf(stderr,"Adjusted segment table\n");
                 dump_link_segments();
             }
@@ -3363,7 +3367,7 @@ int main(int argc,char **argv) {
                 hdr_p = segdef->image_ptr + ofs;
                 reloc_p = rsegdef->image_ptr + rofs;
 
-                if (verbose) {
+                if (cmdoptions.verbose) {
                     fprintf(stderr,"Original entry: 0x%x, 0x%x\n",
                         *((uint16_t*)(hdr_p + 0x06)),
                         *((uint16_t*)(hdr_p + 0x08)));
@@ -3378,7 +3382,7 @@ int main(int argc,char **argv) {
                 *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry2)) = *((uint16_t*)(hdr_p + 0x08));
                 *((uint16_t*)(hdr_p + 0x08)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry2 - 1;
 
-                if (verbose) {
+                if (cmdoptions.verbose) {
                     fprintf(stderr,"New entry: 0x%x, 0x%x\n",
                         *((uint16_t*)(hdr_p + 0x06)),
                         *((uint16_t*)(hdr_p + 0x08)));
@@ -3449,8 +3453,8 @@ int main(int argc,char **argv) {
 
             sz = lseek(fd,0,SEEK_END);
 
-            if (hex_split) {
-                sprintf(hex_output_tmpfile,"%s.%s",hex_output.c_str(),hex_cpp ? "cpp" : "c");
+            if (cmdoptions.hex_split) {
+                sprintf(hex_output_tmpfile,"%s.%s",hex_output.c_str(),cmdoptions.hex_cpp ? "cpp" : "c");
             }
             else {
                 strcpy(hex_output_tmpfile,hex_output.c_str());
@@ -3479,7 +3483,7 @@ int main(int argc,char **argv) {
 
             fprintf(hfp,"};\n");
 
-            if (hex_split) {
+            if (cmdoptions.hex_split) {
                 fclose(hfp);
 
                 sprintf(hex_output_tmpfile,"%s.h",hex_output.c_str());
