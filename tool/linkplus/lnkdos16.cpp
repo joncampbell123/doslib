@@ -185,9 +185,6 @@ struct exe_relocation {
 static vector<struct exe_relocation>    exe_relocation_table;
 
 struct exe_relocation *new_exe_relocation(void) {
-    if (exe_relocation_table.empty())
-        exe_relocation_table.reserve(4096);
-
     const size_t idx = exe_relocation_table.size();
     exe_relocation_table.resize(idx + (size_t)1);
     return &exe_relocation_table[idx];
@@ -202,12 +199,6 @@ static unsigned int                     output_format_variant = OFMTVAR_NONE;
 
 #define MAX_SEG_FRAGMENTS               1024
 
-#if TARGET_MSDOS == 32 || defined(LINUX)
-#define MAX_SYMBOLS                     65536
-#else
-#define MAX_SYMBOLS                     4096
-#endif
-
 struct link_symbol {
     char*                               name;
     char*                               segdef;
@@ -217,87 +208,20 @@ struct link_symbol {
     in_fileRef                          in_file;
     in_fileModuleRef                    in_module;
     unsigned int                        is_local:1;
+
+    link_symbol() : name(NULL), segdef(NULL), groupdef(NULL), offset(0), fragment(0), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
-static struct link_symbol*              link_symbols = NULL;
-static size_t                           link_symbols_count = 0;
-static size_t                           link_symbols_alloc = 0;
-static size_t                           link_symbols_nextalloc = 0;
-
-int link_symbols_extend(size_t sz) {
-    if (sz > MAX_SYMBOLS) return -1;
-    if (sz <= link_symbols_alloc) return 0;
-    if (sz == 0) return -1;
-
-    if (link_symbols != NULL) {
-        size_t old_alloc = link_symbols_alloc;
-        struct link_symbol *n = (struct link_symbol*)realloc((void*)link_symbols, sz * sizeof(struct link_symbol));
-        if (n == NULL) return -1;
-        link_symbols = n;
-        assert(old_alloc != 0);
-        assert(old_alloc < sz);
-        memset(link_symbols + old_alloc, 0, (sz - old_alloc) * sizeof(struct link_symbol));
-    }
-    else {
-        link_symbols = (struct link_symbol*)malloc(sz * sizeof(struct link_symbol));
-        if (link_symbols == NULL) return -1;
-        memset(link_symbols, 0, sz * sizeof(struct link_symbol));
-        link_symbols_nextalloc = 0;
-        link_symbols_count = 0;
-    }
-
-    link_symbols_alloc = sz;
-    return 0;
-}
-
-int link_symbols_extend_double(void) {
-    if (link_symbols_alloc < MAX_SYMBOLS) {
-        size_t ns = link_symbols_alloc * 2u;
-        if (ns < 128) ns = 128;
-        if (ns > MAX_SYMBOLS) ns = MAX_SYMBOLS;
-        if (link_symbols_extend(ns)) return -1;
-        assert(link_symbols_alloc >= ns);
-    }
-
-    return 0;
-}
-
-struct link_symbol *link_symbol_empty_slot(void) {
-    struct link_symbol *sym = NULL;
-
-    if (link_symbols == NULL && link_symbols_extend_double()) return NULL;
-
-    do {
-        assert(link_symbols_nextalloc <= link_symbols_count);
-        assert(link_symbols_count <= link_symbols_alloc);
-        while (link_symbols_nextalloc < link_symbols_count) {
-            sym = link_symbols + (link_symbols_nextalloc++);
-            if (sym->name == NULL) return sym;
-        }
-        while (link_symbols_count < link_symbols_alloc) {
-            sym = link_symbols + (link_symbols_count++);
-            if (sym->name == NULL) return sym;
-        }
-
-        if (link_symbols_extend_double()) return NULL;
-    } while (1);
-
-    return NULL;
-}
+static vector<struct link_symbol>       link_symbols;
+#define link_symbols_count              link_symbols.size()
 
 struct link_symbol *new_link_symbol(const char *name) {
-    struct link_symbol *sym = link_symbol_empty_slot();
+    const size_t idx = link_symbols.size();
+    link_symbols.resize(idx + (size_t)1);
+    struct link_symbol *sym = &link_symbols[idx];
 
-    if (sym != NULL) {
-        assert(sym->name == NULL);
-        assert(sym->segdef == NULL);
-        assert(sym->groupdef == NULL);
-
-        sym->name = strdup(name);
-
-        sym->in_file = in_fileRefUndef;
-    }
-
+    sym->name = strdup(name);
+    sym->in_file = in_fileRefUndef;
     return sym;
 }
 
@@ -305,22 +229,20 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
     struct link_symbol *sym;
     size_t i = 0;
 
-    if (link_symbols != NULL) {
-        for (;i < link_symbols_count;i++) {
-            sym = link_symbols + i;
-            assert(sym->name != NULL);
+    for (;i < link_symbols_count;i++) {
+        sym = &link_symbols[i];
+        assert(sym->name != NULL);
 
-            if (sym->is_local) {
-                /* ignore local symbols unless file/module scope is given */
-                if (in_file != in_fileRefUndef && sym->in_file != in_file)
-                    continue;
-                if (in_module != in_fileModuleRefUndef && sym->in_module != in_module)
-                    continue;
-            }
-
-            if (!strcmp(sym->name, name))
-                return sym;
+        if (sym->is_local) {
+            /* ignore local symbols unless file/module scope is given */
+            if (in_file != in_fileRefUndef && sym->in_file != in_file)
+                continue;
+            if (in_module != in_fileModuleRefUndef && sym->in_module != in_module)
+                continue;
         }
+
+        if (!strcmp(sym->name, name))
+            return sym;
     }
 
     return NULL;
@@ -335,14 +257,8 @@ void link_symbol_free(struct link_symbol *s) {
 void link_symbols_free(void) {
     size_t i;
 
-    if (link_symbols != NULL) {
-        for (i=0;i < link_symbols_alloc;i++) link_symbol_free(&link_symbols[i]);
-        free(link_symbols);
-        link_symbols = NULL;
-        link_symbols_alloc = 0;
-        link_symbols_count = 0;
-        link_symbols_nextalloc = 0;
-    }
+    for (i=0;i < link_symbols.size();i++) link_symbol_free(&link_symbols[i]);
+    link_symbols.clear();
 }
 
 #define MAX_SEGMENTS                    256
@@ -790,8 +706,6 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
 void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     unsigned int i;
 
-    if (link_symbols == NULL) return;
-
     i = 0;
     while (i < link_symbols_count) {
         struct link_symbol *sym = &link_symbols[i++];
@@ -848,8 +762,6 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
 void dump_link_symbols(void) {
     unsigned int i,pass=0,passes=1;
 
-    if (link_symbols == NULL) return;
-
     if (map_fp != NULL)
         passes = 2;
 
@@ -862,9 +774,11 @@ void dump_link_symbols(void) {
             fprintf(map_fp,"---------------------------------------\n");
         }
 
+#if 0
         if (cmdoptions.verbose || map_fp != NULL)
             qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
                 pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
+#endif
 
         while (i < link_symbols_count) {
             struct link_symbol *sym = &link_symbols[i++];
@@ -3042,7 +2956,9 @@ int main(int argc,char **argv) {
     dump_link_symbols();
     dump_link_segments();
 
+#if 0
     qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
+#endif
 
     /* write output */
     assert(!cmdoptions.out_file.empty());
