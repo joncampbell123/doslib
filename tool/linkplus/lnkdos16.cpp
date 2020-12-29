@@ -241,7 +241,7 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
                 continue;
         }
 
-        if (!strcmp(sym->name.c_str(), name))
+        if (sym->name == name)
             return sym;
     }
 
