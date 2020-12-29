@@ -48,6 +48,7 @@ static FILE*                            map_fp = NULL;
 
 static bool                             hex_split = false;
 static bool                             hex_cpp = false;
+static bool                             do_dosseg = true;
 
 static string                           hex_output;
 static char                             hex_output_name[1024];
@@ -71,8 +72,6 @@ const char *get_in_file(unsigned int idx) {
 
     return "";
 }
-
-static unsigned char                    do_dosseg = 1;
 
 struct omf_context_t*                   omf_state = NULL;
 
@@ -2037,10 +2036,10 @@ int main(int argc,char **argv) {
                 verbose = 1;
             }
             else if (!strcmp(a,"dosseg")) {
-                do_dosseg = 1;
+                do_dosseg = true;
             }
             else if (!strcmp(a,"no-dosseg")) {
-                do_dosseg = 0;
+                do_dosseg = false;
             }
             else {
                 help();
