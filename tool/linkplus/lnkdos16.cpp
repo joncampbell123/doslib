@@ -75,7 +75,7 @@ const char *get_in_file(unsigned int idx) {
 
 struct omf_context_t*                   omf_state = NULL;
 
-static unsigned char                    verbose = 0;
+static bool                             verbose = false;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
 static unsigned short                   com_segbase = (unsigned short)(~0u);
@@ -2033,7 +2033,7 @@ int main(int argc,char **argv) {
                 out_file = s;
             }
             else if (!strcmp(a,"v")) {
-                verbose = 1;
+                verbose = true;
             }
             else if (!strcmp(a,"dosseg")) {
                 do_dosseg = true;
