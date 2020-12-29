@@ -159,6 +159,8 @@ struct exe_relocation {
     string                              segname;
     unsigned int                        fragment;
     unsigned long                       offset;
+
+    exe_relocation() : fragment(~0u), offset(0) { }
 };
 
 static vector<struct exe_relocation>    exe_relocation_table;
