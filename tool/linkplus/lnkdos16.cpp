@@ -200,14 +200,14 @@ static unsigned int                     output_format_variant = OFMTVAR_NONE;
 #define MAX_SEG_FRAGMENTS               1024
 
 struct link_symbol {
-    string                              name;
-    string                              segdef;
-    string                              groupdef;
-    unsigned long                       offset;
-    unsigned short                      fragment;
-    in_fileRef                          in_file;
-    in_fileModuleRef                    in_module;
-    unsigned int                        is_local:1;
+    string                              name;               /* symbol name, raw */
+    string                              segdef;             /* belongs to segdef */
+    string                              groupdef;           /* belongs to groupdef */
+    unsigned long                       offset;             /* offset within fragment */
+    unsigned short                      fragment;           /* which fragment it belongs to */
+    in_fileRef                          in_file;            /* from which file */
+    in_fileModuleRef                    in_module;          /* from which module */
+    unsigned int                        is_local:1;         /* is local symbol */
 
     link_symbol() : offset(0), fragment(0), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
