@@ -36,6 +36,19 @@ enum {
     PASS_MAX
 };
 
+enum {
+    OFMTVAR_NONE=0,
+
+    OFMTVAR_COMREL=10
+};
+
+enum {
+    OFMT_COM=0,
+    OFMT_EXE,
+    OFMT_DOSDRV,
+    OFMT_DOSDRVEXE
+};
+
 //================================== PROGRAM ================================
 
 /* <file ref> <module index ref>
@@ -67,6 +80,9 @@ struct cmdoptions {
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
 
+    unsigned int                        output_format;
+    unsigned int                        output_format_variant;
+
     segmentSize                         want_stack_size;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
@@ -79,7 +95,8 @@ struct cmdoptions {
 
     vector<string>                      in_file;
 
-    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), want_stack_size(4096),
+    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false),
+                   output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
                    com_segbase(segmentBaseUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
 
@@ -164,19 +181,6 @@ static const uint8_t dosdrvrel_entry_point[] = {
                                         // 0x28
 };
 
-enum {
-    OFMTVAR_NONE=0,
-
-    OFMTVAR_COMREL=10
-};
-
-enum {
-    OFMT_COM=0,
-    OFMT_EXE,
-    OFMT_DOSDRV,
-    OFMT_DOSDRVEXE
-};
-
 struct exe_relocation {
     string                              segname;
     fragmentRef                         fragment;
@@ -196,9 +200,6 @@ struct exe_relocation *new_exe_relocation(void) {
 void free_exe_relocations(void) {
     exe_relocation_table.clear();
 }
-
-static unsigned int                     output_format = OFMT_COM;
-static unsigned int                     output_format_variant = OFMTVAR_NONE;
 
 #define MAX_SEG_FRAGMENTS               1024
 
@@ -507,7 +508,7 @@ void owlink_stack_bss_arrange(void) {
     unsigned int s = 0,e = link_segments_count - 1u;
 
     if (link_segments_count == 0) return;
-    if (output_format == OFMT_COM || output_format == OFMT_EXE || output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+    if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         /* STACK and BSS must be placed at the end in BSS, STACK order */
         e = link_segments_count - 1u;
         s = 0;
@@ -1381,8 +1382,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
                 }
 
-                if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
-                    if (output_format_variant == OFMTVAR_COMREL) {
+                if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
+                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
                         if (pass == PASS_GATHER) {
                             struct exe_relocation *reloc = new_exe_relocation();
                             if (reloc == NULL) {
@@ -1409,7 +1410,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         return -1;
                     }
                 }
-                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                     /* emit as a relocation */
                     if (pass == PASS_GATHER) {
                         struct exe_relocation *reloc = new_exe_relocation();
@@ -1448,8 +1449,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
                 }
 
-                if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
-                    if (output_format_variant == OFMTVAR_COMREL) {
+                if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
+                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
                         if (pass == PASS_GATHER) {
                             struct exe_relocation *reloc = new_exe_relocation();
                             if (reloc == NULL) {
@@ -1477,7 +1478,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         return -1;
                     }
                 }
-                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                     /* emit as a relocation */
                     if (pass == PASS_GATHER) {
                         struct exe_relocation *reloc = new_exe_relocation();
@@ -1622,7 +1623,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             return -1;
         }
 
-        if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+        if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         }
         else {
             /* no symbols allowed in STACK.
@@ -1850,8 +1851,8 @@ int segment_def_arrange(void) {
             fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
                     inf,ofs,sd->segment_length);
 
-        if (output_format == OFMT_COM || output_format == OFMT_EXE ||
-            output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+        if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
+            cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             if (sd->segment_length > 0x10000ul) {
                 dump_link_segments();
                 fprintf(stderr,"Segment too large >= 64KB\n");
@@ -1919,21 +1920,21 @@ int main(int argc,char **argv) {
                 if (a == NULL) return 1;
 
                 if (!strcmp(a,"com"))
-                    output_format = OFMT_COM;
+                    cmdoptions.output_format = OFMT_COM;
                 else if (!strcmp(a,"comrel")) {
-                    output_format = OFMT_COM;
-                    output_format_variant = OFMTVAR_COMREL;
+                    cmdoptions.output_format = OFMT_COM;
+                    cmdoptions.output_format_variant = OFMTVAR_COMREL;
                 }
                 else if (!strcmp(a,"exe"))
-                    output_format = OFMT_EXE;
+                    cmdoptions.output_format = OFMT_EXE;
                 else if (!strcmp(a,"dosdrv"))
-                    output_format = OFMT_DOSDRV;
+                    cmdoptions.output_format = OFMT_DOSDRV;
                 else if (!strcmp(a,"dosdrvrel")) {
-                    output_format = OFMT_DOSDRV;
-                    output_format_variant = OFMTVAR_COMREL;
+                    cmdoptions.output_format = OFMT_DOSDRV;
+                    cmdoptions.output_format_variant = OFMTVAR_COMREL;
                 }
                 else if (!strcmp(a,"dosdrvexe"))
-                    output_format = OFMT_DOSDRVEXE;
+                    cmdoptions.output_format = OFMT_DOSDRVEXE;
                 else {
                     fprintf(stderr,"Unknown format\n");
                     return 1;
@@ -1970,10 +1971,10 @@ int main(int argc,char **argv) {
     }
 
     if (cmdoptions.com_segbase == segmentBaseUndef) {
-        if (output_format == OFMT_COM) {
+        if (cmdoptions.output_format == OFMT_COM) {
             cmdoptions.com_segbase = 0x100;
         }
-        else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+        else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             cmdoptions.com_segbase = 0;
         }
     }
@@ -1994,7 +1995,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    if (output_format == OFMT_COM) {
+    if (cmdoptions.output_format == OFMT_COM) {
         struct link_segdef *sg;
 
         sg = find_link_segment("__COM_ENTRY_JMP");
@@ -2285,7 +2286,7 @@ int main(int argc,char **argv) {
         if (pass == PASS_GATHER) {
             unsigned long file_baseofs = 0;
 
-            if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                 struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
 
                 if (stacksg != NULL) {
@@ -2330,7 +2331,7 @@ int main(int argc,char **argv) {
             }
 
             /* entry point checkup */
-            if (output_format == OFMT_DOSDRV) {
+            if (cmdoptions.output_format == OFMT_DOSDRV) {
                 /* MS-DOS device drivers do NOT have an entry point */
                 if (entry_seg_link_target != NULL) {
                     fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
@@ -2344,7 +2345,7 @@ int main(int argc,char **argv) {
             }
 
             /* entry point cannot be 32-bit */
-            if (output_format == OFMT_DOSDRV) {
+            if (cmdoptions.output_format == OFMT_DOSDRV) {
                 /* nothing */
             }
             else if (entry_seg_link_target != NULL) {
@@ -2363,8 +2364,8 @@ int main(int argc,char **argv) {
             /* put segments in order, linear offset */
             {
                 /* COMREL relocation + patch code */
-                if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
-                    output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+                if ((cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) &&
+                    cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                     /* make a new segment attached to the end, containing the relocation
                      * table and the patch up code, which becomes the new entry point. */
                     struct seg_fragment *tfrag;
@@ -2418,7 +2419,7 @@ int main(int argc,char **argv) {
 
                     tsg->segment_length += exe_relocation_table.size() * (size_t)2;
 
-                    if (output_format == OFMT_DOSDRV)
+                    if (cmdoptions.output_format == OFMT_DOSDRV)
                         sg->segment_length += sizeof(dosdrvrel_entry_point);
                     else
                         sg->segment_length += sizeof(comrel_entry_point);
@@ -2430,9 +2431,9 @@ int main(int argc,char **argv) {
 
                 /* .COM format: if the entry point is nonzero, a JMP instruction
                  * must be inserted at the start to JMP to the entry point */
-                if (output_format == OFMT_DOSDRV) {
+                if (cmdoptions.output_format == OFMT_DOSDRV) {
                 }
-                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                     /* EXE */
                     /* TODO: relocation table */
                     file_baseofs = 32;
@@ -2443,7 +2444,7 @@ int main(int argc,char **argv) {
                 if (segment_def_arrange())
                     return 1;
 
-                if (output_format == OFMT_COM) {
+                if (cmdoptions.output_format == OFMT_COM) {
                     struct link_segdef *sg;
 
                     sg = find_link_segment("__COM_ENTRY_JMP");
@@ -2451,7 +2452,7 @@ int main(int argc,char **argv) {
                     assert(sg->segment_length == 0);
 
                     /* COM relocatable */
-                    if (output_format_variant == OFMTVAR_COMREL) {
+                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
                         /* always make room */
                         com_entry_insert = 3;
                         sg->segment_length = com_entry_insert;
@@ -2511,7 +2512,7 @@ int main(int argc,char **argv) {
 
             /* if a .COM executable, then all segments are arranged so that the first byte
              * is at 0x100 */
-            if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                 unsigned long segrel = 0;
                 unsigned int linkseg;
 
@@ -2541,7 +2542,7 @@ int main(int argc,char **argv) {
                     }
                 }
             }
-            else if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
+            else if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
                 unsigned int linkseg;
 
                 for (linkseg=0;linkseg < link_segments_count;linkseg++) {
@@ -2567,7 +2568,7 @@ int main(int argc,char **argv) {
                 unsigned long ofs = 0;
                 unsigned int linkseg;
 
-                if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                     /* TODO: EXE header */
                 }
 
@@ -2634,8 +2635,8 @@ int main(int argc,char **argv) {
             }
 
             /* COMREL relocation + patch code */
-            if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
-                output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+            if ((cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) &&
+                cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 /* make a new segment attached to the end, containing the relocation
                  * table and the patch up code, which becomes the new entry point. */
                 struct link_segdef *sg;
@@ -2695,7 +2696,7 @@ int main(int argc,char **argv) {
                         po = ro + (exe_relocation_table.size() * (size_t)2);
                     }
 
-                    if (output_format == OFMT_DOSDRV) {
+                    if (cmdoptions.output_format == OFMT_DOSDRV) {
                         assert((po + sizeof(dosdrvrel_entry_point)) <= sg->segment_length);
                     }
                     else {
@@ -2769,7 +2770,7 @@ int main(int argc,char **argv) {
                         }
                     }
 
-                    if (output_format == OFMT_DOSDRV) {
+                    if (cmdoptions.output_format == OFMT_DOSDRV) {
                         uint8_t *d = (uint8_t*)(sg->image_ptr + po);
                         uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
 
@@ -2880,7 +2881,7 @@ int main(int argc,char **argv) {
         }
     }
  
-    if (output_format == OFMT_COM) {
+    if (cmdoptions.output_format == OFMT_COM) {
         struct link_segdef *sg;
 
         sg = find_link_segment("__COM_ENTRY_JMP");
@@ -2952,7 +2953,7 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+        if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             /* EXE header */
             unsigned char tmp[32];
             unsigned long disk_size = 0;
@@ -3082,7 +3083,7 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
             }
             else {
-                if (output_format == OFMT_DOSDRVEXE) {
+                if (cmdoptions.output_format == OFMT_DOSDRVEXE) {
                     fprintf(stderr,"EXE warning: An entry point is recommended even for MS-DOS EXE-type device drivers.\n");
                     fprintf(stderr,"             Normally such EXEs are intended to be both a runnable command and device\n");
                     fprintf(stderr,"             driver. One common example: EMM386.EXE. Please define an entry point to\n");
@@ -3180,7 +3181,7 @@ int main(int argc,char **argv) {
                 }
             }
         }
-        if (output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+        if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             /* the entry point symbol must exist and must be at the very start of the file,
              * or at the very beginning of the resident image if EXE */
             struct link_segdef *segdef;
@@ -3243,7 +3244,7 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"\n");
             }
 
-            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+            if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 unsigned char *hdr_p;
                 unsigned char *reloc_p;
                 struct link_segdef *rsegdef;
