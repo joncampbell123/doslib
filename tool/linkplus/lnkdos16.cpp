@@ -59,7 +59,7 @@ struct cmdoptions {
 
 static cmdoptions                       cmdoptions;
 static string                           hex_output_name;
-static char                             hex_output_tmpfile[1024];
+static string                           hex_output_tmpfile;
 
 static vector<string>                   in_file;
 
@@ -3447,14 +3447,12 @@ int main(int argc,char **argv) {
 
             sz = lseek(fd,0,SEEK_END);
 
-            if (cmdoptions.hex_split) {
-                sprintf(hex_output_tmpfile,"%s.%s",cmdoptions.hex_output.c_str(),cmdoptions.hex_cpp ? "cpp" : "c");
-            }
-            else {
-                strcpy(hex_output_tmpfile,cmdoptions.hex_output.c_str());
-            }
+            if (cmdoptions.hex_split)
+                hex_output_tmpfile = cmdoptions.hex_output + "." + (cmdoptions.hex_cpp ? "cpp" : "c");
+            else
+                hex_output_tmpfile = cmdoptions.hex_output;
 
-            hfp = fopen(hex_output_tmpfile,"w");
+            hfp = fopen(hex_output_tmpfile.c_str(),"w");
             if (hfp == NULL) {
                 fprintf(stderr,"Unable to write hex output\n");
                 return 1;
@@ -3480,9 +3478,9 @@ int main(int argc,char **argv) {
             if (cmdoptions.hex_split) {
                 fclose(hfp);
 
-                sprintf(hex_output_tmpfile,"%s.h",cmdoptions.hex_output.c_str());
+                hex_output_tmpfile = cmdoptions.hex_output + ".h";
 
-                hfp = fopen(hex_output_tmpfile,"w");
+                hfp = fopen(hex_output_tmpfile.c_str(),"w");
                 if (hfp == NULL) {
                     fprintf(stderr,"Unable to write hex output\n");
                     return 1;
