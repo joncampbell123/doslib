@@ -906,7 +906,7 @@ void dump_link_symbols(void) {
     }
 }
 
-void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
+void dump_hex_segments(FILE *hfp,const char *symbol_name) {
     static char range1[64];
     static char range2[64];
     unsigned long ressz=0;
@@ -921,26 +921,26 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
 
         if (!sg->noemit) {
             fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul /*file offset of base of segment*/\n",
-                    hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
+                    symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
 
             if (firstofs == (~0UL) || firstofs > sg->file_offset)
                 firstofs = sg->file_offset;
         }
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul /*resident offset of base of segment*/\n",
-                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
+                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_relative 0x%lxul /*segment value relative to resident base segment*/\n",
-                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_relative);
+                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_relative);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_offset 0x%lxul /*offset of segment relative to segment base that contents start*/\n",
-                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_offset);
+                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_offset);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_base 0x%lxul /*base offset added to all symbols at fixup (i.e. 0x100 for all .COM symbols)*/\n",
-                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_base);
+                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_base);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
-                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_length);
+                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_length);
 
         fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u*/\n",
                 i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
@@ -1010,8 +1010,8 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
         }
     }
 
-    fprintf(hfp,"#define %s_bin_resident_sz (%ldul)\n",hex_output_name,(unsigned long)ressz);
-    fprintf(hfp,"#define %s_bin_first_segment_file_offset (%ldul)\n",hex_output_name,(unsigned long)firstofs);
+    fprintf(hfp,"#define %s_bin_resident_sz (%ldul)\n",symbol_name,(unsigned long)ressz);
+    fprintf(hfp,"#define %s_bin_first_segment_file_offset (%ldul)\n",symbol_name,(unsigned long)firstofs);
 }
 
 void dump_link_segments(void) {
