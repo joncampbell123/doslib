@@ -53,14 +53,12 @@ struct cmdoptions {
     string                              out_file;
     string                              map_file;
 
+    vector<string>                      in_file;
+
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
 };
 
 static cmdoptions                       cmdoptions;
-static string                           hex_output_name;
-static string                           hex_output_tmpfile;
-
-static vector<string>                   in_file;
 
 /* <file ref> <module index ref>
  *
@@ -88,9 +86,9 @@ const char *get_in_file(const in_fileRef idx) {
         return "<undefined>";
     else if (idx == in_fileRefInternal)
         return "<internal>";
-    else if (idx < in_file.size()) {
-        if (!in_file[idx].empty())
-            return in_file[idx].c_str();
+    else if (idx < cmdoptions.in_file.size()) {
+        if (!cmdoptions.in_file[idx].empty())
+            return cmdoptions.in_file[idx].c_str();
         else
             return "<noname>";
     }
@@ -1971,7 +1969,9 @@ int segment_def_arrange(void) {
 }
 
 int main(int argc,char **argv) {
+    string hex_output_tmpfile;
     unsigned char diddump = 0;
+    string hex_output_name;
     unsigned char pass;
     int i,fd,ret;
     char *a;
@@ -1985,7 +1985,7 @@ int main(int argc,char **argv) {
             if (!strcmp(a,"i")) {
                 char *s = argv[i++];
                 if (s == NULL) return 1;
-                in_file.push_back(s); /* constructs std::string from char* */
+                cmdoptions.in_file.push_back(s); /* constructs std::string from char* */
             }
             else if (!strcmp(a,"hsym")) {
                 a = argv[i++];
@@ -2086,7 +2086,7 @@ int main(int argc,char **argv) {
         setbuf(map_fp,NULL);
     }
 
-    if (in_file.empty()) { /* is the vector empty? */
+    if (cmdoptions.in_file.empty()) { /* is the vector empty? */
         help();
         return 1;
     }
@@ -2111,10 +2111,10 @@ int main(int argc,char **argv) {
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
-        for (current_in_file=0;current_in_file < in_file.size();current_in_file++) {
-            assert(!in_file[current_in_file].empty());
+        for (current_in_file=0;current_in_file < cmdoptions.in_file.size();current_in_file++) {
+            assert(!cmdoptions.in_file[current_in_file].empty());
 
-            fd = open(in_file[current_in_file].c_str(),O_RDONLY|O_BINARY);
+            fd = open(cmdoptions.in_file[current_in_file].c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
