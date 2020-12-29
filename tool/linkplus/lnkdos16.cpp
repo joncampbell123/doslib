@@ -43,15 +43,15 @@ enum {
 
 static const char*                      dosdrv_header_symbol = "_dosdrv_header";
 
-static char*                            out_file = NULL;
+static string                           out_file;
 
-static char*                            map_file = NULL;
+static string                           map_file;
 static FILE*                            map_fp = NULL;
 
 static unsigned char                    hex_split = 0;
 static unsigned char                    hex_cpp = 0;
 
-static char*                            hex_output = NULL;
+static string                           hex_output;
 static char                             hex_output_name[1024];
 static char                             hex_output_tmpfile[1024];
 
@@ -2032,12 +2032,14 @@ int main(int argc,char **argv) {
                 }
             }
             else if (!strcmp(a,"map")) {
-                map_file = argv[i++];
-                if (map_file == NULL) return 1;
+                char *s = argv[i++];
+                if (s == NULL) return 1;
+                map_file = s;
             }
             else if (!strcmp(a,"o")) {
-                out_file = argv[i++];
-                if (out_file == NULL) return 1;
+                char *s = argv[i++];
+                if (s == NULL) return 1;
+                out_file = s;
             }
             else if (!strcmp(a,"v")) {
                 verbose = 1;
@@ -2068,8 +2070,8 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (map_file != NULL) {
-        map_fp = fopen(map_file,"w");
+    if (!map_file.empty()) {
+        map_fp = fopen(map_file.c_str(),"w");
         if (map_fp == NULL) return 1;
         setbuf(map_fp,NULL);
     }
@@ -2079,7 +2081,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    if (out_file == NULL) {
+    if (out_file.empty()) {
         help();
         return 1;
     }
@@ -3016,11 +3018,11 @@ int main(int argc,char **argv) {
     qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
 
     /* write output */
-    assert(out_file != NULL);
+    assert(!out_file.empty());
     {
         int fd;
 
-        fd = open(out_file,O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
+        fd = open(out_file.c_str(),O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
         if (fd < 0) {
             fprintf(stderr,"Unable to open output file\n");
             return 1;
@@ -3400,14 +3402,14 @@ int main(int argc,char **argv) {
             }
         }
 
-        if (hex_output != NULL) {
+        if (!hex_output.empty()) {
             unsigned char tmp[16];
             long sz,count=0;
             FILE *hfp;
             int rd,x;
 
             {
-                char *i = out_file;
+                const char *i = out_file.c_str();
                 size_t o = 0;
 
                 while (*i != 0) {
@@ -3432,10 +3434,10 @@ int main(int argc,char **argv) {
             sz = lseek(fd,0,SEEK_END);
 
             if (hex_split) {
-                sprintf(hex_output_tmpfile,"%s.%s",hex_output,hex_cpp ? "cpp" : "c");
+                sprintf(hex_output_tmpfile,"%s.%s",hex_output.c_str(),hex_cpp ? "cpp" : "c");
             }
             else {
-                strcpy(hex_output_tmpfile,hex_output);
+                strcpy(hex_output_tmpfile,hex_output.c_str());
             }
 
             hfp = fopen(hex_output_tmpfile,"w");
@@ -3464,7 +3466,7 @@ int main(int argc,char **argv) {
             if (hex_split) {
                 fclose(hfp);
 
-                sprintf(hex_output_tmpfile,"%s.h",hex_output);
+                sprintf(hex_output_tmpfile,"%s.h",hex_output.c_str());
 
                 hfp = fopen(hex_output_tmpfile,"w");
                 if (hfp == NULL) {
