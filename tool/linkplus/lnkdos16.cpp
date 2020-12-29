@@ -47,10 +47,10 @@ static string                           map_file;
 static FILE*                            map_fp = NULL;
 
 struct cmdoptions {
-    bool                                hex_split;
-    bool                                hex_cpp;
-    bool                                do_dosseg;
-    bool                                verbose;
+    unsigned int                        hex_split:1;
+    unsigned int                        hex_cpp:1;
+    unsigned int                        do_dosseg:1;
+    unsigned int                        verbose:1;
 
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
 };
