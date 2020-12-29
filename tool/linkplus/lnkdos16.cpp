@@ -46,8 +46,8 @@ static string                           out_file;
 static string                           map_file;
 static FILE*                            map_fp = NULL;
 
-static unsigned char                    hex_split = 0;
-static unsigned char                    hex_cpp = 0;
+static bool                             hex_split = false;
+static bool                             hex_cpp = false;
 
 static string                           hex_output;
 static char                             hex_output_name[1024];
@@ -1994,10 +1994,10 @@ int main(int argc,char **argv) {
                 hex_output = a;
             }
             else if (!strcmp(a,"hexcpp")) {
-                hex_cpp = 1;
+                hex_cpp = true;
             }
             else if (!strcmp(a,"hexsplit")) {
-                hex_split = 1;
+                hex_split = true;
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
