@@ -200,16 +200,16 @@ static unsigned int                     output_format_variant = OFMTVAR_NONE;
 #define MAX_SEG_FRAGMENTS               1024
 
 struct link_symbol {
-    char*                               name;
-    char*                               segdef;
-    char*                               groupdef;
+    string                              name;
+    string                              segdef;
+    string                              groupdef;
     unsigned long                       offset;
     unsigned short                      fragment;
     in_fileRef                          in_file;
     in_fileModuleRef                    in_module;
     unsigned int                        is_local:1;
 
-    link_symbol() : name(NULL), segdef(NULL), groupdef(NULL), offset(0), fragment(0), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
+    link_symbol() : offset(0), fragment(0), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
 static vector<struct link_symbol>       link_symbols;
@@ -230,7 +230,6 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
 
     for (;i < link_symbols.size();i++) {
         sym = &link_symbols[i];
-        assert(sym->name != NULL);
 
         if (sym->is_local) {
             /* ignore local symbols unless file/module scope is given */
@@ -240,23 +239,14 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
                 continue;
         }
 
-        if (!strcmp(sym->name, name))
+        if (!strcmp(sym->name.c_str(), name))
             return sym;
     }
 
     return NULL;
 }
 
-void link_symbol_free(struct link_symbol *s) {
-    cstr_free(&(s->name));
-    cstr_free(&(s->segdef));
-    cstr_free(&(s->groupdef));
-}
-
 void link_symbols_free(void) {
-    size_t i;
-
-    for (i=0;i < link_symbols.size();i++) link_symbol_free(&link_symbols[i]);
     link_symbols.clear();
 }
 
@@ -645,11 +635,7 @@ void dump_link_relocations(void) {
 int link_symbol_qsort_cmp_by_name(const void *a,const void *b) {
     const struct link_symbol *sa = (const struct link_symbol*)a;
     const struct link_symbol *sb = (const struct link_symbol*)b;
-
-    assert(sa->name != NULL);
-    assert(sb->name != NULL);
-
-    return strcasecmp(sa->name,sb->name);
+    return strcasecmp(sa->name.c_str(),sb->name.c_str());
 }
 
 int link_symbol_qsort_cmp(const void *a,const void *b) {
@@ -664,9 +650,7 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
     unsigned long la,lb;
 
     /* -----A----- */
-    assert(sa->segdef != NULL);
-
-    sga = find_link_segment(sa->segdef);
+    sga = find_link_segment(sa->segdef.c_str());
     assert(sga != NULL);
 
     assert(sga->fragments != NULL);
@@ -675,9 +659,7 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
     fraga = &sga->fragments[sa->fragment];
 
     /* -----B----- */
-    assert(sb->segdef != NULL);
-
-    sgb = find_link_segment(sb->segdef);
+    sgb = find_link_segment(sb->segdef.c_str());
     assert(sgb != NULL);
 
     assert(sgb->fragments != NULL);
@@ -708,19 +690,16 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     i = 0;
     while (i < link_symbols.size()) {
         struct link_symbol *sym = &link_symbols[i++];
-        if (sym->name == NULL) continue;
 
         fprintf(hfp,"/*symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u*/\n",
-                i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
+                i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,sym->fragment,
                 get_in_file(sym->in_file),sym->in_module,sym->is_local);
 
         {
             struct seg_fragment *frag;
             struct link_segdef *sg;
 
-            assert(sym->segdef != NULL);
-
-            sg = find_link_segment(sym->segdef);
+            sg = find_link_segment(sym->segdef.c_str());
             assert(sg != NULL);
 
             assert(sg->fragments != NULL);
@@ -729,31 +708,31 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
             frag = &sg->fragments[sym->fragment];
 
             fprintf(hfp,"/*  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u*/\n",
-                    sym->name,
+                    sym->name.c_str(),
                     sym->is_local?'L':'G',
                     sg->segment_relative&0xfffful,
                     sg->segment_offset + frag->offset + sym->offset,
                     sg->linear_offset + frag->offset + sym->offset,
-                    sym->segdef,
+                    sym->segdef.c_str(),
                     frag->offset + sym->offset,
                     get_in_file(sym->in_file),
                     sym->in_module);
 
             if (!sg->noemit)
                 fprintf(hfp,"#define %s_bin_symbol_%s_file_offset 0x%lxul /*offset in file*/\n",
-                    symbol_name,sym->name,(unsigned long)sg->file_offset + frag->offset + sym->offset);
+                    symbol_name,sym->name.c_str(),(unsigned long)sg->file_offset + frag->offset + sym->offset);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_resident_offset 0x%lxul /*offset from base of resident image*/\n",
-                    symbol_name,sym->name,(unsigned long)sg->linear_offset + frag->offset + sym->offset);
+                    symbol_name,sym->name.c_str(),(unsigned long)sg->linear_offset + frag->offset + sym->offset);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_relative 0x%lxul /*segment value relative to resident segment base*/\n",
-                    symbol_name,sym->name,(unsigned long)sg->segment_relative);
+                    symbol_name,sym->name.c_str(),(unsigned long)sg->segment_relative);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset 0x%lxul /*offset from base of resident segment base*/\n",
-                    symbol_name,sym->name,(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
+                    symbol_name,sym->name.c_str(),(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset_with_base 0x%lxul /*offset with segment base offset added (that code would use)*/\n",
-                    symbol_name,sym->name,(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
+                    symbol_name,sym->name.c_str(),(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
         }
     }
 }
@@ -781,11 +760,10 @@ void dump_link_symbols(void) {
 
         while (i < link_symbols.size()) {
             struct link_symbol *sym = &link_symbols[i++];
-            if (sym->name == NULL) continue;
 
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
-                        i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
+                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,sym->fragment,
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
@@ -793,9 +771,7 @@ void dump_link_symbols(void) {
                 struct seg_fragment *frag;
                 struct link_segdef *sg;
 
-                assert(sym->segdef != NULL);
-
-                sg = find_link_segment(sym->segdef);
+                sg = find_link_segment(sym->segdef.c_str());
                 assert(sg != NULL);
 
                 assert(sg->fragments != NULL);
@@ -804,12 +780,12 @@ void dump_link_symbols(void) {
                 frag = &sg->fragments[sym->fragment];
 
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
-                        sym->name,
+                        sym->name.c_str(),
                         sym->is_local?'L':'G',
                         sg->segment_relative&0xfffful,
                         sg->segment_offset + frag->offset + sym->offset,
                         sg->linear_offset + frag->offset + sym->offset,
-                        sym->segdef,
+                        sym->segdef.c_str(),
                         frag->offset + sym->offset,
                         get_in_file(sym->in_file),
                         sym->in_module);
@@ -1209,10 +1185,9 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        assert(sym->segdef != NULL);
-        lsg = find_link_segment(sym->segdef);
+        lsg = find_link_segment(sym->segdef.c_str());
         if (lsg == NULL) {
-            fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef);
+            fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef.c_str());
             return -1;
         }
 
@@ -1662,8 +1637,6 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             fprintf(stderr,"Unable to allocate symbol '%s'\n",name);
             return -1;
         }
-        assert(sym->groupdef == NULL);
-        assert(sym->segdef == NULL);
 
         assert(pass == PASS_GATHER);
         assert(lsg->fragments != NULL);
@@ -1671,8 +1644,8 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
         sym->fragment = lsg->fragments_count - 1u;
         sym->offset = pubdef->public_offset;
-        sym->groupdef = strdup(groupname);
-        sym->segdef = strdup(segname);
+        sym->groupdef = groupname;
+        sym->segdef = segname;
         sym->in_file = in_file;
         sym->in_module = in_module;
         sym->is_local = is_local;
@@ -2516,7 +2489,7 @@ int main(int argc,char **argv) {
                             sym->offset = 0;
                             sym->in_file = in_fileRefInternal;
                             sym->fragment = (int)(frag - &sg->fragments[0]);
-                            sym->segdef = strdup("__COM_ENTRY_JMP");
+                            sym->segdef = "__COM_ENTRY_JMP";
                         }
                     }
 
@@ -2722,14 +2695,14 @@ int main(int argc,char **argv) {
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
                     sym->in_file = in_fileRefInternal;
-                    sym->groupdef = strdup("DGROUP");
+                    sym->groupdef = "DGROUP";
                     if (tsg != NULL) {
-                        sym->segdef = strdup("__COMREL_RELOCTBL");
+                        sym->segdef = "__COMREL_RELOCTBL";
                         sym->fragment = tsg->fragments_count-1;
                         sym->offset = ro - tfrag->offset;
                     }
                     else {
-                        sym->segdef = strdup("__COMREL_RELOC");
+                        sym->segdef = "__COMREL_RELOC";
                         sym->fragment = sg->fragments_count-1;
                         sym->offset = ro - frag->offset;
                     }
@@ -2738,8 +2711,8 @@ int main(int argc,char **argv) {
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_ENTRY");
                     sym->in_file = in_fileRefInternal;
-                    sym->groupdef = strdup("DGROUP");
-                    sym->segdef = strdup("__COMREL_RELOC");
+                    sym->groupdef = "DGROUP";
+                    sym->segdef = "__COMREL_RELOC";
                     sym->fragment = sg->fragments_count-1;
                     sym->offset = po - frag->offset;
 
@@ -2804,8 +2777,8 @@ int main(int argc,char **argv) {
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
                             sym->in_file = in_fileRefInternal;
-                            sym->groupdef = strdup("DGROUP");
-                            sym->segdef = strdup("__COMREL_RELOC");
+                            sym->groupdef = "DGROUP";
+                            sym->segdef = "__COMREL_RELOC";
                             sym->fragment = sg->fragments_count-1;
                             sym->offset = po - frag->offset;
                         }
@@ -2815,8 +2788,8 @@ int main(int argc,char **argv) {
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
                             sym->in_file = in_fileRefInternal;
-                            sym->groupdef = strdup("DGROUP");
-                            sym->segdef = strdup("__COMREL_RELOC");
+                            sym->groupdef = "DGROUP";
+                            sym->segdef = "__COMREL_RELOC";
                             sym->fragment = sg->fragments_count-1;
                             sym->offset = po + dosdrvrel_entry_point_code_intr - frag->offset;
                         }
@@ -3211,12 +3184,11 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",cmdoptions.dosdrv_header_symbol.c_str());
                 return 1;
             }
-            assert(sym->name != NULL);
 
-            segdef = find_link_segment(sym->segdef);
+            segdef = find_link_segment(sym->segdef.c_str());
             if (segdef == NULL) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) missing SEGDEF '%s'\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef);
+                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str());
                 return 1;
             }
 
@@ -3228,13 +3200,13 @@ int main(int argc,char **argv) {
             ofs = sym->offset + frag->offset;
             if (ofs != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) has nonzero offset 0x%lx within segment '%s'\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),ofs,sym->segdef);
+                    cmdoptions.dosdrv_header_symbol.c_str(),ofs,sym->segdef.c_str());
                 return 1;
             }
 
             if (segdef->linear_offset != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef,segdef->linear_offset);
+                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str(),segdef->linear_offset);
                 return 1;
             }
 
@@ -3272,9 +3244,8 @@ int main(int argc,char **argv) {
 
                 rsym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                 assert(rsym != NULL);
-                assert(rsym->segdef != NULL);
 
-                rsegdef = find_link_segment(rsym->segdef);
+                rsegdef = find_link_segment(rsym->segdef.c_str());
                 assert(rsegdef != NULL);
 
                 assert(rsegdef->fragments != NULL);
@@ -3456,10 +3427,9 @@ int main(int argc,char **argv) {
             while (symi < link_symbols.size()) {
                 sym = &link_symbols[symi++];
 
-                assert(sym->segdef != NULL);
-                if (strcmp(sym->segdef, entry_seg_link_target->name)) continue;
+                if (strcmp(sym->segdef.c_str(), entry_seg_link_target->name)) continue;
 
-                ssg = find_link_segment(sym->segdef);
+                ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
 
                 assert(ssg->fragments != NULL);
@@ -3478,10 +3448,9 @@ int main(int argc,char **argv) {
             if (fsymi != (~0u)) {
                 sym = &link_symbols[fsymi];
 
-                assert(sym->segdef != NULL);
-                assert(strcmp(sym->segdef, entry_seg_link_target->name) == 0);
+                assert(strcmp(sym->segdef.c_str(), entry_seg_link_target->name) == 0);
 
-                ssg = find_link_segment(sym->segdef);
+                ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
 
                 assert(ssg->fragments != NULL);
@@ -3493,7 +3462,7 @@ int main(int argc,char **argv) {
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
 
-                fprintf(map_fp,"    %s + 0x%08lx\n",sym->name,cofs - sofs);
+                fprintf(map_fp,"    %s + 0x%08lx\n",sym->name.c_str(),cofs - sofs);
             }
         }
         else {
