@@ -73,6 +73,7 @@ typedef uint32_t                        segmentSize;
 typedef uint32_t                        segmentBase;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
+static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
@@ -82,16 +83,19 @@ static in_fileModuleRef                 current_in_file_module = 0;
 
 static segmentSize                      want_stack_size = 4096;
 
-const char *get_in_file(unsigned int idx) {
-    if (idx >= 0xFFFFu)
+const char *get_in_file(const in_fileRef idx) {
+    if (idx == in_fileRefUndef)
+        return "<undefined>";
+    else if (idx == in_fileRefInternal)
         return "<internal>";
-
-    if (idx < in_file.size()) {
+    else if (idx < in_file.size()) {
         if (!in_file[idx].empty())
             return in_file[idx].c_str();
+        else
+            return "<noname>";
     }
 
-    return "";
+    return "<outofrange>";
 }
 
 struct omf_context_t*                   omf_state = NULL;
