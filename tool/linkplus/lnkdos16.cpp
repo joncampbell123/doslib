@@ -213,7 +213,6 @@ struct link_symbol {
 };
 
 static vector<struct link_symbol>       link_symbols;
-#define link_symbols_count              link_symbols.size()
 
 struct link_symbol *new_link_symbol(const char *name) {
     const size_t idx = link_symbols.size();
@@ -229,7 +228,7 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
     struct link_symbol *sym;
     size_t i = 0;
 
-    for (;i < link_symbols_count;i++) {
+    for (;i < link_symbols.size();i++) {
         sym = &link_symbols[i];
         assert(sym->name != NULL);
 
@@ -707,7 +706,7 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     unsigned int i;
 
     i = 0;
-    while (i < link_symbols_count) {
+    while (i < link_symbols.size()) {
         struct link_symbol *sym = &link_symbols[i++];
         if (sym->name == NULL) continue;
 
@@ -770,17 +769,17 @@ void dump_link_symbols(void) {
 
         if (map_fp != NULL) {
             fprintf(map_fp,"\n");
-            fprintf(map_fp,"Symbol table %s: %u entries\n",pass == 0 ? "by name" : "by address",(unsigned int)link_symbols_count);
+            fprintf(map_fp,"Symbol table %s: %u entries\n",pass == 0 ? "by name" : "by address",(unsigned int)link_symbols.size());
             fprintf(map_fp,"---------------------------------------\n");
         }
 
 #if 0
         if (cmdoptions.verbose || map_fp != NULL)
-            qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
+            qsort(link_symbols, link_symbols.size(), sizeof(struct link_symbol),
                 pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 #endif
 
-        while (i < link_symbols_count) {
+        while (i < link_symbols.size()) {
             struct link_symbol *sym = &link_symbols[i++];
             if (sym->name == NULL) continue;
 
@@ -2957,7 +2956,7 @@ int main(int argc,char **argv) {
     dump_link_segments();
 
 #if 0
-    qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
+    qsort(link_symbols, link_symbols.size(), sizeof(struct link_symbol), link_symbol_qsort_cmp);
 #endif
 
     /* write output */
@@ -3454,7 +3453,7 @@ int main(int argc,char **argv) {
                 frag->offset + entry_seg_ofs,
                 get_in_file(frag->in_file),frag->in_module);
 
-            while (symi < link_symbols_count) {
+            while (symi < link_symbols.size()) {
                 sym = &link_symbols[symi++];
 
                 assert(sym->segdef != NULL);
