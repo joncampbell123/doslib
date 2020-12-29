@@ -63,10 +63,13 @@ static vector<string>                   in_file;
 
 typedef size_t                          in_fileRef;             /* index into in_file */
 typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
-typedef uint64_t                        segmentSize;
+typedef uint32_t                        segmentSize;
+typedef uint32_t                        segmentBase;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
+static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
+static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
 
 static in_fileRef                       current_in_file = 0;
 static in_fileModuleRef                 current_in_file_module = 0;
@@ -90,7 +93,7 @@ struct omf_context_t*                   omf_state = NULL;
 static bool                             verbose = false;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
-static unsigned short                   com_segbase = (unsigned short)(~0u);
+static segmentBase                      com_segbase = segmentBaseUndef;
 
 /* comrel entry point */
 #define comrel_entry_point_CX_COUNT         0x04
@@ -2062,7 +2065,7 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (com_segbase == (unsigned short)(~0u)) {
+    if (com_segbase == segmentBaseUndef) {
         if (output_format == OFMT_COM) {
             com_segbase = 0x100;
         }
