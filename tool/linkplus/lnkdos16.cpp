@@ -56,10 +56,22 @@ static char                             hex_output_tmpfile[1024];
 
 static vector<string>                   in_file;
 
-static size_t                           current_in_file = 0;
-static unsigned int                     current_in_mod = 0;
+/* <file ref> <module index ref>
+ *
+ * for .obj files, file ref is an index and module index ref is zero.
+ * for .lib files, file ref is an index and module index is an index into the embedded .obj files within */
 
-static unsigned int                     want_stack_size = 4096;
+typedef size_t                          in_fileRef;             /* index into in_file */
+typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
+typedef uint64_t                        segmentSize;
+
+static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
+static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
+
+static in_fileRef                       current_in_file = 0;
+static in_fileModuleRef                 current_in_file_module = 0;
+
+static segmentSize                      want_stack_size = 4096;
 
 const char *get_in_file(unsigned int idx) {
     if (idx >= 0xFFFFu)
@@ -192,8 +204,8 @@ struct link_symbol {
     char*                               groupdef;
     unsigned long                       offset;
     unsigned short                      fragment;
-    unsigned short                      in_file;
-    unsigned short                      in_module;
+    in_fileRef                          in_file;
+    in_fileModuleRef                    in_module;
     unsigned int                        is_local:1;
 };
 
@@ -279,7 +291,7 @@ struct link_symbol *new_link_symbol(const char *name) {
     return sym;
 }
 
-struct link_symbol *find_link_symbol(const char *name,int in_file,int in_module) {
+struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
     struct link_symbol *sym;
     size_t i = 0;
 
@@ -290,11 +302,9 @@ struct link_symbol *find_link_symbol(const char *name,int in_file,int in_module)
 
             if (sym->is_local) {
                 /* ignore local symbols unless file/module scope is given */
-                if (in_file < 0 || in_module < 0)
+                if (in_file != in_fileRefUndef && sym->in_file != in_file)
                     continue;
-                if (in_file >= 0 && sym->in_file != in_file)
-                    continue;
-                if (in_module >= 0 && sym->in_module != in_module)
+                if (in_module != in_fileModuleRefUndef && sym->in_module != in_module)
                     continue;
             }
 
@@ -2109,13 +2119,13 @@ int main(int argc,char **argv) {
             omf_state->flags.verbose = (verbose > 0);
 
             diddump = 0;
-            current_in_mod = 0;
+            current_in_file_module = 0;
             omf_context_begin_file(omf_state);
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
-                    if (apply_FIXUPP(omf_state,0,current_in_file,current_in_mod,pass))
+                    if (apply_FIXUPP(omf_state,0,current_in_file,current_in_file_module,pass))
                         return 1;
                     omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
@@ -2134,7 +2144,7 @@ int main(int argc,char **argv) {
                             if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
                         }
                         else if (ret > 0) {
-                            current_in_mod++;
+                            current_in_file_module++;
                             omf_context_begin_module(omf_state);
                             diddump = 0;
                             continue;
@@ -2185,7 +2195,7 @@ int main(int argc,char **argv) {
                             /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
                              *       LPUBDEF means the symbols are not visible outside the module. */
 
-                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, current_in_file, current_in_mod, pass))
+                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
@@ -2215,7 +2225,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count, current_in_file, current_in_mod, pass))
+                            if (segdef_add(omf_state, p_count, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -2355,7 +2365,7 @@ int main(int argc,char **argv) {
                 diddump = 1;
             }
 
-            if (apply_FIXUPP(omf_state,0,current_in_file,current_in_mod,pass))
+            if (apply_FIXUPP(omf_state,0,current_in_file,current_in_file_module,pass))
                 return 1;
             omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
@@ -2780,7 +2790,7 @@ int main(int argc,char **argv) {
                         assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
                     }
 
-                    sym = find_link_symbol("__COMREL_RELOC_TABLE",-1,-1);
+                    sym = find_link_symbol("__COMREL_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
                     sym->groupdef = strdup("DGROUP");
@@ -2795,7 +2805,7 @@ int main(int argc,char **argv) {
                         sym->offset = ro - frag->offset;
                     }
 
-                    sym = find_link_symbol("__COMREL_RELOC_ENTRY",-1,-1);
+                    sym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_ENTRY");
                     sym->groupdef = strdup("DGROUP");
@@ -2860,7 +2870,7 @@ int main(int argc,char **argv) {
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
 
                         {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",-1,-1);
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",in_fileRefUndef,in_fileModuleRefUndef);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
                             sym->groupdef = strdup("DGROUP");
@@ -2870,7 +2880,7 @@ int main(int argc,char **argv) {
                         }
 
                         {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR",-1,-1);
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR",in_fileRefUndef,in_fileModuleRefUndef);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
                             sym->groupdef = strdup("DGROUP");
@@ -3262,7 +3272,7 @@ int main(int argc,char **argv) {
             struct link_symbol *sym;
             unsigned long ofs;
 
-            sym = find_link_symbol(dosdrv_header_symbol,-1,-1);
+            sym = find_link_symbol(dosdrv_header_symbol,in_fileRefUndef,in_fileModuleRefUndef);
             if (sym == NULL) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol);
                 return 1;
@@ -3326,7 +3336,7 @@ int main(int argc,char **argv) {
                 struct link_symbol *rsym;
                 unsigned long rofs;
 
-                rsym = find_link_symbol("__COMREL_RELOC_ENTRY",-1,-1);
+                rsym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                 assert(rsym != NULL);
                 assert(rsym->segdef != NULL);
 
