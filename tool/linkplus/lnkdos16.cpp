@@ -66,6 +66,9 @@ struct cmdoptions {
 
     segmentSize                         want_stack_size;
 
+/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
+    segmentBase                         com_segbase;
+
     string                              dosdrv_header_symbol;
     string                              hex_output;
     string                              out_file;
@@ -73,7 +76,8 @@ struct cmdoptions {
 
     vector<string>                      in_file;
 
-    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), want_stack_size(4096), dosdrv_header_symbol("_dosdrv_header") { }
+    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), want_stack_size(4096),
+                   com_segbase(segmentBaseUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
 
 static cmdoptions                       cmdoptions;
@@ -97,9 +101,6 @@ const char *get_in_file(const in_fileRef idx) {
 }
 
 struct omf_context_t*                   omf_state = NULL;
-
-/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
-static segmentBase                      com_segbase = segmentBaseUndef;
 
 /* comrel entry point */
 #define comrel_entry_point_CX_COUNT         0x04
@@ -2003,7 +2004,7 @@ int main(int argc,char **argv) {
             else if (!strncmp(a,"com",3)) {
                 a += 3;
                 if (!isxdigit(*a)) return 1;
-                com_segbase = strtoul(a,NULL,16);
+                cmdoptions.com_segbase = strtoul(a,NULL,16);
             }
             else if (!strcmp(a,"hex")) {
                 a = argv[i++];
@@ -2071,12 +2072,12 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (com_segbase == segmentBaseUndef) {
+    if (cmdoptions.com_segbase == segmentBaseUndef) {
         if (output_format == OFMT_COM) {
-            com_segbase = 0x100;
+            cmdoptions.com_segbase = 0x100;
         }
         else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
-            com_segbase = 0;
+            cmdoptions.com_segbase = 0;
         }
     }
 
@@ -2626,12 +2627,12 @@ int main(int argc,char **argv) {
                     else
                         segrel = sd->linear_offset >> 4ul;
 
-                    if (prefer_flat && sd->linear_offset < (0xFFFFul - com_segbase))
+                    if (prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.com_segbase))
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
-                    sd->segment_base = com_segbase;
-                    sd->segment_relative = segrel - (com_segbase >> 4ul);
-                    sd->segment_offset = com_segbase + sd->linear_offset - (segrel << 4ul);
+                    sd->segment_base = cmdoptions.com_segbase;
+                    sd->segment_relative = segrel - (cmdoptions.com_segbase >> 4ul);
+                    sd->segment_offset = cmdoptions.com_segbase + sd->linear_offset - (segrel << 4ul);
 
                     if (sd->segment_offset >= 0xFFFFul) {
                         dump_link_segments();
@@ -2647,8 +2648,8 @@ int main(int argc,char **argv) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
                     sd->segment_relative = 0;
-                    sd->segment_base = com_segbase;
-                    sd->segment_offset = com_segbase + sd->linear_offset;
+                    sd->segment_base = cmdoptions.com_segbase;
+                    sd->segment_offset = cmdoptions.com_segbase + sd->linear_offset;
 
                     if (sd->segment_offset >= 0xFFFFul) {
                         dump_link_segments();
@@ -2857,7 +2858,7 @@ int main(int argc,char **argv) {
                             assert(rel->fragment < lsg->fragments_count);
                             frag = lsg->fragments + rel->fragment;
 
-                            roff = rel->offset + lsg->linear_offset + frag->offset + com_segbase;
+                            roff = rel->offset + lsg->linear_offset + frag->offset + cmdoptions.com_segbase;
 
                             if (roff >= (0xFF00u - (exe_relocation_table.size() * (size_t)2u))) {
                                 fprintf(stderr,"COM relocation entry is non-representable\n");
@@ -2997,7 +2998,7 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",sg->segment_relative);
                 return 1;
             }
-            if (sg->segment_base != com_segbase) {
+            if (sg->segment_base != cmdoptions.com_segbase) {
                 fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",sg->segment_base);
                 return 1;
             }
