@@ -41,9 +41,6 @@ enum {
 
 static const char*                      dosdrv_header_symbol = "_dosdrv_header";
 
-static string                           out_file;
-
-static string                           map_file;
 static FILE*                            map_fp = NULL;
 
 struct cmdoptions {
@@ -53,6 +50,8 @@ struct cmdoptions {
     unsigned int                        verbose:1;
 
     string                              hex_output;
+    string                              out_file;
+    string                              map_file;
 
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false) { }
 };
@@ -2041,12 +2040,12 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"map")) {
                 char *s = argv[i++];
                 if (s == NULL) return 1;
-                map_file = s;
+                cmdoptions.map_file = s;
             }
             else if (!strcmp(a,"o")) {
                 char *s = argv[i++];
                 if (s == NULL) return 1;
-                out_file = s;
+                cmdoptions.out_file = s;
             }
             else if (!strcmp(a,"v")) {
                 cmdoptions.verbose = true;
@@ -2077,8 +2076,8 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (!map_file.empty()) {
-        map_fp = fopen(map_file.c_str(),"w");
+    if (!cmdoptions.map_file.empty()) {
+        map_fp = fopen(cmdoptions.map_file.c_str(),"w");
         if (map_fp == NULL) return 1;
         setbuf(map_fp,NULL);
     }
@@ -2088,7 +2087,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    if (out_file.empty()) {
+    if (cmdoptions.out_file.empty()) {
         help();
         return 1;
     }
@@ -3032,11 +3031,11 @@ int main(int argc,char **argv) {
     qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
 
     /* write output */
-    assert(!out_file.empty());
+    assert(!cmdoptions.out_file.empty());
     {
         int fd;
 
-        fd = open(out_file.c_str(),O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
+        fd = open(cmdoptions.out_file.c_str(),O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
         if (fd < 0) {
             fprintf(stderr,"Unable to open output file\n");
             return 1;
@@ -3428,13 +3427,13 @@ int main(int argc,char **argv) {
             int rd,x;
 
             {
-                const char *i = out_file.c_str();
+                const char *i = cmdoptions.out_file.c_str();
 
                 while (*i != 0) {
                     char c = *i++;
 
                     if (isalpha(c) || isdigit(c) || c == '_') {
-                        if (i == out_file && isdigit(c)) /* symbols cannot start with digits */
+                        if (i == cmdoptions.out_file.c_str() && isdigit(c)) /* symbols cannot start with digits */
                             hex_output_name += '_';
 
                         hex_output_name += c;
