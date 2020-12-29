@@ -18,6 +18,7 @@ extern "C" {
 
 using namespace std;
 
+#include <algorithm>
 #include <vector>
 #include <string>
 
@@ -635,56 +636,52 @@ void dump_link_relocations(void) {
         fprintf(map_fp,"\n");
 }
 
-int link_symbol_qsort_cmp_by_name(const void *a,const void *b) {
-    const struct link_symbol *sa = (const struct link_symbol*)a;
-    const struct link_symbol *sb = (const struct link_symbol*)b;
-    return strcasecmp(sa->name.c_str(),sb->name.c_str());
+bool link_symbol_qsort_cmp_by_name(const struct link_symbol &sa,const struct link_symbol &sb) {
+    return strcasecmp(sa.name.c_str(),sb.name.c_str()) < 0;
 }
 
-int link_symbol_qsort_cmp(const void *a,const void *b) {
-    const struct link_symbol *sa = (const struct link_symbol*)a;
+bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol &sb) {
     const struct seg_fragment *fraga;
     const struct link_segdef *sga;
 
-    const struct link_symbol *sb = (const struct link_symbol*)b;
     struct seg_fragment *fragb;
     struct link_segdef *sgb;
 
     unsigned long la,lb;
 
     /* -----A----- */
-    sga = find_link_segment(sa->segdef.c_str());
+    sga = find_link_segment(sa.segdef.c_str());
     assert(sga != NULL);
 
     assert(sga->fragments != NULL);
     assert(sga->fragments_count <= sga->fragments_alloc);
-    assert(sa->fragment < sga->fragments_count);
-    fraga = &sga->fragments[sa->fragment];
+    assert(sa.fragment < sga->fragments_count);
+    fraga = &sga->fragments[sa.fragment];
 
     /* -----B----- */
-    sgb = find_link_segment(sb->segdef.c_str());
+    sgb = find_link_segment(sb.segdef.c_str());
     assert(sgb != NULL);
 
     assert(sgb->fragments != NULL);
     assert(sgb->fragments_count <= sgb->fragments_alloc);
-    assert(sb->fragment < sgb->fragments_count);
-    fragb = &sgb->fragments[sb->fragment];
+    assert(sb.fragment < sgb->fragments_count);
+    fragb = &sgb->fragments[sb.fragment];
 
     /* segment */
     la = sga->segment_relative;
     lb = sgb->segment_relative;
 
-    if (la < lb) return -1;
-    if (la > lb) return 1;
+    if (la < lb) return true;
+    if (la > lb) return false;
 
     /* offset */
-    la = sga->segment_offset + fraga->offset + sa->offset;
-    lb = sgb->segment_offset + fragb->offset + sb->offset;
+    la = sga->segment_offset + fraga->offset + sa.offset;
+    lb = sgb->segment_offset + fragb->offset + sb.offset;
 
-    if (la < lb) return -1;
-    if (la > lb) return 1;
+    if (la < lb) return true;
+    if (la > lb) return false;
 
-    return 0;
+    return false;
 }
 
 void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
@@ -755,11 +752,8 @@ void dump_link_symbols(void) {
             fprintf(map_fp,"---------------------------------------\n");
         }
 
-#if 0
         if (cmdoptions.verbose || map_fp != NULL)
-            qsort(link_symbols, link_symbols.size(), sizeof(struct link_symbol),
-                pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
-#endif
+            sort(link_symbols.begin(), link_symbols.end(), pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
         while (i < link_symbols.size()) {
             struct link_symbol *sym = &link_symbols[i++];
@@ -2931,9 +2925,7 @@ int main(int argc,char **argv) {
     dump_link_symbols();
     dump_link_segments();
 
-#if 0
-    qsort(link_symbols, link_symbols.size(), sizeof(struct link_symbol), link_symbol_qsort_cmp);
-#endif
+    sort(link_symbols.begin(), link_symbols.end(), link_symbol_qsort_cmp);
 
     /* write output */
     assert(!cmdoptions.out_file.empty());
