@@ -785,7 +785,7 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
     return 0;
 }
 
-void dump_hex_symbols(FILE *hfp,const char *hex_output_name) {
+void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     unsigned int i;
 
     if (link_symbols == NULL) return;
@@ -826,19 +826,19 @@ void dump_hex_symbols(FILE *hfp,const char *hex_output_name) {
 
             if (!sg->noemit)
                 fprintf(hfp,"#define %s_bin_symbol_%s_file_offset 0x%lxul /*offset in file*/\n",
-                    hex_output_name,sym->name,(unsigned long)sg->file_offset + frag->offset + sym->offset);
+                    symbol_name,sym->name,(unsigned long)sg->file_offset + frag->offset + sym->offset);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_resident_offset 0x%lxul /*offset from base of resident image*/\n",
-                    hex_output_name,sym->name,(unsigned long)sg->linear_offset + frag->offset + sym->offset);
+                    symbol_name,sym->name,(unsigned long)sg->linear_offset + frag->offset + sym->offset);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_relative 0x%lxul /*segment value relative to resident segment base*/\n",
-                    hex_output_name,sym->name,(unsigned long)sg->segment_relative);
+                    symbol_name,sym->name,(unsigned long)sg->segment_relative);
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset 0x%lxul /*offset from base of resident segment base*/\n",
-                    hex_output_name,sym->name,(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
+                    symbol_name,sym->name,(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
 
             fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset_with_base 0x%lxul /*offset with segment base offset added (that code would use)*/\n",
-                    hex_output_name,sym->name,(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
+                    symbol_name,sym->name,(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
         }
     }
 }
