@@ -2405,6 +2405,7 @@ int main(int argc,char **argv) {
                         frag->segidx = (int)(stacksg + 1 - (&link_segments[0]));
                         frag->attr = stacksg->attr;
                         frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
+                        frag->in_file = in_fileRefInternal;
 
                         stacksg->segment_length = cmdoptions.want_stack_size;
                     }
@@ -2500,6 +2501,7 @@ int main(int argc,char **argv) {
                     }
                     frag->offset = sg->segment_length;
                     frag->segidx = (int)(sg + 1 - (&link_segments[0]));
+                    frag->in_file = in_fileRefInternal;
                     frag->attr = sg->attr;
 
                     if (tsg != NULL) {
@@ -2509,6 +2511,7 @@ int main(int argc,char **argv) {
                         }
                         tfrag->offset = tsg->segment_length;
                         tfrag->segidx = (int)(tsg + 1 - (&link_segments[0]));
+                        tfrag->in_file = in_fileRefInternal;
                         tfrag->attr = tsg->attr;
                     }
                     else {
