@@ -286,12 +286,12 @@ struct link_segdef {
     string                              name;               /* name of segment */
     string                              classname;          /* class of segment */
     string                              groupname;          /* group of segment */
-    fileOffset                          file_offset;        /* file offset chosen to write segment */
-    linearAddress                       linear_offset;      /* linear offset in memory (from executable base) of start of segment */
-    segmentBase                         segment_base;       /* segment base */
-    segmentOffset                       segment_offset;     /* offset within segment */
+    fileOffset                          file_offset;        /* file offset chosen to write segment, undef if not yet chosen */
+    linearAddress                       linear_offset;      /* linear offset in memory relative to image base [*2] */
+    segmentBase                         segment_base;       /* base offset in memory of segment (for example, 100h for .COM, 0h for .EXE) [*3] */
+    segmentOffset                       segment_offset;     /* offset within segment in memory (with segment_base added in) */
     segmentSize                         segment_length;     /* length in bytes */
-    segmentRelative                     segment_relative;   /* segment value to EXE image base/first segment */
+    segmentRelative                     segment_relative;   /* segment number relative to image base in memory [*1] */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment */
     segmentSize                         segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
     segmentOffset                       load_base;          /* offset used to compute loading base during first pass */
@@ -314,6 +314,25 @@ struct link_segdef {
                                         load_base(o.load_base), image(o.image), fragments(o.fragments),
                                         fragments_read(o.fragments_read), pinned(o.pinned), noemit(o.noemit) { }
 };
+/* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
+ *            are in memory because of the nature of 16-bit real mode. In protected mode, this is just a segment index
+ *            because the OS or loader determines what protected mode selectors we get. In flat (non-segmented) modes,
+ *            segment_relative has no meaning. */
+/* NOTE [*2]: linear_offset is used in 16-bit real mode to compute the byte offset from the image base (as if segmentation
+ *            did not exist) and is used to compute segment_relative in some parts of this code. linear_offset has no
+ *            meaning in segmented protected mode. In flat protected mode linear_offset will generally match segment_offset
+ *            since all parts of the image are loaded into one segment. They may not match if for any reason we are
+ *            linking to some esoteric flat memory model. */
+/* NOTE [*3]: segment_base is meant to represent the in-memory base offset of the segment that segment_offset is calculated
+ *            from. For example .COM files will have segment_base == 0x100 because DOS loads the .COM image into a segment
+ *            0x100 bytes from the start and defines the first 0x100 bytes before the image as the PSP (Program Segment Prefix).
+ *            This linker also supports linking .EXE files as if a .COM file translated to .EXE (EXE2BIN) where the
+ *            entry point is set up like a .COM executable (this is where you see values like 0xFFF0:0x0100 in the header
+ *            that due to 16-bit segmented wraparound, start execution with CS pointing at the PSP segment and the
+ *            instruction pointer at the first byte at CS:0x100). All segment_offset values are calculated with segment_base
+ *            added in, to simplify the code. That means you can't just change segment_base on a whim. Separate segment_base
+ *            per segdef allows different segments to operate differently, though currently all have the same com_segbase
+ *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
 
 static vector<struct link_segdef>       link_segments;
 
