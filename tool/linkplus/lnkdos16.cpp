@@ -282,9 +282,9 @@ struct seg_fragment {
 
 struct link_segdef {
     struct omf_segdef_attr_t            attr;
-    char*                               name;
-    char*                               classname;
-    char*                               groupname;
+    string                              name;
+    string                              classname;
+    string                              groupname;
     unsigned long                       file_offset;
     unsigned long                       linear_offset;
     segmentBase                         segment_base;       /* segment base */
@@ -303,8 +303,7 @@ struct link_segdef {
     unsigned int                        pinned:1;
     unsigned int                        noemit:1;
 
-    link_segdef() : name(NULL), classname(NULL), groupname(NULL), file_offset(0), linear_offset(0),
-                    segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
+    link_segdef() : file_offset(0), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
                     initial_alignment(0), segment_len_count(0), load_base(0), image_ptr(NULL),
                     fragments(NULL), fragments_count(0), fragments_alloc(0), fragments_read(0),
                     pinned(0), noemit(0)
@@ -325,10 +324,10 @@ static vector<struct link_segdef>       link_segments;
 static struct link_segdef*              current_link_segment = NULL;
 
 static unsigned int                     entry_seg_link_target_fragment = 0;
-static char*                            entry_seg_link_target_name = NULL;
+static string                           entry_seg_link_target_name;
 static struct link_segdef*              entry_seg_link_target = NULL;
 static unsigned int                     entry_seg_link_frame_fragment = 0;
-static char*                            entry_seg_link_frame_name = NULL;
+static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
 static unsigned long                    entry_seg_ofs = 0;
@@ -345,8 +344,8 @@ static unsigned char                    prefer_flat = 0;
 
 /* 1. return -1 if not DGROUP, class CODE (move up) */
 int sort_cmp_not_dgroup_class_code(const struct link_segdef *a) {
-    if (a->groupname == NULL || strcmp(a->groupname,"DGROUP")) { /* not DGROUP */
-        if (a->classname != NULL && strcmp(a->classname,"CODE") == 0) { /* CODE */
+    if (a->groupname.empty() || a->groupname == "DGROUP") { /* not DGROUP */
+        if (a->classname == "CODE") { /* CODE */
             /* OK */
             return -1;
         }
@@ -357,7 +356,7 @@ int sort_cmp_not_dgroup_class_code(const struct link_segdef *a) {
 
 /* 2. return -1 if not DGROUP */
 int sort_cmp_not_dgroup(const struct link_segdef *a) {
-    if (a->groupname == NULL || strcmp(a->groupname,"DGROUP")) { /* not DGROUP */
+    if (a->groupname.empty() || a->groupname == "DGROUP") { /* not DGROUP */
         /* OK */
         return -1;
     }
@@ -367,8 +366,8 @@ int sort_cmp_not_dgroup(const struct link_segdef *a) {
 
 /* 3. return -1 if group DGROUP, class BEGDATA */
 int sort_cmp_dgroup_class_BEGDATA(const struct link_segdef *a) {
-    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
-        if (a->classname != NULL && strcmp(a->classname,"BEGDATA") == 0) { /* BEGDATA */
+    if (a->groupname == "DGROUP") { /* DGROUP */
+        if (a->classname == "BEGDATA") { /* BEGDATA */
             /* OK */
             return -1;
         }
@@ -379,8 +378,8 @@ int sort_cmp_dgroup_class_BEGDATA(const struct link_segdef *a) {
 
 /* 4. return -1 if group DGROUP, not (class BEGDATA or class BSS or class STACK) */
 int sort_cmp_dgroup_class_not_special(const struct link_segdef *a) {
-    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
-        if (a->classname != NULL && !(strcmp(a->classname,"BEGDATA") == 0 || strcmp(a->classname,"BSS") == 0 || strcmp(a->classname,"STACK") == 0)) { /* BEGDATA */
+    if (a->groupname == "DGROUP") { /* DGROUP */
+        if (a->classname == "BEGDATA" || a->classname == "BSS" || a->classname == "STACK") { /* BEGDATA */
             /* OK */
             return -1;
         }
@@ -391,8 +390,8 @@ int sort_cmp_dgroup_class_not_special(const struct link_segdef *a) {
 
 /* 5. return -1 if group DGROUP, class BSS */
 int sort_cmp_dgroup_class_bss(const struct link_segdef *a) {
-    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
-        if (a->classname != NULL && strcmp(a->classname,"BSS") == 0) { /* BSS */
+    if (a->groupname == "DGROUP") { /* DGROUP */
+        if (a->classname == "BSS") { /* BSS */
             /* OK */
             return -1;
         }
@@ -403,8 +402,8 @@ int sort_cmp_dgroup_class_bss(const struct link_segdef *a) {
 
 /* 6. return -1 if group DGROUP, class STACK */
 int sort_cmp_dgroup_class_stack(const struct link_segdef *a) {
-    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
-        if (a->classname != NULL && strcmp(a->classname,"STACK") == 0) { /* STACK */
+    if (a->groupname == "DGROUP") { /* DGROUP */
+        if (a->classname == "STACK") { /* STACK */
             /* OK */
             return -1;
         }
@@ -415,7 +414,7 @@ int sort_cmp_dgroup_class_stack(const struct link_segdef *a) {
 
 /* return 1 if class BSS */
 int sort_cmpf_class_bss(const struct link_segdef *a) {
-    if (a->classname != NULL && strcmp(a->classname,"BSS") == 0) { /* STACK */
+    if (a->classname == "BSS") { /* STACK */
         /* OK */
         return 1;
     }
@@ -425,7 +424,7 @@ int sort_cmpf_class_bss(const struct link_segdef *a) {
 
 /* return 1 if class STACK */
 int sort_cmpf_class_stack(const struct link_segdef *a) {
-    if (a->classname != NULL && strcmp(a->classname,"STACK") == 0) { /* STACK */
+    if (a->classname == "STACK") { /* STACK */
         /* OK */
         return 1;
     }
@@ -446,15 +445,15 @@ void link_segments_swap(unsigned int s1,unsigned int s2) {
 struct link_segdef *find_link_segment(const char *name);
 
 void reconnect_gl_segs() {
-    if (entry_seg_link_target_name) {
-        entry_seg_link_target = find_link_segment(entry_seg_link_target_name);
+    if (!entry_seg_link_target_name.empty()) {
+        entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
         assert(entry_seg_link_target != NULL);
-        assert(!strcmp(entry_seg_link_target->name,entry_seg_link_target_name));
+        assert(entry_seg_link_target->name == entry_seg_link_target_name);
     }
-    if (entry_seg_link_frame_name) {
-        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name);
+    if (!entry_seg_link_frame_name.empty()) {
+        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name.c_str());
         assert(entry_seg_link_frame != NULL);
-        assert(!strcmp(entry_seg_link_frame->name,entry_seg_link_frame_name));
+        assert(entry_seg_link_frame->name == entry_seg_link_frame_name);
     }
 }
 
@@ -503,28 +502,18 @@ void owlink_dosseg_sort_order(void) {
 }
 
 bool owlink_segsrt_def_qsort_cmp(const struct link_segdef &sa, const struct link_segdef &sb) {
-    const char *gna,*gnb;
-    const char *cna,*cnb;
-//  const char *nna,*nnb;
-    int ret = 0;
-
     /* if either one is pinned, don't move */
-    if (sa.pinned || sb.pinned) return 0;
+    if (sa.pinned || sb.pinned) return false;
 
-    /* sort by GROUP, CLASS, NAME */
-    gna = sa.groupname ? sa.groupname : "";
-    gnb = sb.groupname ? sb.groupname : "";
-    cna = sa.classname ? sa.classname : "";
-    cnb = sb.classname ? sb.classname : "";
-//  nna = sa.name      ? sa.name      : "";
-//  nnb = sb.name      ? sb.name      : "";
+    /* sort by GROUP, CLASS */
 
     /* do it */
-                  ret = strcmp(gna,gnb);
-    if (ret == 0) ret = strcmp(cna,cnb);
-//  if (ret == 0) ret = strcmp(nna,nnb);
+    if (sa.groupname < sb.groupname)
+        return true;
+    if (sa.classname < sb.classname)
+        return true;
 
-    return ret < 0;
+    return false;
 }
 
 void owlink_default_sort_seg(void) {
@@ -586,10 +575,6 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
 }
 
 void free_link_segment(struct link_segdef *sg) {
-    cstr_free(&(sg->groupname));
-    cstr_free(&(sg->classname));
-    cstr_free(&(sg->name));
-
     if (sg->fragments != NULL) {
         free(sg->fragments);
         sg->fragments = NULL;
@@ -846,29 +831,29 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
 
         if (!sg->noemit) {
             fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul /*file offset of base of segment*/\n",
-                    symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
+                    symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->file_offset);
 
             if (firstofs == (~0UL) || firstofs > sg->file_offset)
                 firstofs = sg->file_offset;
         }
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul /*resident offset of base of segment*/\n",
-                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
+                symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->linear_offset);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_relative 0x%lxul /*segment value relative to resident base segment*/\n",
-                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_relative);
+                symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->segment_relative);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_offset 0x%lxul /*offset of segment relative to segment base that contents start*/\n",
-                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_offset);
+                symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->segment_offset);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_base 0x%lxul /*base offset added to all symbols at fixup (i.e. 0x100 for all .COM symbols)*/\n",
-                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_base);
+                symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->segment_base);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
-                symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_length);
+                symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->segment_length);
 
         fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu*/\n",
-                i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
+                i/*post-increment, intentional*/,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),
                 sg->attr.f.f.use32,
                 sg->attr.f.f.combination,
                 sg->attr.f.f.big_segment,
@@ -895,9 +880,9 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
 
         fprintf(hfp,"/*  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s*/\n",
                 sg->attr.f.f.use32?32:16,
-                sg->name?sg->name:"",
-                sg->classname?sg->classname:"",
-                sg->groupname?sg->groupname:"",
+                sg->name.c_str(),
+                sg->classname.c_str(),
+                sg->groupname.c_str(),
                 (unsigned long)sg->segment_relative&0xfffful,
                 range1,
                 range2,
@@ -955,7 +940,7 @@ void dump_link_segments(void) {
 
         if (cmdoptions.verbose) {
             fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu\n",
-                    i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
+                    i/*post-increment, intentional*/,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),
                     sg->attr.f.f.use32,
                     sg->attr.f.f.combination,
                     sg->attr.f.f.big_segment,
@@ -984,9 +969,9 @@ void dump_link_segments(void) {
 
             fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
                 sg->attr.f.f.use32?32:16,
-                sg->name?sg->name:"",
-                sg->classname?sg->classname:"",
-                sg->groupname?sg->groupname:"",
+                sg->name.c_str(),
+                sg->classname.c_str(),
+                sg->groupname.c_str(),
                 (unsigned long)sg->segment_relative&0xfffful,
                 range1,
                 range2,
@@ -1048,9 +1033,7 @@ struct link_segdef *find_link_segment_by_grpdef(const char *name) {
 
     while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
-
-        if (sg->groupname == NULL) continue;
-        if (!strcmp(name,sg->groupname)) return sg;
+        if (sg->groupname == name) return sg;
     }
 
     return NULL;
@@ -1061,9 +1044,7 @@ struct link_segdef *find_link_segment_by_class(const char *name) {
 
     while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
-
-        if (sg->classname == NULL) continue;
-        if (!strcmp(name,sg->classname)) return sg;
+        if (sg->classname == name) return sg;
     }
 
     return NULL;
@@ -1075,9 +1056,7 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
 
     while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
-
-        if (sg->classname == NULL) continue;
-        if (!strcmp(name,sg->classname)) ret = sg;
+        if (sg->classname == name) ret = sg;
     }
 
     return ret;
@@ -1088,9 +1067,7 @@ struct link_segdef *find_link_segment(const char *name) {
 
     while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
-
-        assert(sg->name != NULL);
-        if (!strcmp(name,sg->name)) return sg;
+        if (sg->name == name) return sg;
     }
 
     return NULL;
@@ -1101,8 +1078,7 @@ struct link_segdef *new_link_segment(const char *name) {
     link_segments.resize(idx + (size_t)1);
     struct link_segdef *sg = &link_segments[idx];
     sg->initial_alignment = byteAlignMask;
-    sg->name = strdup(name);
-    assert(sg->name != NULL);
+    sg->name = name;
     return sg;
 }
 
@@ -1357,7 +1333,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         ptch,
                         current_link_segment->linear_offset,
                         ent->omf_rec_file_enoffs + ent->data_record_offset,
-                        current_link_segment->name);
+                        current_link_segment->name.c_str());
 
             ptr = current_link_segment->image_ptr + ptch;
             assert(ptr < fence);
@@ -1382,10 +1358,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             dump_link_segments();
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
-                                current_link_segment->name,
+                                current_link_segment->name.c_str(),
                                 (unsigned long)current_link_segment->segment_relative);
                             fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
-                                targ_sdef->name,
+                                targ_sdef->name.c_str(),
                                 (unsigned long)targ_sdef->segment_relative);
                             return -1;
                         }
@@ -1417,7 +1393,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             }
 
                             assert(current_link_segment->fragments_read > 0);
-                            assert(current_link_segment->name != NULL);
                             reloc->segname = current_link_segment->name;
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
@@ -1445,7 +1420,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         }
 
                         assert(current_link_segment->fragments_read > 0);
-                        assert(current_link_segment->name != NULL);
                         reloc->segname = current_link_segment->name;
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
@@ -1484,7 +1458,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             }
 
                             assert(current_link_segment->fragments_read > 0);
-                            assert(current_link_segment->name != NULL);
                             reloc->segname = current_link_segment->name;
                             reloc->fragment = current_link_segment->fragments_read - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
@@ -1513,7 +1486,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         }
 
                         assert(current_link_segment->fragments_read > 0);
-                        assert(current_link_segment->name != NULL);
                         reloc->segname = current_link_segment->name;
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
@@ -1545,10 +1517,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             dump_link_segments();
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
-                                current_link_segment->name,
+                                current_link_segment->name.c_str(),
                                 (unsigned long)current_link_segment->segment_relative);
                             fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
-                                targ_sdef->name,
+                                targ_sdef->name.c_str(),
                                 (unsigned long)targ_sdef->segment_relative);
                             return -1;
                         }
@@ -1604,11 +1576,11 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
                     return 1;
                 }
 
-                if (lsg->groupname == NULL) {
+                if (lsg->groupname.empty()) {
                     /* assign to group */
-                    lsg->groupname = strdup(grpdef_name);
+                    lsg->groupname = grpdef_name;
                 }
-                else if (!strcmp(lsg->groupname, grpdef_name)) {
+                else if (lsg->groupname == grpdef_name) {
                     /* re-asserting group membership, OK */
                 }
                 else {
@@ -1653,8 +1625,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         else {
             /* no symbols allowed in STACK.
              * BSS is allowed. */
-            if (!strcasecmp(segname,"_STACK") || !strcasecmp(segname,"STACK") ||
-                (lsg->classname != NULL && (!strcasecmp(lsg->classname,"STACK")))) {
+            if (!strcasecmp(segname,"_STACK") || !strcasecmp(segname,"STACK") || lsg->classname == "STACK") {
                 fprintf(stderr,"Emitting symbols to STACK segment not permitted for COM/DRV output\n");
                 return 1;
             }
@@ -1750,10 +1721,8 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                     return -1;
                 }
 
-                assert(lsg->classname == NULL);
-                lsg->classname = strdup(classname);
-
                 lsg->attr = sg->attr;
+                lsg->classname = classname;
                 lsg->initial_alignment = alignValueToAlignMask(omf_align_code_to_bytes(lsg->attr.f.f.alignment));
             }
 
@@ -1782,7 +1751,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
             if (cmdoptions.verbose)
                 fprintf(stderr,"Start segment='%s' load=0x%lx\n",
-                        lsg->name, lsg->load_base);
+                        lsg->name.c_str(), lsg->load_base);
         }
     }
 
@@ -2349,10 +2318,8 @@ int main(int argc,char **argv) {
 
                 for (i=0;i < link_segments.size();i++) {
                     ssg = &link_segments[i];
-                    if (ssg->classname == NULL) continue;
 
-                    if (!strcmp(ssg->classname,"STACK") ||
-                        !strcmp(ssg->classname,"BSS")) {
+                    if (ssg->classname == "STACK" || ssg->classname == "BSS") {
                         ssg->noemit = 1;
                     }
                 }
@@ -2546,8 +2513,8 @@ int main(int argc,char **argv) {
 
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
-                    struct link_segdef *gd = sd->groupname != NULL ? find_link_segment_by_grpdef(sd->groupname) : 0;
-                    struct link_segdef *cd = sd->classname != NULL ? find_link_segment_by_class(sd->classname) : 0;
+                    struct link_segdef *gd = find_link_segment_by_grpdef(sd->groupname.c_str());
+                    struct link_segdef *cd = find_link_segment_by_class(sd->classname.c_str());
 
                     if (gd != NULL)
                         segrel = gd->linear_offset >> 4ul;
@@ -2611,11 +2578,11 @@ int main(int argc,char **argv) {
 
                     if (sd->noemit) {
                         fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
-                            sd->name);
+                            sd->name.c_str());
 
                         if (map_fp != NULL)
                             fprintf(map_fp,"* Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
-                                sd->name);
+                                sd->name.c_str());
 
                         sd->noemit = 0;
                     }
@@ -2877,7 +2844,7 @@ int main(int argc,char **argv) {
                                 fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
                                         entry_seg_link_target->segment_relative&0xfffful,
                                         entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
-                                        entry_seg_link_target->name,
+                                        entry_seg_link_target->name.c_str(),
                                         frag->offset + entry_seg_ofs,
                                         get_in_file(frag->in_file),frag->in_module);
 
@@ -2898,9 +2865,8 @@ int main(int argc,char **argv) {
 
                         *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
 
-                        cstr_free(&entry_seg_link_target_name);
                         entry_seg_link_target_fragment = (int)(frag - sg->fragments);
-                        entry_seg_link_target_name = strdup(sg->name);
+                        entry_seg_link_target_name = sg->name;
                         entry_seg_link_target = sg;
                         entry_seg_ofs = po - frag->offset;
                     }
@@ -3108,7 +3074,7 @@ int main(int argc,char **argv) {
                 init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
 
                 if (cmdoptions.verbose)
-                    fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
+                    fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name.c_str());
             }
             else {
                 if (cmdoptions.output_format == OFMT_DOSDRVEXE) {
@@ -3458,14 +3424,14 @@ int main(int argc,char **argv) {
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
                 entry_seg_link_target->segment_relative&0xfffful,
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
-                entry_seg_link_target->name,
+                entry_seg_link_target->name.c_str(),
                 frag->offset + entry_seg_ofs,
                 get_in_file(frag->in_file),frag->in_module);
 
             while (symi < link_symbols.size()) {
                 sym = &link_symbols[symi++];
 
-                if (strcmp(sym->segdef.c_str(), entry_seg_link_target->name)) continue;
+                if (sym->segdef != entry_seg_link_target->name) continue;
 
                 ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
@@ -3486,7 +3452,7 @@ int main(int argc,char **argv) {
             if (fsymi != (~0u)) {
                 sym = &link_symbols[fsymi];
 
-                assert(strcmp(sym->segdef.c_str(), entry_seg_link_target->name) == 0);
+                assert(sym->segdef == entry_seg_link_target->name);
 
                 ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
@@ -3509,9 +3475,6 @@ int main(int argc,char **argv) {
 
         fprintf(map_fp,"\n");
     }
-
-    cstr_free(&entry_seg_link_target_name);
-    cstr_free(&entry_seg_link_frame_name);
 
     if (map_fp != NULL) {
         fclose(map_fp);
