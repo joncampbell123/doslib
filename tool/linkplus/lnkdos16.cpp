@@ -292,7 +292,7 @@ struct link_segdef {
     segmentOffset                       segment_offset;     /* offset within segment in memory (with segment_base added in) */
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment number relative to image base in memory [*1] */
-    alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment */
+    alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
     segmentSize                         segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
     segmentOffset                       load_base;          /* offset used to compute loading base during first pass */
     vector<unsigned char>               image;              /* in memory image of segment during construction */
