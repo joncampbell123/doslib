@@ -62,6 +62,7 @@ typedef uint32_t                        segmentSize;            /* segment size 
 typedef uint32_t                        segmentBase;            /* segment base */
 typedef uint32_t                        segmentOffset;          /* offset from segment */
 typedef uint32_t                        segmentRelative;        /* segment relative to base */
+typedef uint32_t                        alignMask;              /* alignment mask for data alignment. ~0u (all 1s) means byte alignment. Must be inverse of power of 2 */
 typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
 
@@ -72,9 +73,20 @@ static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
 static const segmentOffset              segmentOffsetUndef = ~((segmentOffset)0u);
 static const fragmentRef                fragmentRefUndef = ~((fragmentRef)0u);
+static const alignMask                  byteAlignMask = ~((alignMask)0u);
+static const alignMask                  wordAlignMask = ~((alignMask)1u);
+static const alignMask                  dwordAlignMask = ~((alignMask)3u);
+static const alignMask                  qwordAlignMask = ~((alignMask)7u);
+
+static inline alignMask alignMaskToValue(const alignMask &v) {
+    return (~v) + ((alignMask)1u);
+}
+
+static inline alignMask alignValueToAlignMask(const alignMask &v) {
+    return (~v) + ((alignMask)1u);
+}
 
 #define MAX_GROUPS                      256
-
 
 static FILE*                            map_fp = NULL;
 
@@ -281,7 +293,7 @@ struct link_segdef {
     segmentOffset                       segment_offset;     /* offset within segment */
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment value to EXE image base/first segment */
-    unsigned short                      initial_alignment;
+    alignMask                           initial_alignment;
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
     unsigned char*                      image_ptr;          /* size is segment_length */
@@ -843,7 +855,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
                 symbol_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_length);
 
-        fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u*/\n",
+        fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu*/\n",
                 i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
                 sg->attr.f.f.use32,
                 sg->attr.f.f.combination,
@@ -854,7 +866,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 (unsigned long)sg->segment_offset,
                 (unsigned long)sg->segment_length,
                 (unsigned long)sg->segment_relative,
-                sg->initial_alignment);
+                (unsigned long)alignMaskToValue(sg->initial_alignment));
 
         if (sg->segment_length != 0ul) {
             sprintf(range1,"%08lx-%08lx",
@@ -869,7 +881,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
             strcpy(range2,"---------------------");
         }
 
-        fprintf(hfp,"/*  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%u%s%s*/\n",
+        fprintf(hfp,"/*  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s*/\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
@@ -878,7 +890,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 range1,
                 range2,
                 (unsigned long)sg->segment_base,
-                sg->initial_alignment,
+                (unsigned long)alignMaskToValue(sg->initial_alignment),
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
 
@@ -930,7 +942,7 @@ void dump_link_segments(void) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (cmdoptions.verbose) {
-            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
+            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu\n",
                     i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
                     sg->attr.f.f.use32,
                     sg->attr.f.f.combination,
@@ -941,7 +953,7 @@ void dump_link_segments(void) {
                     (unsigned long)sg->segment_offset,
                     (unsigned long)sg->segment_length,
                     (unsigned long)sg->segment_relative,
-                    sg->initial_alignment);
+                    (unsigned long)alignMaskToValue(sg->initial_alignment));
         }
 
         if (map_fp != NULL) {
@@ -958,7 +970,7 @@ void dump_link_segments(void) {
                 strcpy(range2,"---------------------");
             }
 
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%u%s%s\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
@@ -967,7 +979,7 @@ void dump_link_segments(void) {
                 range1,
                 range2,
                 (unsigned long)sg->segment_base,
-                sg->initial_alignment,
+                (unsigned long)alignMaskToValue(sg->initial_alignment),
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
         }
@@ -1077,6 +1089,7 @@ struct link_segdef *new_link_segment(const char *name) {
         struct link_segdef *sg = &link_segments[link_segments_count++];
 
         memset(sg,0,sizeof(*sg));
+        sg->initial_alignment = byteAlignMask;
         sg->name = strdup(name);
         assert(sg->name != NULL);
 
@@ -1734,7 +1747,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 lsg->classname = strdup(classname);
 
                 lsg->attr = sg->attr;
-                lsg->initial_alignment = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
+                lsg->initial_alignment = alignValueToAlignMask(omf_align_code_to_bytes(lsg->attr.f.f.alignment));
             }
 
             /* alignment */
@@ -1841,16 +1854,19 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 }
 
 int segment_def_arrange(void) {
-    unsigned long m,ofs = 0;
+    unsigned long ofs = 0;
     unsigned int inf;
 
     for (inf=0;inf < link_segments_count;inf++) {
         struct link_segdef *sd = &link_segments[inf];
 
-        if (sd->initial_alignment != 0ul) {
-            m = ofs % sd->initial_alignment;
-            if (m != 0ul) ofs += sd->initial_alignment - m;
-        }
+        /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
+         *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
+         *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
+         *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
+         *      and so on */
+        if (ofs & (unsigned long)sd->initial_alignment)
+            ofs = (ofs + (~sd->initial_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)sd->initial_alignment;
 
         if (cmdoptions.verbose)
             fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
@@ -2010,7 +2026,7 @@ int main(int argc,char **argv) {
         if (sg == NULL) return 1;
 
         sg->classname = strdup("CODE");
-        sg->initial_alignment = 1;
+        sg->initial_alignment = alignValueToAlignMask(1);
         sg->pinned = 1;
     }
 
@@ -2386,7 +2402,7 @@ int main(int argc,char **argv) {
                             return 1;
                         }
 
-                        sg->initial_alignment = 1;
+                        sg->initial_alignment = alignValueToAlignMask(1);
                         sg->classname = strdup("CODE");
                     }
 
