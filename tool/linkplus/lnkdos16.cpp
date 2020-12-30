@@ -293,25 +293,25 @@ struct link_segdef {
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment number relative to image base in memory [*1] */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
-    segmentOffset                       load_base;          /* offset used to compute loading base during first pass */
+    segmentOffset                       fragment_load_offset;/* segment offset of current fragment, used when processing LEDATA and OMF symbols, in both passes */
+    fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector<unsigned char>               image;              /* in memory image of segment during construction */
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
-    fragmentRef                         fragments_read;     /* fragment reading */
 
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(byteAlignMask), load_base(0), fragments_read(0), pinned(0), noemit(0)
+                    initial_alignment(byteAlignMask), fragment_load_offset(0), fragment_load_index(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
     link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative),
-                                        initial_alignment(o.initial_alignment),
-                                        load_base(o.load_base), image(o.image), fragments(o.fragments),
-                                        fragments_read(o.fragments_read), pinned(o.pinned), noemit(o.noemit) { }
+                                        initial_alignment(o.initial_alignment), fragment_load_offset(o.fragment_load_offset),
+                                        fragment_load_index(o.fragment_load_index), image(o.image), fragments(o.fragments),
+                                        pinned(o.pinned), noemit(o.noemit) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode. In protected mode, this is just a segment index
@@ -552,7 +552,7 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     const size_t idx = sg->fragments.size();
     sg->fragments.resize(idx + (size_t)1);
     struct seg_fragment *f = &sg->fragments[idx];
-    sg->fragments_read = sg->fragments.size();
+    sg->fragment_load_index = sg->fragments.size();
     f->in_module = in_fileModuleRefUndef;
     f->in_file = in_fileRefUndef;
     return f;
@@ -1067,8 +1067,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         return 1;
     }
 
-    assert(lsg->fragments_read > 0 && lsg->fragments_read <= lsg->fragments.size());
-    frag = &lsg->fragments[lsg->fragments_read-1];
+    assert(lsg->fragment_load_index > 0 && lsg->fragment_load_index <= lsg->fragments.size());
+    frag = &lsg->fragments[lsg->fragment_load_index-1];
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
@@ -1086,7 +1086,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (cmdoptions.verbose)
         fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx in frag ofs=0x%lx\n",
-                segname,(unsigned long)lsg->load_base,max_ofs,(unsigned long)info->data_length,(unsigned long)info->enum_data_offset,(unsigned long)frag->offset);
+                segname,(unsigned long)lsg->fragment_load_offset,max_ofs,(unsigned long)info->data_length,(unsigned long)info->enum_data_offset,(unsigned long)frag->offset);
 
     return 0;
 }
@@ -1266,9 +1266,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
         /* assuming each OBJ/module has only one of each named segment,
          * get the fragment it belongs to */
-        assert(current_link_segment->fragments_read > 0);
-        assert(current_link_segment->fragments_read <= current_link_segment->fragments.size());
-        frag = &current_link_segment->fragments[current_link_segment->fragments_read-1];
+        assert(current_link_segment->fragment_load_index > 0);
+        assert(current_link_segment->fragment_load_index <= current_link_segment->fragments.size());
+        frag = &current_link_segment->fragments[current_link_segment->fragment_load_index-1];
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1346,9 +1346,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragments_read > 0);
+                            assert(current_link_segment->fragment_load_index > 0);
                             reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->fragment = current_link_segment->fragment_load_index - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (cmdoptions.verbose)
@@ -1373,9 +1373,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragments_read > 0);
+                        assert(current_link_segment->fragment_load_index > 0);
                         reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->fragment = current_link_segment->fragment_load_index - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (cmdoptions.verbose)
@@ -1411,9 +1411,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragments_read > 0);
+                            assert(current_link_segment->fragment_load_index > 0);
                             reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->fragment = current_link_segment->fragment_load_index - 1u;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (cmdoptions.verbose)
@@ -1439,9 +1439,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragments_read > 0);
+                        assert(current_link_segment->fragment_load_index > 0);
                         reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->fragment = current_link_segment->fragment_load_index - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (cmdoptions.verbose)
@@ -1587,7 +1587,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
         if (cmdoptions.verbose)
             fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
-                    first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
+                    first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->fragment_load_offset,is_local);
 
         sym = find_link_symbol(name,in_file,in_module);
         if (sym != NULL) {
@@ -1635,16 +1635,16 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             if (lsg->fragments.empty())
                 continue;
 
-            assert(lsg->fragments_read < lsg->fragments.size());
+            assert(lsg->fragment_load_index < lsg->fragments.size());
 
             {
-                struct seg_fragment *f = &lsg->fragments[lsg->fragments_read++];
+                struct seg_fragment *f = &lsg->fragments[lsg->fragment_load_index++];
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
                 assert(f->fragment_length == sg->segment_length);
 
-                lsg->load_base = f->offset;
+                lsg->fragment_load_offset = f->offset;
             }
         }
         else if (pass == PASS_GATHER) {
@@ -1680,7 +1680,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
             malign = lsg->segment_length % (unsigned long)alignb;
             if (malign != 0) lsg->segment_length += alignb - malign;
-            lsg->load_base = lsg->segment_length;
+            lsg->fragment_load_offset = lsg->segment_length;
             lsg->segment_length += sg->segment_length;
 
             {
@@ -1692,14 +1692,14 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
                 f->in_file = in_file;
                 f->in_module = in_module;
-                f->offset = lsg->load_base;
+                f->offset = lsg->fragment_load_offset;
                 f->fragment_length = sg->segment_length;
                 f->attr = sg->attr;
             }
 
             if (cmdoptions.verbose)
                 fprintf(stderr,"Start segment='%s' load=0x%lx\n",
-                        lsg->name.c_str(), (unsigned long)lsg->load_base);
+                        lsg->name.c_str(), (unsigned long)lsg->fragment_load_offset);
         }
     }
 
@@ -2562,8 +2562,8 @@ int main(int argc,char **argv) {
                     }
 
                     /* reset load base */
-                    sd->fragments_read = 0;
-                    sd->load_base = 0;
+                    sd->fragment_load_index = 0;
+                    sd->fragment_load_offset = 0;
                 }
             }
 
