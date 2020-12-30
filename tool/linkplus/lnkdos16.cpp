@@ -2769,7 +2769,6 @@ int main(int argc,char **argv) {
                                 struct seg_fragment *frag;
 
                                 assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-
                                 frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
                                 fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
@@ -3343,7 +3342,6 @@ int main(int argc,char **argv) {
             struct link_segdef *ssg;
 
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
