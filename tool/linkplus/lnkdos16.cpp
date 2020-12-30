@@ -101,6 +101,7 @@ struct cmdoptions {
     unsigned int                        hex_cpp:1;
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
+    unsigned int                        prefer_flat:1;
 
     unsigned int                        output_format;
     unsigned int                        output_format_variant;
@@ -117,7 +118,7 @@ struct cmdoptions {
 
     vector<string>                      in_file;
 
-    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false),
+    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), prefer_flat(false),
                    output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
                    com_segbase(segmentBaseUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
@@ -355,7 +356,6 @@ static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
 static segmentOffset                    entry_seg_ofs = 0;
-static unsigned char                    prefer_flat = 0;
 
 /* Open Watcom DOSSEG linker order
  * 
@@ -1848,7 +1848,7 @@ int main(int argc,char **argv) {
                 cmdoptions.dosdrv_header_symbol = a;
             }
             else if (!strcmp(a,"pflat")) {
-                prefer_flat = 1;
+                cmdoptions.prefer_flat = 1;
             }
             else if (!strncmp(a,"stack",5)) {
                 a += 5;
@@ -2475,7 +2475,7 @@ int main(int argc,char **argv) {
                     else
                         segrel = sd->linear_offset >> 4ul;
 
-                    if (prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.com_segbase))
+                    if (cmdoptions.prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.com_segbase))
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
                     sd->segment_base = cmdoptions.com_segbase;
