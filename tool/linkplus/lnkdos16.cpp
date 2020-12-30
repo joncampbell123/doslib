@@ -991,6 +991,103 @@ void dump_link_segments(void) {
         fprintf(map_fp,"\n");
 }
 
+void dump_link_segment_file_locations(void) {
+    static char range1[64];
+    static char range2[64];
+    unsigned int i=0,f;
+
+    if (map_fp != NULL) {
+        fprintf(map_fp,"\n");
+        fprintf(map_fp,"Segment table: %u entries, file offsets\n",(unsigned int)link_segments.size());
+        fprintf(map_fp,"---------------------------------------\n");
+    }
+
+    while (i < link_segments.size()) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        if (map_fp != NULL) {
+            if (sg->segment_length != 0ul) {
+                sprintf(range1,"%08lx-%08lx",
+                    (unsigned long)sg->segment_offset,
+                    (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
+            }
+            else {
+                strcpy(range1,"-----------------");
+            }
+            if (sg->segment_length != 0ul && sg->file_offset != fileOffsetUndef) {
+                sprintf(range2,"0x%08lx-0x%08lx",
+                        (unsigned long)sg->file_offset,
+                        (unsigned long)sg->file_offset+sg->segment_length-1ul);
+            }
+            else {
+                strcpy(range2,"---------------------");
+            }
+
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
+                sg->attr.f.f.use32?32:16,
+                sg->name.c_str(),
+                sg->classname.c_str(),
+                sg->groupname.c_str(),
+                (unsigned long)sg->segment_relative&0xfffful,
+                range1,
+                range2,
+                (unsigned long)sg->segment_base,
+                (unsigned long)alignMaskToValue(sg->initial_alignment),
+                sg->pinned ? " PIN" : "",
+                sg->noemit ? " NOEMIT" : "");
+        }
+
+        {
+            for (f=0;f < sg->fragments.size();f++) {
+                struct seg_fragment *frag = &sg->fragments[f];
+
+                if (cmdoptions.verbose) {
+                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
+                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
+                }
+
+                if (map_fp != NULL) {
+                    if (frag->fragment_length != 0ul) {
+                        sprintf(range1,"%08lx-%08lx",
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+                    }
+                    else {
+                        strcpy(range1,"-----------------");
+                    }
+                    if (frag->fragment_length != 0ul && sg->file_offset != fileOffsetUndef) {
+                        sprintf(range2,"0x%08lx-0x%08lx",
+                            (unsigned long)sg->file_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->file_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+                    }
+                    else {
+                        strcpy(range2,"---------------------");
+                    }
+
+                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
+                            frag->attr.f.f.use32?32:16,
+                            "",
+                            "",
+                            "",
+                            range1,
+                            range2,
+                            get_in_file(frag->in_file));
+
+                    if (frag->in_module != in_fileModuleRefUndef) {
+                        fprintf(map_fp,":%u",
+                                frag->in_module);
+                    }
+
+                    fprintf(map_fp,"\n");
+                }
+            }
+        }
+    }
+
+    if (map_fp != NULL)
+        fprintf(map_fp,"\n");
+}
+
 struct link_segdef *find_link_segment_by_grpdef(const char *name) {
     unsigned int i=0;
 
@@ -3336,6 +3433,8 @@ int main(int argc,char **argv) {
 
         close(fd);
     }
+
+    dump_link_segment_file_locations();
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
