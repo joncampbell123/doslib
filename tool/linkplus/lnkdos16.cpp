@@ -63,6 +63,8 @@ typedef uint32_t                        segmentBase;            /* segment base 
 typedef uint32_t                        segmentOffset;          /* offset from segment */
 typedef uint32_t                        segmentRelative;        /* segment relative to base */
 typedef uint32_t                        alignMask;              /* alignment mask for data alignment. ~0u (all 1s) means byte alignment. Must be inverse of power of 2 */
+typedef uint32_t                        fileOffset;
+typedef uint32_t                        linearAddress;
 typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
 
@@ -221,7 +223,7 @@ struct link_symbol {
     string                              name;               /* symbol name, raw */
     string                              segdef;             /* belongs to segdef */
     string                              groupdef;           /* belongs to groupdef */
-    unsigned long                       offset;             /* offset within fragment */
+    segmentOffset                       offset;             /* offset within fragment */
     fragmentRef                         fragment;           /* which fragment it belongs to */
     in_fileRef                          in_file;            /* from which file */
     in_fileModuleRef                    in_module;          /* from which module */
@@ -273,8 +275,8 @@ struct seg_fragment {
     in_fileRef                          in_file;            /* fragment comes from file */
     in_fileModuleRef                    in_module;          /* fragment comes from this module index */
     unsigned short                      segidx;             /* segment index */
-    unsigned long                       offset;             /* offset in segment */
-    unsigned long                       fragment_length;    /* length of fragment */
+    segmentOffset                       offset;             /* offset in segment */
+    segmentSize                         fragment_length;    /* length of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
 };
 
@@ -283,15 +285,15 @@ struct link_segdef {
     string                              name;               /* name of segment */
     string                              classname;          /* class of segment */
     string                              groupname;          /* group of segment */
-    unsigned long                       file_offset;        /* file offset chosen to write segment */
-    unsigned long                       linear_offset;      /* linear offset in memory (from executable base) of start of segment */
+    fileOffset                          file_offset;        /* file offset chosen to write segment */
+    linearAddress                       linear_offset;      /* linear offset in memory (from executable base) of start of segment */
     segmentBase                         segment_base;       /* segment base */
     segmentOffset                       segment_offset;     /* offset within segment */
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment value to EXE image base/first segment */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment */
-    unsigned long                       segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
-    unsigned long                       load_base;          /* offset used to compute loading base during first pass */
+    segmentSize                         segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
+    segmentOffset                       load_base;          /* offset used to compute loading base during first pass */
     vector<unsigned char>               image;              /* in memory image of segment during construction */
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
     fragmentRef                         fragments_read;     /* fragment reading */
@@ -323,7 +325,7 @@ static unsigned int                     entry_seg_link_frame_fragment = 0;
 static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
-static unsigned long                    entry_seg_ofs = 0;
+static segmentOffset                    entry_seg_ofs = 0;
 static unsigned char                    prefer_flat = 0;
 
 /* Open Watcom DOSSEG linker order
@@ -585,9 +587,9 @@ void dump_link_relocations(void) {
 
             fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sg->segment_relative&0xfffful,
-                sg->segment_offset + frag->offset + rel->offset,
-                sg->linear_offset + frag->offset + rel->offset,
-                rel->segname.c_str(),frag->offset + rel->offset,
+                (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
+                (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
+                rel->segname.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
                 get_in_file(frag->in_file),frag->in_module);
         }
     }
@@ -648,7 +650,7 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
         struct link_symbol *sym = &link_symbols[i++];
 
         fprintf(hfp,"/*symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u*/\n",
-                i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,(unsigned long)sym->fragment,
+                i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),(unsigned long)sym->offset,(unsigned long)sym->fragment,
                 get_in_file(sym->in_file),sym->in_module,sym->is_local);
 
         {
@@ -665,10 +667,10 @@ void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
                     sym->name.c_str(),
                     sym->is_local?'L':'G',
                     sg->segment_relative&0xfffful,
-                    sg->segment_offset + frag->offset + sym->offset,
-                    sg->linear_offset + frag->offset + sym->offset,
+                    (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
+                    (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
                     sym->segdef.c_str(),
-                    frag->offset + sym->offset,
+                    (unsigned long)frag->offset + (unsigned long)sym->offset,
                     get_in_file(sym->in_file),
                     sym->in_module);
 
@@ -714,7 +716,7 @@ void dump_link_symbols(void) {
 
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u\n",
-                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),sym->offset,(unsigned long)sym->fragment,
+                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),(unsigned long)sym->offset,(unsigned long)sym->fragment,
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
@@ -731,11 +733,11 @@ void dump_link_symbols(void) {
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
                         sym->name.c_str(),
                         sym->is_local?'L':'G',
-                        sg->segment_relative&0xfffful,
-                        sg->segment_offset + frag->offset + sym->offset,
-                        sg->linear_offset + frag->offset + sym->offset,
+                        (unsigned long)sg->segment_relative&0xfffful,
+                        (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
+                        (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
                         sym->segdef.c_str(),
-                        frag->offset + sym->offset,
+                        (unsigned long)frag->offset + (unsigned long)sym->offset,
                         get_in_file(sym->in_file));
 
                 if (sym->in_module != in_fileModuleRefUndef) {
@@ -833,11 +835,11 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
 
                 if (frag->fragment_length != 0ul) {
                     sprintf(range1,"%08lx-%08lx",
-                            sg->segment_offset+frag->offset,
-                            sg->segment_offset+frag->offset+frag->fragment_length-1ul);
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
                     sprintf(range2,"0x%08lx-0x%08lx",
-                            sg->linear_offset+frag->offset,
-                            sg->linear_offset+frag->offset+frag->fragment_length-1ul);
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
                 }
                 else {
                     strcpy(range1,"-----------------");
@@ -923,17 +925,17 @@ void dump_link_segments(void) {
 
                 if (cmdoptions.verbose) {
                     fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
-                            f,get_in_file(frag->in_file),frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
+                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length,frag->segidx);
                 }
 
                 if (map_fp != NULL) {
                     if (frag->fragment_length != 0ul) {
                         sprintf(range1,"%08lx-%08lx",
-                            sg->segment_offset+frag->offset,
-                            sg->segment_offset+frag->offset+frag->fragment_length-1ul);
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
                         sprintf(range2,"0x%08lx-0x%08lx",
-                            sg->linear_offset+frag->offset,
-                            sg->linear_offset+frag->offset+frag->fragment_length-1ul);
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
                     }
                     else {
                         strcpy(range1,"-----------------");
@@ -1066,7 +1068,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (cmdoptions.verbose)
         fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx in frag ofs=0x%lx\n",
-                segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset,frag->offset);
+                segname,(unsigned long)lsg->load_base,max_ofs,(unsigned long)info->data_length,(unsigned long)info->enum_data_offset,(unsigned long)frag->offset);
 
     return 0;
 }
@@ -1265,7 +1267,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
             if (omf_state->flags.verbose)
                 fprintf(stderr,"ptch=0x%lx linear=0x%lx load=0x%lx '%s'\n",
                         ptch,
-                        current_link_segment->linear_offset,
+                        (unsigned long)current_link_segment->linear_offset,
                         ent->omf_rec_file_enoffs + ent->data_record_offset,
                         current_link_segment->name.c_str());
 
@@ -1682,7 +1684,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
             if (cmdoptions.verbose)
                 fprintf(stderr,"Start segment='%s' load=0x%lx\n",
-                        lsg->name.c_str(), lsg->load_base);
+                        lsg->name.c_str(), (unsigned long)lsg->load_base);
         }
     }
 
@@ -2758,10 +2760,10 @@ int main(int argc,char **argv) {
                                 frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
                                 fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
-                                        entry_seg_link_target->segment_relative&0xfffful,
-                                        entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
+                                        (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
+                                        (unsigned long)entry_seg_link_target->segment_offset + (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
                                         entry_seg_link_target->name.c_str(),
-                                        frag->offset + entry_seg_ofs,
+                                        (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
                                         get_in_file(frag->in_file),frag->in_module);
 
                             }
@@ -3119,7 +3121,7 @@ int main(int argc,char **argv) {
 
             if (segdef->linear_offset != 0ul) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str(),segdef->linear_offset);
+                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str(),(unsigned long)segdef->linear_offset);
                 return 1;
             }
 
@@ -3328,10 +3330,10 @@ int main(int argc,char **argv) {
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
-                entry_seg_link_target->segment_relative&0xfffful,
-                entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
+                (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
+                (unsigned long)entry_seg_link_target->segment_offset + (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
                 entry_seg_link_target->name.c_str(),
-                frag->offset + entry_seg_ofs,
+                (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
                 get_in_file(frag->in_file));
 
             if (frag->in_module != in_fileModuleRefUndef)
