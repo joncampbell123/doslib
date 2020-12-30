@@ -337,10 +337,10 @@ static vector<struct link_segdef>       link_segments;
 
 static struct link_segdef*              current_link_segment = NULL;
 
-static unsigned int                     entry_seg_link_target_fragment = 0;
+static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
 static string                           entry_seg_link_target_name;
 static struct link_segdef*              entry_seg_link_target = NULL;
-static unsigned int                     entry_seg_link_frame_fragment = 0;
+static fragmentRef                      entry_seg_link_frame_fragment = fragmentRefUndef;
 static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
