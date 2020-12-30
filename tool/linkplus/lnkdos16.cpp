@@ -217,8 +217,6 @@ void free_exe_relocations(void) {
     exe_relocation_table.clear();
 }
 
-#define MAX_SEG_FRAGMENTS               1024
-
 struct link_symbol {
     string                              name;               /* symbol name, raw */
     string                              segdef;             /* belongs to segdef */
