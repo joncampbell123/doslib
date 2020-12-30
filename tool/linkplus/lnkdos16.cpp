@@ -294,7 +294,7 @@ struct link_segdef {
     alignMask                           initial_alignment;
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
-    unsigned char*                      image_ptr;          /* size is segment_length */
+    vector<unsigned char>               image;
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
     fragmentRef                         fragments_read;
 
@@ -302,8 +302,7 @@ struct link_segdef {
     unsigned int                        noemit:1;
 
     link_segdef() : file_offset(0), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(0), segment_len_count(0), load_base(0), image_ptr(NULL), fragments_read(0),
-                    pinned(0), noemit(0)
+                    initial_alignment(0), segment_len_count(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
@@ -311,7 +310,7 @@ struct link_segdef {
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative),
                                         initial_alignment(o.initial_alignment), segment_len_count(o.segment_len_count),
-                                        load_base(o.load_base), image_ptr(o.image_ptr), fragments(o.fragments),
+                                        load_base(o.load_base), image(o.image), fragments(o.fragments),
                                         fragments_read(o.fragments_read), pinned(o.pinned), noemit(o.noemit) { }
 };
 
@@ -540,17 +539,7 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     return f;
 }
 
-void free_link_segment(struct link_segdef *sg) {
-    if (sg->image_ptr != NULL) {
-        free(sg->image_ptr);
-        sg->image_ptr = NULL;
-    }
-}
-
 void free_link_segments(void) {
-    for (size_t i=0;i < link_segments.size();i++)
-        free_link_segment(&link_segments[i]);
-
     link_segments.clear();
 }
 
@@ -1071,10 +1060,10 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (pass == PASS_BUILD) {
         assert(info->data != NULL);
+        assert(lsg->image.size() == lsg->segment_length);
         assert(max_ofs >= (unsigned long)info->data_length);
         max_ofs -= (unsigned long)info->data_length;
-        assert(lsg->image_ptr != NULL);
-        memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
+        memcpy(&lsg->image[max_ofs], info->data, info->data_length);
     }
 
     if (cmdoptions.verbose)
@@ -1268,8 +1257,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
         if (pass == PASS_BUILD) {
             assert(current_link_segment != NULL);
-            assert(current_link_segment->image_ptr != NULL);
-            fence = current_link_segment->image_ptr + current_link_segment->segment_length;
+            assert(current_link_segment->image.size() == current_link_segment->segment_length);
+            fence = &current_link_segment->image[current_link_segment->segment_length];
 
             ptch =  (unsigned long)ent->omf_rec_file_enoffs +
                 (unsigned long)ent->data_record_offset +
@@ -1282,7 +1271,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         ent->omf_rec_file_enoffs + ent->data_record_offset,
                         current_link_segment->name.c_str());
 
-            ptr = current_link_segment->image_ptr + ptch;
+            ptr = &current_link_segment->image[ptch];
             assert(ptr < fence);
         }
         else if (pass == PASS_GATHER) {
@@ -2231,8 +2220,6 @@ int main(int argc,char **argv) {
                 struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
 
                 if (stacksg != NULL) {
-                    assert(stacksg->image_ptr == NULL);
-
                     if (stacksg->segment_length < cmdoptions.want_stack_size) {
                         struct seg_fragment *frag;
 
@@ -2557,11 +2544,9 @@ int main(int argc,char **argv) {
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
-                    assert(sd->image_ptr == NULL);
                     if (sd->segment_length != 0 && !sd->noemit) {
-                        sd->image_ptr = (unsigned char*)malloc(sd->segment_length);
-                        assert(sd->image_ptr != NULL);
-                        memset(sd->image_ptr,0,sd->segment_length);
+                        sd->image.resize(sd->segment_length);
+                        memset(&sd->image[0],0,sd->segment_length);
                     }
 
                     /* reset load base */
@@ -2662,11 +2647,11 @@ int main(int argc,char **argv) {
                     sym->offset = po - frag->offset;
 
                     /* do it */
-                    assert(sg->image_ptr != NULL);
+                    assert(sg->image.size() == sg->segment_length);
 
                     {
-                        uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
-                        uint16_t *f = (uint16_t*)(sg->image_ptr + sg->segment_length);
+                        uint16_t *d = (uint16_t*)(&sg->image[ro]);
+                        uint16_t *f = (uint16_t*)(&sg->image[sg->segment_length]);
                         struct exe_relocation *rel = &exe_relocation_table[0];
                         struct seg_fragment *frag;
                         struct link_segdef *lsg;
@@ -2674,8 +2659,8 @@ int main(int argc,char **argv) {
                         unsigned long roff;
 
                         if (tsg != NULL) {
-                            d = (uint16_t*)(tsg->image_ptr + ro);
-                            f = (uint16_t*)(tsg->image_ptr + sg->segment_length);
+                            d = (uint16_t*)(&tsg->image[ro]);
+                            f = (uint16_t*)(&tsg->image[sg->segment_length]);
                         }
 
                         assert((d+exe_relocation_table.size()) <= f);
@@ -2701,8 +2686,8 @@ int main(int argc,char **argv) {
                     }
 
                     if (cmdoptions.output_format == OFMT_DOSDRV) {
-                        uint8_t *d = (uint8_t*)(sg->image_ptr + po);
-                        uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
+                        uint8_t *d = (uint8_t*)(&sg->image[po]);
+                        uint8_t *f = (uint8_t*)(&sg->image[sg->segment_length]);
 
                         assert((d+sizeof(dosdrvrel_entry_point)) <= f);
                         memcpy(d,dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
@@ -2739,8 +2724,8 @@ int main(int argc,char **argv) {
                         /* header handling will patch in mov DI fields later */
                     }
                     else {
-                        uint8_t *d = (uint8_t*)(sg->image_ptr + po);
-                        uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
+                        uint8_t *d = (uint8_t*)(&sg->image[po]);
+                        uint8_t *f = (uint8_t*)(&sg->image[sg->segment_length]);
 
                         if (entry_seg_link_target != NULL) {
                             struct seg_fragment *frag;
@@ -2819,7 +2804,7 @@ int main(int argc,char **argv) {
             struct seg_fragment *frag;
             unsigned long ofs;
 
-            assert(sg->image_ptr != NULL);
+            assert(sg->image.size() == sg->segment_length);
             assert(sg->segment_length >= com_entry_insert);
 
             if (sg->segment_relative != 0) {
@@ -2848,13 +2833,13 @@ int main(int argc,char **argv) {
 
             if (com_entry_insert == 3) {
                 assert(ofs <= (0xFFFFu - 3u));
-                sg->image_ptr[0] = 0xE9; /* JMP near */
-                *((uint16_t*)(sg->image_ptr+1)) = (uint16_t)ofs - 3;
+                *((uint8_t* )(&sg->image[0])) = 0xE9; /* JMP near */
+                *((uint16_t*)(&sg->image[1])) = (uint16_t)ofs - 3;
             }
             else if (com_entry_insert == 2) {
                 assert(ofs <= (0x7Fu + 2u));
-                sg->image_ptr[0] = 0xEB; /* JMP short */
-                sg->image_ptr[1] = (unsigned char)ofs - 2;
+                *((uint8_t* )(&sg->image[0])) = 0xEB; /* JMP short */
+                *((uint8_t* )(&sg->image[1])) = (unsigned char)ofs - 2;
             }
             else {
                 abort();
@@ -3145,7 +3130,7 @@ int main(int argc,char **argv) {
                 unsigned int i;
                 unsigned char *hdr_p;
 
-                hdr_p = segdef->image_ptr + ofs;
+                hdr_p = &segdef->image[ofs];
 
                 fprintf(map_fp,"\n");
                 fprintf(map_fp,"MS-DOS device driver information:\n");
@@ -3183,15 +3168,15 @@ int main(int argc,char **argv) {
 
                 rofs = rsym->offset + rfrag->offset;
 
-                assert(rsegdef->image_ptr != NULL);
+                assert(rsegdef->image.size() == rsegdef->segment_length);
                 assert((rofs + sizeof(dosdrvrel_entry_point)) <= rsegdef->segment_length);
 
-                assert(segdef->image_ptr != NULL);
+                assert(segdef->image.size() == segdef->segment_length);
                 assert((ofs + 10) <= segdef->segment_length);
                 assert(ofs == 0);
 
-                hdr_p = segdef->image_ptr + ofs;
-                reloc_p = rsegdef->image_ptr + rofs;
+                hdr_p = &segdef->image[ofs];
+                reloc_p = &rsegdef->image[rofs];
 
                 if (cmdoptions.verbose) {
                     fprintf(stderr,"Original entry: 0x%x, 0x%x\n",
@@ -3240,8 +3225,8 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                assert(sd->image_ptr != NULL);
-                if ((unsigned long)write(fd,sd->image_ptr,sd->segment_length) != sd->segment_length) {
+                assert(sd->image.size() == sd->segment_length);
+                if ((unsigned long)write(fd,&sd->image[0],sd->segment_length) != sd->segment_length) {
                     fprintf(stderr,"Write error\n");
                     return 1;
                 }
