@@ -302,7 +302,7 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
+                    initial_alignment(byteAlignMask), load_base(0), fragments_read(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
@@ -1034,7 +1034,6 @@ struct link_segdef *new_link_segment(const char *name) {
     const size_t idx = link_segments.size();
     link_segments.resize(idx + (size_t)1);
     struct link_segdef *sg = &link_segments[idx];
-    sg->initial_alignment = byteAlignMask;
     sg->name = name;
     return sg;
 }
