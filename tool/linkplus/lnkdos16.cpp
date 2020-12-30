@@ -79,6 +79,7 @@ static const alignMask                  byteAlignMask = ~((alignMask)0u);
 static const alignMask                  wordAlignMask = ~((alignMask)1u);
 static const alignMask                  dwordAlignMask = ~((alignMask)3u);
 static const alignMask                  qwordAlignMask = ~((alignMask)7u);
+static const fileOffset                 fileOffsetUndef = ~((fileOffset)0u);
 
 static inline alignMask alignMaskToValue(const alignMask &v) {
     return (~v) + ((alignMask)1u);
@@ -300,7 +301,7 @@ struct link_segdef {
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
-    link_segdef() : file_offset(0), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
+    link_segdef() : file_offset(fileOffsetUndef), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
                     initial_alignment(0), segment_len_count(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
@@ -757,7 +758,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
     static char range1[64];
     static char range2[64];
     unsigned long ressz=0;
-    unsigned long firstofs=~0UL;
+    fileOffset firstofs=fileOffsetUndef;
     unsigned int i=0,f;
 
     while (i < link_segments.size()) {
@@ -770,7 +771,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
             fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul /*file offset of base of segment*/\n",
                     symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->file_offset);
 
-            if (firstofs == (~0UL) || firstofs > sg->file_offset)
+            if (firstofs == fileOffsetUndef || firstofs > sg->file_offset)
                 firstofs = sg->file_offset;
         }
 
@@ -2873,6 +2874,7 @@ int main(int argc,char **argv) {
 
             if (link_segments.size() > 0) {
                 struct link_segdef *sd = &link_segments[0];
+                assert(sd->file_offset != fileOffsetUndef);
                 header_size = sd->file_offset;
             }
             o_header_size = header_size;
@@ -2894,8 +2896,9 @@ int main(int argc,char **argv) {
                 for (i=0;i < link_segments.size();i++) {
                     struct link_segdef *sd = &link_segments[i];
 
-                    if (sd->segment_length == 0) continue;
+                    if (sd->segment_length == 0 || sd->noemit) continue;
 
+                    assert(sd->file_offset != fileOffsetUndef);
                     sd->file_offset += adj;
                 }
             }
@@ -2909,6 +2912,7 @@ int main(int argc,char **argv) {
                 if (resident_size < ofs) resident_size = ofs;
 
                 if (!sd->noemit) {
+                    assert(sd->file_offset != fileOffsetUndef);
                     ofs = sd->file_offset + sd->segment_length;
                     if (disk_size < ofs) disk_size = ofs;
                 }
@@ -3214,6 +3218,7 @@ int main(int argc,char **argv) {
 
                 if (sd->segment_length == 0 || sd->noemit) continue;
 
+                assert(sd->file_offset != fileOffsetUndef);
                 if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
                     fprintf(stderr,"Seek error\n");
                     return 1;
