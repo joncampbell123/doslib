@@ -198,9 +198,9 @@ static const uint8_t dosdrvrel_entry_point[] = {
 };
 
 struct exe_relocation {
-    string                              segname;
-    fragmentRef                         fragment;
-    segmentOffset                       offset;
+    string                              segname;            /* which segment */
+    fragmentRef                         fragment;           /* which fragment */
+    segmentOffset                       offset;             /* offset within fragment */
 
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
@@ -272,34 +272,34 @@ void link_symbols_free(void) {
 }
 
 struct seg_fragment {
-    in_fileRef                          in_file;
-    in_fileModuleRef                    in_module;
-    unsigned short                      segidx;
-    unsigned long                       offset;
-    unsigned long                       fragment_length;
-    struct omf_segdef_attr_t            attr;
+    in_fileRef                          in_file;            /* fragment comes from file */
+    in_fileModuleRef                    in_module;          /* fragment comes from this module index */
+    unsigned short                      segidx;             /* segment index */
+    unsigned long                       offset;             /* offset in segment */
+    unsigned long                       fragment_length;    /* length of fragment */
+    struct omf_segdef_attr_t            attr;               /* fragment attributes */
 };
 
 struct link_segdef {
-    struct omf_segdef_attr_t            attr;
-    string                              name;
-    string                              classname;
-    string                              groupname;
-    unsigned long                       file_offset;
-    unsigned long                       linear_offset;
+    struct omf_segdef_attr_t            attr;               /* segment attributes */
+    string                              name;               /* name of segment */
+    string                              classname;          /* class of segment */
+    string                              groupname;          /* group of segment */
+    unsigned long                       file_offset;        /* file offset chosen to write segment */
+    unsigned long                       linear_offset;      /* linear offset in memory (from executable base) of start of segment */
     segmentBase                         segment_base;       /* segment base */
     segmentOffset                       segment_offset;     /* offset within segment */
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment value to EXE image base/first segment */
-    alignMask                           initial_alignment;
-    unsigned long                       segment_len_count;
-    unsigned long                       load_base;
-    vector<unsigned char>               image;
+    alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment */
+    unsigned long                       segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
+    unsigned long                       load_base;          /* offset used to compute loading base during first pass */
+    vector<unsigned char>               image;              /* in memory image of segment during construction */
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
-    fragmentRef                         fragments_read;
+    fragmentRef                         fragments_read;     /* fragment reading */
 
-    unsigned int                        pinned:1;
-    unsigned int                        noemit:1;
+    unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
+    unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(0), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
                     initial_alignment(0), segment_len_count(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
