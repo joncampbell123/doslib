@@ -293,7 +293,6 @@ struct link_segdef {
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment number relative to image base in memory [*1] */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
-    segmentSize                         segment_len_count;  /* running count of LEDATA used to expand segment size in first pass */
     segmentOffset                       load_base;          /* offset used to compute loading base during first pass */
     vector<unsigned char>               image;              /* in memory image of segment during construction */
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
@@ -303,14 +302,14 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(0), segment_len_count(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
+                    initial_alignment(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
     link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative),
-                                        initial_alignment(o.initial_alignment), segment_len_count(o.segment_len_count),
+                                        initial_alignment(o.initial_alignment),
                                         load_base(o.load_base), image(o.image), fragments(o.fragments),
                                         fragments_read(o.fragments_read), pinned(o.pinned), noemit(o.noemit) { }
 };
@@ -1680,11 +1679,10 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
             /* alignment */
             alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
-            malign = lsg->segment_len_count % (unsigned long)alignb;
-            if (malign != 0) lsg->segment_len_count += alignb - malign;
-            lsg->load_base = lsg->segment_len_count;
-            lsg->segment_len_count += sg->segment_length;
-            lsg->segment_length = lsg->segment_len_count;
+            malign = lsg->segment_length % (unsigned long)alignb;
+            if (malign != 0) lsg->segment_length += alignb - malign;
+            lsg->load_base = lsg->segment_length;
+            lsg->segment_length += sg->segment_length;
 
             {
                 struct seg_fragment *f = alloc_link_segment_fragment(lsg);
@@ -2565,7 +2563,6 @@ int main(int argc,char **argv) {
                     }
 
                     /* reset load base */
-                    sd->segment_len_count = 0;
                     sd->fragments_read = 0;
                     sd->load_base = 0;
                 }
