@@ -340,7 +340,6 @@ static struct link_segdef*              current_link_segment = NULL;
 static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
 static string                           entry_seg_link_target_name;
 static struct link_segdef*              entry_seg_link_target = NULL;
-static fragmentRef                      entry_seg_link_frame_fragment = fragmentRefUndef;
 static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
@@ -2189,9 +2188,6 @@ int main(int argc,char **argv) {
                                             /* FIXME: This code is assuming the entry point is in the last fragment!
                                              *        Search ALL fragments according to entry_seg_ofs! */
 
-                                            assert(!frameseg->fragments.empty());
-                                            entry_seg_link_frame_fragment = frameseg->fragments.size() - 1u;
-
                                             assert(!targseg->fragments.empty());
                                             entry_seg_link_target_fragment = targseg->fragments.size() - 1u;
 
@@ -2406,7 +2402,7 @@ int main(int argc,char **argv) {
                     /* COM */
                     else if (entry_seg_link_target != NULL) {
                         struct seg_fragment *frag;
-                        unsigned long io;
+                        segmentOffset io;
 
                         assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
                         frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
