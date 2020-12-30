@@ -3329,12 +3329,17 @@ int main(int argc,char **argv) {
 
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
-            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
+            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
                 entry_seg_link_target->segment_relative&0xfffful,
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
                 entry_seg_link_target->name.c_str(),
                 frag->offset + entry_seg_ofs,
-                get_in_file(frag->in_file),frag->in_module);
+                get_in_file(frag->in_file));
+
+            if (frag->in_module != in_fileModuleRefUndef)
+                fprintf(map_fp,":%u",frag->in_module);
+
+            fprintf(map_fp,"\n");
 
             while (symi < link_symbols.size()) {
                 sym = &link_symbols[symi++];
