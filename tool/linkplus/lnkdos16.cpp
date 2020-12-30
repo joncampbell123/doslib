@@ -58,15 +58,19 @@ enum {
 
 typedef size_t                          in_fileRef;             /* index into in_file */
 typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
-typedef uint32_t                        segmentSize;
-typedef uint32_t                        segmentBase;
+typedef uint32_t                        segmentSize;            /* segment size */
+typedef uint32_t                        segmentBase;            /* segment base */
+typedef uint32_t                        segmentOffset;          /* offset from segment */
+typedef uint32_t                        segmentRelative;        /* segment relative to base */
 typedef size_t                          fragmentRef;
+typedef size_t                          segmentRef;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
+static const segmentOffset              segmentOffsetUndef = ~((segmentOffset)0u);
 static const fragmentRef                fragmentRefUndef = ~((fragmentRef)0u);
 
 #define MAX_GROUPS                      256
@@ -273,20 +277,21 @@ struct link_segdef {
     char*                               groupname;
     unsigned long                       file_offset;
     unsigned long                       linear_offset;
-    unsigned long                       segment_base;       /* segment base */
-    unsigned long                       segment_offset;     /* offset within segment */
-    unsigned long                       segment_length;     /* length in bytes */
-    unsigned long                       segment_relative;   /* relative segment */
+    segmentBase                         segment_base;       /* segment base */
+    segmentOffset                       segment_offset;     /* offset within segment */
+    segmentSize                         segment_length;     /* length in bytes */
+    segmentRelative                     segment_relative;   /* segment value to EXE image base/first segment */
     unsigned short                      initial_alignment;
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
     unsigned char*                      image_ptr;          /* size is segment_length */
     struct seg_fragment*                fragments;          /* fragments (one from each OBJ/module) */
-    unsigned int                        fragments_count;
-    unsigned int                        fragments_alloc;
-    unsigned int                        fragments_read;
-    unsigned char                       pinned;
-    unsigned char                       noemit;
+    fragmentRef                         fragments_count;
+    fragmentRef                         fragments_alloc;
+    fragmentRef                         fragments_read;
+
+    unsigned int                        pinned:1;
+    unsigned int                        noemit:1;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -649,7 +654,7 @@ bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol
     struct seg_fragment *fragb;
     struct link_segdef *sgb;
 
-    unsigned long la,lb;
+    segmentRelative la,lb;
 
     /* -----A----- */
     sga = find_link_segment(sa.segdef.c_str());
@@ -843,21 +848,21 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 sg->attr.f.f.use32,
                 sg->attr.f.f.combination,
                 sg->attr.f.f.big_segment,
-                sg->file_offset,
-                sg->linear_offset,
-                sg->segment_base,
-                sg->segment_offset,
-                sg->segment_length,
-                sg->segment_relative,
+                (unsigned long)sg->file_offset,
+                (unsigned long)sg->linear_offset,
+                (unsigned long)sg->segment_base,
+                (unsigned long)sg->segment_offset,
+                (unsigned long)sg->segment_length,
+                (unsigned long)sg->segment_relative,
                 sg->initial_alignment);
 
         if (sg->segment_length != 0ul) {
             sprintf(range1,"%08lx-%08lx",
-                    sg->segment_offset,
-                    sg->segment_offset+sg->segment_length-1ul);
+                    (unsigned long)sg->segment_offset,
+                    (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
             sprintf(range2,"0x%08lx-0x%08lx",
-                    sg->linear_offset,
-                    sg->linear_offset+sg->segment_length-1ul);
+                    (unsigned long)sg->linear_offset,
+                    (unsigned long)sg->linear_offset+(unsigned long)sg->segment_length-1ul);
         }
         else {
             strcpy(range1,"-----------------");
@@ -869,10 +874,10 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
                 sg->groupname?sg->groupname:"",
-                sg->segment_relative&0xfffful,
+                (unsigned long)sg->segment_relative&0xfffful,
                 range1,
                 range2,
-                sg->segment_base,
+                (unsigned long)sg->segment_base,
                 sg->initial_alignment,
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
@@ -930,23 +935,23 @@ void dump_link_segments(void) {
                     sg->attr.f.f.use32,
                     sg->attr.f.f.combination,
                     sg->attr.f.f.big_segment,
-                    sg->file_offset,
-                    sg->linear_offset,
-                    sg->segment_base,
-                    sg->segment_offset,
-                    sg->segment_length,
-                    sg->segment_relative,
+                    (unsigned long)sg->file_offset,
+                    (unsigned long)sg->linear_offset,
+                    (unsigned long)sg->segment_base,
+                    (unsigned long)sg->segment_offset,
+                    (unsigned long)sg->segment_length,
+                    (unsigned long)sg->segment_relative,
                     sg->initial_alignment);
         }
 
         if (map_fp != NULL) {
             if (sg->segment_length != 0ul) {
                 sprintf(range1,"%08lx-%08lx",
-                    sg->segment_offset,
-                    sg->segment_offset+sg->segment_length-1ul);
+                    (unsigned long)sg->segment_offset,
+                    (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
                 sprintf(range2,"0x%08lx-0x%08lx",
-                    sg->linear_offset,
-                    sg->linear_offset+sg->segment_length-1ul);
+                    (unsigned long)sg->linear_offset,
+                    (unsigned long)sg->linear_offset+sg->segment_length-1ul);
             }
             else {
                 strcpy(range1,"-----------------");
@@ -958,10 +963,10 @@ void dump_link_segments(void) {
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
                 sg->groupname?sg->groupname:"",
-                sg->segment_relative&0xfffful,
+                (unsigned long)sg->segment_relative&0xfffful,
                 range1,
                 range2,
-                sg->segment_base,
+                (unsigned long)sg->segment_base,
                 sg->initial_alignment,
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
@@ -1115,7 +1120,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
-        fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
+        fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",(unsigned long)lsg->segment_length,max_ofs);
         return 1;
     }
 
@@ -1358,10 +1363,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
                                 current_link_segment->name,
-                                current_link_segment->segment_relative);
+                                (unsigned long)current_link_segment->segment_relative);
                             fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
                                 targ_sdef->name,
-                                targ_sdef->segment_relative);
+                                (unsigned long)targ_sdef->segment_relative);
                             return -1;
                         }
 
@@ -1521,10 +1526,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
                                 current_link_segment->name,
-                                current_link_segment->segment_relative);
+                                (unsigned long)current_link_segment->segment_relative);
                             fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
                                 targ_sdef->name,
-                                targ_sdef->segment_relative);
+                                (unsigned long)targ_sdef->segment_relative);
                             return -1;
                         }
 
@@ -1849,7 +1854,7 @@ int segment_def_arrange(void) {
 
         if (cmdoptions.verbose)
             fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
-                    inf,ofs,sd->segment_length);
+                    inf,ofs,(unsigned long)sd->segment_length);
 
         if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
             cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
@@ -2896,15 +2901,15 @@ int main(int argc,char **argv) {
             assert(sg->segment_length >= com_entry_insert);
 
             if (sg->segment_relative != 0) {
-                fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",sg->segment_relative);
+                fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",(unsigned long)sg->segment_relative);
                 return 1;
             }
             if (sg->segment_base != cmdoptions.com_segbase) {
-                fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",sg->segment_base);
+                fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",(unsigned long)sg->segment_base);
                 return 1;
             }
             if (sg->segment_offset != sg->segment_base) {
-                fprintf(stderr,"__COM_ENTRY_JMP segment offset is not start of file, 0x%lx\n",sg->segment_offset);
+                fprintf(stderr,"__COM_ENTRY_JMP segment offset is not start of file, 0x%lx\n",(unsigned long)sg->segment_offset);
                 return 1;
             }
 
