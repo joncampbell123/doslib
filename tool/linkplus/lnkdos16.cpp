@@ -2968,7 +2968,7 @@ int main(int argc,char **argv) {
                     }
                 }
 
-                ofs = (init_ss << 4ul) + init_sp + header_size;
+                ofs = (((init_ss << 4ul) + init_sp)&0xFFFFFFFFul) + header_size;
                 if (resident_size < ofs) resident_size = ofs;
             }
 
@@ -2993,7 +2993,7 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"EXE disk size:                 0x%lx\n",disk_size);
                 fprintf(map_fp,"EXE stack size:                0x%lx\n",stack_size);
                 fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
-                    init_ss,init_sp,(init_ss << 4ul) + init_sp);
+                    init_ss&0xFFFFul,init_sp,((init_ss << 4ul) + init_sp)&0xFFFFFFFFul);
  
                 fprintf(map_fp,"\n");
             }
