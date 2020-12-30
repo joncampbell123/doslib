@@ -274,7 +274,6 @@ void link_symbols_free(void) {
 struct seg_fragment {
     in_fileRef                          in_file;            /* fragment comes from file */
     in_fileModuleRef                    in_module;          /* fragment comes from this module index */
-    unsigned short                      segidx;             /* segment index */
     segmentOffset                       offset;             /* offset in segment */
     segmentSize                         fragment_length;    /* length of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
@@ -924,8 +923,8 @@ void dump_link_segments(void) {
                 struct seg_fragment *frag = &sg->fragments[f];
 
                 if (cmdoptions.verbose) {
-                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
-                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length,frag->segidx);
+                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
+                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
                 }
 
                 if (map_fp != NULL) {
@@ -1625,7 +1624,6 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
                 assert(f->fragment_length == sg->segment_length);
-                assert(f->segidx == first);
 
                 lsg->load_base = f->offset;
             }
@@ -1678,7 +1676,6 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 f->in_module = in_module;
                 f->offset = lsg->load_base;
                 f->fragment_length = sg->segment_length;
-                f->segidx = first;
                 f->attr = sg->attr;
             }
 
@@ -2228,7 +2225,6 @@ int main(int argc,char **argv) {
                             return 1;
                         }
                         frag->offset = stacksg->segment_length;
-                        frag->segidx = (int)(stacksg + 1 - (&link_segments[0]));
                         frag->attr = stacksg->attr;
                         frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
                         frag->in_file = in_fileRefInternal;
@@ -2323,7 +2319,6 @@ int main(int argc,char **argv) {
                         return 1;
                     }
                     frag->offset = sg->segment_length;
-                    frag->segidx = (int)(sg + 1 - (&link_segments[0]));
                     frag->in_file = in_fileRefInternal;
                     frag->attr = sg->attr;
 
@@ -2333,7 +2328,6 @@ int main(int argc,char **argv) {
                             return 1;
                         }
                         tfrag->offset = tsg->segment_length;
-                        tfrag->segidx = (int)(tsg + 1 - (&link_segments[0]));
                         tfrag->in_file = in_fileRefInternal;
                         tfrag->attr = tsg->attr;
                     }
