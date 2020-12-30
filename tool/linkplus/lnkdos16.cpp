@@ -271,8 +271,6 @@ void link_symbols_free(void) {
     link_symbols.clear();
 }
 
-#define MAX_SEGMENTS                    256
-
 struct seg_fragment {
     in_fileRef                          in_file;
     in_fileModuleRef                    in_module;
@@ -304,10 +302,25 @@ struct link_segdef {
 
     unsigned int                        pinned:1;
     unsigned int                        noemit:1;
+
+    link_segdef() : name(NULL), classname(NULL), groupname(NULL), file_offset(0), linear_offset(0),
+                    segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
+                    initial_alignment(0), segment_len_count(0), load_base(0), image_ptr(NULL),
+                    fragments(NULL), fragments_count(0), fragments_alloc(0), fragments_read(0),
+                    pinned(0), noemit(0)
+    {
+        memset(&attr,0,sizeof(attr));
+    }
+    link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
+                                        linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
+                                        segment_length(o.segment_length), segment_relative(o.segment_relative),
+                                        initial_alignment(o.initial_alignment), segment_len_count(o.segment_len_count),
+                                        load_base(o.load_base), image_ptr(o.image_ptr), fragments(o.fragments),
+                                        fragments_count(o.fragments_count), fragments_alloc(o.fragments_alloc),
+                                        fragments_read(o.fragments_read), pinned(o.pinned), noemit(o.noemit) { }
 };
 
-static struct link_segdef               link_segments[MAX_SEGMENTS];
-static unsigned int                     link_segments_count = 0;
+static vector<struct link_segdef>       link_segments;
 
 static struct link_segdef*              current_link_segment = NULL;
 
@@ -478,9 +491,9 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
 }
 
 void owlink_dosseg_sort_order(void) {
-    unsigned int s = 0,e = link_segments_count - 1u;
+    unsigned int s = 0,e = link_segments.size() - 1u;
 
-    if (link_segments_count == 0) return;
+    if (link_segments.size() == 0) return;
     link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
     link_segments_sort(&s,&e,sort_cmp_not_dgroup);                  /* 2 */
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
@@ -489,45 +502,42 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
 }
 
-int owlink_segsrt_def_qsort_cmp(const void *a,const void *b) {
-    const struct link_segdef *sa = (const struct link_segdef*)a;
-    const struct link_segdef *sb = (const struct link_segdef*)b;
+bool owlink_segsrt_def_qsort_cmp(const struct link_segdef &sa, const struct link_segdef &sb) {
     const char *gna,*gnb;
     const char *cna,*cnb;
 //  const char *nna,*nnb;
     int ret = 0;
 
     /* if either one is pinned, don't move */
-    if (sa->pinned || sb->pinned) return 0;
+    if (sa.pinned || sb.pinned) return 0;
 
     /* sort by GROUP, CLASS, NAME */
-    gna = sa->groupname ? sa->groupname : "";
-    gnb = sb->groupname ? sb->groupname : "";
-    cna = sa->classname ? sa->classname : "";
-    cnb = sb->classname ? sb->classname : "";
-//  nna = sa->name      ? sa->name      : "";
-//  nnb = sb->name      ? sb->name      : "";
+    gna = sa.groupname ? sa.groupname : "";
+    gnb = sb.groupname ? sb.groupname : "";
+    cna = sa.classname ? sa.classname : "";
+    cnb = sb.classname ? sb.classname : "";
+//  nna = sa.name      ? sa.name      : "";
+//  nnb = sb.name      ? sb.name      : "";
 
     /* do it */
                   ret = strcmp(gna,gnb);
     if (ret == 0) ret = strcmp(cna,cnb);
 //  if (ret == 0) ret = strcmp(nna,nnb);
 
-    return ret;
+    return ret < 0;
 }
 
 void owlink_default_sort_seg(void) {
-    qsort(link_segments, link_segments_count, sizeof(struct link_segdef), owlink_segsrt_def_qsort_cmp);
-    reconnect_gl_segs();
+    sort(link_segments.begin(), link_segments.end(), owlink_segsrt_def_qsort_cmp);
 }
 
 void owlink_stack_bss_arrange(void) {
-    unsigned int s = 0,e = link_segments_count - 1u;
+    unsigned int s = 0,e = link_segments.size() - 1u;
 
-    if (link_segments_count == 0) return;
+    if (link_segments.size() == 0) return;
     if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         /* STACK and BSS must be placed at the end in BSS, STACK order */
-        e = link_segments_count - 1u;
+        e = link_segments.size() - 1u;
         s = 0;
 
         link_segments_sort(&s,&e,sort_cmpf_class_stack);
@@ -594,8 +604,10 @@ void free_link_segment(struct link_segdef *sg) {
 }
 
 void free_link_segments(void) {
-    while (link_segments_count > 0)
-        free_link_segment(&link_segments[--link_segments_count]);
+    for (size_t i=0;i < link_segments.size();i++)
+        free_link_segment(&link_segments[i]);
+
+    link_segments.clear();
 }
 
 unsigned int omf_align_code_to_bytes(const unsigned int x) {
@@ -826,7 +838,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
     unsigned long firstofs=~0UL;
     unsigned int i=0,f;
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (ressz < (sg->linear_offset+sg->segment_length))
@@ -934,11 +946,11 @@ void dump_link_segments(void) {
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
-        fprintf(map_fp,"Segment table: %u entries\n",(unsigned int)link_segments_count);
+        fprintf(map_fp,"Segment table: %u entries\n",(unsigned int)link_segments.size());
         fprintf(map_fp,"---------------------------------------\n");
     }
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (cmdoptions.verbose) {
@@ -1034,7 +1046,7 @@ void dump_link_segments(void) {
 struct link_segdef *find_link_segment_by_grpdef(const char *name) {
     unsigned int i=0;
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (sg->groupname == NULL) continue;
@@ -1047,7 +1059,7 @@ struct link_segdef *find_link_segment_by_grpdef(const char *name) {
 struct link_segdef *find_link_segment_by_class(const char *name) {
     unsigned int i=0;
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (sg->classname == NULL) continue;
@@ -1061,7 +1073,7 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
     struct link_segdef *ret=NULL;
     unsigned int i=0;
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (sg->classname == NULL) continue;
@@ -1074,7 +1086,7 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
 struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
-    while (i < link_segments_count) {
+    while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
         assert(sg->name != NULL);
@@ -1085,18 +1097,13 @@ struct link_segdef *find_link_segment(const char *name) {
 }
 
 struct link_segdef *new_link_segment(const char *name) {
-    if (link_segments_count < MAX_SEGMENTS) {
-        struct link_segdef *sg = &link_segments[link_segments_count++];
-
-        memset(sg,0,sizeof(*sg));
-        sg->initial_alignment = byteAlignMask;
-        sg->name = strdup(name);
-        assert(sg->name != NULL);
-
-        return sg;
-    }
-
-    return NULL;
+    const size_t idx = link_segments.size();
+    link_segments.resize(idx + (size_t)1);
+    struct link_segdef *sg = &link_segments[idx];
+    sg->initial_alignment = byteAlignMask;
+    sg->name = strdup(name);
+    assert(sg->name != NULL);
+    return sg;
 }
 
 int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
@@ -1857,7 +1864,7 @@ int segment_def_arrange(void) {
     unsigned long ofs = 0;
     unsigned int inf;
 
-    for (inf=0;inf < link_segments_count;inf++) {
+    for (inf=0;inf < link_segments.size();inf++) {
         struct link_segdef *sd = &link_segments[inf];
 
         /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
@@ -2340,7 +2347,7 @@ int main(int argc,char **argv) {
                 struct link_segdef *ssg;
                 unsigned int i;
 
-                for (i=0;i < link_segments_count;i++) {
+                for (i=0;i < link_segments.size();i++) {
                     ssg = &link_segments[i];
                     if (ssg->classname == NULL) continue;
 
@@ -2537,7 +2544,7 @@ int main(int argc,char **argv) {
                 unsigned long segrel = 0;
                 unsigned int linkseg;
 
-                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
                     struct link_segdef *gd = sd->groupname != NULL ? find_link_segment_by_grpdef(sd->groupname) : 0;
                     struct link_segdef *cd = sd->classname != NULL ? find_link_segment_by_class(sd->classname) : 0;
@@ -2566,7 +2573,7 @@ int main(int argc,char **argv) {
             else if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
                 unsigned int linkseg;
 
-                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
                     sd->segment_relative = 0;
@@ -2593,7 +2600,7 @@ int main(int argc,char **argv) {
                     /* TODO: EXE header */
                 }
 
-                for (linkseg=link_segments_count;linkseg > 0;) {
+                for (linkseg=link_segments.size();linkseg > 0;) {
                     struct link_segdef *sd = &link_segments[--linkseg];
 
                     if (!sd->noemit) break;
@@ -2614,7 +2621,7 @@ int main(int argc,char **argv) {
                     }
                 }
 
-                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
                     if (sd->noemit) break;
@@ -2627,7 +2634,7 @@ int main(int argc,char **argv) {
                      *      in fact, maybe computing file offset at this phase was a bad idea... :( */
                 }
 
-                for (;linkseg < link_segments_count;linkseg++) {
+                for (;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
                     assert(sd->noemit != 0);
@@ -2638,7 +2645,7 @@ int main(int argc,char **argv) {
             {
                 unsigned int linkseg;
 
-                for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
                     assert(sd->image_ptr == NULL);
@@ -2987,7 +2994,7 @@ int main(int argc,char **argv) {
             unsigned long init_ss = 0,init_sp = 0,init_cs = 0,init_ip = 0;
             unsigned int i,ofs;
 
-            if (link_segments_count > 0) {
+            if (link_segments.size() > 0) {
                 struct link_segdef *sd = &link_segments[0];
                 header_size = sd->file_offset;
             }
@@ -3007,7 +3014,7 @@ int main(int argc,char **argv) {
             if (o_header_size < header_size) {
                 unsigned long adj = header_size - o_header_size;
 
-                for (i=0;i < link_segments_count;i++) {
+                for (i=0;i < link_segments.size();i++) {
                     struct link_segdef *sd = &link_segments[i];
 
                     if (sd->segment_length == 0) continue;
@@ -3016,7 +3023,7 @@ int main(int argc,char **argv) {
                 }
             }
 
-            for (i=0;i < link_segments_count;i++) {
+            for (i=0;i < link_segments.size();i++) {
                 struct link_segdef *sd = &link_segments[i];
 
                 if (sd->segment_length == 0) continue;
@@ -3333,7 +3340,7 @@ int main(int argc,char **argv) {
         {
             unsigned int linkseg;
 
-            for (linkseg=0;linkseg < link_segments_count;linkseg++) {
+            for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                 struct link_segdef *sd = &link_segments[linkseg];
 
                 if (sd->segment_length == 0 || sd->noemit) continue;
