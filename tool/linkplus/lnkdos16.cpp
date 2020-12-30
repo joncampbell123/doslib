@@ -200,9 +200,9 @@ static const uint8_t dosdrvrel_entry_point[] = {
 struct exe_relocation {
     string                              segname;
     fragmentRef                         fragment;
-    unsigned long                       offset;
+    segmentOffset                       offset;
 
-    exe_relocation() : fragment(fragmentRefUndef), offset(0) { }
+    exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
 static vector<struct exe_relocation>    exe_relocation_table;
@@ -572,7 +572,7 @@ void dump_link_relocations(void) {
 
         if (cmdoptions.verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%lu offset=0x%lx\n",
-                i,rel->segname.c_str(),(unsigned long)rel->fragment,rel->offset);
+                i,rel->segname.c_str(),(unsigned long)rel->fragment,(unsigned long)rel->offset);
         }
 
         if (map_fp != NULL) {
@@ -1334,7 +1334,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1361,7 +1361,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
@@ -1399,7 +1399,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                         }
 
                         if (pass == PASS_BUILD) {
@@ -1427,7 +1427,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,reloc->offset);
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                     }
 
                     if (pass == PASS_BUILD) {
