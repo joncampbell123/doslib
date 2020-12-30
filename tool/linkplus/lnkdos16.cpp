@@ -67,10 +67,12 @@ typedef uint32_t                        fileOffset;
 typedef uint32_t                        linearAddress;
 typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
+typedef size_t                          segmentIndex;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
+static const segmentIndex               segmentIndexUndef = ~((segmentIndex)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
 static const segmentOffset              segmentOffsetUndef = ~((segmentOffset)0u);
@@ -276,9 +278,18 @@ void link_symbols_free(void) {
 struct seg_fragment {
     in_fileRef                          in_file;            /* fragment comes from file */
     in_fileModuleRef                    in_module;          /* fragment comes from this module index */
+    segmentIndex                        from_segment_index; /* from which segment (by index) if applicable for the OBJ file (OMF) */
     segmentOffset                       offset;             /* offset in segment */
     segmentSize                         fragment_length;    /* length of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
+
+    seg_fragment() : in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), from_segment_index(segmentIndexUndef),
+                     offset(segmentOffsetUndef), fragment_length(segmentSizeUndef)
+    {
+        memset(&attr,0,sizeof(attr));
+    }
+    seg_fragment(const seg_fragment &o) : in_file(o.in_file), in_module(o.in_module), from_segment_index(o.from_segment_index),
+                                          offset(o.offset), fragment_length(o.fragment_length), attr(o.attr) { }
 };
 
 struct link_segdef {
@@ -550,10 +561,7 @@ void owlink_stack_bss_arrange(void) {
 struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     const size_t idx = sg->fragments.size();
     sg->fragments.resize(idx + (size_t)1);
-    struct seg_fragment *f = &sg->fragments[idx];
-    f->in_module = in_fileModuleRefUndef;
-    f->in_file = in_fileRefUndef;
-    return f;
+    return &sg->fragments[idx];
 }
 
 void free_link_segments(void) {
@@ -1694,6 +1702,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
                 f->in_file = in_file;
                 f->in_module = in_module;
+                f->from_segment_index = first;
                 f->offset = lsg->fragment_load_offset;
                 f->fragment_length = sg->segment_length;
                 f->attr = sg->attr;
