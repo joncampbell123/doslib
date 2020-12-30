@@ -302,7 +302,7 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(byteAlignMask), fragment_load_offset(0), fragment_load_index(0), pinned(0), noemit(0)
+                    initial_alignment(byteAlignMask), fragment_load_offset(segmentOffsetUndef), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
@@ -552,7 +552,6 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     const size_t idx = sg->fragments.size();
     sg->fragments.resize(idx + (size_t)1);
     struct seg_fragment *f = &sg->fragments[idx];
-    sg->fragment_load_index = sg->fragments.size();
     f->in_module = in_fileModuleRefUndef;
     f->in_file = in_fileRefUndef;
     return f;
@@ -1067,8 +1066,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         return 1;
     }
 
-    assert(lsg->fragment_load_index > 0 && lsg->fragment_load_index <= lsg->fragments.size());
-    frag = &lsg->fragments[lsg->fragment_load_index-1];
+    assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index <= lsg->fragments.size());
+    frag = &lsg->fragments[lsg->fragment_load_index];
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
@@ -1266,9 +1265,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
         /* assuming each OBJ/module has only one of each named segment,
          * get the fragment it belongs to */
-        assert(current_link_segment->fragment_load_index > 0);
-        assert(current_link_segment->fragment_load_index <= current_link_segment->fragments.size());
-        frag = &current_link_segment->fragments[current_link_segment->fragment_load_index-1];
+        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+        assert(current_link_segment->fragment_load_index < current_link_segment->fragments.size());
+        frag = &current_link_segment->fragments[current_link_segment->fragment_load_index];
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1346,9 +1345,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragment_load_index > 0);
+                            assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                             reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragment_load_index - 1u;
+                            reloc->fragment = current_link_segment->fragment_load_index;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (cmdoptions.verbose)
@@ -1373,9 +1372,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragment_load_index > 0);
+                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                         reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index - 1u;
+                        reloc->fragment = current_link_segment->fragment_load_index;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (cmdoptions.verbose)
@@ -1411,9 +1410,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragment_load_index > 0);
+                            assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                             reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragment_load_index - 1u;
+                            reloc->fragment = current_link_segment->fragment_load_index;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (cmdoptions.verbose)
@@ -1439,9 +1438,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragment_load_index > 0);
+                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                         reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index - 1u;
+                        reloc->fragment = current_link_segment->fragment_load_index;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (cmdoptions.verbose)
@@ -1635,10 +1634,11 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             if (lsg->fragments.empty())
                 continue;
 
+            lsg->fragment_load_index++;
             assert(lsg->fragment_load_index < lsg->fragments.size());
 
             {
-                struct seg_fragment *f = &lsg->fragments[lsg->fragment_load_index++];
+                struct seg_fragment *f = &lsg->fragments[lsg->fragment_load_index];
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
@@ -1689,6 +1689,9 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                     fprintf(stderr,"Unable to alloc segment fragment\n");
                     return -1;
                 }
+
+                /* current load index is now the fragment just allocated */
+                lsg->fragment_load_index = (fragmentRef)(f - &lsg->fragments[0]);
 
                 f->in_file = in_file;
                 f->in_module = in_module;
@@ -2562,8 +2565,8 @@ int main(int argc,char **argv) {
                     }
 
                     /* reset load base */
-                    sd->fragment_load_index = 0;
-                    sd->fragment_load_offset = 0;
+                    sd->fragment_load_index = fragmentRefUndef;
+                    sd->fragment_load_offset = segmentOffsetUndef;
                 }
             }
 
