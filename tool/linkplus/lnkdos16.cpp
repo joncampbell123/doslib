@@ -80,6 +80,7 @@ static const alignMask                  wordAlignMask = ~((alignMask)1u);
 static const alignMask                  dwordAlignMask = ~((alignMask)3u);
 static const alignMask                  qwordAlignMask = ~((alignMask)7u);
 static const fileOffset                 fileOffsetUndef = ~((fileOffset)0u);
+static const linearAddress              linearAddressUndef = ~((linearAddress)0u);
 
 static inline alignMask alignMaskToValue(const alignMask &v) {
     return (~v) + ((alignMask)1u);
@@ -301,7 +302,7 @@ struct link_segdef {
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
-    link_segdef() : file_offset(fileOffsetUndef), linear_offset(0), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
+    link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
                     initial_alignment(0), segment_len_count(0), load_base(0), fragments_read(0), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
