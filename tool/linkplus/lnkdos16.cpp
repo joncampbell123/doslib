@@ -2186,6 +2186,9 @@ int main(int argc,char **argv) {
                                         if (targseg != NULL && frameseg != NULL) {
                                             entry_seg_ofs = TargetDisplacement;
 
+                                            /* FIXME: This code is assuming the entry point is in the last fragment!
+                                             *        Search ALL fragments according to entry_seg_ofs! */
+
                                             assert(!frameseg->fragments.empty());
                                             entry_seg_link_frame_fragment = frameseg->fragments.size() - 1u;
 
