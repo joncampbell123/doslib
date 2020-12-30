@@ -1602,7 +1602,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         assert(pass == PASS_GATHER);
         assert(!lsg->fragments.empty());
 
-        sym->fragment = lsg->fragments.size() - 1u;
+        sym->fragment = lsg->fragment_load_index;
         sym->offset = pubdef->public_offset;
         sym->groupdef = groupname;
         sym->segdef = segname;
