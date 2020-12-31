@@ -11,12 +11,14 @@ NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE
 TEST_EXE =   $(SUBDIR)$(HPS)test.com
+TEST2_EXE =  $(SUBDIR)$(HPS)test2.com
 DOSLIBLINKER_OFMT = -of com
 !else
 ! ifeq TARGET_MSDOS 32
 # DOSLIB linker cannot handle 32-bit OMF........yet
 ! else
 TEST_EXE =   $(SUBDIR)$(HPS)test.exe
+TEST2_EXE =  $(SUBDIR)$(HPS)test2.exe
 DOSLIBLINKER_OFMT = -of exe
 ! endif
 !endif
@@ -37,7 +39,7 @@ $(DOSLIBLINKER):
 
 all: lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) $(TEST_EXE) $(TESTA2_EXE) $(TESTB_EXE) $(TESTB2_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) .symbolic
 
 lib: .symbolic
 
@@ -50,6 +52,11 @@ WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TEST_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST_EXE).map
+!endif
+
+!ifdef TEST2_EXE
+$(TEST2_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TEST2_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST2_EXE).map
 !endif
 
 clean: .SYMBOLIC
