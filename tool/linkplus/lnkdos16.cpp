@@ -108,6 +108,7 @@ struct cmdoptions {
 
     segmentSize                         want_stack_size;
 
+    segmentBase                         image_base_segment_reloc_adjust;/* segment value to add to relocation entries in order to work with relocation fixup code (COMREL) */
     segmentBase                         image_base_segment;             /* base segment of executable image. For .COM images, this is -0x10 aka 0x...FFF0 */
     segmentOffset                       image_base_offset;              /* base offset, relative to base segment, of executable image */
 
@@ -120,8 +121,8 @@ struct cmdoptions {
 
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), prefer_flat(false),
                    output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
-                   image_base_segment(segmentBaseUndef), image_base_offset(segmentOffsetUndef),
-                   dosdrv_header_symbol("_dosdrv_header") { }
+                   image_base_segment_reloc_adjust(segmentBaseUndef), image_base_segment(segmentBaseUndef),
+                   image_base_offset(segmentOffsetUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
 
 static cmdoptions                       cmdoptions;
@@ -305,6 +306,7 @@ struct link_segdef {
     segmentOffset                       segment_offset;     /* offset within segment in memory (with segment_base added in) */
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
+    segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
     segmentOffset                       fragment_load_offset;/* segment offset of current fragment, used when processing LEDATA and OMF symbols, in both passes */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
@@ -315,13 +317,13 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    initial_alignment(byteAlignMask), fragment_load_offset(segmentOffsetUndef), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
+                    segment_reloc_adj(0), initial_alignment(byteAlignMask), fragment_load_offset(segmentOffsetUndef), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
     link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
-                                        segment_length(o.segment_length), segment_relative(o.segment_relative),
+                                        segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
                                         initial_alignment(o.initial_alignment), fragment_load_offset(o.fragment_load_offset),
                                         fragment_load_index(o.fragment_load_index), image(o.image), fragments(o.fragments),
                                         pinned(o.pinned), noemit(o.noemit) { }
@@ -1474,7 +1476,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         }
 
                         if (pass == PASS_BUILD) {
-                            *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                            *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                         }
                     }
                     else {
@@ -1501,12 +1503,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
 
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                     }
                 }
                 else {
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                     }
                 }
                 break;
@@ -1540,7 +1542,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                         if (pass == PASS_BUILD) {
                             *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                            *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                            *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                         }
                     }
                     else {
@@ -1568,13 +1570,13 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
                     if (pass == PASS_BUILD) {
                         *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                     }
                 }
                 else {
                     if (pass == PASS_BUILD) {
                         *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                     }
                 }
                 break;
@@ -2061,6 +2063,15 @@ int main(int argc,char **argv) {
         }
         else {
             cmdoptions.image_base_segment = 0;
+        }
+    }
+
+    if (cmdoptions.image_base_segment_reloc_adjust == segmentBaseUndef) {
+        if (cmdoptions.output_format_variant == OFMTVAR_COMREL && (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV)) {
+            cmdoptions.image_base_segment_reloc_adjust = -cmdoptions.image_base_segment;
+        }
+        else {
+            cmdoptions.image_base_segment_reloc_adjust = 0;
         }
     }
 
@@ -2611,6 +2622,7 @@ int main(int argc,char **argv) {
 
                     sd->segment_base = cmdoptions.image_base_offset;
                     sd->segment_relative = segrel + cmdoptions.image_base_segment;
+                    sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
                     sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
 
                     if (sd->segment_offset >= 0xFFFFul) {
@@ -2628,6 +2640,7 @@ int main(int argc,char **argv) {
 
                     sd->segment_base = cmdoptions.image_base_offset;
                     sd->segment_relative = cmdoptions.image_base_segment;
+                    sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
                     sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
 
                     if (sd->segment_offset >= 0xFFFFul) {
