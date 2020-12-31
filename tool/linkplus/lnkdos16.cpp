@@ -1458,59 +1458,32 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
-                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
-                        if (pass == PASS_GATHER) {
-                            struct exe_relocation *reloc = new_exe_relocation();
-                            if (reloc == NULL) {
-                                fprintf(stderr,"Unable to allocate relocation\n");
-                                return -1;
-                            }
-
-                            assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                            reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragment_load_index;
-                            reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
-
-                            if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
-                        }
-
-                        if (pass == PASS_BUILD) {
-                            *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                        }
-                    }
-                    else {
+                    if (!(cmdoptions.output_format_variant == OFMTVAR_COMREL)) {
                         fprintf(stderr,"segment base self-relative not supported for .COM\n");
                         return -1;
                     }
                 }
-                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                    /* emit as a relocation */
-                    if (pass == PASS_GATHER) {
-                        struct exe_relocation *reloc = new_exe_relocation();
-                        if (reloc == NULL) {
-                            fprintf(stderr,"Unable to allocate relocation\n");
-                            return -1;
-                        }
 
-                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                        reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index;
-                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
-
-                        if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
+                if (pass == PASS_GATHER) {
+                    struct exe_relocation *reloc = new_exe_relocation();
+                    if (reloc == NULL) {
+                        fprintf(stderr,"Unable to allocate relocation\n");
+                        return -1;
                     }
 
-                    if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                    }
+                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+                    reloc->segname = current_link_segment->name;
+                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
+
+                    if (cmdoptions.verbose)
+                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                 }
-                else {
-                    if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                    }
+
+                if (pass == PASS_BUILD) {
+                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                 }
+
                 break;
             case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET: /* 16-bit segment:offset */
                 if (pass == PASS_BUILD) {
@@ -1523,62 +1496,33 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
-                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
-                        if (pass == PASS_GATHER) {
-                            struct exe_relocation *reloc = new_exe_relocation();
-                            if (reloc == NULL) {
-                                fprintf(stderr,"Unable to allocate relocation\n");
-                                return -1;
-                            }
-
-                            assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                            reloc->segname = current_link_segment->name;
-                            reloc->fragment = current_link_segment->fragment_load_index;
-                            reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
-
-                            if (cmdoptions.verbose)
-                                fprintf(stderr,"COM relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
-                        }
-
-                        if (pass == PASS_BUILD) {
-                            *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                            *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                        }
-                    }
-                    else {
+                    if (!(cmdoptions.output_format_variant == OFMTVAR_COMREL)) {
                         fprintf(stderr,"segment base self-relative not supported for .COM\n");
                         return -1;
                     }
                 }
-                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                    /* emit as a relocation */
-                    if (pass == PASS_GATHER) {
-                        struct exe_relocation *reloc = new_exe_relocation();
-                        if (reloc == NULL) {
-                            fprintf(stderr,"Unable to allocate relocation\n");
-                            return -1;
-                        }
 
-                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                        reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index;
-                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
-
-                        if (cmdoptions.verbose)
-                            fprintf(stderr,"EXE relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
+                if (pass == PASS_GATHER) {
+                    struct exe_relocation *reloc = new_exe_relocation();
+                    if (reloc == NULL) {
+                        fprintf(stderr,"Unable to allocate relocation\n");
+                        return -1;
                     }
 
-                    if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                    }
+                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+                    reloc->segname = current_link_segment->name;
+                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
+
+                    if (cmdoptions.verbose)
+                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                 }
-                else {
-                    if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
-                    }
+
+                if (pass == PASS_BUILD) {
+                    *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                    *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
                 }
+
                 break;
             case OMF_FIXUPP_LOCATION_32BIT_OFFSET: /* 32-bit offset */
                 if (pass == PASS_BUILD) {
