@@ -761,21 +761,6 @@ void dump_link_segments(void) {
     while (i < link_segments.size()) {
         struct link_segdef *sg = &link_segments[i++];
 
-        if (cmdoptions.verbose) {
-            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx align=%lu\n",
-                    i/*post-increment, intentional*/,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),
-                    sg->attr.f.f.use32,
-                    sg->attr.f.f.combination,
-                    sg->attr.f.f.big_segment,
-                    (unsigned long)sg->file_offset,
-                    (unsigned long)sg->linear_offset,
-                    (unsigned long)sg->segment_base,
-                    (unsigned long)sg->segment_offset,
-                    (unsigned long)sg->segment_length,
-                    (unsigned long)sg->segment_relative,
-                    (unsigned long)alignMaskToValue(sg->segment_alignment));
-        }
-
         if (map_fp != NULL) {
             if (sg->segment_length != 0ul) {
                 sprintf(range1,"%08lx-%08lx",
@@ -806,11 +791,6 @@ void dump_link_segments(void) {
 
         for (f=0;f < sg->fragments.size();f++) {
             struct seg_fragment *frag = &sg->fragments[f];
-
-            if (cmdoptions.verbose) {
-                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
-                        f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
-            }
 
             if (map_fp != NULL) {
                 if (frag->fragment_length != 0ul) {
@@ -898,11 +878,6 @@ void dump_link_segment_file_locations(void) {
 
         for (f=0;f < sg->fragments.size();f++) {
             struct seg_fragment *frag = &sg->fragments[f];
-
-            if (cmdoptions.verbose) {
-                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
-                        f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
-            }
 
             if (map_fp != NULL) {
                 if (frag->fragment_length != 0ul) {
