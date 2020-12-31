@@ -1900,7 +1900,7 @@ int segment_exe_arrange(void) {
 
 int fragment_def_arrange(struct link_segdef *sd) {
     segmentOffset ofs = 0;
-    unsigned int fi;
+    size_t fi;
 
     for (fi=0;fi < sd->fragments.size();fi++) {
         struct seg_fragment *frag = &sd->fragments[fi];
@@ -1921,12 +1921,11 @@ int fragment_def_arrange(struct link_segdef *sd) {
     }
 
     sd->segment_length = ofs;
-
     return 0;
 }
 
 int fragment_def_arrange(void) {
-    unsigned int inf;
+    size_t inf;
 
     for (inf=0;inf < link_segments.size();inf++)
         fragment_def_arrange(&link_segments[inf]);
@@ -1936,7 +1935,7 @@ int fragment_def_arrange(void) {
 
 int segment_def_arrange(void) {
     segmentOffset ofs = 0;
-    unsigned int inf;
+    size_t inf;
 
     for (inf=0;inf < link_segments.size();inf++) {
         struct link_segdef *sd = &link_segments[inf];
