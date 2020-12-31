@@ -1124,6 +1124,19 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
     return ret;
 }
 
+fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link_segdef * const sg,const in_fileRef in_file,const in_fileModuleRef in_module,const segmentIndex TargetDatum) {
+    fragmentRef i;
+
+    for (i=0;i < (fragmentRef)sg->fragments.size();i++) {
+        const struct seg_fragment *f = &sg->fragments[i];
+
+        if (f->in_file == in_file && f->in_module == in_module && f->from_segment_index == TargetDatum)
+            return i;
+    }
+
+    return fragmentRefUndef;
+}
+
 struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
@@ -1801,7 +1814,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
                 f->in_file = in_file;
                 f->in_module = in_module;
-                f->from_segment_index = first;
+                f->from_segment_index = first; /* NTS: remember the code above does first++, so this is 1 based, like OMF */
                 f->offset = lsg->fragment_load_offset;
                 f->fragment_length = sg->segment_length;
                 f->attr = sg->attr;
@@ -2310,11 +2323,13 @@ int main(int argc,char **argv) {
                                         if (targseg != NULL && frameseg != NULL) {
                                             entry_seg_ofs = TargetDisplacement;
 
-                                            /* FIXME: This code is assuming the entry point is in the last fragment!
-                                             *        Search ALL fragments according to entry_seg_ofs! */
-
-                                            assert(!targseg->fragments.empty());
-                                            entry_seg_link_target_fragment = targseg->fragments.size() - 1u;
+                                            /* don't blindly assume TargetDisplacement is relative to the whole segment, it's relative to the
+                                             * SEGDEF of the current object/module and we need to locate exactly that! */
+                                            entry_seg_link_target_fragment = find_link_segment_by_file_module_and_segment_index(targseg,current_in_file,current_in_file_module,TargetDatum);
+                                            if (entry_seg_link_target_fragment == fragmentRefUndef) {
+                                                fprintf(stderr,"Unable to locate entry point\n");
+                                                return 1;
+                                            }
 
                                             entry_seg_link_target_name = targetname;
                                             entry_seg_link_target = targseg;
