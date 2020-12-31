@@ -41,8 +41,12 @@ segment _STACK align=4 class=STACK use16
 
     resb    512
 
+section _BSS align=4 class=BSS use32
+
+    resb    64
+
 %ifdef TINYMODE
-group DGROUP _DATA _TEXT _STACK
+group DGROUP _DATA _TEXT _STACK _BSS
 %else
  %if TARGET_MSDOS == 32
 group DGROUP _DATA _STACK
