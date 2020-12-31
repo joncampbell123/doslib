@@ -671,7 +671,7 @@ bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol
     return false;
 }
 
-bool link_segments_qsort_frag_by_fileofs(const struct seg_fragment &sa,const struct seg_fragment &sb) {
+bool link_segments_qsort_frag_by_offset(const struct seg_fragment &sa,const struct seg_fragment &sb) {
     return sa.offset < sb.offset;
 }
 
@@ -1969,6 +1969,52 @@ int segment_def_arrange(void) {
     return 0;
 }
 
+void linkseg_add_padding_fragments(struct link_segdef *sg) {
+    vector<seg_fragment>::iterator scan;
+    vector<seg_fragment> add;
+    segmentOffset expect = 0;
+
+    scan = sg->fragments.begin();
+    if (scan == sg->fragments.end()) return;
+    expect = scan->offset + scan->fragment_length;
+    scan++;
+    while (scan != sg->fragments.end()) {
+        if (expect > scan->offset) {
+            fprintf(stderr,"ERROR: fragment overlap detected\n");
+            break;
+        }
+        if (expect < scan->offset) {
+            const segmentOffset gap = scan->offset - expect;
+            seg_fragment nf;
+
+            nf.in_file = in_fileRefInternal;
+            nf.offset = expect;
+            nf.fragment_length = gap;
+            nf.fragment_alignment = byteAlignMask;
+            nf.attr = scan->attr;
+
+            nf.image.resize(nf.fragment_length);
+
+            if (sg->classname == "CODE")
+                memset(&nf.image[0],0x90/*NOP*/,nf.fragment_length);
+            else
+                memset(&nf.image[0],0x00,nf.fragment_length);
+
+            add.push_back(nf);
+        }
+
+        expect = scan->offset + scan->fragment_length;
+        scan++;
+    }
+
+    if (!add.empty()) {
+        for (scan=add.begin();scan!=add.end();scan++)
+            sg->fragments.push_back(*scan);
+
+        sort(sg->fragments.begin(), sg->fragments.end(), link_segments_qsort_frag_by_offset);
+    }
+}
+
 int main(int argc,char **argv) {
     string hex_output_tmpfile;
     unsigned char diddump = 0;
@@ -2528,8 +2574,10 @@ int main(int argc,char **argv) {
     {
         size_t li;
 
-        for (li=0;li < link_segments.size();li++)
-            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_fileofs);
+        for (li=0;li < link_segments.size();li++) {
+            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_offset);
+            linkseg_add_padding_fragments(&link_segments[li]);
+        }
     }
     assert(!cmdoptions.out_file.empty());
     {
@@ -2542,7 +2590,6 @@ int main(int argc,char **argv) {
         }
 
         {
-            bool seg_code = false,pseg_code = false;
             unsigned int linkseg,fragseg;
             fileOffset cur_offset = 0;
             unsigned char fill[4096];
@@ -2551,8 +2598,6 @@ int main(int argc,char **argv) {
                 struct link_segdef *sd = &link_segments[linkseg];
 
                 if (sd->noemit) continue;
-
-                seg_code = (sd->classname == "CODE");
 
                 assert(sd->file_offset != fileOffsetUndef);
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
@@ -2570,11 +2615,7 @@ int main(int argc,char **argv) {
                             return 1;
                         }
 
-                        if (seg_code && pseg_code)
-                            memset(fill,0x90,sizeof(fill)); /* 0x90 = NOP */
-                        else
-                            memset(fill,0,sizeof(fill));
-
+                        memset(fill,0,sizeof(fill));
                         while (gapsize >= sizeof(fill)) {
                             if (write(fd,fill,sizeof(fill)) != sizeof(fill)) {
                                 fprintf(stderr,"Write error\n");
@@ -2602,7 +2643,6 @@ int main(int argc,char **argv) {
                     }
 
                     cur_offset += frag->fragment_length;
-                    pseg_code = seg_code;
                 }
             }
         }
