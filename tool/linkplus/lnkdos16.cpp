@@ -671,6 +671,14 @@ bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol
     return false;
 }
 
+bool link_segments_qsort_frag_by_fileofs(const struct seg_fragment &sa,const struct seg_fragment &sb) {
+    return sa.offset < sb.offset;
+}
+
+bool link_segments_qsort_by_fileofs(const struct link_segdef &sa,const struct link_segdef &sb) {
+    return sa.file_offset < sb.file_offset;
+}
+
 void dump_hex_symbols(FILE *hfp,const char *symbol_name) {
     unsigned int i;
 
@@ -2519,6 +2527,13 @@ int main(int argc,char **argv) {
     }
 
     /* write output */
+    sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
+    {
+        size_t li;
+
+        for (li=0;li < link_segments.size();li++)
+            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_fileofs);
+    }
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
