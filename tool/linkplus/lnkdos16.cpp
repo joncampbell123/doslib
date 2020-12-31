@@ -2551,9 +2551,10 @@ int main(int argc,char **argv) {
 
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
                     struct seg_fragment *frag = &sd->fragments[fragseg];
+                    fileOffset file_ofs = sd->file_offset+frag->offset;
 
                     assert(sd->file_offset != fileOffsetUndef);
-                    if ((unsigned long)lseek(fd,sd->file_offset+frag->offset,SEEK_SET) != (sd->file_offset+frag->offset)) {
+                    if ((unsigned long)lseek(fd,file_ofs,SEEK_SET) != file_ofs) {
                         fprintf(stderr,"Seek error\n");
                         return 1;
                     }
