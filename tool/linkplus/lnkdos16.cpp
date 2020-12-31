@@ -287,6 +287,8 @@ struct seg_fragment {
     alignMask                           fragment_alignment; /* alignment of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
 
+    vector<unsigned char>               image;              /* in memory image of segment during construction */
+
     seg_fragment() : in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), from_segment_index(segmentIndexUndef),
                      offset(segmentOffsetUndef), fragment_length(segmentSizeUndef), fragment_alignment(byteAlignMask)
     {
@@ -294,7 +296,7 @@ struct seg_fragment {
     }
     seg_fragment(const seg_fragment &o) : in_file(o.in_file), in_module(o.in_module), from_segment_index(o.from_segment_index),
                                           offset(o.offset), fragment_length(o.fragment_length), fragment_alignment(o.fragment_alignment),
-                                          attr(o.attr) { }
+                                          attr(o.attr), image(o.image) { }
 };
 
 struct link_segdef {
@@ -312,7 +314,6 @@ struct link_segdef {
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
     segmentOffset                       fragment_load_offset;/* segment offset of current fragment, used when processing LEDATA and OMF symbols, in both passes */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
-    vector<unsigned char>               image;              /* in memory image of segment during construction */
     vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
 
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
@@ -327,8 +328,8 @@ struct link_segdef {
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
                                         segment_alignment(o.segment_alignment), fragment_load_offset(o.fragment_load_offset),
-                                        fragment_load_index(o.fragment_load_index), image(o.image), fragments(o.fragments),
-                                        pinned(o.pinned), noemit(o.noemit) { }
+                                        fragment_load_index(o.fragment_load_index), fragments(o.fragments), pinned(o.pinned),
+                                        noemit(o.noemit) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -1193,18 +1194,18 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index <= lsg->fragments.size());
     frag = &lsg->fragments[lsg->fragment_load_index];
 
-    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
-    if (lsg->segment_length < max_ofs) {
-        fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",(unsigned long)lsg->segment_length,max_ofs);
+    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
+    if (max_ofs > lsg->segment_length) {
+        fprintf(stderr,"LEDATA out of fragment bounds (len=%lu max=%lu)\n",(unsigned long)lsg->segment_length,max_ofs);
         return 1;
     }
 
     if (pass == PASS_BUILD) {
         assert(info->data != NULL);
-        assert(lsg->image.size() == lsg->segment_length);
+        assert(frag->image.size() == frag->fragment_length);
         assert(max_ofs >= (unsigned long)info->data_length);
         max_ofs -= (unsigned long)info->data_length;
-        memcpy(&lsg->image[max_ofs], info->data, info->data_length);
+        memcpy(&frag->image[max_ofs], info->data, info->data_length);
     }
 
     if (cmdoptions.verbose)
@@ -1389,6 +1390,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
         /* assuming each OBJ/module has only one of each named segment,
          * get the fragment it belongs to */
+        assert(current_link_segment != NULL);
         assert(current_link_segment->fragment_load_index != fragmentRefUndef);
         assert(current_link_segment->fragment_load_index < current_link_segment->fragments.size());
         frag = &current_link_segment->fragments[current_link_segment->fragment_load_index];
@@ -1397,22 +1399,13 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         assert(frag->in_module == in_module);
 
         if (pass == PASS_BUILD) {
-            assert(current_link_segment != NULL);
-            assert(current_link_segment->image.size() == current_link_segment->segment_length);
-            fence = &current_link_segment->image[current_link_segment->segment_length];
+            assert(frag->image.size() == frag->fragment_length);
+            fence = &frag->image[frag->fragment_length];
 
             ptch =  (unsigned long)ent->omf_rec_file_enoffs +
-                (unsigned long)ent->data_record_offset +
-                (unsigned long)frag->offset;
+                    (unsigned long)ent->data_record_offset;
 
-            if (omf_state->flags.verbose)
-                fprintf(stderr,"ptch=0x%lx linear=0x%lx load=0x%lx '%s'\n",
-                        ptch,
-                        (unsigned long)current_link_segment->linear_offset,
-                        ent->omf_rec_file_enoffs + ent->data_record_offset,
-                        current_link_segment->name.c_str());
-
-            ptr = &current_link_segment->image[ptch];
+            ptr = &frag->image[ptch];
             assert(ptr < fence);
         }
         else if (pass == PASS_GATHER) {
@@ -2476,14 +2469,20 @@ int main(int argc,char **argv) {
 
             /* allocate in-memory copy of the segments */
             {
-                unsigned int linkseg;
+                unsigned int linkseg,fragseg;
 
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
-                    if (sd->segment_length != 0 && !sd->noemit) {
-                        sd->image.resize(sd->segment_length);
-                        memset(&sd->image[0],0,sd->segment_length);
+                    if (!sd->noemit) {
+                        for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
+                            struct seg_fragment *frag = &sd->fragments[fragseg];
+
+                            if (frag->fragment_length != 0) {
+                                frag->image.resize(frag->fragment_length);
+                                memset(&frag->image[0],0,frag->fragment_length);
+                            }
+                        }
                     }
 
                     /* reset load base */
@@ -2525,23 +2524,27 @@ int main(int argc,char **argv) {
         }
 
         {
-            unsigned int linkseg;
+            unsigned int linkseg,fragseg;
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                 struct link_segdef *sd = &link_segments[linkseg];
 
-                if (sd->segment_length == 0 || sd->noemit) continue;
+                if (sd->noemit) continue;
 
-                assert(sd->file_offset != fileOffsetUndef);
-                if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
-                    fprintf(stderr,"Seek error\n");
-                    return 1;
-                }
+                for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
+                    struct seg_fragment *frag = &sd->fragments[fragseg];
 
-                assert(sd->image.size() == sd->segment_length);
-                if ((unsigned long)write(fd,&sd->image[0],sd->segment_length) != sd->segment_length) {
-                    fprintf(stderr,"Write error\n");
-                    return 1;
+                    assert(sd->file_offset != fileOffsetUndef);
+                    if ((unsigned long)lseek(fd,sd->file_offset+frag->offset,SEEK_SET) != (sd->file_offset+frag->offset)) {
+                        fprintf(stderr,"Seek error\n");
+                        return 1;
+                    }
+
+                    assert(frag->image.size() == frag->fragment_length);
+                    if ((unsigned long)write(fd,&frag->image[0],frag->fragment_length) != frag->fragment_length) {
+                        fprintf(stderr,"Write error\n");
+                        return 1;
+                    }
                 }
             }
         }
