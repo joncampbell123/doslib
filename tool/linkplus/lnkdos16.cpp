@@ -678,6 +678,10 @@ bool link_segments_qsort_frag_by_offset(const struct seg_fragment &sa,const stru
     return sa.offset < sb.offset;
 }
 
+bool link_segments_qsort_by_linofs(const struct link_segdef &sa,const struct link_segdef &sb) {
+    return sa.linear_offset < sb.linear_offset;
+}
+
 bool link_segments_qsort_by_fileofs(const struct link_segdef &sa,const struct link_segdef &sb) {
     return sa.file_offset < sb.file_offset;
 }
@@ -2403,6 +2407,8 @@ int main(int argc,char **argv) {
             linkseg_add_padding_fragments(&link_segments[li]);
         }
     }
+
+    sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
 
     dump_link_relocations();
     dump_link_symbols();
