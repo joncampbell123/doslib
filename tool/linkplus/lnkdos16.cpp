@@ -2569,12 +2569,18 @@ int main(int argc,char **argv) {
 
                         memset(fill,0,sizeof(fill));
                         while (gapsize >= sizeof(fill)) {
-                            write(fd,fill,sizeof(fill));
+                            if (write(fd,fill,sizeof(fill)) != sizeof(fill)) {
+                                fprintf(stderr,"Write error\n");
+                                return 1;
+                            }
                             cur_offset += sizeof(fill);
                             gapsize -= sizeof(fill);
                         }
                         if (gapsize > (size_t)0) {
-                            write(fd,fill,(size_t)gapsize);
+                            if (write(fd,fill,(size_t)gapsize) != (ssize_t)gapsize) {
+                                fprintf(stderr,"Write error\n");
+                                return 1;
+                            }
                             cur_offset += (size_t)gapsize;
                             gapsize = 0;
                         }
