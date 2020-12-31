@@ -2543,20 +2543,43 @@ int main(int argc,char **argv) {
 
         {
             unsigned int linkseg,fragseg;
+            fileOffset cur_offset = 0;
+            unsigned char fill[4096];
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                 struct link_segdef *sd = &link_segments[linkseg];
 
                 if (sd->noemit) continue;
 
+                assert(sd->file_offset != fileOffsetUndef);
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
                     struct seg_fragment *frag = &sd->fragments[fragseg];
                     fileOffset file_ofs = sd->file_offset+frag->offset;
 
-                    assert(sd->file_offset != fileOffsetUndef);
-                    if ((unsigned long)lseek(fd,file_ofs,SEEK_SET) != file_ofs) {
-                        fprintf(stderr,"Seek error\n");
+                    if (file_ofs < cur_offset) {
+                        fprintf(stderr,"Fragment overlap error\n");
                         return 1;
+                    }
+                    else if (file_ofs > cur_offset) {
+                        fileOffset gapsize = file_ofs - cur_offset;
+                        if (gapsize > (fileOffset)(1024*1024)) {
+                            fprintf(stderr,"Gap is too large (%lu)\n",(unsigned long)gapsize);
+                            return 1;
+                        }
+
+                        memset(fill,0,sizeof(fill));
+                        while (gapsize >= sizeof(fill)) {
+                            write(fd,fill,sizeof(fill));
+                            cur_offset += sizeof(fill);
+                            gapsize -= sizeof(fill);
+                        }
+                        if (gapsize > (size_t)0) {
+                            write(fd,fill,(size_t)gapsize);
+                            cur_offset += (size_t)gapsize;
+                            gapsize = 0;
+                        }
+
+                        assert(cur_offset == file_ofs);
                     }
 
                     assert(frag->image.size() == frag->fragment_length);
@@ -2564,6 +2587,8 @@ int main(int argc,char **argv) {
                         fprintf(stderr,"Write error\n");
                         return 1;
                     }
+
+                    cur_offset += frag->fragment_length;
                 }
             }
         }
