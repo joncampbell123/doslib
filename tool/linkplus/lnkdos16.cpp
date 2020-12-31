@@ -284,15 +284,17 @@ struct seg_fragment {
     segmentIndex                        from_segment_index; /* from which segment (by index) if applicable for the OBJ file (OMF) */
     segmentOffset                       offset;             /* offset in segment */
     segmentSize                         fragment_length;    /* length of fragment */
+    alignMask                           fragment_alignment; /* alignment of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
 
     seg_fragment() : in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), from_segment_index(segmentIndexUndef),
-                     offset(segmentOffsetUndef), fragment_length(segmentSizeUndef)
+                     offset(segmentOffsetUndef), fragment_length(segmentSizeUndef), fragment_alignment(byteAlignMask)
     {
         memset(&attr,0,sizeof(attr));
     }
     seg_fragment(const seg_fragment &o) : in_file(o.in_file), in_module(o.in_module), from_segment_index(o.from_segment_index),
-                                          offset(o.offset), fragment_length(o.fragment_length), attr(o.attr) { }
+                                          offset(o.offset), fragment_length(o.fragment_length), fragment_alignment(o.fragment_alignment),
+                                          attr(o.attr) { }
 };
 
 struct link_segdef {
@@ -307,7 +309,7 @@ struct link_segdef {
     segmentSize                         segment_length;     /* length in bytes */
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
-    alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
+    alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
     segmentOffset                       fragment_load_offset;/* segment offset of current fragment, used when processing LEDATA and OMF symbols, in both passes */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector<unsigned char>               image;              /* in memory image of segment during construction */
@@ -317,14 +319,14 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
 
     link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    segment_reloc_adj(0), initial_alignment(byteAlignMask), fragment_load_offset(segmentOffsetUndef), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
+                    segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_offset(segmentOffsetUndef), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
     {
         memset(&attr,0,sizeof(attr));
     }
     link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
-                                        initial_alignment(o.initial_alignment), fragment_load_offset(o.fragment_load_offset),
+                                        segment_alignment(o.segment_alignment), fragment_load_offset(o.fragment_load_offset),
                                         fragment_load_index(o.fragment_load_index), image(o.image), fragments(o.fragments),
                                         pinned(o.pinned), noemit(o.noemit) { }
 };
@@ -819,7 +821,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
                 symbol_name,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),(unsigned long)sg->segment_length);
 
-        fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu*/\n",
+        fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx align=%lu*/\n",
                 i/*post-increment, intentional*/,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),
                 sg->attr.f.f.use32,
                 sg->attr.f.f.combination,
@@ -830,7 +832,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 (unsigned long)sg->segment_offset,
                 (unsigned long)sg->segment_length,
                 (unsigned long)sg->segment_relative,
-                (unsigned long)alignMaskToValue(sg->initial_alignment));
+                (unsigned long)alignMaskToValue(sg->segment_alignment));
 
         if (sg->segment_length != 0ul) {
             sprintf(range1,"%08lx-%08lx",
@@ -854,7 +856,7 @@ void dump_hex_segments(FILE *hfp,const char *symbol_name) {
                 range1,
                 range2,
                 (unsigned long)sg->segment_base,
-                (unsigned long)alignMaskToValue(sg->initial_alignment),
+                (unsigned long)alignMaskToValue(sg->segment_alignment),
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
 
@@ -906,7 +908,7 @@ void dump_link_segments(void) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (cmdoptions.verbose) {
-            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%lu\n",
+            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx align=%lu\n",
                     i/*post-increment, intentional*/,sg->name.c_str(),sg->classname.c_str(),sg->groupname.c_str(),
                     sg->attr.f.f.use32,
                     sg->attr.f.f.combination,
@@ -917,7 +919,7 @@ void dump_link_segments(void) {
                     (unsigned long)sg->segment_offset,
                     (unsigned long)sg->segment_length,
                     (unsigned long)sg->segment_relative,
-                    (unsigned long)alignMaskToValue(sg->initial_alignment));
+                    (unsigned long)alignMaskToValue(sg->segment_alignment));
         }
 
         if (map_fp != NULL) {
@@ -943,7 +945,7 @@ void dump_link_segments(void) {
                 range1,
                 range2,
                 (unsigned long)sg->segment_base,
-                (unsigned long)alignMaskToValue(sg->initial_alignment),
+                (unsigned long)alignMaskToValue(sg->segment_alignment),
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
         }
@@ -985,7 +987,8 @@ void dump_link_segments(void) {
                                 frag->in_module);
                     }
 
-                    fprintf(map_fp,"\n");
+                    fprintf(map_fp," align=%lu\n",
+                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
                 }
             }
         }
@@ -1036,7 +1039,7 @@ void dump_link_segment_file_locations(void) {
                 range1,
                 range2,
                 (unsigned long)sg->segment_base,
-                (unsigned long)alignMaskToValue(sg->initial_alignment),
+                (unsigned long)alignMaskToValue(sg->segment_alignment),
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "");
         }
@@ -1082,7 +1085,8 @@ void dump_link_segment_file_locations(void) {
                                 frag->in_module);
                     }
 
-                    fprintf(map_fp,"\n");
+                    fprintf(map_fp," align=%lu\n",
+                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
                 }
             }
         }
@@ -1719,7 +1723,9 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 if (cmdoptions.verbose)
                     fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
-                lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
+                /* the larger of the two alignments takes effect */
+                lsg->segment_alignment &= alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
+
                 if (lsg->attr.f.f.combination != sg->attr.f.f.combination ||
                     lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
                     fprintf(stderr,"ERROR, segment attribute changed\n");
@@ -1738,12 +1744,12 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
                 lsg->attr = sg->attr;
                 lsg->classname = classname;
-                lsg->initial_alignment = alignValueToAlignMask(omf_align_code_to_bytes(lsg->attr.f.f.alignment));
+                lsg->segment_alignment = alignValueToAlignMask(omf_align_code_to_bytes(lsg->attr.f.f.alignment));
             }
 
             /* alignment */
-            alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
-            malign = lsg->segment_length % (unsigned long)alignb;
+            alignb = alignMaskToValue(lsg->segment_alignment);
+            malign = lsg->segment_length % alignb;
             if (malign != 0) lsg->segment_length += alignb - malign;
             lsg->fragment_load_offset = lsg->segment_length;
             lsg->segment_length += sg->segment_length;
@@ -1763,6 +1769,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 f->from_segment_index = first; /* NTS: remember the code above does first++, so this is 1 based, like OMF */
                 f->offset = lsg->fragment_load_offset;
                 f->fragment_length = sg->segment_length;
+                f->fragment_alignment = alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
                 f->attr = sg->attr;
             }
 
@@ -1858,8 +1865,8 @@ int segment_def_arrange(void) {
          *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
          *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
          *      and so on */
-        if (ofs & (unsigned long)sd->initial_alignment)
-            ofs = (ofs + (~sd->initial_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)sd->initial_alignment;
+        if (ofs & (unsigned long)sd->segment_alignment)
+            ofs = (ofs + (~sd->segment_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)sd->segment_alignment;
 
         if (cmdoptions.verbose)
             fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
@@ -2045,7 +2052,7 @@ int main(int argc,char **argv) {
         if (sg == NULL) return 1;
 
         sg->classname = strdup("CODE");
-        sg->initial_alignment = alignValueToAlignMask(1);
+        sg->segment_alignment = alignValueToAlignMask(1);
         sg->pinned = 1;
     }
 
@@ -2417,7 +2424,7 @@ int main(int argc,char **argv) {
                             return 1;
                         }
 
-                        sg->initial_alignment = alignValueToAlignMask(1);
+                        sg->segment_alignment = alignValueToAlignMask(1);
                         sg->classname = strdup("CODE");
                     }
 
