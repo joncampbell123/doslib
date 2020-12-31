@@ -2553,6 +2553,16 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* add padding fragments where needed */
+    {
+        size_t li;
+
+        for (li=0;li < link_segments.size();li++) {
+            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_offset);
+            linkseg_add_padding_fragments(&link_segments[li]);
+        }
+    }
+
     dump_link_relocations();
     dump_link_symbols();
     dump_link_segments();
@@ -2574,14 +2584,6 @@ int main(int argc,char **argv) {
 
     /* write output */
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
-    {
-        size_t li;
-
-        for (li=0;li < link_segments.size();li++) {
-            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_offset);
-            linkseg_add_padding_fragments(&link_segments[li]);
-        }
-    }
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
