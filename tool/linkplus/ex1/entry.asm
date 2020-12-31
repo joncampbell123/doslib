@@ -39,6 +39,8 @@ _msg:
 
 segment _STACK align=4 class=STACK use16
 
+    resb    512
+
 %ifdef TINYMODE
 group DGROUP _DATA _TEXT _STACK
 %else

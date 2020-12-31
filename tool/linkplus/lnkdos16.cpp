@@ -2356,8 +2356,10 @@ int main(int argc,char **argv) {
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
             struct link_segdef *sd = &link_segments[linkseg];
 
-            sd->file_offset = sd->linear_offset;
-            offset += sd->segment_length;
+            if (!sd->noemit) {
+                sd->file_offset = sd->linear_offset;
+                offset += sd->segment_length;
+            }
         }
     }
 
