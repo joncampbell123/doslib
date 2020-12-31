@@ -59,7 +59,7 @@ enum {
 typedef size_t                          in_fileRef;             /* index into in_file */
 typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
 typedef uint32_t                        segmentSize;            /* segment size */
-typedef uint32_t                        segmentBase;            /* segment base */
+typedef uint32_t                        segmentBase;            /* segment base value */
 typedef uint32_t                        segmentOffset;          /* offset from segment */
 typedef uint32_t                        segmentRelative;        /* segment relative to base */
 typedef uint32_t                        alignMask;              /* alignment mask for data alignment. ~0u (all 1s) means byte alignment. Must be inverse of power of 2 */
@@ -108,8 +108,8 @@ struct cmdoptions {
 
     segmentSize                         want_stack_size;
 
-/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
-    segmentBase                         com_segbase;
+    segmentBase                         image_base_segment;             /* base segment of executable image. For .COM images, this is -0x10 aka 0x...FFF0 */
+    segmentOffset                       image_base_offset;              /* base offset, relative to base segment, of executable image */
 
     string                              dosdrv_header_symbol;
     string                              hex_output;
@@ -120,7 +120,8 @@ struct cmdoptions {
 
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), prefer_flat(false),
                    output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
-                   com_segbase(segmentBaseUndef), dosdrv_header_symbol("_dosdrv_header") { }
+                   image_base_segment(segmentBaseUndef), image_base_offset(segmentOffsetUndef),
+                   dosdrv_header_symbol("_dosdrv_header") { }
 };
 
 static cmdoptions                       cmdoptions;
@@ -300,10 +301,10 @@ struct link_segdef {
     string                              groupname;          /* group of segment */
     fileOffset                          file_offset;        /* file offset chosen to write segment, undef if not yet chosen */
     linearAddress                       linear_offset;      /* linear offset in memory relative to image base [*2] */
-    segmentBase                         segment_base;       /* base offset in memory of segment (for example, 100h for .COM, 0h for .EXE) [*3] */
+    segmentOffset                       segment_base;       /* base offset in memory of segment (for example, 100h for .COM, 0h for .EXE) [*3] */
     segmentOffset                       segment_offset;     /* offset within segment in memory (with segment_base added in) */
     segmentSize                         segment_length;     /* length in bytes */
-    segmentRelative                     segment_relative;   /* segment number relative to image base in memory [*1] */
+    segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     alignMask                           initial_alignment;  /* alignment (at least the initial alignment) of segment. This is a bitmask. */
     segmentOffset                       fragment_load_offset;/* segment offset of current fragment, used when processing LEDATA and OMF symbols, in both passes */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
@@ -326,9 +327,10 @@ struct link_segdef {
                                         pinned(o.pinned), noemit(o.noemit) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
- *            are in memory because of the nature of 16-bit real mode. In protected mode, this is just a segment index
- *            because the OS or loader determines what protected mode selectors we get. In flat (non-segmented) modes,
- *            segment_relative has no meaning. */
+ *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
+ *            segment offset (0 for EXE, -0x10 for COM). In protected mode, this is just a segment index because the OS or
+ *            loader determines what protected mode selectors we get. In flat (non-segmented) modes, segment_relative has
+ *            no meaning. */
 /* NOTE [*2]: linear_offset is used in 16-bit real mode to compute the byte offset from the image base (as if segmentation
  *            did not exist) and is used to compute segment_relative in some parts of this code. linear_offset has no
  *            meaning in segmented protected mode. In flat protected mode linear_offset will generally match segment_offset
@@ -342,7 +344,7 @@ struct link_segdef {
  *            that due to 16-bit segmented wraparound, start execution with CS pointing at the PSP segment and the
  *            instruction pointer at the first byte at CS:0x100). All segment_offset values are calculated with segment_base
  *            added in, to simplify the code. That means you can't just change segment_base on a whim. Separate segment_base
- *            per segdef allows different segments to operate differently, though currently all have the same com_segbase
+ *            per segdef allows different segments to operate differently, though currently all have the same image_base_offset
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
 
 static vector<struct link_segdef>       link_segments;
@@ -1955,7 +1957,7 @@ int main(int argc,char **argv) {
             else if (!strncmp(a,"com",3)) {
                 a += 3;
                 if (!isxdigit(*a)) return 1;
-                cmdoptions.com_segbase = strtoul(a,NULL,16);
+                cmdoptions.image_base_offset = strtoul(a,NULL,16);
             }
             else if (!strcmp(a,"hex")) {
                 a = argv[i++];
@@ -2023,12 +2025,26 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (cmdoptions.com_segbase == segmentBaseUndef) {
+    if (cmdoptions.image_base_offset == segmentOffsetUndef) {
         if (cmdoptions.output_format == OFMT_COM) {
-            cmdoptions.com_segbase = 0x100;
+            cmdoptions.image_base_offset = 0x100;
         }
         else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-            cmdoptions.com_segbase = 0;
+            cmdoptions.image_base_offset = 0;
+        }
+    }
+
+    if (cmdoptions.image_base_segment == segmentBaseUndef) {
+        if (cmdoptions.output_format == OFMT_COM) {
+            if (cmdoptions.image_base_offset & 0xFul) {
+                fprintf(stderr,"ERROR: image base offset not a multiple of 16, COM output, and unspecified image base segment\n");
+                return 1;
+            }
+
+            cmdoptions.image_base_segment = (segmentBase)(-(cmdoptions.image_base_offset >> (segmentOffset)4ul));
+        }
+        else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+            cmdoptions.image_base_segment = 0;
         }
     }
 
@@ -2572,12 +2588,12 @@ int main(int argc,char **argv) {
                     else
                         segrel = sd->linear_offset >> 4ul;
 
-                    if (cmdoptions.prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.com_segbase))
+                    if (cmdoptions.prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.image_base_offset))
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
-                    sd->segment_base = cmdoptions.com_segbase;
-                    sd->segment_relative = segrel - (cmdoptions.com_segbase >> 4ul);
-                    sd->segment_offset = cmdoptions.com_segbase + sd->linear_offset - (segrel << 4ul);
+                    sd->segment_base = cmdoptions.image_base_offset;
+                    sd->segment_relative = segrel + cmdoptions.image_base_segment;
+                    sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
 
                     if (sd->segment_offset >= 0xFFFFul) {
                         dump_link_segments();
@@ -2592,9 +2608,9 @@ int main(int argc,char **argv) {
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
                     struct link_segdef *sd = &link_segments[linkseg];
 
-                    sd->segment_relative = 0;
-                    sd->segment_base = cmdoptions.com_segbase;
-                    sd->segment_offset = cmdoptions.com_segbase + sd->linear_offset;
+                    sd->segment_base = cmdoptions.image_base_offset;
+                    sd->segment_relative = cmdoptions.image_base_segment;
+                    sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
 
                     if (sd->segment_offset >= 0xFFFFul) {
                         dump_link_segments();
@@ -2699,7 +2715,7 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                assert(sg->segment_relative == 0);
+                assert(sg->segment_relative == cmdoptions.image_base_segment);
 
                 assert(!sg->fragments.empty());
                 frag = &sg->fragments[sg->fragments.size()-1]; // should be the last one
@@ -2709,7 +2725,7 @@ int main(int argc,char **argv) {
                     assert(!tsg->fragments.empty());
                     tfrag = &tsg->fragments[tsg->fragments.size()-1]; // should be the last one
 
-                    assert(tsg->segment_relative == 0);
+                    assert(tsg->segment_relative == cmdoptions.image_base_segment);
                 }
                 else {
                     tfrag = NULL;
@@ -2793,7 +2809,7 @@ int main(int argc,char **argv) {
                             assert(rel->fragment < lsg->fragments.size());
                             frag = &lsg->fragments[rel->fragment];
 
-                            roff = rel->offset + lsg->linear_offset + frag->offset + cmdoptions.com_segbase;
+                            roff = rel->offset + lsg->linear_offset + frag->offset + cmdoptions.image_base_offset;
 
                             if (roff >= (0xFF00u - (exe_relocation_table.size() * (size_t)2u))) {
                                 fprintf(stderr,"COM relocation entry is non-representable\n");
@@ -2925,11 +2941,11 @@ int main(int argc,char **argv) {
             assert(sg->image.size() == sg->segment_length);
             assert(sg->segment_length >= com_entry_insert);
 
-            if (sg->segment_relative != 0) {
+            if (sg->segment_relative != cmdoptions.image_base_segment) {
                 fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",(unsigned long)sg->segment_relative);
                 return 1;
             }
-            if (sg->segment_base != cmdoptions.com_segbase) {
+            if (sg->segment_base != cmdoptions.image_base_offset) {
                 fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",(unsigned long)sg->segment_base);
                 return 1;
             }
