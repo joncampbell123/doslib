@@ -1899,7 +1899,7 @@ int segment_exe_arrange(void) {
 }
 
 int fragment_def_arrange(struct link_segdef *sd) {
-    unsigned long ofs = 0;
+    segmentOffset ofs = 0;
     unsigned int fi;
 
     for (fi=0;fi < sd->fragments.size();fi++) {
@@ -1910,8 +1910,11 @@ int fragment_def_arrange(struct link_segdef *sd) {
          *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
          *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
          *      and so on */
-        if (ofs & (unsigned long)frag->fragment_alignment)
-            ofs = (ofs + (~frag->fragment_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)frag->fragment_alignment;
+        if (ofs & frag->fragment_alignment)
+            ofs = (ofs + (~frag->fragment_alignment)/*~mask == byte alignment - 1*/) & frag->fragment_alignment;
+
+        /* make sure fragment aligns to segment too */
+        assert((ofs & (~sd->segment_alignment)) == 0);
 
         frag->offset = ofs;
         ofs += frag->fragment_length;
@@ -1932,7 +1935,7 @@ int fragment_def_arrange(void) {
 }
 
 int segment_def_arrange(void) {
-    unsigned long ofs = 0;
+    segmentOffset ofs = 0;
     unsigned int inf;
 
     for (inf=0;inf < link_segments.size();inf++) {
@@ -1943,12 +1946,8 @@ int segment_def_arrange(void) {
          *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
          *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
          *      and so on */
-        if (ofs & (unsigned long)sd->segment_alignment)
-            ofs = (ofs + (~sd->segment_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)sd->segment_alignment;
-
-        if (cmdoptions.verbose)
-            fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
-                    inf,ofs,(unsigned long)sd->segment_length);
+        if (ofs & sd->segment_alignment)
+            ofs = (ofs + (~sd->segment_alignment)/*~mask == byte alignment - 1*/) & sd->segment_alignment;
 
         if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
             cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
