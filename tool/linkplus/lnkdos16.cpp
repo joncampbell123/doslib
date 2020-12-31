@@ -804,46 +804,44 @@ void dump_link_segments(void) {
                 sg->noemit ? " NOEMIT" : "");
         }
 
-        {
-            for (f=0;f < sg->fragments.size();f++) {
-                struct seg_fragment *frag = &sg->fragments[f];
+        for (f=0;f < sg->fragments.size();f++) {
+            struct seg_fragment *frag = &sg->fragments[f];
 
-                if (cmdoptions.verbose) {
-                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
-                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
-                }
+            if (cmdoptions.verbose) {
+                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
+                        f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
+            }
 
-                if (map_fp != NULL) {
-                    if (frag->fragment_length != 0ul) {
-                        sprintf(range1,"%08lx-%08lx",
+            if (map_fp != NULL) {
+                if (frag->fragment_length != 0ul) {
+                    sprintf(range1,"%08lx-%08lx",
                             (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
-                        sprintf(range2,"0x%08lx-0x%08lx",
+                    sprintf(range2,"0x%08lx-0x%08lx",
                             (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
-                    }
-                    else {
-                        strcpy(range1,"-----------------");
-                        strcpy(range2,"---------------------");
-                    }
-
-                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
-                            frag->attr.f.f.use32?32:16,
-                            "",
-                            "",
-                            "",
-                            range1,
-                            range2,
-                            get_in_file(frag->in_file));
-
-                    if (frag->in_module != in_fileModuleRefUndef) {
-                        fprintf(map_fp,":%u",
-                                frag->in_module);
-                    }
-
-                    fprintf(map_fp," align=%lu\n",
-                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
                 }
+                else {
+                    strcpy(range1,"-----------------");
+                    strcpy(range2,"---------------------");
+                }
+
+                fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
+                        frag->attr.f.f.use32?32:16,
+                        "",
+                        "",
+                        "",
+                        range1,
+                        range2,
+                        get_in_file(frag->in_file));
+
+                if (frag->in_module != in_fileModuleRefUndef) {
+                    fprintf(map_fp,":%u",
+                            frag->in_module);
+                }
+
+                fprintf(map_fp," align=%lu\n",
+                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
             }
         }
     }
@@ -898,50 +896,48 @@ void dump_link_segment_file_locations(void) {
                 sg->noemit ? " NOEMIT" : "");
         }
 
-        {
-            for (f=0;f < sg->fragments.size();f++) {
-                struct seg_fragment *frag = &sg->fragments[f];
+        for (f=0;f < sg->fragments.size();f++) {
+            struct seg_fragment *frag = &sg->fragments[f];
 
-                if (cmdoptions.verbose) {
-                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
-                            f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
-                }
+            if (cmdoptions.verbose) {
+                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
+                        f,get_in_file(frag->in_file),frag->in_module,(unsigned long)frag->offset,(unsigned long)frag->fragment_length);
+            }
 
-                if (map_fp != NULL) {
-                    if (frag->fragment_length != 0ul) {
-                        sprintf(range1,"%08lx-%08lx",
+            if (map_fp != NULL) {
+                if (frag->fragment_length != 0ul) {
+                    sprintf(range1,"%08lx-%08lx",
                             (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
-                    }
-                    else {
-                        strcpy(range1,"-----------------");
-                    }
-                    if (frag->fragment_length != 0ul && sg->file_offset != fileOffsetUndef) {
-                        sprintf(range2,"0x%08lx-0x%08lx",
+                }
+                else {
+                    strcpy(range1,"-----------------");
+                }
+                if (frag->fragment_length != 0ul && sg->file_offset != fileOffsetUndef) {
+                    sprintf(range2,"0x%08lx-0x%08lx",
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
-                    }
-                    else {
-                        strcpy(range2,"---------------------");
-                    }
-
-                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
-                            frag->attr.f.f.use32?32:16,
-                            "",
-                            "",
-                            "",
-                            range1,
-                            range2,
-                            get_in_file(frag->in_file));
-
-                    if (frag->in_module != in_fileModuleRefUndef) {
-                        fprintf(map_fp,":%u",
-                                frag->in_module);
-                    }
-
-                    fprintf(map_fp," align=%lu\n",
-                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
                 }
+                else {
+                    strcpy(range2,"---------------------");
+                }
+
+                fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
+                        frag->attr.f.f.use32?32:16,
+                        "",
+                        "",
+                        "",
+                        range1,
+                        range2,
+                        get_in_file(frag->in_file));
+
+                if (frag->in_module != in_fileModuleRefUndef) {
+                    fprintf(map_fp,":%u",
+                            frag->in_module);
+                }
+
+                fprintf(map_fp," align=%lu\n",
+                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
             }
         }
     }
