@@ -360,7 +360,6 @@ static string                           entry_seg_link_target_name;
 static struct link_segdef*              entry_seg_link_target = NULL;
 static string                           entry_seg_link_frame_name;
 static struct link_segdef*              entry_seg_link_frame = NULL;
-static unsigned char                    com_entry_insert = 0;
 static segmentOffset                    entry_seg_ofs = 0;
 
 /* Open Watcom DOSSEG linker order
@@ -1853,6 +1852,85 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
         printf("----END-----\n");
 }
 
+int trim_noemit() {
+    /* decide where the segments end up in the executable */
+    unsigned int linkseg;
+
+    for (linkseg=link_segments.size();linkseg > 0;) {
+        struct link_segdef *sd = &link_segments[--linkseg];
+        if (!sd->noemit) break;
+    }
+
+    for (;linkseg > 0;) {
+        struct link_segdef *sd = &link_segments[--linkseg];
+
+        if (sd->noemit) {
+            fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",sd->name.c_str());
+
+            if (map_fp != NULL)
+                fprintf(map_fp,"* Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",sd->name.c_str());
+
+            sd->noemit = 0;
+        }
+    }
+
+    return 0;
+}
+
+int segment_exe_arrange(void) {
+    if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        unsigned long segrel = 0;
+        unsigned int linkseg;
+
+        for (linkseg=0;linkseg < link_segments.size();linkseg++) {
+            struct link_segdef *sd = &link_segments[linkseg];
+            struct link_segdef *gd = find_link_segment_by_grpdef(sd->groupname.c_str());
+            struct link_segdef *cd = find_link_segment_by_class(sd->classname.c_str());
+
+            if (gd != NULL)
+                segrel = gd->linear_offset >> 4ul;
+            else if (cd != NULL)
+                segrel = cd->linear_offset >> 4ul;
+            else
+                segrel = sd->linear_offset >> 4ul;
+
+            if (cmdoptions.prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.image_base_offset))
+                segrel = 0; /* user prefers flat .COM memory model, where possible */
+
+            sd->segment_base = cmdoptions.image_base_offset;
+            sd->segment_relative = segrel + cmdoptions.image_base_segment;
+            sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+            sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
+
+            if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
+                dump_link_segments();
+                fprintf(stderr,"EXE: segment offset out of range\n");
+                return -1;
+            }
+        }
+    }
+    else if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
+        unsigned int linkseg;
+
+        for (linkseg=0;linkseg < link_segments.size();linkseg++) {
+            struct link_segdef *sd = &link_segments[linkseg];
+
+            sd->segment_base = cmdoptions.image_base_offset;
+            sd->segment_relative = cmdoptions.image_base_segment;
+            sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+            sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
+
+            if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
+                dump_link_segments();
+                fprintf(stderr,"COM: segment offset out of range\n");
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 int segment_def_arrange(void) {
     unsigned long ofs = 0;
     unsigned int inf;
@@ -2040,20 +2118,6 @@ int main(int argc,char **argv) {
     if (cmdoptions.out_file.empty()) {
         help();
         return 1;
-    }
-
-    if (cmdoptions.output_format == OFMT_COM) {
-        struct link_segdef *sg;
-
-        sg = find_link_segment("__COM_ENTRY_JMP");
-        if (sg != NULL) return 1;
-
-        sg = new_link_segment("__COM_ENTRY_JMP");
-        if (sg == NULL) return 1;
-
-        sg->classname = strdup("CODE");
-        sg->segment_alignment = alignValueToAlignMask(1);
-        sg->pinned = 1;
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
@@ -2333,8 +2397,6 @@ int main(int argc,char **argv) {
         }
 
         if (pass == PASS_GATHER) {
-            unsigned long file_baseofs = 0;
-
             if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                 struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
 
@@ -2404,256 +2466,13 @@ int main(int argc,char **argv) {
                 }
             }
 
-            /* put segments in order, linear offset */
-            {
-                /* COMREL relocation + patch code */
-                if ((cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) &&
-                    cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                    /* make a new segment attached to the end, containing the relocation
-                     * table and the patch up code, which becomes the new entry point. */
-                    struct seg_fragment *tfrag;
-                    struct seg_fragment *frag;
-                    struct link_segdef *tsg;
-                    struct link_segdef *sg;
-
-                    sg = find_link_segment("__COMREL_RELOC");
-                    if (sg == NULL) {
-                        sg = new_link_segment("__COMREL_RELOC");
-                        if (sg == NULL) {
-                            fprintf(stderr,"Cannot allocate COMREL relocation segment\n");
-                            return 1;
-                        }
-
-                        sg->segment_alignment = alignValueToAlignMask(1);
-                        sg->classname = strdup("CODE");
-                    }
-
-                    /* __COMREL_RELOC cannot be a 32-bit segment */
-                    if (sg->attr.f.f.use32) {
-                        fprintf(stderr,"__COMREL_RELOC cannot be a 32-bit segment\n");
-                        return 1;
-                    }
-
-                    tsg = find_link_segment("__COMREL_RELOCTBL");
-
-                    frag = alloc_link_segment_fragment(sg);
-                    if (frag == NULL) {
-                        return 1;
-                    }
-                    frag->offset = sg->segment_length;
-                    frag->in_file = in_fileRefInternal;
-                    frag->attr = sg->attr;
-
-                    if (tsg != NULL) {
-                        tfrag = alloc_link_segment_fragment(tsg);
-                        if (tfrag == NULL) {
-                            return 1;
-                        }
-                        tfrag->offset = tsg->segment_length;
-                        tfrag->in_file = in_fileRefInternal;
-                        tfrag->attr = tsg->attr;
-                    }
-                    else {
-                        tsg = sg;
-                        tfrag = frag;
-                    }
-
-                    tsg->segment_length += exe_relocation_table.size() * (size_t)2;
-
-                    if (cmdoptions.output_format == OFMT_DOSDRV)
-                        sg->segment_length += sizeof(dosdrvrel_entry_point);
-                    else
-                        sg->segment_length += sizeof(comrel_entry_point);
-
-                    frag->fragment_length = sg->segment_length - frag->offset;
-                    if (tfrag != frag)
-                        tfrag->fragment_length = tsg->segment_length - tfrag->offset;
-                }
-
-                /* .COM format: if the entry point is nonzero, a JMP instruction
-                 * must be inserted at the start to JMP to the entry point */
-                if (cmdoptions.output_format == OFMT_DOSDRV) {
-                }
-                else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                    /* EXE */
-                    /* TODO: relocation table */
-                    file_baseofs = 32;
-                }
-
-                owlink_stack_bss_arrange();
-
-                if (segment_def_arrange())
-                    return 1;
-
-                if (cmdoptions.output_format == OFMT_COM) {
-                    struct link_segdef *sg;
-
-                    sg = find_link_segment("__COM_ENTRY_JMP");
-                    assert(sg != NULL);
-                    assert(sg->segment_length == 0);
-
-                    /* COM relocatable */
-                    if (cmdoptions.output_format_variant == OFMTVAR_COMREL) {
-                        /* always make room */
-                        com_entry_insert = 3;
-                        sg->segment_length = com_entry_insert;
-
-                        if (cmdoptions.verbose)
-                            fprintf(stderr,"Entry point needed for relocateable .COM\n");
-                    }
-                    /* COM */
-                    else if (entry_seg_link_target != NULL) {
-                        struct seg_fragment *frag;
-                        segmentOffset io;
-
-                        assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                        frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                        io = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
-
-                        if (io != 0) {
-                            fprintf(stderr,"Entry point is not start of executable, required by .COM format.\n");
-                            fprintf(stderr,"Adding JMP instruction to compensate.\n");
-
-                            if (io >= 0x82) /* too far for 2-byte JMP */
-                                com_entry_insert = 3;
-                            else
-                                com_entry_insert = 2;
-
-                            sg->segment_length = com_entry_insert;
-                        }
-                    }
-
-                    {
-                        struct seg_fragment *frag = alloc_link_segment_fragment(sg);
-                        if (frag == NULL) return 1;
-
-                        frag->offset = 0;
-                        frag->fragment_length = sg->segment_length;
-                        frag->in_file = in_fileRefInternal;
-                        frag->attr = sg->attr;
-
-                        if (sg->segment_length > 0) {
-                            struct link_symbol *sym;
-
-                            sym = new_link_symbol("__COM_ENTRY_JMP_INS");
-                            if (sym == NULL) return 1;
-                            sym->offset = 0;
-                            sym->in_file = in_fileRefInternal;
-                            sym->fragment = (int)(frag - &sg->fragments[0]);
-                            sym->segdef = "__COM_ENTRY_JMP";
-                        }
-                    }
-
-                    if (segment_def_arrange())
-                        return 1;
-                }
-            }
-
-            /* if a .COM executable, then all segments are arranged so that the first byte
-             * is at 0x100 */
-            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                unsigned long segrel = 0;
-                unsigned int linkseg;
-
-                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = &link_segments[linkseg];
-                    struct link_segdef *gd = find_link_segment_by_grpdef(sd->groupname.c_str());
-                    struct link_segdef *cd = find_link_segment_by_class(sd->classname.c_str());
-
-                    if (gd != NULL)
-                        segrel = gd->linear_offset >> 4ul;
-                    else if (cd != NULL)
-                        segrel = cd->linear_offset >> 4ul;
-                    else
-                        segrel = sd->linear_offset >> 4ul;
-
-                    if (cmdoptions.prefer_flat && sd->linear_offset < (0xFFFFul - cmdoptions.image_base_offset))
-                        segrel = 0; /* user prefers flat .COM memory model, where possible */
-
-                    sd->segment_base = cmdoptions.image_base_offset;
-                    sd->segment_relative = segrel + cmdoptions.image_base_segment;
-                    sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
-                    sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
-
-                    if (sd->segment_offset >= 0xFFFFul) {
-                        dump_link_segments();
-                        fprintf(stderr,"EXE: segment offset out of range\n");
-                        return -1;
-                    }
-                }
-            }
-            else if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) {
-                unsigned int linkseg;
-
-                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = &link_segments[linkseg];
-
-                    sd->segment_base = cmdoptions.image_base_offset;
-                    sd->segment_relative = cmdoptions.image_base_segment;
-                    sd->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
-                    sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
-
-                    if (sd->segment_offset >= 0xFFFFul) {
-                        dump_link_segments();
-                        fprintf(stderr,"COM: segment offset out of range\n");
-                        return -1;
-                    }
-                }
-            }
-            else {
-                abort();
-            }
-
-            /* decide where the segments end up in the executable */
-            {
-                unsigned long ofs = 0;
-                unsigned int linkseg;
-
-                if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                    /* TODO: EXE header */
-                }
-
-                for (linkseg=link_segments.size();linkseg > 0;) {
-                    struct link_segdef *sd = &link_segments[--linkseg];
-
-                    if (!sd->noemit) break;
-                }
-
-                for (;linkseg > 0;) {
-                    struct link_segdef *sd = &link_segments[--linkseg];
-
-                    if (sd->noemit) {
-                        fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
-                            sd->name.c_str());
-
-                        if (map_fp != NULL)
-                            fprintf(map_fp,"* Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
-                                sd->name.c_str());
-
-                        sd->noemit = 0;
-                    }
-                }
-
-                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = &link_segments[linkseg];
-
-                    if (sd->noemit) break;
-
-                    ofs = sd->linear_offset + file_baseofs;
-
-                    sd->file_offset = ofs;
-
-                    /* NTS: for EXE files, sd->file_offset will be adjusted further downward for relocation tables.
-                     *      in fact, maybe computing file offset at this phase was a bad idea... :( */
-                }
-
-                for (;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = &link_segments[linkseg];
-
-                    assert(sd->noemit != 0);
-                }
-            }
+            owlink_stack_bss_arrange();
+            if (trim_noemit())
+                return 1;
+            if (segment_def_arrange())
+                return 1;
+            if (segment_exe_arrange())
+                return 1;
 
             /* allocate in-memory copy of the segments */
             {
@@ -2672,294 +2491,6 @@ int main(int argc,char **argv) {
                     sd->fragment_load_offset = segmentOffsetUndef;
                 }
             }
-
-            /* COMREL relocation + patch code */
-            if ((cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_DOSDRV) &&
-                cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                /* make a new segment attached to the end, containing the relocation
-                 * table and the patch up code, which becomes the new entry point. */
-                struct link_segdef *sg;
-                struct link_symbol *sym;
-                struct seg_fragment *frag;
-
-                struct link_segdef *tsg;
-                struct seg_fragment *tfrag;
-
-                sg = find_link_segment("__COMREL_RELOC");
-                if (sg == NULL) {
-                    fprintf(stderr,"COMREL relocation segment missing\n");
-                    return 1;
-                }
-
-                /* __COMREL_RELOC cannot be a 32-bit segment */
-                if (sg->attr.f.f.use32) {
-                    fprintf(stderr,"__COMREL_RELOC cannot be a 32-bit segment\n");
-                    return 1;
-                }
-
-                assert(sg->segment_relative == cmdoptions.image_base_segment);
-
-                assert(!sg->fragments.empty());
-                frag = &sg->fragments[sg->fragments.size()-1]; // should be the last one
-
-                tsg = find_link_segment("__COMREL_RELOCTBL");
-                if (tsg != NULL) {
-                    assert(!tsg->fragments.empty());
-                    tfrag = &tsg->fragments[tsg->fragments.size()-1]; // should be the last one
-
-                    assert(tsg->segment_relative == cmdoptions.image_base_segment);
-                }
-                else {
-                    tfrag = NULL;
-                }
-
-                /* first, the relocation table */
-                {
-                    unsigned long old_init_ip,init_ip;
-                    unsigned long ro,po;
-
-                    if (tsg != NULL) {
-                        ro = tfrag->offset;
-                        assert((ro + tfrag->fragment_length) <= tsg->segment_length);
-
-                        po = frag->offset;
-                    }
-                    else {
-                        ro = frag->offset;
-                        assert((ro + frag->fragment_length) <= sg->segment_length);
-
-                        po = ro + (exe_relocation_table.size() * (size_t)2);
-                    }
-
-                    if (cmdoptions.output_format == OFMT_DOSDRV) {
-                        assert((po + sizeof(dosdrvrel_entry_point)) <= sg->segment_length);
-                    }
-                    else {
-                        assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
-                    }
-
-                    sym = find_link_symbol("__COMREL_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
-                    if (sym != NULL) return 1;
-                    sym = new_link_symbol("__COMREL_RELOC_TABLE");
-                    sym->in_file = in_fileRefInternal;
-                    sym->groupdef = "DGROUP";
-                    if (tsg != NULL) {
-                        sym->segdef = "__COMREL_RELOCTBL";
-                        sym->fragment = tsg->fragments.size()-1;
-                        sym->offset = ro - tfrag->offset;
-                    }
-                    else {
-                        sym->segdef = "__COMREL_RELOC";
-                        sym->fragment = sg->fragments.size()-1;
-                        sym->offset = ro - frag->offset;
-                    }
-
-                    sym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
-                    if (sym != NULL) return 1;
-                    sym = new_link_symbol("__COMREL_RELOC_ENTRY");
-                    sym->in_file = in_fileRefInternal;
-                    sym->groupdef = "DGROUP";
-                    sym->segdef = "__COMREL_RELOC";
-                    sym->fragment = sg->fragments.size()-1;
-                    sym->offset = po - frag->offset;
-
-                    /* do it */
-                    assert(sg->image.size() == sg->segment_length);
-
-                    {
-                        uint16_t *d = (uint16_t*)(&sg->image[ro]);
-                        uint16_t *f = (uint16_t*)(&sg->image[sg->segment_length]);
-                        struct exe_relocation *rel = &exe_relocation_table[0];
-                        struct seg_fragment *frag;
-                        struct link_segdef *lsg;
-                        unsigned int reloc;
-                        unsigned long roff;
-
-                        if (tsg != NULL) {
-                            d = (uint16_t*)(&tsg->image[ro]);
-                            f = (uint16_t*)(&tsg->image[sg->segment_length]);
-                        }
-
-                        assert((d+exe_relocation_table.size()) <= f);
-                        for (reloc=0;reloc < exe_relocation_table.size();reloc++,rel++) {
-                            lsg = find_link_segment(rel->segname.c_str());
-                            if (lsg == NULL) {
-                                fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
-                                return 1;
-                            }
-
-                            assert(rel->fragment < lsg->fragments.size());
-                            frag = &lsg->fragments[rel->fragment];
-
-                            roff = rel->offset + lsg->linear_offset + frag->offset + cmdoptions.image_base_offset;
-
-                            if (roff >= (0xFF00u - (exe_relocation_table.size() * (size_t)2u))) {
-                                fprintf(stderr,"COM relocation entry is non-representable\n");
-                                return 1;
-                            }
-
-                            d[reloc] = (uint16_t)roff;
-                        }
-                    }
-
-                    if (cmdoptions.output_format == OFMT_DOSDRV) {
-                        uint8_t *d = (uint8_t*)(&sg->image[po]);
-                        uint8_t *f = (uint8_t*)(&sg->image[sg->segment_length]);
-
-                        assert((d+sizeof(dosdrvrel_entry_point)) <= f);
-                        memcpy(d,dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
-
-                        *((uint16_t*)(d+dosdrvrel_entry_point_CX_COUNT)) = exe_relocation_table.size();
-
-                        if (tsg != NULL)
-                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
-                        else
-                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
-
-                        {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",in_fileRefUndef,in_fileModuleRefUndef);
-                            if (sym != NULL) return 1;
-                            sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
-                            sym->in_file = in_fileRefInternal;
-                            sym->groupdef = "DGROUP";
-                            sym->segdef = "__COMREL_RELOC";
-                            sym->fragment = sg->fragments.size()-1;
-                            sym->offset = po - frag->offset;
-                        }
-
-                        {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR",in_fileRefUndef,in_fileModuleRefUndef);
-                            if (sym != NULL) return 1;
-                            sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
-                            sym->in_file = in_fileRefInternal;
-                            sym->groupdef = "DGROUP";
-                            sym->segdef = "__COMREL_RELOC";
-                            sym->fragment = sg->fragments.size()-1;
-                            sym->offset = po + dosdrvrel_entry_point_code_intr - frag->offset;
-                        }
-
-                        /* header handling will patch in mov DI fields later */
-                    }
-                    else {
-                        uint8_t *d = (uint8_t*)(&sg->image[po]);
-                        uint8_t *f = (uint8_t*)(&sg->image[sg->segment_length]);
-
-                        if (entry_seg_link_target != NULL) {
-                            struct seg_fragment *frag;
-
-                            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                            old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
-                        }
-                        else {
-                            old_init_ip = 0x100;
-                        }
-
-                        init_ip = po + sg->segment_offset;
-
-                        /* change entry point to new entry point */
-                        if (cmdoptions.verbose) {
-                            fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
-                            fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
-                        }
-
-                        if (map_fp != NULL) {
-                            fprintf(map_fp,"\n");
-                            fprintf(map_fp,"Entry point prior to replacement by relocation code:\n");
-                            fprintf(map_fp,"---------------------------------------\n");
-
-                            if (entry_seg_link_target != NULL) {
-                                struct seg_fragment *frag;
-
-                                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                                fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
-                                        (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
-                                        (unsigned long)entry_seg_link_target->segment_offset + (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
-                                        entry_seg_link_target->name.c_str(),
-                                        (unsigned long)frag->offset + (unsigned long)entry_seg_ofs,
-                                        get_in_file(frag->in_file),frag->in_module);
-
-                            }
-
-                            fprintf(map_fp,"\n");
-                        }
-
-                        assert((d+sizeof(comrel_entry_point)) <= f);
-                        memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
-
-                        *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table.size();
-
-                        if (tsg != NULL)
-                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
-                        else
-                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
-
-                        *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
-
-                        entry_seg_link_target_fragment = (int)(frag - &sg->fragments[0]);
-                        entry_seg_link_target_name = sg->name;
-                        entry_seg_link_target = sg;
-                        entry_seg_ofs = po - frag->offset;
-                    }
-                }
-            }
-        }
-    }
- 
-    if (cmdoptions.output_format == OFMT_COM) {
-        struct link_segdef *sg;
-
-        sg = find_link_segment("__COM_ENTRY_JMP");
-        assert(sg != NULL);
-
-        /* .COM require JMP instruction */
-        if (entry_seg_link_target != NULL && com_entry_insert > 0) {
-            struct seg_fragment *frag;
-            unsigned long ofs;
-
-            assert(sg->image.size() == sg->segment_length);
-            assert(sg->segment_length >= com_entry_insert);
-
-            if (sg->segment_relative != cmdoptions.image_base_segment) {
-                fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",(unsigned long)sg->segment_relative);
-                return 1;
-            }
-            if (sg->segment_base != cmdoptions.image_base_offset) {
-                fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",(unsigned long)sg->segment_base);
-                return 1;
-            }
-            if (sg->segment_offset != sg->segment_base) {
-                fprintf(stderr,"__COM_ENTRY_JMP segment offset is not start of file, 0x%lx\n",(unsigned long)sg->segment_offset);
-                return 1;
-            }
-
-            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-            ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
-
-            assert(com_entry_insert < 4);
-
-            /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
-             *       Except that in the COM format, segments can only be omitted
-             *       from the end of the image. */
-
-            if (com_entry_insert == 3) {
-                assert(ofs <= (0xFFFFu - 3u));
-                *((uint8_t* )(&sg->image[0])) = 0xE9; /* JMP near */
-                *((uint16_t*)(&sg->image[1])) = (uint16_t)ofs - 3;
-            }
-            else if (com_entry_insert == 2) {
-                assert(ofs <= (0x7Fu + 2u));
-                *((uint8_t* )(&sg->image[0])) = 0xEB; /* JMP short */
-                *((uint8_t* )(&sg->image[1])) = (unsigned char)ofs - 2;
-            }
-            else {
-                abort();
-            }
         }
     }
 
@@ -2968,6 +2499,19 @@ int main(int argc,char **argv) {
     dump_link_segments();
 
     sort(link_symbols.begin(), link_symbols.end(), link_symbol_qsort_cmp);
+
+    /* decide file offsets */
+    {
+        fileOffset offset = 0;
+        unsigned int linkseg;
+
+        for (linkseg=0;linkseg < link_segments.size();linkseg++) {
+            struct link_segdef *sd = &link_segments[linkseg];
+
+            sd->file_offset = sd->linear_offset;
+            offset += sd->segment_length;
+        }
+    }
 
     /* write output */
     assert(!cmdoptions.out_file.empty());
@@ -2978,357 +2522,6 @@ int main(int argc,char **argv) {
         if (fd < 0) {
             fprintf(stderr,"Unable to open output file\n");
             return 1;
-        }
-
-        if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-            /* EXE header */
-            unsigned char tmp[32];
-            unsigned long disk_size = 0;
-            unsigned long stack_size = 0;
-            unsigned long header_size = 0;
-            unsigned long o_header_size = 0;
-            unsigned long resident_size = 0;
-            unsigned long relocation_table_offset = 0;
-            unsigned long max_resident_size = 0xFFFF0ul; /* by default, take ALL memory */
-            unsigned long init_ss = 0,init_sp = 0,init_cs = 0,init_ip = 0;
-            unsigned int i,ofs;
-
-            if (link_segments.size() > 0) {
-                struct link_segdef *sd = &link_segments[0];
-                assert(sd->file_offset != fileOffsetUndef);
-                header_size = sd->file_offset;
-            }
-            o_header_size = header_size;
-
-            if (!exe_relocation_table.empty()) {
-                assert(header_size >= 0x20);
-                relocation_table_offset = header_size;
-                header_size += (exe_relocation_table.size() * (size_t)4ul);
-            }
-
-            /* header_size must be a multiple of 16 */
-            if (header_size % 16ul)
-                header_size += 16ul - (header_size % 16ul);
-
-            /* move segments farther down if needed */
-            if (o_header_size < header_size) {
-                unsigned long adj = header_size - o_header_size;
-
-                for (i=0;i < link_segments.size();i++) {
-                    struct link_segdef *sd = &link_segments[i];
-
-                    if (sd->segment_length == 0 || sd->noemit) continue;
-
-                    assert(sd->file_offset != fileOffsetUndef);
-                    sd->file_offset += adj;
-                }
-            }
-
-            for (i=0;i < link_segments.size();i++) {
-                struct link_segdef *sd = &link_segments[i];
-
-                if (sd->segment_length == 0) continue;
-
-                ofs = sd->linear_offset + sd->segment_length + header_size;
-                if (resident_size < ofs) resident_size = ofs;
-
-                if (!sd->noemit) {
-                    assert(sd->file_offset != fileOffsetUndef);
-                    ofs = sd->file_offset + sd->segment_length;
-                    if (disk_size < ofs) disk_size = ofs;
-                }
-            }
-
-            {
-                unsigned long ofs;
-                struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
-
-                if (stacksg != NULL) {
-                    init_ss = stacksg->segment_relative;
-                    init_sp = stacksg->segment_offset + stacksg->segment_length;
-                    stack_size = stacksg->segment_length;
-                }
-                else {
-                    fprintf(stderr,"Warning, no STACK class segment defined\n");
-
-                    if (map_fp != NULL)
-                        fprintf(map_fp,"* Warning, no STACK class segment defined\n");
-
-                    init_ss = 0;
-                    init_sp = resident_size + cmdoptions.want_stack_size;
-                    stack_size = cmdoptions.want_stack_size;
-                    while (init_sp > 0xFF00ul) {
-                        init_sp -= 0x100;
-                        init_ss += 0x10;
-                    }
-                }
-
-                ofs = (((init_ss << 4ul) + init_sp)&0xFFFFFFFFul) + header_size;
-                if (resident_size < ofs) resident_size = ofs;
-            }
-
-            if (cmdoptions.verbose) {
-                fprintf(stderr,"EXE header:                    0x%lx\n",header_size);
-                fprintf(stderr,"EXE resident size with header: 0x%lx\n",resident_size);
-                fprintf(stderr,"EXE resident size:             0x%lx\n",resident_size - header_size);
-                fprintf(stderr,"EXE disk size without header:  0x%lx\n",disk_size - header_size);
-                fprintf(stderr,"EXE disk size:                 0x%lx\n",disk_size);
-            }
-
-            if (map_fp != NULL) {
-                fprintf(map_fp,"\n");
-
-                fprintf(map_fp,"EXE header stats:\n");
-                fprintf(map_fp,"---------------------------------------\n");
-
-                fprintf(map_fp,"EXE header:                    0x%lx\n",header_size);
-                fprintf(map_fp,"EXE resident size with header: 0x%lx\n",resident_size);
-                fprintf(map_fp,"EXE resident size:             0x%lx\n",resident_size - header_size);
-                fprintf(map_fp,"EXE disk size without header:  0x%lx\n",disk_size - header_size);
-                fprintf(map_fp,"EXE disk size:                 0x%lx\n",disk_size);
-                fprintf(map_fp,"EXE stack size:                0x%lx\n",stack_size);
-                fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
-                    init_ss&0xFFFFul,init_sp,((init_ss << 4ul) + init_sp)&0xFFFFFFFFul);
- 
-                fprintf(map_fp,"\n");
-            }
-
-            /* entry point */
-            if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
-                struct seg_fragment *frag;
-
-                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
-                    fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
-                    return 1;
-                }
-
-                init_cs = entry_seg_link_target->segment_relative;
-                init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
-
-                if (cmdoptions.verbose)
-                    fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name.c_str());
-            }
-            else {
-                if (cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                    fprintf(stderr,"EXE warning: An entry point is recommended even for MS-DOS EXE-type device drivers.\n");
-                    fprintf(stderr,"             Normally such EXEs are intended to be both a runnable command and device\n");
-                    fprintf(stderr,"             driver. One common example: EMM386.EXE. Please define an entry point to\n");
-                    fprintf(stderr,"             avoid this warning.\n");
-                }
-                else {
-                    fprintf(stderr,"EXE warning: No entry point. Executable will likely crash executing\n");
-                    fprintf(stderr,"             code or data at the start of the image. Please define\n");
-                    fprintf(stderr,"             an entry point routine to avoid that.\n");
-               }
-            }
-
-            if (cmdoptions.verbose)
-                fprintf(stderr,"EXE header size: %lu\n",header_size);
-
-            assert(resident_size >= disk_size);
-            assert(header_size != 0u);
-            assert((header_size % 16u) == 0u);
-            assert(sizeof(tmp) >= 32);
-            memset(tmp,0,32);
-            tmp[0] = 'M';
-            tmp[1] = 'Z';
-
-            if (cmdoptions.verbose) {
-                fprintf(stderr,"Adjusted segment table\n");
-                dump_link_segments();
-            }
- 
-            {
-                unsigned int blocks,lastblock;
-
-                blocks = disk_size / 512u;
-                lastblock = disk_size % 512u;
-                if (lastblock != 0) blocks++;
-
-                *((uint16_t*)(tmp+2)) = lastblock;
-                *((uint16_t*)(tmp+4)) = blocks;
-                // no relocations (yet)
-                *((uint16_t*)(tmp+8)) = header_size / 16u; /* in paragraphs */
-                *((uint16_t*)(tmp+10)) = ((resident_size + 15ul - disk_size) / 16ul); /* in paragraphs, additional memory needed */
-                *((uint16_t*)(tmp+12)) = (max_resident_size + 15ul) / 16ul; /* maximum additional memory */
-                *((uint16_t*)(tmp+14)) = init_ss; /* relative */
-                *((uint16_t*)(tmp+16)) = init_sp;
-                // no checksum
-                *((uint16_t*)(tmp+20)) = init_ip;
-                *((uint16_t*)(tmp+22)) = init_cs; /* relative */
-                // no relocation table (yet)
-                // no overlay
-
-                if (!exe_relocation_table.empty()) {
-                    *((uint16_t*)(tmp+24)) = (uint16_t)relocation_table_offset;
-                    *((uint16_t*)(tmp+6)) = (uint16_t)exe_relocation_table.size();
-                }
-            }
-
-            if (lseek(fd,0,SEEK_SET) == 0) {
-                if (write(fd,tmp,32) == 32) {
-                    /* good */
-                }
-            }
-
-            if (!exe_relocation_table.empty()) {
-                if ((unsigned long)lseek(fd,relocation_table_offset,SEEK_SET) == relocation_table_offset) {
-                    struct exe_relocation *rel = &exe_relocation_table[0];
-                    struct seg_fragment *frag;
-                    struct link_segdef *lsg;
-                    unsigned long rseg,roff;
-                    unsigned int reloc;
-
-                    for (reloc=0;reloc < exe_relocation_table.size();reloc++,rel++) {
-                        lsg = find_link_segment(rel->segname.c_str());
-                        if (lsg == NULL) {
-                            fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
-                            return 1;
-                        }
-
-                        assert(rel->fragment < lsg->fragments.size());
-                        frag = &lsg->fragments[rel->fragment];
-
-                        rseg = 0;
-                        roff = rel->offset + lsg->linear_offset + frag->offset;
-
-                        while (roff >= 0x4000ul) {
-                            rseg += 0x10ul;
-                            roff -= 0x100ul;
-                        }
-
-                        *((uint16_t*)(tmp + 0)) = (uint16_t)roff;
-                        *((uint16_t*)(tmp + 2)) = (uint16_t)rseg;
-                        write(fd,tmp,4);
-                    }
-                }
-            }
-        }
-        if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-            /* the entry point symbol must exist and must be at the very start of the file,
-             * or at the very beginning of the resident image if EXE */
-            struct link_segdef *segdef;
-            struct seg_fragment *frag;
-            struct link_symbol *sym;
-            unsigned long ofs;
-
-            sym = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
-            if (sym == NULL) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",cmdoptions.dosdrv_header_symbol.c_str());
-                return 1;
-            }
-
-            segdef = find_link_segment(sym->segdef.c_str());
-            if (segdef == NULL) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) missing SEGDEF '%s'\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str());
-                return 1;
-            }
-
-            assert(sym->fragment < segdef->fragments.size());
-            frag = &segdef->fragments[sym->fragment];
-
-            ofs = sym->offset + frag->offset;
-            if (ofs != 0ul) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) has nonzero offset 0x%lx within segment '%s'\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),ofs,sym->segdef.c_str());
-                return 1;
-            }
-
-            if (segdef->linear_offset != 0ul) {
-                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
-                    cmdoptions.dosdrv_header_symbol.c_str(),sym->segdef.c_str(),(unsigned long)segdef->linear_offset);
-                return 1;
-            }
-
-            if (map_fp != NULL) {
-                char tmp[9];
-                unsigned int i;
-                unsigned char *hdr_p;
-
-                hdr_p = &segdef->image[ofs];
-
-                fprintf(map_fp,"\n");
-                fprintf(map_fp,"MS-DOS device driver information:\n");
-                fprintf(map_fp,"---------------------------------------\n");
-
-                fprintf(map_fp,"  Attributes:          0x%04x\n",*((uint16_t*)(hdr_p + 0x4)));
-                fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
-                fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
-
-                memcpy(tmp,hdr_p + 0xA,8); tmp[8] = 0;
-                for (i=0;i < 8;i++) {
-                    if (tmp[i] < 32 || tmp[i] >= 127) tmp[i] = ' ';
-                }
-                fprintf(map_fp,"  Initial device name: '%s'\n",tmp);
-
-                fprintf(map_fp,"\n");
-            }
-
-            if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                unsigned char *hdr_p;
-                unsigned char *reloc_p;
-                struct link_segdef *rsegdef;
-                struct seg_fragment *rfrag;
-                struct link_symbol *rsym;
-                unsigned long rofs;
-
-                rsym = find_link_symbol("__COMREL_RELOC_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
-                assert(rsym != NULL);
-
-                rsegdef = find_link_segment(rsym->segdef.c_str());
-                assert(rsegdef != NULL);
-
-                assert(rsym->fragment < rsegdef->fragments.size());
-                rfrag = &rsegdef->fragments[rsym->fragment];
-
-                rofs = rsym->offset + rfrag->offset;
-
-                assert(rsegdef->image.size() == rsegdef->segment_length);
-                assert((rofs + sizeof(dosdrvrel_entry_point)) <= rsegdef->segment_length);
-
-                assert(segdef->image.size() == segdef->segment_length);
-                assert((ofs + 10) <= segdef->segment_length);
-                assert(ofs == 0);
-
-                hdr_p = &segdef->image[ofs];
-                reloc_p = &rsegdef->image[rofs];
-
-                if (cmdoptions.verbose) {
-                    fprintf(stderr,"Original entry: 0x%x, 0x%x\n",
-                        *((uint16_t*)(hdr_p + 0x06)),
-                        *((uint16_t*)(hdr_p + 0x08)));
-                }
-
-                /* copy entry points (2) to the relocation parts of the ASM we inserted */
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry1)) = *((uint16_t*)(hdr_p + 0x06));
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry1)) = *((uint16_t*)(hdr_p + 0x06));
-                *((uint16_t*)(hdr_p + 0x06)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry1 - 1;
-
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry2)) = *((uint16_t*)(hdr_p + 0x08));
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry2)) = *((uint16_t*)(hdr_p + 0x08));
-                *((uint16_t*)(hdr_p + 0x08)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry2 - 1;
-
-                if (cmdoptions.verbose) {
-                    fprintf(stderr,"New entry: 0x%x, 0x%x\n",
-                        *((uint16_t*)(hdr_p + 0x06)),
-                        *((uint16_t*)(hdr_p + 0x08)));
-                }
-
-                if (map_fp != NULL) {
-                    fprintf(map_fp,"\n");
-                    fprintf(map_fp,"MS-DOS device driver information, after relocation table added:\n");
-                    fprintf(map_fp,"---------------------------------------\n");
-
-                    fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
-                    fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
-
-                    fprintf(map_fp,"\n");
-                }
-            }
         }
 
         {
@@ -3351,82 +2544,6 @@ int main(int argc,char **argv) {
                     return 1;
                 }
             }
-        }
-
-        if (!cmdoptions.hex_output.empty()) {
-            unsigned char tmp[16];
-            long sz,count=0;
-            FILE *hfp;
-            int rd,x;
-
-            {
-                string::iterator i = cmdoptions.out_file.begin();
-
-                while (i != cmdoptions.out_file.end()) {
-                    char c = *(i++);
-
-                    if (isalpha(c) || isdigit(c) || c == '_') {
-                        if (i == cmdoptions.out_file.begin() && isdigit(c)) /* symbols cannot start with digits */
-                            hex_output_name += '_';
-
-                        hex_output_name += c;
-                    }
-                    else {
-                        hex_output_name += '_';
-                    }
-                }
-            }
-
-            sz = lseek(fd,0,SEEK_END);
-
-            if (cmdoptions.hex_split)
-                hex_output_tmpfile = cmdoptions.hex_output + "." + (cmdoptions.hex_cpp ? "cpp" : "c");
-            else
-                hex_output_tmpfile = cmdoptions.hex_output;
-
-            hfp = fopen(hex_output_tmpfile.c_str(),"w");
-            if (hfp == NULL) {
-                fprintf(stderr,"Unable to write hex output\n");
-                return 1;
-            }
-
-            fprintf(hfp,"const uint8_t %s_bin[%lu] = {\n",hex_output_name.c_str(),sz);
-
-            count = 0;
-            lseek(fd,0,SEEK_SET);
-            while ((rd=read(fd,tmp,sizeof(tmp))) > 0) {
-                fprintf(hfp,"    ");
-                for (x=0;x < rd;x++) {
-                    fprintf(hfp,"0x%02x",tmp[x]);
-                    if ((count+x+1l) < sz) fprintf(hfp,",");
-                }
-                fprintf(hfp," /* 0x%08lx */\n",(unsigned long)count);
-
-                count += (unsigned int)rd;
-            }
-
-            fprintf(hfp,"};\n");
-
-            if (cmdoptions.hex_split) {
-                fclose(hfp);
-
-                hex_output_tmpfile = cmdoptions.hex_output + ".h";
-
-                hfp = fopen(hex_output_tmpfile.c_str(),"w");
-                if (hfp == NULL) {
-                    fprintf(stderr,"Unable to write hex output\n");
-                    return 1;
-                }
-
-                fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name.c_str(),sz);
-            }
-
-            fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name.c_str(),(unsigned long)sz);
-
-            dump_hex_segments(hfp, hex_output_name.c_str());
-            dump_hex_symbols(hfp, hex_output_name.c_str());
-
-            fclose(hfp);
         }
 
         close(fd);
