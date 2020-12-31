@@ -2032,18 +2032,21 @@ int main(int argc,char **argv) {
         else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             cmdoptions.image_base_offset = 0;
         }
+        else {
+            cmdoptions.image_base_offset = 0;
+        }
     }
 
     if (cmdoptions.image_base_segment == segmentBaseUndef) {
-        if (cmdoptions.output_format == OFMT_COM) {
+        if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             if (cmdoptions.image_base_offset & 0xFul) {
-                fprintf(stderr,"ERROR: image base offset not a multiple of 16, COM output, and unspecified image base segment\n");
+                fprintf(stderr,"ERROR: image base offset not a multiple of 16, and unspecified image base segment\n");
                 return 1;
             }
 
             cmdoptions.image_base_segment = (segmentBase)(-(cmdoptions.image_base_offset >> (segmentOffset)4ul));
         }
-        else if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        else {
             cmdoptions.image_base_segment = 0;
         }
     }
