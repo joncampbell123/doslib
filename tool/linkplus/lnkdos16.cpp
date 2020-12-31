@@ -71,6 +71,7 @@ typedef size_t                          segmentIndex;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
+static const in_fileRef                 in_fileRefPadding = in_fileRefUndef - (in_fileRef)2u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentIndex               segmentIndexUndef = ~((segmentIndex)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
@@ -135,6 +136,8 @@ const char *get_in_file(const in_fileRef idx) {
         return "<undefined>";
     else if (idx == in_fileRefInternal)
         return "<internal>";
+    else if (idx == in_fileRefPadding)
+        return "<padding>";
     else if (idx < cmdoptions.in_file.size()) {
         if (!cmdoptions.in_file[idx].empty())
             return cmdoptions.in_file[idx].c_str();
@@ -1987,7 +1990,7 @@ void linkseg_add_padding_fragments(struct link_segdef *sg) {
             const segmentOffset gap = scan->offset - expect;
             seg_fragment nf;
 
-            nf.in_file = in_fileRefInternal;
+            nf.in_file = in_fileRefPadding;
             nf.offset = expect;
             nf.fragment_length = gap;
             nf.fragment_alignment = byteAlignMask;
