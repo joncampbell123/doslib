@@ -747,14 +747,32 @@ void dump_link_symbols(void) {
     }
 }
 
-void dump_link_segments(void) {
+enum {
+    DUMPLS_LINEAR,
+    DUMPLS_FILEOFFSET
+};
+
+void dump_link_segments(const unsigned int purpose) {
     static char range1[64];
     static char range2[64];
     unsigned int i=0,f;
+    const char *what;
+
+    switch (purpose) {
+        case DUMPLS_LINEAR:
+            what = "linear address";
+            break;
+        case DUMPLS_FILEOFFSET:
+            what = "file offset";
+            break;
+        default:
+            abort();
+            break;
+    }
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
-        fprintf(map_fp,"Segment table: %u entries (memory, linear)\n",(unsigned int)link_segments.size());
+        fprintf(map_fp,"Segment table: %u entries (memory, %s)\n",(unsigned int)link_segments.size(),what);
         fprintf(map_fp,"-----------------------------------------------------\n");
     }
 
@@ -766,100 +784,30 @@ void dump_link_segments(void) {
                 sprintf(range1,"%08lx-%08lx",
                     (unsigned long)sg->segment_offset,
                     (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
-                sprintf(range2,"0x%08lx-0x%08lx",
-                    (unsigned long)sg->linear_offset,
-                    (unsigned long)sg->linear_offset+sg->segment_length-1ul);
             }
             else {
                 strcpy(range1,"-----------------");
-                strcpy(range2,"---------------------");
             }
 
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
-                sg->attr.f.f.use32?32:16,
-                sg->name.c_str(),
-                sg->classname.c_str(),
-                sg->groupname.c_str(),
-                (unsigned long)sg->segment_relative&0xfffful,
-                range1,
-                range2,
-                (unsigned long)sg->segment_base,
-                (unsigned long)alignMaskToValue(sg->segment_alignment),
-                sg->pinned ? " PIN" : "",
-                sg->noemit ? " NOEMIT" : "");
-        }
-
-        for (f=0;f < sg->fragments.size();f++) {
-            struct seg_fragment *frag = &sg->fragments[f];
-
-            if (map_fp != NULL) {
-                if (frag->fragment_length != 0ul) {
-                    sprintf(range1,"%08lx-%08lx",
-                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
-                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+            if (purpose == DUMPLS_FILEOFFSET) {
+                if (sg->segment_length != 0ul && sg->file_offset != fileOffsetUndef) {
                     sprintf(range2,"0x%08lx-0x%08lx",
-                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
-                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
-                }
-                else {
-                    strcpy(range1,"-----------------");
-                    strcpy(range2,"---------------------");
-                }
-
-                fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
-                        frag->attr.f.f.use32?32:16,
-                        "",
-                        "",
-                        "",
-                        range1,
-                        range2,
-                        get_in_file(frag->in_file));
-
-                if (frag->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":%u",
-                            frag->in_module);
-                }
-
-                fprintf(map_fp," align=%lu\n",
-                        (unsigned long)alignMaskToValue(frag->fragment_alignment));
-            }
-        }
-    }
-
-    if (map_fp != NULL)
-        fprintf(map_fp,"\n");
-}
-
-void dump_link_segment_file_locations(void) {
-    static char range1[64];
-    static char range2[64];
-    unsigned int i=0,f;
-
-    if (map_fp != NULL) {
-        fprintf(map_fp,"\n");
-        fprintf(map_fp,"Segment table: %u entries, (memory, file offset)\n",(unsigned int)link_segments.size());
-        fprintf(map_fp,"-----------------------------------------------------\n");
-    }
-
-    while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
-
-        if (map_fp != NULL) {
-            if (sg->segment_length != 0ul) {
-                sprintf(range1,"%08lx-%08lx",
-                    (unsigned long)sg->segment_offset,
-                    (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
-            }
-            else {
-                strcpy(range1,"-----------------");
-            }
-            if (sg->segment_length != 0ul && sg->file_offset != fileOffsetUndef) {
-                sprintf(range2,"0x%08lx-0x%08lx",
                         (unsigned long)sg->file_offset,
                         (unsigned long)sg->file_offset+sg->segment_length-1ul);
+                }
+                else {
+                    strcpy(range2,"---------------------");
+                }
             }
             else {
-                strcpy(range2,"---------------------");
+                if (sg->segment_length != 0ul) {
+                    sprintf(range2,"0x%08lx-0x%08lx",
+                        (unsigned long)sg->linear_offset,
+                        (unsigned long)sg->linear_offset+sg->segment_length-1ul);
+                }
+                else {
+                    strcpy(range2,"---------------------");
+                }
             }
 
             fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
@@ -882,19 +830,32 @@ void dump_link_segment_file_locations(void) {
             if (map_fp != NULL) {
                 if (frag->fragment_length != 0ul) {
                     sprintf(range1,"%08lx-%08lx",
-                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
-                            (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+                        (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
+                        (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
                 }
                 else {
                     strcpy(range1,"-----------------");
                 }
-                if (frag->fragment_length != 0ul && sg->file_offset != fileOffsetUndef) {
-                    sprintf(range2,"0x%08lx-0x%08lx",
+
+                if (purpose == DUMPLS_FILEOFFSET) {
+                    if (sg->segment_length != 0ul && sg->file_offset != fileOffsetUndef) {
+                        sprintf(range2,"0x%08lx-0x%08lx",
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+                    }
+                    else {
+                        strcpy(range2,"---------------------");
+                    }
                 }
                 else {
-                    strcpy(range2,"---------------------");
+                    if (frag->fragment_length != 0ul) {
+                        sprintf(range2,"0x%08lx-0x%08lx",
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
+                            (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
+                    }
+                    else {
+                        strcpy(range2,"---------------------");
+                    }
                 }
 
                 fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s'",
@@ -1246,7 +1207,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         /* sanity check: self-relative is only allowed IF the same segment */
                         /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
                         if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
-                            dump_link_segments();
+                            dump_link_segments(DUMPLS_LINEAR);
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
                                 current_link_segment->name.c_str(),
@@ -1349,7 +1310,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         /* sanity check: self-relative is only allowed IF the same segment */
                         /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
                         if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
-                            dump_link_segments();
+                            dump_link_segments(DUMPLS_LINEAR);
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
                                 current_link_segment->name.c_str(),
@@ -1697,7 +1658,7 @@ int segment_exe_arrange(void) {
             sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
 
             if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
-                dump_link_segments();
+                dump_link_segments(DUMPLS_LINEAR);
                 fprintf(stderr,"EXE: segment offset out of range\n");
                 return -1;
             }
@@ -1715,7 +1676,7 @@ int segment_exe_arrange(void) {
             sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
 
             if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
-                dump_link_segments();
+                dump_link_segments(DUMPLS_LINEAR);
                 fprintf(stderr,"COM: segment offset out of range\n");
                 return -1;
             }
@@ -1775,7 +1736,7 @@ int segment_def_arrange(void) {
         if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
             cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             if (sd->segment_length > 0x10000ul) {
-                dump_link_segments();
+                dump_link_segments(DUMPLS_LINEAR);
                 fprintf(stderr,"Segment too large >= 64KB\n");
                 return -1;
             }
@@ -2383,7 +2344,7 @@ int main(int argc,char **argv) {
 
     dump_link_relocations();
     dump_link_symbols();
-    dump_link_segments();
+    dump_link_segments(DUMPLS_LINEAR);
 
     sort(link_symbols.begin(), link_symbols.end(), link_symbol_qsort_cmp);
 
@@ -2473,7 +2434,7 @@ int main(int argc,char **argv) {
         close(fd);
     }
 
-    dump_link_segment_file_locations();
+    dump_link_segments(DUMPLS_FILEOFFSET);
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
