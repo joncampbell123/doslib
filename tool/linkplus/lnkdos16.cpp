@@ -909,8 +909,8 @@ void dump_link_segments(void) {
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
-        fprintf(map_fp,"Segment table: %u entries\n",(unsigned int)link_segments.size());
-        fprintf(map_fp,"---------------------------------------\n");
+        fprintf(map_fp,"Segment table: %u entries (memory, linear)\n",(unsigned int)link_segments.size());
+        fprintf(map_fp,"-----------------------------------------------------\n");
     }
 
     while (i < link_segments.size()) {
@@ -1014,8 +1014,8 @@ void dump_link_segment_file_locations(void) {
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
-        fprintf(map_fp,"Segment table: %u entries, file offsets\n",(unsigned int)link_segments.size());
-        fprintf(map_fp,"---------------------------------------\n");
+        fprintf(map_fp,"Segment table: %u entries, (memory, file offset)\n",(unsigned int)link_segments.size());
+        fprintf(map_fp,"-----------------------------------------------------\n");
     }
 
     while (i < link_segments.size()) {
