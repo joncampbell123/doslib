@@ -1898,30 +1898,35 @@ int segment_exe_arrange(void) {
     return 0;
 }
 
-int fragment_def_arrange(void) {
-    unsigned int inf,fi;
+int fragment_def_arrange(struct link_segdef *sd) {
+    unsigned long ofs = 0;
+    unsigned int fi;
 
-    for (inf=0;inf < link_segments.size();inf++) {
-        struct link_segdef *sd = &link_segments[inf];
-        unsigned long ofs = 0;
+    for (fi=0;fi < sd->fragments.size();fi++) {
+        struct seg_fragment *frag = &sd->fragments[fi];
 
-        for (fi=0;fi < sd->fragments.size();fi++) {
-            struct seg_fragment *frag = &sd->fragments[fi];
+        /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
+         *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
+         *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
+         *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
+         *      and so on */
+        if (ofs & (unsigned long)frag->fragment_alignment)
+            ofs = (ofs + (~frag->fragment_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)frag->fragment_alignment;
 
-            /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
-             *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
-             *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
-             *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
-             *      and so on */
-            if (ofs & (unsigned long)frag->fragment_alignment)
-                ofs = (ofs + (~frag->fragment_alignment)/*~mask == byte alignment - 1*/) & (unsigned long)frag->fragment_alignment;
-
-            frag->offset = ofs;
-            ofs += frag->fragment_length;
-        }
-
-        sd->segment_length = ofs;
+        frag->offset = ofs;
+        ofs += frag->fragment_length;
     }
+
+    sd->segment_length = ofs;
+
+    return 0;
+}
+
+int fragment_def_arrange(void) {
+    unsigned int inf;
+
+    for (inf=0;inf < link_segments.size();inf++)
+        fragment_def_arrange(&link_segments[inf]);
 
     return 0;
 }
