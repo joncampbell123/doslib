@@ -2542,6 +2542,7 @@ int main(int argc,char **argv) {
         }
 
         {
+            bool seg_code = false,pseg_code = false;
             unsigned int linkseg,fragseg;
             fileOffset cur_offset = 0;
             unsigned char fill[4096];
@@ -2550,6 +2551,8 @@ int main(int argc,char **argv) {
                 struct link_segdef *sd = &link_segments[linkseg];
 
                 if (sd->noemit) continue;
+
+                seg_code = (sd->classname == "CODE");
 
                 assert(sd->file_offset != fileOffsetUndef);
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
@@ -2567,7 +2570,11 @@ int main(int argc,char **argv) {
                             return 1;
                         }
 
-                        memset(fill,0,sizeof(fill));
+                        if (seg_code && pseg_code)
+                            memset(fill,0x90,sizeof(fill)); /* 0x90 = NOP */
+                        else
+                            memset(fill,0,sizeof(fill));
+
                         while (gapsize >= sizeof(fill)) {
                             if (write(fd,fill,sizeof(fill)) != sizeof(fill)) {
                                 fprintf(stderr,"Write error\n");
@@ -2595,6 +2602,7 @@ int main(int argc,char **argv) {
                     }
 
                     cur_offset += frag->fragment_length;
+                    pseg_code = seg_code;
                 }
             }
         }
