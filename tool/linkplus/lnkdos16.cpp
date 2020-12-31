@@ -1918,11 +1918,8 @@ int fragment_def_arrange(struct link_segdef *sd) {
          *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
          *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
          *      and so on */
-        if (ofs & frag->fragment_alignment)
-            ofs = (ofs + (~frag->fragment_alignment)/*~mask == byte alignment - 1*/) & frag->fragment_alignment;
-
-        /* make sure fragment aligns to segment too */
-        assert((ofs & (~sd->segment_alignment)) == 0);
+        if (ofs & (~frag->fragment_alignment))
+            ofs = (ofs | (~frag->fragment_alignment)) + (segmentOffset)1u;
 
         frag->offset = ofs;
         ofs += frag->fragment_length;
@@ -1953,8 +1950,8 @@ int segment_def_arrange(void) {
          *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
          *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
          *      and so on */
-        if (ofs & sd->segment_alignment)
-            ofs = (ofs + (~sd->segment_alignment)/*~mask == byte alignment - 1*/) & sd->segment_alignment;
+        if (ofs & (~sd->segment_alignment))
+            ofs = (ofs | (~sd->segment_alignment)) + (segmentOffset)1u;
 
         if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
             cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
