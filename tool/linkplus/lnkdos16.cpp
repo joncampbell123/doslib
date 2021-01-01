@@ -876,6 +876,55 @@ void dump_link_segments(const unsigned int purpose) {
                         (unsigned long)alignMaskToValue(frag->fragment_alignment));
             }
         }
+
+        if (i < link_segments.size() && sg->segment_length != 0ul) {
+            struct link_segdef *nsg = &link_segments[i];
+
+            if (map_fp != NULL) {
+                range1[0] = 0;
+                range2[0] = 0;
+                if (purpose == DUMPLS_FILEOFFSET) {
+                    if (sg->file_offset != fileOffsetUndef && nsg->file_offset != fileOffsetUndef && (sg->file_offset+(fileOffset)sg->segment_length) < nsg->file_offset) {
+                        const fileOffset gap = nsg->file_offset - (sg->file_offset+(fileOffset)sg->segment_length);
+
+                        sprintf(range1,"%08lx-%08lx",
+                                (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length,
+                                (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length+(unsigned long)gap-1ul);
+
+                        sprintf(range2,"0x%08lx-0x%08lx",
+                                (unsigned long)sg->file_offset+(unsigned long)sg->segment_length,
+                                (unsigned long)nsg->file_offset-1ul);
+                    }
+                    else {
+                        strcpy(range1,"-----------------");
+                        strcpy(range2,"---------------------");
+                    }
+                }
+                else {
+                    if (sg->linear_offset != linearAddressUndef && nsg->linear_offset != linearAddressUndef && (sg->linear_offset+(linearAddress)sg->segment_length) < nsg->linear_offset) {
+                        const fileOffset gap = nsg->linear_offset - (sg->linear_offset+(linearAddress)sg->segment_length);
+
+                        sprintf(range1,"%08lx-%08lx",
+                                (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length,
+                                (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length+(unsigned long)gap-1ul);
+
+                        sprintf(range2,"0x%08lx-0x%08lx",
+                                (unsigned long)sg->linear_offset+(unsigned long)sg->segment_length,
+                                (unsigned long)nsg->linear_offset-1ul);
+                    }
+                    else {
+                        strcpy(range1,"-----------------");
+                        strcpy(range2,"---------------------");
+                    }
+                }
+
+                if (range1[0] != 0 && range1[0] != '-') {
+                    fprintf(map_fp,"  [ pad ]                                                                     %s [%s]   padding\n",
+                            range1,
+                            range2);
+                }
+            }
+        }
     }
 
     if (map_fp != NULL)

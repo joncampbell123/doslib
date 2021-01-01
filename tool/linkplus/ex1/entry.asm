@@ -41,7 +41,7 @@ segment _STACK align=4 class=STACK use16
 
     resb    512
 
-section _BSS align=4 class=BSS use32
+section _BSS align=4 class=BSS use16
 
     resb    64
 
