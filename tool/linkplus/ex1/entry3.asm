@@ -14,3 +14,7 @@ global _msg3
 _msg3:
     db      'Do not print this either',13,10,0
 
+segment _STACK align=4 class=STACK use16
+
+    resb    64
+
