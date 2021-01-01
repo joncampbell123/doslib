@@ -2634,6 +2634,8 @@ int main(int argc,char **argv) {
             fprintf(map_fp,"EXE stack size:                0x%lx\n",(unsigned long)stack_size);
             fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
                     (unsigned long)init_ss,(unsigned long)init_sp,(unsigned long)((init_ss << 4ul) + init_sp));
+            fprintf(map_fp,"EXE entry point:               %04lx:%04lx [0x%08lx]\n",
+                    (unsigned long)init_cs,(unsigned long)init_ip,(unsigned long)((init_cs << 4ul) + init_ip));
 
             fprintf(map_fp,"\n");
         }
@@ -2649,6 +2651,8 @@ int main(int argc,char **argv) {
                     sd->file_offset += (fileOffset)header_size;
             }
         }
+
+        reconnect_gl_segs();
     }
 
     /* write output */
