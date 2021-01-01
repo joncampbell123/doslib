@@ -2658,6 +2658,7 @@ int main(int argc,char **argv) {
     /* write output */
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
     dump_link_segments(DUMPLS_FILEOFFSET);
+    reconnect_gl_segs();
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
