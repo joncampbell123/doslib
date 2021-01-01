@@ -13,6 +13,7 @@ NOW_BUILDING = TOOL_LINKER_EX1
 TEST_EXE =   $(SUBDIR)$(HPS)test.com
 TEST2_EXE =  $(SUBDIR)$(HPS)test2.com
 TEST3_EXE =  $(SUBDIR)$(HPS)test3.com
+TEST4_EXE =  $(SUBDIR)$(HPS)test4.com
 DOSLIBLINKER_OFMT = -of com
 !else
 ! ifeq TARGET_MSDOS 32
@@ -21,6 +22,7 @@ DOSLIBLINKER_OFMT = -of com
 TEST_EXE =   $(SUBDIR)$(HPS)test.exe
 TEST2_EXE =  $(SUBDIR)$(HPS)test2.exe
 TEST3_EXE =  $(SUBDIR)$(HPS)test3.exe
+TEST4_EXE =  $(SUBDIR)$(HPS)test4.exe
 DOSLIBLINKER_OFMT = -of exe
 ! endif
 !endif
@@ -41,7 +43,7 @@ $(DOSLIBLINKER):
 
 all: lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) .symbolic
 
 lib: .symbolic
 
@@ -64,6 +66,11 @@ $(TEST2_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj
 !ifdef TEST3_EXE
 $(TEST3_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TEST3_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST3_EXE).map
+!endif
+
+!ifdef TEST4_EXE
+$(TEST4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)entry4.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -o $(TEST4_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST4_EXE).map
 !endif
 
 clean: .SYMBOLIC
