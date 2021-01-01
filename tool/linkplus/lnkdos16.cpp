@@ -2438,9 +2438,12 @@ int main(int argc,char **argv) {
         if (frag == NULL)
             return 1;
 
-        /* TODO: If generating NE/PE/etc. set to 32 */
+        /* TODO: If generating NE/PE/etc. set to 32, to make room for a DWORD at 0x1C that
+         *       points at the NE/PE/LX/LE/etc header. */
         frag->fragment_length = 28;
 
+        /* EXE relocation table is 4 bytes per entry, two WORDs containing ( offset, segment ) of an
+         * address in the image to patch with the base segment */
         if (!exe_relocation_table.empty()) {
             reloc_offset = (segmentOffset)frag->fragment_length;
             frag->fragment_length += 4 * exe_relocation_table.size();
