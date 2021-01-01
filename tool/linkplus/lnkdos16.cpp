@@ -1001,6 +1001,14 @@ struct link_segdef *new_link_segment(const char *name) {
     return sg;
 }
 
+struct link_segdef *new_link_segment_begin(const char *name) {
+    link_segdef newsg;
+    link_segments.insert(link_segments.begin(),newsg);
+    struct link_segdef *sg = &link_segments[0];
+    sg->name = name;
+    return sg;
+}
+
 int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
     struct seg_fragment *frag;
     struct link_segdef *lsg;
@@ -2393,6 +2401,80 @@ int main(int argc,char **argv) {
                     sd->fragment_load_index = fragmentRefUndef;
                 }
             }
+
+            /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
+            if (cmdoptions.output_format == OFMT_COM) {
+                if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+                    struct seg_fragment *frag;
+                    uint32_t init_ip;
+
+                    assert(!entry_seg_link_target->fragments.empty());
+                    assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
+                    frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                    if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+                        fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                                (unsigned long)entry_seg_link_target->segment_relative,
+                                (unsigned long)cmdoptions.image_base_segment);
+                        return 1;
+                    }
+
+                    init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+                    if (init_ip != cmdoptions.image_base_offset) {
+                        struct link_segdef *exeseg;
+
+                        assert(init_ip > cmdoptions.image_base_offset);
+
+                        fprintf(stderr,"COM entry point does not point to beginning of image, adding JMP instruction\n");
+
+                        exeseg = find_link_segment("__COM_ENTRY_JMP");
+                        if (exeseg != NULL)
+                            return 1;
+
+                        exeseg = new_link_segment_begin("__COM_ENTRY_JMP");
+                        if (exeseg == NULL)
+                            return 1;
+
+                        exeseg->pinned = 1;
+                        exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+                        exeseg->segment_relative = cmdoptions.image_base_segment;
+                        exeseg->segment_base = cmdoptions.image_base_offset;
+
+                        frag = alloc_link_segment_fragment(exeseg);
+                        if (frag == NULL)
+                            return 1;
+
+                        frag->in_file = in_fileRefInternal;
+                        frag->offset = 0;
+
+                        if (init_ip >= (0x80+cmdoptions.image_base_offset)) {
+                            /* 3 byte JMP */
+                            frag->fragment_length = 3;
+                            exeseg->segment_length += frag->fragment_length;
+                            frag->image.resize(frag->fragment_length);
+
+                            frag->image[0] = 0xE9; /* JMP near */
+                            *((uint16_t*)(&frag->image[1])) = 0; /* patch later */
+                        }
+                        else {
+                            /* 2 byte JMP */
+                            frag->fragment_length = 2;
+                            exeseg->segment_length += frag->fragment_length;
+                            frag->image.resize(frag->fragment_length);
+
+                            frag->image[0] = 0xEB; /* JMP short */
+                            frag->image[1] = 0; /* patch later */
+                        }
+
+                        fragment_def_arrange(exeseg);
+                        if (segment_def_arrange())
+                            return 1;
+                        if (segment_exe_arrange())
+                            return 1;
+                        reconnect_gl_segs();
+                    }
+                }
+            }
         }
     }
 
@@ -2423,6 +2505,54 @@ int main(int argc,char **argv) {
 
             if (!sd->noemit)
                 sd->file_offset = sd->linear_offset;
+        }
+    }
+
+    /* COM files: patch JMP instruction to entry point */
+    if (cmdoptions.output_format == OFMT_COM) {
+        struct link_segdef *exeseg;
+        struct seg_fragment *frag;
+        uint32_t init_ip;
+
+        assert(!entry_seg_link_target->fragments.empty());
+        assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
+        frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+        if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+            fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                    (unsigned long)entry_seg_link_target->segment_relative,
+                    (unsigned long)cmdoptions.image_base_segment);
+            return 1;
+        }
+
+        exeseg = find_link_segment("__COM_ENTRY_JMP");
+        if (exeseg != NULL) {
+            init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+            assert(init_ip >= cmdoptions.image_base_offset);
+            assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
+            frag = &exeseg->fragments[0];
+            assert(frag->image.size() >= 2);
+
+            if (frag->image[0] == 0xEB) { /* jmp short */
+                signed long rel = (signed long)init_ip - (2 + cmdoptions.image_base_offset);
+                if (rel < -0x80l || rel > 0x7Fl) {
+                    fprintf(stderr,"ERROR: JMP patch impossible, out of range %ld\n",rel);
+                    return 1;
+                }
+                frag->image[1] = (unsigned char)rel;
+            }
+            else if (frag->image[0] == 0xE9) { /* jmp near */
+                assert(frag->image.size() >= 3);
+                signed long rel = (signed long)init_ip - (3 + cmdoptions.image_base_offset);
+                if (rel < -0x8000l || rel > 0x7FFFl) {
+                    fprintf(stderr,"ERROR: JMP patch impossible, out of range %ld\n",rel);
+                    return 1;
+                }
+                *((uint16_t*)(&frag->image[1])) = (uint16_t)rel;
+            }
+            else {
+                abort();
+            }
         }
     }
 
