@@ -780,7 +780,7 @@ void dump_link_segments(const unsigned int purpose) {
         struct link_segdef *sg = &link_segments[i++];
 
         if (map_fp != NULL) {
-            if (sg->segment_length != 0ul) {
+            if (sg->segment_length != 0ul && sg->segment_offset != segmentOffsetUndef) {
                 sprintf(range1,"%08lx-%08lx",
                     (unsigned long)sg->segment_offset,
                     (unsigned long)sg->segment_offset+(unsigned long)sg->segment_length-1ul);
@@ -800,7 +800,7 @@ void dump_link_segments(const unsigned int purpose) {
                 }
             }
             else {
-                if (sg->segment_length != 0ul) {
+                if (sg->segment_length != 0ul && sg->linear_offset != linearAddressUndef) {
                     sprintf(range2,"0x%08lx-0x%08lx",
                         (unsigned long)sg->linear_offset,
                         (unsigned long)sg->linear_offset+sg->segment_length-1ul);
@@ -828,7 +828,7 @@ void dump_link_segments(const unsigned int purpose) {
             struct seg_fragment *frag = &sg->fragments[f];
 
             if (map_fp != NULL) {
-                if (frag->fragment_length != 0ul) {
+                if (frag->fragment_length != 0ul && sg->segment_offset != segmentOffsetUndef) {
                     sprintf(range1,"%08lx-%08lx",
                         (unsigned long)sg->segment_offset+(unsigned long)frag->offset,
                         (unsigned long)sg->segment_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
@@ -848,7 +848,7 @@ void dump_link_segments(const unsigned int purpose) {
                     }
                 }
                 else {
-                    if (frag->fragment_length != 0ul) {
+                    if (frag->fragment_length != 0ul && sg->linear_offset != linearAddressUndef) {
                         sprintf(range2,"0x%08lx-0x%08lx",
                             (unsigned long)sg->linear_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->linear_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
