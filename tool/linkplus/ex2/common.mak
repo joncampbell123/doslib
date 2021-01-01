@@ -14,7 +14,7 @@ TEST_EXE =   $(SUBDIR)$(HPS)test.com
 TEST2_EXE =  $(SUBDIR)$(HPS)test2.com
 TEST3_EXE =  $(SUBDIR)$(HPS)test3.com
 TEST4_EXE =  $(SUBDIR)$(HPS)test4.com
-DOSLIBLINKER_OFMT = -of comrel
+DOSLIBLINKER_OFMT = -of com
 !else
 ! ifeq TARGET_MSDOS 32
 # DOSLIB linker cannot handle 32-bit OMF........yet
