@@ -476,6 +476,8 @@ void link_segments_swap(unsigned int s1,unsigned int s2) {
 
 struct link_segdef *find_link_segment(const char *name);
 
+/* if you do ANYTHING that causes reallocation of the vector array, OR rearrange the elements,
+ * you must call this function. */
 void reconnect_gl_segs() {
     if (!entry_seg_link_target_name.empty()) {
         entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
