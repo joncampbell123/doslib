@@ -2277,27 +2277,6 @@ int main(int argc,char **argv) {
         }
 
         if (pass == PASS_GATHER) {
-            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
-
-                if (stacksg != NULL) {
-                    if (stacksg->segment_length < cmdoptions.want_stack_size) {
-                        struct seg_fragment *frag;
-
-                        frag = alloc_link_segment_fragment(stacksg);
-                        if (frag == NULL) {
-                            return 1;
-                        }
-                        frag->offset = stacksg->segment_length;
-                        frag->attr = stacksg->attr;
-                        frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
-                        frag->in_file = in_fileRefInternal;
-
-                        stacksg->segment_length = cmdoptions.want_stack_size;
-                    }
-                }
-            }
-
             owlink_default_sort_seg();
 
             if (cmdoptions.do_dosseg)
@@ -2312,6 +2291,46 @@ int main(int argc,char **argv) {
 
                     if (ssg->classname == "STACK" || ssg->classname == "BSS") {
                         ssg->noemit = 1;
+                    }
+                }
+            }
+
+            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+                /* NTS: segment_length has not been computed yet, count fragments */
+                struct link_segdef *stacksg = NULL;
+                segmentOffset count = 0;
+
+                {
+                    struct link_segdef *ssg;
+                    unsigned int i,fi;
+
+                    for (i=0;i < link_segments.size();i++) {
+                        ssg = &link_segments[i];
+
+                        if (ssg->classname == "STACK") {
+                            stacksg = ssg;
+
+                            for (fi=0;fi < ssg->fragments.size();fi++) {
+                                struct seg_fragment *frag = &ssg->fragments[fi];
+                                count += frag->fragment_length;
+                            }
+                        }
+                    }
+                }
+
+                if (stacksg != NULL) {
+                    if (count < cmdoptions.want_stack_size) {
+                        struct seg_fragment *frag;
+
+                        frag = alloc_link_segment_fragment(stacksg);
+                        if (frag == NULL) {
+                            return 1;
+                        }
+                        frag->offset = stacksg->segment_length;
+                        frag->attr = stacksg->attr;
+                        frag->fragment_length = cmdoptions.want_stack_size - count;
+                        stacksg->segment_length += frag->fragment_length;
+                        frag->in_file = in_fileRefInternal;
                     }
                 }
             }
