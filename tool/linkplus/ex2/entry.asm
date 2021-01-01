@@ -14,7 +14,7 @@ l1: lodsb
     int     21h
     jmp     short l1
 l1e:
-    retf
+    ret
 
 ..start:
 global asm_entry
@@ -26,7 +26,7 @@ asm_entry:
     mov     ds,ax
 %endif
 
-    call far _printloop
+    call    _printloop
 
 global _exit_
 _exit_:
