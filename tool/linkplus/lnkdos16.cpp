@@ -320,9 +320,10 @@ struct link_segdef {
 
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
+    unsigned int                        header:1;           /* segment is executable header stuff */
 
-    link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(0), segment_length(0), segment_relative(0),
-                    segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0)
+    link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef), segment_length(0), segment_relative(0),
+                    segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0), header(0)
     {
         memset(&attr,0,sizeof(attr));
     }
@@ -330,7 +331,7 @@ struct link_segdef {
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
                                         segment_alignment(o.segment_alignment), fragment_load_index(o.fragment_load_index), fragments(o.fragments),
-                                        pinned(o.pinned), noemit(o.noemit) { }
+                                        pinned(o.pinned), noemit(o.noemit), header(o.header) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -810,7 +811,7 @@ void dump_link_segments(const unsigned int purpose) {
                 }
             }
 
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s%s\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name.c_str(),
                 sg->classname.c_str(),
@@ -821,7 +822,8 @@ void dump_link_segments(const unsigned int purpose) {
                 (unsigned long)sg->segment_base,
                 (unsigned long)alignMaskToValue(sg->segment_alignment),
                 sg->pinned ? " PIN" : "",
-                sg->noemit ? " NOEMIT" : "");
+                sg->noemit ? " NOEMIT" : "",
+                sg->header ? " HEADER" : "");
         }
 
         for (f=0;f < sg->fragments.size();f++) {
@@ -2399,21 +2401,243 @@ int main(int argc,char **argv) {
 
     /* decide file offsets */
     {
-        fileOffset offset = 0;
         unsigned int linkseg;
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
             struct link_segdef *sd = &link_segments[linkseg];
 
-            if (!sd->noemit) {
+            if (!sd->noemit)
                 sd->file_offset = sd->linear_offset;
-                offset += sd->segment_length;
+        }
+    }
+
+    /* EXE files: make header and relocation table */
+    if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        segmentOffset reloc_offset=0;
+        uint16_t init_cs=0,init_ip=0;
+        uint16_t init_ss=0,init_sp=0;
+        struct link_segdef *exeseg;
+        struct seg_fragment *frag;
+        uint32_t bss_segment_size=0;
+        uint32_t stack_size=0;
+        uint32_t tmp;
+
+        exeseg = find_link_segment("$$EXEHEADER");
+        if (exeseg != NULL)
+            return 1;
+
+        exeseg = new_link_segment("$$EXEHEADER");
+        if (exeseg == NULL)
+            return 1;
+
+        exeseg->header = 1;
+        exeseg->file_offset = 0;
+        exeseg->segment_relative = -1;
+
+        frag = alloc_link_segment_fragment(exeseg);
+        if (frag == NULL)
+            return 1;
+
+        /* TODO: If generating NE/PE/etc. set to 32 */
+        frag->fragment_length = 28;
+
+        if (!exe_relocation_table.empty()) {
+            reloc_offset = (segmentOffset)frag->fragment_length;
+            frag->fragment_length += 4 * exe_relocation_table.size();
+        }
+
+        frag->in_file = in_fileRefInternal;
+        frag->offset = exeseg->segment_length;
+        exeseg->segment_length += frag->fragment_length;
+        frag->image.resize(frag->fragment_length);
+
+        linearAddress max_image = 0;
+        linearAddress max_resident = 0;
+        {
+            unsigned int linkseg;
+
+            for (linkseg=0;linkseg < link_segments.size();linkseg++) {
+                const struct link_segdef *sd = &link_segments[linkseg];
+                const linearAddress m = sd->linear_offset + (linearAddress)sd->segment_length;
+
+                if (sd->header) continue;
+
+                if (max_resident < m) max_resident = m;
+                if (!sd->noemit && max_image < m) max_image = m;
+            }
+        }
+
+        if (max_image < max_resident)
+            bss_segment_size = max_resident - max_image;
+
+        if (bss_segment_size >= 0xFFFF0ul) {
+            fprintf(stderr,"BSS/STACK too large for EXE\n");
+            return 1;
+        }
+
+        {
+            struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
+
+            if (stacksg != NULL) {
+                init_ss = stacksg->segment_relative;
+                init_sp = stacksg->segment_offset + stacksg->segment_length;
+                stack_size = stacksg->segment_length;
+            }
+            else {
+                fprintf(stderr,"WARNING: EXE without stack segment\n");
+            }
+        }
+
+        if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+            struct seg_fragment *frag;
+
+            assert(!entry_seg_link_target->fragments.empty());
+            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
+            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+            if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
+                fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
+                return 1;
+            }
+
+            init_cs = entry_seg_link_target->segment_relative;
+            init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+        }
+        else {
+            fprintf(stderr,"WARNING: EXE without an entry point\n");
+        }
+
+        assert(reloc_offset < 0xFFF0u);
+
+        {
+            assert(frag->image.size() >= 28);
+            unsigned char *ptr = &frag->image[0];
+
+            memset(ptr,0,frag->image.size());
+
+            ptr[0] = 'M';
+            ptr[1] = 'Z';
+
+            /* +2 = number of bytes in last block. if nonzero, only that much is used, else if zero, entire last block is used
+             * +4 = number of blocks in EXE, including, if +2 nonzero, the partial last block */
+            if (max_image & 511ul) { /* not a multiple of 512 */
+                *((uint16_t*)(ptr+2)) = max_image & 511ul;
+                *((uint16_t*)(ptr+4)) = (max_image >> 9ul) + 1ul;
+            }
+            else { /* multiple of 512 */
+                *((uint16_t*)(ptr+2)) = 0ul;
+                *((uint16_t*)(ptr+4)) = max_image >> 9ul;
+            }
+
+            /* relocation table */
+            *((uint16_t*)(ptr+6)) = (uint16_t)exe_relocation_table.size(); /* count */
+            *((uint16_t*)(ptr+24)) = (uint16_t)reloc_offset; /* offset */
+
+            *((uint16_t*)(ptr+8)) = (frag->image.size()+0xFul) >> 4ul; /* size of header in paragraphs */
+
+            /* number of paragraphs of additional memory needed */
+            tmp = (uint32_t)((bss_segment_size+0xFul) >> 4ul);
+            if (tmp > 0xFFFFul) tmp = 0xFFFFul;
+            *((uint16_t*)(ptr+10)) = (uint16_t)tmp;
+
+            /* maximum of paragraphs of additional memory */
+            *((uint16_t*)(ptr+12)) = 0xFFFFul;
+
+            /* stack pointer */
+            *((uint16_t*)(ptr+14)) = init_ss;
+            *((uint16_t*)(ptr+16)) = init_sp;
+
+            /* checksum */
+            *((uint16_t*)(ptr+18)) = 0;
+
+            /* entry point (CS:IP) */
+            *((uint16_t*)(ptr+20)) = init_ip;
+            *((uint16_t*)(ptr+22)) = init_cs;
+        }
+
+        if (!exe_relocation_table.empty()) {
+            assert(frag->image.size() >= (reloc_offset+(4*exe_relocation_table.size())));
+            unsigned char *ptr = &frag->image[reloc_offset];
+            size_t i;
+
+            for (i=0;i < exe_relocation_table.size();i++) {
+                struct exe_relocation *rel = &exe_relocation_table[i];
+                struct seg_fragment *frag;
+                struct link_segdef *lsg;
+                unsigned long rseg,roff;
+
+                lsg = find_link_segment(rel->segname.c_str());
+                if (lsg == NULL) {
+                    fprintf(stderr,"Relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
+                    return 1;
+                }
+
+                assert(rel->fragment < lsg->fragments.size());
+                frag = &lsg->fragments[rel->fragment];
+
+                rseg = 0;
+                roff = rel->offset + lsg->linear_offset + frag->offset;
+
+                while (roff >= 0x4000ul) {
+                    rseg += 0x10ul;
+                    roff -= 0x100ul;
+                }
+
+                *((uint16_t*)(ptr + 0)) = (uint16_t)roff;
+                *((uint16_t*)(ptr + 2)) = (uint16_t)rseg;
+                ptr += 4;
+            }
+        }
+
+        /* The EXE header is defined only in number of pages, round up */
+        if (exeseg->segment_length & 0xF) {
+            frag = alloc_link_segment_fragment(exeseg);
+            if (frag == NULL)
+                return 1;
+
+            frag->in_file = in_fileRefPadding;
+            frag->offset = exeseg->segment_length;
+            frag->fragment_length = 0x10 - (exeseg->segment_length & 0xF);
+            exeseg->segment_length += frag->fragment_length;
+            frag->image.resize(frag->fragment_length);
+        }
+
+        fileOffset header_size = exeseg->segment_length;
+
+        if (map_fp != NULL) {
+            fprintf(map_fp,"\n");
+
+            fprintf(map_fp,"EXE header stats:\n");
+            fprintf(map_fp,"---------------------------------------\n");
+
+            fprintf(map_fp,"EXE header:                    0x%lx\n",(unsigned long)header_size);
+            fprintf(map_fp,"EXE resident size with header: 0x%lx\n",(unsigned long)max_resident + (unsigned long)header_size);
+            fprintf(map_fp,"EXE resident size:             0x%lx\n",(unsigned long)max_resident);
+            fprintf(map_fp,"EXE disk size without header:  0x%lx\n",(unsigned long)max_image);
+            fprintf(map_fp,"EXE disk size:                 0x%lx\n",(unsigned long)max_image + (unsigned long)header_size);
+            fprintf(map_fp,"EXE stack size:                0x%lx\n",(unsigned long)stack_size);
+            fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
+                    (unsigned long)init_ss,(unsigned long)init_sp,(unsigned long)((init_ss << 4ul) + init_sp));
+
+            fprintf(map_fp,"\n");
+        }
+
+        /* shift file offsets */
+        {
+            unsigned int linkseg;
+
+            for (linkseg=0;linkseg < link_segments.size();linkseg++) {
+                struct link_segdef *sd = &link_segments[linkseg];
+
+                if (!sd->noemit && !sd->header && sd->file_offset != fileOffsetUndef)
+                    sd->file_offset += (fileOffset)header_size;
             }
         }
     }
 
     /* write output */
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
+    dump_link_segments(DUMPLS_FILEOFFSET);
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
@@ -2484,8 +2708,6 @@ int main(int argc,char **argv) {
 
         close(fd);
     }
-
-    dump_link_segments(DUMPLS_FILEOFFSET);
 
     if (map_fp != NULL) {
         fprintf(map_fp,"\n");
