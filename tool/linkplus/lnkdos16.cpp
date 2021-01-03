@@ -316,12 +316,6 @@ struct link_segdef {
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
                     segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
                     pinned(0), noemit(0), header(0) { }
-    /* FIXME: Why does removing this copy constructor break things? Specifically fragment tracking! */
-    link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
-                                        linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
-                                        segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
-                                        segment_alignment(o.segment_alignment), fragment_load_index(o.fragment_load_index), fragments(o.fragments),
-                                        pinned(o.pinned), noemit(o.noemit), header(o.header) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -2505,6 +2499,7 @@ int main(int argc,char **argv) {
     }
 
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
+    reconnect_gl_segs();
 
     dump_link_relocations();
     dump_link_symbols();
@@ -2651,6 +2646,8 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"WARNING: EXE without stack segment\n");
             }
         }
+
+        reconnect_gl_segs();
 
         if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
             struct seg_fragment *frag;
