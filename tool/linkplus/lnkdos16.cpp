@@ -465,13 +465,8 @@ int sort_cmpf_class_stack(const struct link_segdef *a) {
 }
 
 void link_segments_swap(unsigned int s1,unsigned int s2) {
-    if (s1 != s2) {
-        struct link_segdef t;
-
-                        t = link_segments[s1];
-        link_segments[s1] = link_segments[s2];
-        link_segments[s2] = t;
-    }
+    if (s1 != s2)
+        swap(link_segments[s1],link_segments[s2]);
 }
 
 struct link_segdef *find_link_segment(const char *name);
