@@ -2444,6 +2444,9 @@ int main(int argc,char **argv) {
                         if (frag == NULL)
                             return 1;
 
+                        /* must be the FIRST */
+                        assert(frag == &exeseg->fragments[0]);
+
                         frag->in_file = in_fileRefInternal;
                         frag->offset = 0;
 
@@ -2472,6 +2475,34 @@ int main(int argc,char **argv) {
                         if (segment_exe_arrange())
                             return 1;
                         reconnect_gl_segs();
+
+                        exeseg = find_link_segment("__COM_ENTRY_JMP");
+                        if (exeseg == NULL)
+                            return 1;
+
+                        /* make the original entry point a symbol, change entry point to new place */
+                        struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                        if (ls != NULL)
+                            return 1;
+
+                        ls = new_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY");
+                        if (ls == NULL)
+                            return 1;
+
+                        ls->segdef = entry_seg_link_target->name;
+                        ls->groupdef = entry_seg_link_target->groupname;
+                        ls->offset = entry_seg_ofs;
+                        ls->fragment = entry_seg_link_target_fragment;
+                        ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_file;
+                        ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_module;
+
+                        /* the new entry point is the first byte of the .COM image */
+                        entry_seg_ofs = 0;
+                        entry_seg_link_target_fragment = 0;
+                        entry_seg_link_target_name = exeseg->name;
+                        entry_seg_link_target = exeseg;
+                        entry_seg_link_frame_name = exeseg->name;
+                        entry_seg_link_frame = exeseg;
                     }
                 }
             }
@@ -2514,20 +2545,20 @@ int main(int argc,char **argv) {
         struct seg_fragment *frag;
         uint32_t init_ip;
 
-        assert(!entry_seg_link_target->fragments.empty());
-        assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-        frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-        if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
-            fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
-                    (unsigned long)entry_seg_link_target->segment_relative,
-                    (unsigned long)cmdoptions.image_base_segment);
-            return 1;
-        }
-
         exeseg = find_link_segment("__COM_ENTRY_JMP");
         if (exeseg != NULL) {
-            init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+            struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+            if (ls == NULL)
+                return 1;
+
+            struct link_segdef *lsseg = find_link_segment(ls->segdef.c_str());
+            if (exeseg == NULL)
+                return 1;
+
+            assert(ls->fragment < lsseg->fragments.size());
+            struct seg_fragment *lsfrag = &lsseg->fragments[ls->fragment];
+
+            init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
             assert(init_ip >= cmdoptions.image_base_offset);
             assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
             frag = &exeseg->fragments[0];
