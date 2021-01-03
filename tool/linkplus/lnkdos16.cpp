@@ -93,8 +93,6 @@ static inline alignMask alignValueToAlignMask(const alignMask &v) {
     return (~v) + ((alignMask)1u);
 }
 
-#define MAX_GROUPS                      256
-
 static FILE*                            map_fp = NULL;
 
 struct cmdoptions {
