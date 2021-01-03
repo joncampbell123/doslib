@@ -23,7 +23,7 @@ $(LNKDOS16): linux-host/lnkdos16.o $(OMFLIB)
 	g++ -o $@ $^
 
 linux-host/%.o : %.cpp
-	g++ -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu++03 -c -o $@ $^
+	g++ -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu++11 -c -o $@ $^
 
 clean:
 	rm -f linux-host/lnkdos16 linux-host/*.o linux-host/*.a
