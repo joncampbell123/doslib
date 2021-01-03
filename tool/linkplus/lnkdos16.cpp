@@ -290,13 +290,7 @@ struct seg_fragment {
     vector<unsigned char>               image;              /* in memory image of segment during construction */
 
     seg_fragment() : in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), from_segment_index(segmentIndexUndef),
-                     offset(segmentOffsetUndef), fragment_length(segmentSizeUndef), fragment_alignment(byteAlignMask)
-    {
-        memset(&attr,0,sizeof(attr));
-    }
-    seg_fragment(const seg_fragment &o) : in_file(o.in_file), in_module(o.in_module), from_segment_index(o.from_segment_index),
-                                          offset(o.offset), fragment_length(o.fragment_length), fragment_alignment(o.fragment_alignment),
-                                          attr(o.attr), image(o.image) { }
+                     offset(segmentOffsetUndef), fragment_length(segmentSizeUndef), fragment_alignment(byteAlignMask), attr({0,0,{0}}) { }
 };
 
 struct link_segdef {
@@ -319,11 +313,10 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
     unsigned int                        header:1;           /* segment is executable header stuff */
 
-    link_segdef() : file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef), segment_length(0), segment_relative(0),
-                    segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef), pinned(0), noemit(0), header(0)
-    {
-        memset(&attr,0,sizeof(attr));
-    }
+    link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
+                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
+                    pinned(0), noemit(0), header(0) { }
+    /* FIXME: Why does removing this copy constructor break things? Specifically fragment tracking! */
     link_segdef(const link_segdef &o) : attr(o.attr), name(o.name), classname(o.classname), groupname(o.groupname), file_offset(o.file_offset),
                                         linear_offset(o.linear_offset), segment_base(o.segment_base), segment_offset(o.segment_offset),
                                         segment_length(o.segment_length), segment_relative(o.segment_relative), segment_reloc_adj(o.segment_reloc_adj),
