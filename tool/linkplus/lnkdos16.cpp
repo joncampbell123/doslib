@@ -221,10 +221,10 @@ struct exe_relocation {
 
 static vector< shared_ptr<struct exe_relocation> >          exe_relocation_table;
 
-struct exe_relocation *new_exe_relocation(void) {
-    const size_t idx = exe_relocation_table.size();
-    exe_relocation_table.push_back( shared_ptr<struct exe_relocation>(new struct exe_relocation) );
-    return exe_relocation_table[idx].get();
+shared_ptr<struct exe_relocation> new_exe_relocation(void) {
+    shared_ptr<struct exe_relocation> r(new struct exe_relocation);
+    exe_relocation_table.push_back(r);
+    return r;
 }
 
 void free_exe_relocations(void) {
@@ -1221,7 +1221,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (pass == PASS_GATHER) {
-                    struct exe_relocation *reloc = new_exe_relocation();
+                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation();
                     if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
@@ -1259,7 +1259,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (pass == PASS_GATHER) {
-                    struct exe_relocation *reloc = new_exe_relocation();
+                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation();
                     if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
