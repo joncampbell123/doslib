@@ -211,25 +211,25 @@ static const uint8_t dosdrvrel_entry_point[] = {
                                         // 0x28
 };
 
-template <class T> class reftrackvector : public vector<T> {
+template <class T, class vec_class = vector<T> > class reftrackvector : public vec_class {
 public:
     typedef size_t refval;
     const size_t refUndef = ~((size_t)0u);
 public:
-    reftrackvector() : vector<T>() { }
+    reftrackvector() : vec_class() { }
 public:
     void resize(size_t n) {
         refcount_assert_zero();
-        vector<T>::resize(n);
+        vec_class::resize(n);
     }
     void resize(size_t n,const T &val) {
         refcount_assert_zero();
-        vector<T>::resize(n,val);
+        vec_class::resize(n,val);
     }
 public:
     class ref {
         public:
-            ref(reftrackvector<T> *_parent,T *_elem) : parent(_parent), elem(_elem) {
+            ref(reftrackvector<T, vec_class> *_parent,T *_elem) : parent(_parent), elem(_elem) {
                 parent->refcount++;
             }
             ref(const ref &o) : parent(o.parent), elem(o.elem) {
@@ -267,18 +267,18 @@ public:
                 return !(*this == o);
             }
         private:
-            reftrackvector<T> *parent;
+            reftrackvector<T, vec_class> *parent;
             T* elem;
     };
 public:
     refval new_entry(void) {
-        refval idx = vector<T>::size();
+        refval idx = vec_class::size();
         resize(idx+1);
         return idx;
     }
     ref get_entry(const refval v) {
-        assert(v < vector<T>::size());
-        return ref(this,&(vector<T>::operator[](v)));
+        assert(v < vec_class::size());
+        return ref(this,&(vec_class::operator[](v)));
     }
     void refcount_assert_zero(void) {
         if (refcount != 0) {
