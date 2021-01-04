@@ -213,18 +213,20 @@ static const uint8_t dosdrvrel_entry_point[] = {
                                         // 0x28
 };
 
-template <class T, typename vec_class = vector<T> > class reftrackvector {
+template <class T, class vec_class = vector<T> > class reftrackvector : public vec_class {
 public:
     typedef size_t refval;
     const size_t refUndef = ~((size_t)0u);
 public:
+    reftrackvector() : vec_class() { }
+public:
     void resize(size_t n) {
         refcount_assert_zero();
-        vec.resize(n);
+        vec_class::resize(n);
     }
     void resize(size_t n,const T &val) {
         refcount_assert_zero();
-        vec.resize(n,val);
+        vec_class::resize(n,val);
     }
 public:
     class ref {
@@ -272,18 +274,18 @@ public:
     };
 public:
     refval new_entry(void) {
-        refval idx = vec.size();
+        refval idx = vec_class::size();
         resize(idx+1);
         return idx;
     }
     refval new_entry_begin(void) { /* WARNING: Inserts item at the beginning, invalidates all handles */
         refcount_assert_zero();
-        vec.insert(vec.begin(),T());
+        vec_class::insert(vec_class::begin(),T());
         return (refval)0;
     }
     ref get_entry(const refval v) {
-        assert(v < vec.size());
-        return ref(this,&vec[v]);
+        assert(v < vec_class::size());
+        return ref(this,&(vec_class::operator[](v)));
     }
     void refcount_assert_zero(void) {
         if (refcount != 0) {
@@ -291,27 +293,7 @@ public:
             abort();
         }
     }
-    void clear(void) {
-        vec.clear();
-    }
-    bool empty(void) const {
-        return vec.empty();
-    }
-    size_t size(void) const {
-        return vec.size();
-    }
-    T& operator[](const size_t i) {
-        assert(i < vec.size());
-        return vec[i];
-    }
-    typename vec_class::iterator begin() {
-        return vec.begin();
-    }
-    typename vec_class::iterator end() {
-        return vec.end();
-    }
 private:
-    vec_class                           vec;
     volatile size_t                     refcount = 0;
 };
 
