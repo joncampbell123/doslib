@@ -66,7 +66,6 @@ typedef uint32_t                        segmentRelative;        /* segment relat
 typedef uint32_t                        alignMask;              /* alignment mask for data alignment. ~0u (all 1s) means byte alignment. Must be inverse of power of 2 */
 typedef uint32_t                        fileOffset;
 typedef uint32_t                        linearAddress;
-typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
 
@@ -78,7 +77,6 @@ static const segmentIndex               segmentIndexUndef = ~((segmentIndex)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
 static const segmentOffset              segmentOffsetUndef = ~((segmentOffset)0u);
-static const fragmentRef                fragmentRefUndef = ~((fragmentRef)0u);
 static const alignMask                  byteAlignMask = ~((alignMask)0u);
 static const alignMask                  wordAlignMask = ~((alignMask)1u);
 static const alignMask                  dwordAlignMask = ~((alignMask)3u);
@@ -208,6 +206,11 @@ static const uint8_t dosdrvrel_entry_point[] = {
                                         // 0x28
 };
 
+struct seg_fragment; // forward decl
+
+typedef shared_ptr<struct seg_fragment> fragmentRef;
+static const fragmentRef                fragmentRefUndef = shared_ptr<struct seg_fragment>(nullptr);
+
 struct exe_relocation {
     string                              segname;            /* which segment */
     fragmentRef                         fragment;           /* which fragment */
@@ -306,6 +309,7 @@ struct link_segdef {
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
+    size_t                              fragment_load_index_val;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
@@ -314,8 +318,8 @@ struct link_segdef {
     unsigned int                        header:1;           /* segment is executable header stuff */
 
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
-                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
-                    pinned(0), noemit(0), header(0) { }
+                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index_val(~((size_t)0u)),
+                    fragment_load_index(fragmentRefUndef), pinned(0), noemit(0), header(0) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -566,8 +570,8 @@ void dump_link_relocations(void) {
         struct exe_relocation *rel = exe_relocation_table[i++].get();
 
         if (cmdoptions.verbose) {
-            fprintf(stderr,"relocation[%u]: seg='%s' frag=%lu offset=0x%lx\n",
-                i,rel->segname.c_str(),(unsigned long)rel->fragment,(unsigned long)rel->offset);
+            fprintf(stderr,"relocation[%u]: seg='%s' frag=%p offset=0x%lx\n",
+                i,rel->segname.c_str(),(void*)rel->fragment.get(),(unsigned long)rel->offset);
         }
 
         if (map_fp != NULL) {
@@ -577,8 +581,8 @@ void dump_link_relocations(void) {
             sg = find_link_segment(rel->segname.c_str());
             assert(sg != NULL);
 
-            assert(rel->fragment < sg->fragments.size());
-            frag = sg->fragments[rel->fragment].get();
+            assert(rel->fragment.get() != nullptr);
+            frag = rel->fragment.get();
 
             fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sg->segment_relative&0xfffful,
@@ -610,15 +614,13 @@ bool link_symbol_qsort_cmp(const shared_ptr<struct link_symbol> &sa,const shared
     sga = find_link_segment(sa->segdef.c_str());
     assert(sga != NULL);
 
-    assert(sa->fragment < sga->fragments.size());
-    fraga = sga->fragments[sa->fragment].get();
+    fraga = sa->fragment.get();
 
     /* -----B----- */
     sgb = find_link_segment(sb->segdef.c_str());
     assert(sgb != NULL);
 
-    assert(sb->fragment < sgb->fragments.size());
-    fragb = sgb->fragments[sb->fragment].get();
+    fragb = sb->fragment.get();
 
     /* segment */
     la = sga->segment_relative;
@@ -671,8 +673,8 @@ void dump_link_symbols(void) {
             struct link_symbol *sym = link_symbols[i++].get();
 
             if (cmdoptions.verbose) {
-                fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u\n",
-                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),(unsigned long)sym->offset,(unsigned long)sym->fragment,
+                fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%p file='%s' module=%u local=%u\n",
+                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),(unsigned long)sym->offset,(void*)sym->fragment.get(),
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
@@ -683,8 +685,7 @@ void dump_link_symbols(void) {
                 sg = find_link_segment(sym->segdef.c_str());
                 assert(sg != NULL);
 
-                assert(sym->fragment < sg->fragments.size());
-                frag = sg->fragments[sym->fragment].get();
+                frag = sym->fragment.get();
 
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
                         sym->name.c_str(),
@@ -930,13 +931,11 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
 }
 
 fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link_segdef * const sg,const in_fileRef in_file,const in_fileModuleRef in_module,const segmentIndex TargetDatum) {
-    fragmentRef i;
-
-    for (i=0;i < (fragmentRef)sg->fragments.size();i++) {
-        const struct seg_fragment *f = sg->fragments[i].get();
+    for (auto i=sg->fragments.begin();i != sg->fragments.end();i++) {
+        const struct seg_fragment *f = (*i).get();
 
         if (f->in_file == in_file && f->in_module == in_module && f->from_segment_index == TargetDatum)
-            return i;
+            return (*i);
     }
 
     return fragmentRefUndef;
@@ -997,8 +996,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         return 1;
     }
 
-    assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index <= lsg->fragments.size());
-    frag = lsg->fragments[lsg->fragment_load_index].get();
+    assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index.get() != nullptr);
+    frag = lsg->fragment_load_index.get();
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (max_ofs > frag->fragment_length) {
@@ -1086,8 +1085,8 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        assert(sym->fragment < lsg->fragments.size());
-        frag = lsg->fragments[sym->fragment].get();
+        assert(sym->fragment.get() != nullptr);
+        frag = sym->fragment.get();
 
         *fseg = lsg->segment_relative;
         *fofs = sym->offset + lsg->segment_offset + frag->offset;
@@ -1194,8 +1193,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
          * get the fragment it belongs to */
         assert(current_link_segment != NULL);
         assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-        assert(current_link_segment->fragment_load_index < current_link_segment->fragments.size());
-        frag = current_link_segment->fragments[current_link_segment->fragment_load_index].get();
+        assert(current_link_segment->fragment_load_index.get() != nullptr);
+        frag = current_link_segment->fragment_load_index.get();
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1275,7 +1274,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                     if (cmdoptions.verbose)
-                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
+                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segname.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
@@ -1313,7 +1312,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                     if (cmdoptions.verbose)
-                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
+                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segname.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
@@ -1492,11 +1491,12 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             if (lsg->fragments.empty())
                 continue;
 
-            lsg->fragment_load_index++;
-            assert(lsg->fragment_load_index < lsg->fragments.size());
+            lsg->fragment_load_index_val++;
+            assert(lsg->fragment_load_index_val < lsg->fragments.size());
+            lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
 
             {
-                struct seg_fragment *f = lsg->fragments[lsg->fragment_load_index].get();
+                struct seg_fragment *f = lsg->fragment_load_index.get();
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
@@ -1538,7 +1538,8 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 }
 
                 /* current load index is now the fragment just allocated */
-                lsg->fragment_load_index = (fragmentRef)(lsg->fragments.size() - size_t(1)); // FIXME
+                lsg->fragment_load_index_val = lsg->fragments.size() - size_t(1); // FIXME
+                lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
 
                 f->in_file = in_file;
                 f->in_module = in_module;
@@ -2320,11 +2321,8 @@ int main(int argc,char **argv) {
                 /* nothing */
             }
             else if (!entry_seg_link_target_name.empty()) {
-                struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-                struct seg_fragment *frag;
-
-                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
+                assert(entry_seg_link_target_fragment.get() != nullptr);
+                struct seg_fragment *frag = entry_seg_link_target_fragment.get();
 
                 if (frag->attr.f.f.use32) {
                     fprintf(stderr,"Entry point cannot be 32-bit\n");
@@ -2362,6 +2360,7 @@ int main(int argc,char **argv) {
 
                     /* reset load base */
                     sd->fragment_load_index = fragmentRefUndef;
+                    sd->fragment_load_index_val = ~((size_t)0u);
                 }
             }
 
@@ -2369,12 +2368,11 @@ int main(int argc,char **argv) {
             if (cmdoptions.output_format == OFMT_COM) {
                 if (!entry_seg_link_target_name.empty()) {
                     struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-                    struct seg_fragment *frag;
                     uint32_t init_ip;
 
                     assert(!entry_seg_link_target->fragments.empty());
-                    assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                    frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
+                    assert(entry_seg_link_target_fragment != nullptr);
+                    struct seg_fragment *frag = entry_seg_link_target_fragment.get();
 
                     if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
                         fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
@@ -2459,14 +2457,14 @@ int main(int argc,char **argv) {
                         ls->groupdef = entry_seg_link_target->groupname;
                         ls->offset = entry_seg_ofs;
                         ls->fragment = entry_seg_link_target_fragment;
-                        ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get()->in_file;
-                        ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get()->in_module;
+                        ls->in_file = entry_seg_link_target_fragment.get()->in_file;
+                        ls->in_module = entry_seg_link_target_fragment.get()->in_module;
 
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
-                        entry_seg_link_target_fragment = 0;
-                        entry_seg_link_target_name = exeseg->name;
                         entry_seg_link_frame_name = exeseg->name;
+                        entry_seg_link_target_name = exeseg->name;
+                        entry_seg_link_target_fragment = exeseg->fragments[0];
                     }
                 }
             }
@@ -2519,8 +2517,8 @@ int main(int argc,char **argv) {
             if (exeseg == NULL)
                 return 1;
 
-            assert(ls->fragment < lsseg->fragments.size());
-            struct seg_fragment *lsfrag = lsseg->fragments[ls->fragment].get();
+            assert(ls->fragment.get() != nullptr);
+            struct seg_fragment *lsfrag = ls->fragment.get();
 
             init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
             assert(init_ip >= cmdoptions.image_base_offset);
@@ -2636,11 +2634,10 @@ int main(int argc,char **argv) {
             struct link_segdef* entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name.c_str());
             assert(entry_seg_link_target != NULL);
             assert(entry_seg_link_frame != NULL);
-            struct seg_fragment *frag;
 
             assert(!entry_seg_link_target->fragments.empty());
-            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
+            assert(entry_seg_link_target_fragment != nullptr);
+            struct seg_fragment *frag = entry_seg_link_target_fragment.get();
 
             if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
                 fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
@@ -2709,7 +2706,6 @@ int main(int argc,char **argv) {
 
             for (i=0;i < exe_relocation_table.size();i++) {
                 struct exe_relocation *rel = exe_relocation_table[i].get();
-                struct seg_fragment *frag;
                 struct link_segdef *lsg;
                 unsigned long rseg,roff;
 
@@ -2719,8 +2715,8 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                assert(rel->fragment < lsg->fragments.size());
-                frag = lsg->fragments[rel->fragment].get();
+                assert(rel->fragment != nullptr);
+                struct seg_fragment *frag = rel->fragment.get();
 
                 rseg = 0;
                 roff = rel->offset + lsg->linear_offset + frag->offset;
@@ -2868,13 +2864,11 @@ int main(int argc,char **argv) {
             unsigned int symi = 0,fsymi = ~0u;
             unsigned long sofs,cofs;
             struct link_symbol *sym;
-            struct seg_fragment *frag;
-            struct seg_fragment *sfrag;
             struct link_segdef *ssg;
 
             assert(entry_seg_link_target != NULL);
-            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
+            assert(entry_seg_link_target_fragment != nullptr);
+            struct seg_fragment *frag = entry_seg_link_target_fragment.get();
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
                 (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
@@ -2896,9 +2890,9 @@ int main(int argc,char **argv) {
                 ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
 
-                assert(sym->fragment < ssg->fragments.size());
+                assert(sym->fragment != nullptr);
 
-                sfrag = ssg->fragments[sym->fragment].get();
+                struct seg_fragment *sfrag = sym->fragment.get();
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
@@ -2915,9 +2909,9 @@ int main(int argc,char **argv) {
                 ssg = find_link_segment(sym->segdef.c_str());
                 assert(ssg != NULL);
 
-                assert(sym->fragment < ssg->fragments.size());
+                assert(sym->fragment != nullptr);
 
-                sfrag = ssg->fragments[sym->fragment].get();
+                struct seg_fragment *sfrag = sym->fragment.get();
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
