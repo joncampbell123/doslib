@@ -256,7 +256,7 @@ shared_ptr<struct link_symbol> new_link_symbol(const char *name) {
 
 shared_ptr<struct link_symbol> find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
     for (size_t i=0;i < link_symbols.size();i++) {
-        struct link_symbol *sym = link_symbols[i].get();
+        shared_ptr<struct link_symbol> sym = link_symbols[i];
 
         assert(sym != nullptr);
 
@@ -652,7 +652,7 @@ void dump_link_symbols(void) {
             sort(link_symbols.begin(), link_symbols.end(), pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
         while (i < link_symbols.size()) {
-            struct link_symbol *sym = link_symbols[i++].get();
+            shared_ptr<struct link_symbol> sym = link_symbols[i++];
 
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%p file='%s' module=%u local=%u\n",
