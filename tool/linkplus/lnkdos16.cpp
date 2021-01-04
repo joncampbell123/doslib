@@ -783,15 +783,12 @@ void dump_link_symbols(void) {
             }
 
             if (map_fp != NULL) {
-                struct seg_fragment *frag;
-                linksegdefRef sgref;
-
-                sgref = find_link_segment(sym->segdef.c_str());
+                const linksegdefRef sgref = find_link_segment(sym->segdef.c_str());
                 assert(sgref != linksegdefRefUndef);
                 auto sg = get_link_segment(sgref);
 
                 assert(sym->fragment < sg->fragments.size());
-                frag = &sg->fragments[sym->fragment];
+                struct seg_fragment *frag = &sg->fragments[sym->fragment];
 
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
                         sym->name.c_str(),
@@ -1082,7 +1079,6 @@ linksegdefRef new_link_segment_begin(const char *name) {
 }
 
 int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
-    struct seg_fragment *frag;
     unsigned long max_ofs;
     linksegdefRef lsgref;
     const char *segname;
@@ -1111,7 +1107,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     }
 
     assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index <= lsg->fragments.size());
-    frag = &lsg->fragments[lsg->fragment_load_index];
+    struct seg_fragment *frag = &lsg->fragments[lsg->fragment_load_index];
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (max_ofs > frag->fragment_length) {
@@ -1136,16 +1132,13 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     (void)ent;
 
     if (method == 0/*SEGDEF*/) {
-        linksegdefRef lsgref;
-        const char *segname;
-
-        segname = omf_context_get_segdef_name_safe(omf_state,index);
+        const char *segname = omf_context_get_segdef_name_safe(omf_state,index);
         if (*segname == 0) {
             fprintf(stderr,"FIXUPP SEGDEF no name\n");
             return -1;
         }
 
-        lsgref = find_link_segment(segname);
+        const linksegdefRef lsgref = find_link_segment(segname);
         if (lsgref == linksegdefRefUndef) {
             fprintf(stderr,"FIXUPP SEGDEF not found '%s'\n",segname);
             return -1;
@@ -1158,16 +1151,13 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *sdef = lsgref;
     }
     else if (method == 1/*GRPDEF*/) {
-        linksegdefRef lsgref;
-        const char *segname;
-
-        segname = omf_context_get_grpdef_name_safe(omf_state,index);
+        const char *segname = omf_context_get_grpdef_name_safe(omf_state,index);
         if (*segname == 0) {
             fprintf(stderr,"FIXUPP SEGDEF no name\n");
             return -1;
         }
 
-        lsgref = find_link_segment_by_grpdef(segname);
+        const linksegdefRef lsgref = find_link_segment_by_grpdef(segname);
         if (lsgref == linksegdefRefUndef) {
             fprintf(stderr,"FIXUPP SEGDEF not found\n");
             return -1;
@@ -1180,18 +1170,13 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *sdef = lsgref;
     }
     else if (method == 2/*EXTDEF*/) {
-        linksymbolRef symref = linksymbolRefUndef;
-        struct seg_fragment *frag;
-        linksegdefRef lsgref;
-        const char *defname;
-
-        defname = omf_context_get_extdef_name_safe(omf_state,index);
+        const char *defname = omf_context_get_extdef_name_safe(omf_state,index);
         if (*defname == 0) {
             fprintf(stderr,"FIXUPP EXTDEF no name\n");
             return -1;
         }
 
-        symref = find_link_symbol(defname,in_file,in_module);
+        const linksymbolRef symref = find_link_symbol(defname,in_file,in_module);
         if (symref == linksymbolRefUndef) {
             fprintf(stderr,"No such symbol '%s'\n",defname);
             return -1;
@@ -1200,7 +1185,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         {
             auto sym = get_link_symbol(symref);
 
-            lsgref = find_link_segment(sym->segdef.c_str());
+            const linksegdefRef lsgref = find_link_segment(sym->segdef.c_str());
             if (lsgref == linksegdefRefUndef) {
                 fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef.c_str());
                 return -1;
@@ -1209,7 +1194,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             auto lsg = get_link_segment(lsgref);
 
             assert(sym->fragment < lsg->fragments.size());
-            frag = &lsg->fragments[sym->fragment];
+            struct seg_fragment *frag = &lsg->fragments[sym->fragment];
 
             *fseg = lsg->segment_relative;
             *fofs = sym->offset + lsg->segment_offset + frag->offset;
@@ -1232,7 +1217,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
     unsigned long targ_seg,targ_ofs;
     linksegdefRef frame_sdefref;
     linksegdefRef targ_sdefref;
-    struct seg_fragment *frag;
     const char *cur_segdefname;
     unsigned char *fence;
     unsigned char *ptr;
@@ -1319,7 +1303,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
          * get the fragment it belongs to */
         assert(current_link_segment->fragment_load_index != fragmentRefUndef);
         assert(current_link_segment->fragment_load_index < current_link_segment->fragments.size());
-        frag = &current_link_segment->fragments[current_link_segment->fragment_load_index];
+        struct seg_fragment *frag = &current_link_segment->fragments[current_link_segment->fragment_load_index];
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
