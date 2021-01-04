@@ -1213,12 +1213,12 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
 }
 
 int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_module,unsigned int pass) {
+    const struct omf_segdef_t *cur_segdef;
     unsigned long final_seg,final_ofs;
     unsigned long frame_seg,frame_ofs;
     unsigned long targ_seg,targ_ofs;
     struct link_segdef *frame_sdef;
     struct link_segdef *targ_sdef;
-    const struct omf_segdef_t *cur_segdef;
     struct seg_fragment *frag;
     const char *cur_segdefname;
     unsigned char *fence;
