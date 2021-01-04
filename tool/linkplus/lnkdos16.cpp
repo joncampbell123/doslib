@@ -261,7 +261,6 @@ public:
         assert(v < vector<T>::size());
         return ref(this,&(vector<T>::operator[](v)));
     }
-private:
     void refcount_assert_zero(void) {
         if (refcount != 0) {
             fprintf(stderr,"BUG! Attempt to resize vector with outstanding references\n");
