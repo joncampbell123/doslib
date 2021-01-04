@@ -70,6 +70,7 @@ typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
 typedef size_t                          relocationRef;
 typedef size_t                          linksymbolRef;
+typedef size_t                          linksegdefRef;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
@@ -88,6 +89,7 @@ static const fileOffset                 fileOffsetUndef = ~((fileOffset)0u);
 static const linearAddress              linearAddressUndef = ~((linearAddress)0u);
 static const relocationRef              relocationRefUndef = ~((relocationRef)0u);
 static const linksymbolRef              linksymbolRefUndef = ~((linksymbolRef)0u);
+static const linksegdefRef              linksegdefRefUndef = ~((linksegdefRef)0u);
 
 static inline alignMask alignMaskToValue(const alignMask &v) {
     return (~v) + ((alignMask)1u);
@@ -446,8 +448,6 @@ struct link_segdef {
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
 
 static vector<struct link_segdef>       link_segments;
-
-static struct link_segdef*              current_link_segment = NULL;
 
 static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
 static string                           entry_seg_link_target_name;
@@ -1095,8 +1095,6 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (lsg->noemit) return 0;
 
-    current_link_segment = lsg;
-
     if (info->data_length == 0)
         return 0;
 
@@ -1296,7 +1294,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
             return 1;
         }
 
-        current_link_segment = find_link_segment(cur_segdefname);
+        struct link_segdef* current_link_segment = find_link_segment(cur_segdefname);
         if (current_link_segment == NULL) {
             fprintf(stderr,"Cannot find linker segment '%s'\n",cur_segdefname);
             return 1;
