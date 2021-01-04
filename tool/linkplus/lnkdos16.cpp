@@ -19,6 +19,7 @@ extern "C" {
 using namespace std;
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -215,12 +216,12 @@ struct exe_relocation {
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
-static vector<struct exe_relocation>    exe_relocation_table;
+static vector< unique_ptr<struct exe_relocation> >          exe_relocation_table;
 
 struct exe_relocation *new_exe_relocation(void) {
     const size_t idx = exe_relocation_table.size();
-    exe_relocation_table.resize(idx + (size_t)1);
-    return &exe_relocation_table[idx];
+    exe_relocation_table.push_back( unique_ptr<struct exe_relocation>(new struct exe_relocation) );
+    return exe_relocation_table[idx].get();
 }
 
 void free_exe_relocations(void) {
@@ -240,15 +241,14 @@ struct link_symbol {
     link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
-static vector<struct link_symbol>       link_symbols;
+static vector< unique_ptr<struct link_symbol> >             link_symbols;
 
 struct link_symbol *new_link_symbol(const char *name) {
     const size_t idx = link_symbols.size();
-    link_symbols.resize(idx + (size_t)1);
-    struct link_symbol *sym = &link_symbols[idx];
-
-    sym->name = name;
+    link_symbols.push_back( unique_ptr<struct link_symbol>(new struct link_symbol) );
+    struct link_symbol *sym = link_symbols[idx].get();
     sym->in_file = in_fileRefUndef;
+    sym->name = name;
     return sym;
 }
 
@@ -257,7 +257,7 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
     size_t i = 0;
 
     for (;i < link_symbols.size();i++) {
-        sym = &link_symbols[i];
+        sym = link_symbols[i].get();
 
         if (sym->is_local) {
             /* ignore local symbols unless file/module scope is given */
@@ -563,7 +563,7 @@ void dump_link_relocations(void) {
     }
 
     while (i < exe_relocation_table.size()) {
-        struct exe_relocation *rel = &exe_relocation_table[i++];
+        struct exe_relocation *rel = exe_relocation_table[i++].get();
 
         if (cmdoptions.verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%lu offset=0x%lx\n",
@@ -593,11 +593,11 @@ void dump_link_relocations(void) {
         fprintf(map_fp,"\n");
 }
 
-bool link_symbol_qsort_cmp_by_name(const struct link_symbol &sa,const struct link_symbol &sb) {
-    return strcasecmp(sa.name.c_str(),sb.name.c_str()) < 0;
+bool link_symbol_qsort_cmp_by_name(const unique_ptr<struct link_symbol> &sa,const unique_ptr<struct link_symbol> &sb) {
+    return strcasecmp(sa->name.c_str(),sb->name.c_str()) < 0;
 }
 
-bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol &sb) {
+bool link_symbol_qsort_cmp(const unique_ptr<struct link_symbol> &sa,const unique_ptr<struct link_symbol> &sb) {
     const struct seg_fragment *fraga;
     const struct link_segdef *sga;
 
@@ -607,18 +607,18 @@ bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol
     segmentRelative la,lb;
 
     /* -----A----- */
-    sga = find_link_segment(sa.segdef.c_str());
+    sga = find_link_segment(sa->segdef.c_str());
     assert(sga != NULL);
 
-    assert(sa.fragment < sga->fragments.size());
-    fraga = &sga->fragments[sa.fragment];
+    assert(sa->fragment < sga->fragments.size());
+    fraga = &sga->fragments[sa->fragment];
 
     /* -----B----- */
-    sgb = find_link_segment(sb.segdef.c_str());
+    sgb = find_link_segment(sb->segdef.c_str());
     assert(sgb != NULL);
 
-    assert(sb.fragment < sgb->fragments.size());
-    fragb = &sgb->fragments[sb.fragment];
+    assert(sb->fragment < sgb->fragments.size());
+    fragb = &sgb->fragments[sb->fragment];
 
     /* segment */
     la = sga->segment_relative;
@@ -628,8 +628,8 @@ bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol
     if (la > lb) return false;
 
     /* offset */
-    la = sga->segment_offset + fraga->offset + sa.offset;
-    lb = sgb->segment_offset + fragb->offset + sb.offset;
+    la = sga->segment_offset + fraga->offset + sa->offset;
+    lb = sgb->segment_offset + fragb->offset + sb->offset;
 
     if (la < lb) return true;
     if (la > lb) return false;
@@ -668,7 +668,7 @@ void dump_link_symbols(void) {
             sort(link_symbols.begin(), link_symbols.end(), pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
         while (i < link_symbols.size()) {
-            struct link_symbol *sym = &link_symbols[i++];
+            struct link_symbol *sym = link_symbols[i++].get();
 
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%lu file='%s' module=%u local=%u\n",
@@ -2706,7 +2706,7 @@ int main(int argc,char **argv) {
             size_t i;
 
             for (i=0;i < exe_relocation_table.size();i++) {
-                struct exe_relocation *rel = &exe_relocation_table[i];
+                struct exe_relocation *rel = exe_relocation_table[i].get();
                 struct seg_fragment *frag;
                 struct link_segdef *lsg;
                 unsigned long rseg,roff;
@@ -2887,7 +2887,7 @@ int main(int argc,char **argv) {
             fprintf(map_fp,"\n");
 
             while (symi < link_symbols.size()) {
-                sym = &link_symbols[symi++];
+                sym = link_symbols[symi++].get();
 
                 if (sym->segdef != entry_seg_link_target->name) continue;
 
@@ -2906,7 +2906,7 @@ int main(int argc,char **argv) {
             }
 
             if (fsymi != (~0u)) {
-                sym = &link_symbols[fsymi];
+                sym = link_symbols[fsymi].get();
 
                 assert(sym->segdef == entry_seg_link_target->name);
 
