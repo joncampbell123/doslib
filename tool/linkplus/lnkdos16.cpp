@@ -69,6 +69,7 @@ typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
 typedef size_t                          relocationRef;
+typedef size_t                          linksymbolRef;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
@@ -86,6 +87,7 @@ static const alignMask                  qwordAlignMask = ~((alignMask)7u);
 static const fileOffset                 fileOffsetUndef = ~((fileOffset)0u);
 static const linearAddress              linearAddressUndef = ~((linearAddress)0u);
 static const relocationRef              relocationRefUndef = ~((relocationRef)0u);
+static const linksymbolRef              linksymbolRefUndef = ~((linksymbolRef)0u);
 
 static inline alignMask alignMaskToValue(const alignMask &v) {
     return (~v) + ((alignMask)1u);
@@ -227,14 +229,14 @@ public:
 public:
     class ref {
         public:
-            ref(reftrackvector<T> *_parent,T *_elem) : parent(_parent), elem(_elem) { _parent->refcount++; assert(elem != NULL); }
+            ref(reftrackvector<T> *_parent,T *_elem) : parent(_parent), elem(_elem) {
+                parent->refcount++;
+            }
             ref(const ref &o) : parent(o.parent), elem(o.elem) {
-                assert(elem != NULL);
                 parent->refcount++;
             }
             ~ref() {
                 assert(parent != NULL);
-                assert(elem != NULL);
                 assert(parent->refcount != 0);
                 parent->refcount--;
             }
@@ -246,6 +248,23 @@ public:
             }
             T* getptr(void) {
                 return elem;
+            }
+            ref &operator=(const ref &o) {
+                assert(parent != NULL);
+                assert(parent->refcount != 0);
+                parent->refcount--;
+
+                elem = o.elem;
+                parent = o.parent;
+                parent->refcount++;
+
+                return *this;
+            }
+            bool operator==(const ref &o) const {
+                return parent == o.parent && elem == o.elem;
+            }
+            bool operator!=(const ref &o) const {
+                return !(*this == o);
             }
         private:
             reftrackvector<T> *parent;
@@ -303,6 +322,14 @@ void free_exe_relocations(void) {
     exe_relocation_table.clear();
 }
 
+/* NTS: Due to std::vector reallocation, pointers become INVALID on resize/reserve. For this
+ *      reason allocation and search results are by handle (linksymbolRef), which can be
+ *      converted to pointer by obtaining a ref. For long-term purposes you are supposed to
+ *      refer to symbols by name, for shorter term purposes by handle, and for very short
+ *      periods, during which you must not allocate additional entries, a pointer.
+ *
+ *      If anything is inserted/deleted or contents reordered or sorted, handles become
+ *      invalid. */
 struct link_symbol {
     string                              name;               /* symbol name, raw */
     string                              segdef;             /* belongs to segdef */
@@ -316,24 +343,28 @@ struct link_symbol {
     link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
-static vector<struct link_symbol>       link_symbols;
+static reftrackvector<struct link_symbol>               link_symbols;
 
-struct link_symbol *new_link_symbol(const char *name) {
-    const size_t idx = link_symbols.size();
-    link_symbols.resize(idx + (size_t)1);
-    struct link_symbol *sym = &link_symbols[idx];
+linksymbolRef new_link_symbol(const char *name) {
+    linksymbolRef idx = link_symbols.new_entry();
+    auto sym = link_symbols.get_entry(idx);
 
     sym->name = name;
     sym->in_file = in_fileRefUndef;
-    return sym;
+    return idx;
 }
 
-struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
-    struct link_symbol *sym;
+reftrackvector<struct link_symbol>::ref get_link_symbol(const linksymbolRef ref) {
+    auto ret = link_symbols.get_entry(ref);
+    assert(ret.getptr() != NULL);
+    return ret;
+}
+
+linksymbolRef find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
     size_t i = 0;
 
     for (;i < link_symbols.size();i++) {
-        sym = &link_symbols[i];
+        auto sym = link_symbols.get_entry((linksymbolRef)i);
 
         if (sym->is_local) {
             /* ignore local symbols unless file/module scope is given */
@@ -344,10 +375,10 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
         }
 
         if (sym->name == name)
-            return sym;
+            return i;
     }
 
-    return NULL;
+    return linksymbolRefUndef;
 }
 
 void link_symbols_free(void) {
@@ -1140,9 +1171,9 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
+        linksymbolRef symref = linksymbolRefUndef;
         struct seg_fragment *frag;
         struct link_segdef *lsg;
-        struct link_symbol *sym;
         const char *defname;
 
         defname = omf_context_get_extdef_name_safe(omf_state,index);
@@ -1151,24 +1182,28 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        sym = find_link_symbol(defname,in_file,in_module);
-        if (sym == NULL) {
+        symref = find_link_symbol(defname,in_file,in_module);
+        if (symref == linksymbolRefUndef) {
             fprintf(stderr,"No such symbol '%s'\n",defname);
             return -1;
         }
 
-        lsg = find_link_segment(sym->segdef.c_str());
-        if (lsg == NULL) {
-            fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef.c_str());
-            return -1;
+        {
+            auto sym = get_link_symbol(symref);
+
+            lsg = find_link_segment(sym->segdef.c_str());
+            if (lsg == NULL) {
+                fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef.c_str());
+                return -1;
+            }
+
+            assert(sym->fragment < lsg->fragments.size());
+            frag = &lsg->fragments[sym->fragment];
+
+            *fseg = lsg->segment_relative;
+            *fofs = sym->offset + lsg->segment_offset + frag->offset;
+            *sdef = lsg;
         }
-
-        assert(sym->fragment < lsg->fragments.size());
-        frag = &lsg->fragments[sym->fragment];
-
-        *fseg = lsg->segment_relative;
-        *fofs = sym->offset + lsg->segment_offset + frag->offset;
-        *sdef = lsg;
     }
     else if (method == 5/*BY TARGET*/) {
     }
@@ -1499,9 +1534,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     (void)pass;
 
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
+        linksymbolRef symref;
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
         struct link_segdef *lsg;
-        struct link_symbol *sym;
         const char *groupname;
         const char *segname;
         const char *name;
@@ -1530,13 +1565,13 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             }
         }
 
-        sym = find_link_symbol(name,in_file,in_module);
-        if (sym != NULL) {
+        symref = find_link_symbol(name,in_file,in_module);
+        if (symref != linksymbolRefUndef) {
             fprintf(stderr,"Symbol '%s' already defined\n",name);
             return -1;
         }
-        sym = new_link_symbol(name);
-        if (sym == NULL) {
+        symref = new_link_symbol(name);
+        if (symref == linksymbolRefUndef) {
             fprintf(stderr,"Unable to allocate symbol '%s'\n",name);
             return -1;
         }
@@ -1544,13 +1579,17 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         assert(pass == PASS_GATHER);
         assert(!lsg->fragments.empty());
 
-        sym->fragment = lsg->fragment_load_index;
-        sym->offset = pubdef->public_offset;
-        sym->groupdef = groupname;
-        sym->segdef = segname;
-        sym->in_file = in_file;
-        sym->in_module = in_module;
-        sym->is_local = is_local;
+        {
+            auto sym = get_link_symbol(symref);
+
+            sym->fragment = lsg->fragment_load_index;
+            sym->offset = pubdef->public_offset;
+            sym->groupdef = groupname;
+            sym->segdef = segname;
+            sym->in_file = in_file;
+            sym->in_module = in_module;
+            sym->is_local = is_local;
+        }
     }
 
     return 0;
@@ -2524,23 +2563,26 @@ int main(int argc,char **argv) {
                             return 1;
 
                         /* make the original entry point a symbol, change entry point to new place */
-                        struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
-                        if (ls != NULL)
+                        linksymbolRef lsref = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                        if (lsref != linksymbolRefUndef)
                             return 1;
 
-                        ls = new_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY");
-                        if (ls == NULL)
+                        lsref = new_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY");
+                        if (lsref == linksymbolRefUndef)
                             return 1;
 
                         entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
                         assert(entry_seg_link_target != NULL);
 
-                        ls->segdef = entry_seg_link_target->name;
-                        ls->groupdef = entry_seg_link_target->groupname;
-                        ls->offset = entry_seg_ofs;
-                        ls->fragment = entry_seg_link_target_fragment;
-                        ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_file;
-                        ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_module;
+                        {
+                            auto ls = get_link_symbol(lsref);
+                            ls->segdef = entry_seg_link_target->name;
+                            ls->groupdef = entry_seg_link_target->groupname;
+                            ls->offset = entry_seg_ofs;
+                            ls->fragment = entry_seg_link_target_fragment;
+                            ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_file;
+                            ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_module;
+                        }
 
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
@@ -2591,22 +2633,26 @@ int main(int argc,char **argv) {
 
         exeseg = find_link_segment("__COM_ENTRY_JMP");
         if (exeseg != NULL) {
-            struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
-            if (ls == NULL)
+            linksymbolRef lsref = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+            if (lsref == linksymbolRefUndef)
                 return 1;
 
-            struct link_segdef *lsseg = find_link_segment(ls->segdef.c_str());
-            if (exeseg == NULL)
-                return 1;
+            {
+                auto ls = get_link_symbol(lsref);
 
-            assert(ls->fragment < lsseg->fragments.size());
-            struct seg_fragment *lsfrag = &lsseg->fragments[ls->fragment];
+                struct link_segdef *lsseg = find_link_segment(ls->segdef.c_str());
+                if (exeseg == NULL)
+                    return 1;
 
-            init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
-            assert(init_ip >= cmdoptions.image_base_offset);
-            assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
-            frag = &exeseg->fragments[0];
-            assert(frag->image.size() >= 2);
+                assert(ls->fragment < lsseg->fragments.size());
+                struct seg_fragment *lsfrag = &lsseg->fragments[ls->fragment];
+
+                init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
+                assert(init_ip >= cmdoptions.image_base_offset);
+                assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
+                frag = &exeseg->fragments[0];
+                assert(frag->image.size() >= 2);
+            }
 
             if (frag->image[0] == 0xEB) { /* jmp short */
                 signed long rel = (signed long)init_ip - (2 + cmdoptions.image_base_offset);
