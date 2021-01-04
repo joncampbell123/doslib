@@ -565,7 +565,7 @@ void dump_link_relocations(void) {
     }
 
     while (i < exe_relocation_table.size()) {
-        struct exe_relocation *rel = exe_relocation_table[i++].get();
+        shared_ptr<struct exe_relocation> rel = exe_relocation_table[i++];
 
         if (cmdoptions.verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%p offset=0x%lx\n",
