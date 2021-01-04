@@ -209,69 +209,6 @@ static const uint8_t dosdrvrel_entry_point[] = {
                                         // 0x28
 };
 
-template <class T> class reftrackvector : public vector<T> {
-public:
-    typedef size_t refval;
-    const size_t refUndef = ~((size_t)0u);
-public:
-    reftrackvector() : vector<T>() { }
-public:
-    void resize(size_t n) {
-        refcount_assert_zero();
-        vector<T>::resize(n);
-    }
-    void resize(size_t n,const T &val) {
-        refcount_assert_zero();
-        vector<T>::resize(n,val);
-    }
-public:
-    class ref {
-        public:
-            ref(reftrackvector<T> *_parent,T *_elem) : parent(_parent), elem(_elem) { _parent->refcount++; assert(elem != NULL); }
-            ref(const ref &o) : parent(o.parent), elem(o.elem) {
-                assert(elem != NULL);
-                parent->refcount++;
-            }
-            ~ref() {
-                assert(parent != NULL);
-                assert(elem != NULL);
-                assert(parent->refcount != 0);
-                parent->refcount--;
-            }
-            T& operator*() {
-                return elem;
-            }
-            T* operator->() {
-                return elem;
-            }
-            T* getptr(void) {
-                return elem;
-            }
-        private:
-            reftrackvector<T> *parent;
-            T* elem;
-    };
-public:
-    refval new_entry(void) {
-        refval idx = vector<T>::size();
-        resize(idx+1);
-        return idx;
-    }
-    ref get_entry(const refval v) {
-        assert(v < vector<T>::size());
-        return ref(this,&(vector<T>::operator[](v)));
-    }
-private:
-    void refcount_assert_zero(void) {
-        if (refcount != 0) {
-            fprintf(stderr,"BUG! Attempt to resize vector with outstanding references\n");
-            abort();
-        }
-    }
-private:
-    volatile size_t                     refcount = 0;
-};
-
 struct exe_relocation {
     string                              segname;            /* which segment */
     fragmentRef                         fragment;           /* which fragment */
@@ -289,15 +226,19 @@ struct exe_relocation {
  *      deleting items, relocation references are invalid as well.
  *
  *      However, there should be little need for long term references to relocations anyway. */
-static reftrackvector<struct exe_relocation>            exe_relocation_table;
+static vector<struct exe_relocation>    exe_relocation_table;
 
-/* will return reference, or some sort of C++ exception */
-reftrackvector<struct exe_relocation>::ref get_exe_relocation(const relocationRef ref) {
-    return exe_relocation_table.get_entry(ref);
+/* will return reference, or assert fail */
+struct exe_relocation *get_exe_relocation(const relocationRef r) {
+    assert(r < exe_relocation_table.size());
+    return &exe_relocation_table[r];
 }
 
+/* will return reference, or some sort of C++ exception */
 relocationRef new_exe_relocation(void) {
-    return exe_relocation_table.new_entry();
+    const relocationRef idx = exe_relocation_table.size();
+    exe_relocation_table.resize((size_t)idx + (size_t)1);
+    return idx;
 }
 
 void free_exe_relocations(void) {
@@ -1347,16 +1288,14 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         return -1;
                     }
 
-                    {
-                        auto reloc = get_exe_relocation(relocref);
-                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                        reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index;
-                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
+                    struct exe_relocation *reloc = get_exe_relocation(relocref);
+                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+                    reloc->segname = current_link_segment->name;
+                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
-                        if (cmdoptions.verbose)
-                            fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
-                    }
+                    if (cmdoptions.verbose)
+                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
@@ -1388,16 +1327,14 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         return -1;
                     }
 
-                    {
-                        auto reloc = get_exe_relocation(relocref);
-                        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                        reloc->segname = current_link_segment->name;
-                        reloc->fragment = current_link_segment->fragment_load_index;
-                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
+                    struct exe_relocation *reloc = get_exe_relocation(relocref);
+                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+                    reloc->segname = current_link_segment->name;
+                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
-                        if (cmdoptions.verbose)
-                            fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
-                    }
+                    if (cmdoptions.verbose)
+                        fprintf(stderr,"Relocation entry: Patch up %s:%lu:%04lx\n",reloc->segname.c_str(),(unsigned long)reloc->fragment,(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
