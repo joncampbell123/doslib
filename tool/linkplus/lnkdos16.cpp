@@ -767,7 +767,7 @@ void dump_link_segments(const unsigned int purpose) {
         }
 
         for (f=0;f < sg->fragments.size();f++) {
-            struct seg_fragment *frag = sg->fragments[f].get();
+            shared_ptr<struct seg_fragment> frag = sg->fragments[f];
 
             if (map_fp != NULL) {
                 if (frag->fragment_length != 0ul && sg->segment_offset != segmentOffsetUndef) {
@@ -1451,7 +1451,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
 
             {
-                struct seg_fragment *f = lsg->fragment_load_index.get();
+                shared_ptr<struct seg_fragment> f = lsg->fragment_load_index;
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
@@ -1588,12 +1588,12 @@ int trim_noemit() {
     unsigned int linkseg;
 
     for (linkseg=link_segments.size();linkseg > 0;) {
-        struct link_segdef *sd = link_segments[--linkseg].get();
+        shared_ptr<struct link_segdef> sd = link_segments[--linkseg];
         if (!sd->noemit) break;
     }
 
     for (;linkseg > 0;) {
-        struct link_segdef *sd = link_segments[--linkseg].get();
+        shared_ptr<struct link_segdef> sd = link_segments[--linkseg];
 
         if (sd->noemit) {
             fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",sd->name.c_str());
@@ -2209,11 +2209,10 @@ int main(int argc,char **argv) {
                 owlink_dosseg_sort_order();
 
             {
-                struct link_segdef *ssg;
                 unsigned int i;
 
                 for (i=0;i < link_segments.size();i++) {
-                    ssg = link_segments[i].get();
+                    shared_ptr<struct link_segdef> ssg = link_segments[i];
 
                     if (ssg->classname == "STACK" || ssg->classname == "BSS") {
                         ssg->noemit = 1;
@@ -2277,7 +2276,7 @@ int main(int argc,char **argv) {
             }
             else if (!entry_seg_link_target_name.empty()) {
                 assert(entry_seg_link_target_fragment.get() != nullptr);
-                struct seg_fragment *frag = entry_seg_link_target_fragment.get();
+                shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
 
                 if (frag->attr.f.f.use32) {
                     fprintf(stderr,"Entry point cannot be 32-bit\n");
@@ -2300,11 +2299,11 @@ int main(int argc,char **argv) {
                 unsigned int linkseg,fragseg;
 
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = link_segments[linkseg].get();
+                    shared_ptr<struct link_segdef> sd = link_segments[linkseg];
 
                     if (!sd->noemit) {
                         for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                            struct seg_fragment *frag = sd->fragments[fragseg].get();
+                            shared_ptr<struct seg_fragment> frag = sd->fragments[fragseg];
 
                             if (frag->fragment_length != 0) {
                                 frag->image.resize(frag->fragment_length);
@@ -2449,7 +2448,7 @@ int main(int argc,char **argv) {
         unsigned int linkseg;
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-            struct link_segdef *sd = link_segments[linkseg].get();
+            shared_ptr<struct link_segdef> sd = link_segments[linkseg];
 
             if (!sd->noemit)
                 sd->file_offset = sd->linear_offset;
@@ -2591,7 +2590,7 @@ int main(int argc,char **argv) {
 
             assert(!entry_seg_link_target->fragments.empty());
             assert(entry_seg_link_target_fragment != nullptr);
-            struct seg_fragment *frag = entry_seg_link_target_fragment.get();
+            shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
 
             if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
                 fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
@@ -2752,13 +2751,13 @@ int main(int argc,char **argv) {
             unsigned char fill[4096];
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                struct link_segdef *sd = link_segments[linkseg].get();
+                shared_ptr<struct link_segdef> sd = link_segments[linkseg];
 
                 if (sd->noemit) continue;
 
                 assert(sd->file_offset != fileOffsetUndef);
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                    struct seg_fragment *frag = sd->fragments[fragseg].get();
+                    shared_ptr<struct seg_fragment> frag = sd->fragments[fragseg];
                     fileOffset file_ofs = sd->file_offset+frag->offset;
 
                     if (file_ofs < cur_offset) {
