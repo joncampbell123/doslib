@@ -427,12 +427,6 @@ struct link_segdef {
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
     unsigned int                        header:1;           /* segment is executable header stuff */
 
-    struct seg_fragment *new_fragment(void) {
-        const size_t idx = fragments.size();
-        fragments.resize(idx + (size_t)1);
-        return &fragments[idx];
-    }
-
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
                     segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
                     pinned(0), noemit(0), header(0) { }
@@ -649,6 +643,12 @@ void owlink_stack_bss_arrange(void) {
         link_segments_sort(&s,&e,sort_cmpf_class_stack);
         link_segments_sort(&s,&e,sort_cmpf_class_bss);
     }
+}
+
+struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
+    const size_t idx = sg->fragments.size();
+    sg->fragments.resize(idx + (size_t)1);
+    return &sg->fragments[idx];
 }
 
 void free_link_segments(void) {
@@ -1700,7 +1700,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
             {
                 auto lsg = get_link_segment(lsgref);
-                struct seg_fragment *f = lsg->new_fragment();
+                struct seg_fragment *f = alloc_link_segment_fragment(lsg.getptr());
                 if (f == NULL) {
                     fprintf(stderr,"Unable to alloc segment fragment\n");
                     return -1;
@@ -2452,7 +2452,7 @@ int main(int argc,char **argv) {
                     if (stacksg->segment_length < cmdoptions.want_stack_size) {
                         struct seg_fragment *frag;
 
-                        frag = stacksg->new_fragment();
+                        frag = alloc_link_segment_fragment(stacksg);
                         if (frag == NULL) {
                             return 1;
                         }
@@ -2576,7 +2576,7 @@ int main(int argc,char **argv) {
                             exeseg->segment_relative = cmdoptions.image_base_segment;
                             exeseg->segment_base = cmdoptions.image_base_offset;
 
-                            frag = exeseg->new_fragment();
+                            frag = alloc_link_segment_fragment(exeseg.getptr());
                             if (frag == NULL)
                                 return 1;
 
@@ -2766,7 +2766,7 @@ int main(int argc,char **argv) {
         exeseg->file_offset = 0;
         exeseg->segment_relative = -1;
 
-        frag = exeseg->new_fragment();
+        frag = alloc_link_segment_fragment(exeseg.getptr());
         if (frag == NULL)
             return 1;
 
@@ -2936,7 +2936,7 @@ int main(int argc,char **argv) {
 
         /* The EXE header is defined only in number of pages, round up */
         if (exeseg->segment_length & 0xF) {
-            frag = exeseg->new_fragment();
+            frag = alloc_link_segment_fragment(exeseg.getptr());
             if (frag == NULL)
                 return 1;
 
