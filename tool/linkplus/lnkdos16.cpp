@@ -682,6 +682,7 @@ void dump_link_relocations(void) {
         }
 
         if (map_fp != NULL) {
+            struct seg_fragment *frag;
             linksegdefRef sgref;
 
             sgref = find_link_segment(rel->segname.c_str());
@@ -690,7 +691,7 @@ void dump_link_relocations(void) {
             auto sg = get_link_segment(sgref);
 
             assert(rel->fragment < sg->fragments.size());
-            struct seg_fragment *frag = &sg->fragments[rel->fragment];
+            frag = &sg->fragments[rel->fragment];
 
             fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sg->segment_relative&0xfffful,
@@ -710,25 +711,33 @@ bool link_symbol_qsort_cmp_by_name(const struct link_symbol &sa,const struct lin
 }
 
 bool link_symbol_qsort_cmp(const struct link_symbol &sa,const struct link_symbol &sb) {
+    const struct seg_fragment *fraga;
+    linksegdefRef sgaref;
+
+    struct seg_fragment *fragb;
+    linksegdefRef sgbref;
+
+    segmentRelative la,lb;
+
     /* -----A----- */
-    const linksegdefRef sgaref = find_link_segment(sa.segdef.c_str());
+    sgaref = find_link_segment(sa.segdef.c_str());
     assert(sgaref != linksegdefRefUndef);
     auto sga = get_link_segment(sgaref);
 
     assert(sa.fragment < sga->fragments.size());
-    const struct seg_fragment *fraga = &sga->fragments[sa.fragment];
+    fraga = &sga->fragments[sa.fragment];
 
     /* -----B----- */
-    const linksegdefRef sgbref = find_link_segment(sb.segdef.c_str());
+    sgbref = find_link_segment(sb.segdef.c_str());
     assert(sgbref != linksegdefRefUndef);
     auto sgb = get_link_segment(sgbref);
 
     assert(sb.fragment < sgb->fragments.size());
-    struct seg_fragment *fragb = &sgb->fragments[sb.fragment];
+    fragb = &sgb->fragments[sb.fragment];
 
     /* segment */
-    segmentRelative la = sga->segment_relative;
-    segmentRelative lb = sgb->segment_relative;
+    la = sga->segment_relative;
+    lb = sgb->segment_relative;
 
     if (la < lb) return true;
     if (la > lb) return false;
@@ -2876,6 +2885,7 @@ int main(int argc,char **argv) {
 
             for (i=0;i < exe_relocation_table.size();i++) {
                 struct exe_relocation *rel = &exe_relocation_table[i];
+                struct seg_fragment *frag;
                 unsigned long rseg,roff;
                 linksegdefRef lsgref;
 
@@ -2888,7 +2898,7 @@ int main(int argc,char **argv) {
                 auto lsg = get_link_segment(lsgref);
 
                 assert(rel->fragment < lsg->fragments.size());
-                struct seg_fragment *frag = &lsg->fragments[rel->fragment];
+                frag = &lsg->fragments[rel->fragment];
 
                 rseg = 0;
                 roff = rel->offset + lsg->linear_offset + frag->offset;
@@ -3039,12 +3049,14 @@ int main(int argc,char **argv) {
             unsigned int symi = 0,fsymi = ~0u;
             unsigned long sofs,cofs;
             struct link_symbol *sym;
+            struct seg_fragment *frag;
+            struct seg_fragment *sfrag;
             linksegdefRef ssgref;
 
             assert(entry_seg_link_target_ref != linksegdefRefUndef);
             auto entry_seg_link_target = get_link_segment(entry_seg_link_target_ref);
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            struct seg_fragment *frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
                 (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
@@ -3070,7 +3082,7 @@ int main(int argc,char **argv) {
 
                 assert(sym->fragment < ssg->fragments.size());
 
-                struct seg_fragment *sfrag = &ssg->fragments[sym->fragment];
+                sfrag = &ssg->fragments[sym->fragment];
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
@@ -3091,7 +3103,7 @@ int main(int argc,char **argv) {
 
                 assert(sym->fragment < ssg->fragments.size());
 
-                struct seg_fragment *sfrag = &ssg->fragments[sym->fragment];
+                sfrag = &ssg->fragments[sym->fragment];
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
