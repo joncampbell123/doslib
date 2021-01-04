@@ -68,7 +68,6 @@ typedef uint32_t                        linearAddress;
 typedef size_t                          fragmentRef;
 typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
-typedef size_t                          relocationRef;
 
 static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
 static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
@@ -85,7 +84,6 @@ static const alignMask                  dwordAlignMask = ~((alignMask)3u);
 static const alignMask                  qwordAlignMask = ~((alignMask)7u);
 static const fileOffset                 fileOffsetUndef = ~((fileOffset)0u);
 static const linearAddress              linearAddressUndef = ~((linearAddress)0u);
-static const relocationRef              relocationRefUndef = ~((relocationRef)0u);
 
 static inline alignMask alignMaskToValue(const alignMask &v) {
     return (~v) + ((alignMask)1u);
@@ -217,28 +215,12 @@ struct exe_relocation {
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
-/* NTS: Because of the nature of std::vector, any pointers held from get_exe_relocation()
- *      will become INVALID if std::vector resizes and reallocates the contents. Long
- *      term references to a relocation need to use a relocationRef (basically an index
- *      into the vector) instead of pointing directly at the element.
- *
- *      If the order of anything in the vector is changed, i.e. sorting or inserting/
- *      deleting items, relocation references are invalid as well.
- *
- *      However, there should be little need for long term references to relocations anyway. */
 static vector<struct exe_relocation>    exe_relocation_table;
 
-/* will return reference, or assert fail */
-struct exe_relocation *get_exe_relocation(const relocationRef r) {
-    assert(r < exe_relocation_table.size());
-    return &exe_relocation_table[r];
-}
-
-/* will return reference, or some sort of C++ exception */
-relocationRef new_exe_relocation(void) {
-    const relocationRef idx = exe_relocation_table.size();
-    exe_relocation_table.resize((size_t)idx + (size_t)1);
-    return idx;
+struct exe_relocation *new_exe_relocation(void) {
+    const size_t idx = exe_relocation_table.size();
+    exe_relocation_table.resize(idx + (size_t)1);
+    return &exe_relocation_table[idx];
 }
 
 void free_exe_relocations(void) {
@@ -1282,13 +1264,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (pass == PASS_GATHER) {
-                    relocationRef relocref = new_exe_relocation();
-                    if (relocref == relocationRefUndef) {
+                    struct exe_relocation *reloc = new_exe_relocation();
+                    if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
                     }
 
-                    struct exe_relocation *reloc = get_exe_relocation(relocref);
                     assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                     reloc->segname = current_link_segment->name;
                     reloc->fragment = current_link_segment->fragment_load_index;
@@ -1321,13 +1302,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                 }
 
                 if (pass == PASS_GATHER) {
-                    relocationRef relocref = new_exe_relocation();
-                    if (relocref == relocationRefUndef) {
+                    struct exe_relocation *reloc = new_exe_relocation();
+                    if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
                     }
 
-                    struct exe_relocation *reloc = get_exe_relocation(relocref);
                     assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                     reloc->segname = current_link_segment->name;
                     reloc->fragment = current_link_segment->fragment_load_index;
