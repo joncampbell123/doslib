@@ -246,21 +246,19 @@ struct link_symbol {
 
 static vector< shared_ptr<struct link_symbol> >             link_symbols;
 
-struct link_symbol *new_link_symbol(const char *name) {
-    const size_t idx = link_symbols.size();
-    link_symbols.push_back( shared_ptr<struct link_symbol>(new struct link_symbol) );
-    struct link_symbol *sym = link_symbols[idx].get();
+shared_ptr<struct link_symbol> new_link_symbol(const char *name) {
+    shared_ptr<struct link_symbol> sym(new struct link_symbol);
+    link_symbols.push_back( sym );
     sym->in_file = in_fileRefUndef;
     sym->name = name;
     return sym;
 }
 
-struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
-    struct link_symbol *sym;
-    size_t i = 0;
+shared_ptr<struct link_symbol> find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
+    for (size_t i=0;i < link_symbols.size();i++) {
+        struct link_symbol *sym = link_symbols[i].get();
 
-    for (;i < link_symbols.size();i++) {
-        sym = link_symbols[i].get();
+        assert(sym != nullptr);
 
         if (sym->is_local) {
             /* ignore local symbols unless file/module scope is given */
@@ -271,7 +269,7 @@ struct link_symbol *find_link_symbol(const char *name,const in_fileRef in_file,c
         }
 
         if (sym->name == name)
-            return sym;
+            return link_symbols[i];
     }
 
     return NULL;
@@ -1062,9 +1060,9 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
+        shared_ptr<struct link_symbol> sym;
         struct seg_fragment *frag;
         struct link_segdef *lsg;
-        struct link_symbol *sym;
         const char *defname;
 
         defname = omf_context_get_extdef_name_safe(omf_state,index);
@@ -1415,9 +1413,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     (void)pass;
 
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
+        shared_ptr<struct link_symbol> sym;
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
         struct link_segdef *lsg;
-        struct link_symbol *sym;
         const char *groupname;
         const char *segname;
         const char *name;
@@ -2442,7 +2440,7 @@ int main(int argc,char **argv) {
                             return 1;
 
                         /* make the original entry point a symbol, change entry point to new place */
-                        struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                         if (ls != NULL)
                             return 1;
 
@@ -2509,7 +2507,7 @@ int main(int argc,char **argv) {
 
         exeseg = find_link_segment("__COM_ENTRY_JMP");
         if (exeseg != NULL) {
-            struct link_symbol *ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+            shared_ptr<struct link_symbol> ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
             if (ls == NULL)
                 return 1;
 
