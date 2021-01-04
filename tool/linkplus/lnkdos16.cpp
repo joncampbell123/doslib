@@ -216,11 +216,11 @@ struct exe_relocation {
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
-static vector< unique_ptr<struct exe_relocation> >          exe_relocation_table;
+static vector< shared_ptr<struct exe_relocation> >          exe_relocation_table;
 
 struct exe_relocation *new_exe_relocation(void) {
     const size_t idx = exe_relocation_table.size();
-    exe_relocation_table.push_back( unique_ptr<struct exe_relocation>(new struct exe_relocation) );
+    exe_relocation_table.push_back( shared_ptr<struct exe_relocation>(new struct exe_relocation) );
     return exe_relocation_table[idx].get();
 }
 
@@ -241,11 +241,11 @@ struct link_symbol {
     link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
-static vector< unique_ptr<struct link_symbol> >             link_symbols;
+static vector< shared_ptr<struct link_symbol> >             link_symbols;
 
 struct link_symbol *new_link_symbol(const char *name) {
     const size_t idx = link_symbols.size();
-    link_symbols.push_back( unique_ptr<struct link_symbol>(new struct link_symbol) );
+    link_symbols.push_back( shared_ptr<struct link_symbol>(new struct link_symbol) );
     struct link_symbol *sym = link_symbols[idx].get();
     sym->in_file = in_fileRefUndef;
     sym->name = name;
@@ -307,7 +307,7 @@ struct link_segdef {
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
-    vector< unique_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
+    vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
@@ -338,7 +338,7 @@ struct link_segdef {
  *            per segdef allows different segments to operate differently, though currently all have the same image_base_offset
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
 
-static vector< unique_ptr<struct link_segdef> > link_segments;
+static vector< shared_ptr<struct link_segdef> > link_segments;
 
 static struct link_segdef*              current_link_segment = NULL;
 
@@ -495,7 +495,7 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
 }
 
-bool owlink_segsrt_def_qsort_cmp(const unique_ptr<struct link_segdef> &sa, const unique_ptr<struct link_segdef> &sb) {
+bool owlink_segsrt_def_qsort_cmp(const shared_ptr<struct link_segdef> &sa, const shared_ptr<struct link_segdef> &sb) {
     /* if either one is pinned, don't move */
     if (sa->pinned || sb->pinned) return false;
 
@@ -530,7 +530,7 @@ void owlink_stack_bss_arrange(void) {
 
 struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     const size_t idx = sg->fragments.size();
-    sg->fragments.push_back( unique_ptr<struct seg_fragment>(new struct seg_fragment) );
+    sg->fragments.push_back( shared_ptr<struct seg_fragment>(new struct seg_fragment) );
     return sg->fragments[idx].get();
 }
 
@@ -593,11 +593,11 @@ void dump_link_relocations(void) {
         fprintf(map_fp,"\n");
 }
 
-bool link_symbol_qsort_cmp_by_name(const unique_ptr<struct link_symbol> &sa,const unique_ptr<struct link_symbol> &sb) {
+bool link_symbol_qsort_cmp_by_name(const shared_ptr<struct link_symbol> &sa,const shared_ptr<struct link_symbol> &sb) {
     return strcasecmp(sa->name.c_str(),sb->name.c_str()) < 0;
 }
 
-bool link_symbol_qsort_cmp(const unique_ptr<struct link_symbol> &sa,const unique_ptr<struct link_symbol> &sb) {
+bool link_symbol_qsort_cmp(const shared_ptr<struct link_symbol> &sa,const shared_ptr<struct link_symbol> &sb) {
     const struct seg_fragment *fraga;
     const struct link_segdef *sga;
 
@@ -637,15 +637,15 @@ bool link_symbol_qsort_cmp(const unique_ptr<struct link_symbol> &sa,const unique
     return false;
 }
 
-bool link_segments_qsort_frag_by_offset(const unique_ptr<struct seg_fragment> &sa,const unique_ptr<struct seg_fragment> &sb) {
+bool link_segments_qsort_frag_by_offset(const shared_ptr<struct seg_fragment> &sa,const shared_ptr<struct seg_fragment> &sb) {
     return sa->offset < sb->offset;
 }
 
-bool link_segments_qsort_by_linofs(const unique_ptr<struct link_segdef> &sa,const unique_ptr<struct link_segdef> &sb) {
+bool link_segments_qsort_by_linofs(const shared_ptr<struct link_segdef> &sa,const shared_ptr<struct link_segdef> &sb) {
     return sa->linear_offset < sb->linear_offset;
 }
 
-bool link_segments_qsort_by_fileofs(const unique_ptr<struct link_segdef> &sa,const unique_ptr<struct link_segdef> &sb) {
+bool link_segments_qsort_by_fileofs(const shared_ptr<struct link_segdef> &sa,const shared_ptr<struct link_segdef> &sb) {
     return sa->file_offset < sb->file_offset;
 }
 
@@ -955,14 +955,14 @@ struct link_segdef *find_link_segment(const char *name) {
 
 struct link_segdef *new_link_segment(const char *name) {
     const size_t idx = link_segments.size();
-    link_segments.push_back( unique_ptr<struct link_segdef>(new struct link_segdef) );
+    link_segments.push_back( shared_ptr<struct link_segdef>(new struct link_segdef) );
     struct link_segdef *sg = link_segments[idx].get();
     sg->name = name;
     return sg;
 }
 
 struct link_segdef *new_link_segment_begin(const char *name) {
-    link_segments.insert(link_segments.begin(), unique_ptr<struct link_segdef>(new struct link_segdef) );
+    link_segments.insert(link_segments.begin(), shared_ptr<struct link_segdef>(new struct link_segdef) );
     struct link_segdef *sg = link_segments[0].get();
     sg->name = name;
     return sg;
@@ -1770,8 +1770,8 @@ int segment_def_arrange(void) {
 }
 
 void linkseg_add_padding_fragments(struct link_segdef *sg) {
-    vector< unique_ptr<seg_fragment> >::iterator scan;
-    vector< unique_ptr<seg_fragment> > add;
+    vector< shared_ptr<seg_fragment> >::iterator scan;
+    vector< shared_ptr<seg_fragment> > add;
     segmentOffset expect = 0;
     seg_fragment *frag;
 
@@ -1788,7 +1788,7 @@ void linkseg_add_padding_fragments(struct link_segdef *sg) {
         }
         if (expect < frag->offset) {
             const segmentOffset gap = frag->offset - expect;
-            unique_ptr<seg_fragment> nf(new seg_fragment);
+            shared_ptr<seg_fragment> nf(new seg_fragment);
 
             nf->in_file = in_fileRefPadding;
             nf->offset = expect;
