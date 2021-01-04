@@ -2449,12 +2449,11 @@ int main(int argc,char **argv) {
                 /* nothing */
             }
             else if (!entry_seg_link_target_name.empty()) {
-                linksegdefRef entry_seg_link_target_ref = find_link_segment(entry_seg_link_target_name.c_str());
-                struct seg_fragment *frag;
+                const linksegdefRef entry_seg_link_target_ref = find_link_segment(entry_seg_link_target_name.c_str());
 
                 auto entry_seg_link_target = get_link_segment(entry_seg_link_target_ref);
                 assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+                struct seg_fragment *frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
                 if (frag->attr.f.f.use32) {
                     fprintf(stderr,"Entry point cannot be 32-bit\n");
@@ -2646,20 +2645,21 @@ int main(int argc,char **argv) {
 
     /* COM files: patch JMP instruction to entry point */
     if (cmdoptions.output_format == OFMT_COM) {
-        struct seg_fragment *frag;
         linksegdefRef exesegref;
         uint32_t init_ip;
 
         exesegref = find_link_segment("__COM_ENTRY_JMP");
         if (exesegref != linksegdefRefUndef) {
-            linksymbolRef lsref = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+            const linksymbolRef lsref = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
             if (lsref == linksymbolRefUndef)
                 return 1;
+
+            struct seg_fragment *frag;
 
             {
                 auto ls = get_link_symbol(lsref);
 
-                linksegdefRef lssegref = find_link_segment(ls->segdef.c_str());
+                const linksegdefRef lssegref = find_link_segment(ls->segdef.c_str());
                 if (lssegref == linksegdefRefUndef)
                     return 1;
 
