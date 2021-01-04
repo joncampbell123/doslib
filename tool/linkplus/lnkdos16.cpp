@@ -307,7 +307,7 @@ struct link_segdef {
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
-    vector<struct seg_fragment>         fragments;          /* fragments (one from each OBJ/module) */
+    vector< unique_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
@@ -338,7 +338,7 @@ struct link_segdef {
  *            per segdef allows different segments to operate differently, though currently all have the same image_base_offset
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
 
-static vector<struct link_segdef>       link_segments;
+static vector< unique_ptr<struct link_segdef> > link_segments;
 
 static struct link_segdef*              current_link_segment = NULL;
 
@@ -458,7 +458,7 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
     int r;
 
     for (i=*start;i <= *end;) {
-        r = sort_cmp(&link_segments[i]);
+        r = sort_cmp(link_segments[i].get());
         if (r < 0) {
             while (i > *start) {
                 i--;
@@ -495,16 +495,16 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
 }
 
-bool owlink_segsrt_def_qsort_cmp(const struct link_segdef &sa, const struct link_segdef &sb) {
+bool owlink_segsrt_def_qsort_cmp(const unique_ptr<struct link_segdef> &sa, const unique_ptr<struct link_segdef> &sb) {
     /* if either one is pinned, don't move */
-    if (sa.pinned || sb.pinned) return false;
+    if (sa->pinned || sb->pinned) return false;
 
     /* sort by GROUP, CLASS */
 
     /* do it */
-    if (sa.groupname < sb.groupname)
+    if (sa->groupname < sb->groupname)
         return true;
-    if (sa.classname < sb.classname)
+    if (sa->classname < sb->classname)
         return true;
 
     return false;
@@ -530,8 +530,8 @@ void owlink_stack_bss_arrange(void) {
 
 struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     const size_t idx = sg->fragments.size();
-    sg->fragments.resize(idx + (size_t)1);
-    return &sg->fragments[idx];
+    sg->fragments.push_back( unique_ptr<struct seg_fragment>(new struct seg_fragment) );
+    return sg->fragments[idx].get();
 }
 
 void free_link_segments(void) {
@@ -578,7 +578,7 @@ void dump_link_relocations(void) {
             assert(sg != NULL);
 
             assert(rel->fragment < sg->fragments.size());
-            frag = &sg->fragments[rel->fragment];
+            frag = sg->fragments[rel->fragment].get();
 
             fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sg->segment_relative&0xfffful,
@@ -611,14 +611,14 @@ bool link_symbol_qsort_cmp(const unique_ptr<struct link_symbol> &sa,const unique
     assert(sga != NULL);
 
     assert(sa->fragment < sga->fragments.size());
-    fraga = &sga->fragments[sa->fragment];
+    fraga = sga->fragments[sa->fragment].get();
 
     /* -----B----- */
     sgb = find_link_segment(sb->segdef.c_str());
     assert(sgb != NULL);
 
     assert(sb->fragment < sgb->fragments.size());
-    fragb = &sgb->fragments[sb->fragment];
+    fragb = sgb->fragments[sb->fragment].get();
 
     /* segment */
     la = sga->segment_relative;
@@ -637,16 +637,16 @@ bool link_symbol_qsort_cmp(const unique_ptr<struct link_symbol> &sa,const unique
     return false;
 }
 
-bool link_segments_qsort_frag_by_offset(const struct seg_fragment &sa,const struct seg_fragment &sb) {
-    return sa.offset < sb.offset;
+bool link_segments_qsort_frag_by_offset(const unique_ptr<struct seg_fragment> &sa,const unique_ptr<struct seg_fragment> &sb) {
+    return sa->offset < sb->offset;
 }
 
-bool link_segments_qsort_by_linofs(const struct link_segdef &sa,const struct link_segdef &sb) {
-    return sa.linear_offset < sb.linear_offset;
+bool link_segments_qsort_by_linofs(const unique_ptr<struct link_segdef> &sa,const unique_ptr<struct link_segdef> &sb) {
+    return sa->linear_offset < sb->linear_offset;
 }
 
-bool link_segments_qsort_by_fileofs(const struct link_segdef &sa,const struct link_segdef &sb) {
-    return sa.file_offset < sb.file_offset;
+bool link_segments_qsort_by_fileofs(const unique_ptr<struct link_segdef> &sa,const unique_ptr<struct link_segdef> &sb) {
+    return sa->file_offset < sb->file_offset;
 }
 
 void dump_link_symbols(void) {
@@ -684,7 +684,7 @@ void dump_link_symbols(void) {
                 assert(sg != NULL);
 
                 assert(sym->fragment < sg->fragments.size());
-                frag = &sg->fragments[sym->fragment];
+                frag = sg->fragments[sym->fragment].get();
 
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
                         sym->name.c_str(),
@@ -740,7 +740,7 @@ void dump_link_segments(const unsigned int purpose) {
     }
 
     while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
+        struct link_segdef *sg = link_segments[i++].get();
 
         if (map_fp != NULL) {
             if (sg->segment_length != 0ul && sg->segment_offset != segmentOffsetUndef) {
@@ -789,7 +789,7 @@ void dump_link_segments(const unsigned int purpose) {
         }
 
         for (f=0;f < sg->fragments.size();f++) {
-            struct seg_fragment *frag = &sg->fragments[f];
+            struct seg_fragment *frag = sg->fragments[f].get();
 
             if (map_fp != NULL) {
                 if (frag->fragment_length != 0ul && sg->segment_offset != segmentOffsetUndef) {
@@ -842,7 +842,7 @@ void dump_link_segments(const unsigned int purpose) {
         }
 
         if (i < link_segments.size() && sg->segment_length != 0ul) {
-            struct link_segdef *nsg = &link_segments[i];
+            struct link_segdef *nsg = link_segments[i].get();
 
             if (map_fp != NULL) {
                 range1[0] = 0;
@@ -899,7 +899,7 @@ struct link_segdef *find_link_segment_by_grpdef(const char *name) {
     unsigned int i=0;
 
     while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
+        struct link_segdef *sg = link_segments[i++].get();
         if (sg->groupname == name) return sg;
     }
 
@@ -910,7 +910,7 @@ struct link_segdef *find_link_segment_by_class(const char *name) {
     unsigned int i=0;
 
     while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
+        struct link_segdef *sg = link_segments[i++].get();
         if (sg->classname == name) return sg;
     }
 
@@ -922,7 +922,7 @@ struct link_segdef *find_link_segment_by_class_last(const char *name) {
     unsigned int i=0;
 
     while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
+        struct link_segdef *sg = link_segments[i++].get();
         if (sg->classname == name) ret = sg;
     }
 
@@ -933,7 +933,7 @@ fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link
     fragmentRef i;
 
     for (i=0;i < (fragmentRef)sg->fragments.size();i++) {
-        const struct seg_fragment *f = &sg->fragments[i];
+        const struct seg_fragment *f = sg->fragments[i].get();
 
         if (f->in_file == in_file && f->in_module == in_module && f->from_segment_index == TargetDatum)
             return i;
@@ -946,7 +946,7 @@ struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
     while (i < link_segments.size()) {
-        struct link_segdef *sg = &link_segments[i++];
+        struct link_segdef *sg = link_segments[i++].get();
         if (sg->name == name) return sg;
     }
 
@@ -955,16 +955,15 @@ struct link_segdef *find_link_segment(const char *name) {
 
 struct link_segdef *new_link_segment(const char *name) {
     const size_t idx = link_segments.size();
-    link_segments.resize(idx + (size_t)1);
-    struct link_segdef *sg = &link_segments[idx];
+    link_segments.push_back( unique_ptr<struct link_segdef>(new struct link_segdef) );
+    struct link_segdef *sg = link_segments[idx].get();
     sg->name = name;
     return sg;
 }
 
 struct link_segdef *new_link_segment_begin(const char *name) {
-    link_segdef newsg;
-    link_segments.insert(link_segments.begin(),newsg);
-    struct link_segdef *sg = &link_segments[0];
+    link_segments.insert(link_segments.begin(), unique_ptr<struct link_segdef>(new struct link_segdef) );
+    struct link_segdef *sg = link_segments[0].get();
     sg->name = name;
     return sg;
 }
@@ -999,7 +998,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     }
 
     assert(lsg->fragment_load_index != fragmentRefUndef && lsg->fragment_load_index <= lsg->fragments.size());
-    frag = &lsg->fragments[lsg->fragment_load_index];
+    frag = lsg->fragments[lsg->fragment_load_index].get();
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (max_ofs > frag->fragment_length) {
@@ -1088,7 +1087,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         }
 
         assert(sym->fragment < lsg->fragments.size());
-        frag = &lsg->fragments[sym->fragment];
+        frag = lsg->fragments[sym->fragment].get();
 
         *fseg = lsg->segment_relative;
         *fofs = sym->offset + lsg->segment_offset + frag->offset;
@@ -1196,7 +1195,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         assert(current_link_segment != NULL);
         assert(current_link_segment->fragment_load_index != fragmentRefUndef);
         assert(current_link_segment->fragment_load_index < current_link_segment->fragments.size());
-        frag = &current_link_segment->fragments[current_link_segment->fragment_load_index];
+        frag = current_link_segment->fragments[current_link_segment->fragment_load_index].get();
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1497,7 +1496,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             assert(lsg->fragment_load_index < lsg->fragments.size());
 
             {
-                struct seg_fragment *f = &lsg->fragments[lsg->fragment_load_index];
+                struct seg_fragment *f = lsg->fragments[lsg->fragment_load_index].get();
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
@@ -1539,7 +1538,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 }
 
                 /* current load index is now the fragment just allocated */
-                lsg->fragment_load_index = (fragmentRef)(f - &lsg->fragments[0]);
+                lsg->fragment_load_index = (fragmentRef)(lsg->fragments.size() - size_t(1)); // FIXME
 
                 f->in_file = in_file;
                 f->in_module = in_module;
@@ -1633,12 +1632,12 @@ int trim_noemit() {
     unsigned int linkseg;
 
     for (linkseg=link_segments.size();linkseg > 0;) {
-        struct link_segdef *sd = &link_segments[--linkseg];
+        struct link_segdef *sd = link_segments[--linkseg].get();
         if (!sd->noemit) break;
     }
 
     for (;linkseg > 0;) {
-        struct link_segdef *sd = &link_segments[--linkseg];
+        struct link_segdef *sd = link_segments[--linkseg].get();
 
         if (sd->noemit) {
             fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",sd->name.c_str());
@@ -1659,7 +1658,7 @@ int segment_exe_arrange(void) {
         unsigned int linkseg;
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-            struct link_segdef *sd = &link_segments[linkseg];
+            struct link_segdef *sd = link_segments[linkseg].get();
             struct link_segdef *gd = find_link_segment_by_grpdef(sd->groupname.c_str());
             struct link_segdef *cd = find_link_segment_by_class(sd->classname.c_str());
 
@@ -1689,7 +1688,7 @@ int segment_exe_arrange(void) {
         unsigned int linkseg;
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-            struct link_segdef *sd = &link_segments[linkseg];
+            struct link_segdef *sd = link_segments[linkseg].get();
 
             sd->segment_base = cmdoptions.image_base_offset;
             sd->segment_relative = cmdoptions.image_base_segment;
@@ -1712,7 +1711,7 @@ int fragment_def_arrange(struct link_segdef *sd) {
     size_t fi;
 
     for (fi=0;fi < sd->fragments.size();fi++) {
-        struct seg_fragment *frag = &sd->fragments[fi];
+        struct seg_fragment *frag = sd->fragments[fi].get();
 
         /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
          *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
@@ -1734,7 +1733,7 @@ int fragment_def_arrange(void) {
     size_t inf;
 
     for (inf=0;inf < link_segments.size();inf++)
-        fragment_def_arrange(&link_segments[inf]);
+        fragment_def_arrange(link_segments[inf].get());
 
     return 0;
 }
@@ -1744,7 +1743,7 @@ int segment_def_arrange(void) {
     size_t inf;
 
     for (inf=0;inf < link_segments.size();inf++) {
-        struct link_segdef *sd = &link_segments[inf];
+        struct link_segdef *sd = link_segments[inf].get();
 
         /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
          *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
@@ -1771,46 +1770,49 @@ int segment_def_arrange(void) {
 }
 
 void linkseg_add_padding_fragments(struct link_segdef *sg) {
-    vector<seg_fragment>::iterator scan;
-    vector<seg_fragment> add;
+    vector< unique_ptr<seg_fragment> >::iterator scan;
+    vector< unique_ptr<seg_fragment> > add;
     segmentOffset expect = 0;
+    seg_fragment *frag;
 
     scan = sg->fragments.begin();
     if (scan == sg->fragments.end()) return;
-    expect = scan->offset + scan->fragment_length;
+    frag = scan->get();
+    expect = frag->offset + frag->fragment_length;
     scan++;
     while (scan != sg->fragments.end()) {
-        if (expect > scan->offset) {
+        frag = scan->get();
+        if (expect > frag->offset) {
             fprintf(stderr,"ERROR: fragment overlap detected\n");
             break;
         }
-        if (expect < scan->offset) {
-            const segmentOffset gap = scan->offset - expect;
-            seg_fragment nf;
+        if (expect < frag->offset) {
+            const segmentOffset gap = frag->offset - expect;
+            unique_ptr<seg_fragment> nf(new seg_fragment);
 
-            nf.in_file = in_fileRefPadding;
-            nf.offset = expect;
-            nf.fragment_length = gap;
-            nf.fragment_alignment = byteAlignMask;
-            nf.attr = scan->attr;
+            nf->in_file = in_fileRefPadding;
+            nf->offset = expect;
+            nf->fragment_length = gap;
+            nf->fragment_alignment = byteAlignMask;
+            nf->attr = frag->attr;
 
-            nf.image.resize(nf.fragment_length);
+            nf->image.resize(nf->fragment_length);
 
             if (sg->classname == "CODE")
-                memset(&nf.image[0],0x90/*NOP*/,nf.fragment_length);
+                memset(&nf->image[0],0x90/*NOP*/,nf->fragment_length);
             else
-                memset(&nf.image[0],0x00,nf.fragment_length);
+                memset(&nf->image[0],0x00,nf->fragment_length);
 
-            add.push_back(nf);
+            add.push_back(move(nf));
         }
 
-        expect = scan->offset + scan->fragment_length;
+        expect = frag->offset + frag->fragment_length;
         scan++;
     }
 
     if (!add.empty()) {
         for (scan=add.begin();scan!=add.end();scan++)
-            sg->fragments.push_back(*scan);
+            sg->fragments.push_back(move(*scan));
 
         sort(sg->fragments.begin(), sg->fragments.end(), link_segments_qsort_frag_by_offset);
     }
@@ -2255,7 +2257,7 @@ int main(int argc,char **argv) {
                 unsigned int i;
 
                 for (i=0;i < link_segments.size();i++) {
-                    ssg = &link_segments[i];
+                    ssg = link_segments[i].get();
 
                     if (ssg->classname == "STACK" || ssg->classname == "BSS") {
                         ssg->noemit = 1;
@@ -2272,7 +2274,7 @@ int main(int argc,char **argv) {
                     unsigned int i;
 
                     for (i=0;i < link_segments.size();i++) {
-                        ssg = &link_segments[i];
+                        ssg = link_segments[i].get();
 
                         if (ssg->classname == "STACK")
                             stacksg = ssg;
@@ -2322,7 +2324,7 @@ int main(int argc,char **argv) {
                 struct seg_fragment *frag;
 
                 assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+                frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
 
                 if (frag->attr.f.f.use32) {
                     fprintf(stderr,"Entry point cannot be 32-bit\n");
@@ -2345,11 +2347,11 @@ int main(int argc,char **argv) {
                 unsigned int linkseg,fragseg;
 
                 for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    struct link_segdef *sd = &link_segments[linkseg];
+                    struct link_segdef *sd = link_segments[linkseg].get();
 
                     if (!sd->noemit) {
                         for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                            struct seg_fragment *frag = &sd->fragments[fragseg];
+                            struct seg_fragment *frag = sd->fragments[fragseg].get();
 
                             if (frag->fragment_length != 0) {
                                 frag->image.resize(frag->fragment_length);
@@ -2372,7 +2374,7 @@ int main(int argc,char **argv) {
 
                     assert(!entry_seg_link_target->fragments.empty());
                     assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-                    frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+                    frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
 
                     if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
                         fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
@@ -2407,7 +2409,7 @@ int main(int argc,char **argv) {
                             return 1;
 
                         /* must be the FIRST */
-                        assert(frag == &exeseg->fragments[0]);
+                        assert(frag == exeseg->fragments[0].get());
 
                         frag->in_file = in_fileRefInternal;
                         frag->offset = 0;
@@ -2457,8 +2459,8 @@ int main(int argc,char **argv) {
                         ls->groupdef = entry_seg_link_target->groupname;
                         ls->offset = entry_seg_ofs;
                         ls->fragment = entry_seg_link_target_fragment;
-                        ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_file;
-                        ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].in_module;
+                        ls->in_file = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get()->in_file;
+                        ls->in_module = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get()->in_module;
 
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
@@ -2476,8 +2478,8 @@ int main(int argc,char **argv) {
         size_t li;
 
         for (li=0;li < link_segments.size();li++) {
-            sort(link_segments[li].fragments.begin(), link_segments[li].fragments.end(), link_segments_qsort_frag_by_offset);
-            linkseg_add_padding_fragments(&link_segments[li]);
+            sort(link_segments[li].get()->fragments.begin(), link_segments[li].get()->fragments.end(), link_segments_qsort_frag_by_offset);
+            linkseg_add_padding_fragments(link_segments[li].get());
         }
     }
 
@@ -2494,7 +2496,7 @@ int main(int argc,char **argv) {
         unsigned int linkseg;
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-            struct link_segdef *sd = &link_segments[linkseg];
+            struct link_segdef *sd = link_segments[linkseg].get();
 
             if (!sd->noemit)
                 sd->file_offset = sd->linear_offset;
@@ -2518,12 +2520,12 @@ int main(int argc,char **argv) {
                 return 1;
 
             assert(ls->fragment < lsseg->fragments.size());
-            struct seg_fragment *lsfrag = &lsseg->fragments[ls->fragment];
+            struct seg_fragment *lsfrag = lsseg->fragments[ls->fragment].get();
 
             init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
             assert(init_ip >= cmdoptions.image_base_offset);
             assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
-            frag = &exeseg->fragments[0];
+            frag = exeseg->fragments[0].get();
             assert(frag->image.size() >= 2);
 
             if (frag->image[0] == 0xEB) { /* jmp short */
@@ -2598,7 +2600,7 @@ int main(int argc,char **argv) {
             unsigned int linkseg;
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                const struct link_segdef *sd = &link_segments[linkseg];
+                const struct link_segdef *sd = link_segments[linkseg].get();
                 const linearAddress m = sd->linear_offset + (linearAddress)sd->segment_length;
 
                 if (sd->header) continue;
@@ -2638,7 +2640,7 @@ int main(int argc,char **argv) {
 
             assert(!entry_seg_link_target->fragments.empty());
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+            frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
 
             if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
                 fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
@@ -2718,7 +2720,7 @@ int main(int argc,char **argv) {
                 }
 
                 assert(rel->fragment < lsg->fragments.size());
-                frag = &lsg->fragments[rel->fragment];
+                frag = lsg->fragments[rel->fragment].get();
 
                 rseg = 0;
                 roff = rel->offset + lsg->linear_offset + frag->offset;
@@ -2774,7 +2776,7 @@ int main(int argc,char **argv) {
             unsigned int linkseg;
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                struct link_segdef *sd = &link_segments[linkseg];
+                struct link_segdef *sd = link_segments[linkseg].get();
 
                 if (!sd->noemit && !sd->header && sd->file_offset != fileOffsetUndef)
                     sd->file_offset += (fileOffset)header_size;
@@ -2801,13 +2803,13 @@ int main(int argc,char **argv) {
             unsigned char fill[4096];
 
             for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                struct link_segdef *sd = &link_segments[linkseg];
+                struct link_segdef *sd = link_segments[linkseg].get();
 
                 if (sd->noemit) continue;
 
                 assert(sd->file_offset != fileOffsetUndef);
                 for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                    struct seg_fragment *frag = &sd->fragments[fragseg];
+                    struct seg_fragment *frag = sd->fragments[fragseg].get();
                     fileOffset file_ofs = sd->file_offset+frag->offset;
 
                     if (file_ofs < cur_offset) {
@@ -2872,7 +2874,7 @@ int main(int argc,char **argv) {
 
             assert(entry_seg_link_target != NULL);
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
-            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+            frag = entry_seg_link_target->fragments[entry_seg_link_target_fragment].get();
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
                 (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
@@ -2896,7 +2898,7 @@ int main(int argc,char **argv) {
 
                 assert(sym->fragment < ssg->fragments.size());
 
-                sfrag = &ssg->fragments[sym->fragment];
+                sfrag = ssg->fragments[sym->fragment].get();
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
@@ -2915,7 +2917,7 @@ int main(int argc,char **argv) {
 
                 assert(sym->fragment < ssg->fragments.size());
 
-                sfrag = &ssg->fragments[sym->fragment];
+                sfrag = ssg->fragments[sym->fragment].get();
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
