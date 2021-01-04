@@ -344,9 +344,7 @@ static struct link_segdef*              current_link_segment = NULL;
 
 static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
 static string                           entry_seg_link_target_name;
-static struct link_segdef*              entry_seg_link_target = NULL;
 static string                           entry_seg_link_frame_name;
-static struct link_segdef*              entry_seg_link_frame = NULL;
 static segmentOffset                    entry_seg_ofs = 0;
 
 /* Open Watcom DOSSEG linker order
@@ -455,21 +453,6 @@ void link_segments_swap(unsigned int s1,unsigned int s2) {
 
 struct link_segdef *find_link_segment(const char *name);
 
-/* if you do ANYTHING that causes reallocation of the vector array, OR rearrange the elements,
- * you must call this function. */
-void reconnect_gl_segs() {
-    if (!entry_seg_link_target_name.empty()) {
-        entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-        assert(entry_seg_link_target != NULL);
-        assert(entry_seg_link_target->name == entry_seg_link_target_name);
-    }
-    if (!entry_seg_link_frame_name.empty()) {
-        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name.c_str());
-        assert(entry_seg_link_frame != NULL);
-        assert(entry_seg_link_frame->name == entry_seg_link_frame_name);
-    }
-}
-
 void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
     unsigned int i;
     int r;
@@ -498,8 +481,6 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
             i++;
         }
     }
-
-    reconnect_gl_segs();
 }
 
 void owlink_dosseg_sort_order(void) {
@@ -2227,9 +2208,7 @@ int main(int argc,char **argv) {
                                             }
 
                                             entry_seg_link_target_name = targetname;
-                                            entry_seg_link_target = targseg;
                                             entry_seg_link_frame_name = framename;
-                                            entry_seg_link_frame = frameseg;
                                         }
                                         else {
                                             fprintf(stderr,"Did not find segments\n");
@@ -2318,17 +2297,19 @@ int main(int argc,char **argv) {
                 }
             }
 
-            /* entry point checkup */
-            if (cmdoptions.output_format == OFMT_DOSDRV) {
-                /* MS-DOS device drivers do NOT have an entry point */
-                if (entry_seg_link_target != NULL) {
-                    fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
-                    fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
+            {
+                /* entry point checkup */
+                if (cmdoptions.output_format == OFMT_DOSDRV) {
+                    /* MS-DOS device drivers do NOT have an entry point */
+                    if (!entry_seg_link_target_name.empty()) {
+                        fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
+                        fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
+                    }
                 }
-            }
-            else {
-                if (entry_seg_link_target == NULL) {
-                    fprintf(stderr,"WARNING: No entry point found\n");
+                else {
+                    if (entry_seg_link_target_name.empty()) {
+                        fprintf(stderr,"WARNING: No entry point found\n");
+                    }
                 }
             }
 
@@ -2336,7 +2317,8 @@ int main(int argc,char **argv) {
             if (cmdoptions.output_format == OFMT_DOSDRV) {
                 /* nothing */
             }
-            else if (entry_seg_link_target != NULL) {
+            else if (!entry_seg_link_target_name.empty()) {
+                struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
                 struct seg_fragment *frag;
 
                 assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
@@ -2383,7 +2365,8 @@ int main(int argc,char **argv) {
 
             /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
             if (cmdoptions.output_format == OFMT_COM) {
-                if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+                if (!entry_seg_link_target_name.empty()) {
+                    struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
                     struct seg_fragment *frag;
                     uint32_t init_ip;
 
@@ -2453,7 +2436,6 @@ int main(int argc,char **argv) {
                             return 1;
                         if (segment_exe_arrange())
                             return 1;
-                        reconnect_gl_segs();
 
                         exeseg = find_link_segment("__COM_ENTRY_JMP");
                         if (exeseg == NULL)
@@ -2468,6 +2450,9 @@ int main(int argc,char **argv) {
                         if (ls == NULL)
                             return 1;
 
+                        entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
+                        assert(entry_seg_link_target != NULL);
+
                         ls->segdef = entry_seg_link_target->name;
                         ls->groupdef = entry_seg_link_target->groupname;
                         ls->offset = entry_seg_ofs;
@@ -2479,9 +2464,7 @@ int main(int argc,char **argv) {
                         entry_seg_ofs = 0;
                         entry_seg_link_target_fragment = 0;
                         entry_seg_link_target_name = exeseg->name;
-                        entry_seg_link_target = exeseg;
                         entry_seg_link_frame_name = exeseg->name;
-                        entry_seg_link_frame = exeseg;
                     }
                 }
             }
@@ -2499,7 +2482,6 @@ int main(int argc,char **argv) {
     }
 
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
-    reconnect_gl_segs();
 
     dump_link_relocations();
     dump_link_symbols();
@@ -2647,9 +2629,11 @@ int main(int argc,char **argv) {
             }
         }
 
-        reconnect_gl_segs();
-
-        if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+        if (!entry_seg_link_target_name.empty() && !entry_seg_link_frame_name.empty()) {
+            struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
+            struct link_segdef* entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name.c_str());
+            assert(entry_seg_link_target != NULL);
+            assert(entry_seg_link_frame != NULL);
             struct seg_fragment *frag;
 
             assert(!entry_seg_link_target->fragments.empty());
@@ -2796,14 +2780,11 @@ int main(int argc,char **argv) {
                     sd->file_offset += (fileOffset)header_size;
             }
         }
-
-        reconnect_gl_segs();
     }
 
     /* write output */
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
     dump_link_segments(DUMPLS_FILEOFFSET);
-    reconnect_gl_segs();
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
@@ -2880,7 +2861,8 @@ int main(int argc,char **argv) {
         fprintf(map_fp,"Entry point:\n");
         fprintf(map_fp,"---------------------------------------\n");
 
-        if (entry_seg_link_target != NULL) {
+        if (!entry_seg_link_target_name.empty()) {
+            struct link_segdef* entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
             unsigned int symi = 0,fsymi = ~0u;
             unsigned long sofs,cofs;
             struct link_symbol *sym;
@@ -2888,6 +2870,7 @@ int main(int argc,char **argv) {
             struct seg_fragment *sfrag;
             struct link_segdef *ssg;
 
+            assert(entry_seg_link_target != NULL);
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments.size());
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
