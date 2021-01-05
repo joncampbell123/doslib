@@ -337,8 +337,6 @@ struct link_segdef {
 
 static vector< shared_ptr<struct link_segdef> > link_segments;
 
-static shared_ptr<struct link_segdef>   current_link_segment;
-
 static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
 static string                           entry_seg_link_target_name;
 static string                           entry_seg_link_frame_name;
@@ -961,7 +959,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (lsg->noemit) return 0;
 
-    current_link_segment = lsg;
+    shared_ptr<struct link_segdef> current_link_segment = lsg;
 
     if (info->data_length == 0)
         return 0;
@@ -1140,7 +1138,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
             return 1;
         }
 
-        current_link_segment = find_link_segment(cur_segdefname);
+        shared_ptr<struct link_segdef> current_link_segment = find_link_segment(cur_segdefname);
         if (current_link_segment == NULL) {
             fprintf(stderr,"Cannot find linker segment '%s'\n",cur_segdefname);
             return 1;
