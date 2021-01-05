@@ -250,7 +250,6 @@ static vector< shared_ptr<struct link_symbol> >             link_symbols;
 shared_ptr<struct link_symbol> new_link_symbol(const char *name) {
     shared_ptr<struct link_symbol> sym(new struct link_symbol);
     link_symbols.push_back( sym );
-    sym->in_file = in_fileRefUndef;
     sym->name = name;
     return sym;
 }
