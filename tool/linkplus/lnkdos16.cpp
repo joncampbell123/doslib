@@ -2403,9 +2403,6 @@ int main(int argc,char **argv) {
                         if (ls == NULL)
                             return 1;
 
-                        entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-                        assert(entry_seg_link_target != NULL);
-
                         ls->segdef = entry_seg_link_target->name;
                         ls->groupdef = entry_seg_link_target->groupname;
                         ls->offset = entry_seg_ofs;
@@ -2415,6 +2412,7 @@ int main(int argc,char **argv) {
 
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
+                        entry_seg_link_target = exeseg;
                         entry_seg_link_frame_name = exeseg->name;
                         entry_seg_link_target_name = exeseg->name;
                         entry_seg_link_target_fragment = exeseg->fragments[0];
