@@ -258,8 +258,6 @@ shared_ptr<struct link_symbol> find_link_symbol(const char *name,const in_fileRe
     for (size_t i=0;i < link_symbols.size();i++) {
         shared_ptr<struct link_symbol> sym = link_symbols[i];
 
-        assert(sym != nullptr);
-
         if (sym->is_local) {
             /* ignore local symbols unless file/module scope is given */
             if (in_file != in_fileRefUndef && sym->in_file != in_file)
@@ -273,10 +271,6 @@ shared_ptr<struct link_symbol> find_link_symbol(const char *name,const in_fileRe
     }
 
     return NULL;
-}
-
-void link_symbols_free(void) {
-    link_symbols.clear();
 }
 
 struct seg_fragment {
@@ -2872,7 +2866,6 @@ int main(int argc,char **argv) {
         map_fp = NULL;
     }
 
-    link_symbols_free();
     free_link_segments();
     free_exe_relocations();
     return 0;
