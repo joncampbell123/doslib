@@ -2791,6 +2791,9 @@ int main(int argc,char **argv) {
             shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
             auto frag = entry_seg_link_target_fragment;
 
+            assert(entry_seg_link_target != nullptr);
+            assert(frag != nullptr);
+
             shared_ptr<struct link_symbol> sym;
             unsigned long sofs,cofs;
 
