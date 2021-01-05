@@ -2,6 +2,8 @@
 ; code
 segment _TEXT align=1 class=CODE use16
 
+    db      'Blah blah blah blah blah blah blah blah blah padding the entry point out past 128 bytes blah blah blah blah blah blah blah blah blah blah blah blah blah blah',13,10,0
+
 global _nops
 _nops:
         nop

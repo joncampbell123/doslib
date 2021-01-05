@@ -1,15 +1,20 @@
 
-; data
-segment _DATA align=1 class=DATA use16
-
-global _msg
-_msg:
-    db      'Hello world',13,10,0
-
 ; code
 segment _TEXT align=1 class=CODE use16
 
-    db      'Blah blah blah blah blah blah blah blah blah padding the entry point out past 128 bytes blah blah blah blah blah blah blah blah blah blah blah blah blah blah',13,10,0
+..start:
+global asm_entry
+asm_entry:
+; even for .COM, load segment (induce segment relocation)
+    mov     ax,_DATA
+    mov     ds,ax
+
+    call    _printloop
+
+global _exit_
+_exit_:
+    mov     ah,4Ch
+    int     21h
 
 global _printloop
 _printloop:
@@ -25,19 +30,12 @@ l1: lodsb
 l1e:
     ret
 
-..start:
-global asm_entry
-asm_entry:
-; even for .COM, load segment (induce segment relocation)
-    mov     ax,_DATA
-    mov     ds,ax
+; data
+segment _DATA align=1 class=DATA use16
 
-    call    _printloop
-
-global _exit_
-_exit_:
-    mov     ah,4Ch
-    int     21h
+global _msg
+_msg:
+    db      'Hello world',13,10,0
 
 segment _STACK align=4 class=STACK use16
 
