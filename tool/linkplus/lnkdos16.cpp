@@ -2402,9 +2402,9 @@ int main(int argc,char **argv) {
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
                         entry_seg_link_target = exeseg;
+                        entry_seg_link_target_fragment = frag;
                         entry_seg_link_frame_name = exeseg->name;
                         entry_seg_link_target_name = exeseg->name;
-                        entry_seg_link_target_fragment = exeseg->fragments[0];
                     }
                 }
             }
