@@ -1495,10 +1495,6 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             {
                 size_t fidx;
                 shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get(),/*&*/fidx);
-                if (f == NULL) {
-                    fprintf(stderr,"Unable to alloc segment fragment\n");
-                    return -1;
-                }
 
                 /* current load index is now the fragment just allocated */
                 lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val=fidx];
@@ -2685,9 +2681,6 @@ int main(int argc,char **argv) {
         /* The EXE header is defined only in number of pages, round up */
         if (exeseg->segment_length & 0xF) {
             frag = alloc_link_segment_fragment(exeseg.get());
-            if (frag == NULL)
-                return 1;
-
             frag->in_file = in_fileRefPadding;
             frag->offset = exeseg->segment_length;
             frag->fragment_length = 0x10 - (exeseg->segment_length & 0xF);
