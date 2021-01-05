@@ -536,6 +536,13 @@ shared_ptr<struct seg_fragment> alloc_link_segment_fragment(struct link_segdef *
     return frag;
 }
 
+shared_ptr<struct seg_fragment> alloc_link_segment_fragment(struct link_segdef *sg,size_t &index) {
+    shared_ptr<struct seg_fragment> frag(new struct seg_fragment);
+    index = sg->fragments.size();
+    sg->fragments.push_back(frag);
+    return frag;
+}
+
 void free_link_segments(void) {
     link_segments.clear();
 }
@@ -1486,15 +1493,15 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             }
 
             {
-                shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
+                size_t fidx;
+                shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get(),/*&*/fidx);
                 if (f == NULL) {
                     fprintf(stderr,"Unable to alloc segment fragment\n");
                     return -1;
                 }
 
                 /* current load index is now the fragment just allocated */
-                lsg->fragment_load_index_val = lsg->fragments.size() - size_t(1); // FIXME
-                lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
+                lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val=fidx];
 
                 f->in_file = in_file;
                 f->in_module = in_module;
