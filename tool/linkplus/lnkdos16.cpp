@@ -219,6 +219,7 @@ struct exe_relocation {
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
+/* array of EXE relocation entries (memory locations referring to a segment that need adjustment by EXE image base) */
 static vector< shared_ptr<struct exe_relocation> >          exe_relocation_table;
 
 shared_ptr<struct exe_relocation> new_exe_relocation(void) {
