@@ -207,6 +207,7 @@ static const uint8_t dosdrvrel_entry_point[] = {
 };
 
 struct seg_fragment; // forward decl
+struct link_segdef;
 
 typedef shared_ptr<struct seg_fragment> fragmentRef;
 static const fragmentRef                fragmentRefUndef = shared_ptr<struct seg_fragment>(nullptr);
@@ -234,8 +235,8 @@ void free_exe_relocations(void) {
 
 struct link_symbol {
     string                              name;               /* symbol name, raw */
-    string                              segdef;             /* belongs to segdef */
-    string                              groupdef;           /* belongs to groupdef */
+    shared_ptr<struct link_segdef>      segref;             /* belongs to segdef */
+    string                              groupdef;           /* belongs to groupdef (not used except for display) */
     segmentOffset                       offset;             /* offset within fragment */
     fragmentRef                         fragment;           /* which fragment it belongs to */
     in_fileRef                          in_file;            /* from which file */
@@ -596,11 +597,11 @@ bool link_symbol_qsort_cmp_by_name(const shared_ptr<struct link_symbol> &sa,cons
 
 bool link_symbol_qsort_cmp(const shared_ptr<struct link_symbol> &sa,const shared_ptr<struct link_symbol> &sb) {
     /* -----A----- */
-    shared_ptr<struct link_segdef> sga = find_link_segment(sa->segdef.c_str());
+    shared_ptr<struct link_segdef> sga = sa->segref;
     shared_ptr<struct seg_fragment> fraga = sa->fragment;
 
     /* -----B----- */
-    shared_ptr<struct link_segdef> sgb = find_link_segment(sb->segdef.c_str());
+    shared_ptr<struct link_segdef> sgb = sb->segref;
     shared_ptr<struct seg_fragment> fragb = sb->fragment;
 
     segmentRelative la,lb;
@@ -657,12 +658,12 @@ void dump_link_symbols(void) {
 
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%p file='%s' module=%u local=%u\n",
-                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segdef.c_str(),(unsigned long)sym->offset,(void*)sym->fragment.get(),
+                        i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segref->name.c_str(),(unsigned long)sym->offset,(void*)sym->fragment.get(),
                         get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
             if (map_fp != NULL) {
-                shared_ptr<struct link_segdef> sg = find_link_segment(sym->segdef.c_str());
+                shared_ptr<struct link_segdef> sg = sym->segref;
                 shared_ptr<struct seg_fragment> frag = sym->fragment;
 
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
@@ -671,7 +672,7 @@ void dump_link_symbols(void) {
                         (unsigned long)sg->segment_relative&0xfffful,
                         (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
                         (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)sym->offset,
-                        sym->segdef.c_str(),
+                        sym->segref->name.c_str(),
                         (unsigned long)frag->offset + (unsigned long)sym->offset,
                         get_in_file(sym->in_file));
 
@@ -1041,13 +1042,8 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        shared_ptr<struct link_segdef> lsg = find_link_segment(sym->segdef.c_str());
-        if (lsg == NULL) {
-            fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef.c_str());
-            return -1;
-        }
-
         shared_ptr<struct seg_fragment> frag = sym->fragment;
+        shared_ptr<struct link_segdef> lsg = sym->segref;
 
         *fseg = lsg->segment_relative;
         *fofs = sym->offset + lsg->segment_offset + frag->offset;
@@ -1421,7 +1417,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         sym->fragment = lsg->fragment_load_index;
         sym->offset = pubdef->public_offset;
         sym->groupdef = groupname;
-        sym->segdef = segname;
+        sym->segref = lsg;
         sym->in_file = in_file;
         sym->in_module = in_module;
         sym->is_local = is_local;
@@ -2396,7 +2392,7 @@ int main(int argc,char **argv) {
                         if (ls == NULL)
                             return 1;
 
-                        ls->segdef = entry_seg_link_target->name;
+                        ls->segref = entry_seg_link_target;
                         ls->groupdef = entry_seg_link_target->groupname;
                         ls->offset = entry_seg_ofs;
                         ls->fragment = entry_seg_link_target_fragment;
@@ -2456,10 +2452,7 @@ int main(int argc,char **argv) {
             if (ls == NULL)
                 return 1;
 
-            shared_ptr<struct link_segdef> lsseg = find_link_segment(ls->segdef.c_str());
-            if (exeseg == NULL)
-                return 1;
-
+            shared_ptr<struct link_segdef> lsseg = ls->segref;
             shared_ptr<struct seg_fragment> lsfrag = ls->fragment;
 
             init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
@@ -2820,14 +2813,10 @@ int main(int argc,char **argv) {
             while (symi < link_symbols.size()) {
                 sym = link_symbols[symi++];
 
-                if (sym->segdef != entry_seg_link_target->name) continue;
-
-                ssg = find_link_segment(sym->segdef.c_str());
-                assert(ssg != NULL);
-
-                assert(sym->fragment != nullptr);
+                if (sym->segref != entry_seg_link_target) continue;
 
                 shared_ptr<struct seg_fragment> sfrag = sym->fragment;
+                ssg = sym->segref;
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
@@ -2839,14 +2828,10 @@ int main(int argc,char **argv) {
             if (fsymi != (~0u)) {
                 sym = link_symbols[fsymi];
 
-                assert(sym->segdef == entry_seg_link_target->name);
-
-                ssg = find_link_segment(sym->segdef.c_str());
-                assert(ssg != NULL);
-
-                assert(sym->fragment != nullptr);
+                assert(sym->segref == entry_seg_link_target);
 
                 shared_ptr<struct seg_fragment> sfrag = sym->fragment;
+                ssg = sym->segref;
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
