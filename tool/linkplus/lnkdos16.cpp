@@ -302,7 +302,7 @@ struct link_segdef {
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
-    size_t                              fragment_load_index_val;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
+    size_t                              fragment_load_index_val;/* current fragment, used when processing LEDATA and OMF symbols ONLY in BUILD pass */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
@@ -1441,7 +1441,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             if (lsg->fragments.empty())
                 continue;
 
-            lsg->fragment_load_index_val++;
+            lsg->fragment_load_index_val++; /* NTS: init to -1 aka ~(0u) */
             assert(lsg->fragment_load_index_val < lsg->fragments.size());
             lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
 
@@ -1450,6 +1450,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
                 assert(f->in_file == in_file);
                 assert(f->in_module == in_module);
+                assert(f->from_segment_index == first); /* NTS: remember the code above does first++, so this is 1 based, like OMF */
                 assert(f->fragment_length == sg->segment_length);
             }
         }
@@ -1481,11 +1482,8 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             }
 
             {
-                size_t fidx;
-                shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get(),/*&*/fidx);
-
-                /* current load index is now the fragment just allocated */
-                lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val=fidx];
+                shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
+                lsg->fragment_load_index = f;
 
                 f->in_file = in_file;
                 f->in_module = in_module;
@@ -1947,6 +1945,11 @@ int main(int argc,char **argv) {
                         return 1;
                     omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
+                    for (auto li=link_segments.begin();li!=link_segments.end();li++) {
+                        shared_ptr<struct link_segdef> sd = *li;
+                        sd->fragment_load_index = fragmentRefUndef;
+                    }
+
                     if (omf_record_is_modend(&omf_state->record)) {
                         if (!diddump && cmdoptions.verbose) {
                             my_dumpstate(omf_state);
@@ -2191,6 +2194,11 @@ int main(int argc,char **argv) {
             omf_context_clear(omf_state);
             omf_state = omf_context_destroy(omf_state);
 
+            for (auto li=link_segments.begin();li!=link_segments.end();li++) {
+                shared_ptr<struct link_segdef> sd = *li;
+                sd->fragment_load_index = fragmentRefUndef;
+            }
+
             close(fd);
         }
 
@@ -2282,26 +2290,18 @@ int main(int argc,char **argv) {
                 return 1;
 
             /* allocate in-memory copy of the segments */
-            {
-                unsigned int linkseg,fragseg;
+            for (auto li=link_segments.begin();li!=link_segments.end();li++) {
+                shared_ptr<struct link_segdef> sd = *li;
 
-                for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                    shared_ptr<struct link_segdef> sd = link_segments[linkseg];
+                if (!sd->noemit) {
+                    for (auto fi=sd->fragments.begin();fi!=sd->fragments.end();fi++) {
+                        shared_ptr<struct seg_fragment> frag = *fi;
 
-                    if (!sd->noemit) {
-                        for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                            shared_ptr<struct seg_fragment> frag = sd->fragments[fragseg];
-
-                            if (frag->fragment_length != 0) {
-                                frag->image.resize(frag->fragment_length);
-                                memset(&frag->image[0],0,frag->fragment_length);
-                            }
+                        if (frag->fragment_length != 0) {
+                            frag->image.resize(frag->fragment_length);
+                            memset(&frag->image[0],0,frag->fragment_length);
                         }
                     }
-
-                    /* reset load base */
-                    sd->fragment_load_index = fragmentRefUndef;
-                    sd->fragment_load_index_val = ~((size_t)0u);
                 }
             }
 
