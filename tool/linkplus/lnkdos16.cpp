@@ -1481,6 +1481,16 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 lsg->classname = classname;
             }
 
+            /* We no longer allow one OBJ file/module to define the same segment twice */
+            if (!lsg->fragments.empty()) {
+                shared_ptr<struct seg_fragment> f = lsg->fragments.back(); /* last entry */
+
+                if (f->in_file == in_file && f->in_module == in_module) {
+                    fprintf(stderr,"Segment '%s' defined more than once in an individual object file\n",name);
+                    return -1;
+                }
+            }
+
             {
                 shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
                 lsg->fragment_load_index = f;
