@@ -338,8 +338,8 @@ struct link_segdef {
 static vector< shared_ptr<struct link_segdef> > link_segments;
 
 static fragmentRef                      entry_seg_link_target_fragment = fragmentRefUndef;
-static string                           entry_seg_link_target_name;
-static string                           entry_seg_link_frame_name;
+static shared_ptr<link_segdef>          entry_seg_link_target;
+static shared_ptr<link_segdef>          entry_seg_link_frame;
 static segmentOffset                    entry_seg_ofs = 0;
 
 /* Open Watcom DOSSEG linker order
@@ -2150,14 +2150,15 @@ int main(int argc,char **argv) {
 
                                             /* don't blindly assume TargetDisplacement is relative to the whole segment, it's relative to the
                                              * SEGDEF of the current object/module and we need to locate exactly that! */
-                                            entry_seg_link_target_fragment = find_link_segment_by_file_module_and_segment_index(targseg.get(),current_in_file,current_in_file_module,TargetDatum);
+                                            entry_seg_link_target_fragment =
+                                                find_link_segment_by_file_module_and_segment_index(targseg.get(),current_in_file,current_in_file_module,TargetDatum);
                                             if (entry_seg_link_target_fragment == fragmentRefUndef) {
                                                 fprintf(stderr,"Unable to locate entry point\n");
                                                 return 1;
                                             }
 
-                                            entry_seg_link_target_name = targetname;
-                                            entry_seg_link_frame_name = framename;
+                                            entry_seg_link_target = targseg;
+                                            entry_seg_link_frame = frameseg;
                                         }
                                         else {
                                             fprintf(stderr,"Did not find segments\n");
@@ -2244,13 +2245,13 @@ int main(int argc,char **argv) {
                 /* entry point checkup */
                 if (cmdoptions.output_format == OFMT_DOSDRV) {
                     /* MS-DOS device drivers do NOT have an entry point */
-                    if (!entry_seg_link_target_name.empty()) {
+                    if (entry_seg_link_target != nullptr) {
                         fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
                         fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
                     }
                 }
                 else {
-                    if (entry_seg_link_target_name.empty()) {
+                    if (entry_seg_link_target == nullptr) {
                         fprintf(stderr,"WARNING: No entry point found\n");
                     }
                 }
@@ -2260,9 +2261,9 @@ int main(int argc,char **argv) {
             if (cmdoptions.output_format == OFMT_DOSDRV) {
                 /* nothing */
             }
-            else if (!entry_seg_link_target_name.empty()) {
-                assert(entry_seg_link_target_fragment.get() != nullptr);
+            else if (entry_seg_link_target != nullptr) {
                 shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+                assert(frag != nullptr);
 
                 if (frag->attr.f.f.use32) {
                     fprintf(stderr,"Entry point cannot be 32-bit\n");
@@ -2306,14 +2307,12 @@ int main(int argc,char **argv) {
 
             /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
             if (cmdoptions.output_format == OFMT_COM) {
-                if (!entry_seg_link_target_name.empty()) {
-                    shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
+                if (entry_seg_link_target != nullptr) {
                     uint32_t init_ip;
 
                     {
-                        assert(!entry_seg_link_target->fragments.empty());
-                        assert(entry_seg_link_target_fragment != nullptr);
                         shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+                        assert(frag != nullptr);
 
                         if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
                             fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
@@ -2399,10 +2398,9 @@ int main(int argc,char **argv) {
 
                         /* the new entry point is the first byte of the .COM image */
                         entry_seg_ofs = 0;
+                        entry_seg_link_frame = exeseg;
                         entry_seg_link_target = exeseg;
                         entry_seg_link_target_fragment = frag;
-                        entry_seg_link_frame_name = exeseg->name;
-                        entry_seg_link_target_name = exeseg->name;
                     }
                 }
             }
@@ -2559,15 +2557,9 @@ int main(int argc,char **argv) {
             }
         }
 
-        if (!entry_seg_link_target_name.empty() && !entry_seg_link_frame_name.empty()) {
-            shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-            shared_ptr<struct link_segdef> entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name.c_str());
-            assert(entry_seg_link_target != NULL);
-            assert(entry_seg_link_frame != NULL);
-
-            assert(!entry_seg_link_target->fragments.empty());
-            assert(entry_seg_link_target_fragment != nullptr);
+        if (entry_seg_link_target != nullptr && entry_seg_link_frame != nullptr) {
             shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+            assert(frag != nullptr);
 
             if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
                 fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
@@ -2784,11 +2776,8 @@ int main(int argc,char **argv) {
         fprintf(map_fp,"Entry point:\n");
         fprintf(map_fp,"---------------------------------------\n");
 
-        if (!entry_seg_link_target_name.empty()) {
-            shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
+        if (entry_seg_link_target != nullptr) {
             auto frag = entry_seg_link_target_fragment;
-
-            assert(entry_seg_link_target != nullptr);
             assert(frag != nullptr);
 
             shared_ptr<struct link_symbol> sym;
