@@ -2722,18 +2722,17 @@ int main(int argc,char **argv) {
         }
 
         {
-            unsigned int linkseg,fragseg;
             fileOffset cur_offset = 0;
             unsigned char fill[4096];
 
-            for (linkseg=0;linkseg < link_segments.size();linkseg++) {
-                shared_ptr<struct link_segdef> sd = link_segments[linkseg];
+            for (auto li=link_segments.begin();li!=link_segments.end();li++) {
+                shared_ptr<struct link_segdef> sd = *li;
 
                 if (sd->noemit) continue;
 
                 assert(sd->file_offset != fileOffsetUndef);
-                for (fragseg=0;fragseg < sd->fragments.size();fragseg++) {
-                    shared_ptr<struct seg_fragment> frag = sd->fragments[fragseg];
+                for (auto fi=sd->fragments.begin();fi!=sd->fragments.end();fi++) {
+                    shared_ptr<struct seg_fragment> frag = *fi;
                     fileOffset file_ofs = sd->file_offset+frag->offset;
 
                     if (file_ofs < cur_offset) {
