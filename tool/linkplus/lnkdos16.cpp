@@ -2246,12 +2246,7 @@ int main(int argc,char **argv) {
                 if (stacksg != NULL) {
                     fragment_def_arrange(stacksg.get());
                     if (stacksg->segment_length < cmdoptions.want_stack_size) {
-                        shared_ptr<struct seg_fragment> frag;
-
-                        frag = alloc_link_segment_fragment(stacksg.get());
-                        if (frag == NULL) {
-                            return 1;
-                        }
+                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(stacksg.get());
                         frag->offset = stacksg->segment_length;
                         frag->attr = stacksg->attr;
                         frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
@@ -2331,18 +2326,21 @@ int main(int argc,char **argv) {
                     shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
                     uint32_t init_ip;
 
-                    assert(!entry_seg_link_target->fragments.empty());
-                    assert(entry_seg_link_target_fragment != nullptr);
-                    shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+                    {
+                        assert(!entry_seg_link_target->fragments.empty());
+                        assert(entry_seg_link_target_fragment != nullptr);
+                        shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
 
-                    if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
-                        fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
-                                (unsigned long)entry_seg_link_target->segment_relative,
-                                (unsigned long)cmdoptions.image_base_segment);
-                        return 1;
+                        if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+                            fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                                    (unsigned long)entry_seg_link_target->segment_relative,
+                                    (unsigned long)cmdoptions.image_base_segment);
+                            return 1;
+                        }
+
+                        init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
                     }
 
-                    init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
                     if (init_ip != cmdoptions.image_base_offset) {
                         shared_ptr<struct link_segdef> exeseg;
 
@@ -2363,13 +2361,10 @@ int main(int argc,char **argv) {
                         exeseg->segment_relative = cmdoptions.image_base_segment;
                         exeseg->segment_base = cmdoptions.image_base_offset;
 
-                        frag = alloc_link_segment_fragment(exeseg.get());
-                        if (frag == NULL)
-                            return 1;
-
+                        size_t fidx;
+                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get(),/*&*/fidx);
                         /* must be the FIRST */
-                        assert(frag == exeseg->fragments[0]);
-
+                        assert(fidx == 0);
                         frag->in_file = in_fileRefInternal;
                         frag->offset = 0;
 
@@ -2465,7 +2460,6 @@ int main(int argc,char **argv) {
     /* COM files: patch JMP instruction to entry point */
     if (cmdoptions.output_format == OFMT_COM) {
         shared_ptr<struct link_segdef> exeseg;
-        shared_ptr<struct seg_fragment> frag;
         uint32_t init_ip;
 
         exeseg = find_link_segment("__COM_ENTRY_JMP");
@@ -2483,7 +2477,7 @@ int main(int argc,char **argv) {
             init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
             assert(init_ip >= cmdoptions.image_base_offset);
             assert(exeseg->fragments.size() >= 1); /* first one should be the JMP */
-            frag = exeseg->fragments[0];
+            shared_ptr<struct seg_fragment> frag = exeseg->fragments[0];
             assert(frag->image.size() >= 2);
 
             if (frag->image[0] == 0xEB) { /* jmp short */
@@ -2511,11 +2505,10 @@ int main(int argc,char **argv) {
 
     /* EXE files: make header and relocation table */
     if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        shared_ptr<struct link_segdef> exeseg;
         segmentOffset reloc_offset=0;
         uint16_t init_cs=0,init_ip=0;
         uint16_t init_ss=0,init_sp=0;
-        shared_ptr<struct link_segdef> exeseg;
-        shared_ptr<struct seg_fragment> frag;
         uint32_t bss_segment_size=0;
         uint32_t stack_size=0;
         uint32_t tmp;
@@ -2532,9 +2525,7 @@ int main(int argc,char **argv) {
         exeseg->file_offset = 0;
         exeseg->segment_relative = -1;
 
-        frag = alloc_link_segment_fragment(exeseg.get());
-        if (frag == NULL)
-            return 1;
+        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
 
         /* TODO: If generating NE/PE/etc. set to 32, to make room for a DWORD at 0x1C that
          *       points at the NE/PE/LX/LE/etc header. */
