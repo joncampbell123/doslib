@@ -2789,14 +2789,10 @@ int main(int argc,char **argv) {
 
         if (!entry_seg_link_target_name.empty()) {
             shared_ptr<struct link_segdef> entry_seg_link_target = find_link_segment(entry_seg_link_target_name.c_str());
-            shared_ptr<struct link_symbol> sym;
-            shared_ptr<struct link_segdef> ssg;
-            unsigned int symi = 0,fsymi = ~0u;
-            unsigned long sofs,cofs;
+            auto frag = entry_seg_link_target_fragment;
 
-            assert(entry_seg_link_target != NULL);
-            assert(entry_seg_link_target_fragment != nullptr);
-            shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+            shared_ptr<struct link_symbol> sym;
+            unsigned long sofs,cofs;
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s'",
                 (unsigned long)entry_seg_link_target->segment_relative&0xfffful,
@@ -2810,28 +2806,28 @@ int main(int argc,char **argv) {
 
             fprintf(map_fp,"\n");
 
-            while (symi < link_symbols.size()) {
-                sym = link_symbols[symi++];
+            for (auto i=link_symbols.begin();i!=link_symbols.end();i++) {
+                auto cur_sym = *i;
 
-                if (sym->segref != entry_seg_link_target) continue;
+                if (cur_sym->segref != entry_seg_link_target) continue;
 
-                shared_ptr<struct seg_fragment> sfrag = sym->fragment;
-                ssg = sym->segref;
+                shared_ptr<struct seg_fragment> sfrag = cur_sym->fragment;
+                shared_ptr<struct link_segdef> ssg = cur_sym->segref;
 
-                sofs = ssg->segment_offset + sfrag->offset + sym->offset;
+                sofs = ssg->segment_offset + sfrag->offset + cur_sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
 
-                if (sofs > cofs) break;
-                else fsymi = symi - 1u;
+                if (sofs > cofs) {
+                    sym = cur_sym;
+                    break;
+                }
             }
 
-            if (fsymi != (~0u)) {
-                sym = link_symbols[fsymi];
-
+            if (sym != nullptr) {
                 assert(sym->segref == entry_seg_link_target);
 
                 shared_ptr<struct seg_fragment> sfrag = sym->fragment;
-                ssg = sym->segref;
+                shared_ptr<struct link_segdef> ssg = sym->segref;
 
                 sofs = ssg->segment_offset + sfrag->offset + sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
