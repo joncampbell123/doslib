@@ -1009,8 +1009,11 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
+        auto frag = lsg->fragment_load_index;
+        assert(frag != nullptr);
+
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_offset;
+        *fofs = lsg->segment_offset + frag->offset;
         *sdef = lsg;
     }
     else if (method == 1/*GRPDEF*/) {
@@ -1026,8 +1029,11 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
+        auto frag = lsg->fragment_load_index;
+        assert(frag != nullptr);
+
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_offset;
+        *fofs = lsg->segment_offset + frag->offset;
         *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
@@ -1149,8 +1155,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
         /* assuming each OBJ/module has only one of each named segment,
          * get the fragment it belongs to */
-        assert(current_link_segment != NULL);
-        assert(current_link_segment->fragment_load_index != fragmentRefUndef);
+        assert(current_link_segment != nullptr);
+        assert(current_link_segment->fragment_load_index != nullptr);
         frag = current_link_segment->fragment_load_index;
 
         assert(frag->in_file == in_file);
@@ -1160,10 +1166,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
             assert(frag->image.size() == frag->fragment_length);
             fence = &frag->image[frag->fragment_length];
 
-            ptch =  (unsigned long)ent->omf_rec_file_enoffs +
-                    (unsigned long)ent->data_record_offset;
+            ptch = (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset + (unsigned long)frag->offset;
 
-            ptr = &frag->image[ptch];
+            assert(ptch >= frag->offset);
+            assert((ptch-frag->offset) < frag->image.size());
+
+            ptr = &frag->image[ptch-frag->offset];
             assert(ptr < fence);
         }
         else if (pass == PASS_GATHER) {
