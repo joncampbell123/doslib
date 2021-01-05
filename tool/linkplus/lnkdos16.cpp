@@ -969,6 +969,9 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         return 1;
     }
 
+    /* NTS: For simplicity reasons, load_index is cleared before every object file,
+     *      and is set by SEGDEF parsing which allows only ONE fragment from a segment
+     *      in an individual object file. */
     shared_ptr<struct seg_fragment> frag = lsg->fragment_load_index;
 
     unsigned long max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
@@ -1411,6 +1414,11 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
         assert(pass == PASS_GATHER);
         assert(!lsg->fragments.empty());
+        assert(lsg->fragment_load_index != nullptr);
+
+        /* NTS: For simplicity reasons, load_index is cleared before every object file,
+         *      and is set by SEGDEF parsing which allows only ONE fragment from a segment
+         *      in an individual object file. */
 
         sym->fragment = lsg->fragment_load_index;
         sym->offset = pubdef->public_offset;
@@ -1481,7 +1489,8 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 lsg->classname = classname;
             }
 
-            /* We no longer allow one OBJ file/module to define the same segment twice */
+            /* We no longer allow one OBJ file/module to define the same segment twice.
+             * That way, only one fragment exists for a segment, one from each object file. */
             if (!lsg->fragments.empty()) {
                 shared_ptr<struct seg_fragment> f = lsg->fragments.back(); /* last entry */
 
