@@ -960,6 +960,9 @@ fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link
     return fragmentRefUndef;
 }
 
+/* Try to return the segment matching current segment group or higher.
+ * Presumably segdefs are sorted such that segment groups increment sequentially
+ * given a specific name. */
 shared_ptr<struct link_segdef> find_link_segment(const char *name) {
     shared_ptr<struct link_segdef> sg,rsg;
     size_t i=0;
