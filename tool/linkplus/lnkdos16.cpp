@@ -96,6 +96,9 @@ static FILE*                            map_fp = NULL;
 
 struct input_file {
     string                              path;
+    int                                 segment_group;
+
+    input_file() : segment_group(-1) { }
 };
 
 struct cmdoptions {
@@ -105,6 +108,8 @@ struct cmdoptions {
 
     unsigned int                        output_format;
     unsigned int                        output_format_variant;
+
+    int                                 next_segment_group;
 
     segmentSize                         want_stack_size;
 
@@ -120,7 +125,7 @@ struct cmdoptions {
     vector<input_file>                  in_file;
 
     cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), output_format(OFMT_COM),
-                   output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
+                   output_format_variant(OFMTVAR_NONE), next_segment_group(-1), want_stack_size(4096),
                    image_base_segment_reloc_adjust(segmentBaseUndef), image_base_segment(segmentBaseUndef),
                    image_base_offset(segmentOffsetUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
@@ -129,6 +134,7 @@ static cmdoptions                       cmdoptions;
 
 static in_fileRef                       current_in_file = 0;
 static in_fileModuleRef                 current_in_file_module = 0;
+static int                              current_segment_group = -1;
 
 const char *get_in_file(const in_fileRef idx) {
     if (idx == in_fileRefUndef)
@@ -307,13 +313,15 @@ struct link_segdef {
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
+    int                                 segment_group;
+
     unsigned int                        pinned:1;           /* segment is pinned at it's position in the segment order, should not move */
     unsigned int                        noemit:1;           /* segment will not be written to disk (usually BSS and STACK) */
     unsigned int                        header:1;           /* segment is executable header stuff */
 
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
                     segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
-                    pinned(0), noemit(0), header(0) { }
+                    segment_group(-1), pinned(0), noemit(0), header(0) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -480,28 +488,50 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
 }
 
 void owlink_dosseg_sort_order(void) {
-    unsigned int s = 0,e = link_segments.size() - 1u;
+    /* WARNING: list should have already been sorted by segment groups.
+     *          BSS/STACK however is ALWAYS moved to the bottom of the image. */
+    for (unsigned int gsi=0;gsi < link_segments.size();gsi++) {
+        unsigned int s = gsi,e = s;
 
-    if (link_segments.size() == 0) return;
-    link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
-    link_segments_sort(&s,&e,sort_cmp_not_dgroup);                  /* 2 */
-    link_segments_sort(&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
-    link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
-    link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
-    link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+        while (e < link_segments.size() && link_segments[e]->segment_group == link_segments[s]->segment_group) e++;
+        gsi = e;
+        e--;
+
+        link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
+        link_segments_sort(&s,&e,sort_cmp_not_dgroup);                  /* 2 */
+        link_segments_sort(&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
+        link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
+    }
+
+    if (link_segments.size() != 0) {
+        unsigned int s = 0,e = link_segments.size() - 1u;
+
+        link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
+        link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+    }
 }
 
 bool owlink_segsrt_def_qsort_cmp(const shared_ptr<struct link_segdef> &sa, const shared_ptr<struct link_segdef> &sb) {
     /* if either one is pinned, don't move */
     if (sa->pinned || sb->pinned) return false;
 
-    /* sort by GROUP, CLASS */
+    /* sort by segment_group, GROUP, CLASS */
 
     /* do it */
+    if (sa->segment_group < sb->segment_group)
+        return true;
+    if (sa->segment_group > sb->segment_group)
+        return false;
+
     if (sa->groupname < sb->groupname)
         return true;
+    if (sa->groupname > sb->groupname)
+        return false;
+
     if (sa->classname < sb->classname)
         return true;
+    if (sa->classname > sb->classname)
+        return false;
 
     return false;
 }
@@ -679,6 +709,10 @@ void dump_link_symbols(void) {
                     fprintf(map_fp,":%u",
                             sym->in_module);
                 }
+                if (sg->segment_group >= 0) {
+                    fprintf(map_fp," group=%d",
+                            sg->segment_group);
+                }
 
                 fprintf(map_fp,"\n");
             }
@@ -752,7 +786,7 @@ void dump_link_segments(const unsigned int purpose) {
                 }
             }
 
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s%s\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%lu%s%s%s",
                 sg->attr.f.f.use32?32:16,
                 sg->name.c_str(),
                 sg->classname.c_str(),
@@ -765,6 +799,13 @@ void dump_link_segments(const unsigned int purpose) {
                 sg->pinned ? " PIN" : "",
                 sg->noemit ? " NOEMIT" : "",
                 sg->header ? " HEADER" : "");
+
+            if (sg->segment_group >= 0) {
+                fprintf(map_fp," group=%d",
+                        sg->segment_group);
+            }
+
+            fprintf(map_fp,"\n");
         }
 
         for (f=0;f < sg->fragments.size();f++) {
@@ -920,14 +961,20 @@ fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link
 }
 
 shared_ptr<struct link_segdef> find_link_segment(const char *name) {
+    shared_ptr<struct link_segdef> sg,rsg;
     size_t i=0;
 
     while (i < link_segments.size()) {
-        shared_ptr<struct link_segdef> &sg = link_segments[i++];
-        if (sg->name == name) return sg;
+        sg = link_segments[i++];
+        if (sg->name == name) {
+            rsg = sg;
+
+            if (sg->segment_group >= current_segment_group)
+                break;
+        }
     }
 
-    return nullptr;
+    return rsg;
 }
 
 shared_ptr<struct link_segdef> new_link_segment(const char *name) {
@@ -1475,6 +1522,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
 
             if (lsg->fragment_load_index == nullptr) {
                 fprintf(stderr,"SEGDEF '%s', second pass, failed to find fragment\n",name);
+                dump_link_segments(DUMPLS_LINEAR);
                 return -1;
             }
 
@@ -1489,6 +1537,12 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
         }
         else if (pass == PASS_GATHER) {
             shared_ptr<struct link_segdef> lsg = find_link_segment(name);
+
+            if (lsg != nullptr) {
+                if (lsg->segment_group < current_segment_group)
+                    lsg = nullptr;
+            }
+
             if (lsg != NULL) {
                 /* it is an error to change attributes */
                 if (cmdoptions.verbose)
@@ -1512,6 +1566,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
 
                 lsg->attr = sg->attr;
                 lsg->classname = classname;
+                lsg->segment_group = current_segment_group;
             }
 
             /* We no longer allow one OBJ file/module to define the same segment twice.
@@ -1561,6 +1616,7 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
     fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
+    fprintf(stderr,"  -seggroup    Start new segment group, for OBJs after, i.e. init section\n");
     fprintf(stderr,"  -comNNN      Link .COM segment starting at 0xNNN\n");
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
@@ -1828,6 +1884,7 @@ int main(int argc,char **argv) {
                 input_file ent;
 
                 ent.path = s; /* constructs std::string from char* */
+                ent.segment_group = cmdoptions.next_segment_group;
 
                 cmdoptions.in_file.push_back(ent);
             }
@@ -1891,6 +1948,9 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"v")) {
                 cmdoptions.verbose = true;
+            }
+            else if (!strcmp(a,"seggroup")) {
+                cmdoptions.next_segment_group++;
             }
             else if (!strcmp(a,"dosseg")) {
                 cmdoptions.do_dosseg = true;
@@ -1980,6 +2040,7 @@ int main(int argc,char **argv) {
             diddump = 0;
             current_in_file_module = 0;
             omf_context_begin_file(omf_state);
+            current_segment_group = cmdoptions.in_file[current_in_file].segment_group;
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
@@ -2243,6 +2304,7 @@ int main(int argc,char **argv) {
             }
 
             close(fd);
+            current_segment_group = -1;
         }
 
         if (pass == PASS_GATHER) {
@@ -2403,6 +2465,7 @@ int main(int argc,char **argv) {
                     return 1;
 
                 exeseg->pinned = 1;
+                exeseg->segment_group = ++cmdoptions.next_segment_group;
                 exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
                 exeseg->segment_relative = cmdoptions.image_base_segment;
                 exeseg->segment_base = cmdoptions.image_base_offset;

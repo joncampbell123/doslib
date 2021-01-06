@@ -35,7 +35,7 @@ $(DOSLIBLINKER):
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
 dos86t/drvci.obj: drvci.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $(CFLAGS_END) -nt=_INITTEXT -nc=INITCODE $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $(CFLAGS_END) $[@
 	@$(CC) @tmp.cmd
 
 all: $(OMFSEGDG) lib exe
@@ -57,7 +57,7 @@ drva.asm:
 !ifdef TEST_SYS
 # TODO: dosdrv
 $(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrv -map $(TEST_SYS).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrv -map $(TEST_SYS).map
 !endif
 
 clean: .SYMBOLIC

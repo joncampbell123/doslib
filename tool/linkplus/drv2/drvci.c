@@ -12,7 +12,7 @@
 /* NTS: must declare this __based on _CODE so that it doesn't end up in _CONST.
  *      we want this string to be discarded along with INIT function after init.
  *      _CONST is not discarded after INIT. */
-static const char __based( __segname("_CODE") ) hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";
+static const char hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";
 
 void INIT_func(void) {
 // NTS: Watcom C is missing an optimization opportunity here, so define instead
