@@ -27,6 +27,10 @@ TESTF_EXE =   $(SUBDIR)$(HPS)testf.exe
 TESTF2_EXE =  $(SUBDIR)$(HPS)testf2.exe
 TESTF3_EXE =  $(SUBDIR)$(HPS)testf3.exe
 TESTF4_EXE =  $(SUBDIR)$(HPS)testf4.exe
+TESTFC_EXE =   $(SUBDIR)$(HPS)testfc.exe
+TESTFC2_EXE =  $(SUBDIR)$(HPS)testfc2.exe
+TESTFC3_EXE =  $(SUBDIR)$(HPS)testfc3.exe
+TESTFC4_EXE =  $(SUBDIR)$(HPS)testfc4.exe
 DOSLIBLINKER_OFMT = -of exe
 ! endif
 !endif
@@ -47,7 +51,7 @@ $(DOSLIBLINKER):
 
 all: lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) $(TESTF_EXE) $(TESTF2_EXE) $(TESTF3_EXE) $(TESTF4_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) $(TESTF_EXE) $(TESTF2_EXE) $(TESTF3_EXE) $(TESTF4_EXE) $(TESTFC_EXE) $(TESTFC2_EXE) $(TESTFC3_EXE) $(TESTFC4_EXE) .symbolic
 
 lib: .symbolic
 
@@ -95,6 +99,26 @@ $(TESTF3_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS
 !ifdef TESTF4_EXE
 $(TESTF4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)entry4.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -o $(TESTF4_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF4_EXE).map
+!endif
+
+!ifdef TESTFC_EXE
+$(TESTFC_EXE): $(SUBDIR)$(HPS)entry.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TESTFC_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100 -map $(TESTFC_EXE).map
+!endif
+
+!ifdef TESTFC2_EXE
+$(TESTFC2_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTFC2_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100 -map $(TESTFC2_EXE).map
+!endif
+
+!ifdef TESTFC3_EXE
+$(TESTFC3_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TESTFC3_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100 -map $(TESTFC3_EXE).map
+!endif
+
+!ifdef TESTFC4_EXE
+$(TESTFC4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)entry4.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -o $(TESTFC4_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100 -map $(TESTFC4_EXE).map
 !endif
 
 clean: .SYMBOLIC
