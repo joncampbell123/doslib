@@ -994,7 +994,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     return 0;
 }
 
-int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,shared_ptr<struct link_segdef> *sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,unsigned int in_file,unsigned int in_module) {
+int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,shared_ptr<struct link_segdef> *sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,in_fileRef in_file,in_fileModuleRef in_module) {
     *fseg = *fofs = ~0UL;
     *sdef = NULL;
     (void)ent;
@@ -1068,7 +1068,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     return 0;
 }
 
-int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_module,unsigned int pass) {
+int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     shared_ptr<struct link_segdef> frame_sdef;
     shared_ptr<struct link_segdef> targ_sdef;
     const struct omf_segdef_t *cur_segdef;
@@ -1376,7 +1376,7 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     return 0;
 }
 
-int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag,unsigned int in_file,unsigned int in_module,unsigned int pass) {
+int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     const unsigned char is_local = (tag == OMF_RECTYPE_LPUBDEF) || (tag == OMF_RECTYPE_LPUBDEF32);
 
     (void)pass;
@@ -1443,7 +1443,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     return 0;
 }
 
-int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_module,unsigned int pass) {
+int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
         const char *classname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->class_name_index);
