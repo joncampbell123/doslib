@@ -2332,6 +2332,25 @@ int main(int argc,char **argv) {
                 }
             }
 
+            /* symbol for entry point */
+            if (entry_seg_link_target != nullptr) {
+                /* make the original entry point a symbol, change entry point to new place */
+                shared_ptr<struct link_symbol> ls = find_link_symbol("$$SOURCEENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+                if (ls != NULL)
+                    return 1;
+
+                ls = new_link_symbol("$$SOURCEENTRYPOINT");
+                if (ls == NULL)
+                    return 1;
+
+                ls->segref = entry_seg_link_target;
+                ls->groupdef = entry_seg_link_target->groupname;
+                ls->offset = entry_seg_ofs;
+                ls->fragment = entry_seg_link_target_fragment;
+                ls->in_file = entry_seg_link_target_fragment.get()->in_file;
+                ls->in_module = entry_seg_link_target_fragment.get()->in_module;
+            }
+
             /* COM relocatable: Inject patch code and relocation table, put original entry point within, redirect entry point */
             if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 shared_ptr<struct link_segdef> exeseg;
@@ -2556,6 +2575,25 @@ int main(int argc,char **argv) {
                 }
             }
         }
+    }
+
+    /* symbol for entry point */
+    if (entry_seg_link_target != nullptr) {
+        /* make the original entry point a symbol, change entry point to new place */
+        shared_ptr<struct link_symbol> ls = find_link_symbol("$$ENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+        if (ls != NULL)
+            return 1;
+
+        ls = new_link_symbol("$$ENTRYPOINT");
+        if (ls == NULL)
+            return 1;
+
+        ls->segref = entry_seg_link_target;
+        ls->groupdef = entry_seg_link_target->groupname;
+        ls->offset = entry_seg_ofs;
+        ls->fragment = entry_seg_link_target_fragment;
+        ls->in_file = entry_seg_link_target_fragment.get()->in_file;
+        ls->in_module = entry_seg_link_target_fragment.get()->in_module;
     }
 
     /* add padding fragments where needed */
@@ -3026,6 +3064,8 @@ int main(int argc,char **argv) {
             for (auto i=link_symbols.begin();i!=link_symbols.end();i++) {
                 auto cur_sym = *i;
 
+                if (cur_sym->name == "$$ENTRYPOINT") continue;
+                if (cur_sym->name == "$$SOURCEENTRYPOINT") continue;
                 if (cur_sym->segref != entry_seg_link_target) continue;
 
                 shared_ptr<struct seg_fragment> sfrag = cur_sym->fragment;
