@@ -79,22 +79,22 @@ $(TEST4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)
 
 !ifdef TESTF_EXE
 $(TESTF_EXE): $(SUBDIR)$(HPS)entry.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TESTF_EXE) $(DOSLIBLINKER_OFMT) -com100 -map $(TESTF_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TESTF_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF_EXE).map
 !endif
 
 !ifdef TESTF2_EXE
 $(TESTF2_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTF2_EXE) $(DOSLIBLINKER_OFMT) -com100 -map $(TESTF2_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTF2_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF2_EXE).map
 !endif
 
 !ifdef TESTF3_EXE
 $(TESTF3_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TESTF3_EXE) $(DOSLIBLINKER_OFMT) -com100 -map $(TESTF3_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TESTF3_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF3_EXE).map
 !endif
 
 !ifdef TESTF4_EXE
 $(TESTF4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)entry4.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -o $(TESTF4_EXE) $(DOSLIBLINKER_OFMT) -com100 -map $(TESTF4_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -o $(TESTF4_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF4_EXE).map
 !endif
 
 clean: .SYMBOLIC
