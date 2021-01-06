@@ -3054,11 +3054,13 @@ int main(int argc,char **argv) {
             for (auto li=link_segments.begin();li!=link_segments.end();li++) {
                 shared_ptr<struct link_segdef> sd = *li;
 
-                if (sd->noemit) continue;
+                if (sd->noemit || sd->segment_length == 0) continue;
 
                 assert(sd->file_offset != fileOffsetUndef);
                 for (auto fi=sd->fragments.begin();fi!=sd->fragments.end();fi++) {
                     shared_ptr<struct seg_fragment> frag = *fi;
+                    if (frag->fragment_length == 0) continue;
+
                     fileOffset file_ofs = sd->file_offset+frag->offset;
 
                     if (file_ofs < cur_offset) {
