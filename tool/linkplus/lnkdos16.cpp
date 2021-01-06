@@ -99,8 +99,6 @@ struct input_file {
 };
 
 struct cmdoptions {
-    unsigned int                        hex_split:1;
-    unsigned int                        hex_cpp:1;
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
     unsigned int                        prefer_flat:1;
@@ -121,8 +119,8 @@ struct cmdoptions {
 
     vector<input_file>                  in_file;
 
-    cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), prefer_flat(false),
-                   output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
+    cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), output_format(OFMT_COM),
+                   output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
                    image_base_segment_reloc_adjust(segmentBaseUndef), image_base_segment(segmentBaseUndef),
                    image_base_offset(segmentOffsetUndef), dosdrv_header_symbol("_dosdrv_header") { }
 };
@@ -1855,12 +1853,6 @@ int main(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 cmdoptions.hex_output = a;
-            }
-            else if (!strcmp(a,"hexcpp")) {
-                cmdoptions.hex_cpp = true;
-            }
-            else if (!strcmp(a,"hexsplit")) {
-                cmdoptions.hex_split = true;
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
