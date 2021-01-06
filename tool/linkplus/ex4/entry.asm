@@ -9,7 +9,7 @@ asm_entry:
     mov     ax,_DATA
     mov     ds,ax
 
-    call    _printloop
+    call far   _printloop
 
 global _exit_
 _exit_:
@@ -28,7 +28,7 @@ l1: lodsb
     int     21h
     jmp     short l1
 l1e:
-    ret
+    retf
 
 ; data
 segment _DATA align=1 class=DATA use16
