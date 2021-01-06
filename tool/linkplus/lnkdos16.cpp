@@ -306,7 +306,6 @@ struct link_segdef {
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
-    size_t                              fragment_load_index_val;/* current fragment, used when processing LEDATA and OMF symbols ONLY in BUILD pass */
     fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
@@ -315,8 +314,8 @@ struct link_segdef {
     unsigned int                        header:1;           /* segment is executable header stuff */
 
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
-                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index_val(~((size_t)0u)),
-                    fragment_load_index(fragmentRefUndef), pinned(0), noemit(0), header(0) { }
+                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
+                    pinned(0), noemit(0), header(0) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -1458,12 +1457,25 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 fprintf(stderr,"No SEGDEF '%s'\n",name);
                 return -1;
             }
-            if (lsg->fragments.empty())
-                continue;
+            if (lsg->fragments.empty()) {
+                fprintf(stderr,"SEGDEF '%s' with no fragments on second pass?\n",name);
+                return -1;
+            }
 
-            lsg->fragment_load_index_val++; /* NTS: init to -1 aka ~(0u) */
-            assert(lsg->fragment_load_index_val < lsg->fragments.size());
-            lsg->fragment_load_index = lsg->fragments[lsg->fragment_load_index_val];
+            /* match fragment to input file, input module.
+             * Remember: For simplicity reasons, only ONE FRAGMENT per segment per module. We do not allow an OBJ to SEGDEF the same name twice. */
+            lsg->fragment_load_index = nullptr;
+            for (auto fi=lsg->fragments.begin();fi!=lsg->fragments.end();fi++) {
+                if ((*fi)->in_file == in_file && (*fi)->in_module == in_module && (*fi)->from_segment_index == first) {
+                    lsg->fragment_load_index = *fi;
+                    break;
+                }
+            }
+
+            if (lsg->fragment_load_index == nullptr) {
+                fprintf(stderr,"SEGDEF '%s', second pass, failed to find fragment\n",name);
+                return -1;
+            }
 
             {
                 shared_ptr<struct seg_fragment> f = lsg->fragment_load_index;
