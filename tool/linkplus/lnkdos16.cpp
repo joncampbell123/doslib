@@ -2526,6 +2526,7 @@ int main(int argc,char **argv) {
                         if (exeseg != NULL)
                             return 1;
 
+                        /* segment MUST exist at the beginning of the file! COM executables always run from the first byte at 0x100! */
                         exeseg = new_link_segment_begin("__COM_ENTRY_JMP");
                         if (exeseg == NULL)
                             return 1;
@@ -2537,7 +2538,7 @@ int main(int argc,char **argv) {
 
                         size_t fidx;
                         shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get(),/*&*/fidx);
-                        /* must be the FIRST */
+                        /* must be the FIRST in the segment! */
                         assert(fidx == 0);
                         frag->in_file = in_fileRefInternal;
                         frag->offset = 0;
@@ -2654,6 +2655,8 @@ int main(int argc,char **argv) {
         uint32_t init_ip;
         uint32_t tbl_ip;
 
+        /* Add segment to end of list. __COMREL_INIT should exist at the back of the file so it can easily
+         * be discarded after running without harming the program we're linking together. */
         exeseg = find_link_segment("__COMREL_INIT");
         if (exeseg != NULL) {
             {
