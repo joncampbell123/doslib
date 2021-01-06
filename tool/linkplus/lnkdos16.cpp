@@ -217,7 +217,7 @@ typedef shared_ptr<struct seg_fragment> fragmentRef;
 static const fragmentRef                fragmentRefUndef = shared_ptr<struct seg_fragment>(nullptr);
 
 struct exe_relocation {
-    string                              segname;            /* which segment */
+    shared_ptr<struct link_segdef>      segref;             /* which segment */
     fragmentRef                         fragment;           /* which fragment */
     segmentOffset                       offset;             /* offset within fragment */
 
@@ -572,18 +572,18 @@ void dump_link_relocations(void) {
 
         if (cmdoptions.verbose) {
             fprintf(stderr,"relocation[%u]: seg='%s' frag=%p offset=0x%lx\n",
-                i,rel->segname.c_str(),(void*)rel->fragment.get(),(unsigned long)rel->offset);
+                i,rel->segref->name.c_str(),(void*)rel->fragment.get(),(unsigned long)rel->offset);
         }
 
         if (map_fp != NULL) {
-            shared_ptr<struct link_segdef> sg = find_link_segment(rel->segname.c_str());
+            shared_ptr<struct link_segdef> sg = rel->segref;
             shared_ptr<struct seg_fragment> frag = rel->fragment;
 
             fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sg->segment_relative&0xfffful,
                 (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
-                rel->segname.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
+                rel->segref->name.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
                 get_in_file(frag->in_file),frag->in_module);
         }
     }
@@ -1237,12 +1237,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
                     }
 
                     assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                    reloc->segname = current_link_segment->name;
+                    reloc->segref = current_link_segment;
                     reloc->fragment = current_link_segment->fragment_load_index;
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                     if (cmdoptions.verbose)
-                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segname.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
+                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segref->name.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
@@ -1275,12 +1275,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
                     }
 
                     assert(current_link_segment->fragment_load_index != fragmentRefUndef);
-                    reloc->segname = current_link_segment->name;
+                    reloc->segref = current_link_segment;
                     reloc->fragment = current_link_segment->fragment_load_index;
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                     if (cmdoptions.verbose)
-                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segname.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
+                        fprintf(stderr,"Relocation entry: Patch up %s:%p:%04lx\n",reloc->segref->name.c_str(),(void*)reloc->fragment.get(),(unsigned long)reloc->offset);
                 }
 
                 if (pass == PASS_BUILD) {
@@ -2696,18 +2696,10 @@ int main(int argc,char **argv) {
 
                 for (auto i=exe_relocation_table.begin();i!=exe_relocation_table.end();i++) {
                     shared_ptr<struct exe_relocation> rel = *i;
-                    shared_ptr<struct link_segdef> lsg;
-                    unsigned long roff;
-
-                    lsg = find_link_segment(rel->segname.c_str());
-                    if (lsg == NULL) {
-                        fprintf(stderr,"Relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
-                        return 1;
-                    }
-
+                    shared_ptr<struct link_segdef> lsg = rel->segref;
                     shared_ptr<struct seg_fragment> frag = rel->fragment;
 
-                    roff = rel->offset + lsg->segment_offset + frag->offset;
+                    unsigned long roff = rel->offset + lsg->segment_offset + frag->offset;
                     if (roff >= 0xFFFEul) {
                         fprintf(stderr,"COMREL: Relocation out of range\n");
                         return 1;
@@ -2915,16 +2907,9 @@ int main(int argc,char **argv) {
 
             for (i=0;i < exe_relocation_table.size();i++) {
                 shared_ptr<struct exe_relocation> rel = exe_relocation_table[i];
-                shared_ptr<struct link_segdef> lsg;
-                unsigned long rseg,roff;
-
-                lsg = find_link_segment(rel->segname.c_str());
-                if (lsg == NULL) {
-                    fprintf(stderr,"Relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
-                    return 1;
-                }
-
                 shared_ptr<struct seg_fragment> frag = rel->fragment;
+                shared_ptr<struct link_segdef> lsg = rel->segref;
+                unsigned long rseg,roff;
 
                 rseg = 0;
                 roff = rel->offset + lsg->linear_offset + frag->offset;
