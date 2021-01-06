@@ -3034,10 +3034,10 @@ int main(int argc,char **argv) {
                 sofs = ssg->segment_offset + sfrag->offset + cur_sym->offset;
                 cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
 
-                if (sofs > cofs) {
-                    sym = cur_sym;
+                if (sofs > cofs)
                     break;
-                }
+
+                sym = cur_sym;
             }
 
             if (sym != nullptr) {
