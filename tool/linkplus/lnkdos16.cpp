@@ -780,7 +780,7 @@ void dump_link_segments(const unsigned int purpose) {
                 }
 
                 if (purpose == DUMPLS_FILEOFFSET) {
-                    if (sg->segment_length != 0ul && sg->file_offset != fileOffsetUndef) {
+                    if (frag->fragment_length != 0ul && sg->file_offset != fileOffsetUndef) {
                         sprintf(range2,"0x%08lx-0x%08lx",
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset,
                             (unsigned long)sg->file_offset+(unsigned long)frag->offset+(unsigned long)frag->fragment_length-1ul);
