@@ -12,11 +12,13 @@ NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE
 TEST_SYS =   $(SUBDIR)$(HPS)test.sys
+TEST2_SYS =  $(SUBDIR)$(HPS)test2.sys
 !else
 ! ifeq TARGET_MSDOS 32
 # DOSLIB linker cannot handle 32-bit OMF........yet
 ! else
 TEST_SYS =   $(SUBDIR)$(HPS)test.sys
+TEST2_SYS =  $(SUBDIR)$(HPS)test2.sys
 ! endif
 !endif
 
@@ -40,7 +42,7 @@ dos86t/drvci.obj: drvci.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_SYS) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_SYS) $(TEST2_SYS) .symbolic
 
 lib: .symbolic
 
@@ -58,6 +60,12 @@ drva.asm:
 # TODO: dosdrv
 $(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -com0 -of com -map $(TEST_SYS).map
+!endif
+
+!ifdef TEST2_SYS
+# TODO: dosdrv
+$(TEST2_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) -of dosdrv -map $(TEST2_SYS).map
 !endif
 
 clean: .SYMBOLIC
