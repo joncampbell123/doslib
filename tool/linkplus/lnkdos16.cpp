@@ -946,7 +946,10 @@ shared_ptr<struct link_segdef> new_link_segment_begin(const char *name) {
     return sg;
 }
 
-int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
+int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+    (void)in_module;
+    (void)in_file;
+
     const char *segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
     if (*segname == 0) {
         fprintf(stderr,"Null segment name\n");
@@ -2140,7 +2143,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (pass == PASS_BUILD && ledata_add(omf_state, &info, pass))
+                            if (pass == PASS_BUILD && ledata_add(omf_state, &info, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
