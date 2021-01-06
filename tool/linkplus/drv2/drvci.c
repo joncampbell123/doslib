@@ -9,9 +9,8 @@
 #include <hw/dos/drvreq.h>
 #include <hw/dos/drvvar.h>
 
-/* NTS: must declare this __based on _CODE so that it doesn't end up in _CONST.
- *      we want this string to be discarded along with INIT function after init.
- *      _CONST is not discarded after INIT. */
+/* This time, we can declare code and data as normal,
+ * then segregate this code into it's own init section using lnkdos16 -seggroup. */
 static const char hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";
 
 void INIT_func(void) {
