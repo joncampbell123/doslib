@@ -2332,6 +2332,130 @@ int main(int argc,char **argv) {
                 }
             }
 
+            /* COM relocatable: Inject patch code and relocation table, put original entry point within, redirect entry point */
+            if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+                shared_ptr<struct link_segdef> exeseg;
+                uint32_t init_ip;
+
+                /* I'm not going to make up a guess that won't work. Give me an entry point! */
+                if (entry_seg_link_target == nullptr) {
+                    fprintf(stderr,"COMREL link target requires entry point\n");
+                    return 1;
+                }
+
+                {
+                    shared_ptr<struct seg_fragment> frag = entry_seg_link_target_fragment;
+                    assert(frag != nullptr);
+
+                    if (entry_seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+                        fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                                (unsigned long)entry_seg_link_target->segment_relative,
+                                (unsigned long)cmdoptions.image_base_segment);
+                        return 1;
+                    }
+
+                    init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+                }
+
+                assert(init_ip >= cmdoptions.image_base_offset);
+
+                exeseg = find_link_segment("__COMREL_INIT");
+                if (exeseg != NULL)
+                    return 1;
+
+                exeseg = new_link_segment("__COMREL_INIT");
+                if (exeseg == NULL)
+                    return 1;
+
+                exeseg->pinned = 1;
+                exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+                exeseg->segment_relative = cmdoptions.image_base_segment;
+                exeseg->segment_base = cmdoptions.image_base_offset;
+
+                {
+                    /* make the original entry point a symbol, change entry point to new place */
+                    shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                    if (ls != NULL)
+                        return 1;
+
+                    ls = new_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY");
+                    if (ls == NULL)
+                        return 1;
+
+                    ls->segref = entry_seg_link_target;
+                    ls->groupdef = entry_seg_link_target->groupname;
+                    ls->offset = entry_seg_ofs;
+                    ls->fragment = entry_seg_link_target_fragment;
+                    ls->in_file = entry_seg_link_target_fragment.get()->in_file;
+                    ls->in_module = entry_seg_link_target_fragment.get()->in_module;
+                }
+
+                {
+                    /* injected fixup code, wait until second pass to actually patch in values */
+                    shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+                    frag->in_file = in_fileRefInternal;
+                    frag->fragment_length = sizeof(comrel_entry_point);
+                    frag->image.resize(frag->fragment_length);
+                    memcpy(&frag->image[0],comrel_entry_point,sizeof(comrel_entry_point));
+
+                    /* replace entry point */
+                    entry_seg_ofs = 0;
+                    entry_seg_link_frame = exeseg;
+                    entry_seg_link_target = exeseg;
+                    entry_seg_link_target_fragment = frag;
+
+                    {
+                        /* make the original entry point a symbol, change entry point to new place */
+                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                        if (ls != NULL)
+                            return 1;
+
+                        ls = new_link_symbol("__COMREL_INIT_RELOC_APPLY");
+                        if (ls == NULL)
+                            return 1;
+
+                        ls->segref = exeseg;
+                        ls->groupdef = exeseg->groupname;
+                        ls->offset = 0;
+                        ls->fragment = frag;
+                        ls->in_file = in_fileRefInternal;
+                        ls->in_module = in_fileModuleRefUndef;
+                    }
+                }
+
+                {
+                    shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+                    frag->in_file = in_fileRefInternal;
+                    frag->fragment_length = 2 * exe_relocation_table.size();
+                    frag->image.resize(frag->fragment_length);
+
+                    {
+                        /* make the original entry point a symbol, change entry point to new place */
+                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                        if (ls != NULL)
+                            return 1;
+
+                        ls = new_link_symbol("__COMREL_INIT_RELOC_TABLE");
+                        if (ls == NULL)
+                            return 1;
+
+                        ls->segref = exeseg;
+                        ls->groupdef = exeseg->groupname;
+                        ls->offset = 0;
+                        ls->fragment = frag;
+                        ls->in_file = in_fileRefInternal;
+                        ls->in_module = in_fileModuleRefUndef;
+                    }
+                }
+
+                fragment_def_arrange(exeseg.get());
+                owlink_stack_bss_arrange(); /* __COMREL_INIT is meant to attach to the end of the .COM image */
+                if (segment_def_arrange())
+                    return 1;
+                if (segment_exe_arrange())
+                    return 1;
+            }
+
             /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
             if (cmdoptions.output_format == OFMT_COM) {
                 if (entry_seg_link_target != nullptr) {
@@ -2397,12 +2521,6 @@ int main(int argc,char **argv) {
                             frag->image[1] = 0; /* patch later */
                         }
 
-                        fragment_def_arrange(exeseg.get());
-                        if (segment_def_arrange())
-                            return 1;
-                        if (segment_exe_arrange())
-                            return 1;
-
                         exeseg = find_link_segment("__COM_ENTRY_JMP");
                         if (exeseg == NULL)
                             return 1;
@@ -2428,6 +2546,12 @@ int main(int argc,char **argv) {
                         entry_seg_link_frame = exeseg;
                         entry_seg_link_target = exeseg;
                         entry_seg_link_target_fragment = frag;
+
+                        fragment_def_arrange(exeseg.get());
+                        if (segment_def_arrange())
+                            return 1;
+                        if (segment_exe_arrange())
+                            return 1;
                     }
                 }
             }
@@ -2461,6 +2585,83 @@ int main(int argc,char **argv) {
 
             if (!sd->noemit)
                 sd->file_offset = sd->linear_offset;
+        }
+    }
+
+    /* COMREL files: patch in entry point, table */
+    if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL) {
+        shared_ptr<struct link_segdef> exeseg;
+        uint32_t end_jmp_ip;
+        uint32_t init_ip;
+        uint32_t tbl_ip;
+
+        exeseg = find_link_segment("__COMREL_INIT");
+        if (exeseg != NULL) {
+            {
+                shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+                if (ls == NULL)
+                    return 1;
+
+                shared_ptr<struct link_segdef> lsseg = ls->segref;
+                shared_ptr<struct seg_fragment> lsfrag = ls->fragment;
+
+                init_ip = ls->offset + lsseg->segment_offset + lsfrag->offset;
+                assert(init_ip >= cmdoptions.image_base_offset);
+            }
+
+            shared_ptr<struct seg_fragment> apply_frag;
+            {
+                shared_ptr<struct link_symbol> apply_ls = find_link_symbol("__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                if (apply_ls == NULL)
+                    return 1;
+
+                apply_frag = apply_ls->fragment;
+                assert(apply_frag->image.size() >= sizeof(comrel_entry_point));
+
+                end_jmp_ip = exeseg->segment_offset + apply_frag->offset + comrel_entry_point_JMP_ENTRY + 2; // first byte past JMP
+            }
+
+            shared_ptr<struct seg_fragment> table_frag;
+            {
+                shared_ptr<struct link_symbol> table_ls = find_link_symbol("__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                if (table_ls == NULL)
+                    return 1;
+
+                table_frag = table_ls->fragment;
+                assert(table_frag->image.size() >= (2 * exe_relocation_table.size()));
+
+                tbl_ip = exeseg->segment_offset + table_frag->offset;
+
+                uint16_t *w = (uint16_t*)(&table_frag->image[0]);
+                uint16_t *wf = (uint16_t*)(&table_frag->image[table_frag->image.size() & (~1u)]);
+
+                for (auto i=exe_relocation_table.begin();i!=exe_relocation_table.end();i++) {
+                    shared_ptr<struct exe_relocation> rel = *i;
+                    shared_ptr<struct link_segdef> lsg;
+                    unsigned long roff;
+
+                    lsg = find_link_segment(rel->segname.c_str());
+                    if (lsg == NULL) {
+                        fprintf(stderr,"Relocation entry refers to non-existent segment '%s'\n",rel->segname.c_str());
+                        return 1;
+                    }
+
+                    shared_ptr<struct seg_fragment> frag = rel->fragment;
+
+                    roff = rel->offset + lsg->segment_offset + frag->offset;
+                    if (roff >= 0xFFFEul) {
+                        fprintf(stderr,"COMREL: Relocation out of range\n");
+                        return 1;
+                    }
+
+                    *w++ = (uint16_t)roff;
+                    assert(w <= wf);
+                }
+            }
+
+            *((uint16_t*)(&apply_frag->image[comrel_entry_point_CX_COUNT])) = exe_relocation_table.size();
+            *((uint16_t*)(&apply_frag->image[comrel_entry_point_SI_OFFSET])) = (uint16_t)tbl_ip;
+            *((uint16_t*)(&apply_frag->image[comrel_entry_point_JMP_ENTRY])) = (uint16_t)((init_ip - end_jmp_ip) & 0xFFFFul);
         }
     }
 
