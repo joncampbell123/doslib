@@ -94,6 +94,10 @@ static inline alignMask alignValueToAlignMask(const alignMask &v) {
 
 static FILE*                            map_fp = NULL;
 
+struct input_file {
+    string                              path;
+};
+
 struct cmdoptions {
     unsigned int                        hex_split:1;
     unsigned int                        hex_cpp:1;
@@ -115,7 +119,7 @@ struct cmdoptions {
     string                              out_file;
     string                              map_file;
 
-    vector<string>                      in_file;
+    vector<input_file>                  in_file;
 
     cmdoptions() : hex_split(false), hex_cpp(false), do_dosseg(true), verbose(false), prefer_flat(false),
                    output_format(OFMT_COM), output_format_variant(OFMTVAR_NONE), want_stack_size(4096),
@@ -136,8 +140,8 @@ const char *get_in_file(const in_fileRef idx) {
     else if (idx == in_fileRefPadding)
         return "<padding>";
     else if (idx < cmdoptions.in_file.size()) {
-        if (!cmdoptions.in_file[idx].empty())
-            return cmdoptions.in_file[idx].c_str();
+        if (!cmdoptions.in_file[idx].path.empty())
+            return cmdoptions.in_file[idx].path.c_str();
         else
             return "<noname>";
     }
@@ -1807,7 +1811,12 @@ int main(int argc,char **argv) {
             if (!strcmp(a,"i")) {
                 char *s = argv[i++];
                 if (s == NULL) return 1;
-                cmdoptions.in_file.push_back(s); /* constructs std::string from char* */
+
+                input_file ent;
+
+                ent.path = s; /* constructs std::string from char* */
+
+                cmdoptions.in_file.push_back(ent);
             }
             else if (!strcmp(a,"hsym")) {
                 a = argv[i++];
@@ -1946,9 +1955,9 @@ int main(int argc,char **argv) {
 
     for (pass=0;pass < PASS_MAX;pass++) {
         for (current_in_file=0;current_in_file < cmdoptions.in_file.size();current_in_file++) {
-            assert(!cmdoptions.in_file[current_in_file].empty());
+            assert(!cmdoptions.in_file[current_in_file].path.empty());
 
-            fd = open(cmdoptions.in_file[current_in_file].c_str(),O_RDONLY|O_BINARY);
+            fd = open(cmdoptions.in_file[current_in_file].path.c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
