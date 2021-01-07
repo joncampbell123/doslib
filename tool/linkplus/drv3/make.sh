@@ -33,7 +33,7 @@ fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
 #    make_buildlist
-    build_list="dos86t dos86s dos86c"
+    build_list="dos86t dos86s dos86c dos86l dos86m"
     begin_bat
 
     what=all

@@ -65,7 +65,7 @@ drva.asm:
 !ifdef TEST_SYS
 # TODO: dosdrv
 $(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrv -map $(TEST_SYS).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrvrel -map $(TEST_SYS).map
 !endif
 
 !ifdef TEST_EXE
@@ -79,7 +79,7 @@ $(TEST_EXE): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drv
 !ifdef TEST2_SYS
 # TODO: dosdrv
 $(TEST2_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) -of dosdrv -map $(TEST2_SYS).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) -of dosdrvrel -map $(TEST2_SYS).map
 !endif
 
 !ifdef TEST2_EXE
