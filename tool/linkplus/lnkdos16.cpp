@@ -2397,7 +2397,9 @@ int main(int argc,char **argv) {
             if (segment_exe_arrange())
                 return 1;
 
-            /* MS-DOS device drivers: header symbol must exist at the start of the file */
+            /* MS-DOS device drivers: header symbol must exist at the start of the resident image.
+             * For .COM files that is the start of the file. For .EXE files that is the first byte in the file
+             * past the EXE header. When loaded into memory, it must be the first byte at the base of the image. */
             if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                 shared_ptr<struct link_symbol> ls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
 
