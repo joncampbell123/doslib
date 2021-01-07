@@ -2397,6 +2397,49 @@ int main(int argc,char **argv) {
             if (segment_exe_arrange())
                 return 1;
 
+            /* MS-DOS device drivers: header symbol must exist at the start of the file */
+            if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+                shared_ptr<struct link_symbol> ls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+
+                if (ls == nullptr) {
+                    fprintf(stderr,"WARNING: Unable to find symbol '%s' which is DOS driver header. See also -hsym option.\n",
+                        cmdoptions.dosdrv_header_symbol.c_str());
+                }
+                else {
+                    assert(ls->fragment != nullptr);
+                    assert(ls->segref != nullptr);
+
+                    if (ls->segref->segment_relative != cmdoptions.image_base_segment || ls->segref->segment_offset != cmdoptions.image_base_offset) {
+                        fprintf(stderr,"WARNING: DOS driver header '%s' exists at segment/offset other than base of image, which will make the driver invalid.\n",
+                                cmdoptions.dosdrv_header_symbol.c_str());
+                    }
+                    else {
+                        /* if the segment exists at base, but the fragment does not, and the symbol exists at the base
+                         * of a fragment. it may be possible to locate the fragment and shuffle it to the beginning of the image */
+                        if (ls->fragment->offset != 0 && ls->offset == 0) {
+                            auto i = find(ls->segref->fragments.begin(),ls->segref->fragments.end(),ls->fragment);
+                            assert(i != ls->segref->fragments.end()); /* must find it somewhere! */
+
+                            /* if not at the beginning, then move it to the beginning.
+                             * remember everything is shared_ptr so there is no risk of stale pointers here. */
+                            if (i != ls->segref->fragments.begin()) {
+                                ls->segref->fragments.erase(i);
+                                ls->segref->fragments.insert(ls->segref->fragments.begin(),ls->fragment);
+                                fragment_def_arrange(ls->segref.get());
+
+                                fprintf(stderr,"DOS driver header '%s' moved to base of image.\n",
+                                        cmdoptions.dosdrv_header_symbol.c_str());
+                            }
+                        }
+
+                        if ((ls->fragment->offset+ls->offset) != 0) {
+                            fprintf(stderr,"WARNING: DOS driver header '%s' exists at offset other than base of image, which will make the driver invalid.\n",
+                                    cmdoptions.dosdrv_header_symbol.c_str());
+                        }
+                    }
+                }
+            }
+
             /* allocate in-memory copy of the segments */
             for (auto li=link_segments.begin();li!=link_segments.end();li++) {
                 shared_ptr<struct link_segdef> sd = *li;
