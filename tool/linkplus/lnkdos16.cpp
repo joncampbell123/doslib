@@ -2420,11 +2420,11 @@ int main(int argc,char **argv) {
                             auto i = find(ls->segref->fragments.begin(),ls->segref->fragments.end(),ls->fragment);
                             assert(i != ls->segref->fragments.end()); /* must find it somewhere! */
 
-                            /* if not at the beginning, then move it to the beginning.
+                            /* if not at the beginning, then move it to the beginning. for speed, just use swap()
+                             * because removing/inserting in a vector takes linear time (based on number of elements).
                              * remember everything is shared_ptr so there is no risk of stale pointers here. */
                             if (i != ls->segref->fragments.begin()) {
-                                ls->segref->fragments.erase(i);
-                                ls->segref->fragments.insert(ls->segref->fragments.begin(),ls->fragment);
+                                swap(*(ls->segref->fragments.begin()),*i);
                                 fragment_def_arrange(ls->segref.get());
 
                                 fprintf(stderr,"DOS driver header '%s' moved to base of image.\n",
