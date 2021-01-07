@@ -1034,9 +1034,10 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,i
         return 1;
     }
 
-    if (pass == PASS_BUILD) {
+    if (pass == PASS_GATHER) {
         assert(info->data != NULL);
-        assert(frag->image.size() == frag->fragment_length);
+        if (frag->image.size() < frag->fragment_length) frag->image.resize(frag->fragment_length);
+        assert(frag->image.size() >= frag->fragment_length);
         assert(max_ofs >= (unsigned long)info->data_length);
         max_ofs -= (unsigned long)info->data_length;
         memcpy(&frag->image[max_ofs], info->data, info->data_length);
@@ -2199,7 +2200,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (pass == PASS_BUILD && ledata_add(omf_state, &info, current_in_file, current_in_file_module, pass))
+                            if (pass == PASS_GATHER && ledata_add(omf_state, &info, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
@@ -2437,22 +2438,6 @@ int main(int argc,char **argv) {
                         if ((ls->fragment->offset+ls->offset) != 0) {
                             fprintf(stderr,"WARNING: DOS driver header '%s' exists at offset other than base of image, which will make the driver invalid.\n",
                                     cmdoptions.dosdrv_header_symbol.c_str());
-                        }
-                    }
-                }
-            }
-
-            /* allocate in-memory copy of the segments */
-            for (auto li=link_segments.begin();li!=link_segments.end();li++) {
-                shared_ptr<struct link_segdef> sd = *li;
-
-                if (!sd->noemit) {
-                    for (auto fi=sd->fragments.begin();fi!=sd->fragments.end();fi++) {
-                        shared_ptr<struct seg_fragment> frag = *fi;
-
-                        if (frag->fragment_length != 0) {
-                            frag->image.resize(frag->fragment_length);
-                            memset(&frag->image[0],0,frag->fragment_length);
                         }
                     }
                 }
