@@ -17,7 +17,7 @@ extern struct dosdrv_request_base_t far _cdecl * DOSDRV_NF          dosdrv_req_p
 #define DOSDEVICE_INTERRUPT_FAR_PROC void __watcall __saveregs far
 
 /* if using near stub */
-#define DOSDEVICE_INTERRUPT_NEAR_PROC void __watcall __saveregs
+#define DOSDEVICE_INTERRUPT_NEAR_PROC void __watcall __saveregs near
 
 #undef DOSDRV_NF
 
