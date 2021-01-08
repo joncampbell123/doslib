@@ -57,7 +57,6 @@ enum {
  * for .obj files, file ref is an index and module index ref is zero.
  * for .lib files, file ref is an index and module index is an index into the embedded .obj files within */
 
-typedef size_t                          in_fileRef;             /* index into in_file */
 typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
 typedef uint32_t                        segmentSize;            /* segment size */
 typedef uint32_t                        segmentBase;            /* segment base value */
@@ -69,9 +68,6 @@ typedef uint32_t                        linearAddress;
 typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
 
-static const in_fileRef                 in_fileRefUndef = ~((in_fileRef)0u);
-static const in_fileRef                 in_fileRefInternal = in_fileRefUndef - (in_fileRef)1u;
-static const in_fileRef                 in_fileRefPadding = in_fileRefUndef - (in_fileRef)2u;
 static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentIndex               segmentIndexUndef = ~((segmentIndex)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
@@ -98,8 +94,23 @@ struct input_file {
     string                              path;
     int                                 segment_group;
 
-    input_file() : segment_group(-1) { }
+    enum special_t {
+        SPEC_NONE=0,
+        SPEC_INTERNAL,
+        SPEC_PADDING
+    };
+
+    enum special_t                      special;
+
+    input_file() : segment_group(-1), special(SPEC_NONE) { }
 };
+
+typedef shared_ptr<input_file>          in_fileRef;             /* ref file */
+
+static const in_fileRef                 in_fileRefUndef = nullptr;
+
+shared_ptr<input_file>                  in_fileRefPadding;
+shared_ptr<input_file>                  in_fileRefInternal;
 
 struct cmdoptions {
     unsigned int                        do_dosseg:1;
@@ -132,27 +143,19 @@ struct cmdoptions {
 
 static cmdoptions                       cmdoptions;
 
-static in_fileRef                       current_in_file = 0;
-static in_fileModuleRef                 current_in_file_module = 0;
+static in_fileRef                       current_in_file = in_fileRefUndef;
+static in_fileModuleRef                 current_in_file_module = in_fileModuleRefUndef;
 static int                              current_segment_group = -1;
 
 const char *get_in_file(const in_fileRef idx) {
-    if (idx == in_fileRefUndef)
-        return "<undefined>";
-    else if (idx == in_fileRefInternal)
-        return "<internal>";
-    else if (idx == in_fileRefPadding)
-        return "<padding>";
-    else if (idx < cmdoptions.in_file.size()) {
-        auto r = cmdoptions.in_file[idx];
-        assert(r != nullptr);
-        if (!r->path.empty())
-            return r->path.c_str();
+    if (idx != in_fileRefUndef) {
+        if (!idx->path.empty())
+            return idx->path.c_str();
         else
             return "<noname>";
     }
 
-    return "<outofrange>";
+    return "<undefined>";
 }
 
 struct omf_context_t*                   omf_state = NULL;
@@ -1866,6 +1869,14 @@ int main(int argc,char **argv) {
     int i,fd,ret;
     char *a;
 
+    in_fileRefPadding.reset(new input_file);
+    in_fileRefPadding->path = "<padding>";
+    in_fileRefPadding->special = input_file::SPEC_PADDING;
+
+    in_fileRefInternal.reset(new input_file);
+    in_fileRefInternal->path = "<internal>";
+    in_fileRefInternal->special = input_file::SPEC_INTERNAL;
+
     for (i=1;i < argc;) {
         a = argv[i++];
 
@@ -2016,11 +2027,13 @@ int main(int argc,char **argv) {
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
-        for (current_in_file=0;current_in_file < cmdoptions.in_file.size();current_in_file++) {
-            assert(cmdoptions.in_file[current_in_file] != nullptr);
-            assert(!cmdoptions.in_file[current_in_file]->path.empty());
+        for (size_t in_file=0;in_file < cmdoptions.in_file.size();in_file++) {
+            current_in_file = cmdoptions.in_file[in_file];
+            assert(current_in_file != nullptr);
+            assert(!current_in_file->path.empty());
+            assert(current_in_file->special == input_file::SPEC_NONE);
 
-            fd = open(cmdoptions.in_file[current_in_file]->path.c_str(),O_RDONLY|O_BINARY);
+            fd = open(current_in_file->path.c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
@@ -2036,7 +2049,7 @@ int main(int argc,char **argv) {
             diddump = 0;
             current_in_file_module = 0;
             omf_context_begin_file(omf_state);
-            current_segment_group = cmdoptions.in_file[current_in_file]->segment_group;
+            current_segment_group = current_in_file->segment_group;
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
