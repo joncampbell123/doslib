@@ -2499,7 +2499,6 @@ int main(int argc,char **argv) {
                         memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
 
                         {
-                            /* make the original entry point a symbol, change entry point to new place */
                             shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
                             if (ls != NULL)
                                 return 1;
@@ -2523,7 +2522,6 @@ int main(int argc,char **argv) {
                         frag->image.resize(frag->fragment_length);
 
                         {
-                            /* make the original entry point a symbol, change entry point to new place */
                             shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                             if (ls != NULL)
                                 return 1;
