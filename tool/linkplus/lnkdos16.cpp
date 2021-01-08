@@ -122,7 +122,7 @@ struct cmdoptions {
     string                              out_file;
     string                              map_file;
 
-    vector<input_file>                  in_file;
+    vector< shared_ptr<input_file> >    in_file;
 
     cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), output_format(OFMT_COM),
                    output_format_variant(OFMTVAR_NONE), next_segment_group(-1), want_stack_size(4096),
@@ -144,8 +144,10 @@ const char *get_in_file(const in_fileRef idx) {
     else if (idx == in_fileRefPadding)
         return "<padding>";
     else if (idx < cmdoptions.in_file.size()) {
-        if (!cmdoptions.in_file[idx].path.empty())
-            return cmdoptions.in_file[idx].path.c_str();
+        auto r = cmdoptions.in_file[idx];
+        assert(r != nullptr);
+        if (!r->path.empty())
+            return r->path.c_str();
         else
             return "<noname>";
     }
@@ -1874,10 +1876,10 @@ int main(int argc,char **argv) {
                 char *s = argv[i++];
                 if (s == NULL) return 1;
 
-                input_file ent;
+                shared_ptr<input_file> ent(new input_file);
 
-                ent.path = s; /* constructs std::string from char* */
-                ent.segment_group = cmdoptions.next_segment_group;
+                ent->path = s; /* constructs std::string from char* */
+                ent->segment_group = cmdoptions.next_segment_group;
 
                 cmdoptions.in_file.push_back(ent);
             }
@@ -2015,9 +2017,10 @@ int main(int argc,char **argv) {
 
     for (pass=0;pass < PASS_MAX;pass++) {
         for (current_in_file=0;current_in_file < cmdoptions.in_file.size();current_in_file++) {
-            assert(!cmdoptions.in_file[current_in_file].path.empty());
+            assert(cmdoptions.in_file[current_in_file] != nullptr);
+            assert(!cmdoptions.in_file[current_in_file]->path.empty());
 
-            fd = open(cmdoptions.in_file[current_in_file].path.c_str(),O_RDONLY|O_BINARY);
+            fd = open(cmdoptions.in_file[current_in_file]->path.c_str(),O_RDONLY|O_BINARY);
             if (fd < 0) {
                 fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
                 return 1;
@@ -2033,7 +2036,7 @@ int main(int argc,char **argv) {
             diddump = 0;
             current_in_file_module = 0;
             omf_context_begin_file(omf_state);
-            current_segment_group = cmdoptions.in_file[current_in_file].segment_group;
+            current_segment_group = cmdoptions.in_file[current_in_file]->segment_group;
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
