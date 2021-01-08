@@ -2462,6 +2462,105 @@ int main(int argc,char **argv) {
                 ls->in_module = entry_seg_link_target_fragment.get()->in_module;
             }
 
+            /* MS-DOS DOS drivers with relocations */
+            if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+                shared_ptr<struct link_symbol> ls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+
+                if (ls != nullptr) {
+                    assert(ls->fragment != nullptr);
+                    assert(ls->segref != nullptr);
+
+                    if (ls->segref->segment_relative == cmdoptions.image_base_segment &&
+                        ls->segref->segment_offset == cmdoptions.image_base_offset &&
+                        ls->fragment->offset == 0 && ls->offset == 0 &&
+                        ls->fragment->fragment_length >= 10/*enough to contain entry points*/) {
+                        shared_ptr<struct link_segdef> exeseg;
+
+                        exeseg = find_link_segment("__DOSDRVREL_INIT");
+                        if (exeseg != NULL)
+                            return 1;
+
+                        exeseg = new_link_segment("__DOSDRVREL_INIT");
+                        if (exeseg == NULL)
+                            return 1;
+
+                        /* segment base and relative must match the entry point */
+                        exeseg->segment_group = ++cmdoptions.next_segment_group; /* at the end, if possible, presumably where the init code resides so it can be discarded after load */
+                        exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+                        exeseg->segment_relative = cmdoptions.image_base_segment;
+                        exeseg->segment_base = cmdoptions.image_base_offset;
+                        exeseg->groupname = ls->segref->groupname;
+
+                        /* add patchup code */
+                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+                        frag->in_file = in_fileRefInternal;
+                        frag->fragment_length = sizeof(dosdrvrel_entry_point);
+                        frag->image.resize(frag->fragment_length);
+                        memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
+
+                        {
+                            /* make the original entry point a symbol, change entry point to new place */
+                            shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                            if (ls != NULL)
+                                return 1;
+
+                            ls = new_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY");
+                            if (ls == NULL)
+                                return 1;
+
+                            ls->segref = exeseg;
+                            ls->groupdef = exeseg->groupname;
+                            ls->offset = 0;
+                            ls->fragment = frag;
+                            ls->in_file = in_fileRefInternal;
+                            ls->in_module = in_fileModuleRefUndef;
+                        }
+
+                        /* relocation table */
+                        frag = alloc_link_segment_fragment(exeseg.get());
+                        frag->in_file = in_fileRefInternal;
+                        frag->fragment_length = 2 * exe_relocation_table.size();
+                        frag->image.resize(frag->fragment_length);
+
+                        {
+                            /* make the original entry point a symbol, change entry point to new place */
+                            shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                            if (ls != NULL)
+                                return 1;
+
+                            ls = new_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE");
+                            if (ls == NULL)
+                                return 1;
+
+                            ls->segref = exeseg;
+                            ls->groupdef = exeseg->groupname;
+                            ls->offset = 0;
+                            ls->fragment = frag;
+                            ls->in_file = in_fileRefInternal;
+                            ls->in_module = in_fileModuleRefUndef;
+                        }
+
+                        owlink_default_sort_seg();
+
+                        if (cmdoptions.do_dosseg)
+                            owlink_dosseg_sort_order();
+
+                        owlink_stack_bss_arrange();
+                        if (trim_noemit())
+                            return 1;
+                        if (fragment_def_arrange())
+                            return 1;
+                        if (segment_def_arrange())
+                            return 1;
+                        if (segment_exe_arrange())
+                            return 1;
+                    }
+                    else {
+                        fprintf(stderr,"WARNING: Cannot patch DOS driver header to make relocatable\n");
+                    }
+                }
+            }
+
             /* COM relocatable: Inject patch code and relocation table, put original entry point within, redirect entry point */
             if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
                 shared_ptr<struct link_segdef> exeseg;
@@ -2849,6 +2948,65 @@ int main(int argc,char **argv) {
             }
             else {
                 abort();
+            }
+        }
+    }
+
+    /* MS-DOS DOS drivers with relocations: patch */
+    if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL) {
+        shared_ptr<struct link_symbol> headls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> relocls = find_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> rtablels = find_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+
+        if (headls != nullptr && relocls != nullptr && rtablels != nullptr) {
+            assert(headls->fragment != nullptr);
+            assert(headls->segref != nullptr);
+            assert(headls->offset == 0);
+            assert(headls->fragment->offset == 0);
+            assert(headls->fragment->fragment_length >= 10);
+            assert(headls->fragment->image.size() >= headls->fragment->fragment_length);
+            assert(headls->segref->segment_offset == cmdoptions.image_base_offset);
+            assert(headls->segref->segment_relative == cmdoptions.image_base_segment);
+            assert(relocls->fragment != nullptr);
+            assert(relocls->segref != nullptr);
+            assert(relocls->segref->segment_relative == cmdoptions.image_base_segment);
+            assert(relocls->fragment->fragment_length >= sizeof(dosdrvrel_entry_point));
+            assert(relocls->fragment->image.size() >= relocls->fragment->fragment_length);
+            assert(rtablels->fragment != nullptr);
+            assert(rtablels->segref != nullptr);
+            assert(rtablels->segref->segment_relative == cmdoptions.image_base_segment);
+            assert(rtablels->fragment->fragment_length >= (2*exe_relocation_table.size()));
+            assert(rtablels->fragment->image.size() >= rtablels->fragment->fragment_length);
+
+            /* original strategy entry point offset */
+            uint16_t orig_strat = *((uint16_t*)(&headls->fragment->image[0x06]));
+            /* original interrupt entry point offset */
+            uint16_t orig_int = *((uint16_t*)(&headls->fragment->image[0x08]));
+
+            /* patch them to the new code */
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_entry1])) = orig_strat;
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry1])) = orig_strat;
+            *((uint16_t*)(&headls->fragment->image[0x06])) = relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry1 - 1;
+
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_entry2])) = orig_int;
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry2])) = orig_int;
+            *((uint16_t*)(&headls->fragment->image[0x08])) = relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry2 - 1;
+
+            /* relocation table pointer and count */
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_CX_COUNT])) = exe_relocation_table.size();
+            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_SI_OFFSET])) = rtablels->segref->segment_offset + rtablels->fragment->offset + rtablels->offset;
+
+            /* relocation table */
+            for (size_t i=0;i < exe_relocation_table.size();i++) {
+                auto r = exe_relocation_table[i];
+                assert(r->segref != nullptr);
+                assert(r->fragment != nullptr);
+                uint32_t offset = r->segref->segment_offset + r->fragment->offset + r->offset;
+                if (offset >= 0xFFFFul) {
+                    fprintf(stderr,"Relocation out of range\n");
+                    return 1;
+                }
+                *((uint16_t*)(&rtablels->fragment->image[i*2])) = (uint16_t)offset;
             }
         }
     }
