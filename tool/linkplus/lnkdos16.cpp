@@ -57,7 +57,6 @@ enum {
  * for .obj files, file ref is an index and module index ref is zero.
  * for .lib files, file ref is an index and module index is an index into the embedded .obj files within */
 
-typedef uint32_t                        in_fileModuleRef;       /* within a file ref */
 typedef uint32_t                        segmentSize;            /* segment size */
 typedef uint32_t                        segmentBase;            /* segment base value */
 typedef uint32_t                        segmentOffset;          /* offset from segment */
@@ -68,7 +67,6 @@ typedef uint32_t                        linearAddress;
 typedef size_t                          segmentRef;
 typedef size_t                          segmentIndex;
 
-static const in_fileModuleRef           in_fileModuleRefUndef = ~((in_fileModuleRef)0u);
 static const segmentIndex               segmentIndexUndef = ~((segmentIndex)0u);
 static const segmentSize                segmentSizeUndef = ~((segmentSize)0u);
 static const segmentBase                segmentBaseUndef = ~((segmentBase)0u);
@@ -90,8 +88,21 @@ static inline alignMask alignValueToAlignMask(const alignMask &v) {
 
 static FILE*                            map_fp = NULL;
 
+struct input_file;
+
+struct input_module {
+    size_t                              index = ~((size_t)(0u));
+    string                              name;
+    shared_ptr<input_file>              file;
+};
+
+typedef shared_ptr<input_module>        in_fileModuleRef;
+
+static const in_fileModuleRef           in_fileModuleRefUndef = nullptr;
+
 struct input_file {
     string                              path;
+    vector< shared_ptr<input_module> >  modules;
     int                                 segment_group;
 
     enum special_t {
@@ -615,7 +626,7 @@ void dump_link_relocations(void) {
                 (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 rel->segref->name.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
-                get_in_file(frag->in_file),frag->in_module);
+                get_in_file(frag->in_file),(unsigned int)frag->in_module->index);
         }
     }
 
@@ -691,7 +702,7 @@ void dump_link_symbols(void) {
             if (cmdoptions.verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%p file='%s' module=%u local=%u\n",
                         i/*post-increment, intentional*/,sym->name.c_str(),sym->groupdef.c_str(),sym->segref->name.c_str(),(unsigned long)sym->offset,(void*)sym->fragment.get(),
-                        get_in_file(sym->in_file),sym->in_module,sym->is_local);
+                        get_in_file(sym->in_file),(unsigned int)sym->in_module->index,sym->is_local);
             }
 
             if (map_fp != NULL) {
@@ -710,7 +721,7 @@ void dump_link_symbols(void) {
 
                 if (sym->in_module != in_fileModuleRefUndef) {
                     fprintf(map_fp,":%u",
-                            sym->in_module);
+                            (unsigned int)sym->in_module->index);
                 }
                 if (sg->segment_group >= 0) {
                     fprintf(map_fp," group=%d",
@@ -856,7 +867,7 @@ void dump_link_segments(const unsigned int purpose) {
 
                 if (frag->in_module != in_fileModuleRefUndef) {
                     fprintf(map_fp,":%u",
-                            frag->in_module);
+                            (unsigned int)frag->in_module->index);
                 }
 
                 fprintf(map_fp," align=%lu\n",
@@ -2027,6 +2038,8 @@ int main(int argc,char **argv) {
     for (pass=0;pass < PASS_MAX;pass++) {
         for (size_t in_file=0;in_file < cmdoptions.in_file.size();in_file++) {
             in_fileRef current_in_file = cmdoptions.in_file[in_file];
+            in_fileModuleRef current_in_file_module;
+            size_t current_in_file_module_idx = 0; // PASS 2
 
             assert(current_in_file != nullptr);
             assert(!current_in_file->path.empty());
@@ -2049,7 +2062,17 @@ int main(int argc,char **argv) {
             omf_context_begin_file(omf_state);
             current_segment_group = current_in_file->segment_group;
 
-            in_fileModuleRef current_in_file_module = 0;
+            /* start a new module */
+            if (pass == 0) {
+                current_in_file_module.reset(new input_module);
+                current_in_file_module->file = current_in_file;
+                current_in_file_module->index = current_in_file->modules.size();
+                current_in_file->modules.push_back(current_in_file_module);
+            }
+            else {
+                assert(current_in_file_module_idx < current_in_file->modules.size());
+                current_in_file_module = current_in_file->modules[current_in_file_module_idx];
+            }
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
@@ -2078,7 +2101,18 @@ int main(int argc,char **argv) {
                             if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
                         }
                         else if (ret > 0) {
-                            current_in_file_module++;
+                            /* start a new module */
+                            if (pass == 0) {
+                                current_in_file_module.reset(new input_module);
+                                current_in_file_module->file = current_in_file;
+                                current_in_file_module->index = current_in_file->modules.size();
+                                current_in_file->modules.push_back(current_in_file_module);
+                            }
+                            else {
+                                assert(current_in_file_module_idx < current_in_file->modules.size());
+                                current_in_file_module = current_in_file->modules[current_in_file_module_idx];
+                            }
+
                             omf_context_begin_module(omf_state);
                             diddump = 0;
                             continue;
@@ -3320,7 +3354,7 @@ int main(int argc,char **argv) {
                 get_in_file(frag->in_file));
 
             if (frag->in_module != in_fileModuleRefUndef)
-                fprintf(map_fp,":%u",frag->in_module);
+                fprintf(map_fp,":%u",(unsigned int)frag->in_module->index);
 
             fprintf(map_fp,"\n");
 
