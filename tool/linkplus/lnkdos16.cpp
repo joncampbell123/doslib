@@ -143,8 +143,6 @@ struct cmdoptions {
 
 static cmdoptions                       cmdoptions;
 
-static in_fileRef                       current_in_file = in_fileRefUndef;
-static in_fileModuleRef                 current_in_file_module = in_fileModuleRefUndef;
 static int                              current_segment_group = -1;
 
 const char *get_in_file(const in_fileRef idx) {
@@ -2028,7 +2026,8 @@ int main(int argc,char **argv) {
 
     for (pass=0;pass < PASS_MAX;pass++) {
         for (size_t in_file=0;in_file < cmdoptions.in_file.size();in_file++) {
-            current_in_file = cmdoptions.in_file[in_file];
+            in_fileRef current_in_file = cmdoptions.in_file[in_file];
+
             assert(current_in_file != nullptr);
             assert(!current_in_file->path.empty());
             assert(current_in_file->special == input_file::SPEC_NONE);
@@ -2047,9 +2046,10 @@ int main(int argc,char **argv) {
             omf_state->flags.verbose = (cmdoptions.verbose > 0);
 
             diddump = 0;
-            current_in_file_module = 0;
             omf_context_begin_file(omf_state);
             current_segment_group = current_in_file->segment_group;
+
+            in_fileModuleRef current_in_file_module = 0;
 
             do {
                 ret = omf_context_read_fd(omf_state,fd);
