@@ -1243,19 +1243,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
                     assert((ptr+2) <= fence);
 
                     if (!ent->segment_relative) {
-                        /* sanity check: self-relative is only allowed IF the same segment */
-                        /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
-                        if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
-                            dump_link_segments(DUMPLS_LINEAR);
-                            fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
-                            fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
-                                current_link_segment->name.c_str(),
-                                (unsigned long)current_link_segment->segment_relative);
-                            fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
-                                targ_sdef->name.c_str(),
-                                (unsigned long)targ_sdef->segment_relative);
-                            return -1;
-                        }
+                        /* adjust offset by the difference of two real-mode segments */
+                        final_ofs += (targ_sdef->segment_relative - current_link_segment->segment_relative) << 4;
 
                         /* do it */
                         final_ofs -= ptch+2+current_link_segment->segment_offset;
