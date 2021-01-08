@@ -29,6 +29,8 @@ if [ "$1" == "disk" ]; then
     gunzip -c -d win95.dsk.gz >win95.dsk
     mcopy -i win95.dsk dos86s/test.sys ::drv.sys
     mcopy -i win95.dsk dos86s/test.exe ::drv.exe
+    mcopy -i win95.dsk dos86l/test.sys ::drv2.sys
+    mcopy -i win95.dsk dos86l/test.exe ::drv2.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
