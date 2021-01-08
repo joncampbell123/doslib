@@ -1708,8 +1708,8 @@ int segment_exe_arrange(void) {
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
             shared_ptr<struct link_segdef> sd = link_segments[linkseg];
-            shared_ptr<struct link_segdef> gd = find_link_segment_by_grpdef(sd->groupname.c_str());
-            shared_ptr<struct link_segdef> cd = find_link_segment_by_class(sd->classname.c_str());
+            shared_ptr<struct link_segdef> gd = sd->groupname.empty() ? nullptr : find_link_segment_by_grpdef(sd->groupname.c_str());
+            shared_ptr<struct link_segdef> cd = sd->classname.empty() ? nullptr : find_link_segment_by_class(sd->classname.c_str());
 
             if (gd != NULL)
                 segrel = gd->linear_offset >> 4ul;
