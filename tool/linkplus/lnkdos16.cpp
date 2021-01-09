@@ -621,12 +621,12 @@ void dump_link_relocations(void) {
             shared_ptr<struct link_segdef> sg = rel->segref;
             shared_ptr<struct seg_fragment> frag = rel->fragment;
 
-            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
+            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%s(%u)\n",
                 sg->segment_relative&0xfffful,
                 (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 rel->segref->name.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
-                get_in_file(frag->in_file),(unsigned int)frag->in_module->index);
+                get_in_file(frag->in_file),frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
         }
     }
 
@@ -720,8 +720,8 @@ void dump_link_symbols(void) {
                         get_in_file(sym->in_file));
 
                 if (sym->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":%u",
-                            (unsigned int)sym->in_module->index);
+                    fprintf(map_fp,":%s(%u)",
+                            sym->in_module->name.c_str(),(unsigned int)sym->in_module->index);
                 }
                 if (sg->segment_group >= 0) {
                     fprintf(map_fp," group=%d",
@@ -866,8 +866,8 @@ void dump_link_segments(const unsigned int purpose) {
                         get_in_file(frag->in_file));
 
                 if (frag->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":%u",
-                            (unsigned int)frag->in_module->index);
+                    fprintf(map_fp,":%s(%u)",
+                            frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
                 }
 
                 fprintf(map_fp," align=%lu\n",
@@ -2162,6 +2162,18 @@ int main(int argc,char **argv) {
             do {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
+                    if (pass == PASS_GATHER && omf_state->THEADR != NULL) {
+                        const char *s = omf_state->THEADR;
+                        const char *scan = s;
+                        while (scan[0] != 0 && scan[1] != 0) {
+                            if (*scan == '\\' || *scan == '/')
+                                s = scan+1;
+
+                            scan++;
+                        }
+
+                        current_in_file_module->name = s;
+                    }
                     if (pass == PASS_GATHER && grpdef_add(omf_state, 0))
                         return 1;
                     if (pass == PASS_GATHER && pubdef_add(omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
@@ -2218,6 +2230,12 @@ int main(int argc,char **argv) {
                 }
 
                 switch (omf_state->record.rectype) {
+                    case OMF_RECTYPE_THEADR:/*0x80*/
+                        if (omf_context_parse_THEADR(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing THEADR\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_EXTDEF:/*0x8C*/
                     case OMF_RECTYPE_LEXTDEF:/*0xB4*/
                     case OMF_RECTYPE_LEXTDEF32:/*0xB5*/
@@ -3319,7 +3337,7 @@ int main(int argc,char **argv) {
                 get_in_file(frag->in_file));
 
             if (frag->in_module != in_fileModuleRefUndef)
-                fprintf(map_fp,":%u",(unsigned int)frag->in_module->index);
+                fprintf(map_fp,":%s(%u)",frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
 
             fprintf(map_fp,"\n");
 
