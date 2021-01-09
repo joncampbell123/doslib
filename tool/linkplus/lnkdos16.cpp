@@ -614,12 +614,34 @@ void dump_link_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relo
             shared_ptr<struct link_segdef> sg = rel->segref;
             shared_ptr<struct seg_fragment> frag = rel->fragment;
 
-            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':'%s'(%u)\n",
-                sg->segment_relative&0xfffful,
-                (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
-                (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
-                rel->segref->name.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
-                get_in_file(frag->in_file),frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
+            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s'",
+                    sg->segment_relative&0xfffful,
+                    (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
+                    (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
+                    rel->segref->name.c_str(),(unsigned long)frag->offset + (unsigned long)rel->offset,
+                    get_in_file(frag->in_file));
+
+            if (frag->in_module != nullptr) {
+                if (!frag->in_module->name.empty() || frag->in_module->index != ~((size_t)(0u))) {
+                    fprintf(map_fp,":");
+
+                    if (!frag->in_module->name.empty())
+                        fprintf(map_fp,"'%s'",frag->in_module->name.c_str());
+
+                    if (frag->in_module->index != ~((size_t)(0u)))
+                        fprintf(map_fp,"(%u)",(unsigned int)frag->in_module->index);
+                }
+            }
+            else if (frag->in_file != nullptr) {
+                if (!frag->in_file->path.empty()) {
+                    fprintf(map_fp,":");
+
+                    if (!frag->in_file->path.empty())
+                        fprintf(map_fp,"'%s'",frag->in_file->path.c_str());
+                }
+            }
+
+            fprintf(map_fp,"\n");
         }
     }
 
@@ -712,10 +734,26 @@ void dump_link_symbols(vector< shared_ptr<struct link_symbol> > &link_symbols) {
                         (unsigned long)frag->offset + (unsigned long)sym->offset,
                         get_in_file(sym->in_file));
 
-                if (sym->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":'%s'(%u)",
-                            sym->in_module->name.c_str(),(unsigned int)sym->in_module->index);
+                if (sym->in_module != nullptr) {
+                    if (!sym->in_module->name.empty() || sym->in_module->index != ~((size_t)(0u))) {
+                        fprintf(map_fp,":");
+
+                        if (!sym->in_module->name.empty())
+                            fprintf(map_fp,"'%s'",sym->in_module->name.c_str());
+
+                        if (sym->in_module->index != ~((size_t)(0u)))
+                            fprintf(map_fp,"(%u)",(unsigned int)sym->in_module->index);
+                    }
                 }
+                else if (sym->in_file != nullptr) {
+                    if (!sym->in_file->path.empty()) {
+                        fprintf(map_fp,":");
+
+                        if (!sym->in_file->path.empty())
+                            fprintf(map_fp,"'%s'",sym->in_file->path.c_str());
+                    }
+                }
+
                 if (sg->segment_group >= 0) {
                     fprintf(map_fp," group=%d",
                             sg->segment_group);
@@ -858,9 +896,24 @@ void dump_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments,
                         range2,
                         get_in_file(frag->in_file));
 
-                if (frag->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":'%s'(%u)",
-                            frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
+                if (frag->in_module != nullptr) {
+                    if (!frag->in_module->name.empty() || frag->in_module->index != ~((size_t)(0u))) {
+                        fprintf(map_fp,":");
+
+                        if (!frag->in_module->name.empty())
+                            fprintf(map_fp,"'%s'",frag->in_module->name.c_str());
+
+                        if (frag->in_module->index != ~((size_t)(0u)))
+                            fprintf(map_fp,"(%u)",(unsigned int)frag->in_module->index);
+                    }
+                }
+                else if (frag->in_file != nullptr) {
+                    if (!frag->in_file->path.empty()) {
+                        fprintf(map_fp,":");
+
+                        if (!frag->in_file->path.empty())
+                            fprintf(map_fp,"'%s'",frag->in_file->path.c_str());
+                    }
                 }
 
                 fprintf(map_fp," align=%lu\n",
@@ -2330,6 +2383,11 @@ int main(int argc,char **argv) {
 
             close(fd);
             current_segment_group = -1;
+
+            if (current_in_file->modules.size() == 1) {
+                for (auto mi=current_in_file->modules.begin();mi!=current_in_file->modules.end();mi++)
+                    (*mi)->index = ~((size_t)(0u));
+            }
         }
 
         if (pass == PASS_GATHER) {
@@ -3335,8 +3393,25 @@ int main(int argc,char **argv) {
                 (unsigned long)frag->offset + (unsigned long)entry_point.seg_ofs,
                 get_in_file(frag->in_file));
 
-            if (frag->in_module != in_fileModuleRefUndef)
-                fprintf(map_fp,":'%s'(%u)",frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
+            if (frag->in_module != nullptr) {
+                if (!frag->in_module->name.empty() || frag->in_module->index != ~((size_t)(0u))) {
+                    fprintf(map_fp,":");
+
+                    if (!frag->in_module->name.empty())
+                        fprintf(map_fp,"'%s'",frag->in_module->name.c_str());
+
+                    if (frag->in_module->index != ~((size_t)(0u)))
+                        fprintf(map_fp,"(%u)",(unsigned int)frag->in_module->index);
+                }
+            }
+            else if (frag->in_file != nullptr) {
+                if (!frag->in_file->path.empty()) {
+                    fprintf(map_fp,":");
+
+                    if (!frag->in_file->path.empty())
+                        fprintf(map_fp,"'%s'",frag->in_file->path.c_str());
+                }
+            }
 
             fprintf(map_fp,"\n");
 
