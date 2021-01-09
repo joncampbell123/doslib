@@ -167,8 +167,6 @@ const char *get_in_file(const in_fileRef idx) {
     return "<undefined>";
 }
 
-struct omf_context_t*                   omf_state = NULL;
-
 /* comrel entry point */
 #define comrel_entry_point_CX_COUNT         0x04
 #define comrel_entry_point_SI_OFFSET        0x07
@@ -1658,22 +1656,22 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 
     if (ctx->SEGDEFs.omf_SEGDEFS != NULL) {
         for (i=1;i <= ctx->SEGDEFs.omf_SEGDEFS_count;i++)
-            dump_SEGDEF(stdout,omf_state,i);
+            dump_SEGDEF(stdout,ctx,i);
     }
 
     if (ctx->GRPDEFs.omf_GRPDEFS != NULL) {
         for (i=1;i <= ctx->GRPDEFs.omf_GRPDEFS_count;i++)
-            dump_GRPDEF(stdout,omf_state,i);
+            dump_GRPDEF(stdout,ctx,i);
     }
 
     if (ctx->EXTDEFs.omf_EXTDEFS != NULL)
-        dump_EXTDEF(stdout,omf_state,1);
+        dump_EXTDEF(stdout,ctx,1);
 
     if (ctx->PUBDEFs.omf_PUBDEFS != NULL)
-        dump_PUBDEF(stdout,omf_state,1);
+        dump_PUBDEF(stdout,ctx,1);
 
     if (ctx->FIXUPPs.omf_FIXUPPS != NULL)
-        dump_FIXUPP(stdout,omf_state,1);
+        dump_FIXUPP(stdout,ctx,1);
 
     if (cmdoptions.verbose)
         printf("----END-----\n");
@@ -2121,6 +2119,8 @@ int main(int argc,char **argv) {
     }
 
     for (pass=0;pass < PASS_MAX;pass++) {
+        struct omf_context_t* omf_state = NULL;
+
         for (size_t in_file=0;in_file < cmdoptions.in_file.size();in_file++) {
             in_fileRef current_in_file = cmdoptions.in_file[in_file];
             in_fileModuleRef current_in_file_module;
