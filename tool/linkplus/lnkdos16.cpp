@@ -240,16 +240,13 @@ struct exe_relocation {
     exe_relocation() : fragment(fragmentRefUndef), offset(segmentOffsetUndef) { }
 };
 
-/* array of EXE relocation entries (memory locations referring to a segment that need adjustment by EXE image base) */
-static vector< shared_ptr<struct exe_relocation> >          exe_relocation_table;
-
-shared_ptr<struct exe_relocation> new_exe_relocation(void) {
+shared_ptr<struct exe_relocation> new_exe_relocation(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table) {
     shared_ptr<struct exe_relocation> r(new struct exe_relocation);
     exe_relocation_table.push_back(r);
     return r;
 }
 
-void free_exe_relocations(void) {
+void free_exe_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table) {
     exe_relocation_table.clear();
 }
 
@@ -594,7 +591,7 @@ unsigned int omf_align_code_to_bytes(const unsigned int x) {
     return 0;
 }
 
-void dump_link_relocations(void) {
+void dump_link_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table) {
     unsigned int i=0;
 
     if (exe_relocation_table.empty()) return;
@@ -1130,7 +1127,7 @@ int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
     return 0;
 }
 
-int apply_FIXUPP(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     shared_ptr<struct link_segdef> frame_sdef;
     shared_ptr<struct link_segdef> targ_sdef;
     const struct omf_segdef_t *cur_segdef;
@@ -1281,7 +1278,7 @@ int apply_FIXUPP(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< 
                 }
 
                 if (pass == PASS_GATHER) {
-                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation();
+                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation(exe_relocation_table);
                     if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
@@ -1319,7 +1316,7 @@ int apply_FIXUPP(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< 
                 }
 
                 if (pass == PASS_GATHER) {
-                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation();
+                    shared_ptr<struct exe_relocation> reloc = new_exe_relocation(exe_relocation_table);
                     if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
@@ -1956,6 +1953,7 @@ int main(int argc,char **argv) {
     string hex_output_tmpfile;
     vector< shared_ptr<struct link_segdef> > link_segments;
     vector< shared_ptr<struct link_symbol> > link_symbols;
+    vector< shared_ptr<struct exe_relocation> > exe_relocation_table;
     unsigned char diddump = 0;
     string hex_output_name;
     unsigned char pass;
@@ -2179,7 +2177,7 @@ int main(int argc,char **argv) {
                         return 1;
                     if (pass == PASS_GATHER && pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                         return 1;
-                    if (apply_FIXUPP(link_symbols,link_segments,omf_state,0,current_in_file,current_in_file_module,pass))
+                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,omf_state,0,current_in_file,current_in_file_module,pass))
                         return 1;
 
                     omf_context_clear_for_module(omf_state);
@@ -2841,7 +2839,7 @@ int main(int argc,char **argv) {
 
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
 
-    dump_link_relocations();
+    dump_link_relocations(exe_relocation_table);
     dump_link_symbols(link_symbols);
     dump_link_segments(link_segments,DUMPLS_LINEAR);
 
@@ -3386,7 +3384,7 @@ int main(int argc,char **argv) {
     }
 
     free_link_segments(link_segments);
-    free_exe_relocations();
+    free_exe_relocations(exe_relocation_table);
     return 0;
 }
 
