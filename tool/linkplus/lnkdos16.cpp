@@ -2077,9 +2077,14 @@ int main(int argc,char **argv) {
             do {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
+                    if (pass == PASS_GATHER && grpdef_add(omf_state, 0))
+                        return 1;
+                    if (pass == PASS_GATHER && pubdef_add(omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
+                        return 1;
                     if (apply_FIXUPP(omf_state,0,current_in_file,current_in_file_module,pass))
                         return 1;
-                    omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
+
+                    omf_context_clear_for_module(omf_state);
 
                     for (auto li=link_segments.begin();li!=link_segments.end();li++) {
                         shared_ptr<struct link_segdef> sd = *li;
@@ -2131,54 +2136,26 @@ int main(int argc,char **argv) {
                     case OMF_RECTYPE_EXTDEF:/*0x8C*/
                     case OMF_RECTYPE_LEXTDEF:/*0xB4*/
                     case OMF_RECTYPE_LEXTDEF32:/*0xB5*/
-                        {
-                            int first_new_extdef;
-
-                            if ((first_new_extdef=omf_context_parse_EXTDEF(omf_state,&omf_state->record)) < 0) {
-                                fprintf(stderr,"Error parsing EXTDEF\n");
-                                return 1;
-                            }
-
-                            if (omf_state->flags.verbose)
-                                dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
-
-                            // TODO: Store as symbol, noting it is external
-                        } break;
+                        if (omf_context_parse_EXTDEF(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing EXTDEF\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_PUBDEF:/*0x90*/
                     case OMF_RECTYPE_PUBDEF32:/*0x91*/
                     case OMF_RECTYPE_LPUBDEF:/*0xB6*/
                     case OMF_RECTYPE_LPUBDEF32:/*0xB7*/
-                        {
-                            int p_count = omf_state->PUBDEFs.omf_PUBDEFS_count;
-                            int first_new_pubdef;
-
-                            if ((first_new_pubdef=omf_context_parse_PUBDEF(omf_state,&omf_state->record)) < 0) {
-                                fprintf(stderr,"Error parsing PUBDEF\n");
-                                return 1;
-                            }
-
-                            if (omf_state->flags.verbose)
-                                dump_PUBDEF(stdout,omf_state,(unsigned int)first_new_pubdef);
-
-                            /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
-                             *       LPUBDEF means the symbols are not visible outside the module. */
-
-                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
-                                return 1;
-                        } break;
+                        if (omf_context_parse_PUBDEF(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing PUBDEF\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
-                        {
-                            int first_new_lname;
-
-                            if ((first_new_lname=omf_context_parse_LNAMES(omf_state,&omf_state->record)) < 0) {
-                                fprintf(stderr,"Error parsing LNAMES\n");
-                                return 1;
-                            }
-
-                            if (omf_state->flags.verbose)
-                                dump_LNAMES(stdout,omf_state,(unsigned int)first_new_lname);
-
-                        } break;
+                        if (omf_context_parse_LNAMES(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing LNAMES\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_SEGDEF:/*0x98*/
                     case OMF_RECTYPE_SEGDEF32:/*0x99*/
                         {
@@ -2198,34 +2175,18 @@ int main(int argc,char **argv) {
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
                     case OMF_RECTYPE_GRPDEF32:/*0x9B*/
-                        {
-                            int p_count = omf_state->GRPDEFs.omf_GRPDEFS_count;
-                            int first_new_grpdef;
-
-                            if ((first_new_grpdef=omf_context_parse_GRPDEF(omf_state,&omf_state->record)) < 0) {
-                                fprintf(stderr,"Error parsing GRPDEF\n");
-                                return 1;
-                            }
-
-                            if (omf_state->flags.verbose)
-                                dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
-
-                            if (pass == PASS_GATHER && grpdef_add(omf_state, p_count))
-                                return 1;
-                        } break;
+                        if (omf_context_parse_GRPDEF(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing GRPDEF\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_FIXUPP:/*0x9C*/
                     case OMF_RECTYPE_FIXUPP32:/*0x9D*/
-                        {
-                            int first_new_fixupp;
-
-                            if ((first_new_fixupp=omf_context_parse_FIXUPP(omf_state,&omf_state->record)) < 0) {
-                                fprintf(stderr,"Error parsing FIXUPP\n");
-                                return 1;
-                            }
-
-                            if (omf_state->flags.verbose)
-                                dump_FIXUPP(stdout,omf_state,(unsigned int)first_new_fixupp);
-                        } break;
+                        if (omf_context_parse_FIXUPP(omf_state,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing FIXUPP\n");
+                            return 1;
+                        }
+                        break;
                     case OMF_RECTYPE_LEDATA:/*0xA0*/
                     case OMF_RECTYPE_LEDATA32:/*0xA1*/
                         {
@@ -2333,10 +2294,6 @@ int main(int argc,char **argv) {
                 my_dumpstate(omf_state);
                 diddump = 1;
             }
-
-            if (apply_FIXUPP(omf_state,0,current_in_file,current_in_file_module,pass))
-                return 1;
-            omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
             omf_context_clear(omf_state);
             omf_state = omf_context_destroy(omf_state);
