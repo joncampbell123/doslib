@@ -93,7 +93,7 @@ struct input_file;
 struct input_module {
     size_t                              index = ~((size_t)(0u));
     string                              name;
-    shared_ptr<input_file>              file;
+    weak_ptr<input_file>                file;
 };
 
 typedef shared_ptr<input_module>        in_fileModuleRef;
