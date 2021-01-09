@@ -614,7 +614,7 @@ void dump_link_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relo
             shared_ptr<struct link_segdef> sg = rel->segref;
             shared_ptr<struct seg_fragment> frag = rel->fragment;
 
-            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%s(%u)\n",
+            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':'%s'(%u)\n",
                 sg->segment_relative&0xfffful,
                 (unsigned long)sg->segment_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
                 (unsigned long)sg->linear_offset + (unsigned long)frag->offset + (unsigned long)rel->offset,
@@ -713,7 +713,7 @@ void dump_link_symbols(vector< shared_ptr<struct link_symbol> > &link_symbols) {
                         get_in_file(sym->in_file));
 
                 if (sym->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":%s(%u)",
+                    fprintf(map_fp,":'%s'(%u)",
                             sym->in_module->name.c_str(),(unsigned int)sym->in_module->index);
                 }
                 if (sg->segment_group >= 0) {
@@ -859,7 +859,7 @@ void dump_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments,
                         get_in_file(frag->in_file));
 
                 if (frag->in_module != in_fileModuleRefUndef) {
-                    fprintf(map_fp,":%s(%u)",
+                    fprintf(map_fp,":'%s'(%u)",
                             frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
                 }
 
@@ -3336,7 +3336,7 @@ int main(int argc,char **argv) {
                 get_in_file(frag->in_file));
 
             if (frag->in_module != in_fileModuleRefUndef)
-                fprintf(map_fp,":%s(%u)",frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
+                fprintf(map_fp,":'%s'(%u)",frag->in_module->name.c_str(),(unsigned int)frag->in_module->index);
 
             fprintf(map_fp,"\n");
 
