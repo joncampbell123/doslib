@@ -365,8 +365,6 @@ struct entrypoint {
     segmentOffset                       seg_ofs = 0;
 };
 
-entrypoint                                      entry_point;
-
 /* Open Watcom DOSSEG linker order
  * 
  * 1. not DGROUP, class CODE
@@ -1872,7 +1870,7 @@ void linkseg_add_padding_fragments(struct link_segdef *sg) {
     }
 }
 
-int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_fileModuleRef current_in_file_module) {
+int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_fileModuleRef current_in_file_module,entrypoint &entry_point) {
     unsigned char ModuleType;
     unsigned char EndData;
     unsigned int FrameDatum;
@@ -1958,6 +1956,7 @@ int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_f
 }
 
 int main(int argc,char **argv) {
+    entrypoint entry_point;
     string hex_output_tmpfile;
     unsigned char diddump = 0;
     string hex_output_name;
@@ -2312,7 +2311,7 @@ int main(int argc,char **argv) {
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
-                        if (pass == PASS_GATHER && parse_MODEND(omf_state, current_in_file, current_in_file_module))
+                        if (pass == PASS_GATHER && parse_MODEND(omf_state, current_in_file, current_in_file_module, entry_point))
                             return 1;
                         break;
                     default:
