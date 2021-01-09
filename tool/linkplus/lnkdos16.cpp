@@ -1870,6 +1870,91 @@ void linkseg_add_padding_fragments(struct link_segdef *sg) {
     }
 }
 
+int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_fileModuleRef current_in_file_module) {
+    unsigned char ModuleType;
+    unsigned char EndData;
+    unsigned int FrameDatum;
+    unsigned int TargetDatum;
+    unsigned long TargetDisplacement;
+    const struct omf_segdef_t *frame_segdef;
+    const struct omf_segdef_t *target_segdef;
+
+    ModuleType = omf_record_get_byte(&omf_state->record);
+    if (ModuleType&0x40/*START*/) {
+        EndData = omf_record_get_byte(&omf_state->record);
+        FrameDatum = omf_record_get_index(&omf_state->record);
+        TargetDatum = omf_record_get_index(&omf_state->record);
+
+        if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
+            TargetDisplacement = omf_record_get_dword(&omf_state->record);
+        else
+            TargetDisplacement = omf_record_get_word(&omf_state->record);
+
+        frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
+        target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
+
+        if (cmdoptions.verbose) {
+            printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
+                    ModuleType,
+                    ModuleType&0x80?1:0,
+                    ModuleType&0x40?1:0,
+                    ModuleType&0x20?1:0,
+                    ModuleType&0x01?1:0);
+            printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
+                    EndData,
+                    FrameDatum,
+                    (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
+                    TargetDatum,
+                    (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
+                    TargetDisplacement);
+        }
+
+        if (frame_segdef != NULL && target_segdef != NULL) {
+            const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
+            const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
+
+            if (cmdoptions.verbose)
+                fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
+
+            if (*framename != 0 && *targetname != 0) {
+                shared_ptr<struct link_segdef> frameseg,targseg;
+
+                targseg = find_link_segment(targetname);
+                frameseg = find_link_segment(framename);
+                if (targseg != NULL && frameseg != NULL) {
+                    entry_seg_ofs = TargetDisplacement;
+
+                    /* don't blindly assume TargetDisplacement is relative to the whole segment, it's relative to the
+                     * SEGDEF of the current object/module and we need to locate exactly that! */
+                    entry_seg_link_target_fragment =
+                        find_link_segment_by_file_module_and_segment_index(targseg.get(),current_in_file,current_in_file_module,TargetDatum);
+                    if (entry_seg_link_target_fragment == fragmentRefUndef) {
+                        fprintf(stderr,"Unable to locate entry point\n");
+                        return 1;
+                    }
+
+                    entry_seg_link_target = targseg;
+                    entry_seg_link_frame = frameseg;
+                }
+                else {
+                    fprintf(stderr,"Did not find segments\n");
+                    return 1;
+                }
+            }
+            else {
+                fprintf(stderr,"frame/target name not found\n");
+                return 1;
+            }
+        }
+        else {
+            fprintf(stderr,"frame/target segdef not found\n");
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     string hex_output_tmpfile;
     unsigned char diddump = 0;
@@ -2205,86 +2290,9 @@ int main(int argc,char **argv) {
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
-                        if (pass == PASS_GATHER) {
-                            unsigned char ModuleType;
-                            unsigned char EndData;
-                            unsigned int FrameDatum;
-                            unsigned int TargetDatum;
-                            unsigned long TargetDisplacement;
-                            const struct omf_segdef_t *frame_segdef;
-                            const struct omf_segdef_t *target_segdef;
-
-                            ModuleType = omf_record_get_byte(&omf_state->record);
-                            if (ModuleType&0x40/*START*/) {
-                                EndData = omf_record_get_byte(&omf_state->record);
-                                FrameDatum = omf_record_get_index(&omf_state->record);
-                                TargetDatum = omf_record_get_index(&omf_state->record);
-
-                                if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
-                                    TargetDisplacement = omf_record_get_dword(&omf_state->record);
-                                else
-                                    TargetDisplacement = omf_record_get_word(&omf_state->record);
-
-                                frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
-                                target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
-
-                                if (cmdoptions.verbose) {
-                                    printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
-                                            ModuleType,
-                                            ModuleType&0x80?1:0,
-                                            ModuleType&0x40?1:0,
-                                            ModuleType&0x20?1:0,
-                                            ModuleType&0x01?1:0);
-                                    printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
-                                            EndData,
-                                            FrameDatum,
-                                            (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
-                                            TargetDatum,
-                                            (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
-                                            TargetDisplacement);
-                                }
-
-                                if (frame_segdef != NULL && target_segdef != NULL) {
-                                    const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
-                                    const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
-
-                                    if (cmdoptions.verbose)
-                                        fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
-
-                                    if (*framename != 0 && *targetname != 0) {
-                                        shared_ptr<struct link_segdef> frameseg,targseg;
-
-                                        targseg = find_link_segment(targetname);
-                                        frameseg = find_link_segment(framename);
-                                        if (targseg != NULL && frameseg != NULL) {
-                                            entry_seg_ofs = TargetDisplacement;
-
-                                            /* don't blindly assume TargetDisplacement is relative to the whole segment, it's relative to the
-                                             * SEGDEF of the current object/module and we need to locate exactly that! */
-                                            entry_seg_link_target_fragment =
-                                                find_link_segment_by_file_module_and_segment_index(targseg.get(),current_in_file,current_in_file_module,TargetDatum);
-                                            if (entry_seg_link_target_fragment == fragmentRefUndef) {
-                                                fprintf(stderr,"Unable to locate entry point\n");
-                                                return 1;
-                                            }
-
-                                            entry_seg_link_target = targseg;
-                                            entry_seg_link_frame = frameseg;
-                                        }
-                                        else {
-                                            fprintf(stderr,"Did not find segments\n");
-                                        }
-                                    }
-                                    else {
-                                        fprintf(stderr,"frame/target name not found\n");
-                                    }
-                                }
-                                else {
-                                    fprintf(stderr,"frame/target segdef not found\n");
-                                }
-                            }
-                        } break;
- 
+                        if (pass == PASS_GATHER && parse_MODEND(omf_state, current_in_file, current_in_file_module))
+                            return 1;
+                        break;
                     default:
                         break;
                 }
