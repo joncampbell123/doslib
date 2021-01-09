@@ -266,16 +266,14 @@ struct link_symbol {
     link_symbol() : offset(0), fragment(fragmentRefUndef), in_file(in_fileRefUndef), in_module(in_fileModuleRefUndef), is_local(0) { }
 };
 
-static vector< shared_ptr<struct link_symbol> >             link_symbols;
-
-shared_ptr<struct link_symbol> new_link_symbol(const char *name) {
+shared_ptr<struct link_symbol> new_link_symbol(vector< shared_ptr<struct link_symbol> > &link_symbols,const char *name) {
     shared_ptr<struct link_symbol> sym(new struct link_symbol);
     link_symbols.push_back( sym );
     sym->name = name;
     return sym;
 }
 
-shared_ptr<struct link_symbol> find_link_symbol(const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
+shared_ptr<struct link_symbol> find_link_symbol(vector< shared_ptr<struct link_symbol> > &link_symbols,const char *name,const in_fileRef in_file,const in_fileModuleRef in_module) {
     for (size_t i=0;i < link_symbols.size();i++) {
         shared_ptr<struct link_symbol> sym = link_symbols[i];
 
@@ -355,8 +353,6 @@ struct link_segdef {
  *            added in, to simplify the code. That means you can't just change segment_base on a whim. Separate segment_base
  *            per segdef allows different segments to operate differently, though currently all have the same image_base_offset
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
-
-static vector< shared_ptr<struct link_segdef> > link_segments;
 
 struct entrypoint {
     fragmentRef                         seg_link_target_fragment = fragmentRefUndef;
@@ -469,7 +465,7 @@ void link_segments_swap(vector< shared_ptr<struct link_segdef> > &link_segments,
         swap(link_segments[s1],link_segments[s2]);
 }
 
-shared_ptr<struct link_segdef> find_link_segment(const char *name);
+shared_ptr<struct link_segdef> find_link_segment(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name);
 
 void link_segments_sort(vector< shared_ptr<struct link_segdef> > &link_segments,unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
     unsigned int i;
@@ -678,7 +674,7 @@ bool link_segments_qsort_by_fileofs(const shared_ptr<struct link_segdef> &sa,con
     return sa->file_offset < sb->file_offset;
 }
 
-void dump_link_symbols(void) {
+void dump_link_symbols(vector< shared_ptr<struct link_symbol> > &link_symbols) {
     unsigned int i,pass=0,passes=1;
 
     if (map_fp != NULL)
@@ -929,7 +925,7 @@ void dump_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments,
         fprintf(map_fp,"\n");
 }
 
-shared_ptr<struct link_segdef> find_link_segment_by_grpdef(const char *name) {
+shared_ptr<struct link_segdef> find_link_segment_by_grpdef(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     size_t i=0;
 
     while (i < link_segments.size()) {
@@ -940,7 +936,7 @@ shared_ptr<struct link_segdef> find_link_segment_by_grpdef(const char *name) {
     return nullptr;
 }
 
-shared_ptr<struct link_segdef> find_link_segment_by_class(const char *name) {
+shared_ptr<struct link_segdef> find_link_segment_by_class(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     size_t i=0;
 
     while (i < link_segments.size()) {
@@ -951,7 +947,7 @@ shared_ptr<struct link_segdef> find_link_segment_by_class(const char *name) {
     return nullptr;
 }
 
-shared_ptr<struct link_segdef> find_link_segment_by_class_last(const char *name) {
+shared_ptr<struct link_segdef> find_link_segment_by_class_last(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     shared_ptr<struct link_segdef> ret;
     size_t i=0;
 
@@ -977,7 +973,7 @@ fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link
 /* Try to return the segment matching current segment group or higher.
  * Presumably segdefs are sorted such that segment groups increment sequentially
  * given a specific name. */
-shared_ptr<struct link_segdef> find_link_segment(const char *name) {
+shared_ptr<struct link_segdef> find_link_segment(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     shared_ptr<struct link_segdef> sg,rsg;
     size_t i=0;
 
@@ -994,21 +990,21 @@ shared_ptr<struct link_segdef> find_link_segment(const char *name) {
     return rsg;
 }
 
-shared_ptr<struct link_segdef> new_link_segment(const char *name) {
+shared_ptr<struct link_segdef> new_link_segment(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     shared_ptr<struct link_segdef> sg(new struct link_segdef);
     link_segments.push_back(sg);
     sg->name = name;
     return sg;
 }
 
-shared_ptr<struct link_segdef> new_link_segment_begin(const char *name) {
+shared_ptr<struct link_segdef> new_link_segment_begin(vector< shared_ptr<struct link_segdef> > &link_segments,const char *name) {
     shared_ptr<struct link_segdef> sg(new struct link_segdef);
     link_segments.insert(link_segments.begin(), sg );
     sg->name = name;
     return sg;
 }
 
-int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     (void)in_module;
     (void)in_file;
 
@@ -1018,7 +1014,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,i
         return 1;
     }
 
-    shared_ptr<struct link_segdef> lsg = find_link_segment(segname);
+    shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,segname);
 
     if (lsg == NULL) {
         fprintf(stderr,"Segment %s not found\n",segname);
@@ -1060,7 +1056,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,i
     return 0;
 }
 
-int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,shared_ptr<struct link_segdef> *sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,in_fileRef in_file,in_fileModuleRef in_module) {
+int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,shared_ptr<struct link_segdef> *sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,in_fileRef in_file,in_fileModuleRef in_module) {
     *fseg = *fofs = ~0UL;
     *sdef = NULL;
     (void)ent;
@@ -1072,7 +1068,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        shared_ptr<struct link_segdef> lsg = find_link_segment(segname);
+        shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,segname);
         if (lsg == NULL) {
             fprintf(stderr,"FIXUPP SEGDEF not found '%s'\n",segname);
             return -1;
@@ -1092,7 +1088,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        shared_ptr<struct link_segdef> lsg = find_link_segment_by_grpdef(segname);
+        shared_ptr<struct link_segdef> lsg = find_link_segment_by_grpdef(link_segments,segname);
         if (lsg == NULL) {
             fprintf(stderr,"FIXUPP SEGDEF not found\n");
             return -1;
@@ -1112,7 +1108,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        shared_ptr<struct link_symbol> sym = find_link_symbol(defname,in_file,in_module);
+        shared_ptr<struct link_symbol> sym = find_link_symbol(link_symbols,defname,in_file,in_module);
         if (sym == NULL) {
             fprintf(stderr,"No such symbol '%s'\n",defname);
             return -1;
@@ -1134,7 +1130,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     return 0;
 }
 
-int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int apply_FIXUPP(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     shared_ptr<struct link_segdef> frame_sdef;
     shared_ptr<struct link_segdef> targ_sdef;
     const struct omf_segdef_t *cur_segdef;
@@ -1153,9 +1149,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
         if (!ent->alloc) continue;
 
         if (pass == PASS_BUILD) {
-            if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index,in_file,in_module))
+            if (fixupp_get(link_symbols,link_segments,omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index,in_file,in_module))
                 return -1;
-            if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index,in_file,in_module))
+            if (fixupp_get(link_symbols,link_segments,omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index,in_file,in_module))
                 return -1;
 
             if (ent->frame_method == 5/*BY TARGET*/) {
@@ -1216,7 +1212,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
             return 1;
         }
 
-        shared_ptr<struct link_segdef> current_link_segment = find_link_segment(cur_segdefname);
+        shared_ptr<struct link_segdef> current_link_segment = find_link_segment(link_segments,cur_segdefname);
         if (current_link_segment == NULL) {
             fprintf(stderr,"Cannot find linker segment '%s'\n",cur_segdefname);
             return 1;
@@ -1380,7 +1376,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
     return 0;
 }
 
-int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
+int grpdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first) {
     while (first < omf_state->GRPDEFs.omf_GRPDEFS_count) {
         struct omf_grpdef_t *gd = &omf_state->GRPDEFs.omf_GRPDEFS[first++];
         const char *grpdef_name;
@@ -1407,7 +1403,7 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
                     return 1;
                 }
 
-                shared_ptr<struct link_segdef> lsg = find_link_segment(segdef_name);
+                shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,segdef_name);
                 if (lsg == NULL) {
                     fprintf(stderr,"GRPDEF refers to SEGDEF that has not been registered\n");
                     return 1;
@@ -1431,7 +1427,7 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     return 0;
 }
 
-int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,unsigned int tag,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     const unsigned char is_local = (tag == OMF_RECTYPE_LPUBDEF) || (tag == OMF_RECTYPE_LPUBDEF32);
 
     (void)pass;
@@ -1450,7 +1446,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         if (*segname == 0) continue;
         groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
 
-        shared_ptr<struct link_segdef> lsg = find_link_segment(segname);
+        shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,segname);
         if (lsg == NULL) {
             fprintf(stderr,"Pubdef: No such segment '%s'\n",segname);
             return -1;
@@ -1467,12 +1463,12 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             }
         }
 
-        sym = find_link_symbol(name,in_file,in_module);
+        sym = find_link_symbol(link_symbols,name,in_file,in_module);
         if (sym != NULL) {
             fprintf(stderr,"Symbol '%s' already defined\n",name);
             return -1;
         }
-        sym = new_link_symbol(name);
+        sym = new_link_symbol(link_symbols,name);
         if (sym == NULL) {
             fprintf(stderr,"Unable to allocate symbol '%s'\n",name);
             return -1;
@@ -1498,7 +1494,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     return 0;
 }
 
-int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
         const char *classname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->class_name_index);
@@ -1507,7 +1503,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
         if (*name == 0) continue;
 
         if (pass == PASS_BUILD) {
-            shared_ptr<struct link_segdef> lsg = find_link_segment(name);
+            shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
             if (lsg == NULL) {
                 fprintf(stderr,"No SEGDEF '%s'\n",name);
                 return -1;
@@ -1543,7 +1539,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
             }
         }
         else if (pass == PASS_GATHER) {
-            shared_ptr<struct link_segdef> lsg = find_link_segment(name);
+            shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
 
             if (lsg != nullptr) {
                 if (lsg->segment_group < current_segment_group)
@@ -1565,7 +1561,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
                 if (cmdoptions.verbose)
                     fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
 
-                lsg = new_link_segment(name);
+                lsg = new_link_segment(link_segments,name);
                 if (lsg == NULL) {
                     fprintf(stderr,"Cannot add segment\n");
                     return -1;
@@ -1711,8 +1707,8 @@ int segment_exe_arrange(vector< shared_ptr<struct link_segdef> > &link_segments)
 
         for (linkseg=0;linkseg < link_segments.size();linkseg++) {
             shared_ptr<struct link_segdef> sd = link_segments[linkseg];
-            shared_ptr<struct link_segdef> gd = sd->groupname.empty() ? nullptr : find_link_segment_by_grpdef(sd->groupname.c_str());
-            shared_ptr<struct link_segdef> cd = sd->classname.empty() ? nullptr : find_link_segment_by_class(sd->classname.c_str());
+            shared_ptr<struct link_segdef> gd = sd->groupname.empty() ? nullptr : find_link_segment_by_grpdef(link_segments,sd->groupname.c_str());
+            shared_ptr<struct link_segdef> cd = sd->classname.empty() ? nullptr : find_link_segment_by_class(link_segments,sd->classname.c_str());
 
             if (gd != NULL)
                 segrel = gd->linear_offset >> 4ul;
@@ -1870,7 +1866,7 @@ void linkseg_add_padding_fragments(struct link_segdef *sg) {
     }
 }
 
-int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_fileModuleRef current_in_file_module,entrypoint &entry_point) {
+int parse_MODEND(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t* omf_state,in_fileRef current_in_file,in_fileModuleRef current_in_file_module,entrypoint &entry_point) {
     unsigned char ModuleType;
     unsigned char EndData;
     unsigned int FrameDatum;
@@ -1919,8 +1915,8 @@ int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_f
             if (*framename != 0 && *targetname != 0) {
                 shared_ptr<struct link_segdef> frameseg,targseg;
 
-                targseg = find_link_segment(targetname);
-                frameseg = find_link_segment(framename);
+                targseg = find_link_segment(link_segments,targetname);
+                frameseg = find_link_segment(link_segments,framename);
                 if (targseg != NULL && frameseg != NULL) {
                     entry_point.seg_ofs = TargetDisplacement;
 
@@ -1958,6 +1954,8 @@ int parse_MODEND(struct omf_context_t* omf_state,in_fileRef current_in_file,in_f
 int main(int argc,char **argv) {
     entrypoint entry_point;
     string hex_output_tmpfile;
+    vector< shared_ptr<struct link_segdef> > link_segments;
+    vector< shared_ptr<struct link_symbol> > link_symbols;
     unsigned char diddump = 0;
     string hex_output_name;
     unsigned char pass;
@@ -2177,11 +2175,11 @@ int main(int argc,char **argv) {
 
                         current_in_file_module->name = s;
                     }
-                    if (pass == PASS_GATHER && grpdef_add(omf_state, 0))
+                    if (pass == PASS_GATHER && grpdef_add(link_segments, omf_state, 0))
                         return 1;
-                    if (pass == PASS_GATHER && pubdef_add(omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
+                    if (pass == PASS_GATHER && pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                         return 1;
-                    if (apply_FIXUPP(omf_state,0,current_in_file,current_in_file_module,pass))
+                    if (apply_FIXUPP(link_symbols,link_segments,omf_state,0,current_in_file,current_in_file_module,pass))
                         return 1;
 
                     omf_context_clear_for_module(omf_state);
@@ -2276,7 +2274,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count, current_in_file, current_in_file_module, pass))
+                            if (segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -2306,12 +2304,12 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (pass == PASS_GATHER && ledata_add(omf_state, &info, current_in_file, current_in_file_module, pass))
+                            if (pass == PASS_GATHER && ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
-                        if (pass == PASS_GATHER && parse_MODEND(omf_state, current_in_file, current_in_file_module, entry_point))
+                        if (pass == PASS_GATHER && parse_MODEND(link_segments, omf_state, current_in_file, current_in_file_module, entry_point))
                             return 1;
                         break;
                     default:
@@ -2427,7 +2425,7 @@ int main(int argc,char **argv) {
              * For .COM files that is the start of the file. For .EXE files that is the first byte in the file
              * past the EXE header. When loaded into memory, it must be the first byte at the base of the image. */
             if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                shared_ptr<struct link_symbol> ls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
 
                 if (ls == nullptr) {
                     fprintf(stderr,"WARNING: Unable to find symbol '%s' which is DOS driver header. See also -hsym option.\n",
@@ -2471,11 +2469,11 @@ int main(int argc,char **argv) {
             /* symbol for entry point */
             if (entry_point.seg_link_target != nullptr) {
                 /* make the original entry point a symbol, change entry point to new place */
-                shared_ptr<struct link_symbol> ls = find_link_symbol("$$SOURCEENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"$$SOURCEENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
                 if (ls != NULL)
                     return 1;
 
-                ls = new_link_symbol("$$SOURCEENTRYPOINT");
+                ls = new_link_symbol(link_symbols,"$$SOURCEENTRYPOINT");
                 if (ls == NULL)
                     return 1;
 
@@ -2489,7 +2487,7 @@ int main(int argc,char **argv) {
 
             /* MS-DOS DOS drivers with relocations */
             if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                shared_ptr<struct link_symbol> ls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
 
                 if (ls != nullptr) {
                     assert(ls->fragment != nullptr);
@@ -2501,11 +2499,11 @@ int main(int argc,char **argv) {
                         ls->fragment->fragment_length >= 10/*enough to contain entry points*/) {
                         shared_ptr<struct link_segdef> exeseg;
 
-                        exeseg = find_link_segment("__DOSDRVREL_INIT");
+                        exeseg = find_link_segment(link_segments,"__DOSDRVREL_INIT");
                         if (exeseg != NULL)
                             return 1;
 
-                        exeseg = new_link_segment("__DOSDRVREL_INIT");
+                        exeseg = new_link_segment(link_segments,"__DOSDRVREL_INIT");
                         if (exeseg == NULL)
                             return 1;
 
@@ -2524,11 +2522,11 @@ int main(int argc,char **argv) {
                         memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
 
                         {
-                            shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
                             if (ls != NULL)
                                 return 1;
 
-                            ls = new_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY");
+                            ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY");
                             if (ls == NULL)
                                 return 1;
 
@@ -2547,11 +2545,11 @@ int main(int argc,char **argv) {
                         frag->image.resize(frag->fragment_length);
 
                         {
-                            shared_ptr<struct link_symbol> ls = find_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                             if (ls != NULL)
                                 return 1;
 
-                            ls = new_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE");
+                            ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE");
                             if (ls == NULL)
                                 return 1;
 
@@ -2611,11 +2609,11 @@ int main(int argc,char **argv) {
 
                 assert(init_ip >= cmdoptions.image_base_offset);
 
-                exeseg = find_link_segment("__COMREL_INIT");
+                exeseg = find_link_segment(link_segments,"__COMREL_INIT");
                 if (exeseg != NULL)
                     return 1;
 
-                exeseg = new_link_segment("__COMREL_INIT");
+                exeseg = new_link_segment(link_segments,"__COMREL_INIT");
                 if (exeseg == NULL)
                     return 1;
 
@@ -2627,11 +2625,11 @@ int main(int argc,char **argv) {
 
                 {
                     /* make the original entry point a symbol, change entry point to new place */
-                    shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                    shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                     if (ls != NULL)
                         return 1;
 
-                    ls = new_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY");
+                    ls = new_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY");
                     if (ls == NULL)
                         return 1;
 
@@ -2659,11 +2657,11 @@ int main(int argc,char **argv) {
 
                     {
                         /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
                         if (ls != NULL)
                             return 1;
 
-                        ls = new_link_symbol("__COMREL_INIT_RELOC_APPLY");
+                        ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY");
                         if (ls == NULL)
                             return 1;
 
@@ -2684,11 +2682,11 @@ int main(int argc,char **argv) {
 
                     {
                         /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                         if (ls != NULL)
                             return 1;
 
-                        ls = new_link_symbol("__COMREL_INIT_RELOC_TABLE");
+                        ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE");
                         if (ls == NULL)
                             return 1;
 
@@ -2735,12 +2733,12 @@ int main(int argc,char **argv) {
 
                         fprintf(stderr,"COM entry point does not point to beginning of image, adding JMP instruction\n");
 
-                        exeseg = find_link_segment("__COM_ENTRY_JMP");
+                        exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
                         if (exeseg != NULL)
                             return 1;
 
                         /* segment MUST exist at the beginning of the file! COM executables always run from the first byte at 0x100! */
-                        exeseg = new_link_segment_begin("__COM_ENTRY_JMP");
+                        exeseg = new_link_segment_begin(link_segments,"__COM_ENTRY_JMP");
                         if (exeseg == NULL)
                             return 1;
 
@@ -2775,16 +2773,16 @@ int main(int argc,char **argv) {
                             frag->image[1] = 0; /* patch later */
                         }
 
-                        exeseg = find_link_segment("__COM_ENTRY_JMP");
+                        exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
                         if (exeseg == NULL)
                             return 1;
 
                         /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
                         if (ls != NULL)
                             return 1;
 
-                        ls = new_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY");
+                        ls = new_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY");
                         if (ls == NULL)
                             return 1;
 
@@ -2815,11 +2813,11 @@ int main(int argc,char **argv) {
     /* symbol for entry point */
     if (entry_point.seg_link_target != nullptr) {
         /* make the original entry point a symbol, change entry point to new place */
-        shared_ptr<struct link_symbol> ls = find_link_symbol("$$ENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"$$ENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
         if (ls != NULL)
             return 1;
 
-        ls = new_link_symbol("$$ENTRYPOINT");
+        ls = new_link_symbol(link_symbols,"$$ENTRYPOINT");
         if (ls == NULL)
             return 1;
 
@@ -2844,7 +2842,7 @@ int main(int argc,char **argv) {
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
 
     dump_link_relocations();
-    dump_link_symbols();
+    dump_link_symbols(link_symbols);
     dump_link_segments(link_segments,DUMPLS_LINEAR);
 
     sort(link_symbols.begin(), link_symbols.end(), link_symbol_qsort_cmp);
@@ -2870,10 +2868,10 @@ int main(int argc,char **argv) {
 
         /* Add segment to end of list. __COMREL_INIT should exist at the back of the file so it can easily
          * be discarded after running without harming the program we're linking together. */
-        exeseg = find_link_segment("__COMREL_INIT");
+        exeseg = find_link_segment(link_segments,"__COMREL_INIT");
         if (exeseg != NULL) {
             {
-                shared_ptr<struct link_symbol> ls = find_link_symbol("__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
                 if (ls == NULL)
                     return 1;
 
@@ -2886,7 +2884,7 @@ int main(int argc,char **argv) {
 
             shared_ptr<struct seg_fragment> apply_frag;
             {
-                shared_ptr<struct link_symbol> apply_ls = find_link_symbol("__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> apply_ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
                 if (apply_ls == NULL)
                     return 1;
 
@@ -2898,7 +2896,7 @@ int main(int argc,char **argv) {
 
             shared_ptr<struct seg_fragment> table_frag;
             {
-                shared_ptr<struct link_symbol> table_ls = find_link_symbol("__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> table_ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
                 if (table_ls == NULL)
                     return 1;
 
@@ -2937,9 +2935,9 @@ int main(int argc,char **argv) {
         shared_ptr<struct link_segdef> exeseg;
         uint32_t init_ip;
 
-        exeseg = find_link_segment("__COM_ENTRY_JMP");
+        exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
         if (exeseg != NULL) {
-            shared_ptr<struct link_symbol> ls = find_link_symbol("__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
+            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefInternal,in_fileModuleRefUndef);
             if (ls == NULL)
                 return 1;
 
@@ -2977,9 +2975,9 @@ int main(int argc,char **argv) {
 
     /* MS-DOS DOS drivers with relocations: patch */
     if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL) {
-        shared_ptr<struct link_symbol> headls = find_link_symbol(cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
-        shared_ptr<struct link_symbol> relocls = find_link_symbol("__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
-        shared_ptr<struct link_symbol> rtablels = find_link_symbol("__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> headls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> relocls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+        shared_ptr<struct link_symbol> rtablels = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
 
         if (headls != nullptr && relocls != nullptr && rtablels != nullptr) {
             assert(headls->fragment != nullptr);
@@ -3044,11 +3042,11 @@ int main(int argc,char **argv) {
         uint32_t stack_size=0;
         uint32_t tmp;
 
-        exeseg = find_link_segment("$$EXEHEADER");
+        exeseg = find_link_segment(link_segments,"$$EXEHEADER");
         if (exeseg != NULL)
             return 1;
 
-        exeseg = new_link_segment("$$EXEHEADER");
+        exeseg = new_link_segment(link_segments,"$$EXEHEADER");
         if (exeseg == NULL)
             return 1;
 
@@ -3099,7 +3097,7 @@ int main(int argc,char **argv) {
         }
 
         {
-            shared_ptr<struct link_segdef> stacksg = find_link_segment_by_class_last("STACK");
+            shared_ptr<struct link_segdef> stacksg = find_link_segment_by_class_last(link_segments,"STACK");
 
             if (stacksg != NULL) {
                 init_ss = stacksg->segment_relative;
