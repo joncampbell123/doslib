@@ -466,14 +466,14 @@ int sort_cmpf_class_stack(const struct link_segdef *a) {
     return 0;
 }
 
-void link_segments_swap(unsigned int s1,unsigned int s2) {
+void link_segments_swap(vector< shared_ptr<struct link_segdef> > &link_segments,unsigned int s1,unsigned int s2) {
     if (s1 != s2)
         swap(link_segments[s1],link_segments[s2]);
 }
 
 shared_ptr<struct link_segdef> find_link_segment(const char *name);
 
-void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
+void link_segments_sort(vector< shared_ptr<struct link_segdef> > &link_segments,unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
     unsigned int i;
     int r;
 
@@ -482,7 +482,7 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
         if (r < 0) {
             while (i > *start) {
                 i--;
-                link_segments_swap(i,i+1);
+                link_segments_swap(link_segments,i,i+1);
             }
 
             (*start)++;
@@ -490,7 +490,7 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
         }
         else if (r > 0) {
             while (i < *end) {
-                link_segments_swap(i,i+1);
+                link_segments_swap(link_segments,i,i+1);
                 i++;
             }
 
@@ -503,7 +503,7 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
     }
 }
 
-void owlink_dosseg_sort_order(void) {
+void owlink_dosseg_sort_order(vector< shared_ptr<struct link_segdef> > &link_segments) {
     /* WARNING: list should have already been sorted by segment groups.
      *          BSS/STACK however is ALWAYS moved to the bottom of the image. */
     for (unsigned int gsi=0;gsi < link_segments.size();gsi++) {
@@ -513,17 +513,17 @@ void owlink_dosseg_sort_order(void) {
         gsi = e;
         e--;
 
-        link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
-        link_segments_sort(&s,&e,sort_cmp_not_dgroup);                  /* 2 */
-        link_segments_sort(&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
-        link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_not_dgroup);                  /* 2 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
     }
 
     if (link_segments.size() != 0) {
         unsigned int s = 0,e = link_segments.size() - 1u;
 
-        link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
-        link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
+        link_segments_sort(link_segments,&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
     }
 }
 
@@ -552,11 +552,11 @@ bool owlink_segsrt_def_qsort_cmp(const shared_ptr<struct link_segdef> &sa, const
     return false;
 }
 
-void owlink_default_sort_seg(void) {
+void owlink_default_sort_seg(vector< shared_ptr<struct link_segdef> > &link_segments) {
     sort(link_segments.begin(), link_segments.end(), owlink_segsrt_def_qsort_cmp);
 }
 
-void owlink_stack_bss_arrange(void) {
+void owlink_stack_bss_arrange(vector< shared_ptr<struct link_segdef> > &link_segments) {
     unsigned int s = 0,e = link_segments.size() - 1u;
 
     if (link_segments.size() == 0) return;
@@ -565,8 +565,8 @@ void owlink_stack_bss_arrange(void) {
         e = link_segments.size() - 1u;
         s = 0;
 
-        link_segments_sort(&s,&e,sort_cmpf_class_stack);
-        link_segments_sort(&s,&e,sort_cmpf_class_bss);
+        link_segments_sort(link_segments,&s,&e,sort_cmpf_class_stack);
+        link_segments_sort(link_segments,&s,&e,sort_cmpf_class_bss);
     }
 }
 
@@ -583,7 +583,7 @@ shared_ptr<struct seg_fragment> alloc_link_segment_fragment(struct link_segdef *
     return frag;
 }
 
-void free_link_segments(void) {
+void free_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments) {
     link_segments.clear();
 }
 
@@ -744,7 +744,7 @@ enum {
     DUMPLS_FILEOFFSET
 };
 
-void dump_link_segments(const unsigned int purpose) {
+void dump_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments,const unsigned int purpose) {
     static char range1[64];
     static char range2[64];
     unsigned int i=0,f;
@@ -1354,7 +1354,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,in_fileRef i
                         /* sanity check: self-relative is only allowed IF the same segment */
                         /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
                         if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
-                            dump_link_segments(DUMPLS_LINEAR);
+                            dump_link_segments(link_segments,DUMPLS_LINEAR);
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                             fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
                                 current_link_segment->name.c_str(),
@@ -1531,7 +1531,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,in_fileRef in_
 
             if (lsg->fragment_load_index == nullptr) {
                 fprintf(stderr,"SEGDEF '%s', second pass, failed to find fragment\n",name);
-                dump_link_segments(DUMPLS_LINEAR);
+                dump_link_segments(link_segments,DUMPLS_LINEAR);
                 return -1;
             }
 
@@ -1681,7 +1681,7 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
         printf("----END-----\n");
 }
 
-int trim_noemit() {
+int trim_noemit(vector< shared_ptr<struct link_segdef> > &link_segments) {
     /* decide where the segments end up in the executable */
     unsigned int linkseg;
 
@@ -1706,7 +1706,7 @@ int trim_noemit() {
     return 0;
 }
 
-int segment_exe_arrange(void) {
+int segment_exe_arrange(vector< shared_ptr<struct link_segdef> > &link_segments) {
     if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         unsigned long segrel = 0;
         unsigned int linkseg;
@@ -1732,7 +1732,7 @@ int segment_exe_arrange(void) {
             sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset - (segrel << 4ul);
 
             if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
-                dump_link_segments(DUMPLS_LINEAR);
+                dump_link_segments(link_segments,DUMPLS_LINEAR);
                 fprintf(stderr,"EXE: segment offset out of range\n");
                 return -1;
             }
@@ -1750,7 +1750,7 @@ int segment_exe_arrange(void) {
             sd->segment_offset = cmdoptions.image_base_offset + sd->linear_offset;
 
             if ((sd->segment_offset+sd->segment_length) > 0xFFFFul) {
-                dump_link_segments(DUMPLS_LINEAR);
+                dump_link_segments(link_segments,DUMPLS_LINEAR);
                 fprintf(stderr,"COM: segment offset out of range\n");
                 return -1;
             }
@@ -1783,7 +1783,7 @@ int fragment_def_arrange(struct link_segdef *sd) {
     return 0;
 }
 
-int fragment_def_arrange(void) {
+int fragment_def_arrange(vector< shared_ptr<struct link_segdef> > &link_segments) {
     size_t inf;
 
     for (inf=0;inf < link_segments.size();inf++)
@@ -1792,7 +1792,7 @@ int fragment_def_arrange(void) {
     return 0;
 }
 
-int segment_def_arrange(void) {
+int segment_def_arrange(vector< shared_ptr<struct link_segdef> > &link_segments) {
     segmentOffset ofs = 0;
     size_t inf;
 
@@ -1810,7 +1810,7 @@ int segment_def_arrange(void) {
         if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
             cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
             if (sd->segment_length > 0x10000ul) {
-                dump_link_segments(DUMPLS_LINEAR);
+                dump_link_segments(link_segments,DUMPLS_LINEAR);
                 fprintf(stderr,"Segment too large >= 64KB\n");
                 return -1;
             }
@@ -2338,10 +2338,10 @@ int main(int argc,char **argv) {
         }
 
         if (pass == PASS_GATHER) {
-            owlink_default_sort_seg();
+            owlink_default_sort_seg(link_segments);
 
             if (cmdoptions.do_dosseg)
-                owlink_dosseg_sort_order();
+                owlink_dosseg_sort_order(link_segments);
 
             {
                 unsigned int i;
@@ -2414,14 +2414,14 @@ int main(int argc,char **argv) {
                 }
             }
 
-            owlink_stack_bss_arrange();
-            if (trim_noemit())
+            owlink_stack_bss_arrange(link_segments);
+            if (trim_noemit(link_segments))
                 return 1;
-            if (fragment_def_arrange())
+            if (fragment_def_arrange(link_segments))
                 return 1;
-            if (segment_def_arrange())
+            if (segment_def_arrange(link_segments))
                 return 1;
-            if (segment_exe_arrange())
+            if (segment_exe_arrange(link_segments))
                 return 1;
 
             /* MS-DOS device drivers: header symbol must exist at the start of the resident image.
@@ -2564,19 +2564,19 @@ int main(int argc,char **argv) {
                             ls->in_module = in_fileModuleRefUndef;
                         }
 
-                        owlink_default_sort_seg();
+                        owlink_default_sort_seg(link_segments);
 
                         if (cmdoptions.do_dosseg)
-                            owlink_dosseg_sort_order();
+                            owlink_dosseg_sort_order(link_segments);
 
-                        owlink_stack_bss_arrange();
-                        if (trim_noemit())
+                        owlink_stack_bss_arrange(link_segments);
+                        if (trim_noemit(link_segments))
                             return 1;
-                        if (fragment_def_arrange())
+                        if (fragment_def_arrange(link_segments))
                             return 1;
-                        if (segment_def_arrange())
+                        if (segment_def_arrange(link_segments))
                             return 1;
-                        if (segment_exe_arrange())
+                        if (segment_exe_arrange(link_segments))
                             return 1;
                     }
                     else {
@@ -2703,10 +2703,10 @@ int main(int argc,char **argv) {
                 }
 
                 fragment_def_arrange(exeseg.get());
-                owlink_stack_bss_arrange(); /* __COMREL_INIT is meant to attach to the end of the .COM image */
-                if (segment_def_arrange())
+                owlink_stack_bss_arrange(link_segments); /* __COMREL_INIT is meant to attach to the end of the .COM image */
+                if (segment_def_arrange(link_segments))
                     return 1;
-                if (segment_exe_arrange())
+                if (segment_exe_arrange(link_segments))
                     return 1;
             }
 
@@ -2803,9 +2803,9 @@ int main(int argc,char **argv) {
                         entry_point.seg_link_target_fragment = frag;
 
                         fragment_def_arrange(exeseg.get());
-                        if (segment_def_arrange())
+                        if (segment_def_arrange(link_segments))
                             return 1;
-                        if (segment_exe_arrange())
+                        if (segment_exe_arrange(link_segments))
                             return 1;
                     }
                 }
@@ -2846,7 +2846,7 @@ int main(int argc,char **argv) {
 
     dump_link_relocations();
     dump_link_symbols();
-    dump_link_segments(DUMPLS_LINEAR);
+    dump_link_segments(link_segments,DUMPLS_LINEAR);
 
     sort(link_symbols.begin(), link_symbols.end(), link_symbol_qsort_cmp);
 
@@ -3248,7 +3248,7 @@ int main(int argc,char **argv) {
 
     /* write output */
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_fileofs);
-    dump_link_segments(DUMPLS_FILEOFFSET);
+    dump_link_segments(link_segments,DUMPLS_FILEOFFSET);
     assert(!cmdoptions.out_file.empty());
     {
         int fd;
@@ -3388,7 +3388,7 @@ int main(int argc,char **argv) {
         map_fp = NULL;
     }
 
-    free_link_segments();
+    free_link_segments(link_segments);
     free_exe_relocations();
     return 0;
 }
