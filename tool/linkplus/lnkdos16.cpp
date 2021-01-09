@@ -1180,7 +1180,7 @@ int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
     return 0;
 }
 
-int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     shared_ptr<struct link_segdef> frame_sdef;
     shared_ptr<struct link_segdef> targ_sdef;
     const struct omf_segdef_t *cur_segdef;
@@ -1189,6 +1189,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
     unsigned long frame_seg,frame_ofs;
     unsigned long targ_seg,targ_ofs;
     const char *cur_segdefname;
+    unsigned int first = 0;
     unsigned char *fence;
     unsigned char *ptr;
     unsigned long ptch;
@@ -2230,7 +2231,7 @@ int main(int argc,char **argv) {
                         return 1;
                     if (pass == PASS_GATHER && pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                         return 1;
-                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,omf_state,0,current_in_file,current_in_file_module,pass))
+                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,omf_state,current_in_file,current_in_file_module,pass))
                         return 1;
 
                     omf_context_clear_for_module(omf_state);
