@@ -1194,9 +1194,14 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
     unsigned char *ptr;
     unsigned long ptch;
 
-    while (first <= omf_fixupps_context_get_highest_index(&omf_state->FIXUPPs)) {
-        const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
-        if (ent == NULL) continue;
+    if (omf_state->FIXUPPs.omf_FIXUPPS_count == 0)
+        return 0;
+
+    assert(omf_state->FIXUPPs.omf_FIXUPPS != NULL);
+    assert(omf_state->FIXUPPs.omf_FIXUPPS_count <= omf_state->FIXUPPs.omf_FIXUPPS_alloc);
+
+    while (first < omf_state->FIXUPPs.omf_FIXUPPS_count) {
+        const struct omf_fixupp_t *ent = &omf_state->FIXUPPs.omf_FIXUPPS[first++];
         if (!ent->alloc) continue;
 
         if (pass == PASS_BUILD) {
