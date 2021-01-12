@@ -2398,147 +2398,454 @@ int main(int argc,char **argv) {
         current_segment_group = -1;
     }
 
+    owlink_default_sort_seg(link_segments);
+
+    if (cmdoptions.do_dosseg)
+        owlink_dosseg_sort_order(link_segments);
+
     {
+        unsigned int i;
+
+        for (i=0;i < link_segments.size();i++) {
+            shared_ptr<struct link_segdef> ssg = link_segments[i];
+
+            if (ssg->classname == "STACK" || ssg->classname == "BSS") {
+                ssg->noemit = 1;
+            }
+        }
+    }
+
+    if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        /* NTS: segment_length has not been computed yet, count fragments */
+        shared_ptr<struct link_segdef> stacksg;
+
         {
-            owlink_default_sort_seg(link_segments);
+            shared_ptr<struct link_segdef> ssg;
+            unsigned int i;
 
-            if (cmdoptions.do_dosseg)
-                owlink_dosseg_sort_order(link_segments);
+            for (i=0;i < link_segments.size();i++) {
+                ssg = link_segments[i];
 
-            {
-                unsigned int i;
-
-                for (i=0;i < link_segments.size();i++) {
-                    shared_ptr<struct link_segdef> ssg = link_segments[i];
-
-                    if (ssg->classname == "STACK" || ssg->classname == "BSS") {
-                        ssg->noemit = 1;
-                    }
-                }
+                if (ssg->classname == "STACK")
+                    stacksg = ssg;
             }
+        }
 
-            if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                /* NTS: segment_length has not been computed yet, count fragments */
-                shared_ptr<struct link_segdef> stacksg;
-
-                {
-                    shared_ptr<struct link_segdef> ssg;
-                    unsigned int i;
-
-                    for (i=0;i < link_segments.size();i++) {
-                        ssg = link_segments[i];
-
-                        if (ssg->classname == "STACK")
-                            stacksg = ssg;
-                    }
-                }
-
-                if (stacksg != NULL) {
-                    fragment_def_arrange(stacksg.get());
-                    if (stacksg->segment_length < cmdoptions.want_stack_size) {
-                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(stacksg.get());
-                        frag->offset = stacksg->segment_length;
-                        frag->attr = stacksg->attr;
-                        frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
-                        stacksg->segment_length += frag->fragment_length;
-                        frag->in_file = in_fileRefInternal;
-                    }
-                }
+        if (stacksg != NULL) {
+            fragment_def_arrange(stacksg.get());
+            if (stacksg->segment_length < cmdoptions.want_stack_size) {
+                shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(stacksg.get());
+                frag->offset = stacksg->segment_length;
+                frag->attr = stacksg->attr;
+                frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
+                stacksg->segment_length += frag->fragment_length;
+                frag->in_file = in_fileRefInternal;
             }
+        }
+    }
 
-            {
-                /* entry point checkup */
-                if (cmdoptions.output_format == OFMT_DOSDRV) {
-                    /* MS-DOS device drivers do NOT have an entry point */
-                    if (entry_point.seg_link_target != nullptr) {
-                        fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
-                        fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
-                    }
-                }
-                else {
-                    if (entry_point.seg_link_target == nullptr) {
-                        fprintf(stderr,"WARNING: No entry point found\n");
-                    }
-                }
+    {
+        /* entry point checkup */
+        if (cmdoptions.output_format == OFMT_DOSDRV) {
+            /* MS-DOS device drivers do NOT have an entry point */
+            if (entry_point.seg_link_target != nullptr) {
+                fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
+                fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
             }
-
-            /* entry point cannot be 32-bit */
-            if (cmdoptions.output_format == OFMT_DOSDRV) {
-                /* nothing */
+        }
+        else {
+            if (entry_point.seg_link_target == nullptr) {
+                fprintf(stderr,"WARNING: No entry point found\n");
             }
-            else if (entry_point.seg_link_target != nullptr) {
-                shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
-                assert(frag != nullptr);
+        }
+    }
 
-                if (frag->attr.f.f.use32) {
-                    fprintf(stderr,"Entry point cannot be 32-bit\n");
-                    return 1;
-                }
-            }
+    /* entry point cannot be 32-bit */
+    if (cmdoptions.output_format == OFMT_DOSDRV) {
+        /* nothing */
+    }
+    else if (entry_point.seg_link_target != nullptr) {
+        shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
+        assert(frag != nullptr);
 
-            owlink_stack_bss_arrange(link_segments);
-            if (trim_noemit(link_segments))
-                return 1;
-            if (fragment_def_arrange(link_segments))
-                return 1;
-            if (segment_def_arrange(link_segments))
-                return 1;
-            if (segment_exe_arrange(link_segments))
-                return 1;
+        if (frag->attr.f.f.use32) {
+            fprintf(stderr,"Entry point cannot be 32-bit\n");
+            return 1;
+        }
+    }
 
-            /* MS-DOS device drivers: header symbol must exist at the start of the resident image.
-             * For .COM files that is the start of the file. For .EXE files that is the first byte in the file
-             * past the EXE header. When loaded into memory, it must be the first byte at the base of the image. */
-            if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+    owlink_stack_bss_arrange(link_segments);
+    if (trim_noemit(link_segments))
+        return 1;
+    if (fragment_def_arrange(link_segments))
+        return 1;
+    if (segment_def_arrange(link_segments))
+        return 1;
+    if (segment_exe_arrange(link_segments))
+        return 1;
 
-                if (ls == nullptr) {
-                    fprintf(stderr,"WARNING: Unable to find symbol '%s' which is DOS driver header. See also -hsym option.\n",
+    /* MS-DOS device drivers: header symbol must exist at the start of the resident image.
+     * For .COM files that is the start of the file. For .EXE files that is the first byte in the file
+     * past the EXE header. When loaded into memory, it must be the first byte at the base of the image. */
+    if (cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+
+        if (ls == nullptr) {
+            fprintf(stderr,"WARNING: Unable to find symbol '%s' which is DOS driver header. See also -hsym option.\n",
+                    cmdoptions.dosdrv_header_symbol.c_str());
+        }
+        else {
+            assert(ls->fragment != nullptr);
+            assert(ls->segref != nullptr);
+
+            if (ls->segref->segment_relative != cmdoptions.image_base_segment || ls->segref->segment_offset != cmdoptions.image_base_offset) {
+                fprintf(stderr,"WARNING: DOS driver header '%s' exists at segment/offset other than base of image, which will make the driver invalid.\n",
                         cmdoptions.dosdrv_header_symbol.c_str());
-                }
-                else {
-                    assert(ls->fragment != nullptr);
-                    assert(ls->segref != nullptr);
+            }
+            else {
+                /* if the segment exists at base, but the fragment does not, and the symbol exists at the base
+                 * of a fragment. it may be possible to locate the fragment and shuffle it to the beginning of the image */
+                if (ls->fragment->offset != 0 && ls->offset == 0) {
+                    auto i = find(ls->segref->fragments.begin(),ls->segref->fragments.end(),ls->fragment);
+                    assert(i != ls->segref->fragments.end()); /* must find it somewhere! */
 
-                    if (ls->segref->segment_relative != cmdoptions.image_base_segment || ls->segref->segment_offset != cmdoptions.image_base_offset) {
-                        fprintf(stderr,"WARNING: DOS driver header '%s' exists at segment/offset other than base of image, which will make the driver invalid.\n",
+                    /* if not at the beginning, then move it to the beginning. for speed, just use swap()
+                     * because removing/inserting in a vector takes linear time (based on number of elements).
+                     * remember everything is shared_ptr so there is no risk of stale pointers here. */
+                    if (i != ls->segref->fragments.begin()) {
+                        swap(*(ls->segref->fragments.begin()),*i);
+                        fragment_def_arrange(ls->segref.get());
+
+                        fprintf(stderr,"DOS driver header '%s' moved to base of image.\n",
                                 cmdoptions.dosdrv_header_symbol.c_str());
                     }
-                    else {
-                        /* if the segment exists at base, but the fragment does not, and the symbol exists at the base
-                         * of a fragment. it may be possible to locate the fragment and shuffle it to the beginning of the image */
-                        if (ls->fragment->offset != 0 && ls->offset == 0) {
-                            auto i = find(ls->segref->fragments.begin(),ls->segref->fragments.end(),ls->fragment);
-                            assert(i != ls->segref->fragments.end()); /* must find it somewhere! */
+                }
 
-                            /* if not at the beginning, then move it to the beginning. for speed, just use swap()
-                             * because removing/inserting in a vector takes linear time (based on number of elements).
-                             * remember everything is shared_ptr so there is no risk of stale pointers here. */
-                            if (i != ls->segref->fragments.begin()) {
-                                swap(*(ls->segref->fragments.begin()),*i);
-                                fragment_def_arrange(ls->segref.get());
-
-                                fprintf(stderr,"DOS driver header '%s' moved to base of image.\n",
-                                        cmdoptions.dosdrv_header_symbol.c_str());
-                            }
-                        }
-
-                        if ((ls->fragment->offset+ls->offset) != 0) {
-                            fprintf(stderr,"WARNING: DOS driver header '%s' exists at offset other than base of image, which will make the driver invalid.\n",
-                                    cmdoptions.dosdrv_header_symbol.c_str());
-                        }
-                    }
+                if ((ls->fragment->offset+ls->offset) != 0) {
+                    fprintf(stderr,"WARNING: DOS driver header '%s' exists at offset other than base of image, which will make the driver invalid.\n",
+                            cmdoptions.dosdrv_header_symbol.c_str());
                 }
             }
+        }
+    }
 
-            /* symbol for entry point */
-            if (entry_point.seg_link_target != nullptr) {
+    /* symbol for entry point */
+    if (entry_point.seg_link_target != nullptr) {
+        /* make the original entry point a symbol, change entry point to new place */
+        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"$$SOURCEENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+        if (ls != NULL)
+            return 1;
+
+        ls = new_link_symbol(link_symbols,"$$SOURCEENTRYPOINT");
+        if (ls == NULL)
+            return 1;
+
+        ls->segref = entry_point.seg_link_target;
+        ls->groupdef = entry_point.seg_link_target->groupname;
+        ls->offset = entry_point.seg_ofs;
+        ls->fragment = entry_point.seg_link_target_fragment;
+        ls->in_file = entry_point.seg_link_target_fragment.get()->in_file;
+        ls->in_module = entry_point.seg_link_target_fragment.get()->in_module;
+    }
+
+    /* MS-DOS DOS drivers with relocations */
+    if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
+
+        if (ls != nullptr) {
+            assert(ls->fragment != nullptr);
+            assert(ls->segref != nullptr);
+
+            if (ls->segref->segment_relative == cmdoptions.image_base_segment &&
+                    ls->segref->segment_offset == cmdoptions.image_base_offset &&
+                    ls->fragment->offset == 0 && ls->offset == 0 &&
+                    ls->fragment->fragment_length >= 10/*enough to contain entry points*/) {
+                shared_ptr<struct link_segdef> exeseg;
+
+                exeseg = find_link_segment(link_segments,"__DOSDRVREL_INIT");
+                if (exeseg != NULL)
+                    return 1;
+
+                exeseg = new_link_segment(link_segments,"__DOSDRVREL_INIT");
+                if (exeseg == NULL)
+                    return 1;
+
+                /* segment base and relative must match the entry point */
+                exeseg->segment_group = ++cmdoptions.next_segment_group; /* at the end, if possible, presumably where the init code resides so it can be discarded after load */
+                exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+                exeseg->segment_relative = cmdoptions.image_base_segment;
+                exeseg->segment_base = cmdoptions.image_base_offset;
+                exeseg->groupname = ls->segref->groupname;
+
+                /* add patchup code */
+                shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+                frag->in_file = in_fileRefInternal;
+                frag->fragment_length = sizeof(dosdrvrel_entry_point);
+                frag->image.resize(frag->fragment_length);
+                memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
+
+                {
+                    shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
+                    if (ls != NULL)
+                        return 1;
+
+                    ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY");
+                    if (ls == NULL)
+                        return 1;
+
+                    ls->segref = exeseg;
+                    ls->groupdef = exeseg->groupname;
+                    ls->offset = 0;
+                    ls->fragment = frag;
+                    ls->in_file = in_fileRefInternal;
+                    ls->in_module = in_fileModuleRefUndef;
+                }
+
+                /* relocation table */
+                frag = alloc_link_segment_fragment(exeseg.get());
+                frag->in_file = in_fileRefInternal;
+                frag->fragment_length = 2 * exe_relocation_table.size();
+                frag->image.resize(frag->fragment_length);
+
+                {
+                    shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                    if (ls != NULL)
+                        return 1;
+
+                    ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE");
+                    if (ls == NULL)
+                        return 1;
+
+                    ls->segref = exeseg;
+                    ls->groupdef = exeseg->groupname;
+                    ls->offset = 0;
+                    ls->fragment = frag;
+                    ls->in_file = in_fileRefInternal;
+                    ls->in_module = in_fileModuleRefUndef;
+                }
+
+                owlink_default_sort_seg(link_segments);
+
+                if (cmdoptions.do_dosseg)
+                    owlink_dosseg_sort_order(link_segments);
+
+                owlink_stack_bss_arrange(link_segments);
+                if (trim_noemit(link_segments))
+                    return 1;
+                if (fragment_def_arrange(link_segments))
+                    return 1;
+                if (segment_def_arrange(link_segments))
+                    return 1;
+                if (segment_exe_arrange(link_segments))
+                    return 1;
+            }
+            else {
+                fprintf(stderr,"WARNING: Cannot patch DOS driver header to make relocatable\n");
+            }
+        }
+    }
+
+    /* COM relocatable: Inject patch code and relocation table, put original entry point within, redirect entry point */
+    if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
+        shared_ptr<struct link_segdef> exeseg;
+        uint32_t init_ip;
+
+        /* I'm not going to make up a guess that won't work. Give me an entry point! */
+        if (entry_point.seg_link_target == nullptr) {
+            fprintf(stderr,"COMREL link target requires entry point\n");
+            return 1;
+        }
+
+        {
+            shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
+            assert(frag != nullptr);
+
+            if (entry_point.seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+                fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                        (unsigned long)entry_point.seg_link_target->segment_relative,
+                        (unsigned long)cmdoptions.image_base_segment);
+                return 1;
+            }
+
+            init_ip = entry_point.seg_ofs + entry_point.seg_link_target->segment_offset + frag->offset;
+        }
+
+        assert(init_ip >= cmdoptions.image_base_offset);
+
+        exeseg = find_link_segment(link_segments,"__COMREL_INIT");
+        if (exeseg != NULL)
+            return 1;
+
+        exeseg = new_link_segment(link_segments,"__COMREL_INIT");
+        if (exeseg == NULL)
+            return 1;
+
+        exeseg->pinned = 1;
+        exeseg->segment_group = ++cmdoptions.next_segment_group;
+        exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+        exeseg->segment_relative = cmdoptions.image_base_segment;
+        exeseg->segment_base = cmdoptions.image_base_offset;
+
+        {
+            /* make the original entry point a symbol, change entry point to new place */
+            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+            if (ls != NULL)
+                return 1;
+
+            ls = new_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY");
+            if (ls == NULL)
+                return 1;
+
+            ls->segref = entry_point.seg_link_target;
+            ls->groupdef = entry_point.seg_link_target->groupname;
+            ls->offset = entry_point.seg_ofs;
+            ls->fragment = entry_point.seg_link_target_fragment;
+            ls->in_file = entry_point.seg_link_target_fragment.get()->in_file;
+            ls->in_module = entry_point.seg_link_target_fragment.get()->in_module;
+        }
+
+        {
+            /* injected fixup code, wait until second pass to actually patch in values */
+            shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+            frag->in_file = in_fileRefInternal;
+            frag->fragment_length = sizeof(comrel_entry_point);
+            frag->image.resize(frag->fragment_length);
+            memcpy(&frag->image[0],comrel_entry_point,sizeof(comrel_entry_point));
+
+            /* replace entry point */
+            entry_point.seg_ofs = 0;
+            entry_point.seg_link_frame = exeseg;
+            entry_point.seg_link_target = exeseg;
+            entry_point.seg_link_target_fragment = frag;
+
+            {
                 /* make the original entry point a symbol, change entry point to new place */
-                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"$$SOURCEENTRYPOINT",in_fileRefUndef,in_fileModuleRefUndef);
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
                 if (ls != NULL)
                     return 1;
 
-                ls = new_link_symbol(link_symbols,"$$SOURCEENTRYPOINT");
+                ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY");
+                if (ls == NULL)
+                    return 1;
+
+                ls->segref = exeseg;
+                ls->groupdef = exeseg->groupname;
+                ls->offset = 0;
+                ls->fragment = frag;
+                ls->in_file = in_fileRefInternal;
+                ls->in_module = in_fileModuleRefUndef;
+            }
+        }
+
+        {
+            shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+            frag->in_file = in_fileRefInternal;
+            frag->fragment_length = 2 * exe_relocation_table.size();
+            frag->image.resize(frag->fragment_length);
+
+            {
+                /* make the original entry point a symbol, change entry point to new place */
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
+                if (ls != NULL)
+                    return 1;
+
+                ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE");
+                if (ls == NULL)
+                    return 1;
+
+                ls->segref = exeseg;
+                ls->groupdef = exeseg->groupname;
+                ls->offset = 0;
+                ls->fragment = frag;
+                ls->in_file = in_fileRefInternal;
+                ls->in_module = in_fileModuleRefUndef;
+            }
+        }
+
+        fragment_def_arrange(exeseg.get());
+        owlink_stack_bss_arrange(link_segments); /* __COMREL_INIT is meant to attach to the end of the .COM image */
+        if (segment_def_arrange(link_segments))
+            return 1;
+        if (segment_exe_arrange(link_segments))
+            return 1;
+    }
+
+    /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
+    if (cmdoptions.output_format == OFMT_COM) {
+        if (entry_point.seg_link_target != nullptr) {
+            uint32_t init_ip;
+
+            {
+                shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
+                assert(frag != nullptr);
+
+                if (entry_point.seg_link_target->segment_relative != cmdoptions.image_base_segment) {
+                    fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
+                            (unsigned long)entry_point.seg_link_target->segment_relative,
+                            (unsigned long)cmdoptions.image_base_segment);
+                    return 1;
+                }
+
+                init_ip = entry_point.seg_ofs + entry_point.seg_link_target->segment_offset + frag->offset;
+            }
+
+            if (init_ip != cmdoptions.image_base_offset) {
+                shared_ptr<struct link_segdef> exeseg;
+
+                assert(init_ip > cmdoptions.image_base_offset);
+
+                fprintf(stderr,"COM entry point does not point to beginning of image, adding JMP instruction\n");
+
+                exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
+                if (exeseg != NULL)
+                    return 1;
+
+                /* segment MUST exist at the beginning of the file! COM executables always run from the first byte at 0x100! */
+                exeseg = new_link_segment_begin(link_segments,"__COM_ENTRY_JMP");
+                if (exeseg == NULL)
+                    return 1;
+
+                exeseg->pinned = 1;
+                exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
+                exeseg->segment_relative = cmdoptions.image_base_segment;
+                exeseg->segment_base = cmdoptions.image_base_offset;
+
+                size_t fidx;
+                shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get(),/*&*/fidx);
+                /* must be the FIRST in the segment! */
+                assert(fidx == 0);
+                frag->in_file = in_fileRefInternal;
+                frag->offset = 0;
+
+                if (init_ip >= (0x80+cmdoptions.image_base_offset)) {
+                    /* 3 byte JMP */
+                    frag->fragment_length = 3;
+                    exeseg->segment_length += frag->fragment_length;
+                    frag->image.resize(frag->fragment_length);
+
+                    frag->image[0] = 0xE9; /* JMP near */
+                    *((uint16_t*)(&frag->image[1])) = 0; /* patch later */
+                }
+                else {
+                    /* 2 byte JMP */
+                    frag->fragment_length = 2;
+                    exeseg->segment_length += frag->fragment_length;
+                    frag->image.resize(frag->fragment_length);
+
+                    frag->image[0] = 0xEB; /* JMP short */
+                    frag->image[1] = 0; /* patch later */
+                }
+
+                exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
+                if (exeseg == NULL)
+                    return 1;
+
+                /* make the original entry point a symbol, change entry point to new place */
+                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
+                if (ls != NULL)
+                    return 1;
+
+                ls = new_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY");
                 if (ls == NULL)
                     return 1;
 
@@ -2548,329 +2855,18 @@ int main(int argc,char **argv) {
                 ls->fragment = entry_point.seg_link_target_fragment;
                 ls->in_file = entry_point.seg_link_target_fragment.get()->in_file;
                 ls->in_module = entry_point.seg_link_target_fragment.get()->in_module;
-            }
 
-            /* MS-DOS DOS drivers with relocations */
-            if (cmdoptions.output_format == OFMT_DOSDRV && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,cmdoptions.dosdrv_header_symbol.c_str(),in_fileRefUndef,in_fileModuleRefUndef);
-
-                if (ls != nullptr) {
-                    assert(ls->fragment != nullptr);
-                    assert(ls->segref != nullptr);
-
-                    if (ls->segref->segment_relative == cmdoptions.image_base_segment &&
-                        ls->segref->segment_offset == cmdoptions.image_base_offset &&
-                        ls->fragment->offset == 0 && ls->offset == 0 &&
-                        ls->fragment->fragment_length >= 10/*enough to contain entry points*/) {
-                        shared_ptr<struct link_segdef> exeseg;
-
-                        exeseg = find_link_segment(link_segments,"__DOSDRVREL_INIT");
-                        if (exeseg != NULL)
-                            return 1;
-
-                        exeseg = new_link_segment(link_segments,"__DOSDRVREL_INIT");
-                        if (exeseg == NULL)
-                            return 1;
-
-                        /* segment base and relative must match the entry point */
-                        exeseg->segment_group = ++cmdoptions.next_segment_group; /* at the end, if possible, presumably where the init code resides so it can be discarded after load */
-                        exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
-                        exeseg->segment_relative = cmdoptions.image_base_segment;
-                        exeseg->segment_base = cmdoptions.image_base_offset;
-                        exeseg->groupname = ls->segref->groupname;
-
-                        /* add patchup code */
-                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
-                        frag->in_file = in_fileRefInternal;
-                        frag->fragment_length = sizeof(dosdrvrel_entry_point);
-                        frag->image.resize(frag->fragment_length);
-                        memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
-
-                        {
-                            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
-                            if (ls != NULL)
-                                return 1;
-
-                            ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_APPLY");
-                            if (ls == NULL)
-                                return 1;
-
-                            ls->segref = exeseg;
-                            ls->groupdef = exeseg->groupname;
-                            ls->offset = 0;
-                            ls->fragment = frag;
-                            ls->in_file = in_fileRefInternal;
-                            ls->in_module = in_fileModuleRefUndef;
-                        }
-
-                        /* relocation table */
-                        frag = alloc_link_segment_fragment(exeseg.get());
-                        frag->in_file = in_fileRefInternal;
-                        frag->fragment_length = 2 * exe_relocation_table.size();
-                        frag->image.resize(frag->fragment_length);
-
-                        {
-                            shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
-                            if (ls != NULL)
-                                return 1;
-
-                            ls = new_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE");
-                            if (ls == NULL)
-                                return 1;
-
-                            ls->segref = exeseg;
-                            ls->groupdef = exeseg->groupname;
-                            ls->offset = 0;
-                            ls->fragment = frag;
-                            ls->in_file = in_fileRefInternal;
-                            ls->in_module = in_fileModuleRefUndef;
-                        }
-
-                        owlink_default_sort_seg(link_segments);
-
-                        if (cmdoptions.do_dosseg)
-                            owlink_dosseg_sort_order(link_segments);
-
-                        owlink_stack_bss_arrange(link_segments);
-                        if (trim_noemit(link_segments))
-                            return 1;
-                        if (fragment_def_arrange(link_segments))
-                            return 1;
-                        if (segment_def_arrange(link_segments))
-                            return 1;
-                        if (segment_exe_arrange(link_segments))
-                            return 1;
-                    }
-                    else {
-                        fprintf(stderr,"WARNING: Cannot patch DOS driver header to make relocatable\n");
-                    }
-                }
-            }
-
-            /* COM relocatable: Inject patch code and relocation table, put original entry point within, redirect entry point */
-            if (cmdoptions.output_format == OFMT_COM && cmdoptions.output_format_variant == OFMTVAR_COMREL && !exe_relocation_table.empty()) {
-                shared_ptr<struct link_segdef> exeseg;
-                uint32_t init_ip;
-
-                /* I'm not going to make up a guess that won't work. Give me an entry point! */
-                if (entry_point.seg_link_target == nullptr) {
-                    fprintf(stderr,"COMREL link target requires entry point\n");
-                    return 1;
-                }
-
-                {
-                    shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
-                    assert(frag != nullptr);
-
-                    if (entry_point.seg_link_target->segment_relative != cmdoptions.image_base_segment) {
-                        fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
-                                (unsigned long)entry_point.seg_link_target->segment_relative,
-                                (unsigned long)cmdoptions.image_base_segment);
-                        return 1;
-                    }
-
-                    init_ip = entry_point.seg_ofs + entry_point.seg_link_target->segment_offset + frag->offset;
-                }
-
-                assert(init_ip >= cmdoptions.image_base_offset);
-
-                exeseg = find_link_segment(link_segments,"__COMREL_INIT");
-                if (exeseg != NULL)
-                    return 1;
-
-                exeseg = new_link_segment(link_segments,"__COMREL_INIT");
-                if (exeseg == NULL)
-                    return 1;
-
-                exeseg->pinned = 1;
-                exeseg->segment_group = ++cmdoptions.next_segment_group;
-                exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
-                exeseg->segment_relative = cmdoptions.image_base_segment;
-                exeseg->segment_base = cmdoptions.image_base_offset;
-
-                {
-                    /* make the original entry point a symbol, change entry point to new place */
-                    shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
-                    if (ls != NULL)
-                        return 1;
-
-                    ls = new_link_symbol(link_symbols,"__COMREL_INIT_ORIGINAL_ENTRY");
-                    if (ls == NULL)
-                        return 1;
-
-                    ls->segref = entry_point.seg_link_target;
-                    ls->groupdef = entry_point.seg_link_target->groupname;
-                    ls->offset = entry_point.seg_ofs;
-                    ls->fragment = entry_point.seg_link_target_fragment;
-                    ls->in_file = entry_point.seg_link_target_fragment.get()->in_file;
-                    ls->in_module = entry_point.seg_link_target_fragment.get()->in_module;
-                }
-
-                {
-                    /* injected fixup code, wait until second pass to actually patch in values */
-                    shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
-                    frag->in_file = in_fileRefInternal;
-                    frag->fragment_length = sizeof(comrel_entry_point);
-                    frag->image.resize(frag->fragment_length);
-                    memcpy(&frag->image[0],comrel_entry_point,sizeof(comrel_entry_point));
-
-                    /* replace entry point */
-                    entry_point.seg_ofs = 0;
-                    entry_point.seg_link_frame = exeseg;
-                    entry_point.seg_link_target = exeseg;
-                    entry_point.seg_link_target_fragment = frag;
-
-                    {
-                        /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY",in_fileRefUndef,in_fileModuleRefUndef);
-                        if (ls != NULL)
-                            return 1;
-
-                        ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_APPLY");
-                        if (ls == NULL)
-                            return 1;
-
-                        ls->segref = exeseg;
-                        ls->groupdef = exeseg->groupname;
-                        ls->offset = 0;
-                        ls->fragment = frag;
-                        ls->in_file = in_fileRefInternal;
-                        ls->in_module = in_fileModuleRefUndef;
-                    }
-                }
-
-                {
-                    shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
-                    frag->in_file = in_fileRefInternal;
-                    frag->fragment_length = 2 * exe_relocation_table.size();
-                    frag->image.resize(frag->fragment_length);
-
-                    {
-                        /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
-                        if (ls != NULL)
-                            return 1;
-
-                        ls = new_link_symbol(link_symbols,"__COMREL_INIT_RELOC_TABLE");
-                        if (ls == NULL)
-                            return 1;
-
-                        ls->segref = exeseg;
-                        ls->groupdef = exeseg->groupname;
-                        ls->offset = 0;
-                        ls->fragment = frag;
-                        ls->in_file = in_fileRefInternal;
-                        ls->in_module = in_fileModuleRefUndef;
-                    }
-                }
+                /* the new entry point is the first byte of the .COM image */
+                entry_point.seg_ofs = 0;
+                entry_point.seg_link_frame = exeseg;
+                entry_point.seg_link_target = exeseg;
+                entry_point.seg_link_target_fragment = frag;
 
                 fragment_def_arrange(exeseg.get());
-                owlink_stack_bss_arrange(link_segments); /* __COMREL_INIT is meant to attach to the end of the .COM image */
                 if (segment_def_arrange(link_segments))
                     return 1;
                 if (segment_exe_arrange(link_segments))
                     return 1;
-            }
-
-            /* COM files: if the entry point is anywhere other than the start of the image, insert a JMP instruction */
-            if (cmdoptions.output_format == OFMT_COM) {
-                if (entry_point.seg_link_target != nullptr) {
-                    uint32_t init_ip;
-
-                    {
-                        shared_ptr<struct seg_fragment> frag = entry_point.seg_link_target_fragment;
-                        assert(frag != nullptr);
-
-                        if (entry_point.seg_link_target->segment_relative != cmdoptions.image_base_segment) {
-                            fprintf(stderr,"COM entry point must reside in the same segment as everything else (%lx != %lx)\n",
-                                    (unsigned long)entry_point.seg_link_target->segment_relative,
-                                    (unsigned long)cmdoptions.image_base_segment);
-                            return 1;
-                        }
-
-                        init_ip = entry_point.seg_ofs + entry_point.seg_link_target->segment_offset + frag->offset;
-                    }
-
-                    if (init_ip != cmdoptions.image_base_offset) {
-                        shared_ptr<struct link_segdef> exeseg;
-
-                        assert(init_ip > cmdoptions.image_base_offset);
-
-                        fprintf(stderr,"COM entry point does not point to beginning of image, adding JMP instruction\n");
-
-                        exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
-                        if (exeseg != NULL)
-                            return 1;
-
-                        /* segment MUST exist at the beginning of the file! COM executables always run from the first byte at 0x100! */
-                        exeseg = new_link_segment_begin(link_segments,"__COM_ENTRY_JMP");
-                        if (exeseg == NULL)
-                            return 1;
-
-                        exeseg->pinned = 1;
-                        exeseg->segment_reloc_adj = cmdoptions.image_base_segment_reloc_adjust;
-                        exeseg->segment_relative = cmdoptions.image_base_segment;
-                        exeseg->segment_base = cmdoptions.image_base_offset;
-
-                        size_t fidx;
-                        shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get(),/*&*/fidx);
-                        /* must be the FIRST in the segment! */
-                        assert(fidx == 0);
-                        frag->in_file = in_fileRefInternal;
-                        frag->offset = 0;
-
-                        if (init_ip >= (0x80+cmdoptions.image_base_offset)) {
-                            /* 3 byte JMP */
-                            frag->fragment_length = 3;
-                            exeseg->segment_length += frag->fragment_length;
-                            frag->image.resize(frag->fragment_length);
-
-                            frag->image[0] = 0xE9; /* JMP near */
-                            *((uint16_t*)(&frag->image[1])) = 0; /* patch later */
-                        }
-                        else {
-                            /* 2 byte JMP */
-                            frag->fragment_length = 2;
-                            exeseg->segment_length += frag->fragment_length;
-                            frag->image.resize(frag->fragment_length);
-
-                            frag->image[0] = 0xEB; /* JMP short */
-                            frag->image[1] = 0; /* patch later */
-                        }
-
-                        exeseg = find_link_segment(link_segments,"__COM_ENTRY_JMP");
-                        if (exeseg == NULL)
-                            return 1;
-
-                        /* make the original entry point a symbol, change entry point to new place */
-                        shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY",in_fileRefUndef,in_fileModuleRefUndef);
-                        if (ls != NULL)
-                            return 1;
-
-                        ls = new_link_symbol(link_symbols,"__COM_ENTRY_ORIGINAL_ENTRY");
-                        if (ls == NULL)
-                            return 1;
-
-                        ls->segref = entry_point.seg_link_target;
-                        ls->groupdef = entry_point.seg_link_target->groupname;
-                        ls->offset = entry_point.seg_ofs;
-                        ls->fragment = entry_point.seg_link_target_fragment;
-                        ls->in_file = entry_point.seg_link_target_fragment.get()->in_file;
-                        ls->in_module = entry_point.seg_link_target_fragment.get()->in_module;
-
-                        /* the new entry point is the first byte of the .COM image */
-                        entry_point.seg_ofs = 0;
-                        entry_point.seg_link_frame = exeseg;
-                        entry_point.seg_link_target = exeseg;
-                        entry_point.seg_link_target_fragment = frag;
-
-                        fragment_def_arrange(exeseg.get());
-                        if (segment_def_arrange(link_segments))
-                            return 1;
-                        if (segment_exe_arrange(link_segments))
-                            return 1;
-                    }
-                }
             }
         }
     }
