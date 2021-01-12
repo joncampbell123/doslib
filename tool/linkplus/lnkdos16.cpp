@@ -1983,6 +1983,23 @@ int parse_MODEND(vector< shared_ptr<struct link_segdef> > &link_segments,struct 
     return 0;
 }
 
+int apply_relocation_fixup(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments) {
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+
+        current_segment_group = in_file->segment_group;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
+
+            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_BUILD))
+                return 1;
+        }
+    }
+
+    current_segment_group = -1;
+    return 0;
+}
+
 int compute_exe_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments) {
     for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
         auto in_file = *fi;
@@ -2896,18 +2913,8 @@ int main(int argc,char **argv) {
     }
 
     /* apply relocations (second symbol pass) */
-    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
-        auto in_file = *fi;
-
-        current_segment_group = in_file->segment_group;
-        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
-            auto in_mod = *mi;
-
-            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_BUILD))
-                return 1;
-        }
-    }
-    current_segment_group = -1;
+    if (apply_relocation_fixup(exe_relocation_table,link_symbols,link_segments))
+        return 1;
 
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
 
