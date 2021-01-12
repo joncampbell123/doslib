@@ -2239,7 +2239,7 @@ int main(int argc,char **argv) {
                 do {
                     ret = omf_context_read_fd(omf_state,fd);
                     if (ret == 0) {
-                        if (pass == PASS_GATHER && omf_state->THEADR != NULL) {
+                        if (omf_state->THEADR != NULL) {
                             const char *s = omf_state->THEADR;
                             const char *scan = s;
                             while (scan[0] != 0 && scan[1] != 0) {
@@ -2251,29 +2251,24 @@ int main(int argc,char **argv) {
 
                             current_in_file_module->name = s;
                         }
-                        if (pass == PASS_GATHER && grpdef_add(link_segments, omf_state, 0))
+                        if (grpdef_add(link_segments, omf_state, 0))
                             return 1;
-                        if (pass == PASS_GATHER && pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
+                        if (pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                             return 1;
 
-                        if (pass == PASS_GATHER) {
-                            assert(current_in_file_module->omf_state == NULL);
-                            if ((current_in_file_module->omf_state=omf_context_create()) == NULL) {
-                                fprintf(stderr,"Failed to init OMF parsing state\n");
-                                return 1;
-                            }
+                        assert(current_in_file_module->omf_state == NULL);
+                        if ((current_in_file_module->omf_state=omf_context_create()) == NULL) {
+                            fprintf(stderr,"Failed to init OMF parsing state\n");
+                            return 1;
+                        }
 
-                            /* transfer ownership to new OMF object by swapping valid pointers with NULL pointers in new struct */
-                            swap(current_in_file_module->omf_state->LNAMEs,         omf_state->LNAMEs);
-                            swap(current_in_file_module->omf_state->SEGDEFs,        omf_state->SEGDEFs);
-                            swap(current_in_file_module->omf_state->GRPDEFs,        omf_state->GRPDEFs);
-                            swap(current_in_file_module->omf_state->EXTDEFs,        omf_state->EXTDEFs);
-                            swap(current_in_file_module->omf_state->PUBDEFs,        omf_state->PUBDEFs);
-                            swap(current_in_file_module->omf_state->FIXUPPs,        omf_state->FIXUPPs);
-                        }
-                        else {
-                            assert(current_in_file_module->omf_state != NULL);
-                        }
+                        /* transfer ownership to new OMF object by swapping valid pointers with NULL pointers in new struct */
+                        swap(current_in_file_module->omf_state->LNAMEs,         omf_state->LNAMEs);
+                        swap(current_in_file_module->omf_state->SEGDEFs,        omf_state->SEGDEFs);
+                        swap(current_in_file_module->omf_state->GRPDEFs,        omf_state->GRPDEFs);
+                        swap(current_in_file_module->omf_state->EXTDEFs,        omf_state->EXTDEFs);
+                        swap(current_in_file_module->omf_state->PUBDEFs,        omf_state->PUBDEFs);
+                        swap(current_in_file_module->omf_state->FIXUPPs,        omf_state->FIXUPPs);
 
                         omf_context_clear_for_module(omf_state);
 
@@ -2367,7 +2362,7 @@ int main(int argc,char **argv) {
                                 if (omf_state->flags.verbose)
                                     dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                                if (pass == PASS_GATHER && segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module, pass))
+                                if (segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module, pass))
                                     return 1;
                             } break;
                         case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -2394,15 +2389,15 @@ int main(int argc,char **argv) {
                                     return 1;
                                 }
 
-                                if (omf_state->flags.verbose && pass == PASS_GATHER)
+                                if (omf_state->flags.verbose)
                                     dump_LEDATA(stdout,omf_state,&info);
 
-                                if (pass == PASS_GATHER && ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module, pass))
+                                if (ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module, pass))
                                     return 1;
                             } break;
                         case OMF_RECTYPE_MODEND:/*0x8A*/
                         case OMF_RECTYPE_MODEND32:/*0x8B*/
-                            if (pass == PASS_GATHER && parse_MODEND(link_segments, omf_state, current_in_file, current_in_file_module, entry_point))
+                            if (parse_MODEND(link_segments, omf_state, current_in_file, current_in_file_module, entry_point))
                                 return 1;
                             break;
                         default:
