@@ -2435,8 +2435,7 @@ int main(int argc,char **argv) {
         for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
             auto in_mod = *mi;
 
-            link_symbols.insert(    link_symbols.end(),     in_mod->link_symbols.begin(),   in_mod->link_symbols.end());
-
+            link_symbols.insert(link_symbols.end(),in_mod->link_symbols.begin(),in_mod->link_symbols.end());
             in_mod->link_symbols.clear();
         }
     }
