@@ -554,6 +554,9 @@ bool owlink_segsrt_def_qsort_cmp(const shared_ptr<struct link_segdef> &sa, const
 
 void owlink_default_sort_seg(vector< shared_ptr<struct link_segdef> > &link_segments) {
     sort(link_segments.begin(), link_segments.end(), owlink_segsrt_def_qsort_cmp);
+
+    if (cmdoptions.do_dosseg)
+        owlink_dosseg_sort_order(link_segments);
 }
 
 void owlink_stack_bss_arrange(vector< shared_ptr<struct link_segdef> > &link_segments) {
@@ -2396,9 +2399,6 @@ int main(int argc,char **argv) {
 
     owlink_default_sort_seg(link_segments);
 
-    if (cmdoptions.do_dosseg)
-        owlink_dosseg_sort_order(link_segments);
-
     {
         unsigned int i;
 
@@ -2621,9 +2621,6 @@ int main(int argc,char **argv) {
                 }
 
                 owlink_default_sort_seg(link_segments);
-
-                if (cmdoptions.do_dosseg)
-                    owlink_dosseg_sort_order(link_segments);
 
                 owlink_stack_bss_arrange(link_segments);
                 if (trim_noemit(link_segments))
