@@ -2362,22 +2362,21 @@ int main(int argc,char **argv) {
         }
     }
 
-    /* now gather and assemble the object segments and symbols and apply relocations */
-    for (pass=0;pass < PASS_MAX;pass++) {
-        if (pass == PASS_GATHER) {
-            for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
-                auto in_file = *fi;
+    /* gather symbols */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
 
-                for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
-                    auto in_mod = *mi;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
 
-                    link_symbols.insert(    link_symbols.end(),     in_mod->link_symbols.begin(),   in_mod->link_symbols.end());
+            link_symbols.insert(    link_symbols.end(),     in_mod->link_symbols.begin(),   in_mod->link_symbols.end());
 
-                    in_mod->link_symbols.clear();
-                }
-            }
+            in_mod->link_symbols.clear();
         }
+    }
 
+    /* apply relocations */
+    for (pass=0;pass < PASS_MAX;pass++) {
         for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
             auto in_file = *fi;
 
