@@ -1990,7 +1990,6 @@ int main(int argc,char **argv) {
     vector< shared_ptr<struct exe_relocation> > exe_relocation_table;
     unsigned char diddump = 0;
     string hex_output_name;
-    unsigned char pass;
     int i,fd,ret;
     char *a;
 
@@ -2375,28 +2374,25 @@ int main(int argc,char **argv) {
         }
     }
 
-    /* apply relocations */
-    for (pass=0;pass < PASS_MAX;pass++) {
-        for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
-            auto in_file = *fi;
+    /* compute relocations (first symbol pass) */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
 
-            current_segment_group = in_file->segment_group;
-            for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
-                auto in_mod = *mi;
+        current_segment_group = in_file->segment_group;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
 
-                for (auto si=link_segments.begin();si!=link_segments.end();si++) {
-                    auto in_seg = *si;
+            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
+                auto in_seg = *si;
 
-                    in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
-                }
-
-                if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,pass))
-                    return 1;
+                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
             }
-        }
 
-        current_segment_group = -1;
+            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_GATHER))
+                return 1;
+        }
     }
+    current_segment_group = -1;
 
     owlink_default_sort_seg(link_segments);
 
@@ -2899,6 +2895,26 @@ int main(int argc,char **argv) {
             linkseg_add_padding_fragments(link_segments[li].get());
         }
     }
+
+    /* apply relocations (second symbol pass) */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+
+        current_segment_group = in_file->segment_group;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
+
+            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
+                auto in_seg = *si;
+
+                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
+            }
+
+            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_BUILD))
+                return 1;
+        }
+    }
+    current_segment_group = -1;
 
     sort(link_segments.begin(), link_segments.end(), link_segments_qsort_by_linofs);
 
