@@ -100,8 +100,10 @@ struct input_module {
     vector< shared_ptr<struct link_symbol> > link_symbols;
 
     ~input_module() {
-        omf_context_clear(omf_state);
-        omf_state = omf_context_destroy(omf_state);
+        if (omf_state != nullptr) {
+            omf_context_clear(omf_state);
+            omf_state = omf_context_destroy(omf_state);
+        }
     }
 };
 
