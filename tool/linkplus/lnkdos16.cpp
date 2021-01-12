@@ -1450,7 +1450,9 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
     return 0;
 }
 
-int grpdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first) {
+int grpdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state) {
+    unsigned int first = 0;
+
     while (first < omf_state->GRPDEFs.omf_GRPDEFS_count) {
         struct omf_grpdef_t *gd = &omf_state->GRPDEFs.omf_GRPDEFS[first++];
         const char *grpdef_name;
@@ -1501,8 +1503,9 @@ int grpdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
     return 0;
 }
 
-int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,unsigned int tag,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int tag,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
     const unsigned char is_local = (tag == OMF_RECTYPE_LPUBDEF) || (tag == OMF_RECTYPE_LPUBDEF32);
+    unsigned int first = 0;
 
     (void)pass;
 
@@ -2251,9 +2254,9 @@ int main(int argc,char **argv) {
 
                             current_in_file_module->name = s;
                         }
-                        if (grpdef_add(link_segments, omf_state, 0))
+                        if (grpdef_add(link_segments, omf_state))
                             return 1;
-                        if (pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
+                        if (pubdef_add(link_symbols, link_segments, omf_state, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                             return 1;
 
                         assert(current_in_file_module->omf_state == NULL);
