@@ -2396,7 +2396,10 @@ int main(int argc,char **argv) {
         }
 
         current_segment_group = -1;
-        if (pass == PASS_GATHER) {
+    }
+
+    {
+        {
             owlink_default_sort_seg(link_segments);
 
             if (cmdoptions.do_dosseg)
