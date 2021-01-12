@@ -1985,6 +1985,29 @@ int parse_MODEND(vector< shared_ptr<struct link_segdef> > &link_segments,struct 
     return 0;
 }
 
+int compute_exe_relocations(vector< shared_ptr<struct exe_relocation> > &exe_relocation_table,vector< shared_ptr<struct link_symbol> > &link_symbols,vector< shared_ptr<struct link_segdef> > &link_segments) {
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+
+        current_segment_group = in_file->segment_group;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
+
+            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
+                auto in_seg = *si;
+
+                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
+            }
+
+            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_GATHER))
+                return 1;
+        }
+    }
+
+    current_segment_group = -1;
+    return 0;
+}
+
 int main(int argc,char **argv) {
     entrypoint entry_point;
     string hex_output_tmpfile;
@@ -2378,24 +2401,8 @@ int main(int argc,char **argv) {
     }
 
     /* compute relocations (first symbol pass) */
-    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
-        auto in_file = *fi;
-
-        current_segment_group = in_file->segment_group;
-        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
-            auto in_mod = *mi;
-
-            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
-                auto in_seg = *si;
-
-                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
-            }
-
-            if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_GATHER))
-                return 1;
-        }
-    }
-    current_segment_group = -1;
+    if (compute_exe_relocations(exe_relocation_table,link_symbols,link_segments))
+        return 1;
 
     owlink_default_sort_seg(link_segments);
 
