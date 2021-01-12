@@ -1573,9 +1573,7 @@ int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
     return 0;
 }
 
-int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
-    (void)pass;
-
+int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module) {
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
         const char *classname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->class_name_index);
@@ -2331,7 +2329,7 @@ int main(int argc,char **argv) {
                                 if (omf_state->flags.verbose)
                                     dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                                if (segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module, pass))
+                                if (segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module))
                                     return 1;
                             } break;
                         case OMF_RECTYPE_GRPDEF:/*0x9A*/
