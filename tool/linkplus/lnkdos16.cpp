@@ -2020,6 +2020,35 @@ void mark_typical_noemit(vector< shared_ptr<struct link_segdef> > &link_segments
     }
 }
 
+void ensure_minimum_stack(vector< shared_ptr<struct link_segdef> > &link_segments) {
+    /* NTS: segment_length has not been computed yet, count fragments */
+    shared_ptr<struct link_segdef> stacksg;
+
+    {
+        shared_ptr<struct link_segdef> ssg;
+        unsigned int i;
+
+        for (i=0;i < link_segments.size();i++) {
+            ssg = link_segments[i];
+
+            if (ssg->classname == "STACK")
+                stacksg = ssg;
+        }
+    }
+
+    if (stacksg != NULL) {
+        fragment_def_arrange(stacksg.get());
+        if (stacksg->segment_length < cmdoptions.want_stack_size) {
+            shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(stacksg.get());
+            frag->offset = stacksg->segment_length;
+            frag->attr = stacksg->attr;
+            frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
+            stacksg->segment_length += frag->fragment_length;
+            frag->in_file = in_fileRefInternal;
+        }
+    }
+}
+
 int main(int argc,char **argv) {
     entrypoint entry_point;
     string hex_output_tmpfile;
@@ -2419,34 +2448,8 @@ int main(int argc,char **argv) {
     owlink_default_sort_seg(link_segments);
     mark_typical_noemit(link_segments);
 
-    if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-        /* NTS: segment_length has not been computed yet, count fragments */
-        shared_ptr<struct link_segdef> stacksg;
-
-        {
-            shared_ptr<struct link_segdef> ssg;
-            unsigned int i;
-
-            for (i=0;i < link_segments.size();i++) {
-                ssg = link_segments[i];
-
-                if (ssg->classname == "STACK")
-                    stacksg = ssg;
-            }
-        }
-
-        if (stacksg != NULL) {
-            fragment_def_arrange(stacksg.get());
-            if (stacksg->segment_length < cmdoptions.want_stack_size) {
-                shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(stacksg.get());
-                frag->offset = stacksg->segment_length;
-                frag->attr = stacksg->attr;
-                frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
-                stacksg->segment_length += frag->fragment_length;
-                frag->in_file = in_fileRefInternal;
-            }
-        }
-    }
+    if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE)
+        ensure_minimum_stack(link_segments);
 
     {
         /* entry point checkup */
