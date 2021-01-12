@@ -1103,10 +1103,7 @@ int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
         return 1;
     }
 
-    /* NTS: For simplicity reasons, load_index is cleared before every object file,
-     *      and is set by SEGDEF parsing which allows only ONE fragment from a segment
-     *      in an individual object file. */
-    shared_ptr<struct seg_fragment> frag = lsg->fragment_load_index;
+    shared_ptr<struct seg_fragment> frag = lsg->fragments.back();
 
     unsigned long max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (max_ofs > frag->fragment_length) {
@@ -1550,13 +1547,12 @@ int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
         }
 
         assert(!lsg->fragments.empty());
-        assert(lsg->fragment_load_index != nullptr);
 
         /* NTS: For simplicity reasons, load_index is cleared before every object file,
          *      and is set by SEGDEF parsing which allows only ONE fragment from a segment
          *      in an individual object file. */
 
-        sym->fragment = lsg->fragment_load_index;
+        sym->fragment = lsg->fragments.back();
         sym->offset = pubdef->public_offset;
         sym->groupdef = groupname;
         sym->segref = lsg;
@@ -1622,7 +1618,6 @@ int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
 
         {
             shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
-            lsg->fragment_load_index = f;
 
             f->in_file = in_file;
             f->in_module = in_module;
@@ -2227,11 +2222,6 @@ int main(int argc,char **argv) {
 
                     omf_context_clear_for_module(omf_state);
 
-                    for (auto li=link_segments.begin();li!=link_segments.end();li++) {
-                        shared_ptr<struct link_segdef> sd = *li;
-                        sd->fragment_load_index = fragmentRefUndef;
-                    }
-
                     if (omf_record_is_modend(&omf_state->record)) {
                         if (!diddump && cmdoptions.verbose) {
                             my_dumpstate(omf_state);
@@ -2361,11 +2351,6 @@ int main(int argc,char **argv) {
 
             omf_context_clear(omf_state);
             omf_state = omf_context_destroy(omf_state);
-
-            for (auto li=link_segments.begin();li!=link_segments.end();li++) {
-                shared_ptr<struct link_segdef> sd = *li;
-                sd->fragment_load_index = fragmentRefUndef;
-            }
 
             close(fd);
             current_segment_group = -1;
