@@ -97,6 +97,8 @@ struct input_module {
 
     struct omf_context_t*               omf_state = NULL;
 
+    vector< shared_ptr<struct link_symbol> > link_symbols;
+
     ~input_module() {
         omf_context_clear(omf_state);
         omf_state = omf_context_destroy(omf_state);
@@ -2256,7 +2258,7 @@ int main(int argc,char **argv) {
                         }
                         if (grpdef_add(link_segments, omf_state))
                             return 1;
-                        if (pubdef_add(link_symbols, link_segments, omf_state, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
+                        if (pubdef_add(current_in_file_module->link_symbols, link_segments, omf_state, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                             return 1;
 
                         assert(current_in_file_module->omf_state == NULL);
@@ -2427,6 +2429,21 @@ int main(int argc,char **argv) {
                 if (current_in_file->modules.size() == 1) {
                     for (auto mi=current_in_file->modules.begin();mi!=current_in_file->modules.end();mi++)
                         (*mi)->index = ~((size_t)(0u));
+                }
+            }
+        }
+
+        if (pass == PASS_GATHER) {
+            for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+                auto in_file = *fi;
+
+                current_segment_group = in_file->segment_group;
+                for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+                    auto in_mod = *mi;
+
+                    link_symbols.insert(    link_symbols.end(),     in_mod->link_symbols.begin(),   in_mod->link_symbols.end());
+
+                    in_mod->link_symbols.clear();
                 }
             }
         }
