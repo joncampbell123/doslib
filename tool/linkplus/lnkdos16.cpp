@@ -2412,12 +2412,6 @@ int main(int argc,char **argv) {
         }
 
         current_segment_group = -1;
-        for (auto si=link_segments.begin();si!=link_segments.end();si++) {
-            auto in_seg = *si;
-
-            in_seg->fragment_load_index = fragmentRefUndef;
-        }
-
         if (pass == PASS_GATHER) {
             owlink_default_sort_seg(link_segments);
 
