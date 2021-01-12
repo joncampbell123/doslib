@@ -1074,7 +1074,7 @@ shared_ptr<struct link_segdef> new_link_segment_begin(vector< shared_ptr<struct 
     return sg;
 }
 
-int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module) {
     (void)in_module;
     (void)in_file;
 
@@ -1114,14 +1114,12 @@ int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
         return 1;
     }
 
-    if (pass == PASS_GATHER) {
-        assert(info->data != NULL);
-        if (frag->image.size() < frag->fragment_length) frag->image.resize(frag->fragment_length);
-        assert(frag->image.size() >= frag->fragment_length);
-        assert(max_ofs >= (unsigned long)info->data_length);
-        max_ofs -= (unsigned long)info->data_length;
-        memcpy(&frag->image[max_ofs], info->data, info->data_length);
-    }
+    assert(info->data != NULL);
+    if (frag->image.size() < frag->fragment_length) frag->image.resize(frag->fragment_length);
+    assert(frag->image.size() >= frag->fragment_length);
+    assert(max_ofs >= (unsigned long)info->data_length);
+    max_ofs -= (unsigned long)info->data_length;
+    memcpy(&frag->image[max_ofs], info->data, info->data_length);
 
     return 0;
 }
@@ -1553,7 +1551,6 @@ int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
             return -1;
         }
 
-        assert(pass == PASS_GATHER);
         assert(!lsg->fragments.empty());
         assert(lsg->fragment_load_index != nullptr);
 
@@ -2359,7 +2356,7 @@ int main(int argc,char **argv) {
                                 if (omf_state->flags.verbose)
                                     dump_LEDATA(stdout,omf_state,&info);
 
-                                if (ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module, pass))
+                                if (ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module))
                                     return 1;
                             } break;
                         case OMF_RECTYPE_MODEND:/*0x8A*/
