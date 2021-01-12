@@ -2437,7 +2437,6 @@ int main(int argc,char **argv) {
             for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
                 auto in_file = *fi;
 
-                current_segment_group = in_file->segment_group;
                 for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
                     auto in_mod = *mi;
 
