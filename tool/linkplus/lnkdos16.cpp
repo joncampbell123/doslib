@@ -1016,6 +1016,17 @@ shared_ptr<struct link_segdef> find_link_segment_by_class_last(vector< shared_pt
     return ret;
 }
 
+fragmentRef find_link_segment_by_file_module(const struct link_segdef * const sg,const in_fileRef in_file,const in_fileModuleRef in_module) {
+    for (auto i=sg->fragments.begin();i != sg->fragments.end();i++) {
+        const struct seg_fragment *f = (*i).get();
+
+        if (f->in_file == in_file && f->in_module == in_module)
+            return (*i);
+    }
+
+    return fragmentRefUndef;
+}
+
 fragmentRef find_link_segment_by_file_module_and_segment_index(const struct link_segdef * const sg,const in_fileRef in_file,const in_fileModuleRef in_module,const segmentIndex TargetDatum) {
     for (auto i=sg->fragments.begin();i != sg->fragments.end();i++) {
         const struct seg_fragment *f = (*i).get();
@@ -2263,9 +2274,6 @@ int main(int argc,char **argv) {
                         assert(current_in_file_module->omf_state != NULL);
                     }
 
-                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,current_in_file_module->omf_state,current_in_file,current_in_file_module,pass))
-                        return 1;
-
                     omf_context_clear_for_module(omf_state);
 
                     for (auto li=link_segments.begin();li!=link_segments.end();li++) {
@@ -2421,6 +2429,31 @@ int main(int argc,char **argv) {
                 for (auto mi=current_in_file->modules.begin();mi!=current_in_file->modules.end();mi++)
                     (*mi)->index = ~((size_t)(0u));
             }
+        }
+
+        for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+            auto in_file = *fi;
+
+            current_segment_group = in_file->segment_group;
+            for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+                auto in_mod = *mi;
+
+                for (auto si=link_segments.begin();si!=link_segments.end();si++) {
+                    auto in_seg = *si;
+
+                    in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
+                }
+
+                if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,pass))
+                    return 1;
+            }
+        }
+
+        current_segment_group = -1;
+        for (auto si=link_segments.begin();si!=link_segments.end();si++) {
+            auto in_seg = *si;
+
+            in_seg->fragment_load_index = fragmentRefUndef;
         }
 
         if (pass == PASS_GATHER) {
