@@ -2008,6 +2008,18 @@ int compute_exe_relocations(vector< shared_ptr<struct exe_relocation> > &exe_rel
     return 0;
 }
 
+void mark_typical_noemit(vector< shared_ptr<struct link_segdef> > &link_segments) {
+    unsigned int i;
+
+    for (i=0;i < link_segments.size();i++) {
+        shared_ptr<struct link_segdef> ssg = link_segments[i];
+
+        if (ssg->classname == "STACK" || ssg->classname == "BSS") {
+            ssg->noemit = 1;
+        }
+    }
+}
+
 int main(int argc,char **argv) {
     entrypoint entry_point;
     string hex_output_tmpfile;
@@ -2405,18 +2417,7 @@ int main(int argc,char **argv) {
         return 1;
 
     owlink_default_sort_seg(link_segments);
-
-    {
-        unsigned int i;
-
-        for (i=0;i < link_segments.size();i++) {
-            shared_ptr<struct link_segdef> ssg = link_segments[i];
-
-            if (ssg->classname == "STACK" || ssg->classname == "BSS") {
-                ssg->noemit = 1;
-            }
-        }
-    }
+    mark_typical_noemit(link_segments);
 
     if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         /* NTS: segment_length has not been computed yet, count fragments */
