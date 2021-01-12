@@ -94,6 +94,13 @@ struct input_module {
     size_t                              index = ~((size_t)(0u));
     string                              name;
     weak_ptr<input_file>                file;
+
+    struct omf_context_t*               omf_state = NULL;
+
+    ~input_module() {
+        omf_context_clear(omf_state);
+        omf_state = omf_context_destroy(omf_state);
+    }
 };
 
 typedef shared_ptr<input_module>        in_fileModuleRef;
@@ -2236,7 +2243,27 @@ int main(int argc,char **argv) {
                         return 1;
                     if (pass == PASS_GATHER && pubdef_add(link_symbols, link_segments, omf_state, 0, omf_state->record.rectype, current_in_file, current_in_file_module, pass))
                         return 1;
-                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,omf_state,current_in_file,current_in_file_module,pass))
+
+                    if (pass == PASS_GATHER) {
+                        assert(current_in_file_module->omf_state == NULL);
+                        if ((current_in_file_module->omf_state=omf_context_create()) == NULL) {
+                            fprintf(stderr,"Failed to init OMF parsing state\n");
+                            return 1;
+                        }
+
+                        /* transfer ownership to new OMF object by swapping valid pointers with NULL pointers in new struct */
+                        swap(current_in_file_module->omf_state->LNAMEs,         omf_state->LNAMEs);
+                        swap(current_in_file_module->omf_state->SEGDEFs,        omf_state->SEGDEFs);
+                        swap(current_in_file_module->omf_state->GRPDEFs,        omf_state->GRPDEFs);
+                        swap(current_in_file_module->omf_state->EXTDEFs,        omf_state->EXTDEFs);
+                        swap(current_in_file_module->omf_state->PUBDEFs,        omf_state->PUBDEFs);
+                        swap(current_in_file_module->omf_state->FIXUPPs,        omf_state->FIXUPPs);
+                    }
+                    else {
+                        assert(current_in_file_module->omf_state != NULL);
+                    }
+
+                    if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,current_in_file_module->omf_state,current_in_file,current_in_file_module,pass))
                         return 1;
 
                     omf_context_clear_for_module(omf_state);
