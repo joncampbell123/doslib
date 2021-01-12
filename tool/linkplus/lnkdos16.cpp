@@ -328,7 +328,6 @@ struct link_segdef {
     segmentRelative                     segment_relative;   /* segment number relative to image base segment in memory [*1] */
     segmentRelative                     segment_reloc_adj;  /* segment relocation adjustment at FIXUP time */
     alignMask                           segment_alignment;  /* alignment of segment. This is a bitmask. */
-    fragmentRef                         fragment_load_index;/* current fragment, used when processing LEDATA and OMF symbols, in both passes */
     vector< shared_ptr<struct seg_fragment> > fragments;    /* fragments (one from each OBJ/module) */
 
     int                                 segment_group;
@@ -338,8 +337,8 @@ struct link_segdef {
     unsigned int                        header:1;           /* segment is executable header stuff */
 
     link_segdef() : attr({0,0,{0}}), file_offset(fileOffsetUndef), linear_offset(linearAddressUndef), segment_base(0), segment_offset(segmentOffsetUndef),
-                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), fragment_load_index(fragmentRefUndef),
-                    segment_group(-1), pinned(0), noemit(0), header(0) { }
+                    segment_length(0), segment_relative(0), segment_reloc_adj(0), segment_alignment(byteAlignMask), segment_group(-1), pinned(0),
+                    noemit(0), header(0) { }
 };
 /* NOTE [*1]: segment_relative has meaning only in segmented modes. In real mode, it is useful in determining where things
  *            are in memory because of the nature of 16-bit real mode, where it is a segment value relative to a base
@@ -1144,7 +1143,7 @@ int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
             return -1;
         }
 
-        auto frag = lsg->fragment_load_index;
+        auto frag = find_link_segment_by_file_module(lsg.get(),in_file,in_module);
         assert(frag != nullptr);
 
         *fseg = lsg->segment_relative;
@@ -1164,7 +1163,7 @@ int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
             return -1;
         }
 
-        auto frag = lsg->fragment_load_index;
+        auto frag = find_link_segment_by_file_module(lsg.get(),in_file,in_module);
         assert(frag != nullptr);
 
         *fseg = lsg->segment_relative;
@@ -1297,8 +1296,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
         /* assuming each OBJ/module has only one of each named segment,
          * get the fragment it belongs to */
         assert(current_link_segment != nullptr);
-        assert(current_link_segment->fragment_load_index != nullptr);
-        frag = current_link_segment->fragment_load_index;
+        frag = find_link_segment_by_file_module(current_link_segment.get(),in_file,in_module);
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1363,9 +1361,8 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                         return -1;
                     }
 
-                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                     reloc->segref = current_link_segment;
-                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->fragment = find_link_segment_by_file_module(current_link_segment.get(),in_file,in_module);
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                     if (cmdoptions.verbose)
@@ -1401,9 +1398,8 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                         return -1;
                     }
 
-                    assert(current_link_segment->fragment_load_index != fragmentRefUndef);
                     reloc->segref = current_link_segment;
-                    reloc->fragment = current_link_segment->fragment_load_index;
+                    reloc->fragment = find_link_segment_by_file_module(current_link_segment.get(),in_file,in_module);
                     reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                     if (cmdoptions.verbose)
@@ -1994,12 +1990,6 @@ int compute_exe_relocations(vector< shared_ptr<struct exe_relocation> > &exe_rel
         current_segment_group = in_file->segment_group;
         for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
             auto in_mod = *mi;
-
-            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
-                auto in_seg = *si;
-
-                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
-            }
 
             if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_GATHER))
                 return 1;
@@ -2912,12 +2902,6 @@ int main(int argc,char **argv) {
         current_segment_group = in_file->segment_group;
         for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
             auto in_mod = *mi;
-
-            for (auto si=link_segments.begin();si!=link_segments.end();si++) {
-                auto in_seg = *si;
-
-                in_seg->fragment_load_index = find_link_segment_by_file_module(in_seg.get(),in_file,in_mod);
-            }
 
             if (apply_FIXUPP(exe_relocation_table,link_symbols,link_segments,in_mod->omf_state,in_file,in_mod,PASS_BUILD))
                 return 1;
