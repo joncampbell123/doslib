@@ -1574,6 +1574,8 @@ int pubdef_add(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
 }
 
 int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state,unsigned int first,in_fileRef in_file,in_fileModuleRef in_module,unsigned int pass) {
+    (void)pass;
+
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
         const char *classname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->class_name_index);
@@ -1581,101 +1583,63 @@ int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
 
         if (*name == 0) continue;
 
-        if (pass == PASS_BUILD) {
-            shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
-            if (lsg == NULL) {
-                fprintf(stderr,"No SEGDEF '%s'\n",name);
+        shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
+
+        if (lsg != nullptr) {
+            if (lsg->segment_group < current_segment_group)
+                lsg = nullptr;
+        }
+
+        if (lsg != NULL) {
+            /* it is an error to change attributes */
+            if (cmdoptions.verbose)
+                fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
+
+            if (lsg->attr.f.f.combination != sg->attr.f.f.combination ||
+                    lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
+                fprintf(stderr,"ERROR, segment attribute changed\n");
                 return -1;
-            }
-            if (lsg->fragments.empty()) {
-                fprintf(stderr,"SEGDEF '%s' with no fragments on second pass?\n",name);
-                return -1;
-            }
-
-            /* match fragment to input file, input module.
-             * Remember: For simplicity reasons, only ONE FRAGMENT per segment per module. We do not allow an OBJ to SEGDEF the same name twice. */
-            lsg->fragment_load_index = nullptr;
-            for (auto fi=lsg->fragments.begin();fi!=lsg->fragments.end();fi++) {
-                if ((*fi)->in_file == in_file && (*fi)->in_module == in_module && (*fi)->from_segment_index == first) {
-                    lsg->fragment_load_index = *fi;
-                    break;
-                }
-            }
-
-            if (lsg->fragment_load_index == nullptr) {
-                fprintf(stderr,"SEGDEF '%s', second pass, failed to find fragment\n",name);
-                dump_link_segments(link_segments,DUMPLS_LINEAR);
-                return -1;
-            }
-
-            {
-                shared_ptr<struct seg_fragment> f = lsg->fragment_load_index;
-
-                assert(f->in_file == in_file);
-                assert(f->in_module == in_module);
-                assert(f->from_segment_index == first); /* NTS: remember the code above does first++, so this is 1 based, like OMF */
-                assert(f->fragment_length == sg->segment_length);
             }
         }
-        else if (pass == PASS_GATHER) {
-            shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
+        else {
+            if (cmdoptions.verbose)
+                fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
 
-            if (lsg != nullptr) {
-                if (lsg->segment_group < current_segment_group)
-                    lsg = nullptr;
+            lsg = new_link_segment(link_segments,name);
+            if (lsg == NULL) {
+                fprintf(stderr,"Cannot add segment\n");
+                return -1;
             }
 
-            if (lsg != NULL) {
-                /* it is an error to change attributes */
-                if (cmdoptions.verbose)
-                    fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
+            lsg->attr = sg->attr;
+            lsg->classname = classname;
+            lsg->segment_group = current_segment_group;
+        }
 
-                if (lsg->attr.f.f.combination != sg->attr.f.f.combination ||
-                    lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
-                    fprintf(stderr,"ERROR, segment attribute changed\n");
-                    return -1;
-                }
+        /* We no longer allow one OBJ file/module to define the same segment twice.
+         * That way, only one fragment exists for a segment, one from each object file. */
+        if (!lsg->fragments.empty()) {
+            shared_ptr<struct seg_fragment> f = lsg->fragments.back(); /* last entry */
+
+            if (f->in_file == in_file && f->in_module == in_module) {
+                fprintf(stderr,"Segment '%s' defined more than once in an individual object file\n",name);
+                return -1;
             }
-            else {
-                if (cmdoptions.verbose)
-                    fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
+        }
 
-                lsg = new_link_segment(link_segments,name);
-                if (lsg == NULL) {
-                    fprintf(stderr,"Cannot add segment\n");
-                    return -1;
-                }
+        {
+            shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
+            lsg->fragment_load_index = f;
 
-                lsg->attr = sg->attr;
-                lsg->classname = classname;
-                lsg->segment_group = current_segment_group;
-            }
+            f->in_file = in_file;
+            f->in_module = in_module;
+            f->from_segment_index = first; /* NTS: remember the code above does first++, so this is 1 based, like OMF */
+            f->fragment_length = sg->segment_length;
+            f->fragment_alignment = alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
+            f->attr = sg->attr;
 
-            /* We no longer allow one OBJ file/module to define the same segment twice.
-             * That way, only one fragment exists for a segment, one from each object file. */
-            if (!lsg->fragments.empty()) {
-                shared_ptr<struct seg_fragment> f = lsg->fragments.back(); /* last entry */
-
-                if (f->in_file == in_file && f->in_module == in_module) {
-                    fprintf(stderr,"Segment '%s' defined more than once in an individual object file\n",name);
-                    return -1;
-                }
-            }
-
-            {
-                shared_ptr<struct seg_fragment> f = alloc_link_segment_fragment(lsg.get());
-                lsg->fragment_load_index = f;
-
-                f->in_file = in_file;
-                f->in_module = in_module;
-                f->from_segment_index = first; /* NTS: remember the code above does first++, so this is 1 based, like OMF */
-                f->fragment_length = sg->segment_length;
-                f->fragment_alignment = alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
-                f->attr = sg->attr;
-
-                /* The larger of the two alignments takes effect. This is possible because alignment is a bitmask */
-                lsg->segment_alignment &= alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
-            }
+            /* The larger of the two alignments takes effect. This is possible because alignment is a bitmask */
+            lsg->segment_alignment &= alignValueToAlignMask(omf_align_code_to_bytes(sg->attr.f.f.alignment));
         }
     }
 
