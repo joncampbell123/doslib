@@ -99,6 +99,13 @@ struct entrypoint {
     shared_ptr<link_segdef>             seg_link_target;
     shared_ptr<link_segdef>             seg_link_frame;
     segmentOffset                       seg_ofs = 0;
+
+    void clear(void) {
+        seg_link_target_fragment.reset();
+        seg_link_target.reset();
+        seg_link_frame.reset();
+        seg_ofs = 0;
+    }
 };
 
 struct input_module {
@@ -2506,9 +2513,7 @@ int main(int argc,char **argv) {
             }
 
             /* must clear entry point to avoid memory leaks, shared_ptr leaks */
-            in_mod->entry_point.seg_link_target_fragment = nullptr;
-            in_mod->entry_point.seg_link_target = nullptr;
-            in_mod->entry_point.seg_link_frame = nullptr;
+            in_mod->entry_point.clear();
         }
     }
     current_segment_group = -1;
