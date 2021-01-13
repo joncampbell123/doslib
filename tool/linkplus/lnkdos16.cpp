@@ -2511,9 +2511,6 @@ int main(int argc,char **argv) {
                     assert(entry_point.seg_link_frame != nullptr);
                 }
             }
-
-            /* must clear entry point to avoid memory leaks, shared_ptr leaks */
-            in_mod->entry_point.clear();
         }
     }
     current_segment_group = -1;
@@ -3548,6 +3545,18 @@ int main(int argc,char **argv) {
         map_fp = NULL;
     }
 
+    /* avoid shared_ptr cyclic reference leaks, clear out state now */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_module = *mi;
+            in_module->link_symbols.clear();
+            in_module->link_segments.clear();
+            in_module->entry_point.clear();
+        }
+        in_file->modules.clear();
+    }
+    cmdoptions.in_file.clear();
     return 0;
 }
 
