@@ -2063,12 +2063,10 @@ void ensure_minimum_stack(vector< shared_ptr<struct link_segdef> > &link_segment
 
 int main(int argc,char **argv) {
     entrypoint entry_point;
-    string hex_output_tmpfile;
     vector< shared_ptr<struct link_segdef> > link_segments;
     vector< shared_ptr<struct link_symbol> > link_symbols;
     vector< shared_ptr<struct exe_relocation> > exe_relocation_table;
     unsigned char diddump = 0;
-    string hex_output_name;
     int i,fd,ret;
     char *a;
 
