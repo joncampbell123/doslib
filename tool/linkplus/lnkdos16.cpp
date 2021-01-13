@@ -2488,7 +2488,16 @@ int main(int argc,char **argv) {
         for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
             auto in_mod = *mi;
 
-            link_symbols.insert(link_symbols.end(),in_mod->link_symbols.begin(),in_mod->link_symbols.end());
+            for (auto si=in_mod->link_symbols.begin();si!=in_mod->link_symbols.end();si++) {
+                auto in_sym = *si;
+
+                /* must convert from source segment to target segment */
+                in_sym->segref = find_link_segment(link_segments,in_sym->segref->name.c_str());
+                assert(in_sym->segref != nullptr);
+
+                link_symbols.push_back(in_sym);
+            }
+
             in_mod->link_symbols.clear();
         }
     }
