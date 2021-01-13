@@ -550,15 +550,19 @@ bool owlink_segsrt_def_qsort_cmp(const shared_ptr<struct link_segdef> &sa, const
     if (sa->segment_group > sb->segment_group)
         return false;
 
+    /* From the OMF spec: segments are combined into a segment through a single selector, or in MS-DOS, combined into a 64KB segment frame */
     if (sa->groupname < sb->groupname)
         return true;
     if (sa->groupname > sb->groupname)
         return false;
 
+    /* From the OMF spec: The linker places segments with the same classname into a contiguous area of memory in the run-time memory map */
     if (sa->classname < sb->classname)
         return true;
     if (sa->classname > sb->classname)
         return false;
+
+    /* FIXME: So, which one takes precedence? GROUP, or CLASS? */
 
     return false;
 }
