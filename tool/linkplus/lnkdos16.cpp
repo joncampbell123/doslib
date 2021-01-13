@@ -89,6 +89,17 @@ static inline alignMask alignValueToAlignMask(const alignMask &v) {
 static FILE*                            map_fp = NULL;
 
 struct input_file;
+struct link_segdef;
+
+typedef shared_ptr<struct seg_fragment> fragmentRef;
+static const fragmentRef                fragmentRefUndef = shared_ptr<struct seg_fragment>(nullptr);
+
+struct entrypoint {
+    fragmentRef                         seg_link_target_fragment = fragmentRefUndef;
+    shared_ptr<link_segdef>             seg_link_target;
+    shared_ptr<link_segdef>             seg_link_frame;
+    segmentOffset                       seg_ofs = 0;
+};
 
 struct input_module {
     size_t                              index = ~((size_t)(0u));
@@ -97,7 +108,9 @@ struct input_module {
 
     struct omf_context_t*               omf_state = NULL;
 
+    vector< shared_ptr<struct link_segdef> > link_segments;
     vector< shared_ptr<struct link_symbol> > link_symbols;
+    entrypoint                          entry_point;
 
     ~input_module() {
         if (omf_state != nullptr) {
@@ -240,9 +253,6 @@ static const uint8_t dosdrvrel_entry_point[] = {
 struct seg_fragment; // forward decl
 struct link_segdef;
 
-typedef shared_ptr<struct seg_fragment> fragmentRef;
-static const fragmentRef                fragmentRefUndef = shared_ptr<struct seg_fragment>(nullptr);
-
 struct exe_relocation {
     shared_ptr<struct link_segdef>      segref;             /* which segment */
     fragmentRef                         fragment;           /* which fragment */
@@ -360,13 +370,6 @@ struct link_segdef {
  *            added in, to simplify the code. That means you can't just change segment_base on a whim. Separate segment_base
  *            per segdef allows different segments to operate differently, though currently all have the same image_base_offset
  *            value. segment_offset will generally be zero in segmented protected mode, and in flat protected mode. */
-
-struct entrypoint {
-    fragmentRef                         seg_link_target_fragment = fragmentRefUndef;
-    shared_ptr<link_segdef>             seg_link_target;
-    shared_ptr<link_segdef>             seg_link_frame;
-    segmentOffset                       seg_ofs = 0;
-};
 
 /* Open Watcom DOSSEG linker order
  * 
@@ -1153,21 +1156,18 @@ int fixupp_get(vector< shared_ptr<struct link_symbol> > &link_symbols,vector< sh
     else if (method == 1/*GRPDEF*/) {
         const char *segname = omf_context_get_grpdef_name_safe(omf_state,index);
         if (*segname == 0) {
-            fprintf(stderr,"FIXUPP SEGDEF no name\n");
+            fprintf(stderr,"FIXUPP GRPDEF no name\n");
             return -1;
         }
 
         shared_ptr<struct link_segdef> lsg = find_link_segment_by_grpdef(link_segments,segname);
         if (lsg == NULL) {
-            fprintf(stderr,"FIXUPP SEGDEF not found\n");
+            fprintf(stderr,"FIXUPP GRPDEF not found '%s'\n",segname);
             return -1;
         }
 
-        auto frag = find_link_segment_by_file_module(lsg.get(),in_file,in_module);
-        assert(frag != nullptr);
-
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_offset + frag->offset;
+        *fofs = lsg->segment_offset;
         *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
@@ -1574,11 +1574,6 @@ int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
         if (*name == 0) continue;
 
         shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
-
-        if (lsg != nullptr) {
-            if (lsg->segment_group < current_segment_group)
-                lsg = nullptr;
-        }
 
         if (lsg != NULL) {
             /* it is an error to change attributes */
@@ -2276,9 +2271,9 @@ int main(int argc,char **argv) {
 
                         current_in_file_module->name = s;
                     }
-                    if (grpdef_add(link_segments, omf_state))
+                    if (grpdef_add(current_in_file_module->link_segments, omf_state))
                         return 1;
-                    if (pubdef_add(current_in_file_module->link_symbols, link_segments, omf_state, omf_state->record.rectype, current_in_file, current_in_file_module))
+                    if (pubdef_add(current_in_file_module->link_symbols, current_in_file_module->link_segments, omf_state, omf_state->record.rectype, current_in_file, current_in_file_module))
                         return 1;
 
                     assert(current_in_file_module->omf_state == NULL);
@@ -2376,7 +2371,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(link_segments, omf_state, p_count, current_in_file, current_in_file_module))
+                            if (segdef_add(current_in_file_module->link_segments, omf_state, p_count, current_in_file, current_in_file_module))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -2406,12 +2401,12 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (ledata_add(link_segments, omf_state, &info, current_in_file, current_in_file_module))
+                            if (ledata_add(current_in_file_module->link_segments, omf_state, &info, current_in_file, current_in_file_module))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
-                        if (parse_MODEND(link_segments, omf_state, current_in_file, current_in_file_module, entry_point))
+                        if (parse_MODEND(current_in_file_module->link_segments, omf_state, current_in_file, current_in_file_module, current_in_file_module->entry_point))
                             return 1;
                         break;
                     default:
@@ -2437,6 +2432,47 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* gather segments */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
+
+            for (auto si=in_mod->link_segments.begin();si!=in_mod->link_segments.end();si++) {
+                auto in_seg = *si;
+                current_segment_group = in_seg->segment_group;
+                auto out_seg = find_link_segment(link_segments,in_seg->name.c_str());
+
+                if (out_seg != nullptr) {
+                    if (out_seg->segment_group < in_seg->segment_group)
+                        out_seg = nullptr;
+                }
+
+                if (out_seg != nullptr) {
+                    out_seg->fragments.insert(out_seg->fragments.end(),in_seg->fragments.begin(),in_seg->fragments.end());
+                    in_seg->fragments.clear();
+
+                    if (!in_seg->groupname.empty()) {
+                        if (out_seg->groupname.empty()) {
+                            out_seg->groupname = in_seg->groupname;
+                        }
+                        else if (out_seg->groupname != in_seg->groupname) {
+                            fprintf(stderr,"WARNING: Segment '%s' changes group membership from '%s' to '%s'\n",
+                                    in_seg->name.c_str(),out_seg->groupname.c_str(),in_seg->groupname.c_str());
+                        }
+                    }
+                }
+                else {
+                    link_segments.push_back(in_seg);
+                }
+            }
+
+            in_mod->link_segments.clear();
+        }
+    }
+    current_segment_group = -1;
+
     /* gather symbols */
     for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
         auto in_file = *fi;
@@ -2448,6 +2484,32 @@ int main(int argc,char **argv) {
             in_mod->link_symbols.clear();
         }
     }
+
+    /* pick entry point */
+    for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
+        auto in_file = *fi;
+
+        for (auto mi=in_file->modules.begin();mi!=in_file->modules.end();mi++) {
+            auto in_mod = *mi;
+
+            if (in_mod->entry_point.seg_link_target_fragment != nullptr) {
+                if (entry_point.seg_link_target_fragment != nullptr) {
+                    fprintf(stderr,"WARNING: Multiple entry points, ignoring all but the first\n");
+                }
+                else {
+                    /* have to translate the source segment to target segment object */
+                    assert(in_mod->entry_point.seg_link_target != nullptr);
+                    current_segment_group = in_mod->entry_point.seg_link_target->segment_group;
+                    entry_point = in_mod->entry_point;
+                    entry_point.seg_link_target = find_link_segment(link_segments,in_mod->entry_point.seg_link_target->name.c_str());
+                    assert(entry_point.seg_link_target != nullptr);
+                    entry_point.seg_link_frame = find_link_segment(link_segments,in_mod->entry_point.seg_link_frame->name.c_str());
+                    assert(entry_point.seg_link_frame != nullptr);
+                }
+            }
+        }
+    }
+    current_segment_group = -1;
 
     /* compute relocations (first symbol pass) */
     if (compute_exe_relocations(exe_relocation_table,link_symbols,link_segments))
