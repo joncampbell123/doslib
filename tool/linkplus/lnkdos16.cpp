@@ -2504,6 +2504,11 @@ int main(int argc,char **argv) {
                     assert(entry_point.seg_link_frame != nullptr);
                 }
             }
+
+            /* must clear entry point to avoid memory leaks, shared_ptr leaks */
+            in_mod->entry_point.seg_link_target_fragment = nullptr;
+            in_mod->entry_point.seg_link_target = nullptr;
+            in_mod->entry_point.seg_link_frame = nullptr;
         }
     }
     current_segment_group = -1;
