@@ -1081,10 +1081,7 @@ shared_ptr<struct link_segdef> new_link_segment_begin(vector< shared_ptr<struct 
     return sg;
 }
 
-int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state, struct omf_ledata_info_t *info,in_fileRef in_file,in_fileModuleRef in_module) {
-    (void)in_module;
-    (void)in_file;
-
+int ledata_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
     const char *segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
     if (*segname == 0) {
         fprintf(stderr,"Null segment name\n");
@@ -2401,7 +2398,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (ledata_add(current_in_file_module->link_segments, omf_state, &info, current_in_file, current_in_file_module))
+                            if (ledata_add(current_in_file_module->link_segments, omf_state, &info))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
