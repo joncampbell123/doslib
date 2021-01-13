@@ -3543,8 +3543,6 @@ int main(int argc,char **argv) {
         map_fp = NULL;
     }
 
-    free_link_segments(link_segments);
-    free_exe_relocations(exe_relocation_table);
     return 0;
 }
 
