@@ -2472,6 +2472,8 @@ int main(int argc,char **argv) {
                 else {
                     link_segments.push_back(in_seg);
                 }
+
+                in_seg.reset();
             }
 
             in_mod->link_segments.clear();
@@ -2494,6 +2496,8 @@ int main(int argc,char **argv) {
                 assert(in_sym->segref != nullptr);
 
                 link_symbols.push_back(in_sym);
+
+                in_sym.reset();
             }
 
             in_mod->link_symbols.clear();
@@ -2522,6 +2526,8 @@ int main(int argc,char **argv) {
                     assert(entry_point.seg_link_frame != nullptr);
                 }
             }
+
+            in_mod->entry_point.clear();
         }
     }
     current_segment_group = -1;
