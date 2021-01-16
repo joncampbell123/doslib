@@ -2490,6 +2490,7 @@ int main(int argc,char **argv) {
 
             for (auto si=in_mod->link_symbols.begin();si!=in_mod->link_symbols.end();si++) {
                 auto in_sym = *si;
+                current_segment_group = in_sym->segref->segment_group;
 
                 /* must convert from source segment to target segment */
                 in_sym->segref = find_link_segment(link_segments,in_sym->segref->name.c_str());
@@ -2503,6 +2504,7 @@ int main(int argc,char **argv) {
             in_mod->link_symbols.clear();
         }
     }
+    current_segment_group = -1;
 
     /* pick entry point */
     for (auto fi=cmdoptions.in_file.begin();fi!=cmdoptions.in_file.end();fi++) {
