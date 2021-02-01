@@ -21,7 +21,11 @@ static void OUTPUT_UNTIL_BUSY_func(void);
 static void write_out(const unsigned char c);
 
 /* interrupt routine, via stub */
+#if !defined(__TINY__)
+DOSDEVICE_INTERRUPT_FAR_PROC dosdrv_interrupt_far(void) {
+#else
 DOSDEVICE_INTERRUPT_NEAR_PROC dosdrv_interrupt_near(void) {
+#endif
     switch (dosdrv_req_ptr->command) {
         case dosdrv_request_command_INIT:
             if (dosdrv_req_ptr->request_length < dosdrv_request_init_t_minimum)

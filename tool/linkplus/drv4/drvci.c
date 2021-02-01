@@ -22,6 +22,10 @@ void INIT_func(void) {
         push    si
 
         ; NTS: We can refer to it without reloading DS because we tied everything to DGROUP in this project
+#if defined(__LARGE__) || defined(__COMPACT__)
+        mov     si,seg hello_world
+        mov     ds,si
+#endif
         mov     si,offset hello_world
 
 l1:     lodsb

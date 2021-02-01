@@ -40,10 +40,4 @@ segment _STACK align=4 class=STACK use16
 
 %ifdef TINYMODE
 group DGROUP _DATA _TEXT _STACK
-%else
- %if TARGET_MSDOS == 32
-group DGROUP _DATA _STACK
- %else
-group DGROUP _DATA
- %endif
 %endif

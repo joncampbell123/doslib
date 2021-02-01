@@ -8,7 +8,7 @@
 
 # NTS: -g=DGROUP is needed because lnkdos16 treats objects after -seggroup as if they have their own independent segments,
 #      and FIXUPs across segments with different bases are not allowed.
-CFLAGS_END = -zl -s -zl -q -zu -zdp -zff -zgf -zc -fpi87 -dNEAR_DRVVAR -g=DGROUP
+CFLAGS_END =
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 NOW_BUILDING = TOOL_LINKER_EX1
 
@@ -58,9 +58,16 @@ WLINK_NOCLIBS_SYSTEM = dos com
 WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
 !endif
 
-drva.asm:
-	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --ds-is-cs --int-stub
+$(SUBDIR)$(HPS)drva.asm:
+!ifdef TINYMODE
+	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub --ds-is-cs
 	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
+!else
+	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub-far
+!endif
+
+$(SUBDIR)$(HPS)drva.obj: $(SUBDIR)$(HPS)drva.asm
+	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
 !ifdef TEST_SYS
 # TODO: dosdrv
