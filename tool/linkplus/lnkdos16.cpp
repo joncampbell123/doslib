@@ -3197,7 +3197,6 @@ int main(int argc,char **argv) {
     /* EXE files: make header and relocation table */
     if (cmdoptions.output_format == OFMT_EXE || cmdoptions.output_format == OFMT_DOSDRVEXE) {
         shared_ptr<struct link_segdef> exeseg;
-        segmentOffset reloc_offset=0;
         uint16_t init_cs=0,init_ip=0;
         uint16_t init_ss=0,init_sp=0;
         uint32_t bss_segment_size=0;
@@ -3215,24 +3214,29 @@ int main(int argc,char **argv) {
         exeseg->header = 1;
         exeseg->file_offset = 0;
         exeseg->segment_relative = -1;
+        exeseg->segment_length = 0;
 
         shared_ptr<struct seg_fragment> frag = alloc_link_segment_fragment(exeseg.get());
+        shared_ptr<struct seg_fragment> fragreloc;
 
         /* TODO: If generating NE/PE/etc. set to 32, to make room for a DWORD at 0x1C that
          *       points at the NE/PE/LX/LE/etc header. */
         frag->fragment_length = 28;
-
-        /* EXE relocation table is 4 bytes per entry, two WORDs containing ( offset, segment ) of an
-         * address in the image to patch with the base segment */
-        if (!exe_relocation_table.empty()) {
-            reloc_offset = (segmentOffset)frag->fragment_length;
-            frag->fragment_length += 4 * exe_relocation_table.size();
-        }
-
         frag->in_file = in_fileRefInternal;
         frag->offset = exeseg->segment_length;
         exeseg->segment_length += frag->fragment_length;
         frag->image.resize(frag->fragment_length);
+
+        /* EXE relocation table is 4 bytes per entry, two WORDs containing ( offset, segment ) of an
+         * address in the image to patch with the base segment */
+        if (!exe_relocation_table.empty()) {
+            fragreloc = alloc_link_segment_fragment(exeseg.get());
+            fragreloc->in_file = in_fileRefInternal;
+            fragreloc->offset = exeseg->segment_length;
+            fragreloc->fragment_length = 4 * exe_relocation_table.size();
+            exeseg->segment_length += fragreloc->fragment_length;
+            fragreloc->image.resize(fragreloc->fragment_length);
+        }
 
         linearAddress max_image = 0;
         linearAddress max_resident = 0;
@@ -3287,7 +3291,8 @@ int main(int argc,char **argv) {
             fprintf(stderr,"WARNING: EXE without an entry point\n");
         }
 
-        assert(reloc_offset < 0xFFF0u);
+        if (fragreloc != NULL)
+            assert(fragreloc->offset < 0xFFF0u);
 
         {
             assert(frag->image.size() >= 28);
@@ -3311,9 +3316,9 @@ int main(int argc,char **argv) {
 
             /* relocation table */
             *((uint16_t*)(ptr+6)) = (uint16_t)exe_relocation_table.size(); /* count */
-            *((uint16_t*)(ptr+24)) = (uint16_t)reloc_offset; /* offset */
+            *((uint16_t*)(ptr+24)) = (uint16_t)(fragreloc != NULL ? fragreloc->offset : 0); /* offset */
 
-            *((uint16_t*)(ptr+8)) = (frag->image.size()+0xFul) >> 4ul; /* size of header in paragraphs */
+            *((uint16_t*)(ptr+8)) = (exeseg->segment_length+0xFul) >> 4ul; /* size of header in paragraphs */
 
             /* number of paragraphs of additional memory needed */
             tmp = (uint32_t)((bss_segment_size+0xFul) >> 4ul);
@@ -3336,8 +3341,8 @@ int main(int argc,char **argv) {
         }
 
         if (!exe_relocation_table.empty()) {
-            assert(frag->image.size() >= (reloc_offset+(4*exe_relocation_table.size())));
-            unsigned char *ptr = &frag->image[reloc_offset];
+            assert(fragreloc->image.size() >= (4*exe_relocation_table.size()));
+            unsigned char *ptr = &fragreloc->image[0];
             size_t i;
 
             for (i=0;i < exe_relocation_table.size();i++) {
