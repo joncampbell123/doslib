@@ -7,6 +7,7 @@ my $out_make_stack_entry = 0; # FIXME: This isn't quite right
 my $out_make_stub_entry = 1;
 my $introutine_stub = 0;    # if set, generate interrupt routine stub to load DS and near-call "interrupt" routine
 my $introutine_stub_far = 0;# stub should make FAR call
+my $def_initbegin = 1;      # generate initbegin
 my $out_asmname = undef;
 my $ds_is_cs = 0;
 my $a;
@@ -47,6 +48,9 @@ for ($i=0;$i < @ARGV;) {
         }
         elsif ($a eq "ds-is-cs") {
             $ds_is_cs = 1;
+        }
+        elsif ($a eq "no-initbegin") {
+            $def_initbegin = 0;
         }
         elsif ($a eq "int-stub") {
             $introutine_stub = 1;
@@ -300,11 +304,13 @@ print ASM "section _END class=END\n";
 print ASM "global _dosdrv_end\n";
 print ASM "_dosdrv_end:\n";
 print ASM "\n";
-print ASM "; begin of init section i.e. the cutoff point once initialization is finished.\n";
-print ASM "section _BEGIN class=INITBEGIN\n";
-print ASM "global _dosdrv_initbegin\n";
-print ASM "_dosdrv_initbegin:\n";
-print ASM "\n";
+if ($def_initbegin) {
+    print ASM "; begin of init section i.e. the cutoff point once initialization is finished.\n";
+    print ASM "section _BEGIN class=INITBEGIN\n";
+    print ASM "global _dosdrv_initbegin\n";
+    print ASM "_dosdrv_initbegin:\n";
+    print ASM "\n";
+}
 
 if ($out_make_stack_entry > 0) {
     print ASM "; shut up Watcom\n";
