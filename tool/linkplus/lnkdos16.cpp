@@ -325,6 +325,7 @@ struct seg_fragment {
     segmentSize                         fragment_length;    /* length of fragment */
     alignMask                           fragment_alignment; /* alignment of fragment */
     struct omf_segdef_attr_t            attr;               /* fragment attributes */
+    string                              name;               /* name of fragment */
 
     vector<unsigned char>               image;              /* in memory image of segment during construction */
 
@@ -942,6 +943,9 @@ void dump_link_segments(vector< shared_ptr<struct link_segdef> > &link_segments,
                             fprintf(map_fp,"'%s'",frag->in_file->path.c_str());
                     }
                 }
+
+                if (!frag->name.empty())
+                    fprintf(map_fp," '%s'",frag->name.c_str());
 
                 fprintf(map_fp," align=%lu\n",
                         (unsigned long)alignMaskToValue(frag->fragment_alignment));
@@ -3226,6 +3230,7 @@ int main(int argc,char **argv) {
         frag->offset = exeseg->segment_length;
         exeseg->segment_length += frag->fragment_length;
         frag->image.resize(frag->fragment_length);
+        frag->name = "EXE header";
 
         /* EXE relocation table is 4 bytes per entry, two WORDs containing ( offset, segment ) of an
          * address in the image to patch with the base segment */
@@ -3236,6 +3241,7 @@ int main(int argc,char **argv) {
             fragreloc->fragment_length = 4 * exe_relocation_table.size();
             exeseg->segment_length += fragreloc->fragment_length;
             fragreloc->image.resize(fragreloc->fragment_length);
+            fragreloc->name = "EXE relocation table";
         }
 
         linearAddress max_image = 0;
