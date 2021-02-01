@@ -2059,6 +2059,7 @@ void ensure_minimum_stack(vector< shared_ptr<struct link_segdef> > &link_segment
             frag->offset = stacksg->segment_length;
             frag->attr = stacksg->attr;
             frag->fragment_length = cmdoptions.want_stack_size - stacksg->segment_length;
+            frag->name = "Fill out to meet minimum stack size";
             stacksg->segment_length += frag->fragment_length;
             frag->in_file = in_fileRefInternal;
         }
