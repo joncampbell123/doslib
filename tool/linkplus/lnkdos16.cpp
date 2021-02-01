@@ -2686,6 +2686,7 @@ int main(int argc,char **argv) {
                 frag->in_file = in_fileRefInternal;
                 frag->fragment_length = sizeof(dosdrvrel_entry_point);
                 frag->image.resize(frag->fragment_length);
+                frag->name = "DRV relocation patch code";
                 memcpy(&frag->image[0],dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
 
                 {
@@ -2710,6 +2711,7 @@ int main(int argc,char **argv) {
                 frag->in_file = in_fileRefInternal;
                 frag->fragment_length = 2 * exe_relocation_table.size();
                 frag->image.resize(frag->fragment_length);
+                frag->name = "DRV relocation table";
 
                 {
                     shared_ptr<struct link_symbol> ls = find_link_symbol(link_symbols,"__DOSDRVREL_INIT_RELOC_TABLE",in_fileRefUndef,in_fileModuleRefUndef);
@@ -2811,6 +2813,7 @@ int main(int argc,char **argv) {
             frag->in_file = in_fileRefInternal;
             frag->fragment_length = sizeof(comrel_entry_point);
             frag->image.resize(frag->fragment_length);
+            frag->name = "COM relocation patch code";
             memcpy(&frag->image[0],comrel_entry_point,sizeof(comrel_entry_point));
 
             /* replace entry point */
@@ -2843,6 +2846,7 @@ int main(int argc,char **argv) {
             frag->in_file = in_fileRefInternal;
             frag->fragment_length = 2 * exe_relocation_table.size();
             frag->image.resize(frag->fragment_length);
+            frag->name = "COM relocation table";
 
             {
                 /* make the original entry point a symbol, change entry point to new place */
@@ -2917,6 +2921,7 @@ int main(int argc,char **argv) {
                 assert(fidx == 0);
                 frag->in_file = in_fileRefInternal;
                 frag->offset = 0;
+                frag->name = "JMP to entry point";
 
                 if (init_ip >= (0x80+cmdoptions.image_base_offset)) {
                     /* 3 byte JMP */
@@ -3379,6 +3384,7 @@ int main(int argc,char **argv) {
             frag->fragment_length = 0x10 - (exeseg->segment_length & 0xF);
             exeseg->segment_length += frag->fragment_length;
             frag->image.resize(frag->fragment_length);
+            frag->name = "EXE header extra space";
         }
 
         fileOffset header_size = exeseg->segment_length;
