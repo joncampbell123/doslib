@@ -9,6 +9,12 @@
 #include <hw/dos/drvreq.h>
 #include <hw/dos/drvvar.h>
 
+/* LINKPLUS LNKDOS16 can auto-define a symbol pointing to the start of this init group
+ * which should be the same as the end of the first default (-1) segment group.
+ * Name should be __seggrp_startn_initsect. Use _cdecl to access it which should
+ * prepend the extra _ needed. */
+extern unsigned char far _cdecl _seggrp_startn_initsect;
+
 /* This time, we can declare code and data as normal,
  * then segregate this code into it's own init section using lnkdos16 -seggroup. */
 static const char hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";
@@ -41,7 +47,7 @@ le:
     /* DOS then expects us to tell it the end of our resident section.
      * This is why this code has _END offsets and init sections.
      * This init code and any INIT segments will be thrown away after we return. */
-    initreq->end_of_driver = &dosdrv_initbegin;
+    initreq->end_of_driver = &_seggrp_startn_initsect;
 
 #undef initreq
 }
