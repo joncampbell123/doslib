@@ -1683,6 +1683,7 @@ static void help(void) {
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
     fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
     fprintf(stderr,"  -seggroup    Start new segment group, for OBJs after, i.e. init section\n");
+    fprintf(stderr,"  -sgname <n>  Set segment group name (must follow -seggroup)\n");
     fprintf(stderr,"  -comNNN      Link .COM segment starting at 0xNNN\n");
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
@@ -2188,6 +2189,17 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"v")) {
                 cmdoptions.verbose = true;
+            }
+            else if (!strcmp(a,"sgname")) {
+                char *s = argv[i++];
+                if (s == NULL) return 1;
+                if (cmdoptions.next_segment_group < 0) {
+                    fprintf(stderr,"-sgname must follow -seggroup\n");
+                    return 1;
+                }
+
+                auto &sgrp = cmdoptions.get_segment_group(cmdoptions.next_segment_group);
+                sgrp.name = s;
             }
             else if (!strcmp(a,"seggroup")) {
                 cmdoptions.next_segment_group++;
@@ -3068,18 +3080,37 @@ int main(int argc,char **argv) {
                     auto psg = link_segments[li-1u];
                     assert(psg != NULL);
                     if (sg->segment_group != psg->segment_group && sg->segment_group >= 0) {
-                        auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
-                        string seggrp_start = string("__seggrp_start_") + ((!seggrp_defname.empty()) ? seggrp_defname : to_string(sg->segment_group));
-                        auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
-                        if (gsym == NULL) {
-                            gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
-                            assert(gsym != NULL);
-                            gsym->segref = sym->segref;
-                            gsym->groupdef = sym->groupdef;
-                            gsym->offset = sym->offset;
-                            gsym->in_file = sym->in_file;
-                            gsym->fragment = sym->fragment;
-                            gsym->offset = sym->offset;
+                        {
+                            string seggrp_start = string("__seggrp_starti_") + to_string(sg->segment_group);
+                            auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                            if (gsym == NULL) {
+                                gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                                assert(gsym != NULL);
+                                gsym->segref = sym->segref;
+                                gsym->groupdef = sym->groupdef;
+                                gsym->offset = sym->offset;
+                                gsym->in_file = sym->in_file;
+                                gsym->fragment = sym->fragment;
+                                gsym->offset = sym->offset;
+                            }
+                        }
+
+                        {
+                            auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
+                            if (!seggrp_defname.empty()) {
+                                string seggrp_start = string("__seggrp_startn_") + seggrp_defname;
+                                auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                                if (gsym == NULL) {
+                                    gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                                    assert(gsym != NULL);
+                                    gsym->segref = sym->segref;
+                                    gsym->groupdef = sym->groupdef;
+                                    gsym->offset = sym->offset;
+                                    gsym->in_file = sym->in_file;
+                                    gsym->fragment = sym->fragment;
+                                    gsym->offset = sym->offset;
+                                }
+                            }
                         }
                     }
                 }
@@ -3105,18 +3136,37 @@ int main(int argc,char **argv) {
                     auto nsg = link_segments[li+1u];
                     assert(nsg != NULL);
                     if (sg->segment_group != nsg->segment_group && sg->segment_group >= 0) {
-                        auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
-                        string seggrp_start = string("__seggrp_end_") + ((!seggrp_defname.empty()) ? seggrp_defname : to_string(sg->segment_group));
-                        auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
-                        if (gsym == NULL) {
-                            gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
-                            assert(gsym != NULL);
-                            gsym->segref = sym->segref;
-                            gsym->groupdef = sym->groupdef;
-                            gsym->offset = sym->offset;
-                            gsym->in_file = sym->in_file;
-                            gsym->fragment = sym->fragment;
-                            gsym->offset = sym->offset;
+                        {
+                            string seggrp_start = string("__seggrp_endi_") + to_string(sg->segment_group);
+                            auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                            if (gsym == NULL) {
+                                gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                                assert(gsym != NULL);
+                                gsym->segref = sym->segref;
+                                gsym->groupdef = sym->groupdef;
+                                gsym->offset = sym->offset;
+                                gsym->in_file = sym->in_file;
+                                gsym->fragment = sym->fragment;
+                                gsym->offset = sym->offset;
+                            }
+                        }
+
+                        {
+                            auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
+                            if (!seggrp_defname.empty()) {
+                                string seggrp_start = string("__seggrp_endn_") + seggrp_defname;
+                                auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                                if (gsym == NULL) {
+                                    gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                                    assert(gsym != NULL);
+                                    gsym->segref = sym->segref;
+                                    gsym->groupdef = sym->groupdef;
+                                    gsym->offset = sym->offset;
+                                    gsym->in_file = sym->in_file;
+                                    gsym->fragment = sym->fragment;
+                                    gsym->offset = sym->offset;
+                                }
+                            }
                         }
                     }
                 }

@@ -65,13 +65,13 @@ drva.asm:
 !ifdef TEST_SYS
 # TODO: dosdrv
 $(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrvrel -map $(TEST_SYS).map -segsym
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -sgname initsect -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -of dosdrvrel -map $(TEST_SYS).map -segsym
 !endif
 
 !ifdef TEST_EXE
 # TODO: dosdrv
 $(TEST_EXE): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj $(SUBDIR)$(HPS)exeep.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -i $(SUBDIR)$(HPS)exeep.obj -o $(TEST_EXE) -of dosdrvexe -map $(TEST_EXE).map -segsym
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -seggroup -sgname initsect -i $(SUBDIR)$(HPS)drvci.obj -i $(SUBDIR)$(HPS)exeep.obj -o $(TEST_EXE) -of dosdrvexe -map $(TEST_EXE).map -segsym
 !endif
 
 # deliberately list the OBJ file with the DOS header later to see if the linker can correct for it
@@ -79,13 +79,13 @@ $(TEST_EXE): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drv
 !ifdef TEST2_SYS
 # TODO: dosdrv
 $(TEST2_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) -of dosdrvrel -map $(TEST2_SYS).map -segsym
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -sgname initsect -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) -of dosdrvrel -map $(TEST2_SYS).map -segsym
 !endif
 
 !ifdef TEST2_EXE
 # TODO: dosdrv
 $(TEST2_EXE): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj $(SUBDIR)$(HPS)exeep.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -i $(SUBDIR)$(HPS)drvci.obj -i $(SUBDIR)$(HPS)exeep.obj -o $(TEST2_EXE) -of dosdrvexe -map $(TEST2_EXE).map -segsym
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drva.obj -seggroup -sgname initsect -i $(SUBDIR)$(HPS)drvci.obj -i $(SUBDIR)$(HPS)exeep.obj -o $(TEST2_EXE) -of dosdrvexe -map $(TEST2_EXE).map -segsym
 !endif
 
 clean: .SYMBOLIC
