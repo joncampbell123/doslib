@@ -1868,7 +1868,7 @@ int segment_def_arrange(vector< shared_ptr<struct link_segdef> > &link_segments)
                 ofs = (ofs | (~sd->segment_alignment)) + (segmentOffset)1u;
 
             if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
-                    cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+                cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
                 if (sd->segment_length > 0x10000ul) {
                     dump_link_segments(link_segments,DUMPLS_LINEAR);
                     fprintf(stderr,"Segment too large >= 64KB\n");
