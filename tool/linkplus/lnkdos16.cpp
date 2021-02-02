@@ -3077,6 +3077,25 @@ int main(int argc,char **argv) {
                     sym->fragment = ff;
                     sym->offset = ff->offset + ff->fragment_length;
                 }
+
+                if ((li+1u) < link_segments.size()) {
+                    auto nsg = link_segments[li+1u];
+                    assert(nsg != NULL);
+                    if (sg->segment_group != nsg->segment_group && sg->segment_group >= 0) {
+                        string seggrp_start = string("__seggrp_end_") + to_string(sg->segment_group);
+                        auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                        if (gsym == NULL) {
+                            gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                            assert(gsym != NULL);
+                            gsym->segref = sym->segref;
+                            gsym->groupdef = sym->groupdef;
+                            gsym->offset = sym->offset;
+                            gsym->in_file = sym->in_file;
+                            gsym->fragment = sym->fragment;
+                            gsym->offset = sym->offset;
+                        }
+                    }
+                }
             }
         }
     }
