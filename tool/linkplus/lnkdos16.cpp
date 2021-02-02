@@ -3019,7 +3019,6 @@ int main(int argc,char **argv) {
 
     /* define symbols for segments and seg groups if asked */
     if (cmdoptions.def_segsym) {
-        int prev_seg_group = -1;
         size_t li;
 
         for (li=0;li < link_segments.size();li++) {
@@ -3043,18 +3042,22 @@ int main(int argc,char **argv) {
                     sym->offset += ff->offset;
                 }
 
-                if (sg->segment_group != prev_seg_group && sg->segment_group >= 0) {
-                    string seggrp_start = string("__seggrp_start_") + to_string(sg->segment_group);
-                    auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
-                    if (gsym == NULL) {
-                        gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
-                        assert(gsym != NULL);
-                        gsym->segref = sym->segref;
-                        gsym->groupdef = sym->groupdef;
-                        gsym->offset = sym->offset;
-                        gsym->in_file = sym->in_file;
-                        gsym->fragment = sym->fragment;
-                        gsym->offset = sym->offset;
+                if (li != 0) {
+                    auto psg = link_segments[li-1u];
+                    assert(psg != NULL);
+                    if (sg->segment_group != psg->segment_group && sg->segment_group >= 0) {
+                        string seggrp_start = string("__seggrp_start_") + to_string(sg->segment_group);
+                        auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+                        if (gsym == NULL) {
+                            gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
+                            assert(gsym != NULL);
+                            gsym->segref = sym->segref;
+                            gsym->groupdef = sym->groupdef;
+                            gsym->offset = sym->offset;
+                            gsym->in_file = sym->in_file;
+                            gsym->fragment = sym->fragment;
+                            gsym->offset = sym->offset;
+                        }
                     }
                 }
             }
@@ -3075,8 +3078,6 @@ int main(int argc,char **argv) {
                     sym->offset = ff->offset + ff->fragment_length;
                 }
             }
-
-            prev_seg_group = sg->segment_group;
         }
     }
 
