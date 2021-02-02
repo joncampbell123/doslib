@@ -1858,20 +1858,22 @@ int segment_def_arrange(vector< shared_ptr<struct link_segdef> > &link_segments)
     for (inf=0;inf < link_segments.size();inf++) {
         shared_ptr<struct link_segdef> sd = link_segments[inf];
 
-        /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
-         *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
-         *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
-         *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
-         *      and so on */
-        if (ofs & (~sd->segment_alignment))
-            ofs = (ofs | (~sd->segment_alignment)) + (segmentOffset)1u;
+        if (sd->segment_length != 0) {
+            /* NTS: mask = 0xFFFF           ~mask = 0x0000      alignment = 1 (0 + 1)
+             *      mask = 0xFFFE           ~mask = 0x0001      alignment = 2 (1 + 1)
+             *      mask = 0xFFFC           ~mask = 0x0003      alignment = 4 (3 + 1)
+             *      mask = 0xFFF8           ~mask = 0x0007      alignment = 8 (7 + 1)
+             *      and so on */
+            if (ofs & (~sd->segment_alignment))
+                ofs = (ofs | (~sd->segment_alignment)) + (segmentOffset)1u;
 
-        if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
-            cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
-            if (sd->segment_length > 0x10000ul) {
-                dump_link_segments(link_segments,DUMPLS_LINEAR);
-                fprintf(stderr,"Segment too large >= 64KB\n");
-                return -1;
+            if (cmdoptions.output_format == OFMT_COM || cmdoptions.output_format == OFMT_EXE ||
+                    cmdoptions.output_format == OFMT_DOSDRV || cmdoptions.output_format == OFMT_DOSDRVEXE) {
+                if (sd->segment_length > 0x10000ul) {
+                    dump_link_segments(link_segments,DUMPLS_LINEAR);
+                    fprintf(stderr,"Segment too large >= 64KB\n");
+                    return -1;
+                }
             }
         }
 
