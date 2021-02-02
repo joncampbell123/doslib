@@ -154,6 +154,10 @@ static const in_fileRef                 in_fileRefUndef = nullptr;
 shared_ptr<input_file>                  in_fileRefPadding;
 shared_ptr<input_file>                  in_fileRefInternal;
 
+struct segment_group {
+    string                              name;
+};
+
 struct cmdoptions {
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
@@ -177,11 +181,25 @@ struct cmdoptions {
     string                              map_file;
 
     vector< shared_ptr<input_file> >    in_file;
+    vector<segment_group>               segment_groups;
 
     cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), def_segsym(false), output_format(OFMT_COM),
                    output_format_variant(OFMTVAR_NONE), next_segment_group(-1), want_stack_size(4096),
                    image_base_segment_reloc_adjust(segmentBaseUndef), image_base_segment(segmentBaseUndef),
                    image_base_offset(segmentOffsetUndef), dosdrv_header_symbol("_dosdrv_header") { }
+
+    string get_segment_group_name(const int idx) {
+        if (idx >= 0 && size_t(idx) < segment_groups.size())
+            return segment_groups[idx].name;
+
+        return string();
+    }
+    segment_group &get_segment_group(const int idx) {
+        if (idx >= 0 && size_t(idx) < segment_groups.size())
+            return segment_groups[idx];
+
+        throw range_error("get_segment_group index out of range");
+    }
 };
 
 static cmdoptions                       cmdoptions;
@@ -2173,6 +2191,10 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"seggroup")) {
                 cmdoptions.next_segment_group++;
+                if (cmdoptions.next_segment_group >= 0) {
+                    if (cmdoptions.segment_groups.size() < size_t(cmdoptions.next_segment_group+1))
+                        cmdoptions.segment_groups.resize(cmdoptions.next_segment_group+1);
+                }
             }
             else if (!strcmp(a,"dosseg")) {
                 cmdoptions.do_dosseg = true;
@@ -3046,7 +3068,8 @@ int main(int argc,char **argv) {
                     auto psg = link_segments[li-1u];
                     assert(psg != NULL);
                     if (sg->segment_group != psg->segment_group && sg->segment_group >= 0) {
-                        string seggrp_start = string("__seggrp_start_") + to_string(sg->segment_group);
+                        auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
+                        string seggrp_start = string("__seggrp_start_") + ((!seggrp_defname.empty()) ? seggrp_defname : to_string(sg->segment_group));
                         auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
                         if (gsym == NULL) {
                             gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
@@ -3082,7 +3105,8 @@ int main(int argc,char **argv) {
                     auto nsg = link_segments[li+1u];
                     assert(nsg != NULL);
                     if (sg->segment_group != nsg->segment_group && sg->segment_group >= 0) {
-                        string seggrp_start = string("__seggrp_end_") + to_string(sg->segment_group);
+                        auto seggrp_defname = cmdoptions.get_segment_group_name(sg->segment_group);
+                        string seggrp_start = string("__seggrp_end_") + ((!seggrp_defname.empty()) ? seggrp_defname : to_string(sg->segment_group));
                         auto gsym = find_link_symbol(link_symbols,seggrp_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
                         if (gsym == NULL) {
                             gsym = new_link_symbol(link_symbols,seggrp_start.c_str());
