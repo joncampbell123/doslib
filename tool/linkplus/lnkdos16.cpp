@@ -158,6 +158,7 @@ struct cmdoptions {
     unsigned int                        do_dosseg:1;
     unsigned int                        verbose:1;
     unsigned int                        prefer_flat:1;
+    unsigned int                        def_segsym:1;
 
     unsigned int                        output_format;
     unsigned int                        output_format_variant;
@@ -177,7 +178,7 @@ struct cmdoptions {
 
     vector< shared_ptr<input_file> >    in_file;
 
-    cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), output_format(OFMT_COM),
+    cmdoptions() : do_dosseg(true), verbose(false), prefer_flat(false), def_segsym(false), output_format(OFMT_COM),
                    output_format_variant(OFMTVAR_NONE), next_segment_group(-1), want_stack_size(4096),
                    image_base_segment_reloc_adjust(segmentBaseUndef), image_base_segment(segmentBaseUndef),
                    image_base_offset(segmentOffsetUndef), dosdrv_header_symbol("_dosdrv_header") { }
@@ -705,6 +706,11 @@ bool link_symbol_qsort_cmp(const shared_ptr<struct link_symbol> &sa,const shared
 
     if (la < lb) return true;
     if (la > lb) return false;
+
+    /* name */
+    int cmp = strcasecmp(sa->name.c_str(),sb->name.c_str());
+    if (cmp < 0) return true;
+    if (cmp > 0) return false;
 
     return false;
 }
@@ -1663,6 +1669,7 @@ static void help(void) {
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
     fprintf(stderr,"  -stackN      Set minimum stack segment size (0xNNN)\n");
+    fprintf(stderr,"  -segsym      Define symbols for start/end of segments, seg groups\n");
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
     fprintf(stderr,"  -hsym        Header symbol name (DOSDRV)\n");
     fprintf(stderr,"  -hex <file>  Also emit file as C header hex dump\n");
@@ -2104,6 +2111,9 @@ int main(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 cmdoptions.dosdrv_header_symbol = a;
+            }
+            else if (!strcmp(a,"segsym")) {
+                cmdoptions.def_segsym = 1;
             }
             else if (!strcmp(a,"pflat")) {
                 cmdoptions.prefer_flat = 1;
@@ -3004,6 +3014,51 @@ int main(int argc,char **argv) {
         for (li=0;li < link_segments.size();li++) {
             sort(link_segments[li].get()->fragments.begin(), link_segments[li].get()->fragments.end(), link_segments_qsort_frag_by_offset);
             linkseg_add_padding_fragments(link_segments[li].get());
+        }
+    }
+
+    /* define symbols for segments and seg groups if asked */
+    if (cmdoptions.def_segsym) {
+        size_t li;
+
+        for (li=0;li < link_segments.size();li++) {
+            shared_ptr<struct link_symbol> sym;
+            auto sg = link_segments[li];
+            assert(sg != NULL);
+
+            string seg_start = string("__seg_start") + (sg->segment_group >= 0 ? to_string(sg->segment_group) : "") + "_" + sg->name;
+            sym = find_link_symbol(link_symbols,seg_start.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+            if (sym == NULL) {
+                sym = new_link_symbol(link_symbols,seg_start.c_str());
+                assert(sym != NULL);
+                sym->segref = sg;
+                sym->groupdef = sg->groupname;
+                sym->offset = 0;
+                sym->in_file = in_fileRefInternal;
+                if (!sg->fragments.empty()) {
+                    auto ff = sg->fragments.front();
+                    assert(ff != NULL);
+                    sym->fragment = ff;
+                    sym->offset += ff->offset;
+                }
+            }
+
+            string seg_end = string("__seg_end") + (sg->segment_group >= 0 ? to_string(sg->segment_group) : "") + "_" + sg->name;
+            sym = find_link_symbol(link_symbols,seg_end.c_str(),in_fileRefInternal,in_fileModuleRefUndef);
+            if (sym == NULL) {
+                sym = new_link_symbol(link_symbols,seg_end.c_str());
+                assert(sym != NULL);
+                sym->segref = sg;
+                sym->groupdef = sg->groupname;
+                sym->offset = sg->segment_length;
+                sym->in_file = in_fileRefInternal;
+                if (!sg->fragments.empty()) {
+                    auto ff = sg->fragments.back();
+                    assert(ff != NULL);
+                    sym->fragment = ff;
+                    sym->offset = ff->offset + ff->fragment_length;
+                }
+            }
         }
     }
 

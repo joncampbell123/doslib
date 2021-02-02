@@ -55,22 +55,22 @@ WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TEST_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -o $(TEST_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST_EXE).map -segsym
 !endif
 
 !ifdef TEST2_EXE
 $(TEST2_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TEST2_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST2_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TEST2_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST2_EXE).map -segsym
 !endif
 
 !ifdef TEST3_EXE
 $(TEST3_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TEST3_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST3_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)entry3.obj -o $(TEST3_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST3_EXE).map -segsym
 !endif
 
 !ifdef TEST4_EXE
 $(TEST4_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)entry4.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TEST4_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST4_EXE).map
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)entry4.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TEST4_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST4_EXE).map -segsym
 !endif
 
 clean: .SYMBOLIC
