@@ -108,6 +108,17 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
             s += or1k_dec(ti32);
             s += ")";
             return;
+        case 0x2A: /* l.ori <rD,rA,K> */
+            tu32 = zextmsk(w,(uint32_t)16); /* immediate K */
+            rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+            rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+            s  = "l.ori       "; // 12-char
+            s += gregn(rD);
+            s += ",";
+            s += gregn(rA);
+            s += ",";
+            s += or1k_hex((uint32_t)tu32);
+            return;
         case 0x35: /* l.sw I(rA), rB     EA = I + rA */
             ti32 = (int32_t)sgnextmsk((((w >> (uint32_t)21ul) & (uint32_t)0x1Ful) << (uint32_t)11ul) + ((uint32_t)w & 0x7FFul),(uint32_t)16);
             rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
