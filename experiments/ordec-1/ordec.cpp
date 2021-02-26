@@ -34,6 +34,7 @@ template <class V,class M> static inline V sgnextmsk(const V val,const M bits) {
 }
 
 template <class V> string or1k_hex(const V val);
+template <class V> string or1k_dec(const V val);
 
 template <> string or1k_hex<uint32_t>(const uint32_t val) {
     char tmp[2+(2*4)+1];
@@ -42,21 +43,52 @@ template <> string or1k_hex<uint32_t>(const uint32_t val) {
     return tmp;
 }
 
+template <> string or1k_dec<int32_t>(const int32_t val) {
+    char tmp[64];
+
+    sprintf(tmp,"%ld",(signed long)val);
+    return tmp;
+}
+
+string gregn(const unsigned char n) {
+    char tmp[12];
+
+    sprintf(tmp,"%u",n);
+    return string("r") + tmp;
+}
+
 void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
+    unsigned char rD,rA;
     int32_t ti32;
 
     s.clear();
     switch (w >> ((uint32_t)26)) {
-        case 0x0: /* l.j <signed 26-bit relative address in words> */
+        case 0x00: /* l.j <signed 26-bit relative address in words> */
             ti32 = sgnextmsk(w,(uint32_t)26) << (int32_t)2;
             s  = "l.j         "; // 12-char
             s += or1k_hex((uint32_t)(ti32 + addr));
             return;
-        case 0x5:
+        case 0x05:
             if ((w&0xFF000000ul) == 0x15000000ul) {
                 s = "l.nop       "; // 12-char
                 return;
             }
+            break;
+        case 0x27: /* l.addi <rD,rA,Imm> */
+            ti32 = sgnextmsk(w,(uint32_t)16); /* immediate */
+            rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+            rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+            s  = "l.addi      "; // 12-char
+            s += gregn(rD);
+            s += ",";
+            s += gregn(rA);
+            s += ",";
+            s += or1k_hex((uint32_t)ti32);
+            s += "       ; (decimal ";
+            s += or1k_dec(ti32);
+            s += ")";
+            return;
+        default:
             break;
     }
 
