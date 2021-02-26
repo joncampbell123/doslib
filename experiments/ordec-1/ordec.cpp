@@ -33,6 +33,11 @@ template <class V,class M> static inline V sgnextmsk(const V val,const M bits) {
         return (val & msk);
 }
 
+template <class V,class M> static inline V zextmsk(const V val,const M bits) {
+    const V msk = ((V)1u << (V)bits) - (V)1u;
+    return (val & msk);
+}
+
 template <class V> string or1k_hex(const V val);
 template <class V> string or1k_dec(const V val);
 
@@ -59,6 +64,7 @@ string gregn(const unsigned char n) {
 
 void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
     unsigned char rD,rA,rB;
+    uint32_t tu32;
     int32_t ti32;
 
     s.clear();
@@ -71,6 +77,20 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
         case 0x05:
             if ((w&0xFF000000ul) == 0x15000000ul) {
                 s = "l.nop       "; // 12-char
+                return;
+            }
+            break;
+        case 0x06:
+            if ((w&0x00010000ul) == 0) {
+                s = "l.movhi     "; // 12-char
+                tu32 = zextmsk(w,(uint32_t)16); /* immediate (K) */
+                rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+                s += gregn(rD);
+                s += ",";
+                s += "hi16("; // GNU gas uses hi(val)
+                s += or1k_hex((uint32_t)tu32 << (uint32_t)16);
+                s += ")        ; high16 <= K << 16, K=";
+                s += or1k_hex((uint32_t)tu32);
                 return;
             }
             break;
