@@ -74,6 +74,11 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
             s  = "l.j         "; // 12-char
             s += or1k_hex((uint32_t)(ti32 + addr));
             return;
+        case 0x01: /* l.jal <signed 26-bit relative address in words> */
+            ti32 = sgnextmsk(w,(uint32_t)26) << (int32_t)2;
+            s  = "l.jal       "; // 12-char
+            s += or1k_hex((uint32_t)(ti32 + addr));
+            return;
         case 0x05:
             if ((w&0xFF000000ul) == 0x15000000ul) {
                 s = "l.nop       "; // 12-char
