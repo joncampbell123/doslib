@@ -99,6 +99,11 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
                 return;
             }
             break;
+        case 0x11: /* l.jr rB */
+            rB = (unsigned char)((w >> (uint32_t)11ul) & (uint32_t)0x1Ful);
+            s  = "l.jr        "; // 12-char
+            s += gregn(rB);
+            return;
         case 0x21: /* l.lwz rD,I(rA)      EA = I + rA */
             ti32 = sgnextmsk(w,(uint32_t)16); /* immediate */
             rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
