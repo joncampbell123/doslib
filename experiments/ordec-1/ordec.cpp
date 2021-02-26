@@ -99,6 +99,23 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
                 return;
             }
             break;
+        case 0x21: /* l.lwz rD,I(rA)      EA = I + rA */
+            ti32 = sgnextmsk(w,(uint32_t)16); /* immediate */
+            rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+            rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+            s  = "l.lwz       "; // 12-char
+            s += gregn(rD);
+            s += ",";
+            s += or1k_dec(ti32);
+            s += "(";
+            s += gregn(rA);
+            s += ")";
+            s += "               ; (EA is ";
+            s += gregn(rA);
+            s += " + ";
+            s += or1k_hex((uint32_t)ti32);
+            s += ")";
+            return;
         case 0x27: /* l.addi <rD,rA,Imm> */
             ti32 = sgnextmsk(w,(uint32_t)16); /* immediate */
             rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
