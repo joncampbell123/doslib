@@ -58,7 +58,7 @@ string gregn(const unsigned char n) {
 }
 
 void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
-    unsigned char rD,rA;
+    unsigned char rD,rA,rB;
     int32_t ti32;
 
     s.clear();
@@ -86,6 +86,22 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
             s += or1k_hex((uint32_t)ti32);
             s += "       ; (decimal ";
             s += or1k_dec(ti32);
+            s += ")";
+            return;
+        case 0x35: /* l.sw I(rA), rB     EA = I + rA */
+            ti32 = (int32_t)sgnextmsk((((w >> (uint32_t)21ul) & (uint32_t)0x1Ful) << (uint32_t)11ul) + ((uint32_t)w & 0x7FFul),(uint32_t)16);
+            rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+            rB = (unsigned char)((w >> (uint32_t)11ul) & (uint32_t)0x1Ful);
+            s  = "l.sw        "; // 12-char
+            s += or1k_dec(ti32);
+            s += "(";
+            s += gregn(rA);
+            s += "),";
+            s += gregn(rB);
+            s += "               ; (EA is ";
+            s += gregn(rA);
+            s += " + ";
+            s += or1k_hex((uint32_t)ti32);
             s += ")";
             return;
         default:
