@@ -162,6 +162,22 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
             s += or1k_hex((uint32_t)ti32);
             s += ")";
             return;
+        case 0x38: /* l.add rD,rA,rB  [9:8] = 0  [3:0] = 0 */
+            if ((w&0x300ul) == 0) {
+                if ((w&0x0Ful) == 0) {
+                    rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+                    rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+                    rB = (unsigned char)((w >> (uint32_t)11ul) & (uint32_t)0x1Ful);
+                    s  = "l.add       "; // 12-char
+                    s += gregn(rD);
+                    s += ",";
+                    s += gregn(rA);
+                    s += ",";
+                    s += gregn(rB);
+                    return;
+                }
+            }
+            break;
         default:
             break;
     }
