@@ -289,3 +289,11 @@ opcode "l.muli" {
     description "Multiply Immediate Signed";
 };
 
+opcode "l.mfspr" {
+    with { O=0x2D, D, A, K };
+    input { A, K, SPR(OR(A,K)) };
+    output { D };
+    display { D, A, K };
+    description "Move From Special-Purpose Register";
+};
+
