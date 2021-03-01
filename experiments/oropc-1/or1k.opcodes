@@ -43,6 +43,7 @@
 # Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
 # FLAG = flag register
 # PC = program counter
+# PCNEXT = program counter after execution (perhaps even after delay slot)
 # NPC = PC + (signextend(N) << 2) (l.j)
 # IPAGE = PC + (signextend(I) << 13) (l.adrp)
 # param order is often dest, src...
@@ -55,6 +56,7 @@
 # bits(msb,lsb)  bit range msb to lsb inclusive
 # HI16(N)        N << 16                        (l.movhi)
 # HI16(N,D)      (N << 16) | (D & 0xFFFFu)      (l.movhi)
+# LR is Link Register (r9)
 
 opcode "l.j" {
     with { O=0x00, N };
@@ -142,5 +144,21 @@ opcode "l.csync" {
 opcode "l.rfe" {
     with { O=0x09 };
     description "Return From Exception";
+};
+
+opcode "l.jr" {
+    with { O=0x11, B };
+    input { B };
+    output { PC=B };
+    display { B };
+    description "Jump Register";
+};
+
+opcode "l.jalr" {
+    with { O=0x12, B };
+    input { B };
+    output { LR=PCNEXT, PC=B }; /* order is important here! LR=PCNEXT, then PC=B */
+    display { B };
+    description "Jump and Link Register";
 };
 
