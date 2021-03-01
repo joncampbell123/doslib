@@ -79,6 +79,16 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
             s  = "l.jal       "; // 12-char
             s += or1k_hex((uint32_t)(ti32 + addr));
             return;
+        case 0x03: /* l.j <signed 26-bit relative address in words> */
+            ti32 = sgnextmsk(w,(uint32_t)26) << (int32_t)2;
+            s  = "l.bnf       "; // 12-char
+            s += or1k_hex((uint32_t)(ti32 + addr));
+            return;
+        case 0x04: /* l.jal <signed 26-bit relative address in words> */
+            ti32 = sgnextmsk(w,(uint32_t)26) << (int32_t)2;
+            s  = "l.bf        "; // 12-char
+            s += or1k_hex((uint32_t)(ti32 + addr));
+            return;
         case 0x05:
             if ((w&0xFF000000ul) == 0x15000000ul) {
                 s = "l.nop       "; // 12-char
@@ -176,6 +186,43 @@ void or1k_dec(string &s,uint32_t w,const uint32_t addr) {
                     s += gregn(rB);
                     return;
                 }
+                else if ((w&0x0Ful) == 2) {
+                    rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+                    rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+                    rB = (unsigned char)((w >> (uint32_t)11ul) & (uint32_t)0x1Ful);
+                    s  = "l.sub       "; // 12-char
+                    s += gregn(rD);
+                    s += ",";
+                    s += gregn(rA);
+                    s += ",";
+                    s += gregn(rB);
+                    return;
+                }
+            }
+            break;
+        case 0x39:
+            rD = (unsigned char)((w >> (uint32_t)21ul) & (uint32_t)0x1Ful);
+            rA = (unsigned char)((w >> (uint32_t)16ul) & (uint32_t)0x1Ful);
+            rB = (unsigned char)((w >> (uint32_t)11ul) & (uint32_t)0x1Ful);
+            switch (rD) {
+                case 0x0:
+                    s  = "l.sfeq      "; // 12-char
+                    s += gregn(rA);
+                    s += ",";
+                    s += gregn(rB);
+                    return;
+                case 0x1:
+                    s  = "l.sfne      "; // 12-char
+                    s += gregn(rA);
+                    s += ",";
+                    s += gregn(rB);
+                    return;
+                case 0xB:
+                    s  = "l.sfges     "; // 12-char
+                    s += gregn(rA);
+                    s += ",";
+                    s += gregn(rB);
+                    return;
             }
             break;
         default:
