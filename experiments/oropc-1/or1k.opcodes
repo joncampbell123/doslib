@@ -1,0 +1,93 @@
+# registers r0-r31
+# special purpose register group 0
+# supervision register
+# no FPU
+# no MMU
+# no vector math
+# no exceptions (yet)
+#
+# Basic opcode pattern:
+# 
+# 31     24      16      8       0
+# MSB                          LSB
+# 33222222222211111111110000000000
+# 10987654321098765432109876543210
+# --------------------------------
+# OOOOOODDDDDAAAAABBBBB???????????
+#  or
+# OOOOOONNNNNNNNNNNNNNNNNNNNNNNNNN
+#  or
+# OOOOOO??????????KKKKKKKKKKKKKKKK
+#  or some other variation
+#
+# O = top 6 bits, main opcode group
+# D = destination reg
+# A = register A
+# B = register B
+# N = often a signed offset i.e. jump instruction
+# K = immediate value
+# H = often part of opcode
+# L = often part of opcode
+# 
+# Just to make things clear, opcode definitions will list the bit fields.
+# Bitfields cannot cover bits 31-26 because those are part of the main opcode group.
+# D is assumed to be bits 25-21 unless otherwise defined.
+# A is assumed to be bits 20-16 unless otherwise defined.
+# B is assumed to be bits 15-11 unless otherwise defined.
+# N is assumed to be bits 25-0 unless otherwise defined.
+# I is assumed to be bits 15-0 unless otherwise defined.
+# K is assumed to be bits 15-0 unless otherwise defined.
+# O is always bits 31-26 and 6 bits wide.
+# Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
+# FLAG = flag register
+# PC = program counter
+# NPC = PC + (signextend(N) << 2) (l.j)
+# IPAGE = PC + (signextend(I) << 13) (l.adrp)
+# param order is often dest, src...
+# 
+# opcode "name" { ... };
+# with/output/input/display { ... };
+# input A, B=C, ...
+# description "string"
+# A=bits(msb,lsb)  bit range msb to lsb inclusive
+
+opcode "l.j" {
+    with { O=0x00, N };
+    output { PC=NPC };
+    input { N, PC };
+    display { output }; /* l.j <addr> */
+    description "Jump";
+};
+
+opcode "l.jal" {
+    with { O=0x01, N };
+    output { PC=NPC };
+    input { N, PC };
+    display { output }; /* l.jal <addr> */
+    description "Jump and Link";
+};
+
+opcode "l.adrp" {
+    with { O=0x02, D, I=bits(20,0) };
+    output { D=IPAGE };
+    input { IPAGE, PC };
+    display { D, IPAGE }; /* l.adrp rD, <addr> */
+    description "Compute Instruction Relative Address";
+};
+
+opcode "l.bnf" {
+    with { O=0x03, N };
+    output { PC=NPC }; /* conditional on !FLAG */
+    input { N, PC, FLAG };
+    display { output }; /* l.bnf <addr> */
+    description "Branch if No Flag";
+};
+
+opcode "l.bf" {
+    with { O=0x04, N };
+    output { PC=NPC }; /* conditional on FLAG */
+    input { N, PC, FLAG };
+    display { output }; /* l.bf <addr> */
+    description "Branch if Flag";
+};
+
