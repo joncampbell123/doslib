@@ -238,3 +238,19 @@ opcode "l.lhs" {
     description "Load Half Word and Extend with Sign";
 };
 
+opcode "l.addi" {
+    with { O=0x27, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, A, signed(I) };
+    description "Add Immediate";
+};
+
+opcode "l.addic" {
+    with { O=0x28, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, A, signed(I) };
+    description "Add Immediate and Carry"; /* carry=unsigned overflow   overflow=signed overflow */
+};
+
