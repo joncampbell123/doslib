@@ -40,6 +40,7 @@
 # L does not assume any bits and must be explicitly stated.
 # H does not assume any bits and must be explicitly stated.
 # O is always bits 31-26 and 6 bits wide.
+# OT11 is always bits 31-21.
 # OT16 is always bits 31-16.
 # OT32 is always bits 31-0.
 # Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
@@ -329,5 +330,85 @@ opcode "l.rori" {
     output { D };
     display { D, A, L };
     description "Rotate Right with Immediate"; /* zero fill */
+};
+
+opcode "l.sfeqi" {
+    with { O=0x2F, OT11=0x5E0, D=0, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Equal Immediate";
+};
+
+opcode "l.sfnei" {
+    with { O=0x2F, OT11=0x5E1, D=1, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Not Equal Immediate";
+};
+
+opcode "l.sfgtui" {
+    with { O=0x2F, OT11=0x5E2, D=2, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Greater Than Immediate Unsigned";
+};
+
+opcode "l.sfgeui" {
+    with { O=0x2F, OT11=0x5E3, D=3, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Greater or Equal Than Immediate Unsigned";
+};
+
+opcode "l.sfltui" {
+    with { O=0x2F, OT11=0x5E4, D=4, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Less Than Immediate Unsigned";
+};
+
+opcode "l.sfleui" {
+    with { O=0x2F, OT11=0x5E5, D=5, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Less or Equal Than Immediate Unsigned";
+};
+
+opcode "l.sfgtsi" {
+    with { O=0x2F, OT11=0x5EA, D=10, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Greater Than Immediate Signed";
+};
+
+opcode "l.sfgesi" {
+    with { O=0x2F, OT11=0x5EB, D=11, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Greater or Equal Than Immediate Signed";
+};
+
+opcode "l.sfltsi" {
+    with { O=0x2F, OT11=0x5EC, D=12, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Less Than Immediate Signed";
+};
+
+opcode "l.sflesi" {
+    with { O=0x2F, OT11=0x5ED, D=13, A, I };
+    input { A, I };
+    output { SR(F) };
+    display { A, I };
+    description "Set Flag if Less or Equal Than Immediate Signed";
 };
 
