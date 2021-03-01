@@ -38,6 +38,7 @@
 # I is assumed to be bits 15-0 unless otherwise defined.
 # K is assumed to be bits 15-0 unless otherwise defined.
 # O is always bits 31-26 and 6 bits wide.
+# OT16 is always bits 31-16.
 # Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
 # FLAG = flag register
 # PC = program counter
@@ -98,7 +99,7 @@ opcode "l.nop" {
     with { O=0x05, K };
     display { K }; /* l.nop N */
     description "No Operation";
-}
+};
 
 opcode "l.movhi" {
     with { O=0x06, D, bit(16)=0, K };
@@ -106,5 +107,19 @@ opcode "l.movhi" {
     input { K, D };
     display { D, HI16(K) }; /* l.movhi rD, HI16(K) */
     description "Move Immediate High";
-}
+};
+
+opcode "l.sys" {
+    with { OT16=0x2000, O=0x08, K };
+    input { K };
+    display { K };
+    description "System Call";
+};
+
+opcode "l.trap" {
+    with { OT16=0x2100, O=0x08, K };
+    input { K };
+    display { K };
+    description "Trap";
+};
 
