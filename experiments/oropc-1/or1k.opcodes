@@ -39,6 +39,7 @@
 # K is assumed to be bits 15-0 unless otherwise defined.
 # O is always bits 31-26 and 6 bits wide.
 # OT16 is always bits 31-16.
+# OT32 is always bits 31-0.
 # Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
 # FLAG = flag register
 # PC = program counter
@@ -121,5 +122,20 @@ opcode "l.trap" {
     input { K };
     display { K };
     description "Trap";
+};
+
+opcode "l.msync" {
+    with { OT32=0x22000000, O=0x08 };
+    description "Memory Synchronization";
+};
+
+opcode "l.psync" {
+    with { OT32=0x22800000, O=0x08 };
+    description "Memory Synchronization";
+};
+
+opcode "l.csync" {
+    with { OT32=0x23000000, O=0x08 };
+    description "Memory Synchronization";
 };
 
