@@ -257,3 +257,11 @@ opcode "l.addic" {
     description "Add Immediate and Carry";
 };
 
+opcode "l.andi" {
+    with { O=0x29, D, A, K };
+    input { A, K };
+    output { D };
+    display { D, A, K };
+    description "And with Immediate Half Word";
+};
+
