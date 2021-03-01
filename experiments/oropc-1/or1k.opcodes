@@ -222,3 +222,19 @@ opcode "l.lbs" {
     description "Load Byte and Extend with Sign";
 };
 
+opcode "l.lhz" {
+    with { O=0x25, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Half Word and Extend with Zero";
+};
+
+opcode "l.lhs" {
+    with { O=0x26, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Half Word and Extend with Sign";
+};
+
