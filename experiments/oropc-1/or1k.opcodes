@@ -37,6 +37,8 @@
 # N is assumed to be bits 25-0 unless otherwise defined.
 # I is assumed to be bits 15-0 unless otherwise defined.
 # K is assumed to be bits 15-0 unless otherwise defined.
+# L does not assume any bits and must be explicitly stated.
+# H does not assume any bits and must be explicitly stated.
 # O is always bits 31-26 and 6 bits wide.
 # OT16 is always bits 31-16.
 # OT32 is always bits 31-0.
@@ -295,5 +297,37 @@ opcode "l.mfspr" {
     output { D };
     display { D, A, K };
     description "Move From Special-Purpose Register";
+};
+
+opcode "l.slli" {
+    with { O=0x2E, D, A, bits(7,6)=0/*00*/, L=bits(5,0) };
+    input { A, L };
+    output { D };
+    display { D, A, L };
+    description "Shift Left Logical with Immediate"; /* zero fill */
+};
+
+opcode "l.srli" {
+    with { O=0x2E, D, A, bits(7,6)=1/*01*/, L=bits(5,0) };
+    input { A, L };
+    output { D };
+    display { D, A, L };
+    description "Shift Right Logical with Immediate"; /* zero fill */
+};
+
+opcode "l.srai" {
+    with { O=0x2E, D, A, bits(7,6)=2/*10*/, L=bits(5,0) };
+    input { A, L };
+    output { D };
+    display { D, A, L };
+    description "Shift Right Arithmetic with Immediate"; /* zero fill */
+};
+
+opcode "l.rori" {
+    with { O=0x2E, D, A, bits(7,6)=3/*11*/, L=bits(5,0) };
+    input { A, L };
+    output { D };
+    display { D, A, L };
+    description "Rotate Right with Immediate"; /* zero fill */
 };
 
