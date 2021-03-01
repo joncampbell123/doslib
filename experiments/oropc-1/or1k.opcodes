@@ -41,7 +41,7 @@
 # OT16 is always bits 31-16.
 # OT32 is always bits 31-0.
 # Bitfields not listed are assumed don't care/reserved (listed with - in the OpenRISC spec)
-# FLAG = flag register
+# FLAG = flag register aka SR(F)
 # PC = program counter
 # PCNEXT = program counter after execution (perhaps even after delay slot)
 # NPC = PC + (signextend(N) << 2) (l.j)
@@ -60,6 +60,9 @@
 # LR is Link Register (r9)
 # MACHI, MACLO = multiply-accumulate registers
 # I(N) = N + signed(I)
+# SR(x) = Supervisor register x
+# SR(CY) = carry flag
+# SR(OV) = overflow flag
 
 opcode "l.j" {
     with { O=0x00, N };
@@ -241,16 +244,16 @@ opcode "l.lhs" {
 opcode "l.addi" {
     with { O=0x27, D, A, I };
     input { I, A };
-    output { D };
+    output { D, SR(OF), SR(CY) }; /* SR(CY)=unsigned overflow   SR(OV)=signed overflow */
     display { D, A, signed(I) };
     description "Add Immediate";
 };
 
 opcode "l.addic" {
     with { O=0x28, D, A, I };
-    input { I, A };
-    output { D };
+    input { I, A, SR(CY) };
+    output { D, SR(OF), SR(CY) }; /* SR(CY)=unsigned overflow   SR(OV)=signed overflow */
     display { D, A, signed(I) };
-    description "Add Immediate and Carry"; /* carry=unsigned overflow   overflow=signed overflow */
+    description "Add Immediate and Carry";
 };
 
