@@ -265,3 +265,19 @@ opcode "l.andi" {
     description "And with Immediate Half Word";
 };
 
+opcode "l.ori" {
+    with { O=0x2A, D, A, K };
+    input { A, K };
+    output { D };
+    display { D, A, K };
+    description "Or with Immediate Half Word";
+};
+
+opcode "l.xori" {
+    with { O=0x2B, D, A, K };
+    input { A, K };
+    output { D };
+    display { D, A, K };
+    description "Exclusive Or with Immediate Half Word";
+};
+
