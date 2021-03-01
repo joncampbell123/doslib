@@ -49,7 +49,10 @@
 # with/output/input/display { ... };
 # input A, B=C, ...
 # description "string"
-# A=bits(msb,lsb)  bit range msb to lsb inclusive
+# bit(N) bit N
+# bits(msb,lsb)  bit range msb to lsb inclusive
+# HI16(N)        N << 16                        (l.movhi)
+# HI16(N,D)      (N << 16) | (D & 0xFFFFu)      (l.movhi)
 
 opcode "l.j" {
     with { O=0x00, N };
@@ -90,4 +93,18 @@ opcode "l.bf" {
     display { output }; /* l.bf <addr> */
     description "Branch if Flag";
 };
+
+opcode "l.nop" {
+    with { O=0x05, K };
+    display { K }; /* l.nop N */
+    description "No Operation";
+}
+
+opcode "l.movhi" {
+    with { O=0x06, D, bit(16)=0, K };
+    output { D=HI16(K,D) };
+    input { K, D };
+    display { D, HI16(K) }; /* l.movhi rD, HI16(K) */
+    description "Move Immediate High";
+}
 
