@@ -281,3 +281,11 @@ opcode "l.xori" {
     description "Exclusive Or with Immediate Half Word";
 };
 
+opcode "l.muli" {
+    with { O=0x2C, D, A, I };
+    input { A, I };
+    output { D, SR(OV) };
+    display { D, A, signed(I) };
+    description "Multiply Immediate Signed";
+};
+
