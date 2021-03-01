@@ -412,3 +412,11 @@ opcode "l.sflesi" {
     description "Set Flag if Less or Equal Than Immediate Signed";
 };
 
+opcode "l.mtspr" {
+    with { O=0x30, A, B, K=bits(range(25,21),range(10,0)) }; /* Ick, K is 16 bits split into 5 bits, followed by A, B, then 11 bits LSB */
+    input { A, B, K };
+    output { SPR(OR(A,K)) };
+    display { A, B, K };
+    description "Move To Special-Purpose Register";
+};
+
