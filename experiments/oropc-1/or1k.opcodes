@@ -54,9 +54,12 @@
 # description "string"
 # bit(N) bit N
 # bits(msb,lsb)  bit range msb to lsb inclusive
+# signed(I)      I sign-extended
 # HI16(N)        N << 16                        (l.movhi)
 # HI16(N,D)      (N << 16) | (D & 0xFFFFu)      (l.movhi)
 # LR is Link Register (r9)
+# MACHI, MACLO = multiply-accumulate registers
+# I(N) = N + signed(I)
 
 opcode "l.j" {
     with { O=0x00, N };
@@ -160,5 +163,62 @@ opcode "l.jalr" {
     output { LR=PCNEXT, PC=B }; /* order is important here! LR=PCNEXT, then PC=B */
     display { B };
     description "Jump and Link Register";
+};
+
+opcode "l.maci" {
+    with { O=0x13, A, I };
+    input { A, I };
+    output { MACHI, MACLO };
+    display { A, signed(I) };
+    description "Multiply Immediate and Accumulate Signed";
+};
+
+opcode "l.lwa" {
+    with { O=0x1B, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Single Word Atomic";
+};
+
+opcode "l.ld" {
+    with { O=0x20, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Double Word";
+    limited { 64bit }; /* 64-bit only */
+};
+
+opcode "l.lwz" {
+    with { O=0x21, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Single Word and Extend with Zero"; /* NTS: 32-bit, just loads the word. Extend only for 64-bit */
+};
+
+opcode "l.lws" {
+    with { O=0x22, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Single Word and Extend with Sign"; /* NTS: 32-bit, just loads the word. Extend only for 64-bit */
+};
+
+opcode "l.lbz" {
+    with { O=0x23, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Byte and Extend with Zero";
+};
+
+opcode "l.lbs" {
+    with { O=0x24, D, A, I };
+    input { I, A };
+    output { D };
+    display { D, I(A) };
+    description "Load Byte and Extend with Sign";
 };
 
