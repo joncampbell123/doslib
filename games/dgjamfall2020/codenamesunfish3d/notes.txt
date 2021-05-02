@@ -67,6 +67,28 @@ the poor user playing this game can get around. Alright, let's start!"
 
 --------------------
 
+A "pipe dream" clone using 640x480 VGA 16-color mode.
+
+- The game could offer 3 modes:
+  - Water world (same as basic game, with water)
+  - Nuclear reactor leak (same basic game, but you're routing a reactor leak,
+    "fluid" is glowing green stuff. VGA palette could animate that color to
+    make the green "pulsate" like it's radioactive)
+  - Shit happens (shown with a poop emoji followed by "it happens"). Various
+    people visit an outhouse and fill a meter. When it's full, the "brown
+    stuff" begins flowing, otherwise same basic game.
+- Same idea as "pipe dream": You have a random assortment of pipe parts and
+  you have to assemble a path for the fluid to flow far enough to lose
+  pressure or (bonus points) into a drain.
+
+--------------------
+
+Undecided third game.
+
+- ???
+
+--------------------
+
 Intended runtime environment: 16-bit real mode DOS. With support for
 EMM386.EXE and HIMEM.SYS for some extra storage (but don't get carried away
 like Project 16). Each mini-game could run as a separate executable that
@@ -97,6 +119,12 @@ Craption 52 ideas:
   must guide his rocket through sector 80286 that has been invaded
   by space donkeys. Gameplay of course inspired by DONKEY.BAS.
 
+  Ship must dodge various donkeys. Sprite images could vary between
+  a few generic donkeys, the donkey from Shrek, and (as a visual
+  pun) disembodied buttocks with a 1 in 100 random chance. If that
+  doesn't make sense, consider that in English "ass" is both a term
+  for a donkey as well as the buttocks.
+
 * Office Space
 
   Oh no, another space shooter! This time with random sprites of
@@ -110,6 +138,15 @@ Craption 52 ideas:
   Level start: Play a clip from "Office Space" of that guy saying
                "I believe you have my stapler..."
 
+  Note: Inspired of course by the part of AVGN's review describing
+        a space shooter with safety pins, baby things, etc.
+
+* Smiley wars
+
+  At random, a shot (either way) could turn the target into a pile
+  of poo. If it's *you*, the game could say "YOU LOSE! HAVE A CRAPPY
+  DAY!". Otherwise just "YOU LOSE" "YOU WIN" "TIE!"
+
 * The Cheetoman (parody of the Cheetahmen)
 
   The Cheetoman (Donald Trump) must fight his way through a level
@@ -120,4 +157,7 @@ Craption 52 ideas:
   You know... Cheetoman. Because "Orange Man Bad" right? XD
   A stupid pun for laughs, of course, not to promote or
   discourage anything.
+
+  User will have a path to success if desired, or plenty of deadly
+  spike traps and such if also desired. Either way, have fun :)
 
