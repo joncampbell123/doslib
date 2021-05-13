@@ -34,6 +34,7 @@ CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.$(EXEEXT)
 
 !ifndef TARGET_WINDOWS
 ! ifndef TARGET_OS2
+BLAH_EXE =    $(SUBDIR)$(HPS)blah.$(EXEEXT)
 ANSI_EXE =	  $(SUBDIR)$(HPS)ansi.$(EXEEXT)
 LOL_EXE =     $(SUBDIR)$(HPS)lol.$(EXEEXT)
 TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.$(EXEEXT)
@@ -172,7 +173,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(INT16P_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(INT16P_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) $(BLAH_EXE) .symbolic
 
 lib: $(HW_DOS_LIB) .symbolic
 
@@ -244,6 +245,14 @@ $(SUBDIR)$(HPS)clsgexm1.hdr.asm clsgexm1.h: clsgexm1.def
 $(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c $(SUBDIR)$(HPS)clsgexm1.hdr.obj clsgexm1.h
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) clsgexm1.c
 	@$(CC) @tmp.cmd
+!endif
+
+!ifdef BLAH_EXE
+$(BLAH_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)blah.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)blah.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(BLAH_EXE)
+	%write tmp.cmd option map=$(BLAH_EXE).map
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef ANSI_EXE
