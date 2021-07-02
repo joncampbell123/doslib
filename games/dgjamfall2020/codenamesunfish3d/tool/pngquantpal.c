@@ -298,6 +298,23 @@ fail:
     return ret;
 }
 
+static unsigned char find_palette_index(const unsigned char r,const unsigned char g,const unsigned char b) {
+	unsigned int dist = INT_MAX;
+	unsigned char ret = 0;
+	unsigned int i;
+
+	for (i=0;i < gen_png_pal_count;i++) {
+		unsigned int cdist = abs((int)r - gen_png_pal[i].red) + abs((int)g - gen_png_pal[i].green) + abs((int)b - gen_png_pal[i].blue);
+
+		if (dist > cdist) {
+			dist = cdist;
+			ret = (unsigned int)i;
+		}
+	}
+
+	return ret;
+}
+
 static int quant_rgb_to_png(void) {
 	unsigned int x,y;
 	unsigned char *s;
@@ -308,7 +325,7 @@ static int quant_rgb_to_png(void) {
 		d = gen_png_image_rows[y];
 
 		for (x=0;x < gen_png_width;x++) {
-			d[0] = (s[0] * (gen_png_pal_count - 1)) / 255;
+			d[0] = find_palette_index(s[0],s[1],s[2]);
 
 			s += src_png_bypp;
 			d++;
