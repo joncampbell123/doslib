@@ -189,6 +189,9 @@ static int load_palette_png(void) {
     memcpy(gen_png_pal,pal_png_pal,pal_png_pal_count * sizeof(png_color));
     gen_png_pal_count = pal_png_pal_count;
 
+    memcpy(gen_png_trns,pal_png_pal_trns,pal_png_pal_trns_count);
+    gen_png_trns_count = pal_png_pal_trns_count;
+
     /* success */
     ret = 0;
 fail:
@@ -304,6 +307,11 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 	unsigned int i;
 
 	for (i=0;i < gen_png_pal_count;i++) {
+		if (i < gen_png_trns_count) {
+			if (gen_png_trns[i] & 0x80)
+				continue;
+		}
+
 		unsigned int cdist = abs((int)r - gen_png_pal[i].red) + abs((int)g - gen_png_pal[i].green) + abs((int)b - gen_png_pal[i].blue);
 
 		if (dist > cdist) {
