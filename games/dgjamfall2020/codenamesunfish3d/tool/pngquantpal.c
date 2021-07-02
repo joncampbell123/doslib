@@ -301,7 +301,12 @@ fail:
     return ret;
 }
 
+static unsigned char grayscale(const unsigned char r,const unsigned char g,const unsigned char b) {
+	return (unsigned char)(((r * 29u) + (g * 60u) + (b * 11u) + 50u) / 100u);
+}
+
 static unsigned char find_palette_index(const unsigned char r,const unsigned char g,const unsigned char b) {
+	unsigned char gray = grayscale(r,g,b);
 	unsigned int dist = INT_MAX;
 	unsigned char ret = 0;
 	unsigned int i;
@@ -321,7 +326,8 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 				continue;
 		}
 
-		unsigned int cdist = abs((int)r - gen_png_pal[i].red) + abs((int)g - gen_png_pal[i].green) + abs((int)b - gen_png_pal[i].blue);
+		unsigned char cgray = grayscale(gen_png_pal[i].red,gen_png_pal[i].green,gen_png_pal[i].blue);
+		unsigned int cdist = abs((int)gray - cgray) + abs((int)r - gen_png_pal[i].red) + abs((int)g - gen_png_pal[i].green) + abs((int)b - gen_png_pal[i].blue);
 
 		if (dist > cdist) {
 			dist = cdist;
