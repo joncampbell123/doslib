@@ -7,7 +7,7 @@ dos=1 # MS-DOS
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -v pngmatchpal
+    rm -fv pngmatchpal pngquantpal
     exit 0
 fi
 
