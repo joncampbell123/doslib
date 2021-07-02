@@ -306,6 +306,7 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 	unsigned char ret = 0;
 	unsigned int i;
 
+	/* do not map to transparent color */
 	while (ret < gen_png_trns_count) {
 		if (!(gen_png_trns[ret] & 0x80))
 			ret++;
@@ -315,7 +316,8 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 
 	for (i=0;i < gen_png_pal_count;i++) {
 		if (i < gen_png_trns_count) {
-			if (gen_png_trns[i] & 0x80)
+			/* do not map to transparent color */
+			if (!(gen_png_trns[i] & 0x80))
 				continue;
 		}
 
@@ -331,16 +333,25 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 }
 
 static int quant_rgb_to_png(void) {
+	int transparent_color = -1;
 	unsigned int x,y;
 	unsigned char *s;
 	unsigned char *d;
+
+	if (gen_png_trns_count > 0) {
+		if (!(gen_png_trns[0] & 0x80))
+			transparent_color = 0;
+	}
 
 	for (y=0;y < gen_png_height;y++) {
 		s = src_png_image_rows[y];
 		d = gen_png_image_rows[y];
 
 		for (x=0;x < gen_png_width;x++) {
-			d[0] = find_palette_index(s[0],s[1],s[2]);
+			if (src_png_bypp > 3 && !(s[3] & 0x80) && transparent_color >= 0)
+				d[0] = (unsigned char)transparent_color;
+			else
+				d[0] = find_palette_index(s[0],s[1],s[2]);
 
 			s += src_png_bypp;
 			d++;
