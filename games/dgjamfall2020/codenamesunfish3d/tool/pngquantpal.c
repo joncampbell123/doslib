@@ -5,7 +5,7 @@
 
 #include <png.h>    /* libpng */
 
-static unsigned char	enable_dither = 1;
+static unsigned char	enable_dither = 0;
 
 static char*            pal_png = NULL;
 static char*            in_png = NULL;
@@ -62,7 +62,7 @@ static void help(void) {
     fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
     fprintf(stderr,"rearranging the palette to match palette PNG.\n");
-    fprintf(stderr," -dither         Dither to palette (default)\n");
+    fprintf(stderr," -dither         Dither to palette\n");
     fprintf(stderr," -no-dither      Do not dither\n");
 }
 
