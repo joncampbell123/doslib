@@ -1,6 +1,9 @@
-TOOLS=pngmatchpal
+TOOLS=pngmatchpal pngquantpal
 
 all: $(TOOLS)
+
+pngquantpal: pngquantpal.c
+	gcc -lpng -o $@ $<
 
 pngmatchpal: pngmatchpal.c
 	gcc -lpng -o $@ $<
