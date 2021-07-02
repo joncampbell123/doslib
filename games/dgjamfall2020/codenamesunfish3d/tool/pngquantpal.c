@@ -306,6 +306,13 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 	unsigned char ret = 0;
 	unsigned int i;
 
+	while (ret < gen_png_trns_count) {
+		if (!(gen_png_trns[ret] & 0x80))
+			ret++;
+		else
+			break;
+	}
+
 	for (i=0;i < gen_png_pal_count;i++) {
 		if (i < gen_png_trns_count) {
 			if (gen_png_trns[i] & 0x80)
