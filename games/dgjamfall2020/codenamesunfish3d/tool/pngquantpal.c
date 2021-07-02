@@ -247,18 +247,18 @@ static int load_in_png(void) {
 
     src_png_bypp = (png_color_type & PNG_COLOR_MASK_ALPHA) ? 4 : 3;
 
-    src_png_image = malloc((png_width * png_height) + 4096);
+    src_png_image = malloc((png_width * png_height * src_png_bypp) + 4096);
     if (src_png_image == NULL)
         goto fail;
 
-    src_png_image_rows = (png_bytep*)malloc(sizeof(png_bytep) * png_height * src_png_bypp);
+    src_png_image_rows = (png_bytep*)malloc(sizeof(png_bytep) * png_height);
     if (src_png_image_rows == NULL)
         goto fail;
 
     {
         unsigned int y;
         for (y=0;y < png_height;y++)
-            src_png_image_rows[y] = src_png_image + (y * png_width);
+            src_png_image_rows[y] = src_png_image + (y * png_width * src_png_bypp);
     }
 
     gen_png_image = malloc((png_width * png_height) + 4096);
@@ -296,6 +296,26 @@ fail:
 
     fclose(fp);
     return ret;
+}
+
+static int quant_rgb_to_png(void) {
+	unsigned int x,y;
+	unsigned char *s;
+	unsigned char *d;
+
+	for (y=0;y < gen_png_height;y++) {
+		s = src_png_image_rows[y];
+		d = gen_png_image_rows[y];
+
+		for (x=0;x < gen_png_width;x++) {
+			d[0] = (s[0] * (gen_png_pal_count - 1)) / 255;
+
+			s += src_png_bypp;
+			d++;
+		}
+	}
+
+	return 0;
 }
 
 static int save_out_png(void) {
@@ -360,6 +380,8 @@ int main(int argc,char **argv) {
     if (load_palette_png())
         return 1;
     if (load_in_png())
+        return 1;
+    if (quant_rgb_to_png())
         return 1;
     if (save_out_png())
         return 1;
