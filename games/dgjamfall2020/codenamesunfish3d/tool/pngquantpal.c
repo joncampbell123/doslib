@@ -5,6 +5,8 @@
 
 #include <png.h>    /* libpng */
 
+static unsigned char	enable_dither = 1;
+
 static char*            pal_png = NULL;
 static char*            in_png = NULL;
 static char*            out_png = NULL;
@@ -60,6 +62,8 @@ static void help(void) {
     fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
     fprintf(stderr,"rearranging the palette to match palette PNG.\n");
+    fprintf(stderr," -dither         Dither to palette (default)\n");
+    fprintf(stderr," -no-dither      Do not dither\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -76,9 +80,15 @@ static int parse_argv(int argc,char **argv) {
                 help();
                 return 1;
             }
-            else if (!strcmp(a,"i")) {
-                if ((in_png = argv[i++]) == NULL)
-                    return 1;
+	    else if (!strcmp(a,"dither")) {
+		    enable_dither = 1;
+	    }
+	    else if (!strcmp(a,"no-dither")) {
+		    enable_dither = 0;
+	    }
+	    else if (!strcmp(a,"i")) {
+		    if ((in_png = argv[i++]) == NULL)
+			    return 1;
             }
             else if (!strcmp(a,"o")) {
                 if ((out_png = argv[i++]) == NULL)
@@ -308,6 +318,7 @@ static unsigned char grayscale(const unsigned char r,const unsigned char g,const
 static unsigned char find_palette_index(const unsigned char r,const unsigned char g,const unsigned char b) {
 	unsigned char gray = grayscale(r,g,b);
 	unsigned int dist = INT_MAX;
+	unsigned char pret = 0;
 	unsigned char ret = 0;
 	unsigned int i;
 
@@ -319,6 +330,7 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 			break;
 	}
 
+	pret = ret;
 	for (i=0;i < gen_png_pal_count;i++) {
 		if (i < gen_png_trns_count) {
 			/* do not map to transparent color */
@@ -331,8 +343,14 @@ static unsigned char find_palette_index(const unsigned char r,const unsigned cha
 
 		if (dist > cdist) {
 			dist = cdist;
+			pret = ret;
 			ret = (unsigned int)i;
 		}
+	}
+
+	if (ret != pret && enable_dither) {
+		if (((unsigned)rand()) & 1)
+			return pret;
 	}
 
 	return ret;
