@@ -15,11 +15,11 @@ IFICT_EXE =     ifictdos.$(EXEEXT)
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
 
 .CPP.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
 
 
@@ -31,7 +31,7 @@ exe: $(IFICT_EXE) .symbolic
 
 !ifdef IFICT_EXE
 $(IFICT_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(COMMON_LIB) $(SUBDIR)$(HPS)ifict.obj
-	%write tmp.cmd option quiet option map=$(IFICT_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)ifict.obj name $(IFICT_EXE)
+	%write tmp.cmd option quiet option map=$(IFICT_EXE).map system $(WLINK_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)ifict.obj name $(IFICT_EXE)
 	@wlink @tmp.cmd
 !endif
 
