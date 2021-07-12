@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <stdint.h>
 
 /* NTS: Do not use SDL2 if targeting MS-DOS or Windows 3.1/95, we will have our own framework to use for those targets */
 #include <SDL2/SDL.h>
@@ -18,6 +19,7 @@ SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
 SDL_Color	sdl_pal[256];
+Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
 
 #pragma pack(push,1)
 struct IFEPaletteEntry {
@@ -27,6 +29,17 @@ struct IFEPaletteEntry {
 
 void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
+
+/* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
+ *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
+ *          return value of IFEGetTicks() to periodically count from zero. */
+uint32_t IFEGetTicks(void) {
+	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
+}
+
+void IFEResetTicks(const uint32_t base) {
+	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
+}
 
 void IFEInitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -117,7 +130,8 @@ int main(int argc,char **argv) {
 
 	IFEInitVideo();
 
-	sleep(1);
+	IFEResetTicks(IFEGetTicks());
+	while (IFEGetTicks() < 1000) { }
 
 	{
 		IFEPaletteEntry pal[256];
@@ -169,7 +183,8 @@ int main(int argc,char **argv) {
 
 		IFEUpdateFullScreen();
 
-		sleep(3);
+		IFEResetTicks(IFEGetTicks());
+		while (IFEGetTicks() < 3000) { }
 	}
 
 	IFEShutdownVideo();
