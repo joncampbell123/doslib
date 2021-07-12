@@ -336,6 +336,7 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	(void)first;
 	(void)count;
 	(void)pal;
+	(void)i;
 	// TODO
 #endif
 }
@@ -376,21 +377,21 @@ void IFETestRGBPalette() {
 	unsigned int i;
 
 	for (i=0;i < 64;i++) {
-		pal[i].r = i*4u;
-		pal[i].g = i*4u;
-		pal[i].b = i*4u;
+		pal[i].r = (unsigned char)(i*4u);
+		pal[i].g = (unsigned char)(i*4u);
+		pal[i].b = (unsigned char)(i*4u);
 
-		pal[i+64u].r = i*4u;
-		pal[i+64u].g = 0;
-		pal[i+64u].b = 0;
+		pal[i+64u].r = (unsigned char)(i*4u);
+		pal[i+64u].g = 0u;
+		pal[i+64u].b = 0u;
 
-		pal[i+128u].r = 0;
-		pal[i+128u].g = i*4u;
-		pal[i+128u].b = 0;
+		pal[i+128u].r = 0u;
+		pal[i+128u].g = (unsigned char)(i*4u);
+		pal[i+128u].b = 0u;
 
-		pal[i+192u].r = 0;
-		pal[i+192u].g = 0;
-		pal[i+192u].b = i*4u;
+		pal[i+192u].r = 0u;
+		pal[i+192u].g = 0u;
+		pal[i+192u].b = (unsigned char)(i*4u);
 	}
 
 	IFESetPaletteColors(0,256,pal);
@@ -424,6 +425,7 @@ bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
 #elif defined(USE_WIN32)
 	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
 #elif defined(USE_DOSLIB)
+	(void)p;
 	return false;
 #endif
 }
@@ -548,8 +550,8 @@ void IFETestRGBPalettePattern(void) {
 	for (y=0;y < h;y++) {
 		unsigned char *row = firstrow + ((int)y * pitch);
 		for (x=0;x < w;x++) {
-			if ((x & 0xF0) != 0xF0)
-				row[x] = (y & 0xFF);
+			if ((x & 0xF0u) != 0xF0u)
+				row[x] = (unsigned char)(y & 0xFFu);
 			else
 				row[x] = 0;
 		}
