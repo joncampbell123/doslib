@@ -1,6 +1,7 @@
 
 #if defined(USE_WIN32)
 # include <windows.h>
+# include <mmsystem.h>
 #endif
 
 #include <stdio.h>
@@ -40,6 +41,12 @@ HINSTANCE	myInstance = NULL;
 HWND		hwndMain = NULL;
 bool		winQuit = false;
 bool		winIsDestroying = false;
+bool		winScreenIsPal = false;
+BITMAPINFO*	hwndMainDIB = NULL;
+HPALETTE	hwndMainPAL = NULL;
+HPALETTE	hwndMainPALPrev = NULL;
+PALETTEENTRY	win_pal[256];
+unsigned char*	win_dib = NULL;
 #endif
 
 #pragma pack(push,1)
@@ -53,7 +60,9 @@ void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
 // FIXME dummy var
-#if defined(USE_WIN32) || defined(USE_DOSLIB)
+#if defined(USE_WIN32)
+DWORD win32_tick_base = 0;
+#elif defined(USE_DOSLIB)
 uint32_t fake_tick_count = 0;
 uint32_t fake_tick_base = 0;
 #endif
@@ -65,7 +74,7 @@ uint32_t IFEGetTicks(void) {
 #if defined(USE_SDL2)
 	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
 #elif defined(USE_WIN32)
-	return (fake_tick_count++) - fake_tick_base;
+	return uint32_t(timeGetTime() - win32_tick_base);
 #elif defined(USE_DOSLIB)
 	return (fake_tick_count++) - fake_tick_base;
 #endif
@@ -75,7 +84,7 @@ void IFEResetTicks(const uint32_t base) {
 #if defined(USE_SDL2)
 	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
 #elif defined(USE_WIN32)
-	fake_tick_base = base;
+	win32_tick_base = base;
 #elif defined(USE_DOSLIB)
 	fake_tick_base = base;
 #endif
@@ -110,6 +119,15 @@ void IFEInitVideo(void) {
 	IFECheckEvents();
 #elif defined(USE_WIN32)
 	if (hwndMain == NULL) {
+		{
+			HDC hDC = GetDC(NULL); /* the screen */
+			if ((GetDeviceCaps(hDC,RASTERCAPS) & RC_PALETTE) && (GetDeviceCaps(hDC,BITSPIXEL) == 8))
+				winScreenIsPal = true;
+			else
+				winScreenIsPal = false;
+			ReleaseDC(NULL,hDC);
+		}
+
 		hwndMain = CreateWindow(hwndMainClassName,"",WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,
 			CW_USEDEFAULT,CW_USEDEFAULT,
 			640,480,
@@ -132,6 +150,56 @@ void IFEInitVideo(void) {
 			sh = GetSystemMetrics(SM_CYSCREEN);
 			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
 		}
+
+		hwndMainDIB = (BITMAPINFO*)calloc(1,sizeof(BITMAPINFOHEADER) + (256 * 2/*16-bit integers, DIB_PAL_COLORS*/) + 4096/*for good measure*/);
+		if (hwndMainDIB == NULL)
+			IFEFatalError("hwndMainDIB malloc fail");
+
+		hwndMainDIB->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		hwndMainDIB->bmiHeader.biWidth = 640;
+		hwndMainDIB->bmiHeader.biHeight = 480;
+		hwndMainDIB->bmiHeader.biPlanes = 1;
+		hwndMainDIB->bmiHeader.biBitCount = 8;
+		hwndMainDIB->bmiHeader.biCompression = 0;
+		hwndMainDIB->bmiHeader.biSizeImage = 640*480; /* NTS: pitch is width rounded to a multiple of 4 */
+		hwndMainDIB->bmiHeader.biClrUsed = 256;
+		hwndMainDIB->bmiHeader.biClrImportant = 256;
+		if (winScreenIsPal) { /* map 1:1 to logical palette */
+			uint16_t *p = (uint16_t*)( &(hwndMainDIB->bmiColors[0]) );
+			LOGPALETTE* pal;
+			unsigned int i;
+
+			for (i=0;i < 256;i++) p[i] = (uint16_t)i;
+
+			pal = (LOGPALETTE*)calloc(1,sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * 256) + 4096);
+			if (pal == NULL) IFEFatalError("LOGPALETTE malloc fail");
+
+			pal->palVersion = 0x300;
+			pal->palNumEntries = 256;
+			for (i=0;i < 256;i++) {
+				pal->palPalEntry[i].peRed = (unsigned char)i;
+				pal->palPalEntry[i].peGreen = (unsigned char)i;
+				pal->palPalEntry[i].peBlue = (unsigned char)i;
+				pal->palPalEntry[i].peFlags = PC_NOCOLLAPSE;
+			}
+
+			hwndMainPAL = CreatePalette(pal);
+			if (hwndMainPAL == NULL)
+				IFEFatalError("CreatePalette fail");
+
+			free((void*)pal);
+		}
+		else {
+			hwndMainPALPrev = NULL;
+			hwndMainPAL = NULL;
+		}
+
+		win_dib = (unsigned char*)malloc(hwndMainDIB->bmiHeader.biSizeImage);
+		if (win_dib == NULL)
+			IFEFatalError("win_dib malloc fail");
+
+		IFEUpdateFullScreen();
+		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
 	IFEFatalError("Not yet implemented");
@@ -156,11 +224,32 @@ void IFEShutdownVideo(void) {
 	}
 	SDL_Quit();
 #elif defined(USE_WIN32)
+	if (hwndMainPAL != NULL) {
+		HDC hDC = GetDC(hwndMain);
+
+		if (hwndMainPALPrev != NULL)
+			SelectPalette(hDC,hwndMainPALPrev,TRUE/*background*/);
+
+		UnrealizeObject((HGDIOBJ)hwndMainPAL);
+		DeleteObject((HGDIOBJ)hwndMainPAL);
+		hwndMainPALPrev = NULL;
+		hwndMainPAL = NULL;
+
+		ReleaseDC(hwndMain,hDC);
+	}
+	if (hwndMainDIB != NULL) {
+		free((void*)hwndMainDIB);
+		hwndMainDIB = NULL;
+	}
 	if (hwndMain != NULL) {
 		winIsDestroying = true;
 		DestroyWindow(hwndMain);
 		winIsDestroying = false;
 		hwndMain = NULL;
+	}
+	if (win_dib != NULL) {
+		free((void*)win_dib);
+		win_dib = NULL;
 	}
 #elif defined(USE_DOSLIB)
 	// TODO
@@ -168,12 +257,12 @@ void IFEShutdownVideo(void) {
 }
 
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
-#if defined(USE_SDL2)
 	unsigned int i;
 
 	if (first >= 256u || count > 256u || (first+count) > 256u)
 		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count);
 
+#if defined(USE_SDL2)
 	for (i=0;i < count;i++) {
 		sdl_pal[i+first].r = pal[i].r;
 		sdl_pal[i+first].g = pal[i].g;
@@ -184,10 +273,28 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
 		IFEFatalError("SDL2 game palette set colors");
 #elif defined(USE_WIN32)
-	(void)first;
-	(void)count;
-	(void)pal;
-	// TODO
+	if (winScreenIsPal) {
+		for (i=0;i < count;i++) {
+			win_pal[i].peRed = pal[i].r;
+			win_pal[i].peGreen = pal[i].g;
+			win_pal[i].peBlue = pal[i].b;
+			win_pal[i].peFlags = PC_NOCOLLAPSE;
+		}
+
+		SetPaletteEntries(hwndMainPAL,first,count,win_pal);
+		{
+			HDC hDC = GetDC(hwndMain);
+			RealizePalette(hDC);
+			ReleaseDC(hwndMain,hDC);
+		}
+	}
+	else {
+		for (i=0;i < count;i++) {
+			hwndMainDIB->bmiColors[i+first].rgbRed = pal[i].r;
+			hwndMainDIB->bmiColors[i+first].rgbGreen = pal[i].g;
+			hwndMainDIB->bmiColors[i+first].rgbBlue = pal[i].b;
+		}
+	}
 #elif defined(USE_DOSLIB)
 	(void)first;
 	(void)count;
@@ -204,7 +311,22 @@ void IFEUpdateFullScreen(void) {
 	if (SDL_UpdateWindowSurface(sdl_window) != 0)
 		IFEFatalError("Window surface update");
 #elif defined(USE_WIN32)
-	// TODO
+	{
+		HDC hDC = GetDC(hwndMain);
+
+		StretchDIBits(hDC,/*dest x/y*/0,0,
+			abs((int)hwndMainDIB->bmiHeader.biWidth),
+			abs((int)hwndMainDIB->bmiHeader.biHeight),
+			/*src x/y*/0,0,
+			abs((int)hwndMainDIB->bmiHeader.biWidth),
+			abs((int)hwndMainDIB->bmiHeader.biHeight),
+			win_dib,
+			hwndMainDIB,
+			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS,
+			SRCCOPY);
+
+		ReleaseDC(hwndMain,hDC);
+	}
 #elif defined(USE_DOSLIB)
 	// TODO
 #endif
@@ -249,7 +371,7 @@ unsigned char *IFEScreenDrawPointer(void) {
 #if defined(USE_SDL2)
 	return (unsigned char*)(sdl_game_surface->pixels);
 #elif defined(USE_WIN32)
-	return NULL;// TODO
+	return win_dib;
 #elif defined(USE_DOSLIB)
 	return NULL;// TODO
 #endif
@@ -259,7 +381,7 @@ unsigned int IFEScreenDrawPitch(void) {
 #if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->pitch);
 #elif defined(USE_WIN32)
-	return 0;// TODO
+	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -269,7 +391,7 @@ unsigned int IFEScreenWidth(void) {
 #if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->w);
 #elif defined(USE_WIN32)
-	return 0;// TODO
+	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth);
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -279,7 +401,7 @@ unsigned int IFEScreenHeight(void) {
 #if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->h);
 #elif defined(USE_WIN32)
-	return 0;// TODO
+	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biHeight);
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -296,7 +418,7 @@ bool IFEBeginScreenDraw(void) {
 
 	return true;
 #elif defined(USE_WIN32)
-	return 0;// TODO
+	return true; // nothing to do
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -307,7 +429,7 @@ void IFEEndScreenDraw(void) {
 	if (SDL_MUSTLOCK(sdl_game_surface))
 		SDL_UnlockSurface(sdl_game_surface);
 #elif defined(USE_WIN32)
-	// TODO
+	// nothing to do
 #elif defined(USE_DOSLIB)
 	// TODO
 #endif
@@ -345,6 +467,8 @@ void IFEWaitEvent(const int wait_ms) {
 		IFEProcessEvent(ev);
 #elif defined(USE_WIN32)
 	MSG msg;
+
+	(void)wait_ms;
 
 	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
 		TranslateMessage(&msg);
@@ -414,6 +538,28 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_DESTROY:
 			if (!winIsDestroying)
 				winQuit = true;
+			break;
+		case WM_PAINT:
+			{
+				PAINTSTRUCT ps;
+				HGDIOBJ p = NULL;
+				HDC hDC = BeginPaint(hwnd,&ps);
+				p = SelectPalette(hDC,hwndMainPAL,FALSE);
+				if (hwndMainPALPrev == NULL) hwndMainPALPrev = (HPALETTE)p;
+				RealizePalette(hDC);
+				EndPaint(hwnd,&ps);
+				IFEUpdateFullScreen();
+			}
+			break;
+		case WM_ACTIVATE:
+			{
+				HGDIOBJ p = NULL;
+				HDC hDC = GetDC(hwndMain);
+				p = SelectPalette(hDC,hwndMainPAL,FALSE);
+				if (hwndMainPALPrev == NULL) hwndMainPALPrev = (HPALETTE)p;
+				RealizePalette(hDC);
+				ReleaseDC(hwndMain,hDC);
+			}
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
