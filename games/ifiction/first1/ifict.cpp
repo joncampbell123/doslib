@@ -26,6 +26,7 @@ SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
 SDL_Color	sdl_pal[256];
 Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
+bool		sdl_signal_to_quit = false;
 #endif
 
 #pragma pack(push,1)
@@ -157,6 +158,12 @@ void IFETestRGBPalette() {
 }
 
 #if defined(USE_SDL2)
+bool IFEUserWantsToQuit(void) {
+	return sdl_signal_to_quit;
+}
+#endif
+
+#if defined(USE_SDL2)
 unsigned char *IFEScreenDrawPointer(void) {
 	return (unsigned char*)(sdl_game_surface->pixels);
 }
@@ -190,8 +197,9 @@ void IFEEndScreenDraw(void) {
 
 #if defined(USE_SDL2)
 void IFEProcessEvent(SDL_Event &ev) {
-	(void)ev;
-	// TODO
+	if (ev.type == SDL_QUIT) {
+		sdl_signal_to_quit = true;
+	}
 }
 #endif
 
@@ -250,6 +258,11 @@ void IFEFatalError(const char *msg,...) {
 	exit(127);
 }
 
+void IFENormalExit(void) {
+	IFEShutdownVideo();
+	exit(0);
+}
+
 int main(int argc,char **argv) {
 	//not used yet
 	(void)argc;
@@ -258,13 +271,19 @@ int main(int argc,char **argv) {
 	IFEInitVideo();
 
 	IFEResetTicks(IFEGetTicks());
-	while (IFEGetTicks() < 1000) IFEWaitEvent(100);
+	while (IFEGetTicks() < 1000) {
+		if (IFEUserWantsToQuit()) IFENormalExit();
+		IFEWaitEvent(100);
+	}
 
 	IFETestRGBPalette();
 	IFETestRGBPalettePattern();
-	while (IFEGetTicks() < 3000) IFEWaitEvent(100);
+	while (IFEGetTicks() < 3000) {
+		if (IFEUserWantsToQuit()) IFENormalExit();
+		IFEWaitEvent(100);
+	}
 
-	IFEShutdownVideo();
+	IFENormalExit();
 	return 0;
 }
 
