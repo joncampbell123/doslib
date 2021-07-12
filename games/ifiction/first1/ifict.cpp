@@ -65,24 +65,24 @@ int main(int argc,char **argv) {
 		SDL_Color pal[256];
 
 		for (i=0;i < 64;i++) {
-			pal[i].r = i;
-			pal[i].g = i;
-			pal[i].b = i;
+			pal[i].r = i*4u;
+			pal[i].g = i*4u;
+			pal[i].b = i*4u;
 			pal[i].a = 0xFF;
 
-			pal[i+64u].r = i;
+			pal[i+64u].r = i*4u;
 			pal[i+64u].g = 0;
 			pal[i+64u].b = 0;
 			pal[i+64u].a = 0xFF;
 
 			pal[i+128u].r = 0;
-			pal[i+128u].g = i;
+			pal[i+128u].g = i*4u;
 			pal[i+128u].b = 0;
 			pal[i+128u].a = 0xFF;
 
 			pal[i+192u].r = 0;
 			pal[i+192u].g = 0;
-			pal[i+192u].b = i;
+			pal[i+192u].b = i*4u;
 			pal[i+192u].a = 0xFF;
 		}
 
@@ -115,7 +115,7 @@ int main(int argc,char **argv) {
 		if (SDL_MUSTLOCK(sdl_game_surface))
 			SDL_UnlockSurface(sdl_game_surface);
 
-		if (SDL_BlitSurface(sdl_window_surface,NULL,sdl_game_surface,NULL) != 0)
+		if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
 			IFEFatalError("Game to window BlitSurface");
 
 		if (SDL_UpdateWindowSurface(sdl_window) != 0)
