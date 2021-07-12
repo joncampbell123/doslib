@@ -128,12 +128,22 @@ void IFEInitVideo(void) {
 			ReleaseDC(NULL,hDC);
 		}
 
-		hwndMain = CreateWindow(hwndMainClassName,"",WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,
-			CW_USEDEFAULT,CW_USEDEFAULT,
-			640,480,
-			NULL,NULL,
-			myInstance,
-			NULL);
+		{
+			RECT um;
+
+			um.top = 0;
+			um.left = 0;
+			um.right = 640;
+			um.bottom = 480;
+			AdjustWindowRect(&um,WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,FALSE);
+
+			hwndMain = CreateWindow(hwndMainClassName,"",WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,
+				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
+				NULL,NULL,
+				myInstance,
+				NULL);
+		}
+
 		if (hwndMain == NULL)
 			IFEFatalError("CreateWindow failed");
 
