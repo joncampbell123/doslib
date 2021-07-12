@@ -121,6 +121,11 @@ void IFEInitVideo(void) {
 	IFECheckEvents();
 #elif defined(USE_WIN32)
 	if (hwndMain == NULL) {
+		int sw,sh;
+
+		sw = GetSystemMetrics(SM_CXSCREEN);
+		sh = GetSystemMetrics(SM_CYSCREEN);
+
 		{
 			HDC hDC = GetDC(NULL); /* the screen */
 			if ((GetDeviceCaps(hDC,RASTERCAPS) & RC_PALETTE) && (GetDeviceCaps(hDC,BITSPIXEL) == 8))
@@ -138,7 +143,13 @@ void IFEInitVideo(void) {
 			um.left = 0;
 			um.right = 640;
 			um.bottom = 480;
-			AdjustWindowRect(&um,dwStyle,FALSE);
+			if (sw == 640 && sh == 480) {
+				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
+				dwStyle = WS_POPUP;
+			}
+			else {
+				AdjustWindowRect(&um,dwStyle,FALSE);
+			}
 
 			hwndMain = CreateWindow(hwndMainClassName,"",dwStyle,
 				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
@@ -151,7 +162,7 @@ void IFEInitVideo(void) {
 			IFEFatalError("CreateWindow failed");
 
 		{
-			int sw,sh,ww,wh;
+			int ww,wh;
 
 			{
 				RECT um = {0,0,0,0};
@@ -159,8 +170,6 @@ void IFEInitVideo(void) {
 				ww = (um.right - um.left);
 				wh = (um.bottom - um.top);
 			}
-			sw = GetSystemMetrics(SM_CXSCREEN);
-			sh = GetSystemMetrics(SM_CYSCREEN);
 			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
 		}
 
