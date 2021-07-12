@@ -14,7 +14,7 @@
 all: ifictsdl2
 
 .cpp.o:
-	g++ -std=gnu++03 -Wall -Wextra -pedantic -c -o $@ $< `pkg-config --cflags sdl2`
+	g++ -std=gnu++03 -Wall -Wextra -pedantic -DUSE_SDL2=1 -c -o $@ $< `pkg-config --cflags sdl2`
 
 ifictsdl2: ifict.o
 	g++ -o $@ $< `pkg-config --libs sdl2`

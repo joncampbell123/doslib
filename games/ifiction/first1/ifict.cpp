@@ -4,8 +4,9 @@
 #include <unistd.h>
 #include <stdint.h>
 
-/* NTS: Do not use SDL2 if targeting MS-DOS or Windows 3.1/95, we will have our own framework to use for those targets */
-#include <SDL2/SDL.h>
+#if defined(USE_SDL2)
+# include <SDL2/SDL.h>
+#endif
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
  *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
@@ -14,12 +15,14 @@
 
 static char	fatal_tmp[256];
 
+#if defined(USE_SDL2)
 SDL_Window*	sdl_window = NULL;
 SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
 SDL_Color	sdl_pal[256];
 Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
+#endif
 
 #pragma pack(push,1)
 struct IFEPaletteEntry {
@@ -33,14 +36,19 @@ void IFEUpdateFullScreen(void);
 /* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
  *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
  *          return value of IFEGetTicks() to periodically count from zero. */
+#if defined(USE_SDL2)
 uint32_t IFEGetTicks(void) {
 	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFEResetTicks(const uint32_t base) {
 	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFEInitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
@@ -67,7 +75,9 @@ void IFEInitVideo(void) {
 	SDL_FillRect(sdl_game_surface,NULL,0);
 	IFEUpdateFullScreen();
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFEShutdownVideo(void) {
 	if (sdl_game_surface != NULL) {
 		SDL_FreeSurface(sdl_game_surface);
@@ -84,7 +94,9 @@ void IFEShutdownVideo(void) {
 	}
 	SDL_Quit();
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -101,7 +113,9 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
 		IFEFatalError("SDL2 game palette set colors");
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFEUpdateFullScreen(void) {
 	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
 		IFEFatalError("Game to window BlitSurface");
@@ -109,6 +123,7 @@ void IFEUpdateFullScreen(void) {
 	if (SDL_UpdateWindowSurface(sdl_window) != 0)
 		IFEFatalError("Window surface update");
 }
+#endif
 
 void IFETestRGBPalette() {
 	IFEPaletteEntry pal[256];
@@ -135,14 +150,19 @@ void IFETestRGBPalette() {
 	IFESetPaletteColors(0,256,pal);
 }
 
+#if defined(USE_SDL2)
 unsigned char *IFEScreenDrawPointer(void) {
 	return (unsigned char*)(sdl_game_surface->pixels);
 }
+#endif
 
+#if defined(USE_SDL2)
 unsigned int IFEScreenDrawPitch(void) {
 	return (unsigned int)(sdl_game_surface->pitch);
 }
+#endif
 
+#if defined(USE_SDL2)
 bool IFEBeginScreenDraw(void) {
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
 		return false;
@@ -153,11 +173,14 @@ bool IFEBeginScreenDraw(void) {
 
 	return true;
 }
+#endif
 
+#if defined(USE_SDL2)
 void IFEEndScreenDraw(void) {
 	if (SDL_MUSTLOCK(sdl_game_surface))
 		SDL_UnlockSurface(sdl_game_surface);
 }
+#endif
 
 void IFETestRGBPalettePattern(void) {
 	unsigned int x,y,pitch;
