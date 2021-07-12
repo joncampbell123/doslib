@@ -40,6 +40,7 @@ const char*	hwndMainClassName = "IFICTIONWIN32";
 HINSTANCE	myInstance = NULL;
 HWND		hwndMain = NULL;
 bool		winQuit = false;
+bool		win95 = false; /* Is Windows 95 or higher */
 bool		winIsDestroying = false;
 bool		winScreenIsPal = false;
 BITMAPINFO*	hwndMainDIB = NULL;
@@ -179,7 +180,10 @@ void IFEInitVideo(void) {
 
 		hwndMainDIB->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 		hwndMainDIB->bmiHeader.biWidth = 640;
-		hwndMainDIB->bmiHeader.biHeight = 480;
+		if (win95)
+			hwndMainDIB->bmiHeader.biHeight = -480; /* top down, Windows 95 */
+		else
+			hwndMainDIB->bmiHeader.biHeight = 480; /* bottom up, Windows 3.1 */
 		hwndMainDIB->bmiHeader.biPlanes = 1;
 		hwndMainDIB->bmiHeader.biBitCount = 8;
 		hwndMainDIB->bmiHeader.biCompression = 0;
@@ -639,6 +643,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean any
 	(void)nCmdShow;
 
 	myInstance = hInstance;
+
+	/* some performance and rendering improvements are possible if Windows 95 (aka Windows 4.0) or higher */
+	if ((GetVersion()&0xFF) >= 4)
+		win95 = true;
+	else
+		win95 = false;
 
 	if (!hPrevInstance) {
 		WNDCLASS wnd;
