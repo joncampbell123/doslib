@@ -110,6 +110,57 @@ void IFEUpdateFullScreen(void) {
 		IFEFatalError("Window surface update");
 }
 
+void IFETestRGBPalette() {
+	IFEPaletteEntry pal[256];
+	unsigned int i;
+
+	for (i=0;i < 64;i++) {
+		pal[i].r = i*4u;
+		pal[i].g = i*4u;
+		pal[i].b = i*4u;
+
+		pal[i+64u].r = i*4u;
+		pal[i+64u].g = 0;
+		pal[i+64u].b = 0;
+
+		pal[i+128u].r = 0;
+		pal[i+128u].g = i*4u;
+		pal[i+128u].b = 0;
+
+		pal[i+192u].r = 0;
+		pal[i+192u].g = 0;
+		pal[i+192u].b = i*4u;
+	}
+
+	IFESetPaletteColors(0,256,pal);
+}
+
+void IFETestRGBPalettePattern(void) {
+	unsigned int x,y;
+
+	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
+		IFEFatalError("SDL2 game surface lock fail");
+	if (sdl_game_surface->pixels == NULL)
+		IFEFatalError("SDL2 game surface pixels == NULL");
+
+	memset(sdl_game_surface->pixels,0,sdl_game_surface->pitch * sdl_game_surface->h);
+
+	for (y=0;y < (unsigned int)sdl_game_surface->h;y++) {
+		unsigned char *row = (unsigned char*)sdl_game_surface->pixels + (y * sdl_game_surface->pitch);
+		for (x=0;x < (unsigned int)sdl_game_surface->w;x++) {
+			if ((x & 0xF0) != 0xF0)
+				row[x] = (y & 0xFF);
+			else
+				row[x] = 0;
+		}
+	}
+
+	if (SDL_MUSTLOCK(sdl_game_surface))
+		SDL_UnlockSurface(sdl_game_surface);
+
+	IFEUpdateFullScreen();
+}
+
 void IFEFatalError(const char *msg,...) {
 	va_list va;
 
@@ -133,59 +184,9 @@ int main(int argc,char **argv) {
 	IFEResetTicks(IFEGetTicks());
 	while (IFEGetTicks() < 1000) { }
 
-	{
-		IFEPaletteEntry pal[256];
-		unsigned int i;
-
-		for (i=0;i < 64;i++) {
-			pal[i].r = i*4u;
-			pal[i].g = i*4u;
-			pal[i].b = i*4u;
-
-			pal[i+64u].r = i*4u;
-			pal[i+64u].g = 0;
-			pal[i+64u].b = 0;
-
-			pal[i+128u].r = 0;
-			pal[i+128u].g = i*4u;
-			pal[i+128u].b = 0;
-
-			pal[i+192u].r = 0;
-			pal[i+192u].g = 0;
-			pal[i+192u].b = i*4u;
-		}
-
-		IFESetPaletteColors(0,256,pal);
-	}
-
-	{
-		unsigned int x,y;
-
-		if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
-			IFEFatalError("SDL2 game surface lock fail");
-		if (sdl_game_surface->pixels == NULL)
-			IFEFatalError("SDL2 game surface pixels == NULL");
-
-		memset(sdl_game_surface->pixels,0,sdl_game_surface->pitch * sdl_game_surface->h);
-
-		for (y=0;y < (unsigned int)sdl_game_surface->h;y++) {
-			unsigned char *row = (unsigned char*)sdl_game_surface->pixels + (y * sdl_game_surface->pitch);
-			for (x=0;x < (unsigned int)sdl_game_surface->w;x++) {
-				if ((x & 0xF0) != 0xF0)
-					row[x] = (y & 0xFF);
-				else
-					row[x] = 0;
-			}
-		}
-
-		if (SDL_MUSTLOCK(sdl_game_surface))
-			SDL_UnlockSurface(sdl_game_surface);
-
-		IFEUpdateFullScreen();
-
-		IFEResetTicks(IFEGetTicks());
-		while (IFEGetTicks() < 3000) { }
-	}
+	IFETestRGBPalette();
+	IFETestRGBPalettePattern();
+	while (IFEGetTicks() < 3000) { }
 
 	IFEShutdownVideo();
 	return 0;
