@@ -135,6 +135,14 @@ void IFETestRGBPalette() {
 	IFESetPaletteColors(0,256,pal);
 }
 
+unsigned char *IFEScreenDrawPointer(void) {
+	return (unsigned char*)(sdl_game_surface->pixels);
+}
+
+unsigned int IFEScreenDrawPitch(void) {
+	return (unsigned int)(sdl_game_surface->pitch);
+}
+
 bool IFEBeginScreenDraw(void) {
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
 		return false;
@@ -150,13 +158,17 @@ void IFEEndScreenDraw(void) {
 }
 
 void IFETestRGBPalettePattern(void) {
-	unsigned int x,y;
+	unsigned int x,y,pitch;
+	unsigned char *base;
 
 	if (!IFEBeginScreenDraw())
 		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
+	if ((base=IFEScreenDrawPointer()) == NULL)
+		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
 
+	pitch = IFEScreenDrawPitch();
 	for (y=0;y < (unsigned int)sdl_game_surface->h;y++) {
-		unsigned char *row = (unsigned char*)sdl_game_surface->pixels + (y * sdl_game_surface->pitch);
+		unsigned char *row = base + (y * pitch);
 		for (x=0;x < (unsigned int)sdl_game_surface->w;x++) {
 			if ((x & 0xF0) != 0xF0)
 				row[x] = (y & 0xFF);
