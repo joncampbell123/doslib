@@ -1,4 +1,8 @@
 
+#if defined(USE_WIN32)
+# include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -97,8 +101,10 @@ void IFEInitVideo(void) {
 	IFEUpdateFullScreen();
 	IFECheckEvents();
 #elif defined(USE_WIN32)
+	IFEFatalError("Not yet implemented");
 	// TODO
 #elif defined(USE_DOSLIB)
+	IFEFatalError("Not yet implemented");
 	// TODO
 #endif
 }
@@ -333,7 +339,11 @@ void IFEFatalError(const char *msg,...) {
 
 	IFEShutdownVideo();
 
+#if defined(USE_WIN32)
+	MessageBox(NULL/*FIXME*/,fatal_tmp,"Fatal error",MB_OK|MB_ICONEXCLAMATION);
+#else
 	fprintf(stderr,"Fatal error: %s\n",fatal_tmp);
+#endif
 	exit(127);
 }
 
@@ -342,10 +352,19 @@ void IFENormalExit(void) {
 	exit(0);
 }
 
+#if defined(USE_WIN32)
+int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
+	//not used yet
+	(void)hInstance;
+	(void)hPrevInstance;
+	(void)lpCmdLine;
+	(void)nCmdShow;
+#else
 int main(int argc,char **argv) {
 	//not used yet
 	(void)argc;
 	(void)argv;
+#endif
 
 	IFEInitVideo();
 
