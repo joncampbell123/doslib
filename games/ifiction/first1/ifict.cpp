@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
 
@@ -133,7 +134,7 @@ void IFEUpdateFullScreen(void) {
 #endif
 
 void IFETestRGBPalette() {
-	IFEPaletteEntry pal[256];
+	struct IFEPaletteEntry pal[256];
 	unsigned int i;
 
 	for (i=0;i < 64;i++) {
@@ -234,7 +235,7 @@ void IFEWaitEvent(const int wait_ms) {
 #endif
 
 void IFETestRGBPalettePattern(void) {
-	unsigned int x,y,pitch;
+	unsigned int x,y,w,h,pitch;
 	unsigned char *base;
 
 	if (!IFEBeginScreenDraw())
@@ -242,10 +243,12 @@ void IFETestRGBPalettePattern(void) {
 	if ((base=IFEScreenDrawPointer()) == NULL)
 		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
 
+	w = IFEScreenWidth();
+	h = IFEScreenHeight();
 	pitch = IFEScreenDrawPitch();
-	for (y=0;y < (unsigned int)sdl_game_surface->h;y++) {
+	for (y=0;y < h;y++) {
 		unsigned char *row = base + (y * pitch);
-		for (x=0;x < (unsigned int)sdl_game_surface->w;x++) {
+		for (x=0;x < w;x++) {
 			if ((x & 0xF0) != 0xF0)
 				row[x] = (y & 0xFF);
 			else
