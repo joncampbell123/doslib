@@ -273,7 +273,19 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 			win_pal[i].peFlags = PC_NOCOLLAPSE;
 		}
 
-		// TODO
+		SetPaletteEntries(hwndMainPAL,first,count,win_pal);
+
+		{
+			HPALETTE oldPal;
+			HDC hDC;
+
+			hDC = GetDC(hwndMain);
+			oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+			RealizePalette(hDC);
+			SelectPalette(hDC,oldPal,FALSE);
+			ReleaseDC(hwndMain,hDC);
+			InvalidateRect(hwndMain,NULL,FALSE);
+		}
 	}
 	else {
 		for (i=0;i < count;i++) {
