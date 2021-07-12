@@ -379,6 +379,30 @@ bool IFEUserWantsToQuit(void) {
 #endif
 }
 
+int IFEScreenDrawPitchDisplayOrder(void) {
+#if defined(USE_SDL2)
+	return (int)(sdl_game_surface->pitch);
+#elif defined(USE_WIN32)
+	return -((int)(hwndMainDIB->bmiHeader.biWidth)); /* Windows 3.1 bottom-up DIBs */
+#elif defined(USE_DOSLIB)
+	return 0;// TODO
+#endif
+}
+
+/* Point to first row. You need pitch in display order too, which might be a negative number.
+ * The only reason for this damn code is Windows 3.1 which provides no way whatsoever to draw top down DIBs */
+unsigned char *IFEScreenDrawPointerDisplayOrder(void) {
+#if defined(USE_SDL2)
+	return (unsigned char*)(sdl_game_surface->pixels);
+#elif defined(USE_WIN32)
+	/* Windows 3.1 will not provide us any way to draw top down DIBs (Windows 95 will though), therefore
+	 * everything is drawn upside down. Hrmph. */
+	return win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
+#elif defined(USE_DOSLIB)
+	return NULL;// TODO
+#endif
+}
+
 unsigned char *IFEScreenDrawPointer(void) {
 #if defined(USE_SDL2)
 	return (unsigned char*)(sdl_game_surface->pixels);
@@ -393,7 +417,7 @@ unsigned int IFEScreenDrawPitch(void) {
 #if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->pitch);
 #elif defined(USE_WIN32)
-	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
+	return (unsigned int)(hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -492,19 +516,20 @@ void IFEWaitEvent(const int wait_ms) {
 }
 
 void IFETestRGBPalettePattern(void) {
-	unsigned int x,y,w,h,pitch;
-	unsigned char *base;
+	unsigned int x,y,w,h;
+	unsigned char *firstrow;
+	int pitch;
 
 	if (!IFEBeginScreenDraw())
 		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
-	if ((base=IFEScreenDrawPointer()) == NULL)
+	if ((firstrow=IFEScreenDrawPointerDisplayOrder()) == NULL)
 		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
 
 	w = IFEScreenWidth();
 	h = IFEScreenHeight();
-	pitch = IFEScreenDrawPitch();
+	pitch = IFEScreenDrawPitchDisplayOrder();
 	for (y=0;y < h;y++) {
-		unsigned char *row = base + (y * pitch);
+		unsigned char *row = firstrow + ((int)y * pitch);
 		for (x=0;x < w;x++) {
 			if ((x & 0xF0) != 0xF0)
 				row[x] = (y & 0xFF);
