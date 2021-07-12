@@ -225,17 +225,9 @@ void IFEShutdownVideo(void) {
 	SDL_Quit();
 #elif defined(USE_WIN32)
 	if (hwndMainPAL != NULL) {
-		HDC hDC = GetDC(hwndMain);
-
-		if (hwndMainPALPrev != NULL)
-			SelectPalette(hDC,hwndMainPALPrev,TRUE/*background*/);
-
-		UnrealizeObject((HGDIOBJ)hwndMainPAL);
 		DeleteObject((HGDIOBJ)hwndMainPAL);
 		hwndMainPALPrev = NULL;
 		hwndMainPAL = NULL;
-
-		ReleaseDC(hwndMain,hDC);
 	}
 	if (hwndMainDIB != NULL) {
 		free((void*)hwndMainDIB);
@@ -281,12 +273,7 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 			win_pal[i].peFlags = PC_NOCOLLAPSE;
 		}
 
-		SetPaletteEntries(hwndMainPAL,first,count,win_pal);
-		{
-			HDC hDC = GetDC(hwndMain);
-			RealizePalette(hDC);
-			ReleaseDC(hwndMain,hDC);
-		}
+		// TODO
 	}
 	else {
 		for (i=0;i < count;i++) {
@@ -313,6 +300,7 @@ void IFEUpdateFullScreen(void) {
 #elif defined(USE_WIN32)
 	{
 		HDC hDC = GetDC(hwndMain);
+		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 
 		StretchDIBits(hDC,/*dest x/y*/0,0,
 			abs((int)hwndMainDIB->bmiHeader.biWidth),
@@ -325,6 +313,7 @@ void IFEUpdateFullScreen(void) {
 			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS,
 			SRCCOPY);
 
+		SelectPalette(hDC,oldPal,FALSE);
 		ReleaseDC(hwndMain,hDC);
 	}
 #elif defined(USE_DOSLIB)
@@ -539,27 +528,38 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			if (!winIsDestroying)
 				winQuit = true;
 			break;
+		case WM_QUERYNEWPALETTE:
+			if (winScreenIsPal && hwndMainPAL != NULL) {
+				HPALETTE oldPal;
+				HDC hDC;
+
+				hDC = GetDC(hwnd);
+				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+				RealizePalette(hDC);
+				SelectPalette(hDC,oldPal,FALSE);
+				ReleaseDC(hwnd,hDC);
+				InvalidateRect(hwnd,NULL,FALSE);
+				return TRUE;
+			}
+			break;
 		case WM_PAINT:
 			{
 				PAINTSTRUCT ps;
-				HGDIOBJ p = NULL;
 				HDC hDC = BeginPaint(hwnd,&ps);
-				p = SelectPalette(hDC,hwndMainPAL,FALSE);
-				if (hwndMainPALPrev == NULL) hwndMainPALPrev = (HPALETTE)p;
-				RealizePalette(hDC);
+
+				if (winScreenIsPal && hwndMainPAL != NULL) {
+					HPALETTE oldPal;
+
+					oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+					RealizePalette(hDC);
+					SelectPalette(hDC,oldPal,FALSE);
+				}
+
 				EndPaint(hwnd,&ps);
 				IFEUpdateFullScreen();
 			}
 			break;
 		case WM_ACTIVATE:
-			{
-				HGDIOBJ p = NULL;
-				HDC hDC = GetDC(hwndMain);
-				p = SelectPalette(hDC,hwndMainPAL,FALSE);
-				if (hwndMainPALPrev == NULL) hwndMainPALPrev = (HPALETTE)p;
-				RealizePalette(hDC);
-				ReleaseDC(hwndMain,hDC);
-			}
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
