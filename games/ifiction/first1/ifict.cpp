@@ -5,7 +5,11 @@
 #include <stdint.h>
 
 #if defined(USE_SDL2)
-# include <SDL2/SDL.h>
+# if defined(__APPLE__) /* Brew got the headers wrong here */
+#  include <SDL.h>
+# else
+#  include <SDL2/SDL.h>
+# endif
 #endif
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
