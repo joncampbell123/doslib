@@ -17,6 +17,7 @@ SDL_Window*	sdl_window = NULL;
 SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
+SDL_Color	sdl_pal[256];
 
 #pragma pack(push,1)
 struct IFEPaletteEntry {
@@ -25,6 +26,7 @@ struct IFEPaletteEntry {
 #pragma pack(pop)
 
 void IFEFatalError(const char *msg,...);
+void IFEUpdateFullScreen(void);
 
 void IFEInitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -38,8 +40,19 @@ void IFEInitVideo(void) {
 		IFEFatalError("SDL2 game surface (256-color) failed");
 	if (sdl_game_palette == NULL && (sdl_game_palette=SDL_AllocPalette(256)) == NULL)
 		IFEFatalError("SDL2 game palette");
+
+	/* first color should be black, SDL2 will init palette to white for some reason */
+	memset(sdl_pal,0,sizeof(SDL_Color));
+	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,0,1) != 0)
+		IFEFatalError("SDL2 game palette set colors");
+
+	/* apply palette to surface */
 	if (SDL_SetSurfacePalette(sdl_game_surface,sdl_game_palette) != 0)
 		IFEFatalError("SDL2 game palette set");
+
+	/* make sure screen is cleared black */
+	SDL_FillRect(sdl_game_surface,NULL,0);
+	IFEUpdateFullScreen();
 }
 
 void IFEShutdownVideo(void) {
@@ -58,8 +71,6 @@ void IFEShutdownVideo(void) {
 	}
 	SDL_Quit();
 }
-
-static SDL_Color sdl_pal[256];
 
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -105,6 +116,8 @@ int main(int argc,char **argv) {
 	(void)argv;
 
 	IFEInitVideo();
+
+	sleep(1);
 
 	{
 		IFEPaletteEntry pal[256];
