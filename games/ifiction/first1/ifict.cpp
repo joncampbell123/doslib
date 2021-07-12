@@ -36,6 +36,7 @@ struct IFEPaletteEntry {
 
 void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
+void IFECheckEvents(void);
 
 /* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
  *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
@@ -78,6 +79,7 @@ void IFEInitVideo(void) {
 	/* make sure screen is cleared black */
 	SDL_FillRect(sdl_game_surface,NULL,0);
 	IFEUpdateFullScreen();
+	IFECheckEvents();
 }
 #endif
 
@@ -186,6 +188,31 @@ void IFEEndScreenDraw(void) {
 }
 #endif
 
+#if defined(USE_SDL2)
+void IFEProcessEvent(SDL_Event &ev) {
+	(void)ev;
+	// TODO
+}
+#endif
+
+#if defined(USE_SDL2)
+void IFECheckEvents(void) {
+	SDL_Event ev;
+
+	if (SDL_PollEvent(&ev))
+		IFEProcessEvent(ev);
+}
+#endif
+
+#if defined(USE_SDL2)
+void IFEWaitEvent(const int wait_ms) {
+	SDL_Event ev;
+
+	if (SDL_WaitEventTimeout(&ev,wait_ms))
+		IFEProcessEvent(ev);
+}
+#endif
+
 void IFETestRGBPalettePattern(void) {
 	unsigned int x,y,pitch;
 	unsigned char *base;
@@ -231,11 +258,11 @@ int main(int argc,char **argv) {
 	IFEInitVideo();
 
 	IFEResetTicks(IFEGetTicks());
-	while (IFEGetTicks() < 1000) { }
+	while (IFEGetTicks() < 1000) IFEWaitEvent(100);
 
 	IFETestRGBPalette();
 	IFETestRGBPalettePattern();
-	while (IFEGetTicks() < 3000) { }
+	while (IFEGetTicks() < 3000) IFEWaitEvent(100);
 
 	IFEShutdownVideo();
 	return 0;
