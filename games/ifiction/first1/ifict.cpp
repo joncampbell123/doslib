@@ -10,11 +10,16 @@ static char	fatal_tmp[256];
 SDL_Window*	sdl_window = NULL;
 SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
+SDL_Palette*	sdl_game_palette = NULL;
 
 void IFEShutdownVideo(void) {
 	if (sdl_game_surface != NULL) {
 		SDL_FreeSurface(sdl_game_surface);
 		sdl_game_surface = NULL;
+	}
+	if (sdl_game_palette != NULL) {
+		SDL_FreePalette(sdl_game_palette);
+		sdl_game_palette = NULL;
 	}
 	if (sdl_window != NULL) {
 		SDL_DestroyWindow(sdl_window);
@@ -51,6 +56,10 @@ int main(int argc,char **argv) {
 		IFEFatalError("SDL2 window surface failed");
 	if ((sdl_game_surface=SDL_CreateRGBSurfaceWithFormat(0,640,480,8,SDL_PIXELFORMAT_INDEX8)) == NULL)
 		IFEFatalError("SDL2 game surface (256-color) failed");
+	if ((sdl_game_palette=SDL_AllocPalette(256)) == NULL)
+		IFEFatalError("SDL2 game palette");
+	if (SDL_SetSurfacePalette(sdl_game_surface,sdl_game_palette) != 0)
+		IFEFatalError("SDL2 game palette set");
 
 	IFEShutdownVideo();
 	return 0;
