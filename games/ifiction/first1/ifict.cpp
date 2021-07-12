@@ -148,6 +148,8 @@ bool IFEBeginScreenDraw(void) {
 		return false;
 	if (sdl_game_surface->pixels == NULL)
 		IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
+	if (sdl_game_surface->pitch < 0)
+		IFEFatalError("SDL2 game surface pitch is negative");
 
 	return true;
 }
