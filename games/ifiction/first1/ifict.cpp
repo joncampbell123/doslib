@@ -398,6 +398,17 @@ int IFEScreenDrawPitch(void) {
 #endif
 }
 
+/* check your pointers! */
+bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
+#if defined(USE_SDL2)
+	return (p >= sdl_game_surface->pixels && p < ((unsigned char*)sdl_game_surface->pixels + (sdl_game_surface->pitch * sdl_game_surface->h)));
+#elif defined(USE_WIN32)
+	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
+#elif defined(USE_DOSLIB)
+	return false;
+#endif
+}
+
 /* Point to first row. You need pitch in display order too, which might be a negative number.
  * The only reason for this damn code is Windows 3.1 which provides no way whatsoever to draw top down DIBs */
 unsigned char *IFEScreenDrawPointer(void) {
