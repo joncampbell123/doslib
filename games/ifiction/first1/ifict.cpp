@@ -6,6 +6,11 @@
 /* NTS: Do not use SDL2 if targeting MS-DOS or Windows 3.1/95, we will have our own framework to use for those targets */
 #include <SDL2/SDL.h>
 
+/* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
+ *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
+ *      Not a problem so much if using Windows GDI but if we're going to play with DirectX or the earlier hacky
+ *      Windows 3.1 equivalents, we need to worry about that. */
+
 static char	fatal_tmp[256];
 
 SDL_Window*	sdl_window = NULL;
