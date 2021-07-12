@@ -18,6 +18,12 @@ SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
 
+#pragma pack(push,1)
+struct IFEPaletteEntry {
+	uint8_t	r,g,b;
+};
+#pragma pack(pop)
+
 void IFEFatalError(const char *msg,...);
 
 void IFEInitVideo(void) {
@@ -53,7 +59,26 @@ void IFEShutdownVideo(void) {
 	SDL_Quit();
 }
 
-void IFE_UpdateFullScreen(void) {
+static SDL_Color sdl_pal[256];
+
+void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+	unsigned int i;
+
+	if (first >= 256u || count > 256u || (first+count) > 256u)
+		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count);
+
+	for (i=0;i < count;i++) {
+		sdl_pal[i+first].r = pal[i].r;
+		sdl_pal[i+first].g = pal[i].g;
+		sdl_pal[i+first].b = pal[i].b;
+		sdl_pal[i+first].a = 0xFFu;
+	}
+
+	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
+		IFEFatalError("SDL2 game palette set colors");
+}
+
+void IFEUpdateFullScreen(void) {
 	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
 		IFEFatalError("Game to window BlitSurface");
 
@@ -82,33 +107,28 @@ int main(int argc,char **argv) {
 	IFEInitVideo();
 
 	{
+		IFEPaletteEntry pal[256];
 		unsigned int i;
-		SDL_Color pal[256];
 
 		for (i=0;i < 64;i++) {
 			pal[i].r = i*4u;
 			pal[i].g = i*4u;
 			pal[i].b = i*4u;
-			pal[i].a = 0xFF;
 
 			pal[i+64u].r = i*4u;
 			pal[i+64u].g = 0;
 			pal[i+64u].b = 0;
-			pal[i+64u].a = 0xFF;
 
 			pal[i+128u].r = 0;
 			pal[i+128u].g = i*4u;
 			pal[i+128u].b = 0;
-			pal[i+128u].a = 0xFF;
 
 			pal[i+192u].r = 0;
 			pal[i+192u].g = 0;
 			pal[i+192u].b = i*4u;
-			pal[i+192u].a = 0xFF;
 		}
 
-		if (SDL_SetPaletteColors(sdl_game_palette,pal,0,256) != 0)
-			IFEFatalError("SDL2 game palette set colors");
+		IFESetPaletteColors(0,256,pal);
 	}
 
 	{
@@ -134,7 +154,7 @@ int main(int argc,char **argv) {
 		if (SDL_MUSTLOCK(sdl_game_surface))
 			SDL_UnlockSurface(sdl_game_surface);
 
-		IFE_UpdateFullScreen();
+		IFEUpdateFullScreen();
 
 		sleep(3);
 	}
