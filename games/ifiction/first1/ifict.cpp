@@ -223,8 +223,14 @@ void IFEInitVideo(void) {
 		/* NTS: Windows 3.1 with Win32s does not provide any function to draw top-down DIBs.
 		 *      Windows 95 however does support top down DIBs, so this code should consider auto-detecting that.
 		 *      To simplify other code, pitch and first row are computed here. */
-		win_dib_first_row = win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What about future code for != 8bpp? Also alignment. */
-		win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
+		if ((int)(hwndMainDIB->bmiHeader.biHeight) < 0) {
+			win_dib_first_row = win_dib;
+			win_dib_pitch = (int)hwndMainDIB->bmiHeader.biWidth;
+		}
+		else {
+			win_dib_first_row = win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What about future code for != 8bpp? Also alignment. */
+			win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
+		}
 
 		IFEUpdateFullScreen();
 		IFECheckEvents();
