@@ -18,6 +18,24 @@ SDL_Surface*	sdl_window_surface = NULL;
 SDL_Surface*	sdl_game_surface = NULL;
 SDL_Palette*	sdl_game_palette = NULL;
 
+void IFEFatalError(const char *msg,...);
+
+void IFEInitVideo(void) {
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		IFEFatalError("SDL2 failed to initialize");
+
+	if (sdl_window == NULL && (sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
+		IFEFatalError("SDL2 window creation failed");
+	if (sdl_window_surface == NULL && (sdl_window_surface=SDL_GetWindowSurface(sdl_window)) == NULL)
+		IFEFatalError("SDL2 window surface failed");
+	if (sdl_game_surface == NULL && (sdl_game_surface=SDL_CreateRGBSurfaceWithFormat(0,640,480,8,SDL_PIXELFORMAT_INDEX8)) == NULL)
+		IFEFatalError("SDL2 game surface (256-color) failed");
+	if (sdl_game_palette == NULL && (sdl_game_palette=SDL_AllocPalette(256)) == NULL)
+		IFEFatalError("SDL2 game palette");
+	if (SDL_SetSurfacePalette(sdl_game_surface,sdl_game_palette) != 0)
+		IFEFatalError("SDL2 game palette set");
+}
+
 void IFEShutdownVideo(void) {
 	if (sdl_game_surface != NULL) {
 		SDL_FreeSurface(sdl_game_surface);
@@ -33,6 +51,14 @@ void IFEShutdownVideo(void) {
 		sdl_window = NULL;
 	}
 	SDL_Quit();
+}
+
+void IFE_UpdateFullScreen(void) {
+	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
+		IFEFatalError("Game to window BlitSurface");
+
+	if (SDL_UpdateWindowSurface(sdl_window) != 0)
+		IFEFatalError("Window surface update");
 }
 
 void IFEFatalError(const char *msg,...) {
@@ -53,17 +79,7 @@ int main(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		IFEFatalError("SDL2 failed to initialize");
-
-	if ((sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
-		IFEFatalError("SDL2 window creation failed");
-	if ((sdl_window_surface=SDL_GetWindowSurface(sdl_window)) == NULL)
-		IFEFatalError("SDL2 window surface failed");
-	if ((sdl_game_surface=SDL_CreateRGBSurfaceWithFormat(0,640,480,8,SDL_PIXELFORMAT_INDEX8)) == NULL)
-		IFEFatalError("SDL2 game surface (256-color) failed");
-	if ((sdl_game_palette=SDL_AllocPalette(256)) == NULL)
-		IFEFatalError("SDL2 game palette");
+	IFEInitVideo();
 
 	{
 		unsigned int i;
@@ -93,8 +109,6 @@ int main(int argc,char **argv) {
 
 		if (SDL_SetPaletteColors(sdl_game_palette,pal,0,256) != 0)
 			IFEFatalError("SDL2 game palette set colors");
-		if (SDL_SetSurfacePalette(sdl_game_surface,sdl_game_palette) != 0)
-			IFEFatalError("SDL2 game palette set");
 	}
 
 	{
@@ -120,11 +134,7 @@ int main(int argc,char **argv) {
 		if (SDL_MUSTLOCK(sdl_game_surface))
 			SDL_UnlockSurface(sdl_game_surface);
 
-		if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
-			IFEFatalError("Game to window BlitSurface");
-
-		if (SDL_UpdateWindowSurface(sdl_window) != 0)
-			IFEFatalError("Window surface update");
+		IFE_UpdateFullScreen();
 
 		sleep(3);
 	}
