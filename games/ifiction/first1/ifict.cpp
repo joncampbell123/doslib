@@ -387,6 +387,7 @@ bool IFEUserWantsToQuit(void) {
 #endif
 }
 
+/* WARNING: Pitch is signed only because Windows 3.1 does not allow top-down DIBs */
 int IFEScreenDrawPitch(void) {
 #if defined(USE_SDL2)
 	return (int)(sdl_game_surface->pitch);
