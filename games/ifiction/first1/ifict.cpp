@@ -135,15 +135,25 @@ void IFETestRGBPalette() {
 	IFESetPaletteColors(0,256,pal);
 }
 
+bool IFEBeginScreenDraw(void) {
+	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
+		return false;
+	if (sdl_game_surface->pixels == NULL)
+		IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
+
+	return true;
+}
+
+void IFEEndScreenDraw(void) {
+	if (SDL_MUSTLOCK(sdl_game_surface))
+		SDL_UnlockSurface(sdl_game_surface);
+}
+
 void IFETestRGBPalettePattern(void) {
 	unsigned int x,y;
 
-	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
-		IFEFatalError("SDL2 game surface lock fail");
-	if (sdl_game_surface->pixels == NULL)
-		IFEFatalError("SDL2 game surface pixels == NULL");
-
-	memset(sdl_game_surface->pixels,0,sdl_game_surface->pitch * sdl_game_surface->h);
+	if (!IFEBeginScreenDraw())
+		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
 
 	for (y=0;y < (unsigned int)sdl_game_surface->h;y++) {
 		unsigned char *row = (unsigned char*)sdl_game_surface->pixels + (y * sdl_game_surface->pitch);
@@ -155,9 +165,7 @@ void IFETestRGBPalettePattern(void) {
 		}
 	}
 
-	if (SDL_MUSTLOCK(sdl_game_surface))
-		SDL_UnlockSurface(sdl_game_surface);
-
+	IFEEndScreenDraw();
 	IFEUpdateFullScreen();
 }
 
