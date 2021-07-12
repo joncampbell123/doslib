@@ -7,6 +7,23 @@
 
 static char	fatal_tmp[256];
 
+SDL_Window*	sdl_window = NULL;
+SDL_Surface*	sdl_window_surface = NULL;
+SDL_Surface*	sdl_game_surface = NULL;
+
+void IFEShutdownVideo(void) {
+	if (sdl_game_surface != NULL) {
+		SDL_FreeSurface(sdl_game_surface);
+		sdl_game_surface = NULL;
+	}
+	if (sdl_window != NULL) {
+		SDL_DestroyWindow(sdl_window);
+		sdl_window_surface = NULL;
+		sdl_window = NULL;
+	}
+	SDL_Quit();
+}
+
 void IFEFatalError(const char *msg,...) {
 	va_list va;
 
@@ -14,7 +31,7 @@ void IFEFatalError(const char *msg,...) {
 	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
 	va_end(va);
 
-	SDL_Quit();
+	IFEShutdownVideo();
 
 	fprintf(stderr,"Fatal error: %s\n",fatal_tmp);
 	exit(127);
@@ -25,12 +42,17 @@ int main(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
-		return 1;
-	}
 
-	SDL_Quit();
+	if ((sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
+		IFEFatalError("SDL2 window creation failed");
+	if ((sdl_window_surface=SDL_GetWindowSurface(sdl_window)) == NULL)
+		IFEFatalError("SDL2 window surface failed");
+	if ((sdl_game_surface=SDL_CreateRGBSurfaceWithFormat(0,640,480,8,SDL_PIXELFORMAT_INDEX8)) == NULL)
+		IFEFatalError("SDL2 game surface (256-color) failed");
+
+	IFEShutdownVideo();
 	return 0;
 }
 
