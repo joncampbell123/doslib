@@ -129,15 +129,16 @@ void IFEInitVideo(void) {
 		}
 
 		{
+			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER;
 			RECT um;
 
 			um.top = 0;
 			um.left = 0;
 			um.right = 640;
 			um.bottom = 480;
-			AdjustWindowRect(&um,WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,FALSE);
+			AdjustWindowRect(&um,dwStyle,FALSE);
 
-			hwndMain = CreateWindow(hwndMainClassName,"",WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,
+			hwndMain = CreateWindow(hwndMainClassName,"",dwStyle,
 				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
 				NULL,NULL,
 				myInstance,
