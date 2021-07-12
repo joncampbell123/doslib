@@ -47,6 +47,8 @@ HPALETTE	hwndMainPAL = NULL;
 HPALETTE	hwndMainPALPrev = NULL;
 PALETTEENTRY	win_pal[256];
 unsigned char*	win_dib = NULL;
+unsigned char*	win_dib_first_row = NULL;
+int		win_dib_pitch = 0;
 #endif
 
 #pragma pack(push,1)
@@ -208,6 +210,12 @@ void IFEInitVideo(void) {
 		win_dib = (unsigned char*)malloc(hwndMainDIB->bmiHeader.biSizeImage);
 		if (win_dib == NULL)
 			IFEFatalError("win_dib malloc fail");
+
+		/* NTS: Windows 3.1 with Win32s does not provide any function to draw top-down DIBs.
+		 *      Windows 95 however does support top down DIBs, so this code should consider auto-detecting that.
+		 *      To simplify other code, pitch and first row are computed here. */
+		win_dib_first_row = win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What about future code for != 8bpp? Also alignment. */
+		win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
 
 		IFEUpdateFullScreen();
 		IFECheckEvents();
@@ -379,11 +387,11 @@ bool IFEUserWantsToQuit(void) {
 #endif
 }
 
-int IFEScreenDrawPitchDisplayOrder(void) {
+int IFEScreenDrawPitch(void) {
 #if defined(USE_SDL2)
 	return (int)(sdl_game_surface->pitch);
 #elif defined(USE_WIN32)
-	return -((int)(hwndMainDIB->bmiHeader.biWidth)); /* Windows 3.1 bottom-up DIBs */
+	return win_dib_pitch;
 #elif defined(USE_DOSLIB)
 	return 0;// TODO
 #endif
@@ -391,35 +399,13 @@ int IFEScreenDrawPitchDisplayOrder(void) {
 
 /* Point to first row. You need pitch in display order too, which might be a negative number.
  * The only reason for this damn code is Windows 3.1 which provides no way whatsoever to draw top down DIBs */
-unsigned char *IFEScreenDrawPointerDisplayOrder(void) {
-#if defined(USE_SDL2)
-	return (unsigned char*)(sdl_game_surface->pixels);
-#elif defined(USE_WIN32)
-	/* Windows 3.1 will not provide us any way to draw top down DIBs (Windows 95 will though), therefore
-	 * everything is drawn upside down. Hrmph. */
-	return win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
-#elif defined(USE_DOSLIB)
-	return NULL;// TODO
-#endif
-}
-
 unsigned char *IFEScreenDrawPointer(void) {
 #if defined(USE_SDL2)
 	return (unsigned char*)(sdl_game_surface->pixels);
 #elif defined(USE_WIN32)
-	return win_dib;
+	return win_dib_first_row;
 #elif defined(USE_DOSLIB)
 	return NULL;// TODO
-#endif
-}
-
-unsigned int IFEScreenDrawPitch(void) {
-#if defined(USE_SDL2)
-	return (unsigned int)(sdl_game_surface->pitch);
-#elif defined(USE_WIN32)
-	return (unsigned int)(hwndMainDIB->bmiHeader.biWidth); /* FIXME: What if != 8bpp? Need to round to DWORD too. */
-#elif defined(USE_DOSLIB)
-	return 0;// TODO
 #endif
 }
 
@@ -516,18 +502,18 @@ void IFEWaitEvent(const int wait_ms) {
 }
 
 void IFETestRGBPalettePattern(void) {
-	unsigned int x,y,w,h;
 	unsigned char *firstrow;
+	unsigned int x,y,w,h;
 	int pitch;
 
 	if (!IFEBeginScreenDraw())
 		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
-	if ((firstrow=IFEScreenDrawPointerDisplayOrder()) == NULL)
+	if ((firstrow=IFEScreenDrawPointer()) == NULL)
 		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
 
 	w = IFEScreenWidth();
 	h = IFEScreenHeight();
-	pitch = IFEScreenDrawPitchDisplayOrder();
+	pitch = IFEScreenDrawPitch();
 	for (y=0;y < h;y++) {
 		unsigned char *row = firstrow + ((int)y * pitch);
 		for (x=0;x < w;x++) {
