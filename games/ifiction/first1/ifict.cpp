@@ -34,6 +34,14 @@ Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid pr
 bool		sdl_signal_to_quit = false;
 #endif
 
+#if defined(USE_WIN32)
+const char*	hwndMainClassName = "IFICTIONWIN32";
+HINSTANCE	myInstance = NULL;
+HWND		hwndMain = NULL;
+bool		winQuit = false;
+bool		winIsDestroying = false;
+#endif
+
 #pragma pack(push,1)
 struct IFEPaletteEntry {
 	uint8_t	r,g,b;
@@ -101,8 +109,30 @@ void IFEInitVideo(void) {
 	IFEUpdateFullScreen();
 	IFECheckEvents();
 #elif defined(USE_WIN32)
-	IFEFatalError("Not yet implemented");
-	// TODO
+	if (hwndMain == NULL) {
+		hwndMain = CreateWindow(hwndMainClassName,"",WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER,
+			CW_USEDEFAULT,CW_USEDEFAULT,
+			640,480,
+			NULL,NULL,
+			myInstance,
+			NULL);
+		if (hwndMain == NULL)
+			IFEFatalError("CreateWindow failed");
+
+		{
+			int sw,sh,ww,wh;
+
+			{
+				RECT um = {0,0,0,0};
+				GetWindowRect(hwndMain,&um);
+				ww = (um.right - um.left);
+				wh = (um.bottom - um.top);
+			}
+			sw = GetSystemMetrics(SM_CXSCREEN);
+			sh = GetSystemMetrics(SM_CYSCREEN);
+			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
+		}
+	}
 #elif defined(USE_DOSLIB)
 	IFEFatalError("Not yet implemented");
 	// TODO
@@ -126,7 +156,12 @@ void IFEShutdownVideo(void) {
 	}
 	SDL_Quit();
 #elif defined(USE_WIN32)
-	// TODO
+	if (hwndMain != NULL) {
+		winIsDestroying = true;
+		DestroyWindow(hwndMain);
+		winIsDestroying = false;
+		hwndMain = NULL;
+	}
 #elif defined(USE_DOSLIB)
 	// TODO
 #endif
@@ -203,6 +238,8 @@ void IFETestRGBPalette() {
 bool IFEUserWantsToQuit(void) {
 #if defined(USE_SDL2)
 	return sdl_signal_to_quit;
+#elif defined(USE_WIN32)
+	return winQuit;
 #else
 	return false;
 #endif
@@ -290,6 +327,13 @@ void IFECheckEvents(void) {
 
 	if (SDL_PollEvent(&ev))
 		IFEProcessEvent(ev);
+#elif defined(USE_WIN32)
+	MSG msg;
+
+	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 #endif
 }
 
@@ -299,6 +343,13 @@ void IFEWaitEvent(const int wait_ms) {
 
 	if (SDL_WaitEventTimeout(&ev,wait_ms))
 		IFEProcessEvent(ev);
+#elif defined(USE_WIN32)
+	MSG msg;
+
+	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 #else
 	(void)wait_ms; // TODO
 #endif
@@ -353,12 +404,49 @@ void IFENormalExit(void) {
 }
 
 #if defined(USE_WIN32)
+LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
+	switch (uMsg) {
+		case WM_CREATE:
+			break;
+		case WM_QUIT:
+			winQuit = true;
+			break;
+		case WM_DESTROY:
+			if (!winIsDestroying)
+				winQuit = true;
+			break;
+		default:
+			return DefWindowProc(hwnd,uMsg,wParam,lParam);
+	}
+
+	return 0;
+}
+#endif
+
+#if defined(USE_WIN32)
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
 	//not used yet
 	(void)hInstance;
 	(void)hPrevInstance;
 	(void)lpCmdLine;
 	(void)nCmdShow;
+
+	myInstance = hInstance;
+
+	if (!hPrevInstance) {
+		WNDCLASS wnd;
+
+		memset(&wnd,0,sizeof(wnd));
+		wnd.style = CS_HREDRAW|CS_VREDRAW;
+		wnd.lpfnWndProc = hwndMainProc;
+		wnd.hInstance = hInstance;
+		wnd.lpszClassName = hwndMainClassName;
+
+		if (!RegisterClass(&wnd)) {
+			MessageBox(NULL,"RegisterClass failed","",MB_OK|MB_ICONEXCLAMATION);
+			return 1;
+		}
+	}
 #else
 int main(int argc,char **argv) {
 	//not used yet
