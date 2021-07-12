@@ -176,6 +176,18 @@ unsigned int IFEScreenDrawPitch(void) {
 #endif
 
 #if defined(USE_SDL2)
+unsigned int IFEScreenWidth(void) {
+	return (unsigned int)(sdl_game_surface->w);
+}
+#endif
+
+#if defined(USE_SDL2)
+unsigned int IFEScreenHeight(void) {
+	return (unsigned int)(sdl_game_surface->h);
+}
+#endif
+
+#if defined(USE_SDL2)
 bool IFEBeginScreenDraw(void) {
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
 		return false;
