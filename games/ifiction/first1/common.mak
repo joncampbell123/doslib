@@ -7,9 +7,11 @@ NOW_BUILDING = IFICTION
 !ifdef TARGET_WINDOWS
 # Windows 3.1 with Win32s or Windows 95
 IFICT_EXE =     ifictw31.$(EXEEXT)
+CFLAGS +=       -DUSE_WIN32=1
 !else
 # MS-DOS
 IFICT_EXE =     ifictdos.$(EXEEXT)
+CFLAGS +=       -DUSE_DOSLIB=1
 !endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
@@ -20,7 +22,7 @@ IFICT_EXE =     ifictdos.$(EXEEXT)
 
 .CPP.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
-	$(CC) @tmp.cmd
+	$(CXX) @tmp.cmd
 
 
 all: $(OMFSEGDG) lib exe

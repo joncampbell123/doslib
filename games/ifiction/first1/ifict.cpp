@@ -40,23 +40,37 @@ void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
+// FIXME dummy var
+#if defined(USE_WIN32) || defined(USE_DOSLIB)
+uint32_t fake_tick_count = 0;
+uint32_t fake_tick_base = 0;
+#endif
+
 /* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
  *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
  *          return value of IFEGetTicks() to periodically count from zero. */
-#if defined(USE_SDL2)
 uint32_t IFEGetTicks(void) {
+#if defined(USE_SDL2)
 	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
-}
+#elif defined(USE_WIN32)
+	return (fake_tick_count++) - fake_tick_base;
+#elif defined(USE_DOSLIB)
+	return (fake_tick_count++) - fake_tick_base;
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFEResetTicks(const uint32_t base) {
-	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
-}
-#endif
-
 #if defined(USE_SDL2)
+	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
+#elif defined(USE_WIN32)
+	fake_tick_base = base;
+#elif defined(USE_DOSLIB)
+	fake_tick_base = base;
+#endif
+}
+
 void IFEInitVideo(void) {
+#if defined(USE_SDL2)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
 
@@ -82,11 +96,15 @@ void IFEInitVideo(void) {
 	SDL_FillRect(sdl_game_surface,NULL,0);
 	IFEUpdateFullScreen();
 	IFECheckEvents();
-}
+#elif defined(USE_WIN32)
+	// TODO
+#elif defined(USE_DOSLIB)
+	// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFEShutdownVideo(void) {
+#if defined(USE_SDL2)
 	if (sdl_game_surface != NULL) {
 		SDL_FreeSurface(sdl_game_surface);
 		sdl_game_surface = NULL;
@@ -101,11 +119,15 @@ void IFEShutdownVideo(void) {
 		sdl_window = NULL;
 	}
 	SDL_Quit();
-}
+#elif defined(USE_WIN32)
+	// TODO
+#elif defined(USE_DOSLIB)
+	// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+#if defined(USE_SDL2)
 	unsigned int i;
 
 	if (first >= 256u || count > 256u || (first+count) > 256u)
@@ -120,21 +142,35 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 
 	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
 		IFEFatalError("SDL2 game palette set colors");
-}
+#elif defined(USE_WIN32)
+	(void)first;
+	(void)count;
+	(void)pal;
+	// TODO
+#elif defined(USE_DOSLIB)
+	(void)first;
+	(void)count;
+	(void)pal;
+	// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFEUpdateFullScreen(void) {
+#if defined(USE_SDL2)
 	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
 		IFEFatalError("Game to window BlitSurface");
 
 	if (SDL_UpdateWindowSurface(sdl_window) != 0)
 		IFEFatalError("Window surface update");
-}
+#elif defined(USE_WIN32)
+	// TODO
+#elif defined(USE_DOSLIB)
+	// TODO
 #endif
+}
 
 void IFETestRGBPalette() {
-	struct IFEPaletteEntry pal[256];
+	IFEPaletteEntry pal[256];
 	unsigned int i;
 
 	for (i=0;i < 64;i++) {
@@ -158,38 +194,56 @@ void IFETestRGBPalette() {
 	IFESetPaletteColors(0,256,pal);
 }
 
-#if defined(USE_SDL2)
 bool IFEUserWantsToQuit(void) {
+#if defined(USE_SDL2)
 	return sdl_signal_to_quit;
-}
+#else
+	return false;
 #endif
+}
 
-#if defined(USE_SDL2)
 unsigned char *IFEScreenDrawPointer(void) {
+#if defined(USE_SDL2)
 	return (unsigned char*)(sdl_game_surface->pixels);
-}
+#elif defined(USE_WIN32)
+	return NULL;// TODO
+#elif defined(USE_DOSLIB)
+	return NULL;// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 unsigned int IFEScreenDrawPitch(void) {
+#if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->pitch);
-}
+#elif defined(USE_WIN32)
+	return 0;// TODO
+#elif defined(USE_DOSLIB)
+	return 0;// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 unsigned int IFEScreenWidth(void) {
+#if defined(USE_SDL2)
 	return (unsigned int)(sdl_game_surface->w);
-}
+#elif defined(USE_WIN32)
+	return 0;// TODO
+#elif defined(USE_DOSLIB)
+	return 0;// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 unsigned int IFEScreenHeight(void) {
-	return (unsigned int)(sdl_game_surface->h);
-}
-#endif
-
 #if defined(USE_SDL2)
+	return (unsigned int)(sdl_game_surface->h);
+#elif defined(USE_WIN32)
+	return 0;// TODO
+#elif defined(USE_DOSLIB)
+	return 0;// TODO
+#endif
+}
+
 bool IFEBeginScreenDraw(void) {
+#if defined(USE_SDL2)
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
 		return false;
 	if (sdl_game_surface->pixels == NULL)
@@ -198,15 +252,23 @@ bool IFEBeginScreenDraw(void) {
 		IFEFatalError("SDL2 game surface pitch is negative");
 
 	return true;
-}
+#elif defined(USE_WIN32)
+	return 0;// TODO
+#elif defined(USE_DOSLIB)
+	return 0;// TODO
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFEEndScreenDraw(void) {
+#if defined(USE_SDL2)
 	if (SDL_MUSTLOCK(sdl_game_surface))
 		SDL_UnlockSurface(sdl_game_surface);
-}
+#elif defined(USE_WIN32)
+	// TODO
+#elif defined(USE_DOSLIB)
+	// TODO
 #endif
+}
 
 #if defined(USE_SDL2)
 void IFEProcessEvent(SDL_Event &ev) {
@@ -216,23 +278,25 @@ void IFEProcessEvent(SDL_Event &ev) {
 }
 #endif
 
-#if defined(USE_SDL2)
 void IFECheckEvents(void) {
+#if defined(USE_SDL2)
 	SDL_Event ev;
 
 	if (SDL_PollEvent(&ev))
 		IFEProcessEvent(ev);
-}
 #endif
+}
 
-#if defined(USE_SDL2)
 void IFEWaitEvent(const int wait_ms) {
+#if defined(USE_SDL2)
 	SDL_Event ev;
 
 	if (SDL_WaitEventTimeout(&ev,wait_ms))
 		IFEProcessEvent(ev);
-}
+#else
+	(void)wait_ms; // TODO
 #endif
+}
 
 void IFETestRGBPalettePattern(void) {
 	unsigned int x,y,w,h,pitch;
