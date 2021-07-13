@@ -13,6 +13,8 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "disk" ]; then
+    rm -f test.iso
+    mkisofs -o test.iso -J .
     true
 fi
 
