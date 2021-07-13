@@ -122,6 +122,7 @@ void IFEResetTicks(const uint32_t base) {
 #elif defined(USE_WIN32)
 	win32_tick_base += base;
 #elif defined(USE_DOSLIB)
+	/* convert milliseconds back to timer ticks and adjust */
 	pit_count -= (base / (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ;
 	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
 #endif
