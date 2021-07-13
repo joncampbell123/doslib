@@ -78,7 +78,6 @@ uint16_t	vesa_mode = 0;
 
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
-uint32_t	pit_base = 0;
 
 unsigned char	vesa_pal[256*4];
 #endif
@@ -123,7 +122,8 @@ void IFEResetTicks(const uint32_t base) {
 #elif defined(USE_WIN32)
 	win32_tick_base = base;
 #elif defined(USE_DOSLIB)
-	pit_base = base;
+	pit_count -= (base / (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ;
+	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
 #endif
 }
 
@@ -819,7 +819,6 @@ int main(int argc,char **argv) {
 
 	/* establish the base line timer tick */
 	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
-
 # endif // DOSLIB
 #endif
 
@@ -833,6 +832,7 @@ int main(int argc,char **argv) {
 
 	IFETestRGBPalette();
 	IFETestRGBPalettePattern();
+	IFEResetTicks(IFEGetTicks());
 	while (IFEGetTicks() < 3000) {
 		if (IFEUserWantsToQuit()) IFENormalExit();
 		IFEWaitEvent(100);
