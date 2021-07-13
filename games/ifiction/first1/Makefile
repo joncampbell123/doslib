@@ -23,5 +23,5 @@ clean:
 	rm -fv *.o
 
 distclean: clean
-	rm -fv ifictsdl2
+	rm -fv ifictsdl2 dos4gw.exe
 

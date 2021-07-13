@@ -36,6 +36,10 @@ $(IFICT_EXE): $(HW_8042_LIB) $(HW_8042_LIB_DEPENDENCIES) $(HW_CPU_LIB) $(HW_CPU_
 	%write tmp.cmd option quiet option map=$(IFICT_EXE).map system $(WLINK_SYSTEM) $(HW_8042_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_VESA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)ifict.obj
 	%write tmp.cmd name $(IFICT_EXE)
 	@wlink @tmp.cmd
+! ifdef TARGET_WINDOWS
+! else
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat dos4gw.exe
+! endif
 !endif
 
 clean: .SYMBOLIC

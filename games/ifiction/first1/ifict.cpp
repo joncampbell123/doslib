@@ -808,9 +808,18 @@ int main(int argc,char **argv) {
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 		IFEFatalError("VESA BIOS extensions not detected");
 
-	/* make sure the timer is ticking at 18.2Hz */
-	write_8254_system_timer(0);
+	/* make sure the timer is ticking at 18.2Hz.
+	 * NTS: There seems to be a bug in Windows 95 where if a DOS VM writes 0x0000 to the 8254 the DOS VM will hang.
+	 *      Furthermore while the video display is in a VESA BIOS mode the user cannot exit fullscreen, therefore,
+	 *      the system is "hung". Write 0xFFFF as a workaround to avoid the hang. */
+	if (windows_mode == WINDOWS_ENHANCED && windows_version >= 0x400 && windows_version <= 0x4FF) /* Is Windows 95? */
+		write_8254_system_timer(0xFFFF);
+	else
+		write_8254_system_timer(0);
+
+	/* establish the base line timer tick */
 	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
 # endif // DOSLIB
 #endif
 
