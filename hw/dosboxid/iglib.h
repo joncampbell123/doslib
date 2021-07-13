@@ -2,6 +2,10 @@
 #ifndef __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 #define __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* In order to be usable as part of a VxD, code must be combined with data.
  * In Watcom C we can do this by declaring all global variables __based on _CODE. */
 #ifdef TARGET_VXD
@@ -191,6 +195,10 @@ int probe_dosbox_id_version_string(char *buf,size_t len);
 void dosbox_id_write_data_nrl(const uint32_t val);
 void dosbox_id_write_data(const uint32_t val);
 void dosbox_id_debug_message(const char *str);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __DOSLIB_HW_IDE_DOSBOXIGLIB_H */
 
