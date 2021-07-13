@@ -64,6 +64,12 @@ int		win_dib_pitch = 0;
 #endif
 
 #if defined(USE_DOSLIB)
+unsigned char*	vesa_lfb = NULL;
+uint32_t	vesa_lfb_physaddr = 0;
+uint32_t	vesa_lfb_map_size = 0;
+uint32_t	vesa_lfb_stride = 0;
+uint16_t	vesa_lfb_height = 0;
+uint16_t	vesa_lfb_width = 0;
 bool		vesa_setmode = false;
 uint16_t	vesa_mode = 0;
 #endif
@@ -292,7 +298,13 @@ void IFEInitVideo(void) {
 				vbe_fill_in_mode_info(mode,&mi);
 				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
 					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
-					mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul) {
+					mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul &&
+					mi.bytes_per_scan_line >= 640) {
+					vesa_lfb_physaddr = mi.phys_base_ptr;
+					vesa_lfb_map_size = mi.bytes_per_scan_line * mi.y_resolution;
+					vesa_lfb_stride = mi.bytes_per_scan_line;
+					vesa_lfb_width = mi.x_resolution;
+					vesa_lfb_height = mi.y_resolution;
 					found_mode = mode;
 					break;
 				}
@@ -305,12 +317,19 @@ void IFEInitVideo(void) {
 		vesa_mode = found_mode;
 	}
 
-	/* set it up */
 	if (!vesa_setmode) {
-		if (!vbe_set_mode(vesa_mode | VBE_MODE_LINEAR,NULL))
+		/* Set the video mode */
+		if (!vbe_set_mode((uint16_t)(vesa_mode | VBE_MODE_LINEAR),NULL))
 			IFEFatalError("Unable to set VESA video mode");
 
+		/* we set the mode, set the flag so FatalError can unset it properly */
 		vesa_setmode = true;
+
+		/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
+		 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
+		vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
+		if (vesa_lfb == NULL)
+			IFEFatalError("DPMI VESA LFB map fail");
 	}
 
 	IFEFatalError("Not yet implemented");
@@ -354,6 +373,10 @@ void IFEShutdownVideo(void) {
 		win_dib = NULL;
 	}
 #elif defined(USE_DOSLIB)
+	if (vesa_lfb != NULL) {
+		dpmi_phys_addr_free((void*)vesa_lfb);
+		vesa_lfb = NULL;
+	}
 	if (vesa_setmode) {
 		vesa_setmode = false;
 		int10_setmode(3); /* back to 80x25 text */
