@@ -684,11 +684,16 @@ void IFETestRGBPalettePattern(void) {
 
 void IFEDBG(const char *msg,...) {
 #if defined(USE_DOSLIB)
-	va_list va;
+	if (dosbox_ig) {
+		va_list va;
 
-	va_start(va,msg);
-	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
-	va_end(va);
+		va_start(va,msg);
+		vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
+		va_end(va);
+	}
+	else {
+		fatal_tmp[0] = 0;
+	}
 #else
 	(void)msg;
 #endif
