@@ -65,7 +65,8 @@ DWORD		win32_tick_base = 0;
 #endif
 
 #if defined(USE_DOSLIB)
-unsigned char*	vesa_lfb = NULL;
+unsigned char*	vesa_lfb = NULL; /* video memory, linear framebuffer */
+unsigned char*	vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
 uint32_t	vesa_lfb_physaddr = 0;
 uint32_t	vesa_lfb_map_size = 0;
 uint32_t	vesa_lfb_stride = 0;
@@ -328,6 +329,12 @@ void IFEInitVideo(void) {
 		vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
 		if (vesa_lfb == NULL)
 			IFEFatalError("DPMI VESA LFB map fail");
+
+		/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
+		 * Provide an offscreen copy of video memory to work from for compositing. */
+		vesa_lfb_offscreen = (unsigned char*)malloc(vesa_lfb_map_size);
+		if (vesa_lfb_offscreen == NULL)
+			IFEFatalError("DPMI VESA LFB shadow malloc fail");
 	}
 #endif
 }
@@ -369,6 +376,10 @@ void IFEShutdownVideo(void) {
 		win_dib = NULL;
 	}
 #elif defined(USE_DOSLIB)
+	if (vesa_lfb_offscreen != NULL) {
+		free((void*)vesa_lfb_offscreen);
+		vesa_lfb_offscreen = NULL;
+	}
 	if (vesa_lfb != NULL) {
 		dpmi_phys_addr_free((void*)vesa_lfb);
 		vesa_lfb = NULL;
@@ -475,7 +486,7 @@ void IFEUpdateFullScreen(void) {
 		ReleaseDC(hwndMain,hDC);
 	}
 #elif defined(USE_DOSLIB)
-	/* you're drawing directly on the screen, nothing to do! */
+	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
 #endif
 }
 
@@ -544,7 +555,7 @@ unsigned char *IFEScreenDrawPointer(void) {
 #elif defined(USE_WIN32)
 	return win_dib_first_row;
 #elif defined(USE_DOSLIB)
-	return vesa_lfb;
+	return vesa_lfb_offscreen;
 #endif
 }
 
