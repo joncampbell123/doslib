@@ -63,6 +63,11 @@ unsigned char*	win_dib_first_row = NULL;
 int		win_dib_pitch = 0;
 #endif
 
+#if defined(USE_DOSLIB)
+bool		vesa_setmode = false;
+uint16_t	vesa_mode = 0;
+#endif
+
 #pragma pack(push,1)
 struct IFEPaletteEntry {
 	uint8_t	r,g,b;
@@ -296,6 +301,16 @@ void IFEInitVideo(void) {
 
 		if (found_mode == 0)
 			IFEFatalError("VESA BIOS video mode (640 x 480 256-color) not found");
+
+		vesa_mode = found_mode;
+	}
+
+	/* set it up */
+	if (!vesa_setmode) {
+		if (!vbe_set_mode(vesa_mode | VBE_MODE_LINEAR,NULL))
+			IFEFatalError("Unable to set VESA video mode");
+
+		vesa_setmode = true;
 	}
 
 	IFEFatalError("Not yet implemented");
@@ -339,7 +354,10 @@ void IFEShutdownVideo(void) {
 		win_dib = NULL;
 	}
 #elif defined(USE_DOSLIB)
-	// TODO
+	if (vesa_setmode) {
+		vesa_setmode = false;
+		int10_setmode(3); /* back to 80x25 text */
+	}
 #endif
 }
 
