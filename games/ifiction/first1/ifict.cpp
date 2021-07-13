@@ -13,6 +13,7 @@
 # include <hw/8259/8259.h>
 # include <hw/8042/8042.h>
 # include <hw/dos/doswin.h>
+# include <hw/dosboxid/iglib.h> /* for debugging */
 #endif
 
 #include <stdio.h>
@@ -80,6 +81,8 @@ uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 
 unsigned char	vesa_pal[256*4];
+
+bool		dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
 #pragma pack(push,1)
@@ -808,6 +811,11 @@ int main(int argc,char **argv) {
 		IFEFatalError("Standard VGA not detected");
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 		IFEFatalError("VESA BIOS extensions not detected");
+
+	if (probe_dosbox_id()) {
+		printf("DOSBox Integration Device detected\n");
+		dosbox_ig = true;
+	}
 
 	/* make sure the timer is ticking at 18.2Hz. */
 	write_8254_system_timer(0);
