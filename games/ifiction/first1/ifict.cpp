@@ -86,16 +86,21 @@ bool		dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
 #if defined(USE_DOSLIB)
-void cpu_clear_TF(void) { /* EFLAGS bit 8, TF */
+uint16_t cpu_clear_TF(void) { /* EFLAGS bit 8, TF */
+	uint32_t f;
+
 	__asm {
 		push	eax
 		pushfd
 		pop	eax
+		mov	f,eax
 		and	ah,0xFE
 		push	eax
 		popfd
 		pop	eax
 	}
+
+	return uint16_t(f & 0x100u); /* only the state of TF before clearing */
 }
 #endif
 
@@ -873,7 +878,7 @@ int main(int argc,char **argv) {
 	 * a VM monitor has difficulty knowing whether interrupts are enabled, so perhaps setting
 	 * TF when the VM executes the CLI instruction is Microsoft's hack to try to work with
 	 * DOS games regardless. */
-	cpu_clear_TF();
+	if (cpu_clear_TF()) IFEDBG("Windows 95 hang mitigation: TF (Trap Flag) was set, clearing");
 # endif // DOSLIB
 #endif
 
