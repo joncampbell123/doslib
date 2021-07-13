@@ -736,6 +736,10 @@ void IFEDBG(const char *msg,...) {
 void IFEFatalError(const char *msg,...) {
 	va_list va;
 
+#if defined(USE_DOSLIB)
+	IFE_win95_tf_hang_check();
+#endif
+
 	va_start(va,msg);
 	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
 	va_end(va);
@@ -751,6 +755,10 @@ void IFEFatalError(const char *msg,...) {
 }
 
 void IFENormalExit(void) {
+#if defined(USE_DOSLIB)
+	IFE_win95_tf_hang_check();
+#endif
+
 	IFEShutdownVideo();
 	exit(0);
 }
