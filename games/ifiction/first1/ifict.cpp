@@ -381,6 +381,7 @@ void IFEShutdownVideo(void) {
 		win_dib = NULL;
 	}
 #elif defined(USE_DOSLIB)
+	_sti();
 	if (vesa_lfb_offscreen != NULL) {
 		free((void*)vesa_lfb_offscreen);
 		vesa_lfb_offscreen = NULL;
