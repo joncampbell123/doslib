@@ -77,6 +77,8 @@ uint16_t	vesa_mode = 0;
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 uint32_t	pit_base = 0;
+
+unsigned char	vesa_pal[256*4];
 #endif
 
 #pragma pack(push,1)
@@ -418,11 +420,14 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 		}
 	}
 #elif defined(USE_DOSLIB)
-	(void)first;
-	(void)count;
-	(void)pal;
-	(void)i;
-	// TODO
+	for (i=0;i < count;i++) {
+		/* VGA 6-bit RGB */
+		vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r >> 2u);
+		vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g >> 2u);
+		vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b >> 2u);
+	}
+
+	vesa_set_palette_data(first,count,(char*)vesa_pal);
 #endif
 }
 
