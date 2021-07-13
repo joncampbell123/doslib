@@ -118,9 +118,9 @@ uint32_t IFEGetTicks(void) {
 
 void IFEResetTicks(const uint32_t base) {
 #if defined(USE_SDL2)
-	sdl_ticks_base = base; /* NTS: Use return value of IFEGetTicks() */
+	sdl_ticks_base += base; /* NTS: Use return value of IFEGetTicks() */
 #elif defined(USE_WIN32)
-	win32_tick_base = base;
+	win32_tick_base += base;
 #elif defined(USE_DOSLIB)
 	pit_count -= (base / (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ;
 	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
