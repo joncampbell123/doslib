@@ -287,7 +287,7 @@ void IFEInitVideo(void) {
 				vbe_fill_in_mode_info(mode,&mi);
 				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
 					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
-					mi.phys_base_ptr != 0) {
+					mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul) {
 					found_mode = mode;
 					break;
 				}
