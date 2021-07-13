@@ -91,6 +91,7 @@ struct IFEPaletteEntry {
 };
 #pragma pack(pop)
 
+void IFEDBG(const char *msg,...);
 void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
@@ -681,6 +682,26 @@ void IFETestRGBPalettePattern(void) {
 	IFEUpdateFullScreen();
 }
 
+void IFEDBG(const char *msg,...) {
+#if defined(USE_DOSLIB)
+	va_list va;
+
+	va_start(va,msg);
+	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
+	va_end(va);
+#else
+	(void)msg;
+#endif
+
+#if defined(USE_DOSLIB)
+	if (dosbox_ig) {
+		dosbox_id_debug_message("IFEDBG: ");
+		dosbox_id_debug_message(fatal_tmp);
+		dosbox_id_debug_message("\n");
+	}
+#endif
+}
+
 void IFEFatalError(const char *msg,...) {
 	va_list va;
 
@@ -815,6 +836,8 @@ int main(int argc,char **argv) {
 	if (probe_dosbox_id()) {
 		printf("DOSBox Integration Device detected\n");
 		dosbox_ig = true;
+
+		IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
 	}
 
 	/* make sure the timer is ticking at 18.2Hz. */
