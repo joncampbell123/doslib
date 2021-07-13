@@ -85,6 +85,20 @@ unsigned char	vesa_pal[256*4];
 bool		dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
+#if defined(USE_DOSLIB)
+void cpu_clear_TF(void) { /* EFLAGS bit 8, TF */
+	__asm {
+		push	eax
+		pushfd
+		pop	eax
+		and	ah,0xFE
+		push	eax
+		popfd
+		pop	eax
+	}
+}
+#endif
+
 #pragma pack(push,1)
 struct IFEPaletteEntry {
 	uint8_t	r,g,b;
@@ -852,7 +866,14 @@ int main(int argc,char **argv) {
 	/* establish the base line timer tick */
 	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
 
-	/* FIXME: Something about this code causes it not to work under Windows 95/98 */
+	/* Windows 95 bug: After reading the 8254, the TF flag (Trap Flag) is stuck on, and this
+	 * program runs extremely slowly. Clear the TF flag. It may have something to do with
+	 * read_8254 or any other code that does PUSHF + CLI + POPF to protect against interrupts.
+	 * POPF is known to not cause a fault on 386-level IOPL3 protected mode, and therefore
+	 * a VM monitor has difficulty knowing whether interrupts are enabled, so perhaps setting
+	 * TF when the VM executes the CLI instruction is Microsoft's hack to try to work with
+	 * DOS games regardless. */
+	cpu_clear_TF();
 # endif // DOSLIB
 #endif
 
