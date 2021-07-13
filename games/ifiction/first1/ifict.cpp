@@ -61,6 +61,7 @@ PALETTEENTRY	win_pal[256];
 unsigned char*	win_dib = NULL;
 unsigned char*	win_dib_first_row = NULL;
 int		win_dib_pitch = 0;
+DWORD		win32_tick_base = 0;
 #endif
 
 #if defined(USE_DOSLIB)
@@ -72,6 +73,10 @@ uint16_t	vesa_lfb_height = 0;
 uint16_t	vesa_lfb_width = 0;
 bool		vesa_setmode = false;
 uint16_t	vesa_mode = 0;
+
+uint32_t	pit_count = 0;
+uint16_t	pit_prev = 0;
+uint32_t	pit_base = 0;
 #endif
 
 #pragma pack(push,1)
@@ -84,14 +89,6 @@ void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
-// FIXME dummy var
-#if defined(USE_WIN32)
-DWORD win32_tick_base = 0;
-#elif defined(USE_DOSLIB)
-uint32_t fake_tick_count = 0;
-uint32_t fake_tick_base = 0;
-#endif
-
 /* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
  *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
  *          return value of IFEGetTicks() to periodically count from zero. */
@@ -101,7 +98,18 @@ uint32_t IFEGetTicks(void) {
 #elif defined(USE_WIN32)
 	return uint32_t(timeGetTime() - win32_tick_base);
 #elif defined(USE_DOSLIB)
-	return (fake_tick_count++) - fake_tick_base;
+	uint32_t w,p;
+	{
+		uint16_t pit_cur = read_8254(T8254_TIMER_INTERRUPT_TICK);
+		pit_count += (uint32_t)((uint16_t)(pit_prev - pit_cur)); /* 8254 counts DOWN, not UP, typecast to ensure 16-bit rollover */
+		pit_prev = pit_cur;
+
+		/* convert ticks to milliseconds */
+		w = pit_count / (uint32_t)T8254_REF_CLOCK_HZ;
+		p = ((pit_count % (uint32_t)T8254_REF_CLOCK_HZ) * (uint32_t)1000ul) / (uint32_t)T8254_REF_CLOCK_HZ;
+	}
+
+	return (w * (uint32_t)1000ul) + p;
 #endif
 }
 
@@ -111,7 +119,7 @@ void IFEResetTicks(const uint32_t base) {
 #elif defined(USE_WIN32)
 	win32_tick_base = base;
 #elif defined(USE_DOSLIB)
-	fake_tick_base = base;
+	pit_base = base;
 #endif
 }
 
@@ -262,9 +270,6 @@ void IFEInitVideo(void) {
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
-	/* make sure the timer is ticking at 18.2Hz */
-	write_8254_system_timer(0);
-
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
 	{
@@ -315,8 +320,6 @@ void IFEInitVideo(void) {
 		if (vesa_lfb == NULL)
 			IFEFatalError("DPMI VESA LFB map fail");
 	}
-
-	IFEFatalError("Not yet implemented");
 #endif
 }
 
@@ -496,7 +499,7 @@ int IFEScreenDrawPitch(void) {
 #elif defined(USE_WIN32)
 	return win_dib_pitch;
 #elif defined(USE_DOSLIB)
-	return 0;// TODO
+	return vesa_lfb_stride;
 #endif
 }
 
@@ -507,8 +510,7 @@ bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
 #elif defined(USE_WIN32)
 	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
 #elif defined(USE_DOSLIB)
-	(void)p;
-	return false;
+	return (p >= vesa_lfb && p < (vesa_lfb + vesa_lfb_map_size));
 #endif
 }
 
@@ -520,7 +522,7 @@ unsigned char *IFEScreenDrawPointer(void) {
 #elif defined(USE_WIN32)
 	return win_dib_first_row;
 #elif defined(USE_DOSLIB)
-	return NULL;// TODO
+	return vesa_lfb;
 #endif
 }
 
@@ -530,7 +532,7 @@ unsigned int IFEScreenWidth(void) {
 #elif defined(USE_WIN32)
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth);
 #elif defined(USE_DOSLIB)
-	return 0;// TODO
+	return vesa_lfb_width;
 #endif
 }
 
@@ -540,7 +542,7 @@ unsigned int IFEScreenHeight(void) {
 #elif defined(USE_WIN32)
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biHeight);
 #elif defined(USE_DOSLIB)
-	return 0;// TODO
+	return vesa_lfb_height;
 #endif
 }
 
@@ -557,7 +559,7 @@ bool IFEBeginScreenDraw(void) {
 #elif defined(USE_WIN32)
 	return true; // nothing to do
 #elif defined(USE_DOSLIB)
-	return 0;// TODO
+	return true; // nothing to do
 #endif
 }
 
@@ -568,7 +570,7 @@ void IFEEndScreenDraw(void) {
 #elif defined(USE_WIN32)
 	// nothing to do
 #elif defined(USE_DOSLIB)
-	// TODO
+	// nothing to do
 #endif
 }
 
@@ -773,6 +775,10 @@ int main(int argc,char **argv) {
 		IFEFatalError("Standard VGA not detected");
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 		IFEFatalError("VESA BIOS extensions not detected");
+
+	/* make sure the timer is ticking at 18.2Hz */
+	write_8254_system_timer(0);
+	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
 # endif // DOSLIB
 #endif
 
