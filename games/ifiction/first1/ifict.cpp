@@ -115,6 +115,12 @@ void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
+#if defined(USE_DOSLIB)
+void IFE_win95_tf_hang_check(void) {
+	if (cpu_clear_TF()) IFEDBG("Windows 95 hang mitigation: TF (Trap Flag) was set, clearing");
+}
+#endif
+
 /* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
  *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
  *          return value of IFEGetTicks() to periodically count from zero. */
@@ -878,7 +884,7 @@ int main(int argc,char **argv) {
 	 * a VM monitor has difficulty knowing whether interrupts are enabled, so perhaps setting
 	 * TF when the VM executes the CLI instruction is Microsoft's hack to try to work with
 	 * DOS games regardless. */
-	if (cpu_clear_TF()) IFEDBG("Windows 95 hang mitigation: TF (Trap Flag) was set, clearing");
+	IFE_win95_tf_hang_check();
 # endif // DOSLIB
 #endif
 
