@@ -13,6 +13,10 @@
 # include <hw/cpu/liteio.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
 typedef uint16_t *VGA_ALPHA_PTR;
@@ -523,6 +527,10 @@ struct vga_mode_params {
 void vga_wm1_mem_block_copy(uint16_t dst,uint16_t src,uint16_t b);
 void vga_setup_wm1_block_copy();
 void vga_restore_rm0wm0();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //defined(TARGET_PC98)
 

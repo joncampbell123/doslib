@@ -2,6 +2,10 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* DAC can do 8-bit color */
 #define VBE_CAP_8BIT_DAC		(1 << 0)
 /* controller is NOT VGA compatible */
@@ -169,4 +173,8 @@ void vesa_bnk_writed(uint32_t ofs,uint32_t b);
 extern void (*vesa_writeb)(uint32_t ofs,uint8_t b);
 extern void (*vesa_writew)(uint32_t ofs,uint16_t b);
 extern void (*vesa_writed)(uint32_t ofs,uint32_t b);
+
+#ifdef __cplusplus
+}
+#endif
 

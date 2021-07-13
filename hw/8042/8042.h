@@ -15,6 +15,10 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define K8042_STATUS                    0x64    /* (R) */
 #define K8042_COMMAND                   0x64    /* (W) */
 #define K8042_DATA                      0x60    /* (R/W) */
@@ -116,6 +120,10 @@ static inline void k8042_enable_aux() {
 static inline unsigned char k8042_write_aux(unsigned char c) {
     return (k8042_write_command(0xD4) && k8042_write_data(c));
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HW_8042_8042_H */
 
