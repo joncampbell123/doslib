@@ -814,6 +814,8 @@ int main(int argc,char **argv) {
 
 	/* establish the base line timer tick */
 	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+	/* FIXME: Something about this code causes it not to work under Windows 95/98 */
 # endif // DOSLIB
 #endif
 
