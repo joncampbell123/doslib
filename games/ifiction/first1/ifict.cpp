@@ -4,6 +4,17 @@
 # include <mmsystem.h>
 #endif
 
+#if defined(USE_DOSLIB)
+# include <hw/cpu/cpu.h>
+# include <hw/dos/dos.h>
+# include <hw/vga/vga.h>
+# include <hw/vesa/vesa.h>
+# include <hw/8254/8254.h>
+# include <hw/8259/8259.h>
+# include <hw/8042/8042.h>
+# include <hw/dos/doswin.h>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -240,8 +251,54 @@ void IFEInitVideo(void) {
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+	probe_dpmi();
+	probe_vcpi();
+
+	if (!probe_8254())
+		IFEFatalError("8254 timer not detected");
+	if (!probe_8259())
+		IFEFatalError("8259 interrupt controller not detected");
+	if (!k8042_probe())
+		IFEFatalError("8042 keyboard controller not found");
+	if (!probe_vga())
+		IFEFatalError("Unable to detect video card");
+	if (!(vga_state.vga_flags & VGA_IS_VGA))
+		IFEFatalError("Standard VGA not detected");
+	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
+		IFEFatalError("VESA BIOS extensions not detected");
+
+	/* Find 640x480 256-color mode.
+	 * Linear framebuffer required (we'll support older bank switched stuff later) */
+	{
+		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE | VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE;
+		struct vbe_mode_info mi = {0};
+		uint16_t found_mode = 0;
+		unsigned int entry;
+		uint16_t mode;
+
+		for (entry=0;entry < 4096;entry++) {
+			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
+			if (mode == 0xFFFF) break;
+
+			if (vbe_read_mode_info(mode,&mi)) {
+				vbe_fill_in_mode_info(mode,&mi);
+				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
+					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
+					mi.phys_base_ptr != 0) {
+					found_mode = mode;
+					break;
+				}
+			}
+		}
+
+		if (found_mode == 0)
+			IFEFatalError("VESA BIOS video mode (640 x 480 256-color) not found");
+	}
+
 	IFEFatalError("Not yet implemented");
-	// TODO
 #endif
 }
 
