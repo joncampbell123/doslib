@@ -406,9 +406,11 @@ int vbe_set_mode(uint16_t mode,struct vbe_mode_custom_crtc_info *ci) {
 	struct dpmi_realmode_call rc={0};
 	rc.eax = 0x4F02;
 	rc.ebx = mode;
-	rc.edi = (uint32_t)vbe_dos_buffer & 0xF;
-	rc.es = (uint32_t)vbe_dos_buffer >> 4;
-	memcpy(vbe_dos_buffer,ci,sizeof(*ci));
+	if (ci != NULL) {
+		rc.edi = (uint32_t)vbe_dos_buffer & 0xF;
+		rc.es = (uint32_t)vbe_dos_buffer >> 4;
+		memcpy(vbe_dos_buffer,ci,sizeof(*ci));
+	}
 	vbe_realint(&rc);
 	return (((rc.eax >> 8) & 0xFF) == 0);
 #else
