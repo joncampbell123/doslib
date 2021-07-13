@@ -262,24 +262,13 @@ void IFEInitVideo(void) {
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
-	cpu_probe();
-	probe_dos();
-	detect_windows();
-	probe_dpmi();
-	probe_vcpi();
-
-	if (!probe_8254())
-		IFEFatalError("8254 timer not detected");
-	if (!probe_8259())
-		IFEFatalError("8259 interrupt controller not detected");
-	if (!k8042_probe())
-		IFEFatalError("8042 keyboard controller not found");
-	if (!probe_vga())
-		IFEFatalError("Unable to detect video card");
 	if (!(vga_state.vga_flags & VGA_IS_VGA))
 		IFEFatalError("Standard VGA not detected");
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 		IFEFatalError("VESA BIOS extensions not detected");
+
+	/* make sure the timer is ticking at 18.2Hz */
+	write_8254_system_timer(0);
 
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
@@ -769,6 +758,23 @@ int main(int argc,char **argv) {
 	//not used yet
 	(void)argc;
 	(void)argv;
+
+# if defined(USE_DOSLIB)
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+	probe_dpmi();
+	probe_vcpi();
+
+	if (!probe_8254())
+		IFEFatalError("8254 timer not detected");
+	if (!probe_8259())
+		IFEFatalError("8259 interrupt controller not detected");
+	if (!k8042_probe())
+		IFEFatalError("8042 keyboard controller not found");
+	if (!probe_vga())
+		IFEFatalError("Unable to detect video card");
+# endif // DOSLIB
 #endif
 
 	IFEInitVideo();
