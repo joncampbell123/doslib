@@ -262,11 +262,6 @@ void IFEInitVideo(void) {
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
-	if (!(vga_state.vga_flags & VGA_IS_VGA))
-		IFEFatalError("Standard VGA not detected");
-	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
-		IFEFatalError("VESA BIOS extensions not detected");
-
 	/* make sure the timer is ticking at 18.2Hz */
 	write_8254_system_timer(0);
 
@@ -774,6 +769,10 @@ int main(int argc,char **argv) {
 		IFEFatalError("8042 keyboard controller not found");
 	if (!probe_vga())
 		IFEFatalError("Unable to detect video card");
+	if (!(vga_state.vga_flags & VGA_IS_VGA))
+		IFEFatalError("Standard VGA not detected");
+	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
+		IFEFatalError("VESA BIOS extensions not detected");
 # endif // DOSLIB
 #endif
 
