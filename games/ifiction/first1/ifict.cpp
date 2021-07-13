@@ -453,7 +453,7 @@ void IFEUpdateFullScreen(void) {
 		ReleaseDC(hwndMain,hDC);
 	}
 #elif defined(USE_DOSLIB)
-	// TODO
+	/* you're drawing directly on the screen, nothing to do! */
 #endif
 }
 
