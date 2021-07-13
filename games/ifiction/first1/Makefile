@@ -23,5 +23,5 @@ clean:
 	rm -fv *.o
 
 distclean: clean
-	rm -v ifictsdl2
+	rm -fv ifictsdl2
 

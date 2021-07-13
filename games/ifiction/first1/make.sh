@@ -8,6 +8,7 @@ also_build_list="dos386f win32s3"
 
 if [ "$1" == "clean" ]; then
     do_clean
+    rm -f ifictdos.exe ifictw31.exe *.exe.map ifictsdl2 *.o
     exit 0
 fi
 
