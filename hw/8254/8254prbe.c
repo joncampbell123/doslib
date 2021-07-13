@@ -33,7 +33,7 @@ int probe_8254() {
 			for (cc=0;cc != 0xFFFFU;) cc++; /* delay */
 		} while (patience-- > 0);
 
-		if (c == 0xFF)
+		if (c == 0xFFFF)
 			return (probed_8254_result=0);
 	}
 
