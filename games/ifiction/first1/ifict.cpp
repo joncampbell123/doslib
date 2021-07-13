@@ -240,7 +240,7 @@ void IFEInitVideo(void) {
 				pal->palPalEntry[i].peRed = (unsigned char)i;
 				pal->palPalEntry[i].peGreen = (unsigned char)i;
 				pal->palPalEntry[i].peBlue = (unsigned char)i;
-				pal->palPalEntry[i].peFlags = PC_NOCOLLAPSE;
+				pal->palPalEntry[i].peFlags = 0;
 			}
 
 			hwndMainPAL = CreatePalette(pal);
@@ -413,7 +413,7 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 			win_pal[i].peRed = pal[i].r;
 			win_pal[i].peGreen = pal[i].g;
 			win_pal[i].peBlue = pal[i].b;
-			win_pal[i].peFlags = PC_NOCOLLAPSE;
+			win_pal[i].peFlags = 0;
 		}
 
 		SetPaletteEntries(hwndMainPAL,first,count,win_pal);
@@ -471,16 +471,15 @@ void IFEUpdateFullScreen(void) {
 		HDC hDC = GetDC(hwndMain);
 		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 
-		StretchDIBits(hDC,/*dest x/y*/0,0,
+		SetDIBitsToDevice(hDC,
+			/*dest x/y*/0,0,
 			abs((int)hwndMainDIB->bmiHeader.biWidth),
 			abs((int)hwndMainDIB->bmiHeader.biHeight),
 			/*src x/y*/0,0,
-			abs((int)hwndMainDIB->bmiHeader.biWidth),
-			abs((int)hwndMainDIB->bmiHeader.biHeight),
+			/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
 			win_dib,
 			hwndMainDIB,
-			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS,
-			SRCCOPY);
+			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
 
 		SelectPalette(hDC,oldPal,FALSE);
 		ReleaseDC(hwndMain,hDC);
