@@ -72,6 +72,7 @@ uint32_t	vesa_lfb_stride = 0;
 uint16_t	vesa_lfb_height = 0;
 uint16_t	vesa_lfb_width = 0;
 bool		vesa_setmode = false;
+bool		vesa_8bitpal = false; /* 8-bit DAC */
 uint16_t	vesa_mode = 0;
 
 uint32_t	pit_count = 0;
@@ -316,6 +317,12 @@ void IFEInitVideo(void) {
 		/* we set the mode, set the flag so FatalError can unset it properly */
 		vesa_setmode = true;
 
+		/* use 8-bit DAC if available */
+		if (vbe_info->capabilities & VBE_CAP_8BIT_DAC) {
+			if (vbe_set_dac_width(8) == 8)
+				vesa_8bitpal = true;
+		}
+
 		/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
 		 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
 		vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
@@ -420,11 +427,21 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 		}
 	}
 #elif defined(USE_DOSLIB)
-	for (i=0;i < count;i++) {
-		/* VGA 6-bit RGB */
-		vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r >> 2u);
-		vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g >> 2u);
-		vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b >> 2u);
+	if (vesa_8bitpal) {
+		for (i=0;i < count;i++) {
+			/* VGA 8-bit RGB */
+			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r);
+			vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g);
+			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b);
+		}
+	}
+	else {
+		for (i=0;i < count;i++) {
+			/* VGA 6-bit RGB */
+			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r >> 2u);
+			vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g >> 2u);
+			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b >> 2u);
+		}
 	}
 
 	vesa_set_palette_data(first,count,(char*)vesa_pal);
