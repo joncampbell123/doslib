@@ -36,13 +36,12 @@
 #endif
 
 #include "utils.h"
+#include "debug.h"
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
  *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
  *      Not a problem so much if using Windows GDI but if we're going to play with DirectX or the earlier hacky
  *      Windows 3.1 equivalents, we need to worry about that. */
-
-static char	fatal_tmp[256];
 
 #if defined(USE_SDL2)
 SDL_Window*	sdl_window = NULL;
@@ -92,8 +91,6 @@ unsigned char	vesa_pal[256*4];
 # endif
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
-
-bool		dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
 #pragma pack(push,1)
@@ -102,7 +99,6 @@ struct IFEPaletteEntry {
 };
 #pragma pack(pop)
 
-void IFEDBG(const char *msg,...);
 void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
@@ -744,31 +740,6 @@ void IFETestRGBPalettePattern(void) {
 
 	IFEEndScreenDraw();
 	IFEUpdateFullScreen();
-}
-
-void IFEDBG(const char *msg,...) {
-#if defined(USE_DOSLIB)
-	if (dosbox_ig) {
-		va_list va;
-
-		va_start(va,msg);
-		vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
-		va_end(va);
-	}
-	else {
-		fatal_tmp[0] = 0;
-	}
-#else
-	(void)msg;
-#endif
-
-#if defined(USE_DOSLIB)
-	if (dosbox_ig) {
-		dosbox_id_debug_message("IFEDBG: ");
-		dosbox_id_debug_message(fatal_tmp);
-		dosbox_id_debug_message("\n");
-	}
-#endif
 }
 
 void IFEFatalError(const char *msg,...) {
