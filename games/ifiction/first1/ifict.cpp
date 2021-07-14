@@ -525,6 +525,9 @@ void IFEShutdownVideo(void) {
 
 		/* need to restore the video mode */
 		__asm {
+			mov	ah,0x41			; graphcis layer disable
+			int	18h
+
 			mov	ah,0x4D			; disable 256-color mode
 			mov	ch,0
 			int	18h
