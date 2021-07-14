@@ -8,6 +8,7 @@
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
 # if defined(TARGET_PC98)
+#  error PC-98 target removed
 // REMOVED
 # else
 #  include <hw/vga/vga.h>
