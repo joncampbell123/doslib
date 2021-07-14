@@ -75,7 +75,6 @@ DWORD		win32_tick_base = 0;
 struct uart_8251 *pc98_keyb_uart = NULL;
 unsigned char*	pc98lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*	pc98lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
-uint32_t	pc98lfb_physaddr = 0;
 uint32_t	pc98lfb_map_size = 0;
 uint32_t	pc98lfb_stride = 0;
 uint16_t	pc98lfb_height = 0;
@@ -377,7 +376,17 @@ no_modeset:
 		}
 	}
 
-	IFEFatalError("Not yet implemented");
+	pc98lfb = (unsigned char*)0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
+	pc98lfb_map_size = 640 * 480;
+	pc98lfb_stride = 640;
+	pc98lfb_height = 480;
+	pc98lfb_width = 640;
+
+	/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
+	 * Provide an offscreen copy of video memory to work from for compositing. */
+	pc98lfb_offscreen = (unsigned char*)malloc(pc98lfb_map_size);
+	if (pc98lfb_offscreen == NULL)
+		IFEFatalError("LFB shadow malloc fail");
 # else
 	/* IBM PC/AT compatible */
 	/* Find 640x480 256-color mode.
@@ -501,7 +510,13 @@ void IFEShutdownVideo(void) {
 			int	18h
 		}
 
+		if (pc98lfb_offscreen != NULL) {
+			free((void*)pc98lfb_offscreen);
+			pc98lfb_offscreen = NULL;
+		}
+
 		pc98lfb_setmode = false;
+		pc98lfb = NULL;
 	}
 # else
 	/* IBM PC/AT */
@@ -692,9 +707,9 @@ bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
 	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return (p >= pc98lfb && p < (pc98lfb + pc98lfb_map_size));
+	return (p >= pc98lfb_offscreen && p < (pc98lfb_offscreen + pc98lfb_map_size));
 # else
-	return (p >= vesa_lfb && p < (vesa_lfb + vesa_lfb_map_size));
+	return (p >= vesa_lfb_offscreen && p < (vesa_lfb_offscreen + vesa_lfb_map_size));
 # endif
 #endif
 }
