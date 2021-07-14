@@ -37,6 +37,7 @@
 
 #include "utils.h"
 #include "debug.h"
+#include "palette.h"
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
  *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
@@ -92,12 +93,6 @@ unsigned char	vesa_pal[256*4];
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 #endif
-
-#pragma pack(push,1)
-struct IFEPaletteEntry {
-	uint8_t	r,g,b;
-};
-#pragma pack(pop)
 
 void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
