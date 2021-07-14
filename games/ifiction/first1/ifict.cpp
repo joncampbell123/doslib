@@ -35,6 +35,8 @@
 # endif
 #endif
 
+#include "utils.h"
+
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
  *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
  *      Not a problem so much if using Windows GDI but if we're going to play with DirectX or the earlier hacky
@@ -92,25 +94,6 @@ uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 
 bool		dosbox_ig = false; /* DOSBox Integration Device detected */
-#endif
-
-#if defined(USE_DOSLIB)
-uint16_t cpu_clear_TF(void) { /* EFLAGS bit 8, TF */
-	uint32_t f;
-
-	__asm {
-		push	eax
-		pushfd
-		pop	eax
-		mov	f,eax
-		and	ah,0xFE
-		push	eax
-		popfd
-		pop	eax
-	}
-
-	return uint16_t(f & 0x100u); /* only the state of TF before clearing */
-}
 #endif
 
 #pragma pack(push,1)
