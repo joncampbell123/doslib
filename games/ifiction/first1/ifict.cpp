@@ -75,6 +75,7 @@ DWORD		win32_tick_base = 0;
 struct uart_8251 *pc98_keyb_uart = NULL;
 unsigned char*	pc98lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*	pc98lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
+uint32_t	pc98lfb_physaddr = 0;
 uint32_t	pc98lfb_map_size = 0;
 uint32_t	pc98lfb_stride = 0;
 uint16_t	pc98lfb_height = 0;
@@ -391,7 +392,13 @@ no_modeset:
 		*((volatile unsigned char*)(0xE0000 + 0x102)) = 1; // enable linear framebuffer
 	}
 
-	pc98lfb = (unsigned char*)0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
+	/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
+	 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
+	pc98lfb_physaddr = 0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
+	pc98lfb = (unsigned char*)dpmi_phys_addr_map(pc98lfb_physaddr,pc98lfb_map_size);
+	if (pc98lfb == NULL)
+		IFEFatalError("LFB map fail");
+
 	pc98lfb_map_size = 640 * 480;
 	pc98lfb_stride = 640;
 	pc98lfb_height = 480;
@@ -551,9 +558,11 @@ void IFEShutdownVideo(void) {
 			free((void*)pc98lfb_offscreen);
 			pc98lfb_offscreen = NULL;
 		}
-
+		if (pc98lfb != NULL) {
+			dpmi_phys_addr_free((void*)pc98lfb);
+			pc98lfb = NULL;
+		}
 		pc98lfb_setmode = false;
-		pc98lfb = NULL;
 	}
 # else
 	/* IBM PC/AT */
