@@ -7,8 +7,12 @@
 #if defined(USE_DOSLIB)
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
-# include <hw/vga/vga.h>
-# include <hw/vesa/vesa.h>
+# if defined(TARGET_PC98)
+#  include <hw/8251/8251.h>
+# else
+#  include <hw/vga/vga.h>
+#  include <hw/vesa/vesa.h>
+# endif
 # include <hw/8254/8254.h>
 # include <hw/8259/8259.h>
 # include <hw/8042/8042.h>
@@ -66,6 +70,19 @@ DWORD		win32_tick_base = 0;
 #endif
 
 #if defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+/* NEC PC-9821 */
+struct uart_8251 *pc98_keyb_uart = NULL;
+unsigned char*	pc98lfb = NULL; /* video memory, linear framebuffer */
+unsigned char*	pc98lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
+uint32_t	pc98lfb_physaddr = 0;
+uint32_t	pc98lfb_map_size = 0;
+uint32_t	pc98lfb_stride = 0;
+uint16_t	pc98lfb_height = 0;
+uint16_t	pc98lfb_width = 0;
+bool		pc98lfb_setmode = false;
+# else
+/* IBM PC/AT */
 unsigned char*	vesa_lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*	vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
 uint32_t	vesa_lfb_physaddr = 0;
@@ -77,10 +94,10 @@ bool		vesa_setmode = false;
 bool		vesa_8bitpal = false; /* 8-bit DAC */
 uint16_t	vesa_mode = 0;
 
+unsigned char	vesa_pal[256*4];
+# endif
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
-
-unsigned char	vesa_pal[256*4];
 
 bool		dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
@@ -304,6 +321,11 @@ void IFEInitVideo(void) {
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	/* NEC PC-9821 */
+	IFEFatalError("Not yet implemented");
+# else
+	/* IBM PC/AT compatible */
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
 	{
@@ -366,6 +388,7 @@ void IFEInitVideo(void) {
 		if (vesa_lfb_offscreen == NULL)
 			IFEFatalError("DPMI VESA LFB shadow malloc fail");
 	}
+# endif
 #endif
 }
 
@@ -407,6 +430,10 @@ void IFEShutdownVideo(void) {
 	}
 #elif defined(USE_DOSLIB)
 	_sti();
+# if defined(TARGET_PC98)
+	/* NEC PC-9821 */
+# else
+	/* IBM PC/AT */
 	if (vesa_lfb_offscreen != NULL) {
 		free((void*)vesa_lfb_offscreen);
 		vesa_lfb_offscreen = NULL;
@@ -419,6 +446,7 @@ void IFEShutdownVideo(void) {
 		vesa_setmode = false;
 		int10_setmode(3); /* back to 80x25 text */
 	}
+# endif
 #endif
 }
 
@@ -469,6 +497,16 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 		}
 	}
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	outp(0xA8,first);
+	for (i=0;i < count;i++) {
+		/* PC-9821 256-color is always 8-bit DAC */
+		outp(0xAC,pal[i].r);
+		outp(0xAA,pal[i].r);
+		outp(0xAE,pal[i].r);
+	}
+# else
+	/* IBM PC/AT */
 	if (vesa_8bitpal) {
 		for (i=0;i < count;i++) {
 			/* VGA 8-bit RGB */
@@ -487,6 +525,7 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	}
 
 	vesa_set_palette_data(first,count,(char*)vesa_pal);
+# endif
 #endif
 }
 
@@ -516,7 +555,11 @@ void IFEUpdateFullScreen(void) {
 		ReleaseDC(hwndMain,hDC);
 	}
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	memcpy(pc98lfb,pc98lfb_offscreen,pc98lfb_map_size);
+# else
 	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
+# endif
 #endif
 }
 
@@ -562,7 +605,11 @@ int IFEScreenDrawPitch(void) {
 #elif defined(USE_WIN32)
 	return win_dib_pitch;
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	return pc98lfb_stride;
+# else
 	return vesa_lfb_stride;
+# endif
 #endif
 }
 
@@ -573,7 +620,11 @@ bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
 #elif defined(USE_WIN32)
 	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	return (p >= pc98lfb && p < (pc98lfb + pc98lfb_map_size));
+# else
 	return (p >= vesa_lfb && p < (vesa_lfb + vesa_lfb_map_size));
+# endif
 #endif
 }
 
@@ -585,7 +636,11 @@ unsigned char *IFEScreenDrawPointer(void) {
 #elif defined(USE_WIN32)
 	return win_dib_first_row;
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	return pc98lfb_offscreen;
+# else
 	return vesa_lfb_offscreen;
+# endif
 #endif
 }
 
@@ -595,7 +650,11 @@ unsigned int IFEScreenWidth(void) {
 #elif defined(USE_WIN32)
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth);
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	return pc98lfb_width;
+# else
 	return vesa_lfb_width;
+# endif
 #endif
 }
 
@@ -605,7 +664,11 @@ unsigned int IFEScreenHeight(void) {
 #elif defined(USE_WIN32)
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biHeight);
 #elif defined(USE_DOSLIB)
+# if defined(TARGET_PC98)
+	return pc98lfb_height;
+# else
 	return vesa_lfb_height;
+# endif
 #endif
 }
 
@@ -863,6 +926,29 @@ int main(int argc,char **argv) {
 		IFEFatalError("8254 timer not detected");
 	if (!probe_8259())
 		IFEFatalError("8259 interrupt controller not detected");
+#  if defined(TARGET_PC98)
+	if (!init_8251()) /* keyboard and COM1 use the same 8251 serial UART */
+		IFEFatalError("8251 UART library failed");
+	probe_common_8251();
+	if (uart_8251_total() == 0)
+		IFEFatalError("No 8251 UARTs detected");
+	{
+		unsigned int i;
+
+		for (i=0;i < uart_8251_total();i++) {
+			struct uart_8251 *c_uart = uart_8251_get(i);
+			if (c_uart == NULL) continue;
+
+			if (c_uart->base_io == 0x41) {
+				/* Keyboard UART ports are 0x41,0x43 */
+				pc98_keyb_uart = c_uart;
+				break;
+			}
+		}
+	}
+	if (pc98_keyb_uart == NULL)
+		IFEFatalError("8251 keyboard UART not found");
+#  else
 	if (!k8042_probe())
 		IFEFatalError("8042 keyboard controller not found");
 	if (!probe_vga())
@@ -871,6 +957,7 @@ int main(int argc,char **argv) {
 		IFEFatalError("Standard VGA not detected");
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 		IFEFatalError("VESA BIOS extensions not detected");
+#  endif
 
 	if (probe_dosbox_id()) {
 		printf("DOSBox Integration Device detected\n");
