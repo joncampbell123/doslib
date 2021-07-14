@@ -369,11 +369,29 @@ no_modeset:
 		/* it is done */
 		pc98lfb_setmode = true;
 
-		/* Real hardware already hides the text layer, but hide it just in case */
+		/* Real hardware already hides the text layer, but hide it just in case.
+		 * The call above may set 256-color mode, but make an additional call just in case to enable it.
+		 * Also make sure graphics layer is visible. */
 		__asm {
 			mov	ah,0x0D			; disable/hide text layer
 			int	18h
+
+			mov	ah,0x4D			; enable 256-color mode
+			mov	ch,1
+			int	18h
+
+			mov	ah,0x40			; enable/show graphics layer
+			int	18h
 		}
+
+		/* Just to be sure, manually poke the hardware to make sure 256-color is enabled */
+		outp(0x6A,0x21);
+
+		/* To obtain the linear framebuffer, additional pokes to the PEGC memory-mapped I/O are needed */
+		*((volatile unsigned char*)(0xE0000 + 0x004)) = 0; // bank 0 set to 0
+		*((volatile unsigned char*)(0xE0000 + 0x006)) = 0; // bank 0 set to 0
+		*((volatile unsigned char*)(0xE0000 + 0x100)) = 0; // packed 256-color mode
+		*((volatile unsigned char*)(0xE0000 + 0x102)) = 1; // enable linear framebuffer
 	}
 
 	pc98lfb = (unsigned char*)0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
@@ -496,11 +514,21 @@ void IFEShutdownVideo(void) {
 # if defined(TARGET_PC98)
 	/* NEC PC-9821 */
 	if (pc98lfb_setmode) {
+		*((volatile unsigned char*)(0xE0000 + 0x100)) = 0; // packed 256-color mode
+		*((volatile unsigned char*)(0xE0000 + 0x102)) = 0; // disable linear framebuffer
+
 		/* need to restore the video mode */
 		__asm {
+			mov	ah,0x4D			; disable 256-color mode
+			mov	ch,0
+			int	18h
+
 			mov	ah,0x30			; set display mode
 			mov	al,pc98_old_mode1
 			mov	bh,pc98_old_mode2
+			int	18h
+
+			mov	ah,0x41			; graphcis layer disable
 			int	18h
 
 			mov	ah,0x0D			; text layer disable
