@@ -4,7 +4,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 dos=0
-also_build_list="dos386f d98386f win32s3"
+also_build_list="dos386f win32s3" # disabled: d98386f
 
 if [ "$1" == "clean" ]; then
     do_clean
