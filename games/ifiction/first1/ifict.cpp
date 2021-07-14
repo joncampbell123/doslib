@@ -379,9 +379,6 @@ no_modeset:
 			mov	ah,0x4D			; enable 256-color mode
 			mov	ch,1
 			int	18h
-
-			mov	ah,0x40			; enable/show graphics layer
-			int	18h
 		}
 
 		/* Just to be sure, manually poke the hardware to make sure 256-color is enabled */
@@ -399,6 +396,15 @@ no_modeset:
 	pc98lfb_stride = 640;
 	pc98lfb_height = 480;
 	pc98lfb_width = 640;
+
+	/* clear video memory */
+	memset(pc98lfb,0,pc98lfb_map_size);
+
+	/* then show it */
+	__asm {
+		mov	ah,0x40			; enable/show graphics layer
+		int	18h
+	}
 
 	/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
 	 * Provide an offscreen copy of video memory to work from for compositing. */
