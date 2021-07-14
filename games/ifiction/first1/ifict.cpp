@@ -83,6 +83,7 @@ uint16_t	pc98lfb_width = 0;
 uint8_t		pc98_old_mode1 = 0;
 uint8_t		pc98_old_mode2 = 0;
 bool		pc98lfb_setmode = false;
+bool		pc98lfb_dpmi_map = false;
 # else
 /* IBM PC/AT */
 unsigned char*	vesa_lfb = NULL; /* video memory, linear framebuffer */
@@ -394,10 +395,21 @@ no_modeset:
 
 	/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
 	 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
+	/* FIXME: DOS4GW.EXE actually runs, though with issues, on PC-98 systems (except the exception handler
+	 *        crash will hang because it assumes IBM PC I/O ports). For some additional reason, the DPMI
+	 *        map function here will not work. Our only option then is to typecast the pointer if paging
+	 *        is not enabled. */
 	pc98lfb_physaddr = 0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
-	pc98lfb = (unsigned char*)dpmi_phys_addr_map(pc98lfb_physaddr,pc98lfb_map_size);
-	if (pc98lfb == NULL)
-		IFEFatalError("LFB map fail");
+	if (dos_ltp_info.paging) {
+		pc98lfb_dpmi_map = true;
+		pc98lfb = (unsigned char*)dpmi_phys_addr_map(pc98lfb_physaddr,pc98lfb_map_size);
+		if (pc98lfb == NULL)
+			IFEFatalError("LFB map fail");
+	}
+	else {
+		/* no paging, no need to DPMI map */
+		pc98lfb = (unsigned char*)pc98lfb_physaddr;
+	}
 
 	pc98lfb_map_size = 640 * 480;
 	pc98lfb_stride = 640;
@@ -559,7 +571,10 @@ void IFEShutdownVideo(void) {
 			pc98lfb_offscreen = NULL;
 		}
 		if (pc98lfb != NULL) {
-			dpmi_phys_addr_free((void*)pc98lfb);
+			if (pc98lfb_dpmi_map) {
+				dpmi_phys_addr_free((void*)pc98lfb);
+				pc98lfb_dpmi_map = false;
+			}
 			pc98lfb = NULL;
 		}
 		pc98lfb_setmode = false;
@@ -1053,6 +1068,7 @@ int main(int argc,char **argv) {
 	detect_windows();
 	probe_dpmi();
 	probe_vcpi();
+	dos_ltp_probe();
 
 	if (!probe_8254())
 		IFEFatalError("8254 timer not detected");
