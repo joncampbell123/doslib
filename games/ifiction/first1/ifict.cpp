@@ -612,9 +612,9 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	}
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	outp(0xA8,first);
 	for (i=0;i < count;i++) {
 		/* PC-9821 256-color is always 8-bit DAC */
+		outp(0xA8,i+first);
 		outp(0xAC,pal[i].r);
 		outp(0xAA,pal[i].g);
 		outp(0xAE,pal[i].b);
