@@ -367,8 +367,14 @@ no_modeset:
 		if (r != 0x05) /* AH=5 on success, according to Neko Project II and real hardware. Other register results disagree between the two */
 			IFEFatalError("Unable to set 640x480 256-color mode");
 
-		/* done */
+		/* it is done */
 		pc98lfb_setmode = true;
+
+		/* Real hardware already hides the text layer, but hide it just in case */
+		__asm {
+			mov	ah,0x0D			; disable/hide text layer
+			int	18h
+		}
 	}
 
 	IFEFatalError("Not yet implemented");
