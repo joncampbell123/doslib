@@ -564,6 +564,9 @@ void IFEShutdownVideo(void) {
 
 			mov	ah,0x0C			; text layer enable
 			int	18h
+
+			mov	ah,0x11			; show cursor
+			int	18h
 		}
 
 		if (pc98lfb_offscreen != NULL) {
