@@ -80,6 +80,8 @@ uint32_t	pc98lfb_map_size = 0;
 uint32_t	pc98lfb_stride = 0;
 uint16_t	pc98lfb_height = 0;
 uint16_t	pc98lfb_width = 0;
+uint8_t		pc98_old_mode1 = 0;
+uint8_t		pc98_old_mode2 = 0;
 bool		pc98lfb_setmode = false;
 # else
 /* IBM PC/AT */
@@ -323,6 +325,52 @@ void IFEInitVideo(void) {
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
 	/* NEC PC-9821 */
+
+	/* This code depends on the linear framebuffer at the 15MB mark, 386SX style.
+	 * Later PC-9821 units can easily support this by enabling the "memory hole" at 15MB,
+	 * even the PCI-based ones that use the common Intel motherboard chipsets of the time (mid 1990s).
+	 *
+	 * FIXME: Write code that can detect whether that memory hole is open or not.
+	 *        Were it not for HIMEM.SYS clearing extended memory fields in the BIOS data area,
+	 *        we could reliably detect it reading the 286-level extended memory count (1MB-16MB) vs
+	 *        386-level extended memory count. (16MB+) */
+
+	/* Use INT 18h AH=30h to set 640x480 256-color mode.
+	 * Note that PC-9821 hardware can ONLY do 640x480 256-color mode because memory layout of 16-color
+	 * planar modes cannot support 640x480, the 32KB bitplanes cannot hold enough video data for it.
+	 * You can of course hack the hardware to 640x480 16-color mode, and see for yourself by how the
+	 * picture repeats past 32KB */
+	{
+		unsigned char r=0xFF;
+
+		__asm {
+			mov	ah,0x31			; AH=31h get display mode. NTS other sources suggest this call does not exist unless EGC-capable hardware
+			mov	al,0xFF			; AL=FFh (to detect if BIOS changed registers)
+			mov	bh,0xFF			; BH=FFH (to detect if BIOS changed registers)
+			int	18h
+			mov	cl,al			; are AL/BH still FFh?
+			and	cl,bh			; quick test: if (AL & BH) == 0xFF then the registers did not change
+			inc	cl			; 0xFF + 1 == 0x00, which would set ZF=1
+			jz	no_modeset		; if that was the case, do not attempt modeset
+
+			mov	pc98_old_mode1,al	; save current display mode: whether 24KHz/31KHz, interlaced etc.
+			mov	pc98_old_mode2,bh	; save current display mode: whether 640x200/640x400, number of text rows, etc
+
+			mov	ax,0x300C		; AH=30h set display mode, AL=0Ch 31khz sync
+			mov	bh,0x30			; BH=30h we want 640x480 mode
+			int	18h
+			mov	r,ah
+
+no_modeset:
+		}
+
+		if (r != 0x05) /* AH=5 on success, according to Neko Project II and real hardware. Other register results disagree between the two */
+			IFEFatalError("Unable to set 640x480 256-color mode");
+
+		/* done */
+		pc98lfb_setmode = true;
+	}
+
 	IFEFatalError("Not yet implemented");
 # else
 	/* IBM PC/AT compatible */
@@ -432,6 +480,23 @@ void IFEShutdownVideo(void) {
 	_sti();
 # if defined(TARGET_PC98)
 	/* NEC PC-9821 */
+	if (pc98lfb_setmode) {
+		/* need to restore the video mode */
+		__asm {
+			mov	ah,0x30			; set display mode
+			mov	al,pc98_old_mode1
+			mov	bh,pc98_old_mode2
+			int	18h
+
+			mov	ah,0x0D			; text layer disable
+			int	18h
+
+			mov	ah,0x0C			; text layer enable
+			int	18h
+		}
+
+		pc98lfb_setmode = false;
+	}
 # else
 	/* IBM PC/AT */
 	if (vesa_lfb_offscreen != NULL) {
