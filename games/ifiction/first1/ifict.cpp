@@ -336,6 +336,29 @@ void IFEInitVideo(void) {
 	 *        we could reliably detect it reading the 286-level extended memory count (1MB-16MB) vs
 	 *        386-level extended memory count. (16MB+) */
 
+	/* FIXME: DOS4GW for IBM PC systems happens to work on PC-98 systems, but will hang on showing
+	 *        an exception because the beep function is written for the 8254 on IBM PC systems and
+	 *        will hang on PC-98. Furthermore, there seems to be a BIG problem with interrupts and
+	 *        DOS4GW that will randomly corrupt CPU flags and cause seemingly random and irrational
+	 *        behavior. For example, a loop that waits for 3000ms may randomly terminate early
+	 *        because an interrupt happened between the compare and the branch.
+	 *
+	 *        CWSDPMI is even worse. It happens to work, but it considers a direct call to INT 18h
+	 *        an exception. I suppose that makes sense since on IBM PC hardware it's designed for,
+	 *        INT 18h is a diskless boot / cassette basic entry point that DOS programs would not
+	 *        normally call, but that becomes a BIG problem for PC-98 because INT 18h is a very
+	 *        important interrupt to use.
+	 *
+	 *        There's a DPMI.EXE for PC-98 systems, but it crashes under DOSBox-X when started, and
+	 *        requires EMM386.EXE, so that's not an option either.
+	 *
+	 *        Running with a DOS extender like DOS4GW.EXE under PC-98 Windows is not an option either.
+	 *        It faults under Windows, tries to print an error, and hangs during the 8254 PIT wait
+	 *        loop. You cannot get back to Windows, the system is hung.
+	 *
+	 *        Perhaps someday I'll figure out how to compile CWSDPMI from source and make a modified
+	 *        version for PC-98 that I can use. Until then, this code will not be developed. */
+
 	/* Use INT 18h AH=30h to set 640x480 256-color mode.
 	 * Note that PC-9821 hardware can ONLY do 640x480 256-color mode because memory layout of 16-color
 	 * planar modes cannot support 640x480, the 32KB bitplanes cannot hold enough video data for it.
