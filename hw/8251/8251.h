@@ -1,4 +1,8 @@
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdint.h>
 
@@ -67,5 +71,9 @@ static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char 
     /* WARNING: Assumes bit 6 == 0. If bit 6 == 1 you will reset back into mode byte */
     outp(prt,cmd);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
