@@ -8,7 +8,7 @@
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
 # if defined(TARGET_PC98)
-#  include <hw/8251/8251.h>
+// REMOVED
 # else
 #  include <hw/vga/vga.h>
 #  include <hw/vesa/vesa.h>
@@ -71,19 +71,7 @@ DWORD		win32_tick_base = 0;
 
 #if defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-/* NEC PC-9821 */
-struct uart_8251 *pc98_keyb_uart = NULL;
-unsigned char*	pc98lfb = NULL; /* video memory, linear framebuffer */
-unsigned char*	pc98lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
-uint32_t	pc98lfb_physaddr = 0;
-uint32_t	pc98lfb_map_size = 0;
-uint32_t	pc98lfb_stride = 0;
-uint16_t	pc98lfb_height = 0;
-uint16_t	pc98lfb_width = 0;
-uint8_t		pc98_old_mode1 = 0;
-uint8_t		pc98_old_mode2 = 0;
-bool		pc98lfb_setmode = false;
-bool		pc98lfb_dpmi_map = false;
+// REMOVED
 # else
 /* IBM PC/AT */
 unsigned char*	vesa_lfb = NULL; /* video memory, linear framebuffer */
@@ -325,134 +313,7 @@ void IFEInitVideo(void) {
 	}
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	/* NEC PC-9821 */
-
-	/* This code depends on the linear framebuffer at the 15MB mark, 386SX style.
-	 * Later PC-9821 units can easily support this by enabling the "memory hole" at 15MB,
-	 * even the PCI-based ones that use the common Intel motherboard chipsets of the time (mid 1990s).
-	 *
-	 * FIXME: Write code that can detect whether that memory hole is open or not.
-	 *        Were it not for HIMEM.SYS clearing extended memory fields in the BIOS data area,
-	 *        we could reliably detect it reading the 286-level extended memory count (1MB-16MB) vs
-	 *        386-level extended memory count. (16MB+) */
-
-	/* FIXME: DOS4GW for IBM PC systems happens to work on PC-98 systems, but will hang on showing
-	 *        an exception because the beep function is written for the 8254 on IBM PC systems and
-	 *        will hang on PC-98. Furthermore, there seems to be a BIG problem with interrupts and
-	 *        DOS4GW that will randomly corrupt CPU flags and cause seemingly random and irrational
-	 *        behavior. For example, a loop that waits for 3000ms may randomly terminate early
-	 *        because an interrupt happened between the compare and the branch.
-	 *
-	 *        CWSDPMI is even worse. It happens to work, but it considers a direct call to INT 18h
-	 *        an exception. I suppose that makes sense since on IBM PC hardware it's designed for,
-	 *        INT 18h is a diskless boot / cassette basic entry point that DOS programs would not
-	 *        normally call, but that becomes a BIG problem for PC-98 because INT 18h is a very
-	 *        important interrupt to use.
-	 *
-	 *        There's a DPMI.EXE for PC-98 systems, but it crashes under DOSBox-X when started, and
-	 *        requires EMM386.EXE, so that's not an option either.
-	 *
-	 *        Running with a DOS extender like DOS4GW.EXE under PC-98 Windows is not an option either.
-	 *        It faults under Windows, tries to print an error, and hangs during the 8254 PIT wait
-	 *        loop. You cannot get back to Windows, the system is hung.
-	 *
-	 *        Perhaps someday I'll figure out how to compile CWSDPMI from source and make a modified
-	 *        version for PC-98 that I can use. Until then, this code will not be developed. */
-
-	/* Use INT 18h AH=30h to set 640x480 256-color mode.
-	 * Note that PC-9821 hardware can ONLY do 640x480 256-color mode because memory layout of 16-color
-	 * planar modes cannot support 640x480, the 32KB bitplanes cannot hold enough video data for it.
-	 * You can of course hack the hardware to 640x480 16-color mode, and see for yourself by how the
-	 * picture repeats past 32KB */
-	{
-		unsigned char r=0xFF;
-
-		__asm {
-			mov	ah,0x31			; AH=31h get display mode. NTS other sources suggest this call does not exist unless EGC-capable hardware
-			mov	al,0xFF			; AL=FFh (to detect if BIOS changed registers)
-			mov	bh,0xFF			; BH=FFH (to detect if BIOS changed registers)
-			int	18h
-			mov	cl,al			; are AL/BH still FFh?
-			and	cl,bh			; quick test: if (AL & BH) == 0xFF then the registers did not change
-			inc	cl			; 0xFF + 1 == 0x00, which would set ZF=1
-			jz	no_modeset		; if that was the case, do not attempt modeset
-
-			mov	pc98_old_mode1,al	; save current display mode: whether 24KHz/31KHz, interlaced etc.
-			mov	pc98_old_mode2,bh	; save current display mode: whether 640x200/640x400, number of text rows, etc
-
-			mov	ax,0x300C		; AH=30h set display mode, AL=0Ch 31khz sync
-			mov	bh,0x30			; BH=30h we want 640x480 mode
-			int	18h
-			mov	r,ah
-
-no_modeset:
-		}
-
-		if (r != 0x05) /* AH=5 on success, according to Neko Project II and real hardware. Other register results disagree between the two */
-			IFEFatalError("Unable to set 640x480 256-color mode");
-
-		/* it is done */
-		pc98lfb_setmode = true;
-
-		/* Real hardware already hides the text layer, but hide it just in case.
-		 * The call above may set 256-color mode, but make an additional call just in case to enable it.
-		 * Also make sure graphics layer is visible. */
-		__asm {
-			mov	ah,0x0D			; disable/hide text layer
-			int	18h
-
-			mov	ah,0x4D			; enable 256-color mode
-			mov	ch,1
-			int	18h
-		}
-
-		/* Just to be sure, manually poke the hardware to make sure 256-color is enabled */
-		outp(0x6A,0x21);
-
-		/* To obtain the linear framebuffer, additional pokes to the PEGC memory-mapped I/O are needed */
-		*((volatile unsigned char*)(0xE0000 + 0x004)) = 0; // bank 0 set to 0
-		*((volatile unsigned char*)(0xE0000 + 0x006)) = 0; // bank 0 set to 0
-		*((volatile unsigned char*)(0xE0000 + 0x100)) = 0; // packed 256-color mode
-		*((volatile unsigned char*)(0xE0000 + 0x102)) = 1; // enable linear framebuffer
-	}
-
-	/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
-	 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
-	/* FIXME: DOS4GW.EXE actually runs, though with issues, on PC-98 systems (except the exception handler
-	 *        crash will hang because it assumes IBM PC I/O ports). For some additional reason, the DPMI
-	 *        map function here will not work. Our only option then is to typecast the pointer if paging
-	 *        is not enabled. */
-	pc98lfb_physaddr = 0x00F00000; /* video memory, linear framebuffer, at 15MB mark (1MB below 16MB) */
-	if (dos_ltp_info.paging) {
-		pc98lfb_dpmi_map = true;
-		pc98lfb = (unsigned char*)dpmi_phys_addr_map(pc98lfb_physaddr,pc98lfb_map_size);
-		if (pc98lfb == NULL)
-			IFEFatalError("LFB map fail");
-	}
-	else {
-		/* no paging, no need to DPMI map */
-		pc98lfb = (unsigned char*)pc98lfb_physaddr;
-	}
-
-	pc98lfb_map_size = 640 * 480;
-	pc98lfb_stride = 640;
-	pc98lfb_height = 480;
-	pc98lfb_width = 640;
-
-	/* clear video memory */
-	memset(pc98lfb,0,pc98lfb_map_size);
-
-	/* then show it */
-	__asm {
-		mov	ah,0x40			; enable/show graphics layer
-		int	18h
-	}
-
-	/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
-	 * Provide an offscreen copy of video memory to work from for compositing. */
-	pc98lfb_offscreen = (unsigned char*)malloc(pc98lfb_map_size);
-	if (pc98lfb_offscreen == NULL)
-		IFEFatalError("LFB shadow malloc fail");
+// REMOVED
 # else
 	/* IBM PC/AT compatible */
 	/* Find 640x480 256-color mode.
@@ -560,51 +421,7 @@ void IFEShutdownVideo(void) {
 #elif defined(USE_DOSLIB)
 	_sti();
 # if defined(TARGET_PC98)
-	/* NEC PC-9821 */
-	if (pc98lfb_setmode) {
-		*((volatile unsigned char*)(0xE0000 + 0x100)) = 0; // packed 256-color mode
-		*((volatile unsigned char*)(0xE0000 + 0x102)) = 0; // disable linear framebuffer
-
-		/* need to restore the video mode */
-		__asm {
-			mov	ah,0x41			; graphcis layer disable
-			int	18h
-
-			mov	ah,0x4D			; disable 256-color mode
-			mov	ch,0
-			int	18h
-
-			mov	ah,0x30			; set display mode
-			mov	al,pc98_old_mode1
-			mov	bh,pc98_old_mode2
-			int	18h
-
-			mov	ah,0x41			; graphcis layer disable
-			int	18h
-
-			mov	ah,0x0D			; text layer disable
-			int	18h
-
-			mov	ah,0x0C			; text layer enable
-			int	18h
-
-			mov	ah,0x11			; show cursor
-			int	18h
-		}
-
-		if (pc98lfb_offscreen != NULL) {
-			free((void*)pc98lfb_offscreen);
-			pc98lfb_offscreen = NULL;
-		}
-		if (pc98lfb != NULL) {
-			if (pc98lfb_dpmi_map) {
-				dpmi_phys_addr_free((void*)pc98lfb);
-				pc98lfb_dpmi_map = false;
-			}
-			pc98lfb = NULL;
-		}
-		pc98lfb_setmode = false;
-	}
+// REMOVED
 # else
 	/* IBM PC/AT */
 	if (vesa_lfb_offscreen != NULL) {
@@ -671,13 +488,8 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	}
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	for (i=0;i < count;i++) {
-		/* PC-9821 256-color is always 8-bit DAC */
-		outp(0xA8,i+first);
-		outp(0xAC,pal[i].r);
-		outp(0xAA,pal[i].g);
-		outp(0xAE,pal[i].b);
-	}
+// REMOVED
+	(void)i;
 # else
 	/* IBM PC/AT */
 	if (vesa_8bitpal) {
@@ -729,7 +541,7 @@ void IFEUpdateFullScreen(void) {
 	}
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	memcpy(pc98lfb,pc98lfb_offscreen,pc98lfb_map_size);
+// REMOVED
 # else
 	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
 # endif
@@ -779,7 +591,8 @@ int IFEScreenDrawPitch(void) {
 	return win_dib_pitch;
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return pc98lfb_stride;
+// REMOVED
+	return 0;
 # else
 	return vesa_lfb_stride;
 # endif
@@ -794,7 +607,9 @@ bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
 	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return (p >= pc98lfb_offscreen && p < (pc98lfb_offscreen + pc98lfb_map_size));
+// REMOVED
+	(void)p;
+	return false;
 # else
 	return (p >= vesa_lfb_offscreen && p < (vesa_lfb_offscreen + vesa_lfb_map_size));
 # endif
@@ -810,7 +625,8 @@ unsigned char *IFEScreenDrawPointer(void) {
 	return win_dib_first_row;
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return pc98lfb_offscreen;
+// REMOVED
+	return NULL;
 # else
 	return vesa_lfb_offscreen;
 # endif
@@ -824,7 +640,8 @@ unsigned int IFEScreenWidth(void) {
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth);
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return pc98lfb_width;
+// REMOVED
+	return 0;
 # else
 	return vesa_lfb_width;
 # endif
@@ -838,7 +655,8 @@ unsigned int IFEScreenHeight(void) {
 	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biHeight);
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
-	return pc98lfb_height;
+// REMOVED
+	return 0;
 # else
 	return vesa_lfb_height;
 # endif
@@ -1101,27 +919,7 @@ int main(int argc,char **argv) {
 	if (!probe_8259())
 		IFEFatalError("8259 interrupt controller not detected");
 #  if defined(TARGET_PC98)
-	if (!init_8251()) /* keyboard and COM1 use the same 8251 serial UART */
-		IFEFatalError("8251 UART library failed");
-	probe_common_8251();
-	if (uart_8251_total() == 0)
-		IFEFatalError("No 8251 UARTs detected");
-	{
-		unsigned int i;
-
-		for (i=0;i < uart_8251_total();i++) {
-			struct uart_8251 *c_uart = uart_8251_get(i);
-			if (c_uart == NULL) continue;
-
-			if (c_uart->base_io == 0x41) {
-				/* Keyboard UART ports are 0x41,0x43 */
-				pc98_keyb_uart = c_uart;
-				break;
-			}
-		}
-	}
-	if (pc98_keyb_uart == NULL)
-		IFEFatalError("8251 keyboard UART not found");
+// REMOVED
 #  else
 	if (!k8042_probe())
 		IFEFatalError("8042 keyboard controller not found");
