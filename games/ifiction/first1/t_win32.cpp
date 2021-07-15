@@ -531,6 +531,20 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_CHAR:
 			p_win32_ProcessCharEvent(wParam,lParam);
 			break;
+		case WM_PALETTECHANGED:
+			if (winScreenIsPal && hwndMainPAL != NULL && (HWND)wParam != hwnd) {
+				HPALETTE oldPal;
+				HDC hDC;
+
+				hDC = GetDC(hwnd);
+				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+				RealizePalette(hDC);
+				SelectPalette(hDC,oldPal,FALSE);
+				ReleaseDC(hwnd,hDC);
+				InvalidateRect(hwnd,NULL,FALSE);
+				return TRUE;
+			}
+			break;
 		case WM_QUERYNEWPALETTE:
 			if (winScreenIsPal && hwndMainPAL != NULL) {
 				HPALETTE oldPal;
