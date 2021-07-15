@@ -81,6 +81,32 @@ static void SDLKeySymToFill(IFEKeyEvent &ke,const SDL_KeyboardEvent &ev) {
 		MSN(BACKSPACE);
 		MSN(TAB);
 		MSN(SPACE);
+		MSN(A);
+		MSN(B);
+		MSN(C);
+		MSN(D);
+		MSN(E);
+		MSN(F);
+		MSN(G);
+		MSN(H);
+		MSN(I);
+		MSN(J);
+		MSN(K);
+		MSN(L);
+		MSN(M);
+		MSN(N);
+		MSN(O);
+		MSN(P);
+		MSN(Q);
+		MSN(R);
+		MSN(S);
+		MSN(T);
+		MSN(U);
+		MSN(V);
+		MSN(W);
+		MSN(X);
+		MSN(Y);
+		MSN(Z);
 		default: break;
 	}
 #undef MSN
