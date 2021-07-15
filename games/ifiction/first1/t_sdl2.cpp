@@ -69,18 +69,18 @@ static bool p_UserWantsToQuit(void) {
 	return sdl_signal_to_quit;
 }
 
-static void SDLKeySymToFill(IFEKeyEvent &ke,IFECookedKeyEvent &cke,const SDL_KeyboardEvent &ev) {
-#define MAP(x,y,c) \
-	case x: ke.code = (uint32_t)y; cke.code = (uint32_t)c; break;
-#define MSN(x,c) \
-	case SDL_SCANCODE_##x: ke.code = (uint32_t)(IFEKEY_##x); cke.code = (uint32_t)c; break;
+static void SDLKeySymToFill(IFEKeyEvent &ke,const SDL_KeyboardEvent &ev) {
+#define MAP(x,y) \
+	case x: ke.code = (uint32_t)y; break;
+#define MSN(x) \
+	case SDL_SCANCODE_##x: ke.code = (uint32_t)(IFEKEY_##x); break;
 
 	switch (ev.keysym.scancode) {
-		MSN(RETURN,		13);
-		MSN(ESCAPE,		27);
-		MSN(BACKSPACE,		8);
-		MSN(TAB,		9);
-		MSN(SPACE,		' ');
+		MSN(RETURN);
+		MSN(ESCAPE);
+		MSN(BACKSPACE);
+		MSN(TAB);
+		MSN(SPACE);
 		default: break;
 	}
 #undef MSN
@@ -88,19 +88,15 @@ static void SDLKeySymToFill(IFEKeyEvent &ke,IFECookedKeyEvent &cke,const SDL_Key
 }
 
 static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
-	IFECookedKeyEvent cke;
 	IFEKeyEvent ke;
 
 	memset(&ke,0,sizeof(ke));
-	memset(&cke,0,sizeof(cke));
 	ke.raw_code = (uint32_t)ev.keysym.scancode;
 	ke.flags = (ev.state == SDL_PRESSED) ? IFEKeyEvent_FLAG_DOWN : 0;
-	SDLKeySymToFill(ke,cke,ev);
+	SDLKeySymToFill(ke,ev);
 
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
-	if (cke.code != (uint32_t)0 && !IFECookedKeyQueue.add(cke))
-		IFEDBG("ProcessKeyboardEvent: Cooked queue full");
 }
 
 static void priv_ProcessEvent(const SDL_Event &ev) {
