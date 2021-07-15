@@ -326,7 +326,8 @@ void UpdateWin32ModFlags(void) {
 	win32_mod_flags = 0;
 
 	/* NTS: LSHIFT/RSHIFT works with later versions of Windows.
-	 *      Windows 3.1 only understands SHIFT. Same with CTRL, ALT. */
+	 *      Windows 3.1 only understands SHIFT. Same with CTRL, ALT.
+	 *      The Windows 3.1 SDK doesn't even list L/R versions of those keys. */
 
 	if (GetKeyState(VK_LSHIFT)&0x8000u)/*MSB=down*/
 		win32_mod_flags |= IFEKeyEvent_FLAG_LSHIFT;
