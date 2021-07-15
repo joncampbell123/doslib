@@ -269,9 +269,6 @@ IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
 	return IFECookedKeyQueue.get();
 }
 
-void p_ProcessEvents(void) {
-}
-
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -288,8 +285,7 @@ ifeapi_t ifeapi_doslib = {
 	p_InitVideo,
 	p_FlushKeyboardInput,
 	p_GetRawKeyboardInput,
-	p_GetCookedKeyboardInput,
-	p_ProcessEvents
+	p_GetCookedKeyboardInput
 };
 #endif
 

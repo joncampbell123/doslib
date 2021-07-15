@@ -296,9 +296,6 @@ IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
 	return IFECookedKeyQueue.get();
 }
 
-void p_ProcessEvents(void) {
-}
-
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -315,8 +312,7 @@ ifeapi_t ifeapi_win32 = {
 	p_InitVideo,
 	p_FlushKeyboardInput,
 	p_GetRawKeyboardInput,
-	p_GetCookedKeyboardInput,
-	p_ProcessEvents
+	p_GetCookedKeyboardInput
 };
 
 LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
