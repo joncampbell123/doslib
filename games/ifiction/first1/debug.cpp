@@ -42,11 +42,11 @@
 bool			dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
+bool			ifedbg_en = false;
 char			fatal_tmp[256];
 
 void IFEDBG(const char *msg,...) {
-#if defined(USE_DOSLIB)
-	if (dosbox_ig) {
+	if (ifedbg_en) {
 		va_list va;
 
 		va_start(va,msg);
@@ -56,9 +56,6 @@ void IFEDBG(const char *msg,...) {
 	else {
 		fatal_tmp[0] = 0;
 	}
-#else
-	(void)msg;
-#endif
 
 #if defined(USE_DOSLIB)
 	if (dosbox_ig) {

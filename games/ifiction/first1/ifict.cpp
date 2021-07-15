@@ -809,7 +809,7 @@ int main(int argc,char **argv) {
 
 	if (probe_dosbox_id()) {
 		printf("DOSBox Integration Device detected\n");
-		dosbox_ig = true;
+		dosbox_ig = ifedbg_en = true;
 
 		IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
 	}
