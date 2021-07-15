@@ -7,11 +7,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "ifict.h"
 #include "utils.h"
 #include "debug.h"
 #include "fatal.h"
-
-void IFEShutdownVideo(void);
 
 void IFEFatalError(const char *msg,...) {
 	va_list va;
@@ -24,7 +23,7 @@ void IFEFatalError(const char *msg,...) {
 	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
 	va_end(va);
 
-	IFEShutdownVideo();
+	ifeapi->ShutdownVideo();
 
 #if defined(USE_WIN32)
 	MessageBox(NULL/*FIXME*/,fatal_tmp,"Fatal error",MB_OK|MB_ICONEXCLAMATION);

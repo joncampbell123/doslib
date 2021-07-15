@@ -106,6 +106,23 @@ static void p_EndScreenDraw(void) {
 	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = NULL;
 }
 
+static void p_ShutdownVideo(void) {
+	if (sdl_game_surface != NULL) {
+		SDL_FreeSurface(sdl_game_surface);
+		sdl_game_surface = NULL;
+	}
+	if (sdl_game_palette != NULL) {
+		SDL_FreePalette(sdl_game_palette);
+		sdl_game_palette = NULL;
+	}
+	if (sdl_window != NULL) {
+		SDL_DestroyWindow(sdl_window);
+		sdl_window_surface = NULL;
+		sdl_window = NULL;
+	}
+	SDL_Quit();
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -117,7 +134,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_CheckEvents,
 	p_WaitEvent,
 	p_BeginScreenDraw,
-	p_EndScreenDraw
+	p_EndScreenDraw,
+	p_ShutdownVideo
 };
 #endif
 

@@ -352,67 +352,6 @@ void IFEInitVideo(void) {
 #endif
 }
 
-void IFEShutdownVideo(void) {
-#if defined(USE_SDL2)
-	if (sdl_game_surface != NULL) {
-		SDL_FreeSurface(sdl_game_surface);
-		sdl_game_surface = NULL;
-	}
-	if (sdl_game_palette != NULL) {
-		SDL_FreePalette(sdl_game_palette);
-		sdl_game_palette = NULL;
-	}
-	if (sdl_window != NULL) {
-		SDL_DestroyWindow(sdl_window);
-		sdl_window_surface = NULL;
-		sdl_window = NULL;
-	}
-	SDL_Quit();
-#elif defined(USE_WIN32)
-	if (hwndMainPAL != NULL) {
-		DeleteObject((HGDIOBJ)hwndMainPAL);
-		hwndMainPALPrev = NULL;
-		hwndMainPAL = NULL;
-	}
-	if (hwndMainDIB != NULL) {
-		free((void*)hwndMainDIB);
-		hwndMainDIB = NULL;
-	}
-	if (hwndMain != NULL) {
-		winIsDestroying = true;
-		DestroyWindow(hwndMain);
-		winIsDestroying = false;
-		hwndMain = NULL;
-	}
-	if (win_dib != NULL) {
-		ifevidinfo_win32.buf_base = ifevidinfo_win32.buf_first_row = NULL;
-		free((void*)win_dib);
-		win_dib = NULL;
-	}
-#elif defined(USE_DOSLIB)
-	_sti();
-# if defined(TARGET_PC98)
-// REMOVED
-# else
-	/* IBM PC/AT */
-	if (vesa_lfb_offscreen != NULL) {
-		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = NULL;
-		free((void*)vesa_lfb_offscreen);
-		vesa_lfb_offscreen = NULL;
-	}
-	if (vesa_lfb != NULL) {
-		ifevidinfo_doslib.vram_base = NULL;
-		dpmi_phys_addr_free((void*)vesa_lfb);
-		vesa_lfb = NULL;
-	}
-	if (vesa_setmode) {
-		vesa_setmode = false;
-		int10_setmode(3); /* back to 80x25 text */
-	}
-# endif
-#endif
-}
-
 void IFETestRGBPalette() {
 	IFEPaletteEntry pal[256];
 	unsigned int i;
@@ -473,7 +412,7 @@ void IFENormalExit(void) {
 	IFE_win95_tf_hang_check();
 #endif
 
-	IFEShutdownVideo();
+	ifeapi->ShutdownVideo();
 	exit(0);
 }
 

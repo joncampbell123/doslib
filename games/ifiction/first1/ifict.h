@@ -22,6 +22,7 @@ typedef void ifefunc_CheckEvents_t(void);
 typedef void ifefunc_WaitEvent_t(const int wait_ms);
 typedef bool ifefunc_BeginScreenDraw_t(void);
 typedef void ifefunc_EndScreenDraw_t(void);
+typedef void ifefunc_ShutdownVideo_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -35,6 +36,7 @@ struct ifeapi_t {
 	ifefunc_WaitEvent_t*					WaitEvent;
 	ifefunc_BeginScreenDraw_t*				BeginScreenDraw;
 	ifefunc_EndScreenDraw_t*				EndScreenDraw;
+	ifefunc_ShutdownVideo_t*				ShutdownVideo;
 };
 
 extern ifeapi_t *ifeapi;

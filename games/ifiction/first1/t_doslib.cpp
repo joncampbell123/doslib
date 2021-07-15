@@ -29,6 +29,7 @@
 #include "palette.h"
 
 #if defined(USE_DOSLIB) /* IBM PC/AT */
+extern bool		vesa_setmode;
 extern bool		vesa_8bitpal; /* 8-bit DAC */
 extern unsigned char	vesa_pal[256*4];
 extern uint32_t		pit_count;
@@ -112,6 +113,25 @@ static void p_EndScreenDraw(void) {
 	// nothing to do
 }
 
+static void p_ShutdownVideo(void) {
+	/* IBM PC/AT */
+	_sti();
+	if (vesa_lfb_offscreen != NULL) {
+		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = NULL;
+		free((void*)vesa_lfb_offscreen);
+		vesa_lfb_offscreen = NULL;
+	}
+	if (vesa_lfb != NULL) {
+		ifevidinfo_doslib.vram_base = NULL;
+		dpmi_phys_addr_free((void*)vesa_lfb);
+		vesa_lfb = NULL;
+	}
+	if (vesa_setmode) {
+		vesa_setmode = false;
+		int10_setmode(3); /* back to 80x25 text */
+	}
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -123,7 +143,8 @@ ifeapi_t ifeapi_doslib = {
 	p_CheckEvents,
 	p_WaitEvent,
 	p_BeginScreenDraw,
-	p_EndScreenDraw
+	p_EndScreenDraw,
+	p_ShutdownVideo
 };
 #endif
 

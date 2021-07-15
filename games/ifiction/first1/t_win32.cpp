@@ -18,9 +18,11 @@
 
 #if defined(USE_WIN32)
 extern bool		winScreenIsPal;
+extern bool		winIsDestroying;
 extern PALETTEENTRY	win_pal[256];
 extern BITMAPINFO*	hwndMainDIB;
 extern HPALETTE		hwndMainPAL;
+extern HPALETTE		hwndMainPALPrev;
 extern HWND		hwndMain;
 extern DWORD		win32_tick_base;
 extern unsigned char*	win_dib;
@@ -125,6 +127,29 @@ static void p_EndScreenDraw(void) {
 	// nothing to do
 }
 
+static void p_ShutdownVideo(void) {
+	if (hwndMainPAL != NULL) {
+		DeleteObject((HGDIOBJ)hwndMainPAL);
+		hwndMainPALPrev = NULL;
+		hwndMainPAL = NULL;
+	}
+	if (hwndMainDIB != NULL) {
+		free((void*)hwndMainDIB);
+		hwndMainDIB = NULL;
+	}
+	if (hwndMain != NULL) {
+		winIsDestroying = true;
+		DestroyWindow(hwndMain);
+		winIsDestroying = false;
+		hwndMain = NULL;
+	}
+	if (win_dib != NULL) {
+		ifevidinfo_win32.buf_base = ifevidinfo_win32.buf_first_row = NULL;
+		free((void*)win_dib);
+		win_dib = NULL;
+	}
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -136,7 +161,8 @@ ifeapi_t ifeapi_win32 = {
 	p_CheckEvents,
 	p_WaitEvent,
 	p_BeginScreenDraw,
-	p_EndScreenDraw
+	p_EndScreenDraw,
+	p_ShutdownVideo
 };
 #endif
 
