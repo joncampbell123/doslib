@@ -25,7 +25,11 @@ extern unsigned short		IFEKeyQueueHead,IFEKeyQueueTail;
 extern IFECookedKeyEvent	IFECookedKeyQueue[IFECookedKeyQueueSize];
 extern unsigned short		IFECookedKeyQueueHead,IFECookedKeyQueueTail;
 
+bool IFECookedKeyQueueAdd(const IFECookedKeyEvent *ev);
+bool IFEKeyQueueAdd(const IFEKeyEvent *ev);
+void IFECookedKeyQueueMoveBack(void);
 void IFECookedKeyQueueEmpty(void);
+void IFEKeyQueueMoveBack(void);
 void IFEKeyQueueEmptyAll(void);
 void IFEKeyQueueEmpty(void);
 

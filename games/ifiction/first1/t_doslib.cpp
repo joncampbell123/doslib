@@ -258,6 +258,7 @@ bool priv_IFEMainInit(int argc,char **argv) {
 }
 
 void p_FlushKeyboardInput(void) {
+	IFEKeyQueueEmptyAll();
 }
 
 IFEKeyEvent *p_GetRawKeyboardInput(void) {
