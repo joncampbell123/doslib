@@ -262,11 +262,11 @@ void p_FlushKeyboardInput(void) {
 }
 
 IFEKeyEvent *p_GetRawKeyboardInput(void) {
-	return NULL;
+	return IFEKeyQueue.get();
 }
 
 IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
-	return NULL;
+	return IFECookedKeyQueue.get();
 }
 
 ifeapi_t ifeapi_doslib = {
