@@ -2,24 +2,13 @@
 #if defined(USE_DOSLIB)
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
-# if defined(TARGET_PC98)
-#  error PC-98 target removed
-// REMOVED
-# else
-#  include <hw/vga/vga.h>
-#  include <hw/vesa/vesa.h>
-# endif
+# include <hw/vga/vga.h>
+# include <hw/vesa/vesa.h>
 # include <hw/8254/8254.h>
 # include <hw/8259/8259.h>
 # include <hw/8042/8042.h>
 # include <hw/dos/doswin.h>
 # include <hw/dosboxid/iglib.h> /* for debugging */
-#endif
-
-#if defined(USE_SDL2)
-# include <sys/types.h>
-# include <sys/stat.h>
-#endif
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -33,7 +22,6 @@
 #include "fatal.h"
 #include "palette.h"
 
-#if defined(USE_DOSLIB) /* IBM PC/AT */
 unsigned char*			vesa_lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*			vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
 uint32_t			vesa_lfb_physaddr = 0;

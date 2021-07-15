@@ -1,8 +1,7 @@
 
 #if defined(USE_WIN32)
-# include <windows.h>
-# include <mmsystem.h>
-#endif
+#include <windows.h>
+#include <mmsystem.h>
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -16,7 +15,6 @@
 #include "fatal.h"
 #include "palette.h"
 
-#if defined(USE_WIN32)
 BITMAPINFO*				hwndMainDIB = NULL;
 HPALETTE				hwndMainPAL = NULL;
 HPALETTE				hwndMainPALPrev = NULL;
