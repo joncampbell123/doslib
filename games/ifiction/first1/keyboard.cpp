@@ -98,6 +98,7 @@ void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev) {
 	}
 
 	if (cke.code != 0) {
+		IFEDBG("Cooked key: %c %d",(char)cke.code,(unsigned int)cke.code);
 		if (!IFECookedKeyQueue.add(cke))
 			IFEDBG("ProcessKeyboardEvent: Cooked queue full");
 	}

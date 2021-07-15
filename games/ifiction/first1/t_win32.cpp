@@ -315,6 +315,88 @@ ifeapi_t ifeapi_win32 = {
 	p_GetCookedKeyboardInput
 };
 
+void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
+	(void)l;
+
+#define MAP(x,y) \
+	case x: ke.code = (uint32_t)y; break;
+
+	switch (w) {
+		MAP(VK_RETURN,             IFEKEY_RETURN);
+		MAP(VK_ESCAPE,             IFEKEY_ESCAPE);
+		MAP(VK_BACK,               IFEKEY_BACKSPACE);
+		MAP(VK_TAB,                IFEKEY_TAB);
+		MAP(VK_SPACE,              IFEKEY_SPACE);
+		MAP('A',                   IFEKEY_A);
+		MAP('B',                   IFEKEY_B);
+		MAP('C',                   IFEKEY_C);
+		MAP('D',                   IFEKEY_D);
+		MAP('E',                   IFEKEY_E);
+		MAP('F',                   IFEKEY_F);
+		MAP('G',                   IFEKEY_G);
+		MAP('H',                   IFEKEY_H);
+		MAP('I',                   IFEKEY_I);
+		MAP('J',                   IFEKEY_J);
+		MAP('K',                   IFEKEY_K);
+		MAP('L',                   IFEKEY_L);
+		MAP('M',                   IFEKEY_M);
+		MAP('N',                   IFEKEY_N);
+		MAP('O',                   IFEKEY_O);
+		MAP('P',                   IFEKEY_P);
+		MAP('Q',                   IFEKEY_Q);
+		MAP('R',                   IFEKEY_R);
+		MAP('S',                   IFEKEY_S);
+		MAP('T',                   IFEKEY_T);
+		MAP('U',                   IFEKEY_U);
+		MAP('V',                   IFEKEY_V);
+		MAP('W',                   IFEKEY_W);
+		MAP('X',                   IFEKEY_X);
+		MAP('Y',                   IFEKEY_Y);
+		MAP('Z',                   IFEKEY_Z);
+		MAP('0',                   IFEKEY_0);
+		MAP('1',                   IFEKEY_1);
+		MAP('2',                   IFEKEY_2);
+		MAP('3',                   IFEKEY_3);
+		MAP('4',                   IFEKEY_4);
+		MAP('5',                   IFEKEY_5);
+		MAP('6',                   IFEKEY_6);
+		MAP('7',                   IFEKEY_7);
+		MAP('8',                   IFEKEY_8);
+		MAP('9',                   IFEKEY_9);
+		MAP(VK_OEM_COMMA,          IFEKEY_COMMA);
+		MAP(VK_OEM_PERIOD,         IFEKEY_PERIOD);
+		default: break;
+	}
+#undef MAP
+}
+
+void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
+	IFEKeyEvent ke;
+
+	/* lParam:
+	 *   bits [15:0] = repeat count
+	 *   bits [23:16] = scan code
+	 *   bits [24:24] = extended key (right hand CTRL or ALT)
+	 *   bits [30:30] = previous state */
+
+	/* ignore repeated events caused by holding down the key */
+	if (down && (l & 0xFFFFu) != 0)
+		return;
+
+	memset(&ke,0,sizeof(ke));
+	ke.raw_code = (uint32_t)w; /* raw code here is the VK_ code provided by Windows */
+	ke.flags = down ? IFEKeyEvent_FLAG_DOWN : 0;
+	win32keyfill(ke,w,l);
+
+	if (!IFEKeyQueue.add(ke))
+		IFEDBG("ProcessKeyboardEvent: Queue full");
+
+	/* FIXME: Windows provides WM_CHAR and WM_UNICHAR to received cooked input.
+	 *        This code should not called ProcessRawToCooked but should instead
+	 *        add WM_CHAR/WM_UNICHAR to the cooked queue directly. */
+	IFEKeyboardProcessRawToCooked(ke);
+}
+
 LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 	switch (uMsg) {
 		case WM_CREATE:
@@ -325,6 +407,12 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_DESTROY:
 			if (!winIsDestroying)
 				winQuit = true;
+			break;
+		case WM_KEYDOWN:
+			p_win32_ProcessKeyEvent(wParam,lParam,true);
+			break;
+		case WM_KEYUP:
+			p_win32_ProcessKeyEvent(wParam,lParam,false);
 			break;
 		case WM_QUERYNEWPALETTE:
 			if (winScreenIsPal && hwndMainPAL != NULL) {
