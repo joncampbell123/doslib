@@ -5,6 +5,7 @@
 #endif
 
 #include "palette.h"
+#include "keyboard.h"
 
 struct ifevidinfo_t {
 	unsigned int						width,height;
@@ -29,6 +30,7 @@ typedef bool ifefunc_BeginScreenDraw_t(void);
 typedef void ifefunc_EndScreenDraw_t(void);
 typedef void ifefunc_ShutdownVideo_t(void);
 typedef void ifefunc_InitVideo_t(void);
+typedef void ifefunc_FlushKeyboardInput_t(void); /* NTS: This flushes the framework's queue AND the host environment's queue if possible */
 
 struct ifeapi_t {
 	const char*						name;
@@ -44,6 +46,7 @@ struct ifeapi_t {
 	ifefunc_EndScreenDraw_t*				EndScreenDraw;
 	ifefunc_ShutdownVideo_t*				ShutdownVideo;
 	ifefunc_InitVideo_t*					InitVideo;
+	ifefunc_FlushKeyboardInput_t*				FlushKeyboardInput;
 };
 
 extern ifeapi_t *ifeapi;

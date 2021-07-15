@@ -161,6 +161,9 @@ static void p_InitVideo(void) {
 	ifeapi->CheckEvents();
 }
 
+void p_FlushKeyboardInput(void) {
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -174,7 +177,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_BeginScreenDraw,
 	p_EndScreenDraw,
 	p_ShutdownVideo,
-	p_InitVideo
+	p_InitVideo,
+	p_FlushKeyboardInput
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {

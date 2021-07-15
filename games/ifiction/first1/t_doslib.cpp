@@ -257,6 +257,9 @@ bool priv_IFEMainInit(int argc,char **argv) {
 	return true;
 }
 
+void p_FlushKeyboardInput(void) {
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -270,7 +273,8 @@ ifeapi_t ifeapi_doslib = {
 	p_BeginScreenDraw,
 	p_EndScreenDraw,
 	p_ShutdownVideo,
-	p_InitVideo
+	p_InitVideo,
+	p_FlushKeyboardInput
 };
 #endif
 
