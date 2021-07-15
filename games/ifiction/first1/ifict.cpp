@@ -58,9 +58,6 @@ extern uint16_t			pit_prev;
 #endif
 
 #if defined(USE_WIN32)
-const char*	hwndMainClassName = "IFICTIONWIN32";
-HINSTANCE	myInstance = NULL;
-HWND		hwndMain = NULL;
 bool		win95 = false; /* Is Windows 95 or higher */
 
 LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);

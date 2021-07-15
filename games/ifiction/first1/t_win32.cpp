@@ -29,11 +29,11 @@ ifevidinfo_t				ifevidinfo_win32;
 bool					winQuit = false;
 bool					winIsDestroying = false;
 bool					winScreenIsPal = false;
+const char*				hwndMainClassName = "IFICTIONWIN32";
+HINSTANCE				myInstance = NULL;
+HWND					hwndMain = NULL;
 
-extern const char*	hwndMainClassName;
 extern bool		win95;
-extern HINSTANCE	myInstance;
-extern HWND		hwndMain;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
