@@ -53,15 +53,8 @@ ifeapi_t *ifeapi = &ifeapi_default;
  *      Not a problem so much if using Windows GDI but if we're going to play with DirectX or the earlier hacky
  *      Windows 3.1 equivalents, we need to worry about that. */
 
-#if defined(USE_SDL2)
-SDL_Window*	sdl_window = NULL;
-SDL_Surface*	sdl_window_surface = NULL;
-SDL_Surface*	sdl_game_surface = NULL;
-SDL_Palette*	sdl_game_palette = NULL;
-SDL_Color	sdl_pal[256];
-Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
-bool		sdl_signal_to_quit = false;
-ifevidinfo_t	ifevidinfo_sdl2;
+#if defined(USE_DOSLIB)
+extern uint16_t			pit_prev;
 #endif
 
 #if defined(USE_WIN32)
@@ -81,30 +74,6 @@ unsigned char*	win_dib_first_row = NULL;
 int		win_dib_pitch = 0;
 DWORD		win32_tick_base = 0;
 ifevidinfo_t	ifevidinfo_win32;
-#endif
-
-#if defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-# else
-/* IBM PC/AT */
-unsigned char*	vesa_lfb = NULL; /* video memory, linear framebuffer */
-unsigned char*	vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
-uint32_t	vesa_lfb_physaddr = 0;
-uint32_t	vesa_lfb_map_size = 0;
-uint32_t	vesa_lfb_stride = 0;
-uint16_t	vesa_lfb_height = 0;
-uint16_t	vesa_lfb_width = 0;
-bool		vesa_setmode = false;
-bool		vesa_8bitpal = false; /* 8-bit DAC */
-uint16_t	vesa_mode = 0;
-
-unsigned char	vesa_pal[256*4];
-# endif
-uint32_t	pit_count = 0;
-uint16_t	pit_prev = 0;
-
-ifevidinfo_t	ifevidinfo_doslib;
 #endif
 
 void IFETestRGBPalette() {

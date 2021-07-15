@@ -18,14 +18,14 @@
 #include "fatal.h"
 #include "palette.h"
 
-extern SDL_Color	sdl_pal[256];
-extern SDL_Palette*	sdl_game_palette;
-extern Uint32		sdl_ticks_base;
-extern SDL_Window*	sdl_window;
-extern SDL_Surface*	sdl_window_surface;
-extern SDL_Surface*	sdl_game_surface;
-extern ifevidinfo_t	ifevidinfo_sdl2;
-extern bool		sdl_signal_to_quit;
+SDL_Window*			sdl_window = NULL;
+SDL_Surface*			sdl_window_surface = NULL;
+SDL_Surface*			sdl_game_surface = NULL;
+SDL_Palette*			sdl_game_palette = NULL;
+SDL_Color			sdl_pal[256];
+Uint32				sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
+bool				sdl_signal_to_quit = false;
+ifevidinfo_t			ifevidinfo_sdl2;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;

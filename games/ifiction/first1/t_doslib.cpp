@@ -29,22 +29,23 @@
 #include "palette.h"
 
 #if defined(USE_DOSLIB) /* IBM PC/AT */
-extern bool		vesa_setmode;
-extern bool		vesa_8bitpal; /* 8-bit DAC */
-extern unsigned char	vesa_pal[256*4];
-extern uint32_t		pit_count;
-extern uint16_t		pit_prev;
+unsigned char*			vesa_lfb = NULL; /* video memory, linear framebuffer */
+unsigned char*			vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
+uint32_t			vesa_lfb_physaddr = 0;
+uint32_t			vesa_lfb_map_size = 0;
+uint32_t			vesa_lfb_stride = 0;
+uint16_t			vesa_lfb_height = 0;
+uint16_t			vesa_lfb_width = 0;
+bool				vesa_setmode = false;
+bool				vesa_8bitpal = false; /* 8-bit DAC */
+uint16_t			vesa_mode = 0;
 
-extern unsigned char*	vesa_lfb;
-extern unsigned char*	vesa_lfb_offscreen;
-extern uint32_t		vesa_lfb_map_size;
-extern uint32_t		vesa_lfb_physaddr;
-extern uint32_t		vesa_lfb_stride;
-extern uint16_t		vesa_lfb_height;
-extern uint16_t		vesa_lfb_width;
-extern uint16_t		vesa_mode;
+unsigned char			vesa_pal[256*4];
 
-extern ifevidinfo_t	ifevidinfo_doslib;
+uint32_t			pit_count = 0;
+uint16_t			pit_prev = 0;
+
+ifevidinfo_t			ifevidinfo_doslib;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
