@@ -37,6 +37,7 @@ bool					win95 = false;
 const char*				hwndMainClassName = "IFICTIONWIN32";
 HINSTANCE				myInstance = NULL;
 HWND					hwndMain = NULL;
+uint32_t				win32_mod_flags = 0;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -321,6 +322,36 @@ ifeapi_t ifeapi_win32 = {
 	p_GetCookedKeyboardInput
 };
 
+void UpdateWin32ModFlags(void) {
+	win32_mod_flags = 0;
+
+	if (GetKeyState(VK_LSHIFT)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LSHIFT;
+	if (GetKeyState(VK_RSHIFT)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_RSHIFT;
+	if (!(win32_mod_flags & (IFEKeyEvent_FLAG_LSHIFT|IFEKeyEvent_FLAG_RSHIFT)) && (GetKeyState(VK_SHIFT)&0x8000u))/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LSHIFT|IFEKeyEvent_FLAG_RSHIFT;
+
+	if (GetKeyState(VK_LMENU)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LALT;
+	if (GetKeyState(VK_RMENU)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_RALT;
+	if (!(win32_mod_flags & (IFEKeyEvent_FLAG_LALT|IFEKeyEvent_FLAG_RALT)) && (GetKeyState(VK_MENU)&0x8000u))/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LALT|IFEKeyEvent_FLAG_RALT;
+
+	if (GetKeyState(VK_LCONTROL)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LCTRL;
+	if (GetKeyState(VK_RCONTROL)&0x8000u)/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_RCTRL;
+	if (!(win32_mod_flags & (IFEKeyEvent_FLAG_LCTRL|IFEKeyEvent_FLAG_RCTRL)) && (GetKeyState(VK_CONTROL)&0x8000u))/*MSB=down*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_LCTRL|IFEKeyEvent_FLAG_RCTRL;
+
+	if (GetKeyState(VK_CAPITAL)&0x0001u)/*LSB=toggled on*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_CAPS;
+	if (GetKeyState(VK_NUMLOCK)&0x0001u)/*LSB=toggled on*/
+		win32_mod_flags |= IFEKeyEvent_FLAG_NUMLOCK;
+}
+
 void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
 	(void)l;
 
@@ -379,20 +410,43 @@ void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
 void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
 	IFEKeyEvent ke;
 
+	if (w == VK_CONTROL || w == VK_LCONTROL || w == VK_RCONTROL ||
+		w == VK_MENU || w == VK_LMENU || w == VK_RMENU ||
+		w == VK_SHIFT || w == VK_LSHIFT || w == VK_RSHIFT ||
+		w == VK_CAPITAL || w == VK_NUMLOCK) {
+		UpdateWin32ModFlags();
+	}
+
 	/* lParam:
 	 *   bits [15:0] = repeat count
 	 *   bits [23:16] = scan code
 	 *   bits [24:24] = extended key (right hand CTRL or ALT)
-	 *   bits [30:30] = previous state */
+	 *   bits [30:30] = previous state
+	 */
 
-	/* ignore repeated events caused by holding down the key */
-	if (down && (l & 0xFFFFu) != 0)
+	/* NTS: Microsoft documents the low 16 bits as the repeat count, even in the Windows 3.1 SDK.
+	 *      Problem is, that only works in later versions of Windows. In Windows 3.1, this
+	 *      documentation is a big fat lie. In my testing, the low word is always 1, regardless
+	 *      whether you just pushed the key, released the key, or are holding down the key.
+	 *
+	 *      However, we can filter out the repeated KEYDOWN messages by using instead the
+	 *      "previous state" bit which does work as documented in Windows 3.1 */
+
+	/* filter out repeated KEYDOWN events caused by holding the key down.
+	 * this does not prevent WM_CHAR cooked character input from reflecting the repetition. */
+	if (down && (l & 0x40000000ul)/*bit 30*/)
 		return;
 
 	memset(&ke,0,sizeof(ke));
 	ke.raw_code = (uint32_t)w; /* raw code here is the VK_ code provided by Windows */
-	ke.flags = down ? IFEKeyEvent_FLAG_DOWN : 0;
+	ke.flags = (down ? IFEKeyEvent_FLAG_DOWN : 0) | win32_mod_flags;
 	win32keyfill(ke,w,l);
+
+	IFEDBG("Win32 key event: flags=%08x code=%08x w=%08x l=%08x",
+		(unsigned int)ke.flags,
+		(unsigned int)ke.code,
+		(unsigned int)w,
+		(unsigned int)l);
 
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
@@ -408,6 +462,8 @@ void p_win32_ProcessCharEvent(WPARAM w,LPARAM l) {
 
 		memset(&cke,0,sizeof(cke));
 		cke.code = (uint32_t)w;
+
+		IFEDBG("Cooked key: %c %d",cke.code >= 32 ? (char)cke.code : '?',(unsigned int)cke.code);
 
 		if (!IFECookedKeyQueue.add(cke))
 			IFEDBG("ProcessKeyboardEvent: Cooked queue full");
@@ -466,6 +522,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			}
 			break;
 		case WM_ACTIVATE:
+			UpdateWin32ModFlags();
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
