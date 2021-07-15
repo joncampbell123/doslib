@@ -61,6 +61,7 @@ SDL_Palette*	sdl_game_palette = NULL;
 SDL_Color	sdl_pal[256];
 Uint32		sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
 bool		sdl_signal_to_quit = false;
+ifevidinfo_t	ifevidinfo_sdl2;
 #endif
 
 #if defined(USE_WIN32)
@@ -110,6 +111,11 @@ void IFEInitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
 
+	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
+
+	ifevidinfo_sdl2.width = 640;
+	ifevidinfo_sdl2.height = 480;
+
 	if (sdl_window == NULL && (sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
 		IFEFatalError("SDL2 window creation failed");
 	if (sdl_window_surface == NULL && (sdl_window_surface=SDL_GetWindowSurface(sdl_window)) == NULL)
@@ -118,6 +124,9 @@ void IFEInitVideo(void) {
 		IFEFatalError("SDL2 game surface (256-color) failed");
 	if (sdl_game_palette == NULL && (sdl_game_palette=SDL_AllocPalette(256)) == NULL)
 		IFEFatalError("SDL2 game palette");
+
+	ifevidinfo_sdl2.buf_alloc = ifevidinfo_sdl2.buf_size = sdl_game_surface->pitch * sdl_game_surface->h;
+	ifevidinfo_sdl2.buf_pitch = sdl_game_surface->pitch;
 
 	/* first color should be black, SDL2 will init palette to white for some reason */
 	memset(sdl_pal,0,sizeof(SDL_Color));
@@ -417,82 +426,21 @@ bool IFEUserWantsToQuit(void) {
 
 /* WARNING: Pitch is signed only because Windows 3.1 does not allow top-down DIBs */
 int IFEScreenDrawPitch(void) {
-#if defined(USE_SDL2)
-	return (int)(sdl_game_surface->pitch);
-#elif defined(USE_WIN32)
-	return win_dib_pitch;
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	return 0;
-# else
-	return vesa_lfb_stride;
-# endif
-#endif
-}
-
-/* check your pointers! */
-bool IFEScreenDrawPointerRangeCheck(unsigned char *p) {
-#if defined(USE_SDL2)
-	return (p >= sdl_game_surface->pixels && p < ((unsigned char*)sdl_game_surface->pixels + (sdl_game_surface->pitch * sdl_game_surface->h)));
-#elif defined(USE_WIN32)
-	return (p >= win_dib && p < (win_dib + hwndMainDIB->bmiHeader.biSizeImage));
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	(void)p;
-	return false;
-# else
-	return (p >= vesa_lfb_offscreen && p < (vesa_lfb_offscreen + vesa_lfb_map_size));
-# endif
-#endif
+	return ifeapi->GetVidInfo()->buf_pitch;
 }
 
 /* Point to first row. You need pitch in display order too, which might be a negative number.
  * The only reason for this damn code is Windows 3.1 which provides no way whatsoever to draw top down DIBs */
 unsigned char *IFEScreenDrawPointer(void) {
-#if defined(USE_SDL2)
-	return (unsigned char*)(sdl_game_surface->pixels);
-#elif defined(USE_WIN32)
-	return win_dib_first_row;
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	return NULL;
-# else
-	return vesa_lfb_offscreen;
-# endif
-#endif
+	return ifeapi->GetVidInfo()->buf_first_row;
 }
 
 unsigned int IFEScreenWidth(void) {
-#if defined(USE_SDL2)
-	return (unsigned int)(sdl_game_surface->w);
-#elif defined(USE_WIN32)
-	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biWidth);
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	return 0;
-# else
-	return vesa_lfb_width;
-# endif
-#endif
+	return ifeapi->GetVidInfo()->width;
 }
 
 unsigned int IFEScreenHeight(void) {
-#if defined(USE_SDL2)
-	return (unsigned int)(sdl_game_surface->h);
-#elif defined(USE_WIN32)
-	return (unsigned int)abs((int)hwndMainDIB->bmiHeader.biHeight);
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	return 0;
-# else
-	return vesa_lfb_height;
-# endif
-#endif
+	return ifeapi->GetVidInfo()->height;
 }
 
 bool IFEBeginScreenDraw(void) {
@@ -504,6 +452,7 @@ bool IFEBeginScreenDraw(void) {
 	if (sdl_game_surface->pitch < 0)
 		IFEFatalError("SDL2 game surface pitch is negative");
 
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)(sdl_game_surface->pixels);
 	return true;
 #elif defined(USE_WIN32)
 	return true; // nothing to do
@@ -516,6 +465,8 @@ void IFEEndScreenDraw(void) {
 #if defined(USE_SDL2)
 	if (SDL_MUSTLOCK(sdl_game_surface))
 		SDL_UnlockSurface(sdl_game_surface);
+
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = NULL;
 #elif defined(USE_WIN32)
 	// nothing to do
 #elif defined(USE_DOSLIB)

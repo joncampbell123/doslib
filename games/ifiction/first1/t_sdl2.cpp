@@ -25,6 +25,8 @@ extern SDL_Window*	sdl_window;
 extern SDL_Surface*	sdl_window_surface;
 extern SDL_Surface*	sdl_game_surface;
 
+extern ifevidinfo_t	ifevidinfo_sdl2;
+
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -57,12 +59,17 @@ static void p_UpdateFullScreen(void) {
 		IFEFatalError("Window surface update");
 }
 
+ifevidinfo_t* p_GetVidInfo(void) {
+	return &ifevidinfo_sdl2;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
 	p_GetTicks,
 	p_ResetTicks,
-	p_UpdateFullScreen
+	p_UpdateFullScreen,
+	p_GetVidInfo
 };
 #endif
 
