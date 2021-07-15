@@ -1,4 +1,6 @@
 
+#include "simplequeue.h"
+
 /* raw key event */
 struct IFEKeyEvent {
 	uint32_t		raw_code;	/* platform and driver-specific */
@@ -18,21 +20,6 @@ struct IFECookedKeyEvent {
 
 #define IFEKeyQueueSize		256
 #define IFECookedKeyQueueSize	256
-
-template <typename T,const unsigned short QueueSize> class IFESimpleQueue {
-public:
-	IFESimpleQueue() : head(0), tail(0) { }
-	~IFESimpleQueue() { }
-
-	size_t			queueSize(void) const;
-	void			clear(void);
-	void			clearold(void);
-	bool			add(const T *ev);
-	T*			get(void);
-
-	unsigned short		head,tail;
-	T			queue[QueueSize];
-};
 
 extern IFESimpleQueue<IFEKeyEvent,IFEKeyQueueSize>			IFEKeyQueue;
 extern IFESimpleQueue<IFECookedKeyEvent,IFECookedKeyQueueSize>		IFECookedKeyQueue;
