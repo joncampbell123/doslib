@@ -11,70 +11,50 @@
 #include "fatal.h"
 #include "palette.h"
 
-IFEKeyEvent 		IFEKeyQueue[IFEKeyQueueSize];
-unsigned short		IFEKeyQueueHead=0,IFEKeyQueueTail=0;
+IFESimpleQueue<IFEKeyEvent,IFEKeyQueueSize>			IFEKeyQueue;
+IFESimpleQueue<IFECookedKeyEvent,IFECookedKeyQueueSize>		IFECookedKeyQueue;
 
-IFECookedKeyEvent	IFECookedKeyQueue[IFECookedKeyQueueSize];
-unsigned short		IFECookedKeyQueueHead=0,IFECookedKeyQueueTail=0;
+template <typename T,const unsigned short QueueSize> size_t IFESimpleQueue<T,QueueSize>::queueSize(void) const {
+	return QueueSize;
+}
 
-void IFEKeyQueueMoveBack(void) {
-	unsigned short i;
+template <typename T,const unsigned short QueueSize> void IFESimpleQueue<T,QueueSize>::clear(void) {
+	head = tail = 0;
+}
 
-	if (IFEKeyQueueHead != 0) {
-		for (i=IFEKeyQueueHead;i < IFEKeyQueueTail;i++)
-			IFEKeyQueue[i-IFEKeyQueueHead] = IFEKeyQueue[i];
+template <typename T,const unsigned short QueueSize> void IFESimpleQueue<T,QueueSize>::clearold(void) {
+	if (head != 0) {
+		unsigned short i;
 
-		IFEKeyQueueTail -= IFEKeyQueueHead;
-		IFEKeyQueueHead = 0;
+		for (i=head;i < tail;i++)
+			queue[i-head] = queue[i];
+
+		tail -= head;
+		head = 0;
 	}
 }
 
-bool IFEKeyQueueAdd(const IFEKeyEvent *ev) {
-	if (IFEKeyQueueTail == IFEKeyQueueSize)
-		IFEKeyQueueMoveBack();
+template <typename T,const unsigned short QueueSize> bool IFESimpleQueue<T,QueueSize>::add(const T *ev) {
+	if (tail == QueueSize)
+		clearold();
 
-	if (IFEKeyQueueTail < IFEKeyQueueSize) {
-		IFEKeyQueue[IFEKeyQueueTail++] = *ev;
+	if (tail < QueueSize) {
+		queue[tail++] = *ev;
 		return true;
 	}
 
 	return false;
 }
 
-void IFEKeyQueueEmpty(void) {
-	IFEKeyQueueHead = IFEKeyQueueTail = 0;
-}
+template <typename T,const unsigned short QueueSize> T* IFESimpleQueue<T,QueueSize>::get(void) {
+	if (head < tail)
+		return &queue[head++];
 
-void IFECookedKeyQueueMoveBack(void) {
-	unsigned short i;
-
-	if (IFECookedKeyQueueHead != 0) {
-		for (i=IFECookedKeyQueueHead;i < IFECookedKeyQueueTail;i++)
-			IFECookedKeyQueue[i-IFECookedKeyQueueHead] = IFECookedKeyQueue[i];
-
-		IFECookedKeyQueueTail -= IFECookedKeyQueueHead;
-		IFECookedKeyQueueHead = 0;
-	}
-}
-
-bool IFECookedKeyQueueAdd(const IFECookedKeyEvent *ev) {
-	if (IFECookedKeyQueueTail == IFECookedKeyQueueSize)
-		IFECookedKeyQueueMoveBack();
-
-	if (IFECookedKeyQueueTail < IFECookedKeyQueueSize) {
-		IFECookedKeyQueue[IFECookedKeyQueueTail++] = *ev;
-		return true;
-	}
-
-	return false;
-}
-
-void IFECookedKeyQueueEmpty(void) {
-	IFECookedKeyQueueHead = IFECookedKeyQueueTail = 0;
+	return NULL;
 }
 
 void IFEKeyQueueEmptyAll(void) {
-	IFEKeyQueueEmpty();
-	IFECookedKeyQueueEmpty();
+	IFEKeyQueue.clear();
+	IFECookedKeyQueue.clear();
 }
 

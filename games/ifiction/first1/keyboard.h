@@ -19,19 +19,25 @@ struct IFECookedKeyEvent {
 #define IFEKeyQueueSize		256
 #define IFECookedKeyQueueSize	256
 
-extern IFEKeyEvent 		IFEKeyQueue[IFEKeyQueueSize];
-extern unsigned short		IFEKeyQueueHead,IFEKeyQueueTail;
+template <typename T,const unsigned short QueueSize> class IFESimpleQueue {
+public:
+	IFESimpleQueue() : head(0), tail(0) { }
+	~IFESimpleQueue() { }
 
-extern IFECookedKeyEvent	IFECookedKeyQueue[IFECookedKeyQueueSize];
-extern unsigned short		IFECookedKeyQueueHead,IFECookedKeyQueueTail;
+	size_t			queueSize(void) const;
+	void			clear(void);
+	void			clearold(void);
+	bool			add(const T *ev);
+	T*			get(void);
 
-bool IFECookedKeyQueueAdd(const IFECookedKeyEvent *ev);
-bool IFEKeyQueueAdd(const IFEKeyEvent *ev);
-void IFECookedKeyQueueMoveBack(void);
-void IFECookedKeyQueueEmpty(void);
-void IFEKeyQueueMoveBack(void);
+	unsigned short		head,tail;
+	T			queue[QueueSize];
+};
+
+extern IFESimpleQueue<IFEKeyEvent,IFEKeyQueueSize>			IFEKeyQueue;
+extern IFESimpleQueue<IFECookedKeyEvent,IFECookedKeyQueueSize>		IFECookedKeyQueue;
+
 void IFEKeyQueueEmptyAll(void);
-void IFEKeyQueueEmpty(void);
 
 /* ripped from SDL2 scan codes, development time is short */
 enum IFEKeyCode {
