@@ -1,9 +1,14 @@
 
 #include "palette.h"
 
+typedef uint32_t ifefunc_GetTicks_t(void);
+typedef void ifefunc_ResetTicks_t(const uint32_t base);
+
 struct ifeapi_t {
-	char*							name;
+	const char*						name;
 	ifefunc_SetPaletteColors_t*				SetPaletteColors;
+	ifefunc_GetTicks_t*					GetTicks;
+	ifefunc_ResetTicks_t*					ResetTicks;
 };
 
 extern ifeapi_t *ifeapi;

@@ -20,6 +20,7 @@
 
 extern SDL_Color	sdl_pal[256];
 extern SDL_Palette*	sdl_game_palette;
+extern Uint32		sdl_ticks_base;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -37,9 +38,19 @@ static void p_SetPaletteColors(const unsigned int first,const unsigned int count
 		IFEFatalError("SDL2 game palette set colors");
 }
 
+static uint32_t p_GetTicks(void) {
+	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
+}
+
+static void p_ResetTicks(const uint32_t base) {
+	sdl_ticks_base += base; /* NTS: Use return value of IFEGetTicks() */
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
-	p_SetPaletteColors
+	p_SetPaletteColors,
+	p_GetTicks,
+	p_ResetTicks
 };
 #endif
 

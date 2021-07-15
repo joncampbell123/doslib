@@ -106,42 +106,6 @@ uint16_t	pit_prev = 0;
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
-/* WARNING: Will wrap around after 49 days. You're not playing this game that long, are you?
- *          Anyway to avoid Windows-style crashes at 49 days, call IFEResetTicks() with the
- *          return value of IFEGetTicks() to periodically count from zero. */
-uint32_t IFEGetTicks(void) {
-#if defined(USE_SDL2)
-	return uint32_t(SDL_GetTicks() - sdl_ticks_base);
-#elif defined(USE_WIN32)
-	return uint32_t(timeGetTime() - win32_tick_base);
-#elif defined(USE_DOSLIB)
-	uint32_t w,p;
-	{
-		uint16_t pit_cur = read_8254(T8254_TIMER_INTERRUPT_TICK);
-		pit_count += (uint32_t)((uint16_t)(pit_prev - pit_cur)); /* 8254 counts DOWN, not UP, typecast to ensure 16-bit rollover */
-		pit_prev = pit_cur;
-
-		/* convert ticks to milliseconds */
-		w = pit_count / (uint32_t)T8254_REF_CLOCK_HZ;
-		p = ((pit_count % (uint32_t)T8254_REF_CLOCK_HZ) * (uint32_t)1000ul) / (uint32_t)T8254_REF_CLOCK_HZ;
-	}
-
-	return (w * (uint32_t)1000ul) + p;
-#endif
-}
-
-void IFEResetTicks(const uint32_t base) {
-#if defined(USE_SDL2)
-	sdl_ticks_base += base; /* NTS: Use return value of IFEGetTicks() */
-#elif defined(USE_WIN32)
-	win32_tick_base += base;
-#elif defined(USE_DOSLIB)
-	/* convert milliseconds back to timer ticks and adjust */
-	pit_count -= (base / (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ;
-	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
-#endif
-}
-
 void IFEInitVideo(void) {
 #if defined(USE_SDL2)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -825,16 +789,16 @@ int main(int argc,char **argv) {
 
 	IFEInitVideo();
 
-	IFEResetTicks(IFEGetTicks());
-	while (IFEGetTicks() < 1000) {
+	ifeapi->ResetTicks(ifeapi->GetTicks());
+	while (ifeapi->GetTicks() < 1000) {
 		if (IFEUserWantsToQuit()) IFENormalExit();
 		IFEWaitEvent(100);
 	}
 
 	IFETestRGBPalette();
 	IFETestRGBPalettePattern();
-	IFEResetTicks(IFEGetTicks());
-	while (IFEGetTicks() < 3000) {
+	ifeapi->ResetTicks(ifeapi->GetTicks());
+	while (ifeapi->GetTicks() < 3000) {
 		if (IFEUserWantsToQuit()) IFENormalExit();
 		IFEWaitEvent(100);
 	}
