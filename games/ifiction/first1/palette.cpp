@@ -42,35 +42,12 @@
 #if defined(USE_SDL2)
 extern SDL_Color	sdl_pal[256];
 extern SDL_Palette*	sdl_game_palette;
-#endif
-
-#if defined(USE_WIN32)
-extern bool		winScreenIsPal;
-extern PALETTEENTRY	win_pal[256];
-extern BITMAPINFO*	hwndMainDIB;
-extern HPALETTE		hwndMainPAL;
-extern HWND		hwndMain;
-#endif
-
-#if defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-# else
-/* IBM PC/AT */
-extern bool		vesa_8bitpal; /* 8-bit DAC */
-extern unsigned char	vesa_pal[256*4];
-# endif
-#endif
-
-void IFEFatalError(const char *msg,...);
 
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
-	if (first >= 256u || count > 256u || (first+count) > 256u)
-		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count);
+	IFESETPALETTEASSERT(first,count);
 
-#if defined(USE_SDL2)
 	for (i=0;i < count;i++) {
 		sdl_pal[i+first].r = pal[i].r;
 		sdl_pal[i+first].g = pal[i].g;
@@ -80,7 +57,21 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 
 	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
 		IFEFatalError("SDL2 game palette set colors");
-#elif defined(USE_WIN32)
+}
+#endif
+
+#if defined(USE_WIN32)
+extern bool		winScreenIsPal;
+extern PALETTEENTRY	win_pal[256];
+extern BITMAPINFO*	hwndMainDIB;
+extern HPALETTE		hwndMainPAL;
+extern HWND		hwndMain;
+
+void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+	unsigned int i;
+
+	IFESETPALETTEASSERT(first,count);
+
 	if (winScreenIsPal) {
 		for (i=0;i < count;i++) {
 			win_pal[i].peRed = pal[i].r;
@@ -110,11 +101,18 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 			hwndMainDIB->bmiColors[i+first].rgbBlue = pal[i].b;
 		}
 	}
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-	(void)i;
-# else
+}
+#endif
+
+#if defined(USE_DOSLIB)
+extern bool		vesa_8bitpal; /* 8-bit DAC */
+extern unsigned char	vesa_pal[256*4];
+
+void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+	unsigned int i;
+
+	IFESETPALETTEASSERT(first,count);
+
 	/* IBM PC/AT */
 	if (vesa_8bitpal) {
 		for (i=0;i < count;i++) {
@@ -134,7 +132,6 @@ void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPa
 	}
 
 	vesa_set_palette_data(first,count,(char*)vesa_pal);
-# endif
-#endif
 }
+#endif
 
