@@ -28,6 +28,7 @@ extern IFESimpleQueue<IFEKeyEvent,IFEKeyQueueSize>			IFEKeyQueue;
 extern IFESimpleQueue<IFECookedKeyEvent,IFECookedKeyQueueSize>		IFECookedKeyQueue;
 
 void IFEKeyQueueEmptyAll(void);
+void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev);
 
 /* ripped from SDL2 scan codes, development time is short */
 enum IFEKeyCode {

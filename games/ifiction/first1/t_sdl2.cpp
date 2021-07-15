@@ -97,6 +97,8 @@ static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
 
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
+
+	IFEKeyboardProcessRawToCooked(ke);
 }
 
 static void priv_ProcessEvent(const SDL_Event &ev) {

@@ -19,3 +19,7 @@ void IFEKeyQueueEmptyAll(void) {
 	IFECookedKeyQueue.clear();
 }
 
+void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev) {
+	(void)ev;
+}
+
