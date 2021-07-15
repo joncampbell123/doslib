@@ -1,7 +1,7 @@
 
 void IFEDBG(const char *msg,...);
 
-#if defined(USE_DOSLIB)
+#if defined(USE_DOSLIB) || defined(USE_WIN32)
 extern bool			dosbox_ig; /* DOSBox Integration Device detected */
 #endif
 

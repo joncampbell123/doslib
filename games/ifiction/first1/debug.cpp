@@ -8,6 +8,11 @@
 # include <hw/8259/8259.h>
 # include <hw/8042/8042.h>
 # include <hw/dos/doswin.h>
+#endif
+#if defined(USE_DOSLIB) || defined(USE_WIN32)
+# include <conio.h>
+# include <stdint.h>
+# include <stdlib.h>
 # include <hw/dosboxid/iglib.h> /* for debugging */
 #endif
 
@@ -20,7 +25,7 @@
 #include "utils.h"
 #include "debug.h"
 
-#if defined(USE_DOSLIB)
+#if defined(USE_DOSLIB) || defined(USE_WIN32)
 bool			dosbox_ig = false; /* DOSBox Integration Device detected */
 #endif
 
@@ -35,7 +40,7 @@ void IFEDBG(const char *msg,...) {
 		vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
 		va_end(va);
 
-#if defined(USE_DOSLIB)
+#if defined(USE_DOSLIB) || defined(USE_WIN32)
 		if (dosbox_ig) {
 			dosbox_id_debug_message("IFEDBG: ");
 			dosbox_id_debug_message(fatal_tmp);

@@ -3,11 +3,17 @@
 #include <windows.h>
 #include <mmsystem.h>
 
+#include <conio.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+
+#include <hw/cpu/cpu.h>
+#include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
+#include <hw/dosboxid/iglib.h> /* for debugging */
 
 #include "ifict.h"
 #include "utils.h"
@@ -460,6 +466,20 @@ bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean
 	(void)hPrevInstance;
 	(void)lpCmdLine;
 	(void)nCmdShow;
+
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+
+	/* If Windows 3.1/95 (not Windows NT) then try to use the DOSBox Integration Device */
+	if (windows_mode != WINDOWS_NT) {
+		if (probe_dosbox_id()) {
+			printf("DOSBox Integration Device detected\n");
+			dosbox_ig = ifedbg_en = true;
+
+			IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
+		}
+	}
 
 	myInstance = hInstance;
 
