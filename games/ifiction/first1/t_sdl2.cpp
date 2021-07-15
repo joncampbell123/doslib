@@ -95,6 +95,23 @@ static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
 	ke.flags = (ev.state == SDL_PRESSED) ? IFEKeyEvent_FLAG_DOWN : 0;
 	SDLKeySymToFill(ke,ev);
 
+	if (ev.keysym.mod & KMOD_LSHIFT)
+		ke.flags |= IFEKeyEvent_FLAG_LSHIFT;
+	if (ev.keysym.mod & KMOD_RSHIFT)
+		ke.flags |= IFEKeyEvent_FLAG_RSHIFT;
+	if (ev.keysym.mod & KMOD_LCTRL)
+		ke.flags |= IFEKeyEvent_FLAG_LCTRL;
+	if (ev.keysym.mod & KMOD_RCTRL)
+		ke.flags |= IFEKeyEvent_FLAG_RCTRL;
+	if (ev.keysym.mod & KMOD_LALT)
+		ke.flags |= IFEKeyEvent_FLAG_LALT;
+	if (ev.keysym.mod & KMOD_RALT)
+		ke.flags |= IFEKeyEvent_FLAG_RALT;
+	if (ev.keysym.mod & KMOD_NUM)
+		ke.flags |= IFEKeyEvent_FLAG_NUMLOCK;
+	if (ev.keysym.mod & KMOD_CAPS)
+		ke.flags |= IFEKeyEvent_FLAG_CAPS;
+
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
 

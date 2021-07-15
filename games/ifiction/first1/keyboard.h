@@ -21,6 +21,17 @@ struct IFECookedKeyEvent {
 /* some keys do not have a down or up state, but only a toggle state. DOWN is set if toggled on. */
 #define IFEKeyEvent_FLAG_TOGGLE				(1u << 1u)
 
+/* modifiers */
+#define IFEKeyEvent_FLAG_LCTRL				(1u << 16u)
+#define IFEKeyEvent_FLAG_RCTRL				(1u << 17u)
+#define IFEKeyEvent_FLAG_LALT				(1u << 18u)
+#define IFEKeyEvent_FLAG_RALT				(1u << 19u)
+#define IFEKeyEvent_FLAG_LSHIFT				(1u << 20u)
+#define IFEKeyEvent_FLAG_RSHIFT				(1u << 21u)
+/* state */
+#define IFEKeyEvent_FLAG_CAPS				(1u << 22u)
+#define IFEKeyEvent_FLAG_NUMLOCK			(1u << 23u)
+
 #define IFEKeyQueueSize		256
 #define IFECookedKeyQueueSize	256
 
