@@ -65,15 +65,7 @@ bool		winQuit = false;
 bool		win95 = false; /* Is Windows 95 or higher */
 bool		winIsDestroying = false;
 bool		winScreenIsPal = false;
-BITMAPINFO*	hwndMainDIB = NULL;
 HPALETTE	hwndMainPAL = NULL;
-HPALETTE	hwndMainPALPrev = NULL;
-PALETTEENTRY	win_pal[256];
-unsigned char*	win_dib = NULL;
-unsigned char*	win_dib_first_row = NULL;
-int		win_dib_pitch = 0;
-DWORD		win32_tick_base = 0;
-ifevidinfo_t	ifevidinfo_win32;
 #endif
 
 void IFETestRGBPalette() {

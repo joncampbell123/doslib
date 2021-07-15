@@ -17,22 +17,23 @@
 #include "palette.h"
 
 #if defined(USE_WIN32)
+BITMAPINFO*				hwndMainDIB = NULL;
+HPALETTE				hwndMainPALPrev = NULL;
+PALETTEENTRY				win_pal[256];
+unsigned char*				win_dib = NULL;
+unsigned char*				win_dib_first_row = NULL;
+int					win_dib_pitch = 0;
+DWORD					win32_tick_base = 0;
+ifevidinfo_t				ifevidinfo_win32;
+
 extern const char*	hwndMainClassName;
 extern bool		winScreenIsPal;
 extern bool		winIsDestroying;
 extern bool		win95;
 extern HINSTANCE	myInstance;
-extern PALETTEENTRY	win_pal[256];
-extern BITMAPINFO*	hwndMainDIB;
 extern HPALETTE		hwndMainPAL;
-extern HPALETTE		hwndMainPALPrev;
 extern HWND		hwndMain;
-extern DWORD		win32_tick_base;
-extern unsigned char*	win_dib;
-extern ifevidinfo_t	ifevidinfo_win32;
 extern bool		winQuit;
-extern unsigned char*	win_dib_first_row;
-extern int		win_dib_pitch;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
