@@ -97,6 +97,26 @@ static bool p_UserWantsToQuit(void) {
 	return winQuit;
 }
 
+static void p_CheckEvents(void) {
+	MSG msg;
+
+	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
+static void p_WaitEvent(const int wait_ms) {
+	MSG msg;
+
+	(void)wait_ms;
+
+	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -104,7 +124,9 @@ ifeapi_t ifeapi_win32 = {
 	p_ResetTicks,
 	p_UpdateFullScreen,
 	p_GetVidInfo,
-	p_UserWantsToQuit
+	p_UserWantsToQuit,
+	p_CheckEvents,
+	p_WaitEvent
 };
 #endif
 

@@ -107,8 +107,6 @@ uint16_t	pit_prev = 0;
 ifevidinfo_t	ifevidinfo_doslib;
 #endif
 
-void IFECheckEvents(void);
-
 void IFEInitVideo(void) {
 #if defined(USE_SDL2)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -143,7 +141,7 @@ void IFEInitVideo(void) {
 	/* make sure screen is cleared black */
 	SDL_FillRect(sdl_game_surface,NULL,0);
 	ifeapi->UpdateFullScreen();
-	IFECheckEvents();
+	ifeapi->CheckEvents();
 #elif defined(USE_WIN32)
 	if (hwndMain == NULL) {
 		int sw,sh;
@@ -271,7 +269,7 @@ void IFEInitVideo(void) {
 		ifevidinfo_win32.buf_alloc = ifevidinfo_win32.buf_size = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);
 
 		ifeapi->UpdateFullScreen();
-		IFECheckEvents();
+		ifeapi->CheckEvents();
 	}
 #elif defined(USE_DOSLIB)
 # if defined(TARGET_PC98)
@@ -471,50 +469,6 @@ void IFEEndScreenDraw(void) {
 #endif
 }
 
-#if defined(USE_SDL2)
-void IFEProcessEvent(SDL_Event &ev) {
-	if (ev.type == SDL_QUIT) {
-		sdl_signal_to_quit = true;
-	}
-}
-#endif
-
-void IFECheckEvents(void) {
-#if defined(USE_SDL2)
-	SDL_Event ev;
-
-	if (SDL_PollEvent(&ev))
-		IFEProcessEvent(ev);
-#elif defined(USE_WIN32)
-	MSG msg;
-
-	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-#endif
-}
-
-void IFEWaitEvent(const int wait_ms) {
-#if defined(USE_SDL2)
-	SDL_Event ev;
-
-	if (SDL_WaitEventTimeout(&ev,wait_ms))
-		IFEProcessEvent(ev);
-#elif defined(USE_WIN32)
-	MSG msg;
-
-	(void)wait_ms;
-
-	if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-#else
-	(void)wait_ms; // TODO
-#endif
-}
-
 void IFETestRGBPalettePattern(void) {
 	unsigned char *firstrow;
 	unsigned int x,y,w,h;
@@ -708,7 +662,7 @@ int main(int argc,char **argv) {
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 1000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		IFEWaitEvent(100);
+		ifeapi->WaitEvent(100);
 	}
 
 	IFETestRGBPalette();
@@ -716,7 +670,7 @@ int main(int argc,char **argv) {
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 3000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		IFEWaitEvent(100);
+		ifeapi->WaitEvent(100);
 	}
 
 	IFENormalExit();

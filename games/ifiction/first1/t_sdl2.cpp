@@ -67,6 +67,26 @@ static bool p_UserWantsToQuit(void) {
 	return sdl_signal_to_quit;
 }
 
+static void priv_ProcessEvent(SDL_Event &ev) {
+	if (ev.type == SDL_QUIT) {
+		sdl_signal_to_quit = true;
+	}
+}
+
+static void p_CheckEvents(void) {
+	SDL_Event ev;
+
+	if (SDL_PollEvent(&ev))
+		priv_ProcessEvent(ev);
+}
+
+static void p_WaitEvent(const int wait_ms) {
+	SDL_Event ev;
+
+	if (SDL_WaitEventTimeout(&ev,wait_ms))
+		priv_ProcessEvent(ev);
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -74,7 +94,9 @@ ifeapi_t ifeapi_sdl2 = {
 	p_ResetTicks,
 	p_UpdateFullScreen,
 	p_GetVidInfo,
-	p_UserWantsToQuit
+	p_UserWantsToQuit,
+	p_CheckEvents,
+	p_WaitEvent
 };
 #endif
 

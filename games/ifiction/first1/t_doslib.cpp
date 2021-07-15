@@ -97,6 +97,13 @@ static bool p_UserWantsToQuit(void) {
 	return false;
 }
 
+static void p_CheckEvents(void) {
+}
+
+static void p_WaitEvent(const int wait_ms) {
+	(void)wait_ms;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -104,7 +111,9 @@ ifeapi_t ifeapi_doslib = {
 	p_ResetTicks,
 	p_UpdateFullScreen,
 	p_GetVidInfo,
-	p_UserWantsToQuit
+	p_UserWantsToQuit,
+	p_CheckEvents,
+	p_WaitEvent
 };
 #endif
 
