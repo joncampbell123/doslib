@@ -93,13 +93,18 @@ static ifevidinfo_t* p_GetVidInfo(void) {
 	return &ifevidinfo_doslib;
 }
 
+static bool p_UserWantsToQuit(void) {
+	return false;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
 	p_GetTicks,
 	p_ResetTicks,
 	p_UpdateFullScreen,
-	p_GetVidInfo
+	p_GetVidInfo,
+	p_UserWantsToQuit
 };
 #endif
 

@@ -440,16 +440,6 @@ void IFETestRGBPalette() {
 	ifeapi->SetPaletteColors(0,256,pal);
 }
 
-bool IFEUserWantsToQuit(void) {
-#if defined(USE_SDL2)
-	return sdl_signal_to_quit;
-#elif defined(USE_WIN32)
-	return winQuit;
-#else
-	return false;
-#endif
-}
-
 bool IFEBeginScreenDraw(void) {
 #if defined(USE_SDL2)
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
@@ -717,7 +707,7 @@ int main(int argc,char **argv) {
 
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 1000) {
-		if (IFEUserWantsToQuit()) IFENormalExit();
+		if (ifeapi->UserWantsToQuit()) IFENormalExit();
 		IFEWaitEvent(100);
 	}
 
@@ -725,7 +715,7 @@ int main(int argc,char **argv) {
 	IFETestRGBPalettePattern();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 3000) {
-		if (IFEUserWantsToQuit()) IFENormalExit();
+		if (ifeapi->UserWantsToQuit()) IFENormalExit();
 		IFEWaitEvent(100);
 	}
 

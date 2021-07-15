@@ -17,6 +17,7 @@ typedef uint32_t ifefunc_GetTicks_t(void);
 typedef void ifefunc_ResetTicks_t(const uint32_t base);
 typedef void ifefunc_UpdateFullScreen_t(void);
 typedef ifevidinfo_t* ifefunc_GetVidInfo_t(void);
+typedef bool ifefunc_UserWantsToQuit_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -25,6 +26,7 @@ struct ifeapi_t {
 	ifefunc_ResetTicks_t*					ResetTicks;
 	ifefunc_UpdateFullScreen_t*				UpdateFullScreen;
 	ifefunc_GetVidInfo_t*					GetVidInfo;
+	ifefunc_UserWantsToQuit_t*				UserWantsToQuit;
 };
 
 extern ifeapi_t *ifeapi;

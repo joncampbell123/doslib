@@ -25,6 +25,7 @@ extern HWND		hwndMain;
 extern DWORD		win32_tick_base;
 extern unsigned char*	win_dib;
 extern ifevidinfo_t	ifevidinfo_win32;
+extern bool		winQuit;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -92,13 +93,18 @@ static ifevidinfo_t* p_GetVidInfo(void) {
 	return &ifevidinfo_win32;
 }
 
+static bool p_UserWantsToQuit(void) {
+	return winQuit;
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
 	p_GetTicks,
 	p_ResetTicks,
 	p_UpdateFullScreen,
-	p_GetVidInfo
+	p_GetVidInfo,
+	p_UserWantsToQuit
 };
 #endif
 
