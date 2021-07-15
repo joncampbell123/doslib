@@ -424,25 +424,6 @@ bool IFEUserWantsToQuit(void) {
 #endif
 }
 
-/* WARNING: Pitch is signed only because Windows 3.1 does not allow top-down DIBs */
-int IFEScreenDrawPitch(void) {
-	return ifeapi->GetVidInfo()->buf_pitch;
-}
-
-/* Point to first row. You need pitch in display order too, which might be a negative number.
- * The only reason for this damn code is Windows 3.1 which provides no way whatsoever to draw top down DIBs */
-unsigned char *IFEScreenDrawPointer(void) {
-	return ifeapi->GetVidInfo()->buf_first_row;
-}
-
-unsigned int IFEScreenWidth(void) {
-	return ifeapi->GetVidInfo()->width;
-}
-
-unsigned int IFEScreenHeight(void) {
-	return ifeapi->GetVidInfo()->height;
-}
-
 bool IFEBeginScreenDraw(void) {
 #if defined(USE_SDL2)
 	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
@@ -521,16 +502,19 @@ void IFEWaitEvent(const int wait_ms) {
 void IFETestRGBPalettePattern(void) {
 	unsigned char *firstrow;
 	unsigned int x,y,w,h;
+	ifevidinfo_t* vif;
 	int pitch;
 
 	if (!IFEBeginScreenDraw())
 		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
-	if ((firstrow=IFEScreenDrawPointer()) == NULL)
+	if ((vif=ifeapi->GetVidInfo()) == NULL)
+		IFEFatalError("GetVidInfo() == NULL");
+	if ((firstrow=vif->buf_first_row) == NULL)
 		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
 
-	w = IFEScreenWidth();
-	h = IFEScreenHeight();
-	pitch = IFEScreenDrawPitch();
+	w = vif->width;
+	h = vif->height;
+	pitch = vif->buf_pitch;
 	for (y=0;y < h;y++) {
 		unsigned char *row = firstrow + ((int)y * pitch);
 		for (x=0;x < w;x++) {
