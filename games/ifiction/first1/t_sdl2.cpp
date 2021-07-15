@@ -69,9 +69,49 @@ static bool p_UserWantsToQuit(void) {
 	return sdl_signal_to_quit;
 }
 
-static void priv_ProcessEvent(SDL_Event &ev) {
-	if (ev.type == SDL_QUIT) {
-		sdl_signal_to_quit = true;
+static uint32_t SDKKeySymToIFE(const SDL_Scancode k) {
+#define MAP(x,y) \
+	case x: return y;
+#define MSN(x) \
+	case SDL_SCANCODE_##x: return IFEKEY_##x;
+
+	switch (k) {
+		MSN(RETURN);
+		MSN(ESCAPE);
+		MSN(BACKSPACE);
+		MSN(TAB);
+		MSN(SPACE);
+		default: break;
+	}
+#undef MSN
+#undef MAP
+
+	return uint32_t(0);
+}
+
+static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
+	IFEKeyEvent ke;
+
+	memset(&ke,0,sizeof(ke));
+	ke.raw_code = (uint32_t)ev.keysym.scancode;
+	ke.code = SDKKeySymToIFE(ev.keysym.scancode);
+	ke.flags = (ev.state == SDL_PRESSED) ? IFEKeyEvent_FLAG_DOWN : 0;
+
+	if (!IFEKeyQueue.add(ke))
+		IFEDBG("ProcessKeyboardEvent: Queue full");
+}
+
+static void priv_ProcessEvent(const SDL_Event &ev) {
+	switch (ev.type) {
+		case SDL_QUIT:
+			sdl_signal_to_quit = true;
+			break;
+		case SDL_KEYDOWN:
+		case SDL_KEYUP:
+			priv_ProcessKeyboardEvent(ev.key);
+			break;
+		default:
+			break;
 	}
 }
 
