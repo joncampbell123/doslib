@@ -24,12 +24,12 @@ public:
 		}
 	}
 
-	bool add(const T *ev) {
+	bool add(const T &ev) {
 		if (tail == QueueSize)
 			clearold();
 
 		if (tail < QueueSize) {
-			queue[tail++] = *ev;
+			queue[tail++] = ev;
 			return true;
 		}
 
