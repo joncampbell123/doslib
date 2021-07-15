@@ -123,6 +123,42 @@ static void p_ShutdownVideo(void) {
 	SDL_Quit();
 }
 
+static void p_InitVideo(void) {
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		IFEFatalError("SDL2 failed to initialize");
+
+	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
+
+	ifevidinfo_sdl2.width = 640;
+	ifevidinfo_sdl2.height = 480;
+
+	if (sdl_window == NULL && (sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
+		IFEFatalError("SDL2 window creation failed");
+	if (sdl_window_surface == NULL && (sdl_window_surface=SDL_GetWindowSurface(sdl_window)) == NULL)
+		IFEFatalError("SDL2 window surface failed");
+	if (sdl_game_surface == NULL && (sdl_game_surface=SDL_CreateRGBSurfaceWithFormat(0,640,480,8,SDL_PIXELFORMAT_INDEX8)) == NULL)
+		IFEFatalError("SDL2 game surface (256-color) failed");
+	if (sdl_game_palette == NULL && (sdl_game_palette=SDL_AllocPalette(256)) == NULL)
+		IFEFatalError("SDL2 game palette");
+
+	ifevidinfo_sdl2.buf_alloc = ifevidinfo_sdl2.buf_size = sdl_game_surface->pitch * sdl_game_surface->h;
+	ifevidinfo_sdl2.buf_pitch = sdl_game_surface->pitch;
+
+	/* first color should be black, SDL2 will init palette to white for some reason */
+	memset(sdl_pal,0,sizeof(SDL_Color));
+	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,0,1) != 0)
+		IFEFatalError("SDL2 game palette set colors");
+
+	/* apply palette to surface */
+	if (SDL_SetSurfacePalette(sdl_game_surface,sdl_game_palette) != 0)
+		IFEFatalError("SDL2 game palette set");
+
+	/* make sure screen is cleared black */
+	SDL_FillRect(sdl_game_surface,NULL,0);
+	ifeapi->UpdateFullScreen();
+	ifeapi->CheckEvents();
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -135,7 +171,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_WaitEvent,
 	p_BeginScreenDraw,
 	p_EndScreenDraw,
-	p_ShutdownVideo
+	p_ShutdownVideo,
+	p_InitVideo
 };
 #endif
 

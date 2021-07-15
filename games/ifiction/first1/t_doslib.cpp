@@ -38,6 +38,11 @@ extern uint16_t		pit_prev;
 extern unsigned char*	vesa_lfb;
 extern unsigned char*	vesa_lfb_offscreen;
 extern uint32_t		vesa_lfb_map_size;
+extern uint32_t		vesa_lfb_physaddr;
+extern uint32_t		vesa_lfb_stride;
+extern uint16_t		vesa_lfb_height;
+extern uint16_t		vesa_lfb_width;
+extern uint16_t		vesa_mode;
 
 extern ifevidinfo_t	ifevidinfo_doslib;
 
@@ -132,6 +137,82 @@ static void p_ShutdownVideo(void) {
 	}
 }
 
+static void p_InitVideo(void) {
+	/* IBM PC/AT compatible */
+	/* Find 640x480 256-color mode.
+	 * Linear framebuffer required (we'll support older bank switched stuff later) */
+	{
+		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE | VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE;
+		struct vbe_mode_info mi = {0};
+		uint16_t found_mode = 0;
+		unsigned int entry;
+		uint16_t mode;
+
+		memset(&ifevidinfo_doslib,0,sizeof(ifevidinfo_doslib));
+
+		for (entry=0;entry < 4096;entry++) {
+			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
+			if (mode == 0xFFFF) break;
+
+			if (vbe_read_mode_info(mode,&mi)) {
+				vbe_fill_in_mode_info(mode,&mi);
+				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
+					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
+					mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul &&
+					mi.bytes_per_scan_line >= 640) {
+					vesa_lfb_physaddr = mi.phys_base_ptr;
+					vesa_lfb_map_size = mi.bytes_per_scan_line * mi.y_resolution;
+					vesa_lfb_stride = mi.bytes_per_scan_line;
+					vesa_lfb_width = mi.x_resolution;
+					vesa_lfb_height = mi.y_resolution;
+					found_mode = mode;
+					break;
+				}
+			}
+		}
+
+		if (found_mode == 0)
+			IFEFatalError("VESA BIOS video mode (640 x 480 256-color) not found");
+
+		vesa_mode = found_mode;
+	}
+
+	if (!vesa_setmode) {
+		/* Set the video mode */
+		if (!vbe_set_mode((uint16_t)(vesa_mode | VBE_MODE_LINEAR),NULL))
+			IFEFatalError("Unable to set VESA video mode");
+
+		/* we set the mode, set the flag so FatalError can unset it properly */
+		vesa_setmode = true;
+
+		ifevidinfo_doslib.width = vesa_lfb_width;
+		ifevidinfo_doslib.height = vesa_lfb_height;
+		ifevidinfo_doslib.buf_pitch = ifevidinfo_doslib.vram_pitch = vesa_lfb_stride;
+		ifevidinfo_doslib.buf_alloc = ifevidinfo_doslib.buf_size = ifevidinfo_doslib.vram_size = vesa_lfb_map_size;
+
+		/* use 8-bit DAC if available */
+		if (vbe_info->capabilities & VBE_CAP_8BIT_DAC) {
+			if (vbe_set_dac_width(8) == 8)
+				vesa_8bitpal = true;
+		}
+
+		/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
+		 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
+		vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
+		if (vesa_lfb == NULL)
+			IFEFatalError("DPMI VESA LFB map fail");
+
+		/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
+		 * Provide an offscreen copy of video memory to work from for compositing. */
+		vesa_lfb_offscreen = (unsigned char*)malloc(vesa_lfb_map_size);
+		if (vesa_lfb_offscreen == NULL)
+			IFEFatalError("DPMI VESA LFB shadow malloc fail");
+
+		ifevidinfo_doslib.vram_base = vesa_lfb;
+		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
+	}
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -144,7 +225,8 @@ ifeapi_t ifeapi_doslib = {
 	p_WaitEvent,
 	p_BeginScreenDraw,
 	p_EndScreenDraw,
-	p_ShutdownVideo
+	p_ShutdownVideo,
+	p_InitVideo
 };
 #endif
 

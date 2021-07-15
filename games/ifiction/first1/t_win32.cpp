@@ -17,8 +17,11 @@
 #include "palette.h"
 
 #if defined(USE_WIN32)
+extern const char*	hwndMainClassName;
 extern bool		winScreenIsPal;
 extern bool		winIsDestroying;
+extern bool		win95;
+extern HINSTANCE	myInstance;
 extern PALETTEENTRY	win_pal[256];
 extern BITMAPINFO*	hwndMainDIB;
 extern HPALETTE		hwndMainPAL;
@@ -28,6 +31,8 @@ extern DWORD		win32_tick_base;
 extern unsigned char*	win_dib;
 extern ifevidinfo_t	ifevidinfo_win32;
 extern bool		winQuit;
+extern unsigned char*	win_dib_first_row;
+extern int		win_dib_pitch;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -150,6 +155,137 @@ static void p_ShutdownVideo(void) {
 	}
 }
 
+static void p_InitVideo(void) {
+	if (hwndMain == NULL) {
+		int sw,sh;
+
+		memset(&ifevidinfo_win32,0,sizeof(ifevidinfo_win32));
+
+		ifevidinfo_win32.width = 640;
+		ifevidinfo_win32.height = 480;
+
+		sw = GetSystemMetrics(SM_CXSCREEN);
+		sh = GetSystemMetrics(SM_CYSCREEN);
+
+		{
+			HDC hDC = GetDC(NULL); /* the screen */
+			if ((GetDeviceCaps(hDC,RASTERCAPS) & RC_PALETTE) && (GetDeviceCaps(hDC,BITSPIXEL) == 8))
+				winScreenIsPal = true;
+			else
+				winScreenIsPal = false;
+			ReleaseDC(NULL,hDC);
+		}
+
+		{
+			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER;
+			RECT um;
+
+			um.top = 0;
+			um.left = 0;
+			um.right = 640;
+			um.bottom = 480;
+			if (sw == 640 && sh == 480) {
+				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
+				dwStyle = WS_POPUP;
+			}
+			else {
+				AdjustWindowRect(&um,dwStyle,FALSE);
+			}
+
+			hwndMain = CreateWindow(hwndMainClassName,"",dwStyle,
+				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
+				NULL,NULL,
+				myInstance,
+				NULL);
+		}
+
+		if (hwndMain == NULL)
+			IFEFatalError("CreateWindow failed");
+
+		{
+			int ww,wh;
+
+			{
+				RECT um = {0,0,0,0};
+				GetWindowRect(hwndMain,&um);
+				ww = (um.right - um.left);
+				wh = (um.bottom - um.top);
+			}
+			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
+		}
+
+		hwndMainDIB = (BITMAPINFO*)calloc(1,sizeof(BITMAPINFOHEADER) + (256 * 2/*16-bit integers, DIB_PAL_COLORS*/) + 4096/*for good measure*/);
+		if (hwndMainDIB == NULL)
+			IFEFatalError("hwndMainDIB malloc fail");
+
+		hwndMainDIB->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		hwndMainDIB->bmiHeader.biWidth = 640;
+		if (win95)
+			hwndMainDIB->bmiHeader.biHeight = -480; /* top down, Windows 95 */
+		else
+			hwndMainDIB->bmiHeader.biHeight = 480; /* bottom up, Windows 3.1 */
+		hwndMainDIB->bmiHeader.biPlanes = 1;
+		hwndMainDIB->bmiHeader.biBitCount = 8;
+		hwndMainDIB->bmiHeader.biCompression = 0;
+		hwndMainDIB->bmiHeader.biSizeImage = 640*480; /* NTS: pitch is width rounded to a multiple of 4 */
+		hwndMainDIB->bmiHeader.biClrUsed = 256;
+		hwndMainDIB->bmiHeader.biClrImportant = 256;
+		if (winScreenIsPal) { /* map 1:1 to logical palette */
+			uint16_t *p = (uint16_t*)( &(hwndMainDIB->bmiColors[0]) );
+			LOGPALETTE* pal;
+			unsigned int i;
+
+			for (i=0;i < 256;i++) p[i] = (uint16_t)i;
+
+			pal = (LOGPALETTE*)calloc(1,sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * 256) + 4096);
+			if (pal == NULL) IFEFatalError("LOGPALETTE malloc fail");
+
+			pal->palVersion = 0x300;
+			pal->palNumEntries = 256;
+			for (i=0;i < 256;i++) {
+				pal->palPalEntry[i].peRed = (unsigned char)i;
+				pal->palPalEntry[i].peGreen = (unsigned char)i;
+				pal->palPalEntry[i].peBlue = (unsigned char)i;
+				pal->palPalEntry[i].peFlags = 0;
+			}
+
+			hwndMainPAL = CreatePalette(pal);
+			if (hwndMainPAL == NULL)
+				IFEFatalError("CreatePalette fail");
+
+			free((void*)pal);
+		}
+		else {
+			hwndMainPALPrev = NULL;
+			hwndMainPAL = NULL;
+		}
+
+		win_dib = (unsigned char*)malloc(hwndMainDIB->bmiHeader.biSizeImage);
+		if (win_dib == NULL)
+			IFEFatalError("win_dib malloc fail");
+
+		/* NTS: Windows 3.1 with Win32s does not provide any function to draw top-down DIBs.
+		 *      Windows 95 however does support top down DIBs, so this code should consider auto-detecting that.
+		 *      To simplify other code, pitch and first row are computed here. */
+		if ((int)(hwndMainDIB->bmiHeader.biHeight) < 0) {
+			win_dib_first_row = win_dib;
+			win_dib_pitch = (int)hwndMainDIB->bmiHeader.biWidth;
+		}
+		else {
+			win_dib_first_row = win_dib + (hwndMainDIB->bmiHeader.biSizeImage - hwndMainDIB->bmiHeader.biWidth); /* FIXME: What about future code for != 8bpp? Also alignment. */
+			win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
+		}
+
+		ifevidinfo_win32.buf_base = win_dib;
+		ifevidinfo_win32.buf_first_row = win_dib_first_row;
+		ifevidinfo_win32.buf_pitch = win_dib_pitch;
+		ifevidinfo_win32.buf_alloc = ifevidinfo_win32.buf_size = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);
+
+		ifeapi->UpdateFullScreen();
+		ifeapi->CheckEvents();
+	}
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -162,7 +298,8 @@ ifeapi_t ifeapi_win32 = {
 	p_WaitEvent,
 	p_BeginScreenDraw,
 	p_EndScreenDraw,
-	p_ShutdownVideo
+	p_ShutdownVideo,
+	p_InitVideo
 };
 #endif
 
