@@ -16,7 +16,10 @@ struct IFECookedKeyEvent {
 	uint32_t		flags;		/* flags */
 };
 
+/* key is down, else not down */
 #define IFEKeyEvent_FLAG_DOWN				(1u << 0u)
+/* some keys do not have a down or up state, but only a toggle state. DOWN is set if toggled on. */
+#define IFEKeyEvent_FLAG_TOGGLE				(1u << 1u)
 
 #define IFEKeyQueueSize		256
 #define IFECookedKeyQueueSize	256
