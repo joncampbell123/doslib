@@ -40,12 +40,22 @@
 #include "fatal.h"
 #include "palette.h"
 
-ifefunc_SetPaletteColors_t *ifefunc_SetPaletteColors = ifefunc_SetPaletteColors_default;
+#if defined(USE_SDL2)
+extern SDL_Color	sdl_pal[256];
+extern SDL_Palette*	sdl_game_palette;
 
-void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
-	if (first >= 256u || count > 256u || (first+count) > 256u)
-		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count);
+void ifefunc_SetPaletteColors_sdl2(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+	unsigned int i;
 
-	ifefunc_SetPaletteColors(first,count,pal);
+	for (i=0;i < count;i++) {
+		sdl_pal[i+first].r = pal[i].r;
+		sdl_pal[i+first].g = pal[i].g;
+		sdl_pal[i+first].b = pal[i].b;
+		sdl_pal[i+first].a = 0xFFu;
+	}
+
+	if (SDL_SetPaletteColors(sdl_game_palette,sdl_pal,first,count) != 0)
+		IFEFatalError("SDL2 game palette set colors");
 }
+#endif
 

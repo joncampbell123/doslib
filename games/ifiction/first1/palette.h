@@ -1,6 +1,4 @@
 
-#include "fatal.h"
-
 #include <stdint.h>
 
 #pragma pack(push,1)
@@ -11,8 +9,23 @@ struct IFEPaletteEntry {
 
 void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal);
 
-#define IFESETPALETTEASSERT(first,count) do { \
-	if (first >= 256u || count > 256u || (first+count) > 256u) \
-		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count); \
-} while (0)
+typedef void ifefunc_SetPaletteColors_t(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal);
+
+extern ifefunc_SetPaletteColors_t *ifefunc_SetPaletteColors;
+
+#if defined(USE_SDL2)
+extern ifefunc_SetPaletteColors_t ifefunc_SetPaletteColors_sdl2;
+# define ifefunc_SetPaletteColors_default ifefunc_SetPaletteColors_sdl2
+#endif
+
+#if defined(USE_WIN32)
+extern ifefunc_SetPaletteColors_t ifefunc_SetPaletteColors_win32;
+# define ifefunc_SetPaletteColors_default ifefunc_SetPaletteColors_win32
+#endif
+
+#if defined(USE_DOSLIB)
+extern ifefunc_SetPaletteColors_t ifefunc_SetPaletteColors_doslib;
+# define ifefunc_SetPaletteColors_default ifefunc_SetPaletteColors_doslib
+#endif
+
 
