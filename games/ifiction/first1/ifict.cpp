@@ -103,6 +103,8 @@ unsigned char	vesa_pal[256*4];
 # endif
 uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
+
+ifevidinfo_t	ifevidinfo_doslib;
 #endif
 
 void IFECheckEvents(void);
@@ -285,6 +287,8 @@ void IFEInitVideo(void) {
 		unsigned int entry;
 		uint16_t mode;
 
+		memset(&ifevidinfo_doslib,0,sizeof(ifevidinfo_doslib));
+
 		for (entry=0;entry < 4096;entry++) {
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
@@ -320,6 +324,11 @@ void IFEInitVideo(void) {
 		/* we set the mode, set the flag so FatalError can unset it properly */
 		vesa_setmode = true;
 
+		ifevidinfo_doslib.width = vesa_lfb_width;
+		ifevidinfo_doslib.height = vesa_lfb_height;
+		ifevidinfo_doslib.buf_pitch = ifevidinfo_doslib.vram_pitch = vesa_lfb_stride;
+		ifevidinfo_doslib.buf_alloc = ifevidinfo_doslib.buf_size = ifevidinfo_doslib.vram_size = vesa_lfb_map_size;
+
 		/* use 8-bit DAC if available */
 		if (vbe_info->capabilities & VBE_CAP_8BIT_DAC) {
 			if (vbe_set_dac_width(8) == 8)
@@ -337,6 +346,9 @@ void IFEInitVideo(void) {
 		vesa_lfb_offscreen = (unsigned char*)malloc(vesa_lfb_map_size);
 		if (vesa_lfb_offscreen == NULL)
 			IFEFatalError("DPMI VESA LFB shadow malloc fail");
+
+		ifevidinfo_doslib.vram_base = vesa_lfb;
+		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
 	}
 # endif
 #endif
@@ -386,10 +398,12 @@ void IFEShutdownVideo(void) {
 # else
 	/* IBM PC/AT */
 	if (vesa_lfb_offscreen != NULL) {
+		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = NULL;
 		free((void*)vesa_lfb_offscreen);
 		vesa_lfb_offscreen = NULL;
 	}
 	if (vesa_lfb != NULL) {
+		ifevidinfo_doslib.vram_base = NULL;
 		dpmi_phys_addr_free((void*)vesa_lfb);
 		vesa_lfb = NULL;
 	}

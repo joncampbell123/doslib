@@ -38,6 +38,8 @@ extern unsigned char*	vesa_lfb;
 extern unsigned char*	vesa_lfb_offscreen;
 extern uint32_t		vesa_lfb_map_size;
 
+extern ifevidinfo_t	ifevidinfo_doslib;
+
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -87,12 +89,17 @@ static void p_UpdateFullScreen(void) {
 	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
 }
 
+static ifevidinfo_t* p_GetVidInfo(void) {
+	return &ifevidinfo_doslib;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
 	p_GetTicks,
 	p_ResetTicks,
-	p_UpdateFullScreen
+	p_UpdateFullScreen,
+	p_GetVidInfo
 };
 #endif
 
