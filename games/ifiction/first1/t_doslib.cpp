@@ -34,6 +34,10 @@ extern unsigned char	vesa_pal[256*4];
 extern uint32_t		pit_count;
 extern uint16_t		pit_prev;
 
+extern unsigned char*	vesa_lfb;
+extern unsigned char*	vesa_lfb_offscreen;
+extern uint32_t		vesa_lfb_map_size;
+
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -79,11 +83,16 @@ static void p_ResetTicks(const uint32_t base) {
 	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
 }
 
+static void p_UpdateFullScreen(void) {
+	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
 	p_GetTicks,
-	p_ResetTicks
+	p_ResetTicks,
+	p_UpdateFullScreen
 };
 #endif
 

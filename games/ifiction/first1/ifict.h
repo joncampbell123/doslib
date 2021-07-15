@@ -3,12 +3,14 @@
 
 typedef uint32_t ifefunc_GetTicks_t(void);
 typedef void ifefunc_ResetTicks_t(const uint32_t base);
+typedef void ifefunc_UpdateFullScreen_t(void);
 
 struct ifeapi_t {
 	const char*						name;
 	ifefunc_SetPaletteColors_t*				SetPaletteColors;
 	ifefunc_GetTicks_t*					GetTicks;
 	ifefunc_ResetTicks_t*					ResetTicks;
+	ifefunc_UpdateFullScreen_t*				UpdateFullScreen;
 };
 
 extern ifeapi_t *ifeapi;

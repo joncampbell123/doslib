@@ -103,7 +103,6 @@ uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 #endif
 
-void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
 void IFEInitVideo(void) {
@@ -131,7 +130,7 @@ void IFEInitVideo(void) {
 
 	/* make sure screen is cleared black */
 	SDL_FillRect(sdl_game_surface,NULL,0);
-	IFEUpdateFullScreen();
+	ifeapi->UpdateFullScreen();
 	IFECheckEvents();
 #elif defined(USE_WIN32)
 	if (hwndMain == NULL) {
@@ -249,7 +248,7 @@ void IFEInitVideo(void) {
 			win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
 		}
 
-		IFEUpdateFullScreen();
+		ifeapi->UpdateFullScreen();
 		IFECheckEvents();
 	}
 #elif defined(USE_DOSLIB)
@@ -377,40 +376,6 @@ void IFEShutdownVideo(void) {
 		vesa_setmode = false;
 		int10_setmode(3); /* back to 80x25 text */
 	}
-# endif
-#endif
-}
-
-void IFEUpdateFullScreen(void) {
-#if defined(USE_SDL2)
-	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
-		IFEFatalError("Game to window BlitSurface");
-
-	if (SDL_UpdateWindowSurface(sdl_window) != 0)
-		IFEFatalError("Window surface update");
-#elif defined(USE_WIN32)
-	{
-		HDC hDC = GetDC(hwndMain);
-		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
-
-		SetDIBitsToDevice(hDC,
-			/*dest x/y*/0,0,
-			abs((int)hwndMainDIB->bmiHeader.biWidth),
-			abs((int)hwndMainDIB->bmiHeader.biHeight),
-			/*src x/y*/0,0,
-			/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
-			win_dib,
-			hwndMainDIB,
-			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
-
-		SelectPalette(hDC,oldPal,FALSE);
-		ReleaseDC(hwndMain,hDC);
-	}
-#elif defined(USE_DOSLIB)
-# if defined(TARGET_PC98)
-// REMOVED
-# else
-	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
 # endif
 #endif
 }
@@ -626,7 +591,7 @@ void IFETestRGBPalettePattern(void) {
 	}
 
 	IFEEndScreenDraw();
-	IFEUpdateFullScreen();
+	ifeapi->UpdateFullScreen();
 }
 
 void IFENormalExit(void) {
@@ -678,7 +643,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				}
 
 				EndPaint(hwnd,&ps);
-				IFEUpdateFullScreen();
+				ifeapi->UpdateFullScreen();
 			}
 			break;
 		case WM_ACTIVATE:

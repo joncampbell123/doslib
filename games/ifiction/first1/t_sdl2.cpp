@@ -21,6 +21,9 @@
 extern SDL_Color	sdl_pal[256];
 extern SDL_Palette*	sdl_game_palette;
 extern Uint32		sdl_ticks_base;
+extern SDL_Window*	sdl_window;
+extern SDL_Surface*	sdl_window_surface;
+extern SDL_Surface*	sdl_game_surface;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -46,11 +49,20 @@ static void p_ResetTicks(const uint32_t base) {
 	sdl_ticks_base += base; /* NTS: Use return value of IFEGetTicks() */
 }
 
+static void p_UpdateFullScreen(void) {
+	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
+		IFEFatalError("Game to window BlitSurface");
+
+	if (SDL_UpdateWindowSurface(sdl_window) != 0)
+		IFEFatalError("Window surface update");
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
 	p_GetTicks,
-	p_ResetTicks
+	p_ResetTicks,
+	p_UpdateFullScreen
 };
 #endif
 

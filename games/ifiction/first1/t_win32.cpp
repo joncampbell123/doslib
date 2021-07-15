@@ -23,6 +23,7 @@ extern BITMAPINFO*	hwndMainDIB;
 extern HPALETTE		hwndMainPAL;
 extern HWND		hwndMain;
 extern DWORD		win32_tick_base;
+extern unsigned char*	win_dib;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -68,11 +69,30 @@ static void p_ResetTicks(const uint32_t base) {
 	win32_tick_base += base;
 }
 
+static void p_UpdateFullScreen(void) {
+	HDC hDC = GetDC(hwndMain);
+	HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+
+	SetDIBitsToDevice(hDC,
+		/*dest x/y*/0,0,
+		abs((int)hwndMainDIB->bmiHeader.biWidth),
+		abs((int)hwndMainDIB->bmiHeader.biHeight),
+		/*src x/y*/0,0,
+		/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
+		win_dib,
+		hwndMainDIB,
+		winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
+
+	SelectPalette(hDC,oldPal,FALSE);
+	ReleaseDC(hwndMain,hDC);
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
 	p_GetTicks,
-	p_ResetTicks
+	p_ResetTicks,
+	p_UpdateFullScreen
 };
 #endif
 
