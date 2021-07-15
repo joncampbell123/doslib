@@ -353,5 +353,38 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 	return 0;
 }
+
+bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
+	//not used yet
+	(void)hInstance;
+	(void)hPrevInstance;
+	(void)lpCmdLine;
+	(void)nCmdShow;
+
+	myInstance = hInstance;
+
+	/* some performance and rendering improvements are possible if Windows 95 (aka Windows 4.0) or higher */
+	if ((GetVersion()&0xFF) >= 4)
+		win95 = true;
+	else
+		win95 = false;
+
+	if (!hPrevInstance) {
+		WNDCLASS wnd;
+
+		memset(&wnd,0,sizeof(wnd));
+		wnd.style = CS_HREDRAW|CS_VREDRAW;
+		wnd.lpfnWndProc = hwndMainProc;
+		wnd.hInstance = hInstance;
+		wnd.lpszClassName = hwndMainClassName;
+
+		if (!RegisterClass(&wnd)) {
+			MessageBox(NULL,"RegisterClass failed","",MB_OK|MB_ICONEXCLAMATION);
+			return false;
+		}
+	}
+
+	return true;
+}
 #endif
 
