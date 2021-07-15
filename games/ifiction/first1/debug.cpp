@@ -66,3 +66,9 @@ void IFEDBG(const char *msg,...) {
 #endif
 }
 
+#if defined(USE_DOSLIB)
+void IFE_win95_tf_hang_check(void) {
+	if (cpu_clear_TF()) IFEDBG("Windows 95 hang mitigation: TF (Trap Flag) was set, clearing");
+}
+#endif
+
