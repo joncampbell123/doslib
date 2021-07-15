@@ -48,21 +48,6 @@
 
 ifeapi_t *ifeapi = &ifeapi_default;
 
-/* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
- *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
- *      Not a problem so much if using Windows GDI but if we're going to play with DirectX or the earlier hacky
- *      Windows 3.1 equivalents, we need to worry about that. */
-
-#if defined(USE_DOSLIB)
-extern uint16_t			pit_prev;
-#endif
-
-#if defined(USE_WIN32)
-bool		win95 = false; /* Is Windows 95 or higher */
-
-LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
-#endif
-
 void IFETestRGBPalette() {
 	IFEPaletteEntry pal[256];
 	unsigned int i;
