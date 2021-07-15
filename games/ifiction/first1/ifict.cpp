@@ -80,6 +80,7 @@ unsigned char*	win_dib = NULL;
 unsigned char*	win_dib_first_row = NULL;
 int		win_dib_pitch = 0;
 DWORD		win32_tick_base = 0;
+ifevidinfo_t	ifevidinfo_win32;
 #endif
 
 #if defined(USE_DOSLIB)
@@ -144,6 +145,11 @@ void IFEInitVideo(void) {
 #elif defined(USE_WIN32)
 	if (hwndMain == NULL) {
 		int sw,sh;
+
+		memset(&ifevidinfo_win32,0,sizeof(ifevidinfo_win32));
+
+		ifevidinfo_win32.width = 640;
+		ifevidinfo_win32.height = 480;
 
 		sw = GetSystemMetrics(SM_CXSCREEN);
 		sh = GetSystemMetrics(SM_CYSCREEN);
@@ -257,6 +263,11 @@ void IFEInitVideo(void) {
 			win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
 		}
 
+		ifevidinfo_win32.buf_base = win_dib;
+		ifevidinfo_win32.buf_first_row = win_dib_first_row;
+		ifevidinfo_win32.buf_pitch = win_dib_pitch;
+		ifevidinfo_win32.buf_alloc = ifevidinfo_win32.buf_size = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);
+
 		ifeapi->UpdateFullScreen();
 		IFECheckEvents();
 	}
@@ -364,6 +375,7 @@ void IFEShutdownVideo(void) {
 		hwndMain = NULL;
 	}
 	if (win_dib != NULL) {
+		ifevidinfo_win32.buf_base = ifevidinfo_win32.buf_first_row = NULL;
 		free((void*)win_dib);
 		win_dib = NULL;
 	}
