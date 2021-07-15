@@ -40,10 +40,13 @@
 # endif
 #endif
 
+#include "ifict.h"
 #include "utils.h"
 #include "debug.h"
 #include "fatal.h"
 #include "palette.h"
+
+ifeapi_t *ifeapi = &ifeapi_default;
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
  *      We *could* just render with 256 colors but of course that means some colors get combined, so, don't.
@@ -470,7 +473,7 @@ void IFETestRGBPalette() {
 		pal[i+192u].b = (unsigned char)(i*4u);
 	}
 
-	IFESetPaletteColors(0,256,pal);
+	ifeapi->SetPaletteColors(0,256,pal);
 }
 
 bool IFEUserWantsToQuit(void) {

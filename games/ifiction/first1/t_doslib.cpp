@@ -1,9 +1,4 @@
 
-#if defined(USE_WIN32)
-# include <windows.h>
-# include <mmsystem.h>
-#endif
-
 #if defined(USE_DOSLIB)
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
@@ -27,14 +22,7 @@
 #include <unistd.h>
 #include <stdint.h>
 
-#if defined(USE_SDL2)
-# if defined(__APPLE__) /* Brew got the headers wrong here */
-#  include <SDL.h>
-# else
-#  include <SDL2/SDL.h>
-# endif
-#endif
-
+#include "ifict.h"
 #include "utils.h"
 #include "debug.h"
 #include "fatal.h"
@@ -44,7 +32,7 @@
 extern bool		vesa_8bitpal; /* 8-bit DAC */
 extern unsigned char	vesa_pal[256*4];
 
-void ifefunc_SetPaletteColors_doslib(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
 	/* IBM PC/AT */
@@ -67,5 +55,10 @@ void ifefunc_SetPaletteColors_doslib(const unsigned int first,const unsigned int
 
 	vesa_set_palette_data(first,count,(char*)vesa_pal);
 }
+
+ifeapi_t ifeapi_doslib = {
+	"DOSLIB (IBM PC/AT)",
+	p_SetPaletteColors
+};
 #endif
 

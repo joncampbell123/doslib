@@ -40,12 +40,8 @@
 #include "fatal.h"
 #include "palette.h"
 
-ifefunc_SetPaletteColors_t *ifefunc_SetPaletteColors = ifefunc_SetPaletteColors_default;
-
-void IFESetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
+void priv_SetPaletteColorsRangeCheck(const unsigned int first,const unsigned int count) {
 	if (first >= 256u || count > 256u || (first+count) > 256u)
 		IFEFatalError("SetPaletteColors out of range first=%u count=%u",first,count);
-
-	ifefunc_SetPaletteColors(first,count,pal);
 }
 
