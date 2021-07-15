@@ -92,6 +92,8 @@ void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev) {
 		SCHRMAP(IFEKEY_7,                                '7',    '&',    0,      0);
 		SCHRMAP(IFEKEY_8,                                '8',    '*',    0,      0);
 		SCHRMAP(IFEKEY_9,                                '9',    '(',    0,      0);
+		SCHRMAP(IFEKEY_COMMA,                            ',',    '<',    0,      0);
+		SCHRMAP(IFEKEY_PERIOD,                           '.',    '>',    0,      0);
 		default: break;
 	}
 

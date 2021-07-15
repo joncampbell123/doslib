@@ -117,6 +117,8 @@ static void SDLKeySymToFill(IFEKeyEvent &ke,const SDL_KeyboardEvent &ev) {
 		MSN(7);
 		MSN(8);
 		MSN(9);
+		MSN(COMMA);
+		MSN(PERIOD);
 		default: break;
 	}
 #undef MSN
