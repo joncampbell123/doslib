@@ -31,6 +31,8 @@ typedef void ifefunc_EndScreenDraw_t(void);
 typedef void ifefunc_ShutdownVideo_t(void);
 typedef void ifefunc_InitVideo_t(void);
 typedef void ifefunc_FlushKeyboardInput_t(void); /* NTS: This flushes the framework's queue AND the host environment's queue if possible */
+typedef IFEKeyEvent *ifefunc_GetRawKeyboardInput_t(void);
+typedef IFECookedKeyEvent *ifefunc_GetCookedKeyboardInput_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -47,6 +49,8 @@ struct ifeapi_t {
 	ifefunc_ShutdownVideo_t*				ShutdownVideo;
 	ifefunc_InitVideo_t*					InitVideo;
 	ifefunc_FlushKeyboardInput_t*				FlushKeyboardInput;
+	ifefunc_GetRawKeyboardInput_t*				GetRawKeyboardInput;
+	ifefunc_GetCookedKeyboardInput_t*			GetCookedKeyboardInput;
 };
 
 extern ifeapi_t *ifeapi;

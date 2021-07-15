@@ -164,6 +164,14 @@ static void p_InitVideo(void) {
 void p_FlushKeyboardInput(void) {
 }
 
+IFEKeyEvent *p_GetRawKeyboardInput(void) {
+	return NULL;
+}
+
+IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
+	return NULL;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -178,7 +186,9 @@ ifeapi_t ifeapi_sdl2 = {
 	p_EndScreenDraw,
 	p_ShutdownVideo,
 	p_InitVideo,
-	p_FlushKeyboardInput
+	p_FlushKeyboardInput,
+	p_GetRawKeyboardInput,
+	p_GetCookedKeyboardInput
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {

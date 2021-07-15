@@ -287,6 +287,14 @@ static void p_InitVideo(void) {
 void p_FlushKeyboardInput(void) {
 }
 
+IFEKeyEvent *p_GetRawKeyboardInput(void) {
+	return NULL;
+}
+
+IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
+	return NULL;
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -301,7 +309,9 @@ ifeapi_t ifeapi_win32 = {
 	p_EndScreenDraw,
 	p_ShutdownVideo,
 	p_InitVideo,
-	p_FlushKeyboardInput
+	p_FlushKeyboardInput,
+	p_GetRawKeyboardInput,
+	p_GetCookedKeyboardInput
 };
 
 LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
