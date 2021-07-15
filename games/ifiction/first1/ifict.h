@@ -1,4 +1,9 @@
 
+#if defined(USE_WIN32)
+# include <windows.h>
+# include <mmsystem.h>
+#endif
+
 #include "palette.h"
 
 struct ifevidinfo_t {
