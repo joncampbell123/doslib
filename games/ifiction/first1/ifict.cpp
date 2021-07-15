@@ -438,44 +438,13 @@ void IFETestRGBPalette() {
 	ifeapi->SetPaletteColors(0,256,pal);
 }
 
-bool IFEBeginScreenDraw(void) {
-#if defined(USE_SDL2)
-	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
-		return false;
-	if (sdl_game_surface->pixels == NULL)
-		IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
-	if (sdl_game_surface->pitch < 0)
-		IFEFatalError("SDL2 game surface pitch is negative");
-
-	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)(sdl_game_surface->pixels);
-	return true;
-#elif defined(USE_WIN32)
-	return true; // nothing to do
-#elif defined(USE_DOSLIB)
-	return true; // nothing to do
-#endif
-}
-
-void IFEEndScreenDraw(void) {
-#if defined(USE_SDL2)
-	if (SDL_MUSTLOCK(sdl_game_surface))
-		SDL_UnlockSurface(sdl_game_surface);
-
-	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = NULL;
-#elif defined(USE_WIN32)
-	// nothing to do
-#elif defined(USE_DOSLIB)
-	// nothing to do
-#endif
-}
-
 void IFETestRGBPalettePattern(void) {
 	unsigned char *firstrow;
 	unsigned int x,y,w,h;
 	ifevidinfo_t* vif;
 	int pitch;
 
-	if (!IFEBeginScreenDraw())
+	if (!ifeapi->BeginScreenDraw())
 		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
 	if ((vif=ifeapi->GetVidInfo()) == NULL)
 		IFEFatalError("GetVidInfo() == NULL");
@@ -495,7 +464,7 @@ void IFETestRGBPalettePattern(void) {
 		}
 	}
 
-	IFEEndScreenDraw();
+	ifeapi->EndScreenDraw();
 	ifeapi->UpdateFullScreen();
 }
 

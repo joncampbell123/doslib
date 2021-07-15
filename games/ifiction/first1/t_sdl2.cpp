@@ -87,6 +87,25 @@ static void p_WaitEvent(const int wait_ms) {
 		priv_ProcessEvent(ev);
 }
 
+static bool p_BeginScreenDraw(void) {
+	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
+		return false;
+	if (sdl_game_surface->pixels == NULL)
+		IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
+	if (sdl_game_surface->pitch < 0)
+		IFEFatalError("SDL2 game surface pitch is negative");
+
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)(sdl_game_surface->pixels);
+	return true;
+}
+
+static void p_EndScreenDraw(void) {
+	if (SDL_MUSTLOCK(sdl_game_surface))
+		SDL_UnlockSurface(sdl_game_surface);
+
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = NULL;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -96,7 +115,9 @@ ifeapi_t ifeapi_sdl2 = {
 	p_GetVidInfo,
 	p_UserWantsToQuit,
 	p_CheckEvents,
-	p_WaitEvent
+	p_WaitEvent,
+	p_BeginScreenDraw,
+	p_EndScreenDraw
 };
 #endif
 

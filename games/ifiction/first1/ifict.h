@@ -20,6 +20,8 @@ typedef ifevidinfo_t* ifefunc_GetVidInfo_t(void);
 typedef bool ifefunc_UserWantsToQuit_t(void);
 typedef void ifefunc_CheckEvents_t(void);
 typedef void ifefunc_WaitEvent_t(const int wait_ms);
+typedef bool ifefunc_BeginScreenDraw_t(void);
+typedef void ifefunc_EndScreenDraw_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -31,6 +33,8 @@ struct ifeapi_t {
 	ifefunc_UserWantsToQuit_t*				UserWantsToQuit;
 	ifefunc_CheckEvents_t*					CheckEvents;
 	ifefunc_WaitEvent_t*					WaitEvent;
+	ifefunc_BeginScreenDraw_t*				BeginScreenDraw;
+	ifefunc_EndScreenDraw_t*				EndScreenDraw;
 };
 
 extern ifeapi_t *ifeapi;

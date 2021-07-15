@@ -104,6 +104,14 @@ static void p_WaitEvent(const int wait_ms) {
 	(void)wait_ms;
 }
 
+static bool p_BeginScreenDraw(void) {
+	return true; // nothing to do
+}
+
+static void p_EndScreenDraw(void) {
+	// nothing to do
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -113,7 +121,9 @@ ifeapi_t ifeapi_doslib = {
 	p_GetVidInfo,
 	p_UserWantsToQuit,
 	p_CheckEvents,
-	p_WaitEvent
+	p_WaitEvent,
+	p_BeginScreenDraw,
+	p_EndScreenDraw
 };
 #endif
 
