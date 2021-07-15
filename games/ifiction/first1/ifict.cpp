@@ -128,75 +128,13 @@ void IFENormalExit(void) {
 }
 
 #if defined(USE_WIN32)
-bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow);
-
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
 	if (!priv_IFEWin32Init(hInstance,hPrevInstance,lpCmdLine,nCmdShow))
 		return 1;
 #else
 int main(int argc,char **argv) {
-	//not used yet
-	(void)argc;
-	(void)argv;
-
-# if defined(USE_SDL2)
-	{
-		struct stat st;
-
-		/* if STDERR is a valid handle to something, enable debug */
-		if (fstat(2/*STDERR*/,&st) == 0) {
-			fprintf(stderr,"Will emit debug info to stderr\n");
-			ifedbg_en = true;
-		}
-	}
-# endif
-# if defined(USE_DOSLIB)
-	cpu_probe();
-	probe_dos();
-	detect_windows();
-	probe_dpmi();
-	probe_vcpi();
-	dos_ltp_probe();
-
-	if (!probe_8254())
-		IFEFatalError("8254 timer not detected");
-	if (!probe_8259())
-		IFEFatalError("8259 interrupt controller not detected");
-#  if defined(TARGET_PC98)
-// REMOVED
-#  else
-	if (!k8042_probe())
-		IFEFatalError("8042 keyboard controller not found");
-	if (!probe_vga())
-		IFEFatalError("Unable to detect video card");
-	if (!(vga_state.vga_flags & VGA_IS_VGA))
-		IFEFatalError("Standard VGA not detected");
-	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
-		IFEFatalError("VESA BIOS extensions not detected");
-#  endif
-
-	if (probe_dosbox_id()) {
-		printf("DOSBox Integration Device detected\n");
-		dosbox_ig = ifedbg_en = true;
-
-		IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
-	}
-
-	/* make sure the timer is ticking at 18.2Hz. */
-	write_8254_system_timer(0);
-
-	/* establish the base line timer tick */
-	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
-
-	/* Windows 95 bug: After reading the 8254, the TF flag (Trap Flag) is stuck on, and this
-	 * program runs extremely slowly. Clear the TF flag. It may have something to do with
-	 * read_8254 or any other code that does PUSHF + CLI + POPF to protect against interrupts.
-	 * POPF is known to not cause a fault on 386-level IOPL3 protected mode, and therefore
-	 * a VM monitor has difficulty knowing whether interrupts are enabled, so perhaps setting
-	 * TF when the VM executes the CLI instruction is Microsoft's hack to try to work with
-	 * DOS games regardless. */
-	IFE_win95_tf_hang_check();
-# endif // DOSLIB
+	if (!priv_IFEMainInit(argc,argv))
+		return 1;
 #endif
 
 	ifeapi->InitVideo();

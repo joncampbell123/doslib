@@ -16,6 +16,11 @@
 # include <hw/dosboxid/iglib.h> /* for debugging */
 #endif
 
+#if defined(USE_SDL2)
+# include <sys/types.h>
+# include <sys/stat.h>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -212,6 +217,56 @@ static void p_InitVideo(void) {
 		ifevidinfo_doslib.vram_base = vesa_lfb;
 		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
 	}
+}
+
+bool priv_IFEMainInit(int argc,char **argv) {
+	//not used yet
+	(void)argc;
+	(void)argv;
+
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+	probe_dpmi();
+	probe_vcpi();
+	dos_ltp_probe();
+
+	if (!probe_8254())
+		IFEFatalError("8254 timer not detected");
+	if (!probe_8259())
+		IFEFatalError("8259 interrupt controller not detected");
+	if (!k8042_probe())
+		IFEFatalError("8042 keyboard controller not found");
+	if (!probe_vga())
+		IFEFatalError("Unable to detect video card");
+	if (!(vga_state.vga_flags & VGA_IS_VGA))
+		IFEFatalError("Standard VGA not detected");
+	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
+			IFEFatalError("VESA BIOS extensions not detected");
+
+	if (probe_dosbox_id()) {
+		printf("DOSBox Integration Device detected\n");
+		dosbox_ig = ifedbg_en = true;
+
+		IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
+	}
+
+	/* make sure the timer is ticking at 18.2Hz. */
+	write_8254_system_timer(0);
+
+	/* establish the base line timer tick */
+	pit_prev = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+	/* Windows 95 bug: After reading the 8254, the TF flag (Trap Flag) is stuck on, and this
+	 * program runs extremely slowly. Clear the TF flag. It may have something to do with
+	 * read_8254 or any other code that does PUSHF + CLI + POPF to protect against interrupts.
+	 * POPF is known to not cause a fault on 386-level IOPL3 protected mode, and therefore
+	 * a VM monitor has difficulty knowing whether interrupts are enabled, so perhaps setting
+	 * TF when the VM executes the CLI instruction is Microsoft's hack to try to work with
+	 * DOS games regardless. */
+	IFE_win95_tf_hang_check();
+
+	return true;
 }
 
 ifeapi_t ifeapi_doslib = {

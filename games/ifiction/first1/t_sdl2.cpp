@@ -1,5 +1,7 @@
 
 #if defined(USE_SDL2)
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -174,5 +176,21 @@ ifeapi_t ifeapi_sdl2 = {
 	p_ShutdownVideo,
 	p_InitVideo
 };
+
+bool priv_IFEMainInit(int argc,char **argv) {
+	struct stat st;
+
+	//not used yet
+	(void)argc;
+	(void)argv;
+
+	/* if STDERR is a valid handle to something, enable debug */
+	if (fstat(2/*STDERR*/,&st) == 0) {
+		fprintf(stderr,"Will emit debug info to stderr\n");
+		ifedbg_en = true;
+	}
+
+	return true;
+}
 #endif
 

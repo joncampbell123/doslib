@@ -58,3 +58,9 @@ extern ifeapi_t ifeapi_doslib;
 # define ifeapi_default ifeapi_doslib
 #endif
 
+#if defined(USE_WIN32)
+bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow);
+#else
+bool priv_IFEMainInit(int argc,char **argv);
+#endif
+
