@@ -40,6 +40,85 @@ uint16_t			pit_prev = 0;
 
 ifevidinfo_t			ifevidinfo_doslib;
 
+/* keyboard controller and IRQ 1, IBM PC/AT 8042 */
+bool				keybirq_init = false;
+void				(__interrupt *keybirq_old)() = NULL;
+unsigned char			keybirq_buf[64];
+unsigned char			keybirq_head=0,keybirq_tail=0;
+
+/* read keyboard buffer */
+int keybirq_read_buf(void) {
+	int r = -1;
+
+	/* protect from interruption by PUSH+CLI+....+POPF */
+	SAVE_CPUFLAGS( _cli() ) {
+		if (keybirq_head != keybirq_tail) {
+			r = (int)((unsigned char)keybirq_buf[keybirq_head]);
+			if (++keybirq_head >= sizeof(keybirq_buf))
+				keybirq_head = 0;
+		}
+	} RESTORE_CPUFLAGS();
+
+	return r;
+}
+
+/* IRQ 1 keyboard interrupt */
+void __interrupt keybirq() {
+	while (inp(K8042_STATUS) & 0x01) {
+		unsigned char np = keybirq_tail + 1;
+
+		if (np >= sizeof(keybirq_buf))
+			np = 0;
+
+		if (np == keybirq_head)
+			break;
+
+		keybirq_buf[np] = inp(K8042_DATA);
+		keybirq_tail = np;
+	}
+
+	p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* specific EOI ack IRQ 1 */
+}
+
+void keybirq_hook(void) {
+	if (!keybirq_init) {
+		p8259_mask(1); /* mask the IRQ so we can safely work on it */
+		inp(K8042_DATA); /* flush 8042 data */
+		inp(K8042_STATUS);
+		p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
+		keybirq_head = keybirq_tail = 0;
+
+		/* okay, hook the IRQ */
+		keybirq_old = _dos_getvect(irq2int(1));
+		_dos_setvect(irq2int(1),keybirq);
+
+		/* ready to work */
+		p8259_unmask(1); /* unmask the IRQ */
+
+		/* done */
+		keybirq_init = true;
+	}
+}
+
+void keybirq_unhook(void) {
+	if (keybirq_init) {
+		p8259_mask(1); /* mask the IRQ so we can safely work on it */
+		inp(K8042_DATA); /* flush 8042 data */
+		inp(K8042_STATUS);
+		p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
+
+		/* okay, hook the IRQ */
+		_dos_setvect(irq2int(1),keybirq_old);
+		keybirq_old = NULL;
+
+		/* ready to work */
+		p8259_unmask(1); /* unmask the IRQ */
+
+		/* done */
+		keybirq_init = false;
+	}
+}
+
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -114,6 +193,7 @@ static void p_EndScreenDraw(void) {
 
 static void p_ShutdownVideo(void) {
 	/* IBM PC/AT */
+	keybirq_unhook();
 	_sti();
 	if (vesa_lfb_offscreen != NULL) {
 		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = NULL;
@@ -205,6 +285,9 @@ static void p_InitVideo(void) {
 		ifevidinfo_doslib.vram_base = vesa_lfb;
 		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
 	}
+
+	/* hook keyboard */
+	keybirq_hook();
 }
 
 bool priv_IFEMainInit(int argc,char **argv) {
