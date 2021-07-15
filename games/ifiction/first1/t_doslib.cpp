@@ -46,6 +46,10 @@ void				(__interrupt *keybirq_old)() = NULL;
 unsigned char			keybirq_buf[64];
 unsigned char			keybirq_head=0,keybirq_tail=0;
 
+unsigned char			p_keybin[3];
+unsigned char			p_keybinpos=0;
+unsigned char			p_keybinlen=0;
+
 /* read keyboard buffer */
 int keybirq_read_buf(void) {
 	int r = -1;
@@ -87,6 +91,8 @@ void keybirq_hook(void) {
 		inp(K8042_STATUS);
 		p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
 		keybirq_head = keybirq_tail = 0;
+		p_keybinpos=0;
+		p_keybinlen=0;
 
 		/* okay, hook the IRQ */
 		keybirq_old = _dos_getvect(irq2int(1));
@@ -176,11 +182,57 @@ static bool p_UserWantsToQuit(void) {
 	return false;
 }
 
+static void p_ProcessScanCode(void) {
+	if (p_keybinlen == 3) {
+		IFEDBG("Key 0x%02x 0x%02x 0x%02x",p_keybin[0],p_keybin[1],p_keybin[2]);
+	}
+	else if (p_keybinlen == 2) {
+		IFEDBG("Key 0x%02x 0x%02x",p_keybin[0],p_keybin[1]);
+	}
+	else if (p_keybinlen == 1) {
+		IFEDBG("Key 0x%02x",p_keybin[0]);
+	}
+}
+
+static void p_CheckKeyboard(void) {
+	int c;
+
+	if (p_keybinpos == 0) {
+		c = keybirq_read_buf();
+		if (c < 0) return;
+
+		p_keybin[p_keybinpos++] = (unsigned char)c;
+
+		if (c == 0xE1) /* 0xE1 <xx> <xx> */
+			p_keybinlen=3;
+		else if (c == 0xE0) /* 0xE0 <xx> */
+			p_keybinlen=2;
+		else {
+			p_keybinlen=1;
+			p_ProcessScanCode();
+			p_keybinpos=0;
+		}
+	}
+	else if (p_keybinpos < p_keybinlen) {
+		c = keybirq_read_buf();
+		if (c < 0) return;
+
+		p_keybin[p_keybinpos++] = (unsigned char)c;
+		if (p_keybinpos >= p_keybinlen) {
+			p_ProcessScanCode();
+			p_keybinpos=0;
+		}
+	}
+}
+
 static void p_CheckEvents(void) {
+	/* check keyboard input */
+	p_CheckKeyboard();
 }
 
 static void p_WaitEvent(const int wait_ms) {
 	(void)wait_ms;
+	p_CheckEvents();
 }
 
 static bool p_BeginScreenDraw(void) {
