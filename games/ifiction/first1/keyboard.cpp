@@ -82,22 +82,16 @@ void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev) {
 		SCHRMAC(IFEKEY_X,                                'x',    'X',    0x18,   0);
 		SCHRMAC(IFEKEY_Y,                                'y',    'Y',    0x19,   0);
 		SCHRMAC(IFEKEY_Z,                                'z',    'Z',    0x1A,   0);
-#if 0
-
-    IFEKEY_1 = 30,
-    IFEKEY_2 = 31,
-    IFEKEY_3 = 32,
-    IFEKEY_4 = 33,
-    IFEKEY_5 = 34,
-    IFEKEY_6 = 35,
-    IFEKEY_7 = 36,
-    IFEKEY_8 = 37,
-    IFEKEY_9 = 38,
-    IFEKEY_0 = 39,
-
-
-#endif
-
+		SCHRMAP(IFEKEY_0,                                '0',    ')',    0,      0);
+		SCHRMAP(IFEKEY_1,                                '1',    '!',    0,      0);
+		SCHRMAP(IFEKEY_2,                                '2',    '@',    0,      0);
+		SCHRMAP(IFEKEY_3,                                '3',    '#',    0,      0);
+		SCHRMAP(IFEKEY_4,                                '4',    '$',    0,      0);
+		SCHRMAP(IFEKEY_5,                                '5',    '%',    0,      0);
+		SCHRMAP(IFEKEY_6,                                '6',    '^',    0,      0);
+		SCHRMAP(IFEKEY_7,                                '7',    '&',    0,      0);
+		SCHRMAP(IFEKEY_8,                                '8',    '*',    0,      0);
+		SCHRMAP(IFEKEY_9,                                '9',    '(',    0,      0);
 		default: break;
 	}
 
