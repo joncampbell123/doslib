@@ -52,18 +52,15 @@ void IFEDBG(const char *msg,...) {
 		va_start(va,msg);
 		vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
 		va_end(va);
-	}
-	else {
-		fatal_tmp[0] = 0;
-	}
 
 #if defined(USE_DOSLIB)
-	if (dosbox_ig) {
-		dosbox_id_debug_message("IFEDBG: ");
-		dosbox_id_debug_message(fatal_tmp);
-		dosbox_id_debug_message("\n");
-	}
+		if (dosbox_ig) {
+			dosbox_id_debug_message("IFEDBG: ");
+			dosbox_id_debug_message(fatal_tmp);
+			dosbox_id_debug_message("\n");
+		}
 #endif
+	}
 }
 
 #if defined(USE_DOSLIB)
