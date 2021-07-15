@@ -485,9 +485,11 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			if (!winIsDestroying)
 				winQuit = true;
 			break;
+		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
 			p_win32_ProcessKeyEvent(wParam,lParam,true);
 			break;
+		case WM_SYSKEYUP:
 		case WM_KEYUP:
 			p_win32_ProcessKeyEvent(wParam,lParam,false);
 			break;
