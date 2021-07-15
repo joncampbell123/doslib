@@ -325,6 +325,9 @@ ifeapi_t ifeapi_win32 = {
 void UpdateWin32ModFlags(void) {
 	win32_mod_flags = 0;
 
+	/* NTS: LSHIFT/RSHIFT works with later versions of Windows.
+	 *      Windows 3.1 only understands SHIFT. Same with CTRL, ALT. */
+
 	if (GetKeyState(VK_LSHIFT)&0x8000u)/*MSB=down*/
 		win32_mod_flags |= IFEKeyEvent_FLAG_LSHIFT;
 	if (GetKeyState(VK_RSHIFT)&0x8000u)/*MSB=down*/
