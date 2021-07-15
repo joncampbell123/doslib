@@ -61,11 +61,9 @@ extern uint16_t			pit_prev;
 const char*	hwndMainClassName = "IFICTIONWIN32";
 HINSTANCE	myInstance = NULL;
 HWND		hwndMain = NULL;
-bool		winQuit = false;
 bool		win95 = false; /* Is Windows 95 or higher */
-bool		winIsDestroying = false;
-bool		winScreenIsPal = false;
-HPALETTE	hwndMainPAL = NULL;
+
+LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
 #endif
 
 void IFETestRGBPalette() {
@@ -131,59 +129,6 @@ void IFENormalExit(void) {
 	ifeapi->ShutdownVideo();
 	exit(0);
 }
-
-#if defined(USE_WIN32)
-LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
-	switch (uMsg) {
-		case WM_CREATE:
-			break;
-		case WM_QUIT:
-			winQuit = true;
-			break;
-		case WM_DESTROY:
-			if (!winIsDestroying)
-				winQuit = true;
-			break;
-		case WM_QUERYNEWPALETTE:
-			if (winScreenIsPal && hwndMainPAL != NULL) {
-				HPALETTE oldPal;
-				HDC hDC;
-
-				hDC = GetDC(hwnd);
-				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
-				RealizePalette(hDC);
-				SelectPalette(hDC,oldPal,FALSE);
-				ReleaseDC(hwnd,hDC);
-				InvalidateRect(hwnd,NULL,FALSE);
-				return TRUE;
-			}
-			break;
-		case WM_PAINT:
-			{
-				PAINTSTRUCT ps;
-				HDC hDC = BeginPaint(hwnd,&ps);
-
-				if (winScreenIsPal && hwndMainPAL != NULL) {
-					HPALETTE oldPal;
-
-					oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
-					RealizePalette(hDC);
-					SelectPalette(hDC,oldPal,FALSE);
-				}
-
-				EndPaint(hwnd,&ps);
-				ifeapi->UpdateFullScreen();
-			}
-			break;
-		case WM_ACTIVATE:
-			break;
-		default:
-			return DefWindowProc(hwnd,uMsg,wParam,lParam);
-	}
-
-	return 0;
-}
-#endif
 
 #if defined(USE_WIN32)
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {

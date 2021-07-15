@@ -18,6 +18,7 @@
 
 #if defined(USE_WIN32)
 BITMAPINFO*				hwndMainDIB = NULL;
+HPALETTE				hwndMainPAL = NULL;
 HPALETTE				hwndMainPALPrev = NULL;
 PALETTEENTRY				win_pal[256];
 unsigned char*				win_dib = NULL;
@@ -25,15 +26,14 @@ unsigned char*				win_dib_first_row = NULL;
 int					win_dib_pitch = 0;
 DWORD					win32_tick_base = 0;
 ifevidinfo_t				ifevidinfo_win32;
+bool					winQuit = false;
+bool					winIsDestroying = false;
+bool					winScreenIsPal = false;
 
 extern const char*	hwndMainClassName;
-extern bool		winScreenIsPal;
-extern bool		winIsDestroying;
 extern bool		win95;
 extern HINSTANCE	myInstance;
-extern HPALETTE		hwndMainPAL;
 extern HWND		hwndMain;
-extern bool		winQuit;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -302,5 +302,56 @@ ifeapi_t ifeapi_win32 = {
 	p_ShutdownVideo,
 	p_InitVideo
 };
+
+LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
+	switch (uMsg) {
+		case WM_CREATE:
+			break;
+		case WM_QUIT:
+			winQuit = true;
+			break;
+		case WM_DESTROY:
+			if (!winIsDestroying)
+				winQuit = true;
+			break;
+		case WM_QUERYNEWPALETTE:
+			if (winScreenIsPal && hwndMainPAL != NULL) {
+				HPALETTE oldPal;
+				HDC hDC;
+
+				hDC = GetDC(hwnd);
+				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+				RealizePalette(hDC);
+				SelectPalette(hDC,oldPal,FALSE);
+				ReleaseDC(hwnd,hDC);
+				InvalidateRect(hwnd,NULL,FALSE);
+				return TRUE;
+			}
+			break;
+		case WM_PAINT:
+			{
+				PAINTSTRUCT ps;
+				HDC hDC = BeginPaint(hwnd,&ps);
+
+				if (winScreenIsPal && hwndMainPAL != NULL) {
+					HPALETTE oldPal;
+
+					oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+					RealizePalette(hDC);
+					SelectPalette(hDC,oldPal,FALSE);
+				}
+
+				EndPaint(hwnd,&ps);
+				ifeapi->UpdateFullScreen();
+			}
+			break;
+		case WM_ACTIVATE:
+			break;
+		default:
+			return DefWindowProc(hwnd,uMsg,wParam,lParam);
+	}
+
+	return 0;
+}
 #endif
 
