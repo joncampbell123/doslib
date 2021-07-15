@@ -411,6 +411,13 @@ void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
 #undef MAP
 }
 
+void Win32PopupSysMenu(void) {
+	DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
+	DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_SPACE,0x00000001u);
+	DefWindowProc(hwndMain,WM_SYSKEYUP,VK_SPACE,0xC0000001u);
+	DefWindowProc(hwndMain,WM_SYSKEYUP,VK_MENU,0xC0000001u);
+}
+
 void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
 	IFEKeyEvent ke;
 
@@ -419,6 +426,24 @@ void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
 		w == VK_SHIFT || w == VK_LSHIFT || w == VK_RSHIFT ||
 		w == VK_CAPITAL || w == VK_NUMLOCK) {
 		UpdateWin32ModFlags();
+	}
+
+	/* NTS: This code intercepts WM_SYSKEYDOWN to catch the ALT key.
+	 *      However if the user really does want to access the system menu,
+	 *      we need to watch for VK_SPACE if ALT is down and then run
+	 *      DefWindowProc() to make the system menu work.
+	 *
+	 *      Furthermore on Windows 3.1, we need to watch for VK_TAB
+	 *      and ALT if the user wants to Alt+Tab away from our window.
+	 *      Believe it or not, intercepting WM_SYSKEYDOWN is all it takes
+	 *      to disable Alt+Tab in Windows 3.1. Later versions of Windows
+	 *      will always allow Alt+Tab to work no matter what we intercept
+	 *      for that reason. */
+	if (win32_mod_flags & (IFEKeyEvent_FLAG_LALT|IFEKeyEvent_FLAG_RALT)) {
+		if (w == VK_SPACE) {
+			IFEDBG("ALT+Space detected, Windows user is attempting to access system menu");
+			Win32PopupSysMenu();
+		}
 	}
 
 	/* lParam:
