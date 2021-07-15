@@ -37,6 +37,7 @@
 
 #include "utils.h"
 #include "debug.h"
+#include "fatal.h"
 #include "palette.h"
 
 /* NTS: Do not assume the full 256-color palette, 256-color Windows uses 20 of them, leaving us with 236 of them.
@@ -94,7 +95,6 @@ uint32_t	pit_count = 0;
 uint16_t	pit_prev = 0;
 #endif
 
-void IFEFatalError(const char *msg,...);
 void IFEUpdateFullScreen(void);
 void IFECheckEvents(void);
 
@@ -655,27 +655,6 @@ void IFETestRGBPalettePattern(void) {
 
 	IFEEndScreenDraw();
 	IFEUpdateFullScreen();
-}
-
-void IFEFatalError(const char *msg,...) {
-	va_list va;
-
-#if defined(USE_DOSLIB)
-	IFE_win95_tf_hang_check();
-#endif
-
-	va_start(va,msg);
-	vsnprintf(fatal_tmp,sizeof(fatal_tmp)/*includes NUL byte*/,msg,va);
-	va_end(va);
-
-	IFEShutdownVideo();
-
-#if defined(USE_WIN32)
-	MessageBox(NULL/*FIXME*/,fatal_tmp,"Fatal error",MB_OK|MB_ICONEXCLAMATION);
-#else
-	fprintf(stderr,"Fatal error: %s\n",fatal_tmp);
-#endif
-	exit(127);
 }
 
 void IFENormalExit(void) {
