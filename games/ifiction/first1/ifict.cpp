@@ -4,6 +4,11 @@
 # include <mmsystem.h>
 #endif
 
+#if defined(USE_SDL2)
+# include <sys/types.h>
+# include <sys/stat.h>
+#endif
+
 #if defined(USE_DOSLIB)
 # include <hw/cpu/cpu.h>
 # include <hw/dos/dos.h>
@@ -755,6 +760,17 @@ int main(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
 
+# if defined(USE_SDL2)
+	{
+		struct stat st;
+
+		/* if STDERR is a valid handle to something, enable debug */
+		if (fstat(2/*STDERR*/,&st) == 0) {
+			fprintf(stderr,"Will emit debug info to stderr\n");
+			ifedbg_en = true;
+		}
+	}
+# endif
 # if defined(USE_DOSLIB)
 	cpu_probe();
 	probe_dos();

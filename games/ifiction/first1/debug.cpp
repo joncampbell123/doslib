@@ -60,6 +60,9 @@ void IFEDBG(const char *msg,...) {
 			dosbox_id_debug_message("\n");
 		}
 #endif
+#if defined(USE_SDL2)
+		fprintf(stderr,"IFEDBG: %s\n",fatal_tmp);
+#endif
 	}
 }
 
