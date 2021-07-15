@@ -43,7 +43,7 @@ void IFEKeyboardProcessRawToCooked(const IFEKeyEvent &ev) {
 		SCHRMAP(IFEKEY_ESCAPE,                           27,     0,      0,      0);
 		SCHRMAP(IFEKEY_BACKSPACE,                        8,      0,      0,      0);
 		SCHRMAP(IFEKEY_TAB,                              9,      0,      0,      0);
-		SCHRMAP(IFEKEY_SPACE,                            ' ',    ' ',    0,      0);
+		SCHRMAP(IFEKEY_SPACE,                            32,     32,     0,      0);
 		default: break;
 	}
 
