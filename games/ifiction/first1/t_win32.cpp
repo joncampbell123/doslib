@@ -411,14 +411,7 @@ void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
 #undef MAP
 }
 
-void Win32PopupSysMenu(void) {
-	DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
-	DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_SPACE,0x00000001u);
-	DefWindowProc(hwndMain,WM_SYSKEYUP,VK_SPACE,0xC0000001u);
-	DefWindowProc(hwndMain,WM_SYSKEYUP,VK_MENU,0xC0000001u);
-}
-
-void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
+void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,UINT msg,bool down) {
 	IFEKeyEvent ke;
 
 	if (w == VK_CONTROL || w == VK_LCONTROL || w == VK_RCONTROL ||
@@ -440,9 +433,26 @@ void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
 	 *      will always allow Alt+Tab to work no matter what we intercept
 	 *      for that reason. */
 	if (win32_mod_flags & (IFEKeyEvent_FLAG_LALT|IFEKeyEvent_FLAG_RALT)) {
+		/* If the shortcut is recognized, then call DefWindowProc() first with a fake
+		 * event as if pressing the Alt key, then call DefWindowProc() with the current
+		 * message.
+		 *
+		 * What this allows is the game to continue running even if the user merely
+		 * taps the Alt key, but allows two well known Windows keyboard shortcuts to
+		 * work properly. It also allows other Alt key combinations to be sent properly
+		 * to the game.
+		 *
+		 * Did you know that in Windows 3.1, you can prevent the user from using Alt+Tab
+		 * to switch away from your window if you intercept all WM_SYSKEYDOWN messages? */
 		if (w == VK_SPACE) {
 			IFEDBG("ALT+Space detected, Windows user is attempting to access system menu");
-			Win32PopupSysMenu();
+			DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
+			DefWindowProc(hwndMain,msg,w,l);
+		}
+		else if (w == VK_TAB) {
+			IFEDBG("ALT+Tab detected, Windows user is attempting to switch tasks");
+			DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
+			DefWindowProc(hwndMain,msg,w,l);
 		}
 	}
 
@@ -512,11 +522,11 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			break;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
-			p_win32_ProcessKeyEvent(wParam,lParam,true);
+			p_win32_ProcessKeyEvent(wParam,lParam,uMsg,true);
 			break;
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
-			p_win32_ProcessKeyEvent(wParam,lParam,false);
+			p_win32_ProcessKeyEvent(wParam,lParam,uMsg,false);
 			break;
 		case WM_CHAR:
 			p_win32_ProcessCharEvent(wParam,lParam);
