@@ -16,6 +16,15 @@ struct IFECookedKeyEvent {
 
 #define IFEKeyEvent_FLAG_DOWN				(1u << 0u)
 
+#define IFEKeyQueueSize		256
+#define IFECookedKeyQueueSize	256
+
+extern IFEKeyEvent 		IFEKeyQueue[IFEKeyQueueSize];
+extern unsigned short		IFEKeyQueueHead,IFEKeyQueueTail;
+
+extern IFECookedKeyEvent	IFECookedKeyQueue[IFECookedKeyQueueSize];
+extern unsigned short		IFECookedKeyQueueHead,IFECookedKeyQueueTail;
+
 /* ripped from SDL2 scan codes, development time is short */
 enum IFEKeyCode {
     IFEKEY_UNKNOWN = 0,
