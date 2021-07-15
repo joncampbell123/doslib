@@ -25,6 +25,10 @@ extern unsigned short		IFEKeyQueueHead,IFEKeyQueueTail;
 extern IFECookedKeyEvent	IFECookedKeyQueue[IFECookedKeyQueueSize];
 extern unsigned short		IFECookedKeyQueueHead,IFECookedKeyQueueTail;
 
+void IFECookedKeyQueueEmpty(void);
+void IFEKeyQueueEmptyAll(void);
+void IFEKeyQueueEmpty(void);
+
 /* ripped from SDL2 scan codes, development time is short */
 enum IFEKeyCode {
     IFEKEY_UNKNOWN = 0,
