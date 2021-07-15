@@ -397,10 +397,21 @@ void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,bool down) {
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
 
-	/* FIXME: Windows provides WM_CHAR and WM_UNICHAR to received cooked input.
-	 *        This code should not called ProcessRawToCooked but should instead
-	 *        add WM_CHAR/WM_UNICHAR to the cooked queue directly. */
-	IFEKeyboardProcessRawToCooked(ke);
+	/* There is no need to do the translation to cooked, Windows provides it for us */
+}
+
+void p_win32_ProcessCharEvent(WPARAM w,LPARAM l) {
+	(void)l;
+
+	if (w != 0) {
+		IFECookedKeyEvent cke;
+
+		memset(&cke,0,sizeof(cke));
+		cke.code = (uint32_t)w;
+
+		if (!IFECookedKeyQueue.add(cke))
+			IFEDBG("ProcessKeyboardEvent: Cooked queue full");
+	}
 }
 
 LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
@@ -419,6 +430,9 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			break;
 		case WM_KEYUP:
 			p_win32_ProcessKeyEvent(wParam,lParam,false);
+			break;
+		case WM_CHAR:
+			p_win32_ProcessCharEvent(wParam,lParam);
 			break;
 		case WM_QUERYNEWPALETTE:
 			if (winScreenIsPal && hwndMainPAL != NULL) {
