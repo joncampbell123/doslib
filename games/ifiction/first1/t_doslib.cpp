@@ -55,6 +55,8 @@ uint32_t			keyb_mod=0;
 
 IFEMouseStatus			ifemousestat;
 
+/* NTS: Do not attempt a protected mode INT 33h driver callback routine, it won't work and will crash a lot */
+
 /* read keyboard buffer */
 int keybirq_read_buf(void) {
 	int r = -1;
@@ -74,7 +76,7 @@ int keybirq_read_buf(void) {
 /* IRQ 1 keyboard interrupt */
 void __interrupt keybirq() {
 	while (inp(K8042_STATUS) & 0x01) {
-		unsigned char np = keybirq_tail + 1;
+		unsigned char np = (unsigned char)(keybirq_tail + 1u);
 
 		if (np >= sizeof(keybirq_buf))
 			np = 0;
@@ -376,6 +378,10 @@ static void p_CheckKeyboard(void) {
 static void p_CheckMouse(void) {
 	unsigned short btn=0;
 	signed short x=0,y=0;
+	bool moved=false;
+	IFEMouseEvent me;
+
+	memset(&me,0,sizeof(me));
 
 	__asm {
 		mov	ax,3		; read position and button status
@@ -385,10 +391,43 @@ static void p_CheckMouse(void) {
 		mov	y,dx		; DX=y coordinate
 	}
 
+	me.pstatus = ifemousestat.status;
+
+	if (btn & 1u)
+		ifemousestat.status |= IFEMouseStatus_LBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_LBUTTON;
+
+	if (btn & 2u)
+		ifemousestat.status |= IFEMouseStatus_RBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_RBUTTON;
+
+	if (btn & 4u)
+		ifemousestat.status |= IFEMouseStatus_MBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_MBUTTON;
+
 	if (ifemousestat.x != x || ifemousestat.y != y) {
-		IFEDBG("INT 33h mouse x=%d y=%d",x,y);
 		ifemousestat.x = x;
 		ifemousestat.y = y;
+		moved = true;
+	}
+
+	me.status = ifemousestat.status;
+
+	if (moved || ((me.status^me.pstatus) & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON)) != 0) {
+		IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x",
+			ifemousestat.x,
+			ifemousestat.y,
+			(unsigned int)me.pstatus,
+			(unsigned int)me.status);
+	}
+
+	/* Add only button events */
+	if ((me.status^me.pstatus) & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON)) {
+		if (!IFEMouseQueue.add(me))
+			IFEDBG("Mouse event overrun");
 	}
 }
 
@@ -416,7 +455,7 @@ static void p_ShutdownVideo(void) {
 	/* IBM PC/AT */
 
 	/* reset mouse */
-	if (1) { /* TODO: If someday we support an alternate to INT 33h */
+	{ /* TODO: If someday we support an alternate to INT 33h */
 		__asm {
 			mov	ax,0		; reset driver and read status
 			int	33h
@@ -548,8 +587,8 @@ static void p_InitVideo(void) {
 	 * but they are oblivious to VESA BIOS modes and we will need to set the cursor range
 	 * for it */
 	{
-		unsigned short w=(unsigned short)ifevidinfo_doslib.width-1;
-		unsigned short h=(unsigned short)ifevidinfo_doslib.height-1;
+		unsigned short w=(unsigned short)(ifevidinfo_doslib.width-1u);
+		unsigned short h=(unsigned short)(ifevidinfo_doslib.height-1u);
 
 		__asm {
 			mov	ax,7		; set horizontal cursor range
