@@ -29,6 +29,7 @@ Uint32				sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid 
 bool				sdl_signal_to_quit = false;
 ifevidinfo_t			ifevidinfo_sdl2;
 IFEMouseStatus			ifemousestat;
+bool				mousecap_on = false;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -157,6 +158,80 @@ static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
 	IFEKeyboardProcessRawToCooked(ke);
 }
 
+void priv_ProcessMouseMotion(const SDL_MouseMotionEvent &ev) {
+	/* ignore fake touchscreen mouse motion, in favor of touch screen events */
+	if (ev.which == SDL_TOUCH_MOUSEID) return;
+
+	if (ifemousestat.x != ev.x || ifemousestat.y != ev.y) {
+		ifemousestat.x = ev.x;
+		ifemousestat.y = ev.y;
+	}
+
+	IFEDBG("Mouse move x=%d y=%d status=%08x",
+		ifemousestat.x,
+		ifemousestat.y,
+		(unsigned int)ifemousestat.status);
+}
+
+void priv_CaptureMouse(const bool cap) {
+	if (mousecap_on != cap) {
+		SDL_CaptureMouse((SDL_bool)cap);
+		mousecap_on = cap;
+	}
+}
+
+void priv_ProcessMouseButton(const SDL_MouseButtonEvent &ev) {
+	IFEMouseEvent me;
+
+	/* ignore fake touchscreen mouse motion, in favor of touch screen events */
+	if (ev.which == SDL_TOUCH_MOUSEID) return;
+
+	memset(&me,0,sizeof(me));
+	me.pstatus = ifemousestat.status;
+
+	if (ifemousestat.x != ev.x || ifemousestat.y != ev.y) {
+		ifemousestat.x = ev.x;
+		ifemousestat.y = ev.y;
+	}
+
+	if (ev.button == SDL_BUTTON_LEFT) {
+		if (ev.state == SDL_PRESSED)
+			ifemousestat.status |= IFEMouseStatus_LBUTTON;
+		else if (ev.state == SDL_RELEASED)
+			ifemousestat.status &= ~IFEMouseStatus_LBUTTON;
+	}
+	else if (ev.button == SDL_BUTTON_MIDDLE) {
+		if (ev.state == SDL_PRESSED)
+			ifemousestat.status |= IFEMouseStatus_MBUTTON;
+		else if (ev.state == SDL_RELEASED)
+			ifemousestat.status &= ~IFEMouseStatus_MBUTTON;
+	}
+	else if (ev.button == SDL_BUTTON_RIGHT) {
+		if (ev.state == SDL_PRESSED)
+			ifemousestat.status |= IFEMouseStatus_RBUTTON;
+		else if (ev.state == SDL_RELEASED)
+			ifemousestat.status &= ~IFEMouseStatus_RBUTTON;
+	}
+
+	if (ifemousestat.status & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON))
+		priv_CaptureMouse(true);
+	else
+		priv_CaptureMouse(false);
+
+	me.x = ifemousestat.x;
+	me.y = ifemousestat.y;
+	me.status = ifemousestat.status;
+
+	IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x",
+		ifemousestat.x,
+		ifemousestat.y,
+		(unsigned int)me.pstatus,
+		(unsigned int)me.status);
+
+	if (!IFEMouseQueue.add(me))
+		IFEDBG("Mouse event overrun");
+}
+
 static void priv_ProcessEvent(const SDL_Event &ev) {
 	switch (ev.type) {
 		case SDL_QUIT:
@@ -165,6 +240,13 @@ static void priv_ProcessEvent(const SDL_Event &ev) {
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
 			priv_ProcessKeyboardEvent(ev.key);
+			break;
+		case SDL_MOUSEMOTION:
+			priv_ProcessMouseMotion(ev.motion);
+			break;
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+			priv_ProcessMouseButton(ev.button);
 			break;
 		default:
 			break;
@@ -205,6 +287,7 @@ static void p_EndScreenDraw(void) {
 }
 
 static void p_ShutdownVideo(void) {
+	priv_CaptureMouse(false);
 	if (sdl_game_surface != NULL) {
 		SDL_FreeSurface(sdl_game_surface);
 		sdl_game_surface = NULL;
@@ -225,6 +308,7 @@ static void p_InitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
 
+	mousecap_on = false;
 	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
 	memset(&ifemousestat,0,sizeof(ifemousestat));
 
@@ -274,10 +358,14 @@ IFEMouseStatus *p_GetMouseStatus(void) {
 	return &ifemousestat;
 }
 
-void p_ClearMouseRelativeMotion(void) {
-	ifemousestat.rx = 0;
-	ifemousestat.ry = 0;
-	ifemousestat.status &= ~IFEMouseStatus_RELMOVED;
+void p_FlushMouseInput(void) {
+	IFEMouseQueueEmptyAll();
+	ifemousestat.status = 0;
+	priv_CaptureMouse(false);
+}
+
+IFEMouseEvent *p_GetMouseInput(void) {
+	return IFEMouseQueue.get();
 }
 
 ifeapi_t ifeapi_sdl2 = {
@@ -298,7 +386,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_GetRawKeyboardInput,
 	p_GetCookedKeyboardInput,
 	p_GetMouseStatus,
-	p_ClearMouseRelativeMotion
+	p_FlushMouseInput,
+	p_GetMouseInput
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {

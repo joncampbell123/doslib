@@ -35,7 +35,8 @@ typedef void ifefunc_FlushKeyboardInput_t(void); /* NTS: This flushes the framew
 typedef IFEKeyEvent *ifefunc_GetRawKeyboardInput_t(void);
 typedef IFECookedKeyEvent *ifefunc_GetCookedKeyboardInput_t(void);
 typedef IFEMouseStatus *ifefunc_GetMouseStatus_t(void);
-typedef void ifefunc_ClearMouseRelativeMotion_t(void);
+typedef void ifefunc_FlushMouseInput_t(void);
+typedef IFEMouseEvent *ifefunc_GetMouseInput_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -55,7 +56,8 @@ struct ifeapi_t {
 	ifefunc_GetRawKeyboardInput_t*				GetRawKeyboardInput;
 	ifefunc_GetCookedKeyboardInput_t*			GetCookedKeyboardInput;
 	ifefunc_GetMouseStatus_t*				GetMouseStatus;
-	ifefunc_ClearMouseRelativeMotion_t*			ClearMouseRelativeMotion;
+	ifefunc_FlushMouseInput_t*				FlushMouseInput;
+	ifefunc_GetMouseInput_t*				GetMouseInput;
 };
 
 extern ifeapi_t *ifeapi;
