@@ -50,6 +50,8 @@ unsigned char			p_keybin[3];
 unsigned char			p_keybinpos=0;
 unsigned char			p_keybinlen=0;
 
+uint32_t			keyb_mod=0;
+
 /* read keyboard buffer */
 int keybirq_read_buf(void) {
 	int r = -1;
@@ -77,7 +79,7 @@ void __interrupt keybirq() {
 		if (np == keybirq_head)
 			break;
 
-		keybirq_buf[np] = inp(K8042_DATA);
+		keybirq_buf[keybirq_tail] = inp(K8042_DATA);
 		keybirq_tail = np;
 	}
 
@@ -186,6 +188,11 @@ static bool p_UserWantsToQuit(void) {
 static void p_ProcessScanCode(void) {
 	IFEKeyEvent ke;
 
+#define SETMOD(f,c) do { \
+	if (c) keyb_mod |= f; \
+	else keyb_mod &= ~f; } while (0)
+#define TOGMOD(f,c) do { \
+	if (c) keyb_mod ^= f; } while (0)
 #define MAP(x,y) \
 	case x: ke.code = (uint32_t)y; break;
 
@@ -206,8 +213,19 @@ static void p_ProcessScanCode(void) {
 	else if (p_keybinlen == 1) {
 		IFEDBG("Key 0x%02x",p_keybin[0]);
 
+		/* watch shift states */
+		switch (p_keybin[0]&0x7Fu) {
+			case 0x2A: SETMOD(IFEKeyEvent_FLAG_LSHIFT,!(p_keybin[0]&0x80)); break;
+			case 0x36: SETMOD(IFEKeyEvent_FLAG_RSHIFT,!(p_keybin[0]&0x80)); break;
+			case 0x1D: SETMOD(IFEKeyEvent_FLAG_LCTRL,!(p_keybin[0]&0x80)); break;
+			case 0x38: SETMOD(IFEKeyEvent_FLAG_LALT,!(p_keybin[0]&0x80)); break;
+			case 0x3A: TOGMOD(IFEKeyEvent_FLAG_CAPS,!(p_keybin[0]&0x80)); break;
+			case 0x45: TOGMOD(IFEKeyEvent_FLAG_NUMLOCK,!(p_keybin[0]&0x80)); break;
+			default: break;
+		}
+
 		ke.raw_code = (uint32_t)(p_keybin[0] & 0x7Fu);
-		ke.flags = (p_keybin[0] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
+		ke.flags = ((p_keybin[0] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN) | keyb_mod; /* bit 7 clear if make code */
 
 		switch (p_keybin[0]&0x7Fu) {
 			MAP(0x1C,IFEKEY_RETURN);
@@ -256,6 +274,11 @@ static void p_ProcessScanCode(void) {
 			default: break;
 		}
 	}
+
+	IFEDBG("Key event raw=%08x code=%08x flags=%08x",
+		(unsigned long)ke.raw_code,
+		(unsigned long)ke.code,
+		(unsigned long)ke.flags);
 
 	if (!IFEKeyQueue.add(ke))
 		IFEDBG("ProcessKeyboardEvent: Queue full");
