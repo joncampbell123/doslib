@@ -169,10 +169,8 @@ void priv_ProcessMouseMotion(const SDL_MouseMotionEvent &ev) {
 	/* ignore fake touchscreen mouse motion, in favor of touch screen events, and if not faking from mouse motion */
 	if (ev.which == SDL_TOUCH_MOUSEID || ev.which == touchscreen_touch_lock || touchscreen_finger_lock != no_finger_id || touchscreen_touch_lock != no_touch_id) return;
 
-	if (ifemousestat.x != ev.x || ifemousestat.y != ev.y) {
-		ifemousestat.x = ev.x;
-		ifemousestat.y = ev.y;
-	}
+	ifemousestat.x = ev.x;
+	ifemousestat.y = ev.y;
 
 	IFEDBG("Mouse move x=%d y=%d status=%08x which=%08x",
 		ifemousestat.x,
@@ -197,10 +195,8 @@ void priv_ProcessMouseButton(const SDL_MouseButtonEvent &ev) {
 	memset(&me,0,sizeof(me));
 	me.pstatus = ifemousestat.status;
 
-	if (ifemousestat.x != ev.x || ifemousestat.y != ev.y) {
-		ifemousestat.x = ev.x;
-		ifemousestat.y = ev.y;
-	}
+	ifemousestat.x = ev.x;
+	ifemousestat.y = ev.y;
 
 	if (ev.button == SDL_BUTTON_LEFT) {
 		if (ev.state == SDL_PRESSED)
@@ -250,10 +246,8 @@ static void UpdateMousePosFromTouchFinger(const SDL_TouchFingerEvent &ev) {
 	if (x > (int)(ifevidinfo_sdl2.width-1)) x = (int)(ifevidinfo_sdl2.width-1);
 	if (y > (int)(ifevidinfo_sdl2.height-1)) y = (int)(ifevidinfo_sdl2.height-1);
 
-	if (ifemousestat.x != x || ifemousestat.y != y) {
-		ifemousestat.x = x;
-		ifemousestat.y = y;
-	}
+	ifemousestat.x = x;
+	ifemousestat.y = y;
 
 	IFEDBG("Touch mouse move x=%d y=%d status=%08x finger=%08x touch=%08x",
 		ifemousestat.x,
