@@ -95,6 +95,7 @@ int dos_ltp_probe() {
 			dos_ltp_info.cr4 = 0x00000000UL;
 		}
 		else {
+			/* FIXME: Reading CR0 here doesn't bother DOS32A or DOS4/GW but CWSDPMI (the standard ring-3 version) doesn't like it */
 			uint32_t r0=0,r3=0,r4=0;
 			__asm {
 				xor	eax,eax
