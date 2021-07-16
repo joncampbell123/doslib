@@ -38,6 +38,63 @@ const char*				hwndMainClassName = "IFICTIONWIN32";
 HINSTANCE				myInstance = NULL;
 HWND					hwndMain = NULL;
 uint32_t				win32_mod_flags = 0;
+IFEMouseStatus				ifemousestat;
+bool					mousecap_on = false;
+
+void priv_CaptureMouse(const bool cap) {
+	if (cap && !mousecap_on) {
+		SetCapture(hwndMain);
+		mousecap_on = true;
+	}
+	else if (!cap && mousecap_on) {
+		ReleaseCapture();
+		mousecap_on = false;
+	}
+}
+
+void priv_ProcessMouseMotion(const WPARAM wParam,int x,int y) {
+	IFEMouseEvent me;
+
+	ifemousestat.x = x;
+	ifemousestat.y = y;
+
+	memset(&me,0,sizeof(me));
+	me.pstatus = ifemousestat.status;
+
+	/* wParam for mouse messages indicate which buttons are down */
+	if (wParam & MK_LBUTTON)
+		ifemousestat.status |= IFEMouseStatus_LBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_LBUTTON;
+
+	if (wParam & MK_MBUTTON)
+		ifemousestat.status |= IFEMouseStatus_MBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_MBUTTON;
+
+	if (wParam & MK_RBUTTON)
+		ifemousestat.status |= IFEMouseStatus_RBUTTON;
+	else
+		ifemousestat.status &= ~IFEMouseStatus_RBUTTON;
+
+	if (ifemousestat.status & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON))
+		priv_CaptureMouse(true);
+	else
+		priv_CaptureMouse(false);
+
+	me.x = ifemousestat.x;
+	me.y = ifemousestat.y;
+	me.status = ifemousestat.status;
+
+	IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x",
+		ifemousestat.x,
+		ifemousestat.y,
+		(unsigned int)me.pstatus,
+		(unsigned int)me.status);
+
+	if (!IFEMouseQueue.add(me))
+		IFEDBG("Mouse event overrun");
+}
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -138,6 +195,7 @@ static void p_EndScreenDraw(void) {
 }
 
 static void p_ShutdownVideo(void) {
+	priv_CaptureMouse(false);
 	if (hwndMainPAL != NULL) {
 		DeleteObject((HGDIOBJ)hwndMainPAL);
 		hwndMainPALPrev = NULL;
@@ -164,6 +222,7 @@ static void p_InitVideo(void) {
 	if (hwndMain == NULL) {
 		int sw,sh;
 
+		mousecap_on = false;
 		memset(&ifevidinfo_win32,0,sizeof(ifevidinfo_win32));
 
 		ifevidinfo_win32.width = 640;
@@ -303,6 +362,20 @@ IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
 	return IFECookedKeyQueue.get();
 }
 
+IFEMouseStatus *p_GetMouseStatus(void) {
+	return &ifemousestat;
+}
+
+void p_FlushMouseInput(void) {
+	IFEMouseQueueEmptyAll();
+	ifemousestat.status = 0;
+	priv_CaptureMouse(false);
+}
+
+IFEMouseEvent *p_GetMouseInput(void) {
+	return IFEMouseQueue.get();
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -319,7 +392,10 @@ ifeapi_t ifeapi_win32 = {
 	p_InitVideo,
 	p_FlushKeyboardInput,
 	p_GetRawKeyboardInput,
-	p_GetCookedKeyboardInput
+	p_GetCookedKeyboardInput,
+	p_GetMouseStatus,
+	p_FlushMouseInput,
+	p_GetMouseInput
 };
 
 void UpdateWin32ModFlags(void) {
@@ -519,6 +595,15 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_DESTROY:
 			if (!winIsDestroying)
 				winQuit = true;
+			break;
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+			priv_ProcessMouseMotion(wParam,(int)LOWORD(lParam),(int)HIWORD(lParam));
 			break;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
