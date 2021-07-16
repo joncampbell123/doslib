@@ -41,6 +41,7 @@ uint16_t			pit_prev = 0;
 ifevidinfo_t			ifevidinfo_doslib;
 
 /* keyboard controller and IRQ 1, IBM PC/AT 8042 */
+bool				keybirq_quit = false;
 bool				keybirq_init = false;
 void				(__interrupt *keybirq_old)() = NULL;
 unsigned char			keybirq_buf[64];
@@ -181,7 +182,7 @@ static ifevidinfo_t* p_GetVidInfo(void) {
 }
 
 static bool p_UserWantsToQuit(void) {
-	return false;
+	return keybirq_quit;
 }
 
 /* Assume, as all DOS machines have it, that the 8042 is emitting scan code set 1 */
@@ -206,6 +207,19 @@ static void p_ProcessScanCode(void) {
 	}
 	else if (p_keybinlen == 2) {
 		IFEDBG("Key 0x%02x 0x%02x",p_keybin[0],p_keybin[1]);
+
+		/* CTRL+Break. Note that pressing the key immediately sends make+break without
+		 * the user having to release the key. In this engine, CTRL+BREAK is the signal
+		 * to quit. */
+		if (p_keybin[1] == 0xC6) {
+			/* match break code */
+			keybirq_quit = true;
+			IFEDBG("User wants to quit (CTRL+BREAK)");
+		}
+		else if (p_keybin[1] == 0x46) {
+			/* make code, ignore */
+			return;
+		}
 
 		/* watch shift states */
 		switch (p_keybin[1]&0x7Fu) {
