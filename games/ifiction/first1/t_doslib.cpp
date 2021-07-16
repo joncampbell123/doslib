@@ -101,6 +101,13 @@ void keybirq_hook(void) {
 		keybirq_old = _dos_getvect(irq2int(1));
 		_dos_setvect(irq2int(1),keybirq);
 
+		/* drain BIOS keyboard buffer */
+		while (kbhit()) getch();
+
+		/* alter BIOS data area to clear BIOS keyboard shift states */
+		*((unsigned char far*)MK_FP(0x40,0x17)) &= ~0x0F; // clear alt/ctrl/lshift/rshift down status
+		*((unsigned char far*)MK_FP(0x40,0x18))  =  0x00; // clear other key down status
+
 		/* ready to work */
 		p8259_unmask(1); /* unmask the IRQ */
 
