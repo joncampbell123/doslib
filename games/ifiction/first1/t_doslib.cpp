@@ -378,6 +378,7 @@ static void p_CheckKeyboard(void) {
 static void p_CheckMouse(void) {
 	unsigned short btn=0,cnt=0;
 	signed short x=0,y=0;
+	bool latent=false;
 	bool moved=false;
 	IFEMouseEvent me;
 
@@ -418,8 +419,10 @@ static void p_CheckMouse(void) {
 		int	33h
 		mov	cnt,bx		; BX=number of times the button was pressed
 	}
-	if (cnt != 0) /* if any clicks recorded, then act as if the left button is done because it WAS */
+	if (cnt != 0) { /* if any clicks recorded, then act as if the left button is done because it WAS */
 		ifemousestat.status |= IFEMouseStatus_LBUTTON;
+		latent = true;
+	}
 
 	if (ifemousestat.x != x || ifemousestat.y != y) {
 		ifemousestat.x = x;
@@ -430,11 +433,12 @@ static void p_CheckMouse(void) {
 	me.status = ifemousestat.status;
 
 	if (moved || ((me.status^me.pstatus) & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON)) != 0) {
-		IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x",
+		IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x latent=%u",
 			ifemousestat.x,
 			ifemousestat.y,
 			(unsigned int)me.pstatus,
-			(unsigned int)me.status);
+			(unsigned int)me.status,
+			latent?1:0);
 	}
 
 	/* Add only button events */
