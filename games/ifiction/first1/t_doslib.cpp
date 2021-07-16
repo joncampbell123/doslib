@@ -376,7 +376,7 @@ static void p_CheckKeyboard(void) {
 }
 
 static void p_CheckMouse(void) {
-	unsigned short btn=0;
+	unsigned short btn=0,cnt=0;
 	signed short x=0,y=0;
 	bool moved=false;
 	IFEMouseEvent me;
@@ -407,6 +407,19 @@ static void p_CheckMouse(void) {
 		ifemousestat.status |= IFEMouseStatus_MBUTTON;
 	else
 		ifemousestat.status &= ~IFEMouseStatus_MBUTTON;
+
+	/* read position and button status shows instantaneous button status at this moment.
+	 * if the program is moving slowly, it might miss button clicks that way, so ask the
+	 * mouse driver if any button clicks happened since we last checked. the call will
+	 * clear the count after returning it. */
+	__asm {
+		mov	ax,5		; return button press data
+		mov	bx,0		; left mouse button
+		int	33h
+		mov	cnt,bx		; BX=number of times the button was pressed
+	}
+	if (cnt != 0) /* if any clicks recorded, then act as if the left button is done because it WAS */
+		ifemousestat.status |= IFEMouseStatus_LBUTTON;
 
 	if (ifemousestat.x != x || ifemousestat.y != y) {
 		ifemousestat.x = x;
