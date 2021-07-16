@@ -202,13 +202,20 @@ static void p_ProcessScanCode(void) {
 		IFEDBG("Key 0x%02x 0x%02x 0x%02x",p_keybin[0],p_keybin[1],p_keybin[2]);
 
 		ke.raw_code = ((uint32_t)(p_keybin[2] & 0x7Fu)) | ((uint32_t)(p_keybin[1] & 0x7Fu) << 8u) | (uint32_t)0xE10000; /* this does not happen unless 0xE1 <xx> <xx> */
-		ke.flags = (p_keybin[2] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
+		ke.flags = ((p_keybin[2] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN) | keyb_mod; /* bit 7 clear if make code */
 	}
 	else if (p_keybinlen == 2) {
 		IFEDBG("Key 0x%02x 0x%02x",p_keybin[0],p_keybin[1]);
 
+		/* watch shift states */
+		switch (p_keybin[1]&0x7Fu) {
+			case 0x1D: SETMOD(IFEKeyEvent_FLAG_RCTRL,!(p_keybin[1]&0x80)); break;
+			case 0x38: SETMOD(IFEKeyEvent_FLAG_RALT,!(p_keybin[1]&0x80)); break;
+			default: break;
+		}
+
 		ke.raw_code = ((uint32_t)(p_keybin[1] & 0x7Fu)) | (uint32_t)0xE000; /* this does not happen unless 0xE0 <xx> */
-		ke.flags = (p_keybin[1] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
+		ke.flags = ((p_keybin[1] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN) | keyb_mod; /* bit 7 clear if make code */
 	}
 	else if (p_keybinlen == 1) {
 		IFEDBG("Key 0x%02x",p_keybin[0]);
