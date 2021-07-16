@@ -323,32 +323,38 @@ static void p_ProcessScanCode(void) {
 static void p_CheckKeyboard(void) {
 	int c;
 
-	if (p_keybinpos == 0) {
-		c = keybirq_read_buf();
-		if (c < 0) return;
+	do {
+		if (p_keybinpos == 0) {
+			c = keybirq_read_buf();
+			if (c < 0) return;
 
-		p_keybin[p_keybinpos++] = (unsigned char)c;
+			p_keybin[p_keybinpos++] = (unsigned char)c;
 
-		if (c == 0xE1) /* 0xE1 <xx> <xx> */
-			p_keybinlen=3;
-		else if (c == 0xE0) /* 0xE0 <xx> */
-			p_keybinlen=2;
+			if (c == 0xE1) /* 0xE1 <xx> <xx> */
+				p_keybinlen=3;
+			else if (c == 0xE0) /* 0xE0 <xx> */
+				p_keybinlen=2;
+			else {
+				p_keybinlen=1;
+				p_ProcessScanCode();
+				p_keybinpos=0;
+			}
+		}
+		else if (p_keybinpos < p_keybinlen) {
+			c = keybirq_read_buf();
+			if (c < 0) return;
+
+			p_keybin[p_keybinpos++] = (unsigned char)c;
+			if (p_keybinpos >= p_keybinlen) {
+				p_ProcessScanCode();
+				p_keybinpos=0;
+			}
+		}
 		else {
-			p_keybinlen=1;
 			p_ProcessScanCode();
 			p_keybinpos=0;
 		}
-	}
-	else if (p_keybinpos < p_keybinlen) {
-		c = keybirq_read_buf();
-		if (c < 0) return;
-
-		p_keybin[p_keybinpos++] = (unsigned char)c;
-		if (p_keybinpos >= p_keybinlen) {
-			p_ProcessScanCode();
-			p_keybinpos=0;
-		}
-	}
+	} while (1);
 }
 
 static void p_CheckEvents(void) {
