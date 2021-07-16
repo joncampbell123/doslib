@@ -31,6 +31,13 @@ ifevidinfo_t			ifevidinfo_sdl2;
 IFEMouseStatus			ifemousestat;
 bool				mousecap_on = false;
 
+static const SDL_TouchID	no_touch_id = (SDL_TouchID)(0xFFFFFFFFul);
+static const SDL_FingerID	no_finger_id = (SDL_FingerID)(0xFFFFFFFFul);
+
+/* SDL2 supports touchscreen devices. Allow touchscreen input to fake mouse input */
+SDL_FingerID			touchscreen_finger_lock = no_finger_id;
+SDL_TouchID			touchscreen_touch_lock = no_touch_id;
+
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
 
@@ -159,18 +166,19 @@ static void priv_ProcessKeyboardEvent(const SDL_KeyboardEvent &ev) {
 }
 
 void priv_ProcessMouseMotion(const SDL_MouseMotionEvent &ev) {
-	/* ignore fake touchscreen mouse motion, in favor of touch screen events */
-	if (ev.which == SDL_TOUCH_MOUSEID) return;
+	/* ignore fake touchscreen mouse motion, in favor of touch screen events, and if not faking from mouse motion */
+	if (ev.which == SDL_TOUCH_MOUSEID || ev.which == touchscreen_touch_lock || touchscreen_finger_lock != no_finger_id || touchscreen_touch_lock != no_touch_id) return;
 
 	if (ifemousestat.x != ev.x || ifemousestat.y != ev.y) {
 		ifemousestat.x = ev.x;
 		ifemousestat.y = ev.y;
 	}
 
-	IFEDBG("Mouse move x=%d y=%d status=%08x",
+	IFEDBG("Mouse move x=%d y=%d status=%08x which=%08x",
 		ifemousestat.x,
 		ifemousestat.y,
-		(unsigned int)ifemousestat.status);
+		(unsigned int)ifemousestat.status,
+		(unsigned int)ev.which);
 }
 
 void priv_CaptureMouse(const bool cap) {
@@ -184,7 +192,7 @@ void priv_ProcessMouseButton(const SDL_MouseButtonEvent &ev) {
 	IFEMouseEvent me;
 
 	/* ignore fake touchscreen mouse motion, in favor of touch screen events */
-	if (ev.which == SDL_TOUCH_MOUSEID) return;
+	if (ev.which == SDL_TOUCH_MOUSEID || ev.which == touchscreen_touch_lock || touchscreen_finger_lock != no_finger_id || touchscreen_touch_lock != no_touch_id) return;
 
 	memset(&me,0,sizeof(me));
 	me.pstatus = ifemousestat.status;
@@ -222,14 +230,63 @@ void priv_ProcessMouseButton(const SDL_MouseButtonEvent &ev) {
 	me.y = ifemousestat.y;
 	me.status = ifemousestat.status;
 
-	IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x",
+	IFEDBG("Mouse event x=%d y=%d pstatus=%08x status=%08x which=%08x",
 		ifemousestat.x,
 		ifemousestat.y,
 		(unsigned int)me.pstatus,
-		(unsigned int)me.status);
+		(unsigned int)me.status,
+		(unsigned int)ev.which);
 
 	if (!IFEMouseQueue.add(me))
 		IFEDBG("Mouse event overrun");
+}
+
+static void UpdateMousePosFromTouchFinger(const SDL_TouchFingerEvent &ev) {
+	int x = (int)(ev.x * ifevidinfo_sdl2.width);
+	int y = (int)(ev.y * ifevidinfo_sdl2.height);
+
+	if (x < 0) x = 0;
+	if (y < 0) y = 0;
+	if (x > (int)(ifevidinfo_sdl2.width-1)) x = (int)(ifevidinfo_sdl2.width-1);
+	if (y > (int)(ifevidinfo_sdl2.height-1)) y = (int)(ifevidinfo_sdl2.height-1);
+
+	if (ifemousestat.x != x || ifemousestat.y != y) {
+		ifemousestat.x = x;
+		ifemousestat.y = y;
+	}
+
+	IFEDBG("Touch mouse move x=%d y=%d status=%08x finger=%08x touch=%08x",
+		ifemousestat.x,
+		ifemousestat.y,
+		(unsigned int)ifemousestat.status,
+		(unsigned int)ev.fingerId,
+		(unsigned int)ev.touchId);
+}
+
+static void priv_ProcessTouchscreenFinger(const SDL_TouchFingerEvent &ev) {
+	if (ev.type == SDL_FINGERDOWN) {
+		/* if finger touch, no current finger touch registered, and none of the mouse buttons are down */
+		if (touchscreen_finger_lock == no_finger_id && touchscreen_touch_lock == no_touch_id &&
+			(ifemousestat.status & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON)) == 0) {
+			ifemousestat.status |= IFEMouseStatus_LBUTTON;
+			touchscreen_finger_lock = ev.fingerId;
+			touchscreen_touch_lock = ev.touchId;
+			UpdateMousePosFromTouchFinger(ev);
+		}
+	}
+	else if (ev.type == SDL_FINGERUP) {
+		if (touchscreen_finger_lock == ev.fingerId && touchscreen_touch_lock == ev.touchId) {
+			ifemousestat.status &= ~IFEMouseStatus_LBUTTON;
+			touchscreen_finger_lock = no_finger_id;
+			touchscreen_touch_lock = no_touch_id;
+			UpdateMousePosFromTouchFinger(ev);
+		}
+	}
+	else if (ev.type == SDL_FINGERMOTION) {
+		if (touchscreen_finger_lock == ev.fingerId && touchscreen_touch_lock == ev.touchId) {
+			UpdateMousePosFromTouchFinger(ev);
+		}
+	}
 }
 
 static void priv_ProcessEvent(const SDL_Event &ev) {
@@ -247,6 +304,11 @@ static void priv_ProcessEvent(const SDL_Event &ev) {
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			priv_ProcessMouseButton(ev.button);
+			break;
+		case SDL_FINGERDOWN:
+		case SDL_FINGERUP:
+		case SDL_FINGERMOTION:
+			priv_ProcessTouchscreenFinger(ev.tfinger);
 			break;
 		default:
 			break;
@@ -309,6 +371,8 @@ static void p_InitVideo(void) {
 		IFEFatalError("SDL2 failed to initialize");
 
 	mousecap_on = false;
+	touchscreen_touch_lock = no_touch_id;
+	touchscreen_finger_lock = no_finger_id;
 	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
 	memset(&ifemousestat,0,sizeof(ifemousestat));
 
