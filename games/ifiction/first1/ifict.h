@@ -6,6 +6,7 @@
 
 #include "palette.h"
 #include "keyboard.h"
+#include "mouse.h"
 
 struct ifevidinfo_t {
 	unsigned int						width,height;
@@ -33,6 +34,8 @@ typedef void ifefunc_InitVideo_t(void);
 typedef void ifefunc_FlushKeyboardInput_t(void); /* NTS: This flushes the framework's queue AND the host environment's queue if possible */
 typedef IFEKeyEvent *ifefunc_GetRawKeyboardInput_t(void);
 typedef IFECookedKeyEvent *ifefunc_GetCookedKeyboardInput_t(void);
+typedef IFEMouseStatus *ifefunc_GetMouseStatus_t(void);
+typedef void ifefunc_ClearMouseRelativeMotion_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -51,6 +54,8 @@ struct ifeapi_t {
 	ifefunc_FlushKeyboardInput_t*				FlushKeyboardInput;
 	ifefunc_GetRawKeyboardInput_t*				GetRawKeyboardInput;
 	ifefunc_GetCookedKeyboardInput_t*			GetCookedKeyboardInput;
+	ifefunc_GetMouseStatus_t*				GetMouseStatus;
+	ifefunc_ClearMouseRelativeMotion_t*			ClearMouseRelativeMotion;
 };
 
 extern ifeapi_t *ifeapi;

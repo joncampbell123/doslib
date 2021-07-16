@@ -28,6 +28,7 @@ SDL_Color			sdl_pal[256];
 Uint32				sdl_ticks_base = 0; /* use Uint32 type provided by SDL2 here to avoid problems */
 bool				sdl_signal_to_quit = false;
 ifevidinfo_t			ifevidinfo_sdl2;
+IFEMouseStatus			ifemousestat;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -225,6 +226,7 @@ static void p_InitVideo(void) {
 		IFEFatalError("SDL2 failed to initialize");
 
 	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
+	memset(&ifemousestat,0,sizeof(ifemousestat));
 
 	ifevidinfo_sdl2.width = 640;
 	ifevidinfo_sdl2.height = 480;
@@ -268,6 +270,16 @@ IFECookedKeyEvent *p_GetCookedKeyboardInput(void) {
 	return IFECookedKeyQueue.get();
 }
 
+IFEMouseStatus *p_GetMouseStatus(void) {
+	return &ifemousestat;
+}
+
+void p_ClearMouseRelativeMotion(void) {
+	ifemousestat.rx = 0;
+	ifemousestat.ry = 0;
+	ifemousestat.status &= ~IFEMouseStatus_RELMOVED;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -284,7 +296,9 @@ ifeapi_t ifeapi_sdl2 = {
 	p_InitVideo,
 	p_FlushKeyboardInput,
 	p_GetRawKeyboardInput,
-	p_GetCookedKeyboardInput
+	p_GetCookedKeyboardInput,
+	p_GetMouseStatus,
+	p_ClearMouseRelativeMotion
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {

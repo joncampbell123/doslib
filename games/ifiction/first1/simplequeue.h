@@ -1,4 +1,7 @@
 
+#ifndef IFE_SIMPLEQUEUE_H
+#define IFE_SIMPLEQUEUE_H
+
 template <typename T,const unsigned short QueueSize> class IFESimpleQueue {
 public:
 	IFESimpleQueue() : head(0), tail(0) { }
@@ -46,4 +49,6 @@ public:
 	unsigned short		head,tail;
 	T			queue[QueueSize];
 };
+
+#endif //IFE_SIMPLEQUEUE_H
 
