@@ -92,8 +92,11 @@ void priv_ProcessMouseMotion(const WPARAM wParam,int x,int y) {
 		(unsigned int)me.pstatus,
 		(unsigned int)me.status);
 
-	if (!IFEMouseQueue.add(me))
-		IFEDBG("Mouse event overrun");
+	/* Add only button events */
+	if ((me.status^me.pstatus) & (IFEMouseStatus_LBUTTON|IFEMouseStatus_MBUTTON|IFEMouseStatus_RBUTTON)) {
+		if (!IFEMouseQueue.add(me))
+			IFEDBG("Mouse event overrun");
+	}
 }
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
