@@ -95,24 +95,37 @@ int dos_ltp_probe() {
 			dos_ltp_info.cr4 = 0x00000000UL;
 		}
 		else {
-			/* FIXME: Reading CR0 here doesn't bother DOS32A or DOS4/GW but CWSDPMI (the standard ring-3 version) doesn't like it */
+			/* NTS: Only read cr0 if running at ring-0 (DOS32A or DOS4/GW). CWSDPMI runs us at ring-3 and will crash to DOS if we try.
+			 *      CWSDPMI also uses paging so more memory can be provided from a swap file. */
 			uint32_t r0=0,r3=0,r4=0;
+			unsigned short csv=0;
+
 			__asm {
-				xor	eax,eax
-				dec	eax
-
-				mov	eax,cr0
-				mov	r0,eax
-
-				mov	eax,cr3
-				mov	r3,eax
+				mov	csv,cs
 			}
 
-			if (cpu_flags & CPU_FLAG_CR4_EXISTS) {
+			if ((csv&3) == 0) {
 				__asm {
-					mov	eax,cr4
-					mov	r4,eax
+					xor	eax,eax
+					dec	eax
+
+					mov	eax,cr0
+					mov	r0,eax
+
+					mov	eax,cr3
+					mov	r3,eax
 				}
+
+				if (cpu_flags & CPU_FLAG_CR4_EXISTS) {
+					__asm {
+						mov	eax,cr4
+						mov	r4,eax
+					}
+				}
+			}
+			else {
+				/* we're ring-3, assume paging (e.g. CWSDPMI or DOS4/GW with EMM386) */
+				r0 = 0x80000001u; /* bit 31=paging bit 0=protected mode */
 			}
 
 			dos_ltp_info.cr0 = r0;
