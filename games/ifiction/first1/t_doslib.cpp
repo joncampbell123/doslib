@@ -182,16 +182,86 @@ static bool p_UserWantsToQuit(void) {
 	return false;
 }
 
+/* Assume, as all DOS machines have it, that the 8042 is emitting scan code set 1 */
 static void p_ProcessScanCode(void) {
+	IFEKeyEvent ke;
+
+#define MAP(x,y) \
+	case x: ke.code = (uint32_t)y; break;
+
+	memset(&ke,0,sizeof(ke));
+
 	if (p_keybinlen == 3) {
 		IFEDBG("Key 0x%02x 0x%02x 0x%02x",p_keybin[0],p_keybin[1],p_keybin[2]);
+
+		ke.raw_code = ((uint32_t)(p_keybin[2] & 0x7Fu)) | ((uint32_t)(p_keybin[1] & 0x7Fu) << 8u) | (uint32_t)0xE10000; /* this does not happen unless 0xE1 <xx> <xx> */
+		ke.flags = (p_keybin[2] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
 	}
 	else if (p_keybinlen == 2) {
 		IFEDBG("Key 0x%02x 0x%02x",p_keybin[0],p_keybin[1]);
+
+		ke.raw_code = ((uint32_t)(p_keybin[1] & 0x7Fu)) | (uint32_t)0xE000; /* this does not happen unless 0xE0 <xx> */
+		ke.flags = (p_keybin[1] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
 	}
 	else if (p_keybinlen == 1) {
 		IFEDBG("Key 0x%02x",p_keybin[0]);
+
+		ke.raw_code = (uint32_t)(p_keybin[0] & 0x7Fu);
+		ke.flags = (p_keybin[0] & 0x80u) ? 0 : IFEKeyEvent_FLAG_DOWN; /* bit 7 clear if make code */
+
+		switch (p_keybin[0]&0x7Fu) {
+			MAP(0x1C,IFEKEY_RETURN);
+			MAP(0x01,IFEKEY_ESCAPE);
+			MAP(0x0E,IFEKEY_BACKSPACE);
+			MAP(0x0F,IFEKEY_TAB);
+			MAP(0x39,IFEKEY_SPACE);
+			MAP(0x1E,IFEKEY_A);
+			MAP(0x30,IFEKEY_B);
+			MAP(0x2E,IFEKEY_C);
+			MAP(0x20,IFEKEY_D);
+			MAP(0x12,IFEKEY_E);
+			MAP(0x21,IFEKEY_F);
+			MAP(0x22,IFEKEY_G);
+			MAP(0x23,IFEKEY_H);
+			MAP(0x17,IFEKEY_I);
+			MAP(0x24,IFEKEY_J);
+			MAP(0x25,IFEKEY_K);
+			MAP(0x26,IFEKEY_L);
+			MAP(0x32,IFEKEY_M);
+			MAP(0x31,IFEKEY_N);
+			MAP(0x18,IFEKEY_O);
+			MAP(0x19,IFEKEY_P);
+			MAP(0x10,IFEKEY_Q);
+			MAP(0x13,IFEKEY_R);
+			MAP(0x1F,IFEKEY_S);
+			MAP(0x14,IFEKEY_T);
+			MAP(0x16,IFEKEY_U);
+			MAP(0x2F,IFEKEY_V);
+			MAP(0x11,IFEKEY_W);
+			MAP(0x2D,IFEKEY_X);
+			MAP(0x15,IFEKEY_Y);
+			MAP(0x2C,IFEKEY_Z);
+			MAP(0x0B,IFEKEY_0);
+			MAP(0x02,IFEKEY_1);
+			MAP(0x03,IFEKEY_2);
+			MAP(0x04,IFEKEY_3);
+			MAP(0x05,IFEKEY_4);
+			MAP(0x06,IFEKEY_5);
+			MAP(0x07,IFEKEY_6);
+			MAP(0x08,IFEKEY_7);
+			MAP(0x09,IFEKEY_8);
+			MAP(0x0A,IFEKEY_9);
+			MAP(0x33,IFEKEY_COMMA);
+			MAP(0x34,IFEKEY_PERIOD);
+			default: break;
+		}
 	}
+
+	if (!IFEKeyQueue.add(ke))
+		IFEDBG("ProcessKeyboardEvent: Queue full");
+
+	IFEKeyboardProcessRawToCooked(ke);
+#undef MAP
 }
 
 static void p_CheckKeyboard(void) {
