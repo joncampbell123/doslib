@@ -53,6 +53,8 @@ unsigned char			p_keybinlen=0;
 
 uint32_t			keyb_mod=0;
 
+IFEMouseStatus			ifemousestat;
+
 /* read keyboard buffer */
 int keybirq_read_buf(void) {
 	int r = -1;
@@ -371,9 +373,30 @@ static void p_CheckKeyboard(void) {
 	} while (1);
 }
 
+static void p_CheckMouse(void) {
+	unsigned short btn=0;
+	signed short x=0,y=0;
+
+	__asm {
+		mov	ax,3		; read position and button status
+		int	33h
+		mov	btn,bx		; BX=button status
+		mov	x,cx		; CX=x coordinate
+		mov	y,dx		; DX=y coordinate
+	}
+
+	if (ifemousestat.x != x || ifemousestat.y != y) {
+		IFEDBG("INT 33h mouse x=%d y=%d",x,y);
+		ifemousestat.x = x;
+		ifemousestat.y = y;
+	}
+}
+
 static void p_CheckEvents(void) {
 	/* check keyboard input */
 	p_CheckKeyboard();
+	/* mouse input */
+	p_CheckMouse();
 }
 
 static void p_WaitEvent(const int wait_ms) {
@@ -391,6 +414,15 @@ static void p_EndScreenDraw(void) {
 
 static void p_ShutdownVideo(void) {
 	/* IBM PC/AT */
+
+	/* reset mouse */
+	if (1) { /* TODO: If someday we support an alternate to INT 33h */
+		__asm {
+			mov	ax,0		; reset driver and read status
+			int	33h
+		}
+	}
+
 	keybirq_unhook();
 	_sti();
 	if (vesa_lfb_offscreen != NULL) {
@@ -486,6 +518,51 @@ static void p_InitVideo(void) {
 
 	/* hook keyboard */
 	keybirq_hook();
+
+	/* Is a mouse driver there? NTS: DOS4/GW and Open Watcom might return a stub interrupt proc
+	 * in protected mode even if the real mode vector is NULL. Checking against NULL is required
+	 * to avoid a crash on INT 33h. There's no guarantee there is an interrupt vector there when
+	 * a mouse driver is not installed. Let's not be as sloppy as some PC-98 games I've tested
+	 * that ASSUME INT 33h is there --J.C. */
+	/* Ref: INT 33h, Ralph Brown Interrupt List [http://www.ctyme.com/intr/int-33.htm] */
+	if (*((uint32_t*)(0x33ul * 4ul)) == 0) /* read the real-mode table directly */
+		IFEFatalError("Mouse driver not present, INT 33h is NULL");
+
+	memset(&ifemousestat,0,sizeof(ifemousestat));
+
+	{
+		unsigned short ist=0,btns=0;
+
+		__asm {
+			mov	ax,0		; reset driver and read status
+			int	33h
+			mov	ist,ax		; AX=FFFFh if installed
+			mov	btns,bx		; BX=number of buttons, 0 if not 2 buttons, 2 if two buttons, 3 if three buttons, FFFFh if two buttons. Make sense?
+		}
+
+		if (ist != 0xFFFFu)
+			IFEFatalError("Mouse driver not present");
+	}
+
+	/* mouse drivers automatically set a default range appropriate for standard VGA modes,
+	 * but they are oblivious to VESA BIOS modes and we will need to set the cursor range
+	 * for it */
+	{
+		unsigned short w=(unsigned short)ifevidinfo_doslib.width-1;
+		unsigned short h=(unsigned short)ifevidinfo_doslib.height-1;
+
+		__asm {
+			mov	ax,7		; set horizontal cursor range
+			mov	cx,0		; min=0
+			mov	dx,w		; max=width-1
+			int	33h
+
+			mov	ax,8		; set vertical cursor range
+			mov	cx,0		; min=0
+			mov	dx,h		; max=height-1
+			int	33h
+		}
+	}
 }
 
 bool priv_IFEMainInit(int argc,char **argv) {
