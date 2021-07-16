@@ -11,6 +11,10 @@ public:
 		return QueueSize;
 	}
 
+	bool empty(void) const {
+		return head == tail;
+	}
+
 	void clear(void) {
 		head = tail = 0;
 	}
