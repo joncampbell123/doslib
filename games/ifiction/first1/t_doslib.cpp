@@ -323,6 +323,20 @@ static void p_ProcessScanCode(void) {
 static void p_CheckKeyboard(void) {
 	int c;
 
+	/* Windows 3.1/95/98 hack:
+	 *
+	 *       Despite hooking IRQ 1 within the DOS VM, Windows 3.1/95/98 will NOT send any
+	 *       keystrokes our way unless we poll for keyboard input using INT 21h. INT 21h
+	 *       and DOS aren't going to see anything because we're handling the keyboard
+	 *       controller directly anyway, but never mind that, gotta poll or Windows will
+	 *       not send us keyboard input!
+	 *
+	 *       It turns out kbhit() is sufficient to make it happen, don't need to worry about
+	 *       reading anything. */
+	if (windows_mode != WINDOWS_NONE && keybirq_init) {
+		kbhit();
+	}
+
 	do {
 		if (p_keybinpos == 0) {
 			c = keybirq_read_buf();
