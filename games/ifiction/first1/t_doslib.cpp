@@ -89,49 +89,54 @@ void __interrupt keybirq() {
 
 void keybirq_hook(void) {
 	if (!keybirq_init) {
-		p8259_mask(1); /* mask the IRQ so we can safely work on it */
-		inp(K8042_DATA); /* flush 8042 data */
-		inp(K8042_STATUS);
-		p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
-		keybirq_head = keybirq_tail = 0;
-		p_keybinpos=0;
-		p_keybinlen=0;
+		SAVE_CPUFLAGS( _cli() ) {
+			/* drain BIOS keyboard buffer */
+			while (kbhit()) getch();
 
-		/* okay, hook the IRQ */
-		keybirq_old = _dos_getvect(irq2int(1));
-		_dos_setvect(irq2int(1),keybirq);
+			p8259_mask(1); /* mask the IRQ so we can safely work on it */
+			k8042_drain_buffer();
+			p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
+			keybirq_head = keybirq_tail = 0;
+			p_keybinpos = p_keybinlen = 0;
 
-		/* drain BIOS keyboard buffer */
-		while (kbhit()) getch();
+			/* okay, hook the IRQ */
+			keybirq_old = _dos_getvect(irq2int(1));
+			_dos_setvect(irq2int(1),keybirq);
 
-		/* alter BIOS data area to clear BIOS keyboard shift states */
-		*((unsigned char far*)MK_FP(0x40,0x17)) &= ~0x0F; // clear alt/ctrl/lshift/rshift down status
-		*((unsigned char far*)MK_FP(0x40,0x18))  =  0x00; // clear other key down status
 
-		/* ready to work */
-		p8259_unmask(1); /* unmask the IRQ */
+			/* alter BIOS data area to clear BIOS keyboard shift states */
+			*((unsigned char far*)MK_FP(0x40,0x17)) &= ~0x0F; // clear alt/ctrl/lshift/rshift down status
+			*((unsigned char far*)MK_FP(0x40,0x18))  =  0x00; // clear other key down status
 
-		/* done */
-		keybirq_init = true;
+			/* ready to work */
+			p8259_unmask(1); /* unmask the IRQ */
+
+			/* done */
+			keybirq_init = true;
+		} RESTORE_CPUFLAGS();
 	}
 }
 
 void keybirq_unhook(void) {
 	if (keybirq_init) {
-		p8259_mask(1); /* mask the IRQ so we can safely work on it */
-		inp(K8042_DATA); /* flush 8042 data */
-		inp(K8042_STATUS);
-		p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
+		SAVE_CPUFLAGS( _cli() ) {
+			/* drain BIOS keyboard buffer */
+			while (kbhit()) getch();
 
-		/* okay, hook the IRQ */
-		_dos_setvect(irq2int(1),keybirq_old);
-		keybirq_old = NULL;
+			p8259_mask(1); /* mask the IRQ so we can safely work on it */
+			k8042_drain_buffer();
+			p8259_OCW2(1,P8259_OCW2_SPECIFIC_EOI | 1); /* make sure the PIC is ready to work */
 
-		/* ready to work */
-		p8259_unmask(1); /* unmask the IRQ */
+			/* okay, hook the IRQ */
+			_dos_setvect(irq2int(1),keybirq_old);
+			keybirq_old = NULL;
 
-		/* done */
-		keybirq_init = false;
+			/* ready to work */
+			p8259_unmask(1); /* unmask the IRQ */
+
+			/* done */
+			keybirq_init = false;
+		} RESTORE_CPUFLAGS();
 	}
 }
 
