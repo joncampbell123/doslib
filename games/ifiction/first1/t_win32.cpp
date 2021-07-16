@@ -226,6 +226,7 @@ static void p_InitVideo(void) {
 		int sw,sh;
 
 		mousecap_on = false;
+		memset(&ifemousestat,0,sizeof(ifemousestat));
 		memset(&ifevidinfo_win32,0,sizeof(ifevidinfo_win32));
 
 		ifevidinfo_win32.width = 640;
