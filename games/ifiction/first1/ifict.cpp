@@ -20,6 +20,19 @@ ifeapi_t *ifeapi = &ifeapi_default;
 
 iferect_t IFEScissor;
 
+void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
+	if (x1 < IFEScissor.x)
+		x1 = IFEScissor.x;
+	if (y1 < IFEScissor.y)
+		y1 = IFEScissor.y;
+	if (x2 > (IFEScissor.x+IFEScissor.w))
+		x2 = (IFEScissor.x+IFEScissor.w);
+	if (y2 > (IFEScissor.y+IFEScissor.h))
+		y2 = (IFEScissor.y+IFEScissor.h);
+
+	ifeapi->AddScreenUpdate(x1,y1,x2,y2);
+}
+
 void IFESetScissorRect(int x1,int y1,int x2,int y2) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo();
 
@@ -252,7 +265,7 @@ int main(int argc,char **argv) {
 		}
 
 		IFEBitBlt(/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-		ifeapi->AddScreenUpdate(20,20,20+bmp.width,20+bmp.height);
+		IFEAddScreenUpdate(20,20,20+bmp.width,20+bmp.height);
 		ifeapi->UpdateScreen();
 
 		/* test clipping by letting the user mouse around with it */
@@ -268,7 +281,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					ifeapi->AddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
 
@@ -304,7 +317,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					ifeapi->AddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
 
@@ -340,7 +353,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					ifeapi->AddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
 
