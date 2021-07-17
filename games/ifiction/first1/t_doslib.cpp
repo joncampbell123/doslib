@@ -22,6 +22,15 @@
 #include "fatal.h"
 #include "palette.h"
 
+struct SCR_Rect {
+	signed int		x,y,w,h;
+};
+
+/* update region management */
+unsigned int			upd_ystep = 8;
+SCR_Rect*			upd_yspan = NULL;
+size_t				upd_yspan_size = 0;
+
 unsigned char*			vesa_lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*			vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
 uint32_t			vesa_lfb_physaddr = 0;
@@ -190,7 +199,13 @@ static void p_ResetTicks(const uint32_t base) {
 }
 
 static void p_UpdateFullScreen(void) {
+	size_t i;
+
 	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
+
+	/* clear update region list */
+	for (i=0;i < upd_yspan_size;i++)
+		upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -479,6 +494,11 @@ static void p_ShutdownVideo(void) {
 		}
 	}
 
+	upd_yspan_size = 0;
+	if (upd_yspan) {
+		free(upd_yspan);
+		upd_yspan = NULL;
+	}
 	keybirq_unhook();
 	_sti();
 	if (vesa_lfb_offscreen != NULL) {
@@ -498,6 +518,8 @@ static void p_ShutdownVideo(void) {
 }
 
 static void p_InitVideo(void) {
+	size_t i;
+
 	/* IBM PC/AT compatible */
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
@@ -549,6 +571,16 @@ static void p_InitVideo(void) {
 		ifevidinfo_doslib.height = vesa_lfb_height;
 		ifevidinfo_doslib.buf_pitch = ifevidinfo_doslib.vram_pitch = vesa_lfb_stride;
 		ifevidinfo_doslib.buf_alloc = ifevidinfo_doslib.buf_size = ifevidinfo_doslib.vram_size = vesa_lfb_map_size;
+
+		upd_yspan_size = (ifevidinfo_doslib.height + upd_ystep - 1) / upd_ystep;
+		upd_yspan = (SCR_Rect*)malloc(sizeof(SCR_Rect) * upd_yspan_size);
+		if (upd_yspan == NULL)
+			IFEFatalError("Cannot update yspans");
+
+		for (i=0;i < upd_yspan_size;i++) {
+			upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+			upd_yspan[i].y = (int)(i * upd_ystep);
+		}
 
 		/* use 8-bit DAC if available */
 		if (vbe_info->capabilities & VBE_CAP_8BIT_DAC) {
@@ -696,14 +728,104 @@ IFEMouseEvent *p_GetMouseInput(void) {
 	return IFEMouseQueue.get();
 }
 
+void SCR_UpdateWindowSurfaceRect(SCR_Rect *r) {
+	/* we trust the rects are valid, coming from our own code.
+	 * only consideration is whether (y+h) extends past framebuffer. */
+	unsigned char *src,*dst;
+	unsigned int w = (unsigned int)(r->w);
+	unsigned int h = (unsigned int)(r->h);
+	unsigned int y = (unsigned int)(r->y);
+
+	if (y >= ifevidinfo_doslib.height)
+		return;
+	if ((y+h) > ifevidinfo_doslib.height)
+		h = ifevidinfo_doslib.height - y;
+	if (h == 0)
+		return;
+
+	src = vesa_lfb_offscreen + (y * ifevidinfo_doslib.buf_pitch) + (r->x);
+	dst = vesa_lfb + (y * ifevidinfo_doslib.vram_pitch) + (r->x);
+	do {
+		memcpy(dst,src,w);
+		src += ifevidinfo_doslib.buf_pitch;
+		dst += ifevidinfo_doslib.vram_pitch;
+	} while ((--h) != 0u);
+}
+
+void SCR_UpdateWindowSurfaceRects(SCR_Rect *r,size_t count) {
+	size_t i;
+
+	for (i=0;i < count;i++)
+		SCR_UpdateWindowSurfaceRect(r+i);
+}
+
 void p_UpdateScreen(void) {
+#define MAX_RUPD 32
+	SCR_Rect rupd[MAX_RUPD];
+	size_t rupdi=0;
+	SCR_Rect r;
+	size_t i;
+
+	/* draw spans as needed, clear them as well */
+	for (i=0;i < upd_yspan_size;) {
+		if (upd_yspan[i].h != 0) { /* update span exists */
+			r = upd_yspan[i];
+			upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+			i++;
+
+			/* combine with rects that have the same horizontal span */
+			while (i < upd_yspan_size && upd_yspan[i].x == r.x && upd_yspan[i].w == r.w) {
+				r.h += upd_yspan[i].h;
+				upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+				i++;
+			}
+
+			if (rupdi >= MAX_RUPD) {
+				SCR_UpdateWindowSurfaceRects(rupd,rupdi);
+				rupdi = 0;
+			}
+			rupd[rupdi++] = r;
+		}
+		else {
+			i++;
+		}
+	}
+
+	if (rupdi > 0) {
+		SCR_UpdateWindowSurfaceRects(rupd,rupdi);
+	}
+#undef MAX_RUPD
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
-	(void)x1;
-	(void)x2;
-	(void)y1;
-	(void)y2;
+	if (x1 < 0) x1 = 0;
+	if (y1 < 0) y1 = 0;
+
+	if ((unsigned int)x2 > ifevidinfo_doslib.width)
+		x2 = ifevidinfo_doslib.width;
+	if ((unsigned int)y2 > ifevidinfo_doslib.height)
+		y2 = ifevidinfo_doslib.height;
+
+	if (x1 >= x2 || y1 >= y2) return;
+
+	y1 = y1 / (int)upd_ystep;
+	y2 = (y2 + (int)upd_ystep - 1) / (int)upd_ystep;
+
+	if ((size_t)y2 > upd_yspan_size)
+		IFEFatalError("UpdateScreen region bug");
+
+	while ((unsigned int)y1 < (unsigned int)y2) {
+		if (upd_yspan[(size_t)y1].h == 0) {
+			upd_yspan[(size_t)y1].w = x2-x1;
+			upd_yspan[(size_t)y1].h = upd_ystep;
+			upd_yspan[(size_t)y1].x = x1;
+		}
+		else {
+			if (upd_yspan[(size_t)y1].x > x1) upd_yspan[(size_t)y1].x = x1;
+			if ((upd_yspan[(size_t)y1].x+upd_yspan[(size_t)y1].w) < x2) upd_yspan[(size_t)y1].w = x2-upd_yspan[(size_t)y1].x;
+		}
+		y1++;
+	}
 }
 
 ifeapi_t ifeapi_doslib = {
