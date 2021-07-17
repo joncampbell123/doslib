@@ -28,5 +28,7 @@ public:
 	bool alloc_subrects(size_t count);
 	void free_subrects(void);
 	subrect &get_subrect(const size_t i);
+	unsigned char *row(const unsigned int y,const unsigned int x=0);
+	unsigned char *rowfast(const unsigned int y,const unsigned int x=0);
 };
 

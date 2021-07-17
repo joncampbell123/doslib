@@ -97,3 +97,15 @@ void IFEBitmap::free_storage(void) {
 	stride = 0;
 }
 
+unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) {
+	/* this version error and range checks */
+	if (bitmap != NULL && y < height && x < width)
+		return bitmap + (y * stride) + x;
+
+	return NULL;
+}
+
+unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) {
+	return bitmap + (y * stride) + x; /* for code that has already validated the bitmap */
+}
+
