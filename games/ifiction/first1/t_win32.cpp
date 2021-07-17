@@ -374,7 +374,7 @@ static void p_InitVideo(void) {
 			IFEFatalError("Update Region create fail 1");
 		upd_rect = CreateRectRgn(0,0,0,0); /* empty RGN */
 		if (upd_rect == NULL)
-			IFEFatalError("Update Region create fail 1");
+			IFEFatalError("Update Region create fail 2");
 		upd_region_valid = false;
 
 		ifeapi->UpdateFullScreen();
@@ -434,10 +434,12 @@ void p_UpdateScreen(void) {
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
-	if (x1 < x2 && y1 < y2) upd_region_valid = true;
-	SetRectRgn(upd_rect,x1,y1,x2,y2); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
-	if (CombineRgn(upd_region,upd_region,upd_rect,RGN_OR) == ERROR)
-		IFEDBG("CombineRgn error");
+	if (x1 < x2 && y1 < y2) {
+		upd_region_valid = true;
+		SetRectRgn(upd_rect,x1,y1,x2,y2); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
+		if (CombineRgn(upd_region,upd_region,upd_rect,RGN_OR) == ERROR)
+			IFEDBG("CombineRgn error");
+	}
 }
 
 ifeapi_t ifeapi_win32 = {
