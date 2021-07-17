@@ -671,7 +671,9 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_MBUTTONUP:
 		case WM_RBUTTONDOWN:
 		case WM_RBUTTONUP:
-			priv_ProcessMouseMotion(wParam,(int)LOWORD(lParam),(int)HIWORD(lParam));
+			/* NTS: LOWORD(lParam) returns a 16-bit integer. Mouse coordinates may be negative, therefore
+			 *      typecast as signed 16-bit integer then sign extend to int */
+			priv_ProcessMouseMotion(wParam,(int)((int16_t)LOWORD(lParam)),(int)((int16_t)HIWORD(lParam)));
 			break;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
