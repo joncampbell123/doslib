@@ -136,22 +136,34 @@ int main(int argc,char **argv) {
 
 	IFETestRGBPalettePattern2();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
-	while (ifeapi->GetTicks() < 3000) {
-		int y = (ifeapi->GetTicks() * 480) / 3000;
-		ifeapi->AddScreenUpdate(0,y,640,y); // same line, isn't supposed to do anything
-		ifeapi->AddScreenUpdate(y/2,y,y + 480,y+1);
-		ifeapi->AddScreenUpdate(y/2,600-y,y + 480,600-(y+1));
-		ifeapi->UpdateScreen();
-		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		ifeapi->WaitEvent(1);
+	{
+		int py = -1;
+		while (ifeapi->GetTicks() < 3000) {
+			int y = (ifeapi->GetTicks() * 480) / 3000;
+			if (py != y) {
+				ifeapi->AddScreenUpdate(0,y,640,y); // same line, isn't supposed to do anything
+				ifeapi->AddScreenUpdate(y/2,y,y + 480,y+1);
+				ifeapi->AddScreenUpdate(y/2,600-y,y + 480,600-(y+1));
+				ifeapi->UpdateScreen();
+				py = y;
+			}
+			if (ifeapi->UserWantsToQuit()) IFENormalExit();
+			ifeapi->WaitEvent(1);
+		}
 	}
 	IFETestRGBPalettePattern();
-	while (ifeapi->GetTicks() < 4000) {
-		int y = (((ifeapi->GetTicks()-3000) * (480 / 64)) / 1000) * 64;
-		ifeapi->AddScreenUpdate(0,y,640,y + 32);
-		ifeapi->UpdateScreen();
-		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		ifeapi->WaitEvent(1);
+	{
+		int py = -1;
+		while (ifeapi->GetTicks() < 4000) {
+			int y = (((ifeapi->GetTicks()-3000) * (480 / 64)) / 1000) * 64;
+			if (py != y) {
+				ifeapi->AddScreenUpdate(0,y,640,y + 32);
+				ifeapi->UpdateScreen();
+				py = y;
+			}
+			if (ifeapi->UserWantsToQuit()) IFENormalExit();
+			ifeapi->WaitEvent(1);
+		}
 	}
 	while (ifeapi->GetTicks() < 5000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
