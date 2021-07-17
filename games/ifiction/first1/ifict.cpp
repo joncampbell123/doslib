@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "fatal.h"
+#include "bitmap.h"
 #include "palette.h"
 
 ifeapi_t *ifeapi = &ifeapi_default;
