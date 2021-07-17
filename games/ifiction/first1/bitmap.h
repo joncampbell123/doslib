@@ -30,5 +30,7 @@ public:
 	subrect &get_subrect(const size_t i);
 	unsigned char *row(const unsigned int y,const unsigned int x=0);
 	unsigned char *rowfast(const unsigned int y,const unsigned int x=0);
+	const unsigned char *row(const unsigned int y,const unsigned int x=0) const;
+	const unsigned char *rowfast(const unsigned int y,const unsigned int x=0) const;
 };
 

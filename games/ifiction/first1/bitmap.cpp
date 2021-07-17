@@ -109,3 +109,15 @@ unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) {
 	return bitmap + (y * stride) + x; /* for code that has already validated the bitmap */
 }
 
+const unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) const {
+	/* this version error and range checks */
+	if (bitmap != NULL && y < height && x < width)
+		return bitmap + (y * stride) + x;
+
+	return NULL;
+}
+
+const unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) const {
+	return bitmap + (y * stride) + x; /* for code that has already validated the bitmap */
+}
+
