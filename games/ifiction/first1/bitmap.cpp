@@ -15,11 +15,49 @@
 #include "fatal.h"
 #include "bitmap.h"
 
-IFEBitmap::IFEBitmap() : bitmap(NULL), alloc(0), width(0), height(0), stride(0) {
+IFEBitmap::IFEBitmap() : bitmap(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0) {
 }
 
 IFEBitmap::~IFEBitmap() {
+	free_subrects();
 	free_storage();
+}
+
+bool IFEBitmap::alloc_subrects(size_t count) {
+	if (count == 0 || count > 2048)
+		return false; /* be reasonable */
+
+	if (subrects == NULL) {
+		subrects = (subrect*)calloc(count,sizeof(subrect)); /* which will also initialize to zero */
+		if (subrects == NULL) return false;
+	}
+	else if (count != subrects_alloc) {
+		subrect *np = (subrect*)realloc((void*)subrects,count * sizeof(subrect));
+		if (np == NULL) return false;
+		subrects = np;
+
+		/* zero out new entries */
+		if (subrects_alloc < count)
+			memset((void*)(subrects+subrects_alloc),0,(count - subrects_alloc) * sizeof(subrect));
+	}
+
+	subrects_alloc = count;
+	return true;
+}
+
+void IFEBitmap::free_subrects(void) {
+	if (subrects) {
+		free(subrects);
+		subrects = NULL;
+	}
+	subrects_alloc = 0;
+}
+
+IFEBitmap::subrect &IFEBitmap::get_subrect(const size_t i) {
+	if (subrects == NULL || i >= subrects_alloc)
+		IFEFatalError("IFEBitmap::get_subrect index out of range");
+
+	return subrects[i];
 }
 
 bool IFEBitmap::alloc_storage(unsigned int w,unsigned int h) {
