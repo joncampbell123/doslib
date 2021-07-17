@@ -379,6 +379,8 @@ static void p_InitVideo(void) {
 
 		ifeapi->UpdateFullScreen();
 		ifeapi->CheckEvents();
+
+		IFECompleteVideoInit();
 	}
 }
 

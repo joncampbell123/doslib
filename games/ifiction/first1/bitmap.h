@@ -9,7 +9,7 @@
 class IFEBitmap {
 public:
 	struct subrect {
-		unsigned short	x,y,w,h;
+		iferect_t	r;
 		short int	offset_x,offset_y;	/* draw displacement of bitmap i.e. cursor hot spot */
 	};
 public:

@@ -651,6 +651,8 @@ static void p_InitVideo(void) {
 			int	33h
 		}
 	}
+
+	IFECompleteVideoInit();
 }
 
 bool priv_IFEMainInit(int argc,char **argv) {

@@ -419,6 +419,8 @@ static void p_InitVideo(void) {
 	SDL_FillRect(sdl_game_surface,NULL,0);
 	ifeapi->UpdateFullScreen();
 	ifeapi->CheckEvents();
+
+	IFECompleteVideoInit();
 }
 
 void p_FlushKeyboardInput(void) {

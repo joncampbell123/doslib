@@ -4,6 +4,10 @@
 # include <mmsystem.h>
 #endif
 
+struct iferect_t {
+	int							x,y,w,h;
+};
+
 #include "palette.h"
 #include "keyboard.h"
 #include "mouse.h"
@@ -66,6 +70,8 @@ struct ifeapi_t {
 
 extern ifeapi_t *ifeapi;
 
+extern iferect_t IFEScissor;
+
 #if defined(USE_SDL2)
 extern ifeapi_t ifeapi_sdl2;
 # define ifeapi_default ifeapi_sdl2
@@ -86,4 +92,6 @@ bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean
 #else
 bool priv_IFEMainInit(int argc,char **argv);
 #endif
+
+void IFECompleteVideoInit(void);
 
