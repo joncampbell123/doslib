@@ -40,6 +40,12 @@ HWND					hwndMain = NULL;
 uint32_t				win32_mod_flags = 0;
 IFEMouseStatus				ifemousestat;
 bool					mousecap_on = false;
+HRGN					upd_region = NULL;
+HRGN					upd_rect = NULL;
+
+void MakeRgnEmpty(HRGN r) {
+	SetRectRgn(r,0,0,0,0); /* region is x1 <= x < x2, y1 <= y < y2, therefore this rectangle makes an empty region */
+}
 
 void priv_CaptureMouse(const bool cap) {
 	if (cap && !mousecap_on) {
@@ -159,6 +165,8 @@ static void p_UpdateFullScreen(void) {
 
 	SelectPalette(hDC,oldPal,FALSE);
 	ReleaseDC(hwndMain,hDC);
+
+	MakeRgnEmpty(upd_region);
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -218,6 +226,14 @@ static void p_ShutdownVideo(void) {
 		ifevidinfo_win32.buf_base = ifevidinfo_win32.buf_first_row = NULL;
 		free((void*)win_dib);
 		win_dib = NULL;
+	}
+	if (upd_region != NULL) {
+		DeleteObject((HGDIOBJ)upd_region);
+		upd_region = NULL;
+	}
+	if (upd_rect != NULL) {
+		DeleteObject((HGDIOBJ)upd_rect);
+		upd_rect = NULL;
 	}
 }
 
@@ -349,6 +365,15 @@ static void p_InitVideo(void) {
 		ifevidinfo_win32.buf_pitch = win_dib_pitch;
 		ifevidinfo_win32.buf_alloc = ifevidinfo_win32.buf_size = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);
 
+		/* HRGN objects for partial screen updates.
+		 * Let Windows use it's GDI system rather than reimplementing it ourselves */
+		upd_region = CreateRectRgn(0,0,0,0); /* empty RGN */
+		if (upd_region == NULL)
+			IFEFatalError("Update Region create fail 1");
+		upd_rect = CreateRectRgn(0,0,0,0); /* empty RGN */
+		if (upd_rect == NULL)
+			IFEFatalError("Update Region create fail 1");
+
 		ifeapi->UpdateFullScreen();
 		ifeapi->CheckEvents();
 	}
@@ -381,13 +406,31 @@ IFEMouseEvent *p_GetMouseInput(void) {
 }
 
 void p_UpdateScreen(void) {
+	HDC hDC = GetDC(hwndMain);
+	HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+	HRGN oldRgn = (HRGN)SelectObject(hDC,upd_region);
+
+	SetDIBitsToDevice(hDC,
+		/*dest x/y*/0,0,
+		abs((int)hwndMainDIB->bmiHeader.biWidth),
+		abs((int)hwndMainDIB->bmiHeader.biHeight),
+		/*src x/y*/0,0,
+		/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
+		win_dib,
+		hwndMainDIB,
+		winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
+
+	SelectPalette(hDC,oldPal,FALSE);
+	SelectObject(hDC,oldRgn);
+	ReleaseDC(hwndMain,hDC);
+
+	MakeRgnEmpty(upd_region);
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
-	(void)x1;
-	(void)x2;
-	(void)y1;
-	(void)y2;
+	SetRectRgn(upd_rect,x1,y1,x2,y2); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
+	if (CombineRgn(upd_region,upd_region,upd_rect,RGN_OR) == ERROR)
+		IFEDBG("CombineRgn error");
 }
 
 ifeapi_t ifeapi_win32 = {
