@@ -42,6 +42,7 @@ IFEMouseStatus				ifemousestat;
 bool					mousecap_on = false;
 HRGN					upd_region = NULL;
 HRGN					upd_rect = NULL;
+bool					upd_region_valid = false;
 
 void MakeRgnEmpty(HRGN r) {
 	SetRectRgn(r,0,0,0,0); /* region is x1 <= x < x2, y1 <= y < y2, therefore this rectangle makes an empty region */
@@ -167,6 +168,7 @@ static void p_UpdateFullScreen(void) {
 	ReleaseDC(hwndMain,hDC);
 
 	MakeRgnEmpty(upd_region);
+	upd_region_valid = false;
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -373,6 +375,7 @@ static void p_InitVideo(void) {
 		upd_rect = CreateRectRgn(0,0,0,0); /* empty RGN */
 		if (upd_rect == NULL)
 			IFEFatalError("Update Region create fail 1");
+		upd_region_valid = false;
 
 		ifeapi->UpdateFullScreen();
 		ifeapi->CheckEvents();
@@ -406,28 +409,32 @@ IFEMouseEvent *p_GetMouseInput(void) {
 }
 
 void p_UpdateScreen(void) {
-	HDC hDC = GetDC(hwndMain);
-	HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
-	HRGN oldRgn = (HRGN)SelectObject(hDC,upd_region);
+	if (upd_region_valid) {
+		HDC hDC = GetDC(hwndMain);
+		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+		HRGN oldRgn = (HRGN)SelectObject(hDC,upd_region);
 
-	SetDIBitsToDevice(hDC,
-		/*dest x/y*/0,0,
-		abs((int)hwndMainDIB->bmiHeader.biWidth),
-		abs((int)hwndMainDIB->bmiHeader.biHeight),
-		/*src x/y*/0,0,
-		/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
-		win_dib,
-		hwndMainDIB,
-		winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
+		SetDIBitsToDevice(hDC,
+			/*dest x/y*/0,0,
+			abs((int)hwndMainDIB->bmiHeader.biWidth),
+			abs((int)hwndMainDIB->bmiHeader.biHeight),
+			/*src x/y*/0,0,
+			/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
+			win_dib,
+			hwndMainDIB,
+			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
 
-	SelectPalette(hDC,oldPal,FALSE);
-	SelectObject(hDC,oldRgn);
-	ReleaseDC(hwndMain,hDC);
+		SelectPalette(hDC,oldPal,FALSE);
+		SelectObject(hDC,oldRgn);
+		ReleaseDC(hwndMain,hDC);
 
-	MakeRgnEmpty(upd_region);
+		MakeRgnEmpty(upd_region);
+		upd_region_valid = false;
+	}
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
+	if (x1 < x2 && y1 < y2) upd_region_valid = true;
 	SetRectRgn(upd_rect,x1,y1,x2,y2); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
 	if (CombineRgn(upd_region,upd_region,upd_rect,RGN_OR) == ERROR)
 		IFEDBG("CombineRgn error");
