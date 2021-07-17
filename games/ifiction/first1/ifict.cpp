@@ -20,6 +20,22 @@ ifeapi_t *ifeapi = &ifeapi_default;
 
 iferect_t IFEScissor;
 
+void IFESetScissorRect(int x1,int y1,int x2,int y2) {
+	ifevidinfo_t* vi = ifeapi->GetVidInfo();
+
+	if (x1 < 0) x1 = 0;
+	if (y1 < 0) y1 = 0;
+	if ((unsigned int)x2 > vi->width) x2 = vi->width;
+	if ((unsigned int)y2 > vi->height) y2 = vi->height;
+	if (x1 > x2) x1 = x2;
+	if (y1 > y2) y1 = y2;
+
+	IFEScissor.x = x1;
+	IFEScissor.y = y1;
+	IFEScissor.w = x2-x1;
+	IFEScissor.h = y2-y1;
+}
+
 void IFECompleteVideoInit(void) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo();
 
@@ -110,7 +126,7 @@ void IFETestRGBPalettePattern2(void) {
 
 static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor) {
 	/* BMP with no storage? caller wants to draw bitmaps with negative dimensions? Exit now. Assume scissor rect is valid. */
-	if (bmp.bitmap == NULL || w <= 0 || h <= 0) return false;
+	if (bmp.bitmap == NULL || w <= 0 || h <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
 
 	/* simplify code below by subtracting scissor rect top/left from dx/dy here, to add it back later */
 	dx -= scissor.x;
@@ -240,6 +256,78 @@ int main(int argc,char **argv) {
 		ifeapi->UpdateScreen();
 
 		/* test clipping by letting the user mouse around with it */
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					px = ms->x;
+					py = ms->y;
+
+					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					ifeapi->AddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				ifeapi->WaitEvent(1);
+			} while (1);
+		}
+
+		/* test clipping by letting the user mouse around with it, scissor rect */
+		IFESetScissorRect(100,100,540,380);
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					px = ms->x;
+					py = ms->y;
+
+					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					ifeapi->AddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				ifeapi->WaitEvent(1);
+			} while (1);
+		}
+
+		/* test clipping by letting the user mouse around with it, scissor rect */
+		IFESetScissorRect(200,200,440,280);
 		{
 			int px = -999,py = -999;
 			int lx = -999,ly = -999;
