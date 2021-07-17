@@ -69,7 +69,32 @@ void IFETestRGBPalettePattern(void) {
 	}
 
 	ifeapi->EndScreenDraw();
-	ifeapi->UpdateFullScreen();
+}
+
+void IFETestRGBPalettePattern2(void) {
+	unsigned char *firstrow;
+	unsigned int x,y,w,h;
+	ifevidinfo_t* vif;
+	int pitch;
+
+	if (!ifeapi->BeginScreenDraw())
+		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
+	if ((vif=ifeapi->GetVidInfo()) == NULL)
+		IFEFatalError("GetVidInfo() == NULL");
+	if ((firstrow=vif->buf_first_row) == NULL)
+		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
+
+	w = vif->width;
+	h = vif->height;
+	pitch = vif->buf_pitch;
+	for (y=0;y < h;y++) {
+		unsigned char *row = firstrow + ((int)y * pitch);
+		for (x=0;x < w;x++) {
+			row[x] = x ^ y;
+		}
+	}
+
+	ifeapi->EndScreenDraw();
 }
 
 void IFENormalExit(void) {
@@ -100,9 +125,35 @@ int main(int argc,char **argv) {
 	}
 
 	IFETestRGBPalette();
+
 	IFETestRGBPalettePattern();
+	ifeapi->UpdateFullScreen();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 3000) {
+		if (ifeapi->UserWantsToQuit()) IFENormalExit();
+		ifeapi->WaitEvent(100);
+	}
+
+	IFETestRGBPalettePattern2();
+	ifeapi->ResetTicks(ifeapi->GetTicks());
+	while (ifeapi->GetTicks() < 3000) {
+		int y = (ifeapi->GetTicks() * 480) / 3000;
+		ifeapi->AddScreenUpdate(0,y,640,y); // same line, isn't supposed to do anything
+		ifeapi->AddScreenUpdate(y/2,y,y + 480,y+1);
+		ifeapi->AddScreenUpdate(y/2,600-y,y + 480,600-(y+1));
+		ifeapi->UpdateScreen();
+		if (ifeapi->UserWantsToQuit()) IFENormalExit();
+		ifeapi->WaitEvent(1);
+	}
+	IFETestRGBPalettePattern();
+	while (ifeapi->GetTicks() < 4000) {
+		int y = (((ifeapi->GetTicks()-3000) * (480 / 64)) / 1000) * 64;
+		ifeapi->AddScreenUpdate(0,y,640,y + 32);
+		ifeapi->UpdateScreen();
+		if (ifeapi->UserWantsToQuit()) IFENormalExit();
+		ifeapi->WaitEvent(1);
+	}
+	while (ifeapi->GetTicks() < 5000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
 		ifeapi->WaitEvent(100);
 	}

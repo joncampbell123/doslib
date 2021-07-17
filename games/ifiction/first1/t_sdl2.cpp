@@ -20,6 +20,8 @@
 #include "fatal.h"
 #include "palette.h"
 
+#include <vector>
+
 SDL_Window*			sdl_window = NULL;
 SDL_Surface*			sdl_window_surface = NULL;
 SDL_Surface*			sdl_game_surface = NULL;
@@ -37,6 +39,10 @@ static const SDL_FingerID	no_finger_id = (SDL_FingerID)(0xFFFFFFFFul);
 /* SDL2 supports touchscreen devices. Allow touchscreen input to fake mouse input */
 SDL_FingerID			touchscreen_finger_lock = no_finger_id;
 SDL_TouchID			touchscreen_touch_lock = no_touch_id;
+
+/* update region management */
+unsigned int			upd_ystep = 8;
+std::vector<SDL_Rect>		upd_yspan;
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -63,11 +69,17 @@ static void p_ResetTicks(const uint32_t base) {
 }
 
 static void p_UpdateFullScreen(void) {
+	size_t i;
+
 	if (SDL_BlitSurface(sdl_game_surface,NULL,sdl_window_surface,NULL) != 0)
 		IFEFatalError("Game to window BlitSurface");
 
 	if (SDL_UpdateWindowSurface(sdl_window) != 0)
 		IFEFatalError("Window surface update");
+
+	/* clear update region list */
+	for (i=0;i < upd_yspan.size();i++)
+		upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -357,10 +369,13 @@ static void p_ShutdownVideo(void) {
 		sdl_window_surface = NULL;
 		sdl_window = NULL;
 	}
+	upd_yspan.clear();
 	SDL_Quit();
 }
 
 static void p_InitVideo(void) {
+	size_t i;
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
 
@@ -372,6 +387,12 @@ static void p_InitVideo(void) {
 
 	ifevidinfo_sdl2.width = 640;
 	ifevidinfo_sdl2.height = 480;
+
+	upd_yspan.resize((ifevidinfo_sdl2.height + upd_ystep - 1) / upd_ystep);
+	for (i=0;i < upd_yspan.size();i++) {
+		upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+		upd_yspan[i].y = (int)(i * upd_ystep);
+	}
 
 	if (sdl_window == NULL && (sdl_window=SDL_CreateWindow("",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,480,SDL_WINDOW_SHOWN)) == NULL)
 		IFEFatalError("SDL2 window creation failed");
@@ -427,13 +448,66 @@ IFEMouseEvent *p_GetMouseInput(void) {
 }
 
 void p_UpdateScreen(void) {
+	SDL_Rect r;
+	size_t i;
+
+	/* draw spans as needed, clear them as well */
+	for (i=0;i < upd_yspan.size();) {
+		if (upd_yspan[i].h != 0) { /* update span exists */
+			r = upd_yspan[i];
+			upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+			i++;
+
+			/* combine with rects that have the same horizontal span */
+			while (i < upd_yspan.size() && upd_yspan[i].x == r.x && upd_yspan[i].w == r.w) {
+				r.h += upd_yspan[i].h;
+				upd_yspan[i].x = upd_yspan[i].w = upd_yspan[i].h = 0;
+				i++;
+			}
+
+			if (SDL_BlitSurface(sdl_game_surface,&r,sdl_window_surface,&r) != 0)
+				IFEFatalError("Game to window BlitSurface");
+
+			if (SDL_UpdateWindowSurfaceRects(sdl_window,&r,1) != 0)
+				IFEFatalError("Window surface update");
+		}
+		else {
+			i++;
+		}
+	}
+
+	/* clear update region list */
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
-	(void)x1;
-	(void)x2;
-	(void)y1;
-	(void)y2;
+	if (x1 < 0) x1 = 0;
+	if (y1 < 0) y1 = 0;
+
+	if ((unsigned int)x2 > ifevidinfo_sdl2.width)
+		x2 = ifevidinfo_sdl2.width;
+	if ((unsigned int)y2 > ifevidinfo_sdl2.height)
+		y2 = ifevidinfo_sdl2.height;
+
+	if (x1 >= x2 || y1 >= y2) return;
+
+	y1 = y1 / (int)upd_ystep;
+	y2 = (y2 + (int)upd_ystep - 1) / (int)upd_ystep;
+
+	if ((size_t)y2 > upd_yspan.size())
+		IFEFatalError("UpdateScreen region bug");
+
+	while ((unsigned int)y1 < (unsigned int)y2) {
+		if (upd_yspan[(size_t)y1].h == 0) {
+			upd_yspan[(size_t)y1].w = x2-x1;
+			upd_yspan[(size_t)y1].h = upd_ystep;
+			upd_yspan[(size_t)y1].x = x1;
+		}
+		else {
+			if (upd_yspan[(size_t)y1].x > x1) upd_yspan[(size_t)y1].x = x1;
+			if ((upd_yspan[(size_t)y1].x+upd_yspan[(size_t)y1].w) < x2) upd_yspan[(size_t)y1].w = x2-upd_yspan[(size_t)y1].x;
+		}
+		y1++;
+	}
 }
 
 ifeapi_t ifeapi_sdl2 = {
