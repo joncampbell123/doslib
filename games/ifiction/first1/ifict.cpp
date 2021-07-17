@@ -143,7 +143,7 @@ int main(int argc,char **argv) {
 			if (py != y) {
 				ifeapi->AddScreenUpdate(0,y,640,y); // same line, isn't supposed to do anything
 				ifeapi->AddScreenUpdate(y/2,y,y + 480,y+1);
-				ifeapi->AddScreenUpdate(y/2,600-y,y + 480,600-(y+1));
+				ifeapi->AddScreenUpdate(y/4,600-y,(y/2) + 240,(600-y)+1);
 				ifeapi->UpdateScreen();
 				py = y;
 			}
