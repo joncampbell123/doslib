@@ -448,6 +448,9 @@ IFEMouseEvent *p_GetMouseInput(void) {
 }
 
 void p_UpdateScreen(void) {
+#define MAX_RUPD 32
+	SDL_Rect rupd[MAX_RUPD];
+	size_t rupdi=0;
 	SDL_Rect r;
 	size_t i;
 
@@ -468,15 +471,24 @@ void p_UpdateScreen(void) {
 			if (SDL_BlitSurface(sdl_game_surface,&r,sdl_window_surface,&r) != 0)
 				IFEFatalError("Game to window BlitSurface");
 
-			if (SDL_UpdateWindowSurfaceRects(sdl_window,&r,1) != 0)
-				IFEFatalError("Window surface update");
+			if (rupdi >= MAX_RUPD) {
+				if (SDL_UpdateWindowSurfaceRects(sdl_window,rupd,rupdi) != 0)
+					IFEFatalError("Window surface update");
+
+				rupdi = 0;
+			}
+			rupd[rupdi++] = r;
 		}
 		else {
 			i++;
 		}
 	}
 
-	/* clear update region list */
+	if (rupdi > 0) {
+		if (SDL_UpdateWindowSurfaceRects(sdl_window,rupd,rupdi) != 0)
+			IFEFatalError("Window surface update");
+	}
+#undef MAX_RUPD
 }
 
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
