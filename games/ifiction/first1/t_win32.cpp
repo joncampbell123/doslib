@@ -380,6 +380,16 @@ IFEMouseEvent *p_GetMouseInput(void) {
 	return IFEMouseQueue.get();
 }
 
+void p_UpdateScreen(void) {
+}
+
+void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
+	(void)x1;
+	(void)x2;
+	(void)y1;
+	(void)y2;
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -399,7 +409,9 @@ ifeapi_t ifeapi_win32 = {
 	p_GetCookedKeyboardInput,
 	p_GetMouseStatus,
 	p_FlushMouseInput,
-	p_GetMouseInput
+	p_GetMouseInput,
+	p_UpdateScreen,
+	p_AddScreenUpdate
 };
 
 void UpdateWin32ModFlags(void) {

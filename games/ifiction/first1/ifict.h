@@ -37,6 +37,8 @@ typedef IFECookedKeyEvent *ifefunc_GetCookedKeyboardInput_t(void);
 typedef IFEMouseStatus *ifefunc_GetMouseStatus_t(void);
 typedef void ifefunc_FlushMouseInput_t(void);
 typedef IFEMouseEvent *ifefunc_GetMouseInput_t(void);
+typedef void ifefunc_UpdateScreen_t(void);
+typedef void ifefunc_AddScreenUpdate_t(int x1,int y1,int x2,int y2); /* update x1 <= x < x2, y1 <= y < y2 */
 
 struct ifeapi_t {
 	const char*						name;
@@ -58,6 +60,8 @@ struct ifeapi_t {
 	ifefunc_GetMouseStatus_t*				GetMouseStatus;
 	ifefunc_FlushMouseInput_t*				FlushMouseInput;
 	ifefunc_GetMouseInput_t*				GetMouseInput;
+	ifefunc_UpdateScreen_t*					UpdateScreen;
+	ifefunc_AddScreenUpdate_t*				AddScreenUpdate;
 };
 
 extern ifeapi_t *ifeapi;
