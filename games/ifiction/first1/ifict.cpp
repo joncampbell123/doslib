@@ -16,9 +16,95 @@
 #include "bitmap.h"
 #include "palette.h"
 
+#if defined(TARGET_MSDOS)
+#include <ext/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
+
+#ifndef O_BINARY
+#define O_BINARY (0)
+#endif
+
+extern "C" {
+#include <fmt/minipng/minipng.h>
+}
+
 ifeapi_t *ifeapi = &ifeapi_default;
 
 iferect_t IFEScissor;
+
+/* load one PNG into ONE bitmap, that's it */
+bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
+	struct minipng_reader *rdr = NULL;
+	bool res = false;
+	unsigned int i;
+
+	if ((rdr=minipng_reader_open(path)) == NULL)
+		goto done;
+	if (minipng_reader_parse_head(rdr))
+		goto done;
+	if (rdr->ihdr.width > 2048 || rdr->ihdr.width < 1 || rdr->ihdr.height > 2048 || rdr->ihdr.height < 1)
+		goto done;
+
+	if (!bmp.alloc_subrects(1))
+		goto done;
+	if (!bmp.alloc_storage(rdr->ihdr.width, rdr->ihdr.height))
+		goto done;
+
+	if (rdr->ihdr.bit_depth >= 1 && rdr->ihdr.bit_depth <= 8) {
+		if (rdr->plte == NULL)
+			goto done;
+		if (!bmp.alloc_palette(1u << rdr->ihdr.bit_depth))
+			goto done;
+
+		i=0;
+		while (i < bmp.palette_alloc && i < rdr->plte_count) {
+			bmp.palette[i].r = rdr->plte[i].red;
+			bmp.palette[i].g = rdr->plte[i].green;
+			bmp.palette[i].b = rdr->plte[i].blue;
+			i++;
+		}
+		while (i < bmp.palette_alloc) {
+			bmp.palette[i].r = 0;
+			bmp.palette[i].g = 0;
+			bmp.palette[i].b = 0;
+			i++;
+		}
+
+		bmp.palette_size = rdr->plte_count;
+	}
+	else {
+		bmp.free_palette();
+	}
+
+	{
+		IFEBitmap::subrect &sr = bmp.get_subrect(0);
+		sr.r.w = rdr->ihdr.width;
+		sr.r.h = rdr->ihdr.height;
+		sr.r.x = 0;
+		sr.r.y = 0;
+
+		if (rdr->ihdr.bit_depth == 8) {
+			unsigned char *ptr = bmp.bitmap;
+
+			for (i=0;i < bmp.height;i++) {
+				minipng_reader_read_idat(rdr,ptr,1); /* pad byte */
+				minipng_reader_read_idat(rdr,ptr,rdr->ihdr.width); /* row */
+				ptr += bmp.stride;
+			}
+		}
+		else {
+			memset(bmp.bitmap,0,bmp.stride * bmp.height);
+		}
+
+		res = true;
+	}
+
+done:
+        minipng_reader_close(&rdr);
+	return res;
+}
 
 void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
 	if (x1 < IFEScissor.x)
@@ -31,6 +117,14 @@ void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
 		y2 = (IFEScissor.y+IFEScissor.h);
 
 	ifeapi->AddScreenUpdate(x1,y1,x2,y2);
+}
+
+void IFEResetScissorRect(void) {
+	ifevidinfo_t* vi = ifeapi->GetVidInfo();
+
+	IFEScissor.x = IFEScissor.y = 0;
+	IFEScissor.w = (int)vi->width;
+	IFEScissor.h = (int)vi->height;
 }
 
 void IFESetScissorRect(int x1,int y1,int x2,int y2) {
@@ -80,6 +174,30 @@ void IFETestRGBPalette() {
 	}
 
 	ifeapi->SetPaletteColors(0,256,pal);
+}
+
+void IFEBlankScreen(void) {
+	unsigned char *firstrow;
+	unsigned int y,w,h;
+	ifevidinfo_t* vif;
+	int pitch;
+
+	if (!ifeapi->BeginScreenDraw())
+		IFEFatalError("BeginScreenDraw TestRGBPalettePattern");
+	if ((vif=ifeapi->GetVidInfo()) == NULL)
+		IFEFatalError("GetVidInfo() == NULL");
+	if ((firstrow=vif->buf_first_row) == NULL)
+		IFEFatalError("ScreenDrawPointer==NULL TestRGBPalettePattern");
+
+	w = vif->width;
+	h = vif->height;
+	pitch = vif->buf_pitch;
+	for (y=0;y < h;y++) {
+		unsigned char *row = firstrow + ((int)y * pitch);
+		memset(row,0,w);
+	}
+
+	ifeapi->EndScreenDraw();
 }
 
 void IFETestRGBPalettePattern(void) {
@@ -375,6 +493,39 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 	}
+
+	{
+		IFEBitmap bmp;
+
+		IFEResetScissorRect();
+
+		if (!IFELoadPNG(bmp,"test1.png"))
+			IFEFatalError("Unable to load PNG");
+		if (bmp.row(0) == NULL)
+			IFEFatalError("BMP storage failure, row");
+		if (bmp.palette == NULL)
+			IFEFatalError("PNG did not have palette");
+
+		/* blank screen to avoid palette flash */
+		IFEBlankScreen();
+		ifeapi->UpdateFullScreen();
+		ifeapi->SetPaletteColors(0,bmp.palette_size,bmp.palette);
+
+		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		ifeapi->UpdateFullScreen();
+
+		ifeapi->ResetTicks(ifeapi->GetTicks());
+		while (ifeapi->GetTicks() < 3000) {
+			if (ifeapi->UserWantsToQuit()) IFENormalExit();
+			ifeapi->WaitEvent(1);
+		}
+	}
+
+	/* blank screen to avoid palette flash */
+	IFEBlankScreen();
+	ifeapi->UpdateFullScreen();
+
+	IFETestRGBPalette();
 
 	IFETestRGBPalettePattern2();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
