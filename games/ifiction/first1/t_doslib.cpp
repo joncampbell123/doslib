@@ -160,17 +160,17 @@ static void p_SetPaletteColors(const unsigned int first,const unsigned int count
 	if (vesa_8bitpal) {
 		for (i=0;i < count;i++) {
 			/* VGA 8-bit RGB */
-			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r);
+			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].b);
 			vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g);
-			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b);
+			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].r);
 		}
 	}
 	else {
 		for (i=0;i < count;i++) {
 			/* VGA 6-bit RGB */
-			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].r >> 2u);
+			vesa_pal[i*4u + 0u] = (unsigned char)(pal[i].b >> 2u);
 			vesa_pal[i*4u + 1u] = (unsigned char)(pal[i].g >> 2u);
-			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].b >> 2u);
+			vesa_pal[i*4u + 2u] = (unsigned char)(pal[i].r >> 2u);
 		}
 	}
 
