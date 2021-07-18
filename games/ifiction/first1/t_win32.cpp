@@ -693,6 +693,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				HPALETTE oldPal;
 				HDC hDC;
 
+				IFEDBG("WM_PALETTECHANGED");
+
 				hDC = GetDC(hwnd);
 				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 				RealizePalette(hDC);
@@ -707,6 +709,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				HPALETTE oldPal;
 				HDC hDC;
 
+				IFEDBG("WM_QUERYNEWPALETTE");
+
 				hDC = GetDC(hwnd);
 				oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 				RealizePalette(hDC);
@@ -720,6 +724,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			{
 				PAINTSTRUCT ps;
 				HDC hDC = BeginPaint(hwnd,&ps);
+
+				IFEDBG("WM_PAINT");
 
 				if (winScreenIsPal && hwndMainPAL != NULL) {
 					HPALETTE oldPal;
