@@ -23,6 +23,10 @@
 #include <zlib.h>
 #endif
 
+#ifndef O_BINARY
+#define O_BINARY (0)
+#endif
+
 #include <fmt/minipng/minipng.h>
 
 int main(int argc,char **argv) {
@@ -144,6 +148,28 @@ int main(int argc,char **argv) {
     getch();
 
     int10_setmode(3);
+#else
+    {
+            unsigned int i;
+            unsigned char *row;
+            int fd;
+
+            fd = open("rawpng.bin",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+            if (fd < 0) return 1;
+
+            if (rdr->ihdr.bit_depth == 8) {
+                    row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
+                    if (row != NULL) {
+                            for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
+                                    if (minipng_reader_read_idat(rdr,row,rowsize) <= 0) break;
+                                    write(fd,row+1/*pad byte*/,rdr->ihdr.width);
+                            }
+                            free(row);
+                    }
+            }
+
+            close(fd);
+    }
 #endif
     minipng_reader_close(&rdr);
     return 0;
