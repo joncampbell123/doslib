@@ -11,7 +11,7 @@ public:
 	struct subrect {
 		iferect_t	r;
 		short int	offset_x,offset_y;	/* draw displacement of bitmap i.e. cursor hot spot */
-		bool		has_mask;		/* image is twice the height, bottom half contains mask to AND screen pixels with for color key */
+		bool		has_mask;		/* image is twice the width of r.w, right half is mask to AND screen pixels by when doing a transparent BitBlt */
 	};
 public:
 	unsigned char*		bitmap;

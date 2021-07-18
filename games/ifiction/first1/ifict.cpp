@@ -36,8 +36,8 @@ iferect_t IFEScissor;
 
 /* load one PNG into ONE bitmap, that's it */
 bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
+	bool res = false,transparency = false;
 	struct minipng_reader *rdr = NULL;
-	bool res = false;
 	unsigned int i;
 
 	if ((rdr=minipng_reader_open(path)) == NULL)
@@ -46,10 +46,23 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 		goto done;
 	if (rdr->ihdr.width > 2048 || rdr->ihdr.width < 1 || rdr->ihdr.height > 2048 || rdr->ihdr.height < 1)
 		goto done;
+	if (rdr->ihdr.color_type != 3) /* PNG_COLOR_TYPE_PALETTE = PNG_COLOR_MASK_COLOR | PNG_COLOR_MASK_PALETTE */
+		goto done;
+
+	if (rdr->trns != NULL && rdr->trns_size != 0) {
+		for (i=0;i < rdr->trns_size;i++) {
+			if (!(rdr->trns[i] & 0x80)) {
+				transparency = true;
+			}
+		}
+	}
+
+	/* transparency is accomplished by allocating twice the width,
+	 * making the right hand side the mask and the left hand the image */
 
 	if (!bmp.alloc_subrects(1))
 		goto done;
-	if (!bmp.alloc_storage(rdr->ihdr.width, rdr->ihdr.height))
+	if (!bmp.alloc_storage(rdr->ihdr.width * (transparency ? 2u : 1u), rdr->ihdr.height))
 		goto done;
 
 	if (rdr->ihdr.bit_depth >= 1 && rdr->ihdr.bit_depth <= 8) {
@@ -80,6 +93,7 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 
 	{
 		IFEBitmap::subrect &sr = bmp.get_subrect(0);
+		sr.has_mask = transparency;
 		sr.r.w = rdr->ihdr.width;
 		sr.r.h = rdr->ihdr.height;
 		sr.r.x = 0;
@@ -96,6 +110,27 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 		}
 		else {
 			memset(bmp.bitmap,0,bmp.stride * bmp.height);
+		}
+
+		if (transparency) {
+			/* NTS: Remember the bitmap allocated is twice the width of the PNG, mask starts on right hand side */
+			unsigned int x;
+			unsigned char *ptr = bmp.bitmap;
+			unsigned char *msk = ptr + rdr->ihdr.width;
+
+			for (i=0;i < bmp.height;i++) {
+				for (x=0;x < rdr->ihdr.width;x++) {
+					if (ptr[x] < rdr->trns_size && !(rdr->trns[ptr[x]] & 0x80)) {
+						msk[x] = 0xFF; /* transparent ((dst AND msk) + src) == dst */
+						ptr[x] = 0x00; /* for this to work, make sure src == 0 */
+					}
+					else {
+						msk[x] = 0x00; /* opaque ((dst AND msk) + src) == src */
+					}
+				}
+				ptr += bmp.stride;
+				msk += bmp.stride;
+			}
 		}
 
 		res = true;
@@ -495,7 +530,7 @@ int main(int argc,char **argv) {
 	}
 
 	{
-		IFEBitmap bmp;
+		IFEBitmap bmp,tbmp;
 
 		IFEResetScissorRect();
 
@@ -506,12 +541,24 @@ int main(int argc,char **argv) {
 		if (bmp.palette == NULL)
 			IFEFatalError("PNG did not have palette");
 
+		if (!IFELoadPNG(tbmp,"woo1.png"))
+			IFEFatalError("Unable to load PNG");
+		if (tbmp.row(0) == NULL)
+			IFEFatalError("BMP storage failure, row");
+		if (tbmp.palette == NULL)
+			IFEFatalError("PNG did not have palette");
+		if (tbmp.subrects_alloc < 1)
+			IFEFatalError("PNG without subrect");
+		if (!tbmp.get_subrect(0).has_mask)
+			IFEFatalError("PNG should have transparency");
+
 		/* blank screen to avoid palette flash */
 		IFEBlankScreen();
 		ifeapi->UpdateFullScreen();
 		ifeapi->SetPaletteColors(0,bmp.palette_size,bmp.palette);
 
 		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		ifeapi->ResetTicks(ifeapi->GetTicks());
