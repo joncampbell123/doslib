@@ -15,12 +15,41 @@
 #include "fatal.h"
 #include "bitmap.h"
 
-IFEBitmap::IFEBitmap() : bitmap(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0) {
+IFEBitmap::IFEBitmap() : bitmap(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0), palette(NULL), palette_alloc(0), palette_size(0) {
 }
 
 IFEBitmap::~IFEBitmap() {
 	free_subrects();
 	free_storage();
+	free_palette();
+}
+
+bool IFEBitmap::alloc_palette(size_t count) {
+	if (count == 0 || count > 1024)
+		return false;
+
+	if (palette == NULL) {
+		palette = (IFEPaletteEntry*)malloc(sizeof(IFEPaletteEntry) * count);
+		if (palette == NULL) return false;
+	}
+	else if (count != palette_alloc) {
+		IFEPaletteEntry *np = (IFEPaletteEntry*)realloc((void*)palette,sizeof(IFEPaletteEntry) * count);
+		if (np == NULL) return false;
+		palette = np;
+	}
+
+	palette_alloc = count;
+	palette_size = count;
+	return true;
+}
+
+void IFEBitmap::free_palette(void) {
+	if (palette != NULL) {
+		free(palette);
+		palette = NULL;
+	}
+	palette_alloc = 0;
+	palette_size = 0;
 }
 
 bool IFEBitmap::alloc_subrects(size_t count) {

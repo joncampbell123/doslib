@@ -11,6 +11,7 @@ public:
 	struct subrect {
 		iferect_t	r;
 		short int	offset_x,offset_y;	/* draw displacement of bitmap i.e. cursor hot spot */
+		bool		has_mask;		/* image is twice the height, bottom half contains mask to AND screen pixels with for color key */
 	};
 public:
 	unsigned char*		bitmap;
@@ -19,10 +20,16 @@ public:
 
 	subrect*		subrects;
 	size_t			subrects_alloc;
+
+	IFEPaletteEntry*	palette;
+	size_t			palette_alloc;
+	size_t			palette_size;
 public:
 	IFEBitmap();
 	~IFEBitmap();
 public:
+	bool alloc_palette(size_t count);
+	void free_palette(void);
 	bool alloc_storage(unsigned int w,unsigned int h);
 	void free_storage(void);
 	bool alloc_subrects(size_t count);
