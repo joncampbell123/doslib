@@ -1,18 +1,27 @@
 
 #include <stdio.h>
+#if defined(TARGET_MSDOS)
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <dos.h>
+#endif
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
-#include <dos.h>
 
+#if defined(TARGET_MSDOS)
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#endif
+
+#if defined(TARGET_MSDOS)
 #include <ext/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
 
 #include <fmt/minipng/minipng.h>
 
@@ -44,13 +53,13 @@ int main(int argc,char **argv) {
         return 1;
     }
     fprintf(stderr,"PNG header: %lu x %lu, depth=%u ctype=0x%02x cmpmet=%u flmet=%u ilmet=%u\n",
-        rdr->ihdr.width,
-        rdr->ihdr.height,
-        rdr->ihdr.bit_depth,
-        rdr->ihdr.color_type,
-        rdr->ihdr.compression_method,
-        rdr->ihdr.filter_method,
-        rdr->ihdr.interlace_method);
+        (unsigned long)rdr->ihdr.width,
+        (unsigned long)rdr->ihdr.height,
+        (unsigned int)rdr->ihdr.bit_depth,
+        (unsigned int)rdr->ihdr.color_type,
+        (unsigned int)rdr->ihdr.compression_method,
+        (unsigned int)rdr->ihdr.filter_method,
+        (unsigned int)rdr->ihdr.interlace_method);
     if (rdr->plte != NULL) {
         unsigned int i;
 
@@ -66,8 +75,8 @@ int main(int argc,char **argv) {
     if (rdr->trns != NULL) {
         unsigned int i;
 
-        fprintf(stderr,"PNG trns: bytelength=%u\n",rdr->trns_size);
-        for (i=0;i < rdr->trns_size;i++) fprintf(stderr,"%02x ",rdr->trns[i]);
+        fprintf(stderr,"PNG trns: bytelength=%u\n",(unsigned int)rdr->trns_size);
+        for (i=0;i < rdr->trns_size;i++) fprintf(stderr,"%02x ",(unsigned int)rdr->trns[i]);
         fprintf(stderr,"\n");
     }
     rowsize = minipng_rowsize_bytes(rdr);
@@ -76,6 +85,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Only indexed color is supported\n");
         return 1;
     }
+#if defined(TARGET_MSDOS)
     getch();
 
     probe_dos();
@@ -134,6 +144,7 @@ int main(int argc,char **argv) {
     getch();
 
     int10_setmode(3);
+#endif
     minipng_reader_close(&rdr);
     return 0;
 }

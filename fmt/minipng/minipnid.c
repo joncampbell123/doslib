@@ -1,18 +1,30 @@
 
 #include <stdio.h>
+#if defined(TARGET_MSDOS)
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <ctype.h>
+#endif
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
+#if defined(TARGET_MSDOS)
 #include <dos.h>
+#endif
 
+#if defined(TARGET_MSDOS)
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#endif
+
+#if defined(TARGET_MSDOS)
 #include <ext/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
 
 #include <fmt/minipng/minipng.h>
 

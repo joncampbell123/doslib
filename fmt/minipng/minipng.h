@@ -1,9 +1,13 @@
 
 #include <stdint.h>
 
+#if defined(TARGET_MSDOS)
 #include <ext/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
 
-inline uint32_t minipng_byteswap32(uint32_t t) {
+static inline uint32_t minipng_byteswap32(uint32_t t) {
     t = ((t & 0xFF00FF00UL) >>  8ul) + ((t & 0x00FF00FFUL) <<  8ul);
     t = ((t & 0xFFFF0000UL) >> 16ul) + ((t & 0x0000FFFFUL) << 16ul);
     return t;
