@@ -823,8 +823,14 @@ void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
 			upd_yspan[(size_t)y1].x = x1;
 		}
 		else {
-			if (upd_yspan[(size_t)y1].x > x1) upd_yspan[(size_t)y1].x = x1;
-			if ((upd_yspan[(size_t)y1].x+upd_yspan[(size_t)y1].w) < x2) upd_yspan[(size_t)y1].w = x2-upd_yspan[(size_t)y1].x;
+			if (upd_yspan[(size_t)y1].x > x1) {
+				const unsigned int orig_x = upd_yspan[(size_t)y1].x;
+				upd_yspan[(size_t)y1].x = x1;
+				upd_yspan[(size_t)y1].w += orig_x - x1;
+			}
+			if ((upd_yspan[(size_t)y1].x+upd_yspan[(size_t)y1].w) < x2) {
+				upd_yspan[(size_t)y1].w = x2-upd_yspan[(size_t)y1].x;
+			}
 		}
 		y1++;
 	}
