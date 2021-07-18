@@ -21,6 +21,8 @@ static unsigned char    pal_remap[256] = {0}; /* gen_pal -> pal_pal */
 static png_color        gen_png_pal[256] = {0};
 static int              gen_png_pal_count = 0;
 
+static int		force_color_transparent = -1;
+
 static unsigned int	src_png_bypp = 0;
 static unsigned char*   src_png_image = NULL;
 static png_bytep*       src_png_image_rows = NULL;
@@ -64,6 +66,7 @@ static void help(void) {
     fprintf(stderr,"rearranging the palette to match palette PNG.\n");
     fprintf(stderr," -dither         Dither to palette\n");
     fprintf(stderr," -no-dither      Do not dither\n");
+    fprintf(stderr," -tc <n>         Force transparency for color n\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -85,6 +88,11 @@ static int parse_argv(int argc,char **argv) {
 	    }
 	    else if (!strcmp(a,"no-dither")) {
 		    enable_dither = 0;
+	    }
+	    else if (!strcmp(a,"tc")) {
+		    force_color_transparent = atoi(argv[i++]);
+		    if (force_color_transparent < 0 || force_color_transparent >= 256)
+			    return 1;
 	    }
 	    else if (!strcmp(a,"i")) {
 		    if ((in_png = argv[i++]) == NULL)
@@ -201,6 +209,13 @@ static int load_palette_png(void) {
 
     memcpy(gen_png_trns,pal_png_pal_trns,pal_png_pal_trns_count);
     gen_png_trns_count = pal_png_pal_trns_count;
+
+    if (force_color_transparent >= 0 && force_color_transparent < gen_png_pal_count) {
+        while (gen_png_trns_count <= (unsigned int)force_color_transparent)
+            gen_png_trns[gen_png_trns_count++] = 0xFF;
+
+        gen_png_trns[force_color_transparent] = 0x00;
+    }
 
     /* success */
     ret = 0;
@@ -362,9 +377,11 @@ static int quant_rgb_to_png(void) {
 	unsigned char *s;
 	unsigned char *d;
 
-	if (gen_png_trns_count > 0) {
-		if (!(gen_png_trns[0] & 0x80))
-			transparent_color = 0;
+	for (x=0;x < gen_png_trns_count;x++) {
+		if (!(gen_png_trns[x] & 0x80)) {
+			transparent_color = x;
+			break;
+		}
 	}
 
 	for (y=0;y < gen_png_height;y++) {
