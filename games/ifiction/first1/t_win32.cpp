@@ -130,7 +130,8 @@ static void p_SetPaletteColors(const unsigned int first,const unsigned int count
 			RealizePalette(hDC);
 			SelectPalette(hDC,oldPal,FALSE);
 			ReleaseDC(hwndMain,hDC);
-			InvalidateRect(hwndMain,NULL,FALSE);
+			/* do NOT invalidate rect, the calling program may intend to change palette
+			 * while blank screen, then update later */
 		}
 	}
 	else {
