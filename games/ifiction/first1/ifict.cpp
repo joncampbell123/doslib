@@ -290,7 +290,7 @@ void IFETestRGBPalettePattern2(void) {
 	ifeapi->EndScreenDraw();
 }
 
-static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor) {
+static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor,const bool has_mask) {
 	/* BMP with no storage? caller wants to draw bitmaps with negative dimensions? Exit now. Assume scissor rect is valid. */
 	if (bmp.bitmap == NULL || w <= 0 || h <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
 
@@ -311,7 +311,9 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,co
 		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d w=%d h=%d",__LINE__,sx,sy,dx,dy,w,h);
 #endif
 
-	if ((unsigned int)(sx+w) > bmp.width)
+	int actual_w = has_mask ? (w * 2) : w;
+
+	if ((unsigned int)(sx+actual_w) > bmp.width)
 		w = bmp.width - sx;
 	if ((unsigned int)(sy+h) > bmp.height)
 		h = bmp.height - sy;
@@ -327,9 +329,9 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,co
 	dy += scissor.y;
 
 #if 1//DEBUG
-	if ((unsigned int)(sx+w) > bmp.width && (unsigned int)(sy+h) > bmp.height && (unsigned int)(dx+w) > (unsigned int)scissor.w && (unsigned int)(dy+h) > (unsigned int)scissor.h)
+	if ((unsigned int)(sx+actual_w) > bmp.width && (unsigned int)(sy+h) > bmp.height && (unsigned int)(dx+w) > (unsigned int)scissor.w && (unsigned int)(dy+h) > (unsigned int)scissor.h)
 		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d w=%d h=%d bw=%d bh=%d scw=%d sch=%d",
-			__LINE__,sx,sy,dx,dy,w,h,bmp.width,bmp.height,scissor.w,scissor.h);
+			__LINE__,sx,sy,dx,dy,actual_w,h,bmp.width,bmp.height,scissor.w,scissor.h);
 #endif
 
 	return true;
@@ -338,7 +340,7 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,co
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,false/*no mask*/)) return;
 
 	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
 	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
@@ -352,6 +354,50 @@ void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 		memcpy(dst,src,w);
 		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
 		src += bmp.stride;
+		h--;
+	}
+
+	ifeapi->EndScreenDraw();
+}
+
+static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
+	while (w >= 4) {
+		*((uint32_t*)dst) = (*((uint32_t*)dst) & *((uint32_t*)msk)) + *((uint32_t*)src);
+		dst += 4;
+		msk += 4;
+		src += 4;
+		w -= 4;
+	}
+	while (w > 0) {
+		*dst = (*dst & *msk) + *src;
+		dst++;
+		msk++;
+		src++;
+		w--;
+	}
+}
+
+void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
+	int orig_w = w;
+
+	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,true/*has mask*/)) return;
+
+	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
+	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+
+	const unsigned char *src = bmp.row(sy,sx);
+	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
+	const unsigned char *msk = src + orig_w;
+
+	unsigned char *dst = vi->buf_first_row + (dy * vi->buf_pitch) + dx; /* remember, buf_pitch is signed because Windows 3.1 upside down DIBs to allow negative pitch */
+
+	while (h > 0) {
+		memcpymask(dst,src,msk,w);
+		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
+		src += bmp.stride;
+		msk += bmp.stride;
 		h--;
 	}
 
@@ -559,12 +605,50 @@ int main(int argc,char **argv) {
 
 		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		ifeapi->ResetTicks(ifeapi->GetTicks());
 		while (ifeapi->GetTicks() < 3000) {
 			if (ifeapi->UserWantsToQuit()) IFENormalExit();
 			ifeapi->WaitEvent(1);
+		}
+
+		/* test clipping by letting the user mouse around with it */
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					IFEBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2,tbmp.height,/*source*/px,py,bmp);
+					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
+					px = ms->x;
+					py = ms->y;
+					IFETBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
+
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				ifeapi->WaitEvent(1);
+			} while (1);
 		}
 	}
 
