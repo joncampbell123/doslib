@@ -627,7 +627,7 @@ static void p_InitVideo(void) {
 							if (	(mi.win_a_segment != 0 && (mi.win_a_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005) ||
 								(mi.win_b_segment != 0 && (mi.win_b_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005)) {
 								if (mi.win_granularity != 0 && mi.win_size != 0 &&
-									vesa_ispowerof2(mi.win_granularity) && vesa_ispowerof2(mi.win_size)) {
+									vesa_ispowerof2(mi.win_granularity) && vesa_ispowerof2(mi.win_size) && mi.win_granularity <= mi.win_size) {
 									found_mode_w = mode;
 								}
 							}
