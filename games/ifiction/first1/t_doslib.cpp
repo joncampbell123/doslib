@@ -63,6 +63,12 @@ uint8_t				vesa_current_bank = 0;
 uint16_t			vesa_window_segment = 0;
 unsigned int			vesa_window_shr = 0; /* right-shift from byte count to window number (divide by granularity) */
 uint32_t			vesa_window_func = 0;
+uint32_t			vesa_window_size = 0;
+/* ^ NTS: The VESA BIOS standard allows window granularity to differ from size, even if most hardware just makes both the same anyway.
+ *        One good example are old (mid 1990 or older) Cirrus SVGA chipsets, which have a granularity of 4KB and a window size of 64KB.
+ *        Granularity is the number of bytes times bank into the linear framebuffer of the hardware through the window, so a granularity
+ *        of 4KB means you can point the window into any multiple of 4KB offset of the video memory. If the granularity is 64KB (as most
+ *        cards do) then you can point the window into any multiple of 64KB offset of video memory. */
 
 unsigned char			vesa_pal[256*4];
 
@@ -240,7 +246,12 @@ static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,u
 	bank = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
 	bank_offset = o & win_granularity_mask;
 	while (cpy > (uint32_t)0) {
-		c = (win_granularity_mask + (uint32_t)1) - bank_offset; /* how much can we copy into this window before bank switching again? */
+		/* NTS: Bank offset is initialized modulo window granularity, but window granularity can be smaller than window size.
+		 *      So use window size (which we verified is a power of 2 on init!) to compute how much this code can copy before
+		 *      needing to bank switch again.
+		 *
+		 *      Test case: Cirrus SVGA with granularity 4KB, window size 64KB */
+		c = vesa_window_size - bank_offset; /* how much can we copy into this window before bank switching again? */
 		if (c > cpy) c = cpy;
 
 		/* call on BIOS to move window into framebuffer if necessary */
@@ -652,6 +663,7 @@ static void p_InitVideo(void) {
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
 				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
 				vesa_window_func = mi.window_function;
+				vesa_window_size = (uint32_t)mi.win_size << (uint32_t)10ul; /* convert KB to bytes */
 
 				/* choose the window, A or B. Pick A first if possible.
 				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
@@ -684,7 +696,7 @@ static void p_InitVideo(void) {
 				if (vesa_window_segment == 0)
 					IFEFatalError("Somehow, bank switch window segment is zero");
 
-				IFEDBG("VESA: Using bank switching, window=%u winseg=0x%04x",vesa_window,vesa_window_segment);
+				IFEDBG("VESA: Using bank switching, window=%u winseg=0x%04x winsize=0x%04x",vesa_window,vesa_window_segment,vesa_window_size);
 			}
 			vesa_lfb_map_size = mi.bytes_per_scan_line * mi.y_resolution;
 			vesa_lfb_stride = mi.bytes_per_scan_line;
