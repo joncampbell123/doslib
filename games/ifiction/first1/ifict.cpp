@@ -464,24 +464,26 @@ void priv_IFEDrawCursor(void) {
 
 	const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
 
-	if (!priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h))
-		return;
+	if (!priv_IFEcursor_saved_valid) {
+		if (!priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h))
+			return;
 
-	IFEBitBltFrom(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
-			/*width/height*/r.r.w,r.r.h,
-			/*source*/0,0,
-			priv_IFEcursor_saved);
+		IFEBitBltFrom(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+				/*width/height*/r.r.w,r.r.h,
+				/*source*/0,0,
+				priv_IFEcursor_saved);
 
-	if (r.has_mask)
-		IFETBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
-	else
-		IFEBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+		if (r.has_mask)
+			IFETBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+		else
+			IFEBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
 
-	ifeapi->AddScreenUpdate(
-		priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
-		priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
+		ifeapi->AddScreenUpdate(
+			priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+			priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
 
-	priv_IFEcursor_saved_valid = true;
+		priv_IFEcursor_saved_valid = true;
+	}
 }
 
 void IFEHideCursorDrawing(bool hide) {
