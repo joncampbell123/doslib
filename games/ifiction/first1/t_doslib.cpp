@@ -1058,6 +1058,16 @@ void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
 	}
 }
 
+static bool p_SetHostStdCursor(const unsigned int id) {
+	(void)id;
+	return false;
+}
+
+static bool p_ShowHostStdCursor(const bool show) {
+	(void)show;
+	return false;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -1079,7 +1089,9 @@ ifeapi_t ifeapi_doslib = {
 	p_FlushMouseInput,
 	p_GetMouseInput,
 	p_UpdateScreen,
-	p_AddScreenUpdate
+	p_AddScreenUpdate,
+	p_SetHostStdCursor,
+	p_ShowHostStdCursor
 };
 #endif
 
