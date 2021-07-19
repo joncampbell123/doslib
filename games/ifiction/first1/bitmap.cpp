@@ -150,3 +150,126 @@ const unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int 
 	return bitmap + (y * stride) + x; /* for code that has already validated the bitmap */
 }
 
+bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
+	if (bitmap == NULL) return false;
+	if (s.r.w <= 0 || s.r.h <= 0) return true;
+	if (s.r.x < 0 || s.r.y < 0) return false;
+	if ((unsigned int)(s.r.x+(s.r.w*(s.has_mask?2:1))) > width || (unsigned int)(s.r.y+s.r.h) > height) return false;
+	if (s.index_bias == new_bias) return true;
+
+	unsigned char *row,*ptr;
+	unsigned char mod;
+	unsigned int w,h;
+	uint32_t mod4;
+	bool madd;
+
+	if (new_bias > s.index_bias) {
+		madd = true;
+		mod = (unsigned char)(new_bias - s.index_bias);
+		mod4 = (uint32_t)mod * (uint32_t)0x01010101ul;
+	}
+	else {
+		madd = false;
+		mod = (unsigned char)(s.index_bias - new_bias);
+		mod4 = (uint32_t)mod * (uint32_t)0x01010101ul;
+	}
+
+	row = (unsigned char*)bitmap + ((unsigned int)s.r.y * (unsigned int)stride) + (unsigned int)s.r.x;
+	h = (unsigned int)s.r.h;
+
+	if (s.has_mask) {
+		const unsigned char *mrow = row + (unsigned int)s.r.w;
+		const unsigned char *mptr;
+
+		if (madd) {
+			do {
+				w = (unsigned int)s.r.w;
+				mptr = mrow;
+				ptr = row;
+
+				while (w >= 4u) {
+					*((uint32_t*)ptr) += mod4 & ~(*((uint32_t*)mptr));
+					mptr += 4u;
+					ptr += 4u;
+					w -= 4u;
+				}
+				while (w > 0u) {
+					*ptr += (unsigned char)(mod & ~(*mptr));
+					mptr++;
+					ptr++;
+					w--;
+				}
+
+				mrow += stride;
+				row += stride;
+			} while ((--h) != 0u);
+		}
+		else {
+			do {
+				w = (unsigned int)s.r.w;
+				mptr = mrow;
+				ptr = row;
+
+				while (w >= 4u) {
+					*((uint32_t*)ptr) -= mod4 & ~(*((uint32_t*)mptr));
+					mptr += 4u;
+					ptr += 4u;
+					w -= 4u;
+				}
+				while (w > 0u) {
+					*ptr -= (unsigned char)(mod & ~(*mptr));
+					mptr++;
+					ptr++;
+					w--;
+				}
+
+				mrow += stride;
+				row += stride;
+			} while ((--h) != 0u);
+		}
+	}
+	else {
+		if (madd) {
+			do {
+				w = (unsigned int)s.r.w;
+				ptr = row;
+
+				while (w >= 4u) {
+					*((uint32_t*)ptr) += mod4;
+					ptr += 4u;
+					w -= 4u;
+				}
+				while (w > 0u) {
+					*ptr += mod;
+					ptr++;
+					w--;
+				}
+
+				row += stride;
+			} while ((--h) != 0u);
+		}
+		else {
+			do {
+				w = (unsigned int)s.r.w;
+				ptr = row;
+
+				while (w >= 4u) {
+					*((uint32_t*)ptr) -= mod4;
+					ptr += 4u;
+					w -= 4u;
+				}
+				while (w > 0u) {
+					*ptr -= mod;
+					ptr++;
+					w--;
+				}
+
+				row += stride;
+			} while ((--h) != 0u);
+		}
+	}
+
+	s.index_bias = new_bias;
+	return true;
+}
+

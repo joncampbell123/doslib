@@ -11,6 +11,7 @@ public:
 	struct subrect {
 		iferect_t	r;
 		short int	offset_x,offset_y;	/* draw displacement of bitmap i.e. cursor hot spot */
+		uint8_t		index_bias;		/* this offset has been added to the pixels after loading */
 		bool		has_mask;		/* image is twice the width of r.w, right half is mask to AND screen pixels by when doing a transparent BitBlt */
 	};
 public:
@@ -39,5 +40,6 @@ public:
 	unsigned char *rowfast(const unsigned int y,const unsigned int x=0);
 	const unsigned char *row(const unsigned int y,const unsigned int x=0) const;
 	const unsigned char *rowfast(const unsigned int y,const unsigned int x=0) const;
+	bool bias_subrect(subrect &s,uint8_t new_bias); /* bias (add to pixel values) for simple palette remapping */
 };
 
