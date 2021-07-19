@@ -573,6 +573,11 @@ int main(int argc,char **argv) {
 		IFEFatalError("Failed to load arrow image");
 	if (!IFELoadPNG(IFEcursor_wait,"st_wait.png"))
 		IFEFatalError("Failed to load wait image");
+	{/* by the way the hotspot is in the middle of the hourglass */
+		IFEBitmap::subrect &r = IFEcursor_wait.get_subrect(0);
+		r.offset_x = -r.r.w / 2;
+		r.offset_y = -r.r.h / 2;
+	}
 
 	ifeapi->InitVideo();
 
