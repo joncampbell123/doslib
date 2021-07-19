@@ -360,6 +360,29 @@ void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifeapi->EndScreenDraw();
 }
 
+void IFEBitBltFrom(int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
+	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,false/*no mask*/)) return;
+
+	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
+	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+
+	unsigned char *src = bmp.row(sy,sx);
+	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
+
+	const unsigned char *dst = vi->buf_first_row + (dy * vi->buf_pitch) + dx; /* remember, buf_pitch is signed because Windows 3.1 upside down DIBs to allow negative pitch */
+
+	while (h > 0) {
+		memcpy(src,dst,w); /* copy TO the bitmap, not FROM the bitmap */
+		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
+		src += bmp.stride;
+		h--;
+	}
+
+	ifeapi->EndScreenDraw();
+}
+
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
 	while (w >= 4) {
 		*((uint32_t*)dst) = (*((uint32_t*)dst) & *((uint32_t*)msk)) + *((uint32_t*)src);
@@ -369,7 +392,7 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 		w -= 4;
 	}
 	while (w > 0) {
-		*dst = (*dst & *msk) + *src;
+		*dst = (unsigned char)((*dst & *msk) + *src);
 		dst++;
 		msk++;
 		src++;
@@ -577,6 +600,7 @@ int main(int argc,char **argv) {
 
 	{
 		IFEBitmap bmp,tbmp;
+		IFEBitmap savebmp;
 
 		IFEResetScissorRect();
 
@@ -597,6 +621,9 @@ int main(int argc,char **argv) {
 			IFEFatalError("PNG without subrect");
 		if (!tbmp.get_subrect(0).has_mask)
 			IFEFatalError("PNG should have transparency");
+
+		if (!savebmp.alloc_storage(tbmp.width/2,tbmp.height))
+			IFEFatalError("SaveBMP alloc fail");
 
 		/* blank screen to avoid palette flash */
 		IFEBlankScreen();
@@ -627,6 +654,56 @@ int main(int argc,char **argv) {
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
+					IFETBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
+
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				ifeapi->WaitEvent(1);
+			} while (1);
+		}
+
+		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		ifeapi->UpdateFullScreen();
+
+		ifeapi->ResetTicks(ifeapi->GetTicks());
+		while (ifeapi->GetTicks() < 3000) {
+			if (ifeapi->UserWantsToQuit()) IFENormalExit();
+			ifeapi->WaitEvent(1);
+		}
+
+		/* test clipping by letting the user mouse around with it, this time using IFEBitBltFrom() to save and restore the background
+		 * under the image. */
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					IFEBitBlt(/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
+					px = ms->x;
+					py = ms->y;
+					IFEBitBltFrom(/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
 					IFETBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
