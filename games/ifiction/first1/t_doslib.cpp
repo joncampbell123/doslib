@@ -40,6 +40,7 @@ uint16_t			vesa_lfb_height = 0;
 uint16_t			vesa_lfb_width = 0;
 bool				vesa_setmode = false;
 bool				vesa_8bitpal = false; /* 8-bit DAC */
+bool				vbe_dac_not_vga_compatible = false; /* Palette must be set by the BIOS, not I/O to port 3C8h */
 uint16_t			vesa_mode = 0;
 
 unsigned char			vesa_pal[256*4];
@@ -174,7 +175,17 @@ static void p_SetPaletteColors(const unsigned int first,const unsigned int count
 		}
 	}
 
-	vesa_set_palette_data(first,count,(char*)vesa_pal);
+	if (vbe_dac_not_vga_compatible) {
+		vesa_set_palette_data(first,count,(char*)vesa_pal);
+	}
+	else {
+		outp(0x3C8,first);
+		for (i=0;i < count;i++) {
+			outp(0x3C9,vesa_pal[i*4u + 2u]); // R
+			outp(0x3C9,vesa_pal[i*4u + 1u]); // G
+			outp(0x3C9,vesa_pal[i*4u + 0u]); // B
+		}
+	}
 }
 
 static uint32_t p_GetTicks(void) {
@@ -548,6 +559,9 @@ static void p_InitVideo(void) {
 					vesa_lfb_width = mi.x_resolution;
 					vesa_lfb_height = mi.y_resolution;
 					found_mode = mode;
+					/* also note whether setting the palette must be done through the BIOS.
+					 * the call to do that appeared in VBE 2.0, and was not defined in VBE 1.2 */
+					vbe_dac_not_vga_compatible = (vbe_info->version >= 0x200) && ((mi.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) != 0u);
 					break;
 				}
 			}
