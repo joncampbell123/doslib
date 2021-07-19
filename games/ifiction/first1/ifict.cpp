@@ -505,7 +505,11 @@ void IFEShowCursor(bool show) {
 	}
 }
 
-void IFEMoveCursor(int x,int y) {
+/* mouse cursor position is driven by platform mouse driver.
+ * this function is used purely by the mouse tracking code and
+ * does not affect the platform mouse driver's position, so
+ * what's the point? make it private. */
+void priv_IFEMoveCursor(int x,int y) {
 	if (priv_IFEcursor_x != x || priv_IFEcursor_y != y) {
 		priv_IFEUndrawCursor();
 		priv_IFEcursor_x = x;
@@ -516,7 +520,7 @@ void IFEMoveCursor(int x,int y) {
 
 void IFEUpdateCursor(void) {
 	IFEMouseStatus *ms = ifeapi->GetMouseStatus();
-	IFEMoveCursor(ms->x,ms->y);
+	priv_IFEMoveCursor(ms->x,ms->y);
 }
 
 void IFESetCursor(IFEBitmap* new_cursor,size_t sr) {
