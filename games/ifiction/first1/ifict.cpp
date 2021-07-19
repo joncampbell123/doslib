@@ -34,6 +34,17 @@ ifeapi_t *ifeapi = &ifeapi_default;
 
 iferect_t IFEScissor;
 
+int priv_IFEcursor_x = -999,priv_IFEcursor_y = -999;
+IFEBitmap* priv_IFEcursor = NULL;
+size_t priv_IFEcursor_sr = 0;
+IFEBitmap priv_IFEcursor_saved;
+IFEBitmap IFEcursor_arrow;
+bool priv_IFEcursor_saved_valid = false;
+bool priv_IFEcursor_show_state = false;
+int priv_IFEcursor_hide_draw = 0;
+
+void IFESetCursor(IFEBitmap* new_cursor,size_t sr=0);
+
 /* load one PNG into ONE bitmap, that's it */
 bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 	bool res = false,transparency = false;
@@ -427,6 +438,117 @@ void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifeapi->EndScreenDraw();
 }
 
+void priv_IFEUndrawCursor(void) {
+	if (priv_IFEcursor == NULL) return;
+
+	if (priv_IFEcursor_saved_valid) {
+		const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
+
+		IFEBitBlt(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+				/*width/height*/r.r.w,r.r.h,
+				/*source*/0,0,
+				priv_IFEcursor_saved);
+
+		ifeapi->AddScreenUpdate(
+			priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+			priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
+
+		priv_IFEcursor_saved_valid = false;
+	}
+}
+
+void priv_IFEDrawCursor(void) {
+	if (priv_IFEcursor == NULL) return;
+	if (priv_IFEcursor_hide_draw > 0 || !priv_IFEcursor_show_state) return;
+
+	const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
+
+	if (!priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h))
+		return;
+
+	IFEBitBltFrom(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+			/*width/height*/r.r.w,r.r.h,
+			/*source*/0,0,
+			priv_IFEcursor_saved);
+
+	if (r.has_mask)
+		IFETBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+	else
+		IFEBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+
+	ifeapi->AddScreenUpdate(
+		priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+		priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
+
+	priv_IFEcursor_saved_valid = true;
+}
+
+void IFEHideCursorDrawing(bool hide) {
+	priv_IFEUndrawCursor();
+
+	if (hide)
+		priv_IFEcursor_hide_draw++;
+	else
+		priv_IFEcursor_hide_draw--;
+
+	priv_IFEDrawCursor();
+}
+
+void IFEShowCursor(bool show) {
+	if (priv_IFEcursor_show_state != show) {
+		priv_IFEUndrawCursor();
+		priv_IFEcursor_show_state = show;
+		priv_IFEDrawCursor();
+	}
+}
+
+void IFEMoveCursor(int x,int y) {
+	if (priv_IFEcursor_x != x || priv_IFEcursor_y != y) {
+		priv_IFEUndrawCursor();
+		priv_IFEcursor_x = x;
+		priv_IFEcursor_y = y;
+		priv_IFEDrawCursor();
+	}
+}
+
+void IFEUpdateCursor(void) {
+	IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+	IFEMoveCursor(ms->x,ms->y);
+}
+
+void IFESetCursor(IFEBitmap* new_cursor,size_t sr) {
+	if (new_cursor == priv_IFEcursor && priv_IFEcursor_sr == sr)
+		return;
+
+	priv_IFEUndrawCursor();
+
+	if (new_cursor != NULL && sr < new_cursor->subrects_alloc) {
+		priv_IFEcursor_sr = sr;
+		priv_IFEcursor = new_cursor;
+
+		const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
+		priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h);
+	}
+	else {
+		priv_IFEcursor_saved.free_storage();
+		priv_IFEcursor = NULL;
+		priv_IFEcursor_sr = 0;
+	}
+
+	priv_IFEDrawCursor();
+}
+
+void IFECheckEvent(void) {
+	ifeapi->CheckEvents();
+	IFEUpdateCursor();
+}
+
+void IFEWaitEvent(const int wait_ms) {
+	ifeapi->WaitEvent(wait_ms);
+	IFEUpdateCursor();
+	ifeapi->UpdateScreen();
+}
+
 void IFENormalExit(void) {
 #if defined(USE_DOSLIB)
 	IFE_win95_tf_hang_check();
@@ -446,23 +568,32 @@ int main(int argc,char **argv) {
 		return 1;
 #endif
 
+	if (!IFELoadPNG(IFEcursor_arrow,"st_arrow.png"))
+		IFEFatalError("Failed to load arrow image");
+
 	ifeapi->InitVideo();
+
+	IFESetCursor(&IFEcursor_arrow);
+	IFEShowCursor(true);
 
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 1000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		ifeapi->WaitEvent(100);
+		IFEWaitEvent(100);
 	}
 
+	IFEHideCursorDrawing(true);
 	IFETestRGBPalette();
-
 	IFETestRGBPalettePattern();
+	IFEHideCursorDrawing(false);
 	ifeapi->UpdateFullScreen();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	while (ifeapi->GetTicks() < 3000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		ifeapi->WaitEvent(100);
+		IFEWaitEvent(100);
 	}
+
+	IFEShowCursor(false);
 
 	{
 		unsigned char *row;
@@ -521,7 +652,7 @@ int main(int argc,char **argv) {
 				}
 
 				if (ifeapi->UserWantsToQuit()) IFENormalExit();
-				ifeapi->WaitEvent(1);
+				IFEWaitEvent(1);
 			} while (1);
 		}
 
@@ -557,7 +688,7 @@ int main(int argc,char **argv) {
 				}
 
 				if (ifeapi->UserWantsToQuit()) IFENormalExit();
-				ifeapi->WaitEvent(1);
+				IFEWaitEvent(1);
 			} while (1);
 		}
 
@@ -593,7 +724,7 @@ int main(int argc,char **argv) {
 				}
 
 				if (ifeapi->UserWantsToQuit()) IFENormalExit();
-				ifeapi->WaitEvent(1);
+				IFEWaitEvent(1);
 			} while (1);
 		}
 	}
@@ -635,11 +766,15 @@ int main(int argc,char **argv) {
 		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
+		IFEShowCursor(true);
+
 		ifeapi->ResetTicks(ifeapi->GetTicks());
 		while (ifeapi->GetTicks() < 3000) {
 			if (ifeapi->UserWantsToQuit()) IFENormalExit();
-			ifeapi->WaitEvent(1);
+			IFEWaitEvent(1);
 		}
+
+		IFEShowCursor(false);
 
 		/* test clipping by letting the user mouse around with it */
 		{
@@ -674,7 +809,7 @@ int main(int argc,char **argv) {
 				}
 
 				if (ifeapi->UserWantsToQuit()) IFENormalExit();
-				ifeapi->WaitEvent(1);
+				IFEWaitEvent(1);
 			} while (1);
 		}
 
@@ -683,11 +818,15 @@ int main(int argc,char **argv) {
 		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
+		IFEShowCursor(true);
+
 		ifeapi->ResetTicks(ifeapi->GetTicks());
 		while (ifeapi->GetTicks() < 3000) {
 			if (ifeapi->UserWantsToQuit()) IFENormalExit();
-			ifeapi->WaitEvent(1);
+			IFEWaitEvent(1);
 		}
+
+		IFEShowCursor(false);
 
 		/* test clipping by letting the user mouse around with it, this time using IFEBitBltFrom() to save and restore the background
 		 * under the image. */
@@ -724,7 +863,7 @@ int main(int argc,char **argv) {
 				}
 
 				if (ifeapi->UserWantsToQuit()) IFENormalExit();
-				ifeapi->WaitEvent(1);
+				IFEWaitEvent(1);
 			} while (1);
 		}
 	}
@@ -749,7 +888,7 @@ int main(int argc,char **argv) {
 				py = y;
 			}
 			if (ifeapi->UserWantsToQuit()) IFENormalExit();
-			ifeapi->WaitEvent(1);
+			IFEWaitEvent(1);
 		}
 	}
 	IFETestRGBPalettePattern();
@@ -763,13 +902,19 @@ int main(int argc,char **argv) {
 				py = y;
 			}
 			if (ifeapi->UserWantsToQuit()) IFENormalExit();
-			ifeapi->WaitEvent(1);
+			IFEWaitEvent(1);
 		}
 	}
-	while (ifeapi->GetTicks() < 5000) {
+
+	ifeapi->UpdateFullScreen();
+	IFEShowCursor(true);
+
+	while (ifeapi->GetTicks() < 6000) {
 		if (ifeapi->UserWantsToQuit()) IFENormalExit();
-		ifeapi->WaitEvent(100);
+		IFEWaitEvent(100);
 	}
+
+	IFEShowCursor(false);
 
 	IFENormalExit();
 	return 0;
