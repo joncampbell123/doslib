@@ -231,29 +231,30 @@ static void p_ResetTicks(const uint32_t base) {
 }
 
 static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,uint32_t cpy) {
-	const uint32_t wmsk = ((uint32_t)1u << (uint32_t)vesa_window_shr) - (uint32_t)1;
+	const uint32_t win_granularity_mask = ((uint32_t)1u << (uint32_t)vesa_window_shr) - (uint32_t)1;
 	unsigned char *dst;
-	uint32_t bo;
+	uint32_t bank_offset;
+	uint8_t bank;
 	uint32_t c;
-	uint8_t b;
 
-	b = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
-	bo = o & wmsk;
+	bank = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
+	bank_offset = o & win_granularity_mask;
 	while (cpy > (uint32_t)0) {
-		c = (wmsk + (uint32_t)1) - bo; /* how much can we copy into this window before bank switching again? */
+		c = (win_granularity_mask + (uint32_t)1) - bank_offset; /* how much can we copy into this window before bank switching again? */
 		if (c > cpy) c = cpy;
 
 		/* call on BIOS to move window into framebuffer if necessary */
-		if (vesa_current_bank != b)
-			vbe_bank_switch(vesa_window_func,vesa_window,vesa_current_bank=b);
+		if (vesa_current_bank != bank)
+			vbe_bank_switch(vesa_window_func,vesa_window,vesa_current_bank=bank);
 
-		dst = vesa_non_lfb + bo; /* set pointer into VGA window */
+		dst = vesa_non_lfb + bank_offset; /* set pointer into VGA window */
 		memcpy(dst,src,c);
 		src += c;
 		cpy -= c;
 		o += c;
-		bo = 0; /* assume start of next bank */
-		b++; /* assume next bank */
+
+		bank++; /* assume next bank */
+		bank_offset = 0; /* assume start of next bank */
 	}
 }
 
