@@ -48,6 +48,10 @@ void MakeRgnEmpty(HRGN r) {
 	SetRectRgn(r,0,0,0,0); /* region is x1 <= x < x2, y1 <= y < y2, therefore this rectangle makes an empty region */
 }
 
+void win32updatecursor(void) {
+	SetCursor(NULL); /* make it invisible */
+}
+
 void priv_CaptureMouse(const bool cap) {
 	if (cap && !mousecap_on) {
 		SetCapture(hwndMain);
@@ -666,6 +670,17 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_DESTROY:
 			if (!winIsDestroying)
 				winQuit = true;
+			break;
+		case WM_SETCURSOR:
+			if (LOWORD(lParam) == HTCLIENT) {
+				/* ONLY the client area, allow the cursor normal operation otherwise */
+				win32updatecursor();
+				return TRUE;
+			}
+			else {
+				/* Let Windows set the cursor according to standard behavior from other regions of the screen */
+				return DefWindowProc(hwnd,uMsg,wParam,lParam);
+			}
 			break;
 		case WM_MOUSEMOVE:
 		case WM_LBUTTONDOWN:

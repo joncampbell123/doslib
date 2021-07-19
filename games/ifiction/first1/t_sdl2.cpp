@@ -420,6 +420,9 @@ static void p_InitVideo(void) {
 	ifeapi->UpdateFullScreen();
 	ifeapi->CheckEvents();
 
+	/* make the cursor invisible */
+	SDL_ShowCursor(0);
+
 	IFECompleteVideoInit();
 }
 
