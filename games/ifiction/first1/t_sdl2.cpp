@@ -32,6 +32,12 @@ bool				sdl_signal_to_quit = false;
 ifevidinfo_t			ifevidinfo_sdl2;
 IFEMouseStatus			ifemousestat;
 bool				mousecap_on = false;
+unsigned int			sdl_std_cursor = 0;
+SDL_Cursor*			sdl_std_cursor_obj = NULL;
+bool				sdl_std_cursor_show = false;
+
+SDL_Cursor*			sdl_cursor_pointer = NULL;
+SDL_Cursor*			sdl_cursor_wait = NULL;
 
 static const SDL_TouchID	no_touch_id = (SDL_TouchID)(0xFFFFFFFFul);
 static const SDL_FingerID	no_finger_id = (SDL_FingerID)(0xFFFFFFFFul);
@@ -43,6 +49,16 @@ SDL_TouchID			touchscreen_touch_lock = no_touch_id;
 /* update region management */
 unsigned int			upd_ystep = 8;
 std::vector<SDL_Rect>		upd_yspan;
+
+static void SDL_UpdateCursorFromID(void) {
+	if (sdl_std_cursor_obj != NULL && sdl_std_cursor_show) {
+		SDL_SetCursor(sdl_std_cursor_obj);
+		SDL_ShowCursor(1);
+	}
+	else {
+		SDL_ShowCursor(0);
+	}
+}
 
 static void p_SetPaletteColors(const unsigned int first,const unsigned int count,IFEPaletteEntry *pal) {
 	unsigned int i;
@@ -369,6 +385,15 @@ static void p_ShutdownVideo(void) {
 		sdl_window_surface = NULL;
 		sdl_window = NULL;
 	}
+	sdl_std_cursor_obj = NULL;
+	if (sdl_cursor_pointer != NULL) {
+		SDL_FreeCursor(sdl_cursor_pointer);
+		sdl_cursor_pointer = NULL;
+	}
+	if (sdl_cursor_wait != NULL) {
+		SDL_FreeCursor(sdl_cursor_wait);
+		sdl_cursor_wait = NULL;
+	}
 	upd_yspan.clear();
 	SDL_Quit();
 }
@@ -379,7 +404,9 @@ static void p_InitVideo(void) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		IFEFatalError("SDL2 failed to initialize");
 
+	sdl_std_cursor = 0;
 	mousecap_on = false;
+	sdl_std_cursor_obj = NULL;
 	touchscreen_touch_lock = no_touch_id;
 	touchscreen_finger_lock = no_finger_id;
 	memset(&ifevidinfo_sdl2,0,sizeof(ifevidinfo_sdl2));
@@ -420,8 +447,12 @@ static void p_InitVideo(void) {
 	ifeapi->UpdateFullScreen();
 	ifeapi->CheckEvents();
 
+	/* Get standard cursors, if possible */
+	sdl_cursor_pointer = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+	sdl_cursor_wait = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
+
 	/* make the cursor invisible */
-	SDL_ShowCursor(0);
+	SDL_UpdateCursorFromID();
 
 	IFECompleteVideoInit();
 }
@@ -533,6 +564,36 @@ void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
 	}
 }
 
+static bool p_SetHostStdCursor(const unsigned int id) {
+	if (id == IFEStdCursor_POINTER && sdl_cursor_pointer != NULL) {
+		sdl_std_cursor_obj = sdl_cursor_pointer;
+		sdl_std_cursor = id;
+		SDL_UpdateCursorFromID();
+		return true;
+	}
+	else if (id == IFEStdCursor_WAIT && sdl_cursor_wait != NULL) {
+		sdl_std_cursor_obj = sdl_cursor_wait;
+		sdl_std_cursor = id;
+		SDL_UpdateCursorFromID();
+		return true;
+	}
+
+	sdl_std_cursor_obj = NULL;
+	sdl_std_cursor = 0;
+	SDL_UpdateCursorFromID();
+	return false;
+}
+
+static bool p_ShowHostStdCursor(const bool show) {
+	if (sdl_std_cursor_obj != NULL) {
+		sdl_std_cursor_show = show;
+		SDL_UpdateCursorFromID();
+		return true;
+	}
+
+	return false;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -554,7 +615,9 @@ ifeapi_t ifeapi_sdl2 = {
 	p_FlushMouseInput,
 	p_GetMouseInput,
 	p_UpdateScreen,
-	p_AddScreenUpdate
+	p_AddScreenUpdate,
+	p_SetHostStdCursor,
+	p_ShowHostStdCursor
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {
