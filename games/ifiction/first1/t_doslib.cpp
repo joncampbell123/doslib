@@ -62,6 +62,7 @@ uint8_t				vesa_window = 0; /* which window */
 uint8_t				vesa_current_bank = 0;
 uint16_t			vesa_window_segment = 0;
 unsigned int			vesa_window_shr = 0; /* right-shift from byte count to window number (divide by granularity) */
+uint32_t			vesa_window_func = 0;
 
 unsigned char			vesa_pal[256*4];
 
@@ -229,15 +230,40 @@ static void p_ResetTicks(const uint32_t base) {
 	pit_count -= ((base % (uint32_t)1000ul) * (uint32_t)T8254_REF_CLOCK_HZ) / (uint32_t)1000ul;
 }
 
+static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,uint32_t cpy) {
+	const uint32_t wmsk = ((uint32_t)1u << (uint32_t)vesa_window_shr) - (uint32_t)1;
+	unsigned char *dst;
+	uint32_t bo;
+	uint32_t c;
+	uint8_t b;
+
+	b = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
+	bo = o & wmsk;
+	while (cpy > (uint32_t)0) {
+		c = (wmsk + (uint32_t)1) - bo; /* how much can we copy into this window before bank switching again? */
+		if (c > cpy) c = cpy;
+
+		/* call on BIOS to move window into framebuffer if necessary */
+		if (vesa_current_bank != b)
+			vbe_bank_switch(vesa_window_func,vesa_window,vesa_current_bank=b);
+
+		dst = vesa_non_lfb + bo; /* set pointer into VGA window */
+		memcpy(dst,src,c);
+		src += c;
+		cpy -= c;
+		o += c;
+		bo = 0; /* assume start of next bank */
+		b++; /* assume next bank */
+	}
+}
+
 static void p_UpdateFullScreen(void) {
 	size_t i;
 
-	if (vesa_use_lfb) {
+	if (vesa_use_lfb)
 		memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
-	}
-	else {
-		// TODO
-	}
+	else
+		vesa_windowed_memcpy(0/*target linear vram address*/,vesa_lfb_offscreen,vesa_lfb_map_size);
 
 	/* clear update region list */
 	for (i=0;i < upd_yspan_size;i++)
@@ -624,6 +650,7 @@ static void p_InitVideo(void) {
 				vesa_use_lfb = false;
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
 				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
+				vesa_window_func = mi.window_function;
 
 				/* choose the window, A or B. Pick A first if possible.
 				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
@@ -852,7 +879,7 @@ IFEMouseEvent *p_GetMouseInput(void) {
 void SCR_UpdateWindowSurfaceRect(SCR_Rect *r) {
 	/* we trust the rects are valid, coming from our own code.
 	 * only consideration is whether (y+h) extends past framebuffer. */
-	unsigned char *src,*dst;
+	unsigned char *src;
 	unsigned int w = (unsigned int)(r->w);
 	unsigned int h = (unsigned int)(r->h);
 	unsigned int y = (unsigned int)(r->y);
@@ -866,7 +893,7 @@ void SCR_UpdateWindowSurfaceRect(SCR_Rect *r) {
 
 	src = vesa_lfb_offscreen + (y * ifevidinfo_doslib.buf_pitch) + (r->x);
 	if (vesa_use_lfb) {
-		dst = vesa_lfb + (y * ifevidinfo_doslib.vram_pitch) + (r->x);
+		unsigned char *dst = vesa_lfb + (y * ifevidinfo_doslib.vram_pitch) + (r->x);
 		do {
 			memcpy(dst,src,w);
 			src += ifevidinfo_doslib.buf_pitch;
@@ -874,7 +901,12 @@ void SCR_UpdateWindowSurfaceRect(SCR_Rect *r) {
 		} while ((--h) != 0u);
 	}
 	else {
-		// TODO
+		uint32_t o = (y * ifevidinfo_doslib.vram_pitch) + (r->x);
+		do {
+			vesa_windowed_memcpy(o,src,w);
+			src += ifevidinfo_doslib.buf_pitch;
+			o += ifevidinfo_doslib.vram_pitch;
+		} while ((--h) != 0u);
 	}
 }
 
