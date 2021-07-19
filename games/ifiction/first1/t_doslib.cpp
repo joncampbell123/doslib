@@ -243,14 +243,15 @@ static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,u
 	uint8_t bank;
 	uint32_t c;
 
-	bank = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
-	bank_offset = o & win_granularity_mask;
 	while (cpy > (uint32_t)0) {
 		/* NTS: Bank offset is initialized modulo window granularity, but window granularity can be smaller than window size.
 		 *      So use window size (which we verified is a power of 2 on init!) to compute how much this code can copy before
 		 *      needing to bank switch again.
 		 *
 		 *      Test case: Cirrus SVGA with granularity 4KB, window size 64KB */
+		bank = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
+		bank_offset = o & win_granularity_mask;
+
 		c = vesa_window_size - bank_offset; /* how much can we copy into this window before bank switching again? */
 		if (c > cpy) c = cpy;
 
@@ -263,9 +264,6 @@ static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,u
 		src += c;
 		cpy -= c;
 		o += c;
-
-		bank++; /* assume next bank */
-		bank_offset = 0; /* assume start of next bank */
 	}
 }
 
