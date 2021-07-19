@@ -39,6 +39,7 @@ IFEBitmap* priv_IFEcursor = NULL;
 size_t priv_IFEcursor_sr = 0;
 IFEBitmap priv_IFEcursor_saved;
 IFEBitmap IFEcursor_arrow;
+IFEBitmap IFEcursor_wait;
 bool priv_IFEcursor_saved_valid = false;
 bool priv_IFEcursor_show_state = false;
 int priv_IFEcursor_hide_draw = 0;
@@ -570,6 +571,8 @@ int main(int argc,char **argv) {
 
 	if (!IFELoadPNG(IFEcursor_arrow,"st_arrow.png"))
 		IFEFatalError("Failed to load arrow image");
+	if (!IFELoadPNG(IFEcursor_wait,"st_wait.png"))
+		IFEFatalError("Failed to load wait image");
 
 	ifeapi->InitVideo();
 
@@ -766,6 +769,7 @@ int main(int argc,char **argv) {
 		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
+		IFESetCursor(&IFEcursor_wait);
 		IFEShowCursor(true);
 
 		ifeapi->ResetTicks(ifeapi->GetTicks());
@@ -867,6 +871,8 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 	}
+
+	IFESetCursor(&IFEcursor_arrow);
 
 	/* blank screen to avoid palette flash */
 	IFEBlankScreen();
