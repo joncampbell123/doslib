@@ -650,7 +650,11 @@ static void p_InitVideo(void) {
 				vesa_use_lfb = false;
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
 				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
-				vesa_window_func = mi.window_function;
+
+				/* NTS: Protected mode call to real mode window function is not working right now,
+				 *      at least on an old laptop with an old Cirrus SVGA chipset that doesn't support LFB from the BIOS.
+				 *      Until that can be tracked down, do not use window function */
+				vesa_window_func = 0;//DISABLED mi.window_function;
 
 				/* choose the window, A or B. Pick A first if possible.
 				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
