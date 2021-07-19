@@ -34,15 +34,34 @@ ifeapi_t *ifeapi = &ifeapi_default;
 
 iferect_t IFEScissor;
 
-int priv_IFEcursor_x = -999,priv_IFEcursor_y = -999;
-IFEBitmap* priv_IFEcursor = NULL;
-size_t priv_IFEcursor_sr = 0;
-IFEBitmap priv_IFEcursor_saved;
 IFEBitmap IFEcursor_arrow;
 IFEBitmap IFEcursor_wait;
-bool priv_IFEcursor_saved_valid = false;
-bool priv_IFEcursor_show_state = false;
-int priv_IFEcursor_hide_draw = 0;
+
+struct IFEcursor_state_t {
+	int		x;
+	int		y;
+	IFEBitmap*	bitmap;
+	size_t		bitmap_sr;
+	bool		saved_valid;
+	bool		show_state;
+	int		hide_draw;
+
+	IFEBitmap	saved;
+
+	IFEcursor_state_t();
+};
+
+IFEcursor_state_t::IFEcursor_state_t() {
+	x = -999;
+	y = -999;
+	bitmap = NULL;
+	bitmap_sr = 0;
+	saved_valid = false;
+	show_state = false;
+	hide_draw = 0;
+}
+
+IFEcursor_state_t	priv_IFEcursor;
 
 void IFESetCursor(IFEBitmap* new_cursor,size_t sr=0);
 
@@ -440,49 +459,49 @@ void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 }
 
 void priv_IFEUndrawCursor(void) {
-	if (priv_IFEcursor == NULL) return;
+	if (priv_IFEcursor.bitmap == NULL) return;
 
-	if (priv_IFEcursor_saved_valid) {
-		const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
+	if (priv_IFEcursor.saved_valid) {
+		const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
 
-		IFEBitBlt(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+		IFEBitBlt(	/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
 				/*width/height*/r.r.w,r.r.h,
 				/*source*/0,0,
-				priv_IFEcursor_saved);
+				priv_IFEcursor.saved);
 
 		ifeapi->AddScreenUpdate(
-			priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
-			priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
+			priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+			priv_IFEcursor.x+r.offset_x+r.r.w,priv_IFEcursor.y+r.offset_y+r.r.h);
 
-		priv_IFEcursor_saved_valid = false;
+		priv_IFEcursor.saved_valid = false;
 	}
 }
 
 void priv_IFEDrawCursor(void) {
-	if (priv_IFEcursor == NULL) return;
-	if (priv_IFEcursor_hide_draw > 0 || !priv_IFEcursor_show_state) return;
+	if (priv_IFEcursor.bitmap == NULL) return;
+	if (priv_IFEcursor.hide_draw > 0 || !priv_IFEcursor.show_state) return;
 
-	const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
+	const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
 
-	if (!priv_IFEcursor_saved_valid) {
-		if (!priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h))
+	if (!priv_IFEcursor.saved_valid) {
+		if (!priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h))
 			return;
 
-		IFEBitBltFrom(	/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
+		IFEBitBltFrom(	/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
 				/*width/height*/r.r.w,r.r.h,
 				/*source*/0,0,
-				priv_IFEcursor_saved);
+				priv_IFEcursor.saved);
 
 		if (r.has_mask)
-			IFETBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+			IFETBitBlt(/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
 		else
-			IFEBitBlt(/*dest*/priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor);
+			IFEBitBlt(/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
 
 		ifeapi->AddScreenUpdate(
-			priv_IFEcursor_x+r.offset_x,priv_IFEcursor_y+r.offset_y,
-			priv_IFEcursor_x+r.offset_x+r.r.w,priv_IFEcursor_y+r.offset_y+r.r.h);
+			priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+			priv_IFEcursor.x+r.offset_x+r.r.w,priv_IFEcursor.y+r.offset_y+r.r.h);
 
-		priv_IFEcursor_saved_valid = true;
+		priv_IFEcursor.saved_valid = true;
 	}
 }
 
@@ -490,17 +509,17 @@ void IFEHideCursorDrawing(bool hide) {
 	priv_IFEUndrawCursor();
 
 	if (hide)
-		priv_IFEcursor_hide_draw++;
+		priv_IFEcursor.hide_draw++;
 	else
-		priv_IFEcursor_hide_draw--;
+		priv_IFEcursor.hide_draw--;
 
 	priv_IFEDrawCursor();
 }
 
 void IFEShowCursor(bool show) {
-	if (priv_IFEcursor_show_state != show) {
+	if (priv_IFEcursor.show_state != show) {
 		priv_IFEUndrawCursor();
-		priv_IFEcursor_show_state = show;
+		priv_IFEcursor.show_state = show;
 		priv_IFEDrawCursor();
 	}
 }
@@ -510,10 +529,10 @@ void IFEShowCursor(bool show) {
  * does not affect the platform mouse driver's position, so
  * what's the point? make it private. */
 void priv_IFEMoveCursor(int x,int y) {
-	if (priv_IFEcursor_x != x || priv_IFEcursor_y != y) {
+	if (priv_IFEcursor.x != x || priv_IFEcursor.y != y) {
 		priv_IFEUndrawCursor();
-		priv_IFEcursor_x = x;
-		priv_IFEcursor_y = y;
+		priv_IFEcursor.x = x;
+		priv_IFEcursor.y = y;
 		priv_IFEDrawCursor();
 	}
 }
@@ -524,22 +543,22 @@ void IFEUpdateCursor(void) {
 }
 
 void IFESetCursor(IFEBitmap* new_cursor,size_t sr) {
-	if (new_cursor == priv_IFEcursor && priv_IFEcursor_sr == sr)
+	if (new_cursor == priv_IFEcursor.bitmap && priv_IFEcursor.bitmap_sr == sr)
 		return;
 
 	priv_IFEUndrawCursor();
 
 	if (new_cursor != NULL && sr < new_cursor->subrects_alloc) {
-		priv_IFEcursor_sr = sr;
-		priv_IFEcursor = new_cursor;
+		priv_IFEcursor.bitmap_sr = sr;
+		priv_IFEcursor.bitmap = new_cursor;
 
-		const IFEBitmap::subrect &r = priv_IFEcursor->get_subrect(priv_IFEcursor_sr);
-		priv_IFEcursor_saved.alloc_storage(r.r.w,r.r.h);
+		const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
+		priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h);
 	}
 	else {
-		priv_IFEcursor_saved.free_storage();
-		priv_IFEcursor = NULL;
-		priv_IFEcursor_sr = 0;
+		priv_IFEcursor.saved.free_storage();
+		priv_IFEcursor.bitmap = NULL;
+		priv_IFEcursor.bitmap_sr = 0;
 	}
 
 	priv_IFEDrawCursor();
