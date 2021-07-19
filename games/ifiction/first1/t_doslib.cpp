@@ -861,6 +861,9 @@ static void p_InitVideo(void) {
 		}
 	}
 
+	/* make sure it's clear */
+	memset(vesa_lfb_offscreen,0,vesa_lfb_map_size);
+
 	IFECompleteVideoInit();
 }
 
