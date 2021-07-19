@@ -44,6 +44,7 @@ struct IFEcursor_state_t {
 	size_t		bitmap_sr;
 	bool		saved_valid;
 	bool		show_state;
+	bool		host_replacement; /* host platform is providing a cursor on our behalf, no need to draw */
 	int		hide_draw;
 
 	IFEBitmap	saved;
@@ -56,6 +57,7 @@ IFEcursor_state_t::IFEcursor_state_t() {
 	y = -999;
 	bitmap = NULL;
 	bitmap_sr = 0;
+	host_replacement = false;
 	saved_valid = false;
 	show_state = false;
 	hide_draw = 0;
@@ -479,7 +481,7 @@ void priv_IFEUndrawCursor(void) {
 
 void priv_IFEDrawCursor(void) {
 	if (priv_IFEcursor.bitmap == NULL) return;
-	if (priv_IFEcursor.hide_draw > 0 || !priv_IFEcursor.show_state) return;
+	if (priv_IFEcursor.hide_draw > 0 || !priv_IFEcursor.show_state || priv_IFEcursor.host_replacement) return;
 
 	const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
 
