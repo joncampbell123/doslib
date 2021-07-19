@@ -542,6 +542,7 @@ void IFESetCursor(IFEBitmap* new_cursor,size_t sr) {
 void IFECheckEvent(void) {
 	ifeapi->CheckEvents();
 	IFEUpdateCursor();
+	ifeapi->UpdateScreen();
 }
 
 void IFEWaitEvent(const int wait_ms) {
