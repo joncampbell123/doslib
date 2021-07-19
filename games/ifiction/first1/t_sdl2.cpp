@@ -449,7 +449,10 @@ static void p_InitVideo(void) {
 
 	/* Get standard cursors, if possible */
 	sdl_cursor_pointer = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+#if !defined(__APPLE__)
+    /* NTS: Mac OS X + SDL2 seems to map WAIT to CURSOR_ARROW, so don't bother loading the WAIT cursor */
 	sdl_cursor_wait = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
+#endif
 
 	/* make the cursor invisible */
 	SDL_UpdateCursorFromID();
