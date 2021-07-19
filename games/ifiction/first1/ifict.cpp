@@ -522,6 +522,7 @@ void IFEShowCursor(bool show) {
 	if (priv_IFEcursor.show_state != show) {
 		priv_IFEUndrawCursor();
 		priv_IFEcursor.show_state = show;
+		if (priv_IFEcursor.host_replacement) ifeapi->ShowHostStdCursor(show);
 		priv_IFEDrawCursor();
 	}
 }
@@ -551,13 +552,27 @@ void IFESetCursor(IFEBitmap* new_cursor,size_t sr) {
 	priv_IFEUndrawCursor();
 
 	if (new_cursor != NULL && sr < new_cursor->subrects_alloc) {
+		unsigned int host_id = 0;
+
 		priv_IFEcursor.bitmap_sr = sr;
 		priv_IFEcursor.bitmap = new_cursor;
 
-		const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
-		priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h);
+		if (new_cursor == &IFEcursor_arrow)
+			host_id = IFEStdCursor_POINTER;
+		else if (new_cursor == &IFEcursor_wait)
+			host_id = IFEStdCursor_WAIT;
+
+		if (ifeapi->SetHostStdCursor(host_id)) {
+			priv_IFEcursor.host_replacement = true;
+		}
+		else {
+			const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
+			priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h);
+			priv_IFEcursor.host_replacement = false;
+		}
 	}
 	else {
+		priv_IFEcursor.host_replacement = false;
 		priv_IFEcursor.saved.free_storage();
 		priv_IFEcursor.bitmap = NULL;
 		priv_IFEcursor.bitmap_sr = 0;
