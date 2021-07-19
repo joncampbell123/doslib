@@ -61,6 +61,7 @@ uint16_t			vesa_mode = 0;
 uint8_t				vesa_window = 0; /* which window */
 uint8_t				vesa_current_bank = 0;
 uint16_t			vesa_window_segment = 0;
+unsigned int			vesa_window_shr = 0; /* right-shift from byte count to window number (divide by granularity) */
 
 unsigned char			vesa_pal[256*4];
 
@@ -635,6 +636,21 @@ static void p_InitVideo(void) {
 				else { /* assume B is valid. This case wouldn't execute if both windows were invalid. */
 					vesa_window = 1;
 					vesa_window_segment = mi.win_b_segment;
+				}
+
+				{
+					unsigned int c = mi.win_granularity;
+
+					vesa_window_shr = 10; /* start at 10 (1KB) */
+					while (c > 1u) {
+						vesa_window_shr++;
+						c >>= 1u;
+					}
+
+					IFEDBG("Window granularity: %uKB (byte>>%u)",
+						mi.win_granularity,vesa_window_shr);
+					IFEDBG("Window size: %uKB (%u bytes)",
+						mi.win_size,mi.win_size << 10u);
 				}
 
 				if (vesa_window_segment == 0)
