@@ -22,6 +22,20 @@
 #include "fatal.h"
 #include "palette.h"
 
+static inline bool vesa_ispowerof2(const unsigned int x) {
+	/* NTS:
+	 *      010000     16
+	 *  AND 001111     15
+	 *  -----------------
+	 *      000000     0
+	 *
+	 *      010001     17
+	 *  AND 010000     16
+	 * ------------------
+	 *      010000     16 */
+	return (x != 0u) ? ((x & (x - 1u)) == 0u) : false;
+}
+
 struct SCR_Rect {
 	signed int		x,y,w,h;
 };
@@ -31,6 +45,7 @@ unsigned int			upd_ystep = 8;
 SCR_Rect*			upd_yspan = NULL;
 size_t				upd_yspan_size = 0;
 
+unsigned char*			vesa_non_lfb = NULL;
 unsigned char*			vesa_lfb = NULL; /* video memory, linear framebuffer */
 unsigned char*			vesa_lfb_offscreen = NULL; /* system memory framebuffer, to copy to video memory */
 uint32_t			vesa_lfb_physaddr = 0;
@@ -38,10 +53,14 @@ uint32_t			vesa_lfb_map_size = 0;
 uint32_t			vesa_lfb_stride = 0;
 uint16_t			vesa_lfb_height = 0;
 uint16_t			vesa_lfb_width = 0;
+bool				vesa_use_lfb = false;
 bool				vesa_setmode = false;
 bool				vesa_8bitpal = false; /* 8-bit DAC */
 bool				vbe_dac_not_vga_compatible = false; /* Palette must be set by the BIOS, not I/O to port 3C8h */
 uint16_t			vesa_mode = 0;
+uint8_t				vesa_window = 0; /* which window */
+uint8_t				vesa_current_bank = 0;
+uint16_t			vesa_window_segment = 0;
 
 unsigned char			vesa_pal[256*4];
 
@@ -179,7 +198,7 @@ static void p_SetPaletteColors(const unsigned int first,const unsigned int count
 		vesa_set_palette_data(first,count,(char*)vesa_pal);
 	}
 	else {
-		outp(0x3C8,first);
+		outp(0x3C8,(unsigned char)first);
 		for (i=0;i < count;i++) {
 			outp(0x3C9,vesa_pal[i*4u + 2u]); // R
 			outp(0x3C9,vesa_pal[i*4u + 1u]); // G
@@ -212,7 +231,12 @@ static void p_ResetTicks(const uint32_t base) {
 static void p_UpdateFullScreen(void) {
 	size_t i;
 
-	memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
+	if (vesa_use_lfb) {
+		memcpy(vesa_lfb,vesa_lfb_offscreen,vesa_lfb_map_size);
+	}
+	else {
+		// TODO
+	}
 
 	/* clear update region list */
 	for (i=0;i < upd_yspan_size;i++)
@@ -535,8 +559,9 @@ static void p_InitVideo(void) {
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
 	{
-		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE | VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE;
+		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE;
 		struct vbe_mode_info mi = {0};
+		uint16_t found_mode_w = 0;
 		uint16_t found_mode = 0;
 		unsigned int entry;
 		uint16_t mode;
@@ -547,36 +572,92 @@ static void p_InitVideo(void) {
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
 
+			memset(&mi,0,sizeof(mi));
 			if (vbe_read_mode_info(mode,&mi)) {
 				vbe_fill_in_mode_info(mode,&mi);
 				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
 					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
-					mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul &&
 					mi.bytes_per_scan_line >= 640) {
-					vesa_lfb_physaddr = mi.phys_base_ptr;
-					vesa_lfb_map_size = mi.bytes_per_scan_line * mi.y_resolution;
-					vesa_lfb_stride = mi.bytes_per_scan_line;
-					vesa_lfb_width = mi.x_resolution;
-					vesa_lfb_height = mi.y_resolution;
-					found_mode = mode;
-					/* also note whether setting the palette must be done through the BIOS.
-					 * the call to do that appeared in VBE 2.0, and was not defined in VBE 1.2 */
-					vbe_dac_not_vga_compatible = (vbe_info->version >= 0x200) && ((mi.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) != 0u);
-					break;
+					if (mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) {
+						if (found_mode == 0 && mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul)
+							found_mode = mode;
+					}
+					else if (!(mi.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE_WINDOWING)) {
+						if (found_mode_w == 0) {
+							/* NTS: This code does not intend to read from video memory */
+							if (	(mi.win_a_segment != 0 && (mi.win_a_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005) ||
+								(mi.win_b_segment != 0 && (mi.win_b_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005)) {
+								if (mi.win_granularity != 0 && mi.win_size != 0 &&
+									vesa_ispowerof2(mi.win_granularity) && vesa_ispowerof2(mi.win_size)) {
+									found_mode_w = mode;
+								}
+							}
+						}
+					}
 				}
 			}
 		}
 
+		IFEDBG("Found(LFB): 0x%04x",found_mode);
+		IFEDBG("Found(BNK): 0x%04x",found_mode_w);
+
+		if (found_mode == 0 && found_mode_w != 0) {
+			IFEDBG("Linear framebuffer not available, opting for bank switched mode");
+			found_mode = found_mode_w;
+		}
+
 		if (found_mode == 0)
 			IFEFatalError("VESA BIOS video mode (640 x 480 256-color) not found");
+
+		memset(&mi,0,sizeof(mi));
+		if (!vbe_read_mode_info(found_mode,&mi))
+			IFEFatalError("Unexpected failure to read mode info again");
+
+		vbe_fill_in_mode_info(found_mode,&mi);
+		{
+			if (mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) {
+				vesa_lfb_physaddr = mi.phys_base_ptr;
+				vesa_use_lfb = true;
+			}
+			else {
+				vesa_use_lfb = false;
+				vesa_lfb_physaddr = 0; /* no linear framebuffer */
+				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
+
+				/* choose the window, A or B. Pick A first if possible.
+				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
+				 * window number. Most will allow access through A. Perhaps early 1990s crap might insist on
+				 * window B. This code does not care about reading from video memory, which simplifies things a bit. */
+				if (mi.win_a_segment != 0 && (mi.win_a_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005) {
+					vesa_window = 0;
+					vesa_window_segment = mi.win_a_segment;
+				}
+				else { /* assume B is valid. This case wouldn't execute if both windows were invalid. */
+					vesa_window = 1;
+					vesa_window_segment = mi.win_b_segment;
+				}
+
+				if (vesa_window_segment == 0)
+					IFEFatalError("Somehow, bank switch window segment is zero");
+
+				IFEDBG("VESA: Using bank switching, window=%u winseg=0x%04x",vesa_window,vesa_window_segment);
+			}
+			vesa_lfb_map_size = mi.bytes_per_scan_line * mi.y_resolution;
+			vesa_lfb_stride = mi.bytes_per_scan_line;
+			vesa_lfb_width = mi.x_resolution;
+			vesa_lfb_height = mi.y_resolution;
+			/* also note whether setting the palette must be done through the BIOS.
+			 * the call to do that appeared in VBE 2.0, and was not defined in VBE 1.2 */
+			vbe_dac_not_vga_compatible = (vbe_info->version >= 0x200) && ((mi.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) != 0u);
+		}
 
 		vesa_mode = found_mode;
 	}
 
 	if (!vesa_setmode) {
 		/* Set the video mode */
-		if (!vbe_set_mode((uint16_t)(vesa_mode | VBE_MODE_LINEAR),NULL))
-			IFEFatalError("Unable to set VESA video mode");
+		if (!vbe_set_mode((uint16_t)(vesa_mode | (vesa_use_lfb ? VBE_MODE_LINEAR : 0)),NULL))
+			IFEFatalError("Unable to set VESA video mode 0x%x",vesa_mode);
 
 		/* we set the mode, set the flag so FatalError can unset it properly */
 		vesa_setmode = true;
@@ -604,9 +685,18 @@ static void p_InitVideo(void) {
 
 		/* As a 32-bit DOS program atop DPMI we cannot assume a 1:1 mapping between linear and physical,
 		 * though plenty of DOS extenders will do just that if EMM386.EXE is not loaded */
-		vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
-		if (vesa_lfb == NULL)
-			IFEFatalError("DPMI VESA LFB map fail");
+		if (vesa_use_lfb) {
+			vesa_lfb = (unsigned char*)dpmi_phys_addr_map(vesa_lfb_physaddr,vesa_lfb_map_size);
+			if (vesa_lfb == NULL)
+				IFEFatalError("DPMI VESA LFB map fail");
+
+			ifevidinfo_doslib.vram_base = vesa_lfb;
+		}
+		else {
+			/* most DPMI servers map the low 1MB 1:1 */
+			vesa_non_lfb = (unsigned char*)(vesa_window_segment << 4ul);
+			ifevidinfo_doslib.vram_base = NULL;
+		}
 
 		/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
 		 * Provide an offscreen copy of video memory to work from for compositing. */
@@ -614,7 +704,6 @@ static void p_InitVideo(void) {
 		if (vesa_lfb_offscreen == NULL)
 			IFEFatalError("DPMI VESA LFB shadow malloc fail");
 
-		ifevidinfo_doslib.vram_base = vesa_lfb;
 		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
 	}
 
@@ -760,12 +849,17 @@ void SCR_UpdateWindowSurfaceRect(SCR_Rect *r) {
 		return;
 
 	src = vesa_lfb_offscreen + (y * ifevidinfo_doslib.buf_pitch) + (r->x);
-	dst = vesa_lfb + (y * ifevidinfo_doslib.vram_pitch) + (r->x);
-	do {
-		memcpy(dst,src,w);
-		src += ifevidinfo_doslib.buf_pitch;
-		dst += ifevidinfo_doslib.vram_pitch;
-	} while ((--h) != 0u);
+	if (vesa_use_lfb) {
+		dst = vesa_lfb + (y * ifevidinfo_doslib.vram_pitch) + (r->x);
+		do {
+			memcpy(dst,src,w);
+			src += ifevidinfo_doslib.buf_pitch;
+			dst += ifevidinfo_doslib.vram_pitch;
+		} while ((--h) != 0u);
+	}
+	else {
+		// TODO
+	}
 }
 
 void SCR_UpdateWindowSurfaceRects(SCR_Rect *r,size_t count) {
