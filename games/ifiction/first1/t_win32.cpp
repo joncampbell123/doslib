@@ -44,12 +44,19 @@ HRGN					upd_region = NULL;
 HRGN					upd_rect = NULL;
 bool					upd_region_valid = false;
 
+unsigned int				win32_std_cursor = 0;
+HCURSOR					win32_std_cursor_obj = NULL;
+bool					win32_std_cursor_show = false;
+
 void MakeRgnEmpty(HRGN r) {
 	SetRectRgn(r,0,0,0,0); /* region is x1 <= x < x2, y1 <= y < y2, therefore this rectangle makes an empty region */
 }
 
 void win32updatecursor(void) {
-	SetCursor(NULL); /* make it invisible */
+	if (win32_std_cursor_show)
+		SetCursor(win32_std_cursor_obj); /* NTS: If win32_std_cursor_obj == NULL, then the cursor is invisible */
+	else
+		SetCursor(NULL);
 }
 
 void priv_CaptureMouse(const bool cap) {
@@ -242,6 +249,10 @@ static void p_ShutdownVideo(void) {
 		DeleteObject((HGDIOBJ)upd_rect);
 		upd_rect = NULL;
 	}
+	win32_std_cursor = 0;
+	win32_std_cursor_obj = NULL;
+	win32_std_cursor_show = false;
+	SetCursor(LoadCursor(NULL,IDC_ARROW));
 }
 
 static void p_InitVideo(void) {
@@ -251,6 +262,10 @@ static void p_InitVideo(void) {
 		mousecap_on = false;
 		memset(&ifemousestat,0,sizeof(ifemousestat));
 		memset(&ifevidinfo_win32,0,sizeof(ifevidinfo_win32));
+
+		win32_std_cursor = 0;
+		win32_std_cursor_obj = NULL;
+		win32_std_cursor_show = false;
 
 		ifevidinfo_win32.width = 640;
 		ifevidinfo_win32.height = 480;
@@ -450,12 +465,32 @@ void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
 }
 
 static bool p_SetHostStdCursor(const unsigned int id) {
-	(void)id;
+	if (id == IFEStdCursor_POINTER) {
+		win32_std_cursor_obj = LoadCursor(NULL,IDC_ARROW);
+		win32_std_cursor = id;
+		win32updatecursor();
+		return true;
+	}
+	else if (id == IFEStdCursor_WAIT) {
+		win32_std_cursor_obj = LoadCursor(NULL,IDC_WAIT);
+		win32_std_cursor = id;
+		win32updatecursor();
+		return true;
+	}
+
+	win32_std_cursor_obj = NULL;
+	win32_std_cursor = 0;
+	win32updatecursor();
 	return false;
 }
 
 static bool p_ShowHostStdCursor(const bool show) {
-	(void)show;
+	if (win32_std_cursor_obj != NULL) {
+		win32_std_cursor_show = show;
+		win32updatecursor();
+		return true;
+	}
+
 	return false;
 }
 
