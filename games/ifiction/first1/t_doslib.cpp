@@ -650,11 +650,7 @@ static void p_InitVideo(void) {
 				vesa_use_lfb = false;
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
 				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
-
-				/* NTS: Protected mode call to real mode window function is not working right now,
-				 *      at least on an old laptop with an old Cirrus SVGA chipset that doesn't support LFB from the BIOS.
-				 *      Until that can be tracked down, do not use window function */
-				vesa_window_func = 0;//DISABLED mi.window_function;
+				vesa_window_func = mi.window_function;
 
 				/* choose the window, A or B. Pick A first if possible.
 				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
@@ -743,6 +739,58 @@ static void p_InitVideo(void) {
 			/* most DPMI servers map the low 1MB 1:1 */
 			vesa_non_lfb = (unsigned char*)(vesa_window_segment << 4ul);
 			ifevidinfo_doslib.vram_base = NULL;
+
+			/* Problem: Certain old VBE BIOSes by Cirrus don't seem to work properly from protected mode
+			 *          when calling the provided real mode window function entry point. This seems to
+			 *          be a problem with DOS4GW.EXE. On the same hardware, running this game under
+			 *          DOS32A.EXE allows the window function to work properly. Not sure what's going
+			 *          on here.
+			 *
+			 *          We can try to detect this problem by asking the window proc to bank switch, and
+			 *          then asking the BIOS through the normal INT 10h call what the current bank is.
+			 *          If we detect the window proc failed to do it's job, then we stop using the
+			 *          window function directly and just use INT 10h instead. */
+			if (vesa_window_func != 0) {
+				unsigned short mw = 0;
+
+				IFEDBG("BIOS provides real-mode window bank switching entry point, testing to make sure it works. Some DOS extender and BIOS combinations make it fail.");
+
+				vbe_bank_switch(vesa_window_func,vesa_window,1); /* switch to bank 1 */
+				__asm {
+					mov	ax,0x4F05		; VBE Display Window Control
+					mov	bh,1			; Get memory window
+					mov	bl,vesa_window		; Which window
+					xor	dx,dx
+					dec	dx			; if the call fails to change DX we want it to come back with a very wrong value
+					int	10h
+					mov	mw,dx
+				}
+				if (mw != 1) {
+					IFEDBG("BIOS real-mode window function failed the test, using normal INT 10h to bank switch");
+					vesa_window_func = 0;
+				}
+			}
+			/* and again */
+			if (vesa_window_func != 0) {
+				unsigned short mw = 0;
+
+				vbe_bank_switch(vesa_window_func,vesa_window,2); /* switch to bank 2 */
+				__asm {
+					mov	ax,0x4F05		; VBE Display Window Control
+					mov	bh,1			; Get memory window
+					mov	bl,vesa_window		; Which window
+					xor	dx,dx
+					dec	dx			; if the call fails to change DX we want it to come back with a very wrong value
+					int	10h
+					mov	mw,dx
+				}
+				if (mw != 2) {
+					IFEDBG("BIOS real-mode window function failed the test, using normal INT 10h to bank switch");
+					vesa_window_func = 0;
+				}
+			}
+			if (vesa_window_func != 0)
+				IFEDBG("BIOS real-mode window function appears to work properly, will call it directly from protected mode");
 		}
 
 		/* video memory is slow, and unlike Windows and SDL2, vesa_lfb points directly at video memory.
