@@ -1068,6 +1068,11 @@ static bool p_ShowHostStdCursor(const bool show) {
 	return false;
 }
 
+static bool p_SetWindowTitle(const char *msg) {
+	(void)msg;
+	return false;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -1091,7 +1096,8 @@ ifeapi_t ifeapi_doslib = {
 	p_UpdateScreen,
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
-	p_ShowHostStdCursor
+	p_ShowHostStdCursor,
+	p_SetWindowTitle
 };
 #endif
 

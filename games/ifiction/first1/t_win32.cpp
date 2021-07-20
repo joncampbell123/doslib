@@ -494,6 +494,11 @@ static bool p_ShowHostStdCursor(const bool show) {
 	return false;
 }
 
+static bool p_SetWindowTitle(const char *msg) {
+	SetWindowText(hwndMain,msg);
+	return true;
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -517,7 +522,8 @@ ifeapi_t ifeapi_win32 = {
 	p_UpdateScreen,
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
-	p_ShowHostStdCursor
+	p_ShowHostStdCursor,
+	p_SetWindowTitle
 };
 
 void UpdateWin32ModFlags(void) {
@@ -728,7 +734,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				/* Let Windows set the cursor according to standard behavior from other regions of the screen */
 				return DefWindowProc(hwnd,uMsg,wParam,lParam);
 			}
-			break;
+			/* both paths return, no break needed */
 		case WM_MOUSEMOVE:
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
