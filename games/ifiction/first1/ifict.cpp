@@ -623,6 +623,7 @@ int main(int argc,char **argv) {
 	}
 
 	ifeapi->InitVideo();
+	ifeapi->SetWindowTitle("Testing 123");
 
 	IFESetCursor(&IFEcursor_arrow);
 	IFEShowCursor(true);
@@ -667,6 +668,8 @@ int main(int argc,char **argv) {
 			for (x=0;x < bmp.width;x++)
 				row[x] = (unsigned char)(x ^ y);
 		}
+
+		ifeapi->SetWindowTitle("BitBlt BMP test");
 
 		IFEBitBlt(/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEAddScreenUpdate(20,20,20+bmp.width,20+bmp.height);
@@ -786,6 +789,8 @@ int main(int argc,char **argv) {
 
 		IFEResetScissorRect();
 
+		ifeapi->SetWindowTitle("BitBlt transparency test");
+
 		if (!IFELoadPNG(bmp,"test1.png"))
 			IFEFatalError("Unable to load PNG");
 		if (bmp.row(0) == NULL)
@@ -865,6 +870,8 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 
+		ifeapi->SetWindowTitle("BitBlt transparency test with save/restore");
+
 		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
 		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
@@ -919,6 +926,8 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 	}
+
+	ifeapi->SetWindowTitle("More");
 
 	IFESetCursor(&IFEcursor_arrow);
 

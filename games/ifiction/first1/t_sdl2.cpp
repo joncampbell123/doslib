@@ -597,6 +597,11 @@ static bool p_ShowHostStdCursor(const bool show) {
 	return false;
 }
 
+static bool p_SetWindowTitle(const char *msg) {
+	SDL_SetWindowTitle(sdl_window,msg);
+	return true;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -620,7 +625,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_UpdateScreen,
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
-	p_ShowHostStdCursor
+	p_ShowHostStdCursor,
+	p_SetWindowTitle
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {

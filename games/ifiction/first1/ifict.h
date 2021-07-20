@@ -45,6 +45,7 @@ typedef void ifefunc_UpdateScreen_t(void);
 typedef void ifefunc_AddScreenUpdate_t(int x1,int y1,int x2,int y2); /* update x1 <= x < x2, y1 <= y < y2 */
 typedef bool ifefunc_SetHostStdCursor_t(const unsigned int id);
 typedef bool ifefunc_ShowHostStdCursor_t(const bool show);
+typedef bool ifefunc_SetWindowTitle_t(const char *msg);
 
 struct ifeapi_t {
 	const char*						name;
@@ -70,6 +71,7 @@ struct ifeapi_t {
 	ifefunc_AddScreenUpdate_t*				AddScreenUpdate;
 	ifefunc_SetHostStdCursor_t*				SetHostStdCursor;
 	ifefunc_ShowHostStdCursor_t*				ShowHostStdCursor;
+	ifefunc_SetWindowTitle_t*				SetWindowTitle;
 };
 
 extern ifeapi_t *ifeapi;
