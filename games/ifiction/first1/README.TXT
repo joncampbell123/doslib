@@ -36,9 +36,9 @@ will emit debug output to your DOSBox log file as it runs.
 This game will work with older SVGA cards (ISA/EISA) that offer only the non-linear
 bank switching access to video memory at a slight reduction of performance.
 
-It is not recommended that you run the MS-DOS version in a virtual DOS "box" under
-Windows. Windows will not emulate the MS-DOS mouse driver interface either, which
-can prevent the MS-DOS version from running under Windows.
+This game runs perfectly fine within a Windows "DOS box", but you will need to
+run a mouse driver within the DOS box if one is not already resident in MS-DOS
+before starting Windows. CuteMouse (CTMOUSE.EXE) is provided for your convenience.
 
 This game works with DOS4GW.EXE, but may run better with DOS32A.EXE instead.
 Also tested under CWSDPMI.EXE.

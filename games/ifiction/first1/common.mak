@@ -45,6 +45,7 @@ $(IFICT_EXE): $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(HW_DOSBOXID_L
 ! ifdef TARGET_WINDOWS
 ! else
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat dos4gw.exe
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)ctmouse.bin ctmouse.exe
 ! endif
 !endif
 
