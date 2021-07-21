@@ -434,15 +434,14 @@ int vbe_set_mode(uint16_t mode,struct vbe_mode_custom_crtc_info *ci) {
 #endif
 }
 
-void vbe_bank_switch(uint32_t rproc,uint8_t window,uint8_t bank) {
+void vbe_bank_switch(uint32_t rproc,uint8_t window,uint16_t bank) {
 #if TARGET_MSDOS == 32
 	if (rproc == 0) {
 		__asm {
 			mov	ax,0x4F05
 			mov	bl,window
 			xor	bh,bh
-			mov	dl,bank
-			xor	dh,dh
+			mov	dx,bank
 			int	0x10
 		}
 	}
@@ -450,7 +449,7 @@ void vbe_bank_switch(uint32_t rproc,uint8_t window,uint8_t bank) {
 		struct dpmi_realmode_call rc={0};
 		rc.eax = 0x4F05;
 		rc.ebx = ((uint32_t)window & 0xFFUL);
-		rc.edx = ((uint32_t)bank & 0xFFUL);
+		rc.edx = ((uint32_t)bank & 0xFFFFUL);
 		rc.cs = (uint16_t)(rproc >> 16UL);
 		rc.ip = (uint16_t)(rproc & 0xFFFF);
 		vbe_realbnk(&rc);
@@ -461,8 +460,7 @@ void vbe_bank_switch(uint32_t rproc,uint8_t window,uint8_t bank) {
 			mov	ax,0x4F05
 			mov	bl,window
 			xor	bh,bh
-			mov	dl,bank
-			xor	dh,dh
+			mov	dx,bank
 			int	0x10
 		}
 	}
@@ -471,8 +469,7 @@ void vbe_bank_switch(uint32_t rproc,uint8_t window,uint8_t bank) {
 			mov	ax,0x4F05
 			mov	bl,window
 			xor	bh,bh
-			mov	dl,bank
-			xor	dh,dh
+			mov	dx,bank
 			call	dword ptr [rproc]
 		}
 	}
@@ -560,7 +557,7 @@ void vesa_lfb_writed(uint32_t ofs,uint32_t b) {
 }
 
 void vesa_bnk_writeb(uint32_t ofs,uint8_t b) {
-	uint8_t bnk = (uint8_t)(ofs >> vesa_bnk_winshf);
+	uint16_t bnk = (uint16_t)(ofs >> vesa_bnk_winshf);
 	if (bnk != vesa_bnk_wincur) vbe_bank_switch(vesa_bnk_rproc,vesa_bnk_window,vesa_bnk_wincur=bnk);
 #if TARGET_MSDOS == 32
 	*((uint8_t*)((vesa_bnk_winseg << 4) + (ofs & ((1 << (unsigned long)vesa_bnk_winshf) - 1)))) = b;
@@ -570,7 +567,7 @@ void vesa_bnk_writeb(uint32_t ofs,uint8_t b) {
 }
 
 void vesa_bnk_writew(uint32_t ofs,uint16_t b) {
-	uint8_t bnk = (uint8_t)(ofs >> vesa_bnk_winshf);
+	uint16_t bnk = (uint16_t)(ofs >> vesa_bnk_winshf);
 	if (bnk != vesa_bnk_wincur) vbe_bank_switch(vesa_bnk_rproc,vesa_bnk_window,vesa_bnk_wincur=bnk);
 #if TARGET_MSDOS == 32
 	*((uint16_t*)((vesa_bnk_winseg << 4) + (ofs & ((1 << (unsigned long)vesa_bnk_winshf) - 1)))) = b;
@@ -580,7 +577,7 @@ void vesa_bnk_writew(uint32_t ofs,uint16_t b) {
 }
 
 void vesa_bnk_writed(uint32_t ofs,uint32_t b) {
-	uint8_t bnk = (uint8_t)(ofs >> vesa_bnk_winshf);
+	uint16_t bnk = (uint16_t)(ofs >> vesa_bnk_winshf);
 	if (bnk != vesa_bnk_wincur) vbe_bank_switch(vesa_bnk_rproc,vesa_bnk_window,vesa_bnk_wincur=bnk);
 #if TARGET_MSDOS == 32
 	*((uint32_t*)((vesa_bnk_winseg << 4) + (ofs & ((1 << (unsigned long)vesa_bnk_winshf) - 1)))) = b;

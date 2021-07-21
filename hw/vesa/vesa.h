@@ -131,7 +131,7 @@ const char *vbe_memory_model_to_str(uint8_t m);
 void vbe_realint(struct dpmi_realmode_call *rc);
 void vbe_realbnk(struct dpmi_realmode_call *rc);
 int vbe_read_mode_info(uint16_t mode,struct vbe_mode_info *mi);
-void vbe_bank_switch(uint32_t rproc,uint8_t window,uint8_t bank);
+void vbe_bank_switch(uint32_t rproc,uint8_t window,uint16_t bank);
 int vbe_fill_in_mode_info(uint16_t mode,struct vbe_mode_info *mi);
 uint16_t vbe_read_mode_entry(uint32_t mode_ptr,unsigned int entry);
 int vbe_set_mode(uint16_t mode,struct vbe_mode_custom_crtc_info *ci);
