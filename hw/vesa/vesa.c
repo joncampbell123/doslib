@@ -319,6 +319,8 @@ int vbe_probe() {
 }
 
 void vbe_copystring(char *s,size_t max,uint32_t rp,struct vbe_info_block *b) {
+	(void)b;
+
 	s[0] = 0; if (rp == 0 || max < 2) return; s[max-1] = 0;
 #if TARGET_MSDOS == 32
 	if ((rp>>16) == 0) /* HACK: Any strings returned to us in the reserved section are translated to 0000:offset format */
@@ -397,6 +399,77 @@ int vbe_read_mode_info(uint16_t mode,struct vbe_mode_info *mi) {
 int vbe_fill_in_mode_info(uint16_t mode,struct vbe_mode_info *mi) {
 	if (mi->bank_size == 0 && mi->win_granularity != 0)
 		mi->bank_size = mi->win_granularity;
+
+	/* VBE 1.0 and 1.1 were not required to provide fields beyond BytesPerScanLine (including XResolution/YResolution).
+	 * In order for code using this library to work on such ancient SVGA cards, this function needs to fill them in */
+	if (vbe_info->version < 0x102 && !(mi->mode_attributes & 0x02/*extended information available, which became mandatory in VBE 1.2*/)) {
+		mi->number_of_planes = 0;
+		mi->bits_per_pixel = 0;
+		mi->x_resolution = 0;
+		mi->y_resolution = 0;
+		mi->memory_model = 0;
+		switch (mode) {
+			case 0x100: /* VBE 1.0 */
+				mi->x_resolution = 640;
+				mi->y_resolution = 400;
+				mi->number_of_planes = 1;
+				mi->bits_per_pixel = 8;
+				mi->memory_model = 0x04; /* packed pixel */
+				break;
+			case 0x101: /* VBE 1.0 */
+				mi->x_resolution = 640;
+				mi->y_resolution = 480;
+				mi->number_of_planes = 1;
+				mi->bits_per_pixel = 8;
+				mi->memory_model = 0x04; /* packed pixel */
+				break;
+			case 0x102: /* VBE 1.0 */
+				mi->x_resolution = 800;
+				mi->y_resolution = 600;
+				mi->number_of_planes = 4;
+				mi->bits_per_pixel = 1;
+				mi->memory_model = 0x03; /* planar pixel */
+				break;
+			case 0x103: /* VBE 1.0 */
+				mi->x_resolution = 800;
+				mi->y_resolution = 600;
+				mi->number_of_planes = 1;
+				mi->bits_per_pixel = 8;
+				mi->memory_model = 0x04; /* packed pixel */
+				break;
+			case 0x104: /* VBE 1.0 */
+				mi->x_resolution = 1024;
+				mi->y_resolution = 768;
+				mi->number_of_planes = 4;
+				mi->bits_per_pixel = 1;
+				mi->memory_model = 0x03; /* planar pixel */
+				break;
+			case 0x105: /* VBE 1.0 */
+				mi->x_resolution = 1024;
+				mi->y_resolution = 768;
+				mi->number_of_planes = 1;
+				mi->bits_per_pixel = 8;
+				mi->memory_model = 0x04; /* packed pixel */
+				break;
+			case 0x106: /* VBE 1.0 */
+				mi->x_resolution = 1280;
+				mi->y_resolution = 1024;
+				mi->number_of_planes = 4;
+				mi->bits_per_pixel = 1;
+				mi->memory_model = 0x03; /* planar pixel */
+				break;
+			case 0x107: /* VBE 1.0 */
+				mi->x_resolution = 1280;
+				mi->y_resolution = 1024;
+				mi->number_of_planes = 1;
+				mi->bits_per_pixel = 8;
+				mi->memory_model = 0x04; /* packed pixel */
+				break;
+			/* There are additional standard modes that were not defined until VBE 1.2, which makes
+			 * filling in this information mandatory anyway.
+			 * TODO: Did VBE 1.1 define the "Direct Color" modes? */
+		}
+	}
 
 	return 1;
 }
@@ -602,6 +675,10 @@ void vbe_mode_decision_init(struct vbe_mode_decision *m) {
 }
 
 int vbe_mode_decision_validate(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
+	/* basic info required! query or fill in! */
+	if (mi->x_resolution == 0 || mi->y_resolution == 0 || mi->bits_per_pixel == 0)
+		return 0; /* Really old VBE BIOS and no fill in */
+
 	/* general rule of thumb: if the mode involves is a planar VGA 16-color type, then you generally DONT want to
 	 * use the linear framebuffer. Most SVGA cards limit VGA read/write emulation to the legacy 0xA0000-0xAFFFF
 	 * area only. Most BIOSes (correctly) do not allow you to use linear framebuffer modes with planar SVGA
@@ -651,6 +728,8 @@ int vbe_mode_decision_validate(struct vbe_mode_decision *md,struct vbe_mode_info
 
 int vbe_mode_decision_setmode(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
 	int ok = 0;
+
+	(void)mi;
 	if (!ok && (md->lfb == -1 || md->lfb == 1)) { ok = vbe_set_mode(md->mode | VBE_MODE_LINEAR,NULL); md->lfb = 1;  }
 	if (!ok && (md->lfb == -1 || md->lfb == 0)) { ok = vbe_set_mode(md->mode,NULL); md->lfb = 0; }
 	return ok;
