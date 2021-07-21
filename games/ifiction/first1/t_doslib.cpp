@@ -59,7 +59,7 @@ bool				vesa_8bitpal = false; /* 8-bit DAC */
 bool				vbe_dac_not_vga_compatible = false; /* Palette must be set by the BIOS, not I/O to port 3C8h */
 uint16_t			vesa_mode = 0;
 uint8_t				vesa_window = 0; /* which window */
-uint8_t				vesa_current_bank = 0;
+uint16_t			vesa_current_bank = 0;
 uint16_t			vesa_window_segment = 0;
 unsigned int			vesa_window_shr = 0; /* right-shift from byte count to window number (divide by granularity) */
 uint32_t			vesa_window_func = 0;
@@ -240,7 +240,7 @@ static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,u
 	const uint32_t win_granularity_mask = ((uint32_t)1u << (uint32_t)vesa_window_shr) - (uint32_t)1;
 	unsigned char *dst;
 	uint32_t bank_offset;
-	uint8_t bank;
+	uint16_t bank;
 	uint32_t c;
 
 	while (cpy > (uint32_t)0) {
@@ -249,7 +249,7 @@ static void vesa_windowed_memcpy(uint32_t o/*target*/,const unsigned char *src,u
 		 *      needing to bank switch again.
 		 *
 		 *      Test case: Cirrus SVGA with granularity 4KB, window size 64KB */
-		bank = (uint8_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
+		bank = (uint16_t)(o >> (uint32_t)vesa_window_shr); /* convert to bank (window granularity number) */
 		bank_offset = o & win_granularity_mask;
 
 		c = vesa_window_size - bank_offset; /* how much can we copy into this window before bank switching again? */
@@ -659,7 +659,7 @@ static void p_InitVideo(void) {
 			else {
 				vesa_use_lfb = false;
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
-				vesa_current_bank = 0xFF; /* we don't know what the current bank is, though usually it's bank zero */
+				vesa_current_bank = 0xFFFFu; /* we don't know what the current bank is, though usually it's bank zero */
 				vesa_window_func = mi.window_function;
 				vesa_window_size = (uint32_t)mi.win_size << (uint32_t)10ul; /* convert KB to bytes */
 
