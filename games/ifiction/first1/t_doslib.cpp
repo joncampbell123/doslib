@@ -596,9 +596,7 @@ static void p_InitVideo(void) {
 	/* Find 640x480 256-color mode.
 	 * Linear framebuffer required (we'll support older bank switched stuff later) */
 	{
-		/* we're looking for: Mode supported by hardware configuration, graphics mode, and mode information contains XResolution/YResolution required by VBE 1.2 */
-		/* Note that according to the VBE 1.0 standard, VBE BIOSes prior to 1.2 are allowed to omit fields beyond BytesPerScanLine and that's why that matters */
-		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE | VESA_MODE_ATTR_VBE_1X_MOREINFO;
+		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE;
 		struct vbe_mode_info mi = {0};
 		uint16_t found_mode_w = 0;
 		uint16_t found_mode = 0;
