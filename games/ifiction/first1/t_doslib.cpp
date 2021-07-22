@@ -754,6 +754,24 @@ static void p_InitVideo(void) {
 			vesa_non_lfb = (unsigned char*)(vesa_window_segment << 4ul);
 			ifevidinfo_doslib.vram_base = NULL;
 
+			/* VBE 2.0 defines a protected mode interface for three common functions. Maybe we can use that.
+			 * As defined, it allows 32-bit code (like us) to just CALL NEAR into the BIOS instead of thunking
+			 * to real mode every time we need to switch banks.
+			 * NTS: This probe function will refuse to check for the API if VBE version is below 2.0 because
+			 *      that is the first version the API was defined. It is optional in VBE 3.0. */
+			if (vbe2_pm_probe()) {
+				/* FIXME: If the card requires MMIO, the memory and I/O resource list will list a memory
+				 *        range, and we are required in that case to allocate a 32-bit data segment pointing
+				 *        to that MMIO range, which must be provided in ES at call time. We don't support
+				 *        that, yet. */
+				if (vbe2_pmif_setwindowproc() != NULL) {
+					if (vbe2_pmif_memiolist() == NULL) { /* FIXME: Scan the resource list and only fail if a memory region is specified */
+						IFEDBG("VBE BIOS provides VBE 2.0 protected mode interface, will use PM interface for bank switching");
+						vesa_bnk_vbe2pmproc = vbe2_pmif_setwindowproc();
+					}
+				}
+			}
+
 			/* Problem: Certain old VBE BIOSes by Cirrus don't seem to work properly from protected mode
 			 *          when calling the provided real mode window function entry point. This seems to
 			 *          be a problem with DOS4GW.EXE. On the same hardware, running this game under
