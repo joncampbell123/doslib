@@ -208,9 +208,12 @@ void (*vesa_writeb)(uint32_t ofs,uint8_t b) = NULL;
 void (*vesa_writew)(uint32_t ofs,uint16_t b) = NULL;
 void (*vesa_writed)(uint32_t ofs,uint32_t b) = NULL;
 
+struct vbe2_pmiface*		vbe2_pminfo = NULL;
 struct vbe_info_block*		vbe_info = NULL;
 
 void vbe_free() {
+	if (vbe2_pminfo) free(vbe2_pminfo);
+	vbe2_pminfo = NULL;
 	if (vbe_info) free(vbe_info);
 	vbe_info = NULL;
 
@@ -219,6 +222,137 @@ void vbe_free() {
 	vbe_dos_buffer_selector = 0;
 	vbe_dos_buffer = NULL;
 #endif
+}
+
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_tableptr(void) {
+#else
+uint8_t far* vbe2_pmif_tableptr(void) {
+#endif
+	if (vbe2_pminfo != NULL) {
+		if (vbe2_pminfo->tbl_rmaddr != 0 && vbe2_pminfo->tbl_and_code_length >= 0x08) {
+			const uint16_t rs = (uint16_t)(vbe2_pminfo->tbl_rmaddr >> (uint32_t)16u);
+			const uint16_t ro = (uint16_t)(vbe2_pminfo->tbl_rmaddr & 0xFFFFu);
+#if TARGET_MSDOS == 32
+			return (uint8_t*)(((uint32_t)rs << (uint32_t)4u) + (uint32_t)ro);
+#else
+			return (uint8_t far*)MK_FP(rs,ro);
+#endif
+		}
+	}
+
+	return NULL;
+}
+
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_setwindowproc(void) {
+	uint8_t* tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t*)(tp + 0)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t*)(tp + 0));
+#else
+uint8_t far* vbe2_pmif_setwindowproc(void) {
+	uint8_t far *tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t far*)(tp + 0)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t far*)(tp + 0));
+#endif
+}
+
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_setdisplaystartproc(void) {
+	uint8_t* tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t*)(tp + 2)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t*)(tp + 2));
+#else
+uint8_t far* vbe2_pmif_setdisplaystartproc(void) {
+	uint8_t far *tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t far*)(tp + 2)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t far*)(tp + 2));
+#endif
+}
+
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_setpaletteproc(void) {
+	uint8_t* tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t*)(tp + 4)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t*)(tp + 4));
+#else
+uint8_t far* vbe2_pmif_setpaletteproc(void) {
+	uint8_t far *tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t far*)(tp + 4)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	return tp + *((uint16_t far*)(tp + 4));
+#endif
+}
+
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_memiolist(void) {
+	uint8_t* tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t*)(tp + 6)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	if (*((uint16_t*)(tp + 6)) == 0) return NULL;
+	return tp + *((uint16_t*)(tp + 6));
+#else
+uint8_t far* vbe2_pmif_memiolist(void) {
+	uint8_t far *tp = vbe2_pmif_tableptr();
+	if (tp == NULL) return NULL;
+	if (*((uint16_t far*)(tp + 6)) >= vbe2_pminfo->tbl_and_code_length) return NULL;
+	if (*((uint16_t far*)(tp + 6)) == 0) return NULL;
+	return tp + *((uint16_t far*)(tp + 6));
+#endif
+}
+
+int vbe2_pm_probe() {
+	unsigned short rl=0,sta=0;
+	uint32_t rad=0;
+
+	if (vbe_info == NULL)
+		return 0;
+	if (vbe2_pminfo != NULL)
+		return 1;
+
+	/* This call only exists in VBE 2.0 or higher */
+	if (vbe_info->version < 0x200)
+		return 0;
+
+#if TARGET_MSDOS == 32
+	{ /* DPMI server will corrupt ES register on return if we INT 10h directly */
+		struct dpmi_realmode_call rc={0};
+		rc.eax = 0x4F0A;
+		rc.ebx = 0;
+		vbe_realint(&rc);
+		rad = ((uint32_t)rc.es << (uint32_t)16u) + ((uint16_t)(rc.edi & 0xFFFFu));
+		sta = (unsigned short)rc.eax;
+		rl = (unsigned short)rc.ecx;
+	}
+#else
+	__asm {
+		push	es
+		mov	ax,0x4F0A		; VBE 2.0 protected mode interface
+		xor	bx,bx			; BL=0 return protected mode table
+		int	10h
+		mov	sta,ax			; store status
+		mov	word ptr rad+2,es	; ES:DI real mode seg:off of table
+		mov	word ptr rad+0,di
+		mov	rl,cx			; CX = length of table AND protected mode code in bytes
+		pop	es
+	}
+#endif
+
+	if ((sta >> 8) != 0 || (sta & 0xFF) != 0x4F) /* AH = 0x00 && AL = 0x4F */
+		return 0;
+
+	vbe2_pminfo = (struct vbe2_pmiface*)malloc(sizeof(struct vbe2_pmiface));
+	if (vbe2_pminfo == NULL)
+		return 0;
+
+	vbe2_pminfo->tbl_rmaddr = rad;
+	vbe2_pminfo->tbl_and_code_length = rl;
+	return 1;
 }
 
 int vbe_probe() {

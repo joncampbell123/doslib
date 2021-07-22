@@ -117,6 +117,10 @@ int main() {
 
 	printf("     Video modes:           @%08lx\n",(unsigned long)(vbe_info->video_mode_ptr));
 	if (vbe_info->video_mode_ptr != 0UL) {
+		if (isatty(1) && isatty(0)) {
+			while (getch() != 13);
+		}
+
 		for (entry=0;entry < 4096;entry++) {
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
@@ -124,6 +128,17 @@ int main() {
 			if ((entry%10) == 9) printf("\n");
 		}
 		printf("\n");
+	}
+
+	if (vbe2_pm_probe()) {
+		printf("VBE 2.0 Protected Mode Interface:\n");
+		printf("    Table+code location:    @%08lx\n",(unsigned long)(vbe2_pminfo->tbl_rmaddr));
+		printf("    Table size:              %lu bytes\n",(unsigned long)(vbe2_pminfo->tbl_and_code_length));
+		printf("    Table ptr:               %Fp\n",(void far*)vbe2_pmif_tableptr());
+		printf("    Table SetWindow:         %Fp\n",(void far*)vbe2_pmif_setwindowproc());
+		printf("    Table SetDisplayStart:   %Fp\n",(void far*)vbe2_pmif_setdisplaystartproc());
+		printf("    Table SetPalette:        %Fp\n",(void far*)vbe2_pmif_setpaletteproc());
+		printf("    Table MemIOList:         %Fp\n",(void far*)vbe2_pmif_memiolist());
 	}
 
 	if (isatty(1) && isatty(0)) {

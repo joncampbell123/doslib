@@ -61,10 +61,12 @@ static void help() {
 	printf("    /b                    Use banked mode\n");
 	printf("    /nwf                  Don't use direct 16-bit window function\n");
 	printf("    /fwf                  Force using 16-bit window function\n");
+	printf("    /npw                  Don't use protected mode 32-bit window function VBE 2\n");
+	printf("    /fpw                  Force using protected mode 32-bit window function VBE 2\n");
 	printf("    /6                    Set DAC to 6-bit wide (16/256-color modes only)\n");
 	printf("    /8                    Set DAC to 8-bit wide (16/256-color modes only)\n");
 	printf("    /s                    Single-step mode (hit ENTER)\n");
-    printf("    /i                    Print info on screen\n");
+	printf("    /i                    Print info on screen\n");
 }
 
 static void vbe_mode_test_pattern_svga_text(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
@@ -754,6 +756,12 @@ int main(int argc,char **argv) {
 				help();
 				return 1;
 			}
+			else if (!strcmp(a,"npw")) {
+				md.no_p32wf = 1;
+			}
+			else if (!strcmp(a,"fpw")) {
+				md.force_p32wf = 1;
+			}
 			else if (!strcmp(a,"nwf")) {
 				md.no_wf = 1;
 			}
@@ -763,9 +771,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"l")) {
 				md.lfb = 1;
 			}
-            else if (!strcmp(a,"i")) {
-                info = 1;
-            }
+			else if (!strcmp(a,"i")) {
+				info = 1;
+			}
 			else if (!strcmp(a,"s")) {
 				sstep = 1;
 			}

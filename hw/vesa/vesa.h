@@ -119,14 +119,37 @@ struct vbe_mode_decision {
 	signed char	lfb;
 	unsigned char	no_wf:1;
 	unsigned char	force_wf:1;
-	unsigned char	_pad_:6;
+	unsigned char	no_p32wf:1;
+	unsigned char	force_p32wf:1;
+	unsigned char	_pad_:4;
+};
+
+struct vbe2_pmiface { /* Function 0x4F0A protected mode interface */
+	uint32_t	tbl_rmaddr;
+	uint16_t	tbl_and_code_length;
 };
 #pragma pack(pop)
 
+#if TARGET_MSDOS == 32
+uint8_t* vbe2_pmif_tableptr(void);
+uint8_t* vbe2_pmif_setwindowproc(void);
+uint8_t* vbe2_pmif_setdisplaystartproc(void);
+uint8_t* vbe2_pmif_setpaletteproc(void);
+uint8_t* vbe2_pmif_memiolist(void);
+#else
+uint8_t far* vbe2_pmif_tableptr(void);
+uint8_t far* vbe2_pmif_setwindowproc(void);
+uint8_t far* vbe2_pmif_setdisplaystartproc(void);
+uint8_t far* vbe2_pmif_setpaletteproc(void);
+uint8_t far* vbe2_pmif_memiolist(void);
+#endif
+
+extern struct vbe2_pmiface*		vbe2_pminfo;
 extern struct vbe_info_block*		vbe_info;
 
 void vbe_free();
 int vbe_probe();
+int vbe2_pm_probe();
 const char *vbe_memory_model_to_str(uint8_t m);
 void vbe_realint(struct dpmi_realmode_call *rc);
 void vbe_realbnk(struct dpmi_realmode_call *rc);
