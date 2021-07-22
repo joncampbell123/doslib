@@ -603,7 +603,6 @@ static void p_InitVideo(void) {
 	{
 		const uint32_t wantf1 = VESA_MODE_ATTR_HW_SUPPORTED | VESA_MODE_ATTR_GRAPHICS_MODE;
 		struct vbe_mode_info mi = {0};
-		uint16_t found_mode_w = 0;
 		uint16_t found_mode = 0;
 		unsigned int entry;
 		uint16_t mode;
@@ -617,6 +616,7 @@ static void p_InitVideo(void) {
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
 
+			/* NTS: VESA BIOSes shouldn't have separate modes for linear framebuffer vs non-linear */
 			memset(&mi,0,sizeof(mi));
 			if (vbe_read_mode_info(mode,&mi)) {
 				vbe_fill_in_mode_info(mode,&mi);
@@ -624,31 +624,26 @@ static void p_InitVideo(void) {
 					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
 					mi.bytes_per_scan_line >= 640) {
 					if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200) && !opt_nolfb) {
-						if (found_mode == 0 && mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul)
+						if (found_mode == 0 && mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul) {
 							found_mode = mode;
+							break;
+						}
 					}
 					else if (!(mi.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE_WINDOWING)) {
-						if (found_mode_w == 0) {
+						if (found_mode == 0) {
 							/* NTS: This code does not intend to read from video memory */
 							if (	(mi.win_a_segment != 0 && (mi.win_a_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005) ||
 								(mi.win_b_segment != 0 && (mi.win_b_attributes & 0x0005/*supported(1)|writeable(4)*/) == 0x0005)) {
 								if (mi.win_granularity != 0 && mi.win_size != 0 &&
 									vesa_ispowerof2(mi.win_granularity) && vesa_ispowerof2(mi.win_size) && mi.win_granularity <= mi.win_size) {
-									found_mode_w = mode;
+									found_mode = mode;
+									break;
 								}
 							}
 						}
 					}
 				}
 			}
-		}
-
-		IFEDBG("Found(LFB): 0x%04x",found_mode);
-		IFEDBG("Found(BNK): 0x%04x",found_mode_w);
-
-		if (found_mode == 0 && found_mode_w != 0) {
-			IFEDBG("Linear framebuffer not available, opting for bank switched mode");
-			found_mode = found_mode_w;
 		}
 
 		if (found_mode == 0)
@@ -661,10 +656,12 @@ static void p_InitVideo(void) {
 		vbe_fill_in_mode_info(found_mode,&mi);
 		{
 			if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200) && !opt_nolfb) {
+				IFEDBG("VESA: Using linear framebuffer");
 				vesa_lfb_physaddr = mi.phys_base_ptr;
 				vesa_use_lfb = true;
 			}
 			else {
+				IFEDBG("VESA: Using non-linear framebuffer");
 				vesa_use_lfb = false;
 				vesa_lfb_physaddr = 0; /* no linear framebuffer */
 				vesa_current_bank = 0xFFFFu; /* we don't know what the current bank is, though usually it's bank zero */
