@@ -978,10 +978,9 @@ int vbe_mode_decision_acceptmode(struct vbe_mode_decision *md,struct vbe_mode_in
 		vesa_bnk_wincur = 0xFF;
 		vesa_bnk_rproc = md->no_wf ? 0UL : mi->window_function;
 #if TARGET_MSDOS == 32
-		/* NTS: Not default, not confident about stability when calling VBE 2.0 protected mode API.
-		 *      Furthermore if the resource list indicates memory-mapped I/O, then we have to go about creating
-		 *      a 32-bit data selector to load into ES at call time so the BIOS can do memory-mapped I/O. Ugh. */
-		if ((!md->no_p32wf && md->force_p32wf) && vbe2_pmif_memiolist() == NULL/*I/O resource list which implies MMIO, therefore don't*/)
+		/* FIXME: If the resource list indicates memory-mapped I/O, then we have to go about creating
+		 *        a 32-bit data selector to load into ES at call time so the BIOS can do memory-mapped I/O. */
+		if (/*on by default*/(!md->no_p32wf || md->force_p32wf) && vbe2_pmif_memiolist() == NULL/*I/O resource list which implies MMIO, therefore don't*/)
 			vesa_bnk_vbe2pmproc = vbe2_pmif_setwindowproc();
 		else
 			vesa_bnk_vbe2pmproc = 0;
