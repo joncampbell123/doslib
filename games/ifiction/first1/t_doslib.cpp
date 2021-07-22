@@ -40,6 +40,11 @@ struct SCR_Rect {
 	signed int		x,y,w,h;
 };
 
+/* command line options */
+bool				opt_nolfb = false; /* disable framebuffer */
+bool				opt_nopmwf = false; /* disable VBE 2.0 protected mode window bank switch call */
+bool				opt_normwf = false; /* disable VBE 1.x real mode window bank switch call */
+
 /* update region management */
 unsigned int			upd_ystep = 8;
 SCR_Rect*			upd_yspan = NULL;
@@ -618,7 +623,7 @@ static void p_InitVideo(void) {
 				if ((mi.mode_attributes & wantf1) == wantf1 && mi.x_resolution == 640 && mi.y_resolution == 480 &&
 					mi.bits_per_pixel == 8 && mi.memory_model == 0x04/*packed pixel*/ &&
 					mi.bytes_per_scan_line >= 640) {
-					if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200)) {
+					if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200) && !opt_nolfb) {
 						if (found_mode == 0 && mi.phys_base_ptr != 0x00000000ul && mi.phys_base_ptr != 0xFFFFFFFFul)
 							found_mode = mode;
 					}
@@ -655,7 +660,7 @@ static void p_InitVideo(void) {
 
 		vbe_fill_in_mode_info(found_mode,&mi);
 		{
-			if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200)) {
+			if ((mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE) && (vbe_info->version >= 0x200) && !opt_nolfb) {
 				vesa_lfb_physaddr = mi.phys_base_ptr;
 				vesa_use_lfb = true;
 			}
@@ -665,6 +670,9 @@ static void p_InitVideo(void) {
 				vesa_current_bank = 0xFFFFu; /* we don't know what the current bank is, though usually it's bank zero */
 				vesa_window_func = mi.window_function;
 				vesa_window_size = (uint32_t)mi.win_size << (uint32_t)10ul; /* convert KB to bytes */
+
+				/* If user says not to call it, do not call it */
+				if (opt_normwf) vesa_window_func = 0;
 
 				/* choose the window, A or B. Pick A first if possible.
 				 * Note that if early demoscene is any indication, early VESA BIOSes don't pay attention to the
@@ -759,7 +767,10 @@ static void p_InitVideo(void) {
 			 * to real mode every time we need to switch banks.
 			 * NTS: This probe function will refuse to check for the API if VBE version is below 2.0 because
 			 *      that is the first version the API was defined. It is optional in VBE 3.0. */
-			if (vbe2_pm_probe()) {
+			if (opt_nopmwf) {
+				/* User says not to call protected mode window function, so don't */
+			}
+			else if (vbe2_pm_probe()) {
 				/* FIXME: If the card requires MMIO, the memory and I/O resource list will list a memory
 				 *        range, and we are required in that case to allocate a 32-bit data segment pointing
 				 *        to that MMIO range, which must be provided in ES at call time. We don't support
@@ -768,6 +779,7 @@ static void p_InitVideo(void) {
 					if (vbe2_pmif_memiolist() == NULL) { /* FIXME: Scan the resource list and only fail if a memory region is specified */
 						IFEDBG("VBE BIOS provides VBE 2.0 protected mode interface, will use PM interface for bank switching");
 						vesa_bnk_vbe2pmproc = vbe2_pmif_setwindowproc();
+						vesa_window_func = 0; /* then do not call real mode entry */
 					}
 				}
 			}
@@ -892,6 +904,26 @@ bool priv_IFEMainInit(int argc,char **argv) {
 	//not used yet
 	(void)argc;
 	(void)argv;
+
+	/* look for debug options to disable various things in case of problems */
+	{
+		int i;
+		char *a;
+
+		for (i=1;i < argc;i++) {
+			a = argv[i];
+
+			if (!strcmp(a,"/LFB-")) {
+				opt_nolfb = true;
+			}
+			else if (!strcmp(a,"/PMWF-")) {
+				opt_nopmwf = true;
+			}
+			else if (!strcmp(a,"/RMWF-")) {
+				opt_normwf = true;
+			}
+		}
+	}
 
 	cpu_probe();
 	probe_dos();
