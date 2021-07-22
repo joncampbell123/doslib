@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdint.h>
 
 #include "utils.h"
@@ -32,6 +33,10 @@ bool			want_dosbox_ig = false;
 bool			bochs_e9 = false; /* Bochs port E9h hack (prints to console in Bochs) */
 bool			want_bochs_e9 = false;
 #endif
+
+bool			debug_file = false;
+bool			want_debug_file = false;
+int			debug_fd = -1;
 
 bool			ifedbg_auto = true;
 bool			ifedbg_en = false;
@@ -66,6 +71,12 @@ void IFEDBG(const char *msg,...) {
 			bochs_e9_write("\n");
 		}
 #endif
+		if (debug_file && debug_fd >= 0) {
+			write(debug_fd,"IFEDBG: ",8);
+			write(debug_fd,fatal_tmp,strlen(fatal_tmp));
+			write(debug_fd,"\n",1);
+			fsync(debug_fd);
+		}
 #if defined(USE_SDL2)
 		fprintf(stderr,"IFEDBG: %s\n",fatal_tmp);
 #endif

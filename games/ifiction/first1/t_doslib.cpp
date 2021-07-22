@@ -927,6 +927,10 @@ bool priv_IFEMainInit(int argc,char **argv) {
 				want_bochs_e9 = true;
 				ifedbg_auto = false;
 			}
+			else if (!strcmp(a,"/DBGF")) {
+				want_debug_file = true;
+				ifedbg_auto = false;
+			}
 		}
 	}
 
@@ -964,6 +968,12 @@ bool priv_IFEMainInit(int argc,char **argv) {
 		bochs_e9 = ifedbg_en = true;
 
 		IFEDBG("Using Bochs port E9h for debug info. This should appear in your DOSBox/DOSBox-X log file or your Bochs console");
+	}
+
+	if (want_debug_file) {
+		debug_fd = open("IFEDEBUG.LOG",O_WRONLY|O_CREAT|O_TRUNC,0644);
+		if (debug_fd < 0) IFEFatalError("Unable to open IFE debug log file");
+		debug_file = ifedbg_en = true;
 	}
 
 	/* make sure the timer is ticking at 18.2Hz. */
