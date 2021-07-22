@@ -801,6 +801,8 @@ void vbe_reset_video_to_text() {
 }
 
 void vbe_mode_decision_init(struct vbe_mode_decision *m) {
+	m->force_p32wf = 0;
+	m->no_p32wf = 0;
 	m->force_wf = 0;
 	m->no_wf = 0;
 	m->mode = -1;

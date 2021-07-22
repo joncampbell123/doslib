@@ -139,6 +139,52 @@ int main() {
 		printf("    Table SetDisplayStart:   %Fp\n",(void far*)vbe2_pmif_setdisplaystartproc());
 		printf("    Table SetPalette:        %Fp\n",(void far*)vbe2_pmif_setpaletteproc());
 		printf("    Table MemIOList:         %Fp\n",(void far*)vbe2_pmif_memiolist());
+
+		{
+#if TARGET_MSDOS == 32
+			uint8_t *p = vbe2_pmif_memiolist();
+#else
+			uint8_t far *p = vbe2_pmif_memiolist();
+#endif
+			if (p != NULL) {
+				unsigned int patience = 512;
+				uint32_t u32;
+				uint16_t u16;
+
+				printf("        I/O:                 ");
+				do {
+					if (patience == 0) break;
+					patience--;
+#if TARGET_MSDOS == 32
+					u16 = *((uint16_t*)p); p += 2;
+#else
+					u16 = *((uint16_t far*)p); p += 2;
+#endif
+					if (u16 == 0xFFFFu) break;
+					printf("%04x ",(unsigned int)u16);
+				} while (1);
+				printf("\n");
+
+				printf("        MMIO:                ");
+				do {
+					if (patience == 0) break;
+					patience--;
+#if TARGET_MSDOS == 32
+					u16 = *((uint16_t*)p);
+					if (u16 == 0xFFFFu) break;
+					u32 = *((uint32_t*)p); p += 4;
+					u16 = *((uint16_t*)p); p += 2;
+#else
+					u16 = *((uint16_t far*)p);
+					if (u16 == 0xFFFFu) break;
+					u32 = *((uint32_t far*)p); p += 4;
+					u16 = *((uint16_t far*)p); p += 2;
+#endif
+					printf("%04x:%08lx ",(unsigned int)u16,(unsigned long)u32);
+				} while (1);
+				printf("\n");
+			}
+		}
 	}
 
 	if (isatty(1) && isatty(0)) {
