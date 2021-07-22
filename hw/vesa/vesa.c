@@ -190,6 +190,9 @@ static uint16_t			vbe_dos_buffer_selector = 0;
 #endif
 
 uint32_t			vesa_lfb_base = 0;
+#if TARGET_MSDOS == 32 /* 32-bit only: It doesn't make sense to call protected mode code from real mode */
+uint8_t*			vesa_bnk_vbe2pmproc = 0;
+#endif
 uint32_t			vesa_bnk_rproc = 0;
 uint8_t				vesa_bnk_window = 0;		/* which window to use */
 uint16_t			vesa_bnk_winseg = 0;
@@ -641,9 +644,34 @@ int vbe_set_mode(uint16_t mode,struct vbe_mode_custom_crtc_info *ci) {
 #endif
 }
 
+#if TARGET_MSDOS == 32
+void vbe2_pm_bank_switch(uint8_t window,uint16_t bank) {
+	if (vesa_bnk_vbe2pmproc != NULL) {
+		/* WARNING: This code does not yet support cards that require a separate
+		 *          ES segment value for MMIO */
+		__asm {
+			pusha
+			push	ds
+			push	es
+			mov	ax,0x4F05
+			mov	bl,window
+			xor	bh,bh
+			mov	dx,bank
+			call	dword ptr vesa_bnk_vbe2pmproc ; NEAR 32-bit call
+			pop	es
+			pop	ds
+			popa
+		}
+	}
+}
+#endif
+
 void vbe_bank_switch(uint32_t rproc,uint8_t window,uint16_t bank) {
 #if TARGET_MSDOS == 32
-	if (rproc == 0) {
+	if (vesa_bnk_vbe2pmproc != NULL) {
+		vbe2_pm_bank_switch(window,bank);
+	}
+	else if (rproc == 0) {
 		__asm {
 			mov	ax,0x4F05
 			mov	bl,window
@@ -949,6 +977,15 @@ int vbe_mode_decision_acceptmode(struct vbe_mode_decision *md,struct vbe_mode_in
 
 		vesa_bnk_wincur = 0xFF;
 		vesa_bnk_rproc = md->no_wf ? 0UL : mi->window_function;
+#if TARGET_MSDOS == 32
+		/* NTS: Not default, not confident about stability when calling VBE 2.0 protected mode API.
+		 *      Furthermore if the resource list indicates memory-mapped I/O, then we have to go about creating
+		 *      a 32-bit data selector to load into ES at call time so the BIOS can do memory-mapped I/O. Ugh. */
+		if ((!md->no_p32wf && md->force_p32wf) && vbe2_pmif_memiolist() == NULL/*I/O resource list which implies MMIO, therefore don't*/)
+			vesa_bnk_vbe2pmproc = vbe2_pmif_setwindowproc();
+		else
+			vesa_bnk_vbe2pmproc = 0;
+#endif
 		vesa_writeb = vesa_bnk_writeb;
 		vesa_writew = vesa_bnk_writew;
 		vesa_writed = vesa_bnk_writed;

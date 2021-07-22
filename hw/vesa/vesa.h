@@ -144,6 +144,10 @@ uint8_t far* vbe2_pmif_setpaletteproc(void);
 uint8_t far* vbe2_pmif_memiolist(void);
 #endif
 
+#if TARGET_MSDOS == 32
+void vbe2_pm_bank_switch(uint8_t window,uint16_t bank);
+#endif
+
 extern struct vbe2_pmiface*		vbe2_pminfo;
 extern struct vbe_info_block*		vbe_info;
 
@@ -173,6 +177,9 @@ int vbe_mode_decision_acceptmode(struct vbe_mode_decision *md,struct vbe_mode_in
 
 extern uint32_t			vesa_lfb_base;
 extern uint32_t			vesa_bnk_rproc;
+#if TARGET_MSDOS == 32 /* 32-bit only: It doesn't make sense to call protected mode code from real mode */
+extern uint8_t*			vesa_bnk_vbe2pmproc;
+#endif
 extern uint8_t			vesa_bnk_window;		/* which window to use */
 extern uint16_t			vesa_bnk_winseg;
 extern uint16_t			vesa_bnk_winshf;
