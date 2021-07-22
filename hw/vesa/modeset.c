@@ -868,6 +868,9 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 	sstep_wait();
+#if TARGET_MSDOS == 32
+	vbe2_pm_probe();
+#endif
 
 	if (md.no_wf) printf("...not using direct window function\n");
 
