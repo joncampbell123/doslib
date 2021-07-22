@@ -27,10 +27,24 @@
 
 #if defined(USE_DOSLIB) || defined(USE_WIN32)
 bool			dosbox_ig = false; /* DOSBox Integration Device detected */
+bool			want_dosbox_ig = false;
+
+bool			bochs_e9 = false; /* Bochs port E9h hack (prints to console in Bochs) */
+bool			want_bochs_e9 = false;
 #endif
 
+bool			ifedbg_auto = true;
 bool			ifedbg_en = false;
 char			fatal_tmp[256];
+
+#if defined(USE_DOSLIB) || defined(USE_WIN32)
+void bochs_e9_write(const char *s) {
+	char c;
+
+	while ((c = *s++) != 0)
+		outp(0xE9,(unsigned char)c);
+}
+#endif
 
 void IFEDBG(const char *msg,...) {
 	if (ifedbg_en) {
@@ -45,6 +59,11 @@ void IFEDBG(const char *msg,...) {
 			dosbox_id_debug_message("IFEDBG: ");
 			dosbox_id_debug_message(fatal_tmp);
 			dosbox_id_debug_message("\n");
+		}
+		if (bochs_e9) {
+			bochs_e9_write("IFEDBG: ");
+			bochs_e9_write(fatal_tmp);
+			bochs_e9_write("\n");
 		}
 #endif
 #if defined(USE_SDL2)

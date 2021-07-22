@@ -919,6 +919,14 @@ bool priv_IFEMainInit(int argc,char **argv) {
 			else if (!strcmp(a,"/RMWF-")) {
 				opt_normwf = true;
 			}
+			else if (!strcmp(a,"/DBIG")) {
+				want_dosbox_ig = true;
+				ifedbg_auto = false;
+			}
+			else if (!strcmp(a,"/BE9")) {
+				want_bochs_e9 = true;
+				ifedbg_auto = false;
+			}
 		}
 	}
 
@@ -942,11 +950,20 @@ bool priv_IFEMainInit(int argc,char **argv) {
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
 			IFEFatalError("VESA BIOS extensions not detected");
 
-	if (probe_dosbox_id()) {
-		printf("DOSBox Integration Device detected\n");
-		dosbox_ig = ifedbg_en = true;
+	if ((!ifedbg_en && ifedbg_auto) || want_dosbox_ig) {
+		if (probe_dosbox_id()) {
+			printf("DOSBox Integration Device detected\n");
+			dosbox_ig = ifedbg_en = true;
 
-		IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
+			IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
+		}
+	}
+
+	if (want_bochs_e9) {
+		/* never automatically. not sure if there's a way to detect port E9h exists or that we're running in Bochs */
+		bochs_e9 = ifedbg_en = true;
+
+		IFEDBG("Using Bochs port E9h for debug info. This should appear in your DOSBox/DOSBox-X log file or your Bochs console");
 	}
 
 	/* make sure the timer is ticking at 18.2Hz. */
