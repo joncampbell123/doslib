@@ -882,6 +882,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 				if (is_minimized) {
 					/* draw application icon */
+					/* FIXME: How does Windows by default make sure icons are drawn properly given the desktop background?
+					 *        This code draws an icon atop whatever happened to be on the screen at the time */
 					RECT um;
 
 					HICON hIcon = LoadIcon(NULL,IDI_APPLICATION);
