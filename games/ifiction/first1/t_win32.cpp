@@ -867,14 +867,18 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 				if (is_minimized) {
 					/* draw application icon */
-					/* FIXME: How does Windows by default make sure icons are drawn properly given the desktop background?
-					 *        This code draws an icon atop whatever happened to be on the screen at the time */
+					/* According to MS knowledge base Q74539 which you can read on any site
+					 * other than Microsoft's website, the way Windows 3.1 apps draw their
+					 * own icon is to use WM_ICONERASEBACKGROUND to paint the desktop
+					 * window background then draw the icon. Furthermore for WM_ERASEBKGND
+					 * you do nothing (as we do already). */
 					RECT um;
 
-					HICON hIcon = LoadIcon(NULL,IDI_APPLICATION);
+					/* make Windows 3.1 paint the desktop background over our window */
+					DefWindowProc(hwnd,WM_ICONERASEBKGND,(WORD)hDC,0L);
 
-					GetClientRect(hwnd,&um);
-					DrawIcon(hDC,(um.right - GetSystemMetrics(SM_CXICON))/2,((um.bottom - GetSystemMetrics(SM_CYICON)) / 2),hIcon);
+					/* then draw our icon */
+					DrawIcon(hDC,0,0,LoadIcon(NULL,IDI_APPLICATION));
 				}
 				else {
 					/* paint black border if maximized */
