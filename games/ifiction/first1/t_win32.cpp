@@ -891,10 +891,6 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			UpdateWin32ModFlags();
 			break;
 		case WM_SIZE:
-			if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED) {
-				InvalidateRect(hwnd,NULL,TRUE); /* need to redraw */
-			}
-
 			/* NTS: In Windows 3.1, WM_PAINT applies even to the small icon that is visible when your application is minimized */
 			if (wParam == SIZE_MINIMIZED)
 				is_minimized = true;
@@ -908,6 +904,9 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				is_maximized = false;
 
 			UpdateScreenPosOffset();
+
+			if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
+				InvalidateRect(hwnd,NULL,TRUE); /* need to redraw */
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
