@@ -794,6 +794,13 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			if (!is_minimized)
 				priv_ProcessMouseMotion(wParam,(int)((int16_t)LOWORD(lParam)),(int)((int16_t)HIWORD(lParam)));
 			break;
+		case WM_SYSCHAR:
+		case WM_SYSDEADCHAR:
+			/* Intereception is necessary or Alt combinations we handle ourselves will cause "Dings" in Windows 3.1 */
+			if (wParam == ' ' || wParam == 9) /* but we must pass spacebar and tab so Alt+Spacebar still calls up the system menu */
+				p_win32_ProcessKeyEvent(wParam,lParam,uMsg,true);
+
+			return 0;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
 			if (!is_minimized)
