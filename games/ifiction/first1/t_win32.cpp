@@ -53,11 +53,11 @@ bool					win32_std_cursor_show = false;
 
 void UpdateScreenPosOffset(void) {
 	if (is_maximized) {
-		const int sx = GetSystemMetrics(SM_CXSCREEN);
-		const int sy = GetSystemMetrics(SM_CYSCREEN);
+		RECT r = {0,0,0,0};
 
-		screen_region_offset.x = (sx - abs((int)hwndMainDIB->bmiHeader.biWidth)) / 2;
-		screen_region_offset.y = (sy - abs((int)hwndMainDIB->bmiHeader.biHeight)) / 2;
+		GetClientRect(hwndMain,&r);
+		screen_region_offset.x = ((r.right - r.left) - abs((int)hwndMainDIB->bmiHeader.biWidth)) / 2;
+		screen_region_offset.y = ((r.bottom - r.top) - abs((int)hwndMainDIB->bmiHeader.biHeight)) / 2;
 	}
 	else {
 		screen_region_offset.x = 0;
