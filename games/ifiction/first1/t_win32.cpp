@@ -695,8 +695,10 @@ void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,UINT msg,bool down) {
 			}
 		}
 		else if (w == VK_RETURN) {
-			IFEDBG("ALT+Enter detected, minimizing window");
-			ShowWindow(hwndMain,SW_MINIMIZE);
+			if (!down) {
+				IFEDBG("ALT+Enter detected, minimizing window");
+				ShowWindow(hwndMain,SW_MINIMIZE);
+			}
 		}
 		else if (w == VK_TAB) {
 			IFEDBG("ALT+Tab detected, Windows user is attempting to switch tasks");
