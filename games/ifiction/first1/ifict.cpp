@@ -323,9 +323,15 @@ void IFETestRGBPalettePattern2(void) {
 	ifeapi->EndScreenDraw();
 }
 
-static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor,const bool has_mask) {
+/* in: destination x,y,w,h
+ *     source x,y,w,h
+ *     scissor rect to clip to in dest
+ *     has_mask
+ * out: destination x,y,w,h (modified)
+ *      source x,y (modified) */
+static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,const int sw,const int sh,const iferect_t &scissor,const bool has_mask) {
 	/* BMP with no storage? caller wants to draw bitmaps with negative dimensions? Exit now. Assume scissor rect is valid. */
-	if (bmp.bitmap == NULL || dw <= 0 || dh <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
+	if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
 
 	/* simplify code below by subtracting scissor rect top/left from dx/dy here, to add it back later */
 	dx -= scissor.x;
@@ -346,10 +352,10 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 
 	int actual_dw = has_mask ? (dw * 2) : dw;
 
-	if ((unsigned int)(sx+actual_dw) > bmp.width)
-		dw = bmp.width - sx;
-	if ((unsigned int)(sy+dh) > bmp.height)
-		dh = bmp.height - sy;
+	if ((unsigned int)(sx+actual_dw) > (unsigned int)sw)
+		dw = sw - sx;
+	if ((unsigned int)(sy+dh) > (unsigned int)sh)
+		dh = sh - sy;
 	if ((unsigned int)(dx+dw) > (unsigned int)scissor.w)
 		dw = scissor.w - dx;
 	if ((unsigned int)(dy+dh) > (unsigned int)scissor.h)
@@ -362,10 +368,10 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 	dy += scissor.y;
 
 #if 1//DEBUG
-	if ((unsigned int)(sx+actual_dw) > bmp.width && (unsigned int)(sy+dh) > bmp.height &&
+	if ((unsigned int)(sx+actual_dw) > (unsigned int)sw && (unsigned int)(sy+dh) > (unsigned int)sh &&
 		(unsigned int)(dx+dw) > (unsigned int)scissor.w && (unsigned int)(dy+dh) > (unsigned int)scissor.h)
-		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d dw=%d dh=%d bw=%d bh=%d scw=%d sch=%d",
-			__LINE__,sx,sy,dx,dy,actual_dw,dh,bmp.width,bmp.height,scissor.w,scissor.h);
+		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d dw=%d dh=%d sw=%d sh=%d scw=%d sch=%d",
+			__LINE__,sx,sy,dx,dy,actual_dw,dh,sw,sh,scissor.w,scissor.h);
 #endif
 
 	return true;
@@ -374,7 +380,8 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,false/*no mask*/)) return;
+	if (bmp.bitmap == NULL) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,false/*no mask*/)) return;
 
 	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
 	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
@@ -397,7 +404,8 @@ void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 void IFEBitBltFrom(int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,false/*no mask*/)) return;
+	if (bmp.bitmap == NULL) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,false/*no mask*/)) return;
 
 	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
 	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
@@ -439,7 +447,8 @@ void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,bmp,IFEScissor,true/*has mask*/)) return;
+	if (bmp.bitmap == NULL) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,true/*has mask*/)) return;
 
 	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
 	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
