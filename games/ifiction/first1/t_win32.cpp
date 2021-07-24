@@ -43,6 +43,7 @@ bool					mousecap_on = false;
 HRGN					upd_region = NULL;
 HRGN					upd_rect = NULL;
 bool					upd_region_valid = false;
+bool					is_minimized = false;
 
 unsigned int				win32_std_cursor = 0;
 HCURSOR					win32_std_cursor_obj = NULL;
@@ -163,24 +164,26 @@ static void p_ResetTicks(const uint32_t base) {
 }
 
 static void p_UpdateFullScreen(void) {
-	HDC hDC = GetDC(hwndMain);
-	HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+	if (!is_minimized) {
+		HDC hDC = GetDC(hwndMain);
+		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 
-	SetDIBitsToDevice(hDC,
-		/*dest x/y*/0,0,
-		abs((int)hwndMainDIB->bmiHeader.biWidth),
-		abs((int)hwndMainDIB->bmiHeader.biHeight),
-		/*src x/y*/0,0,
-		/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
-		win_dib,
-		hwndMainDIB,
-		winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
+		SetDIBitsToDevice(hDC,
+			/*dest x/y*/0,0,
+			abs((int)hwndMainDIB->bmiHeader.biWidth),
+			abs((int)hwndMainDIB->bmiHeader.biHeight),
+			/*src x/y*/0,0,
+			/*starting scan/clines*/0,abs((int)hwndMainDIB->bmiHeader.biHeight),
+			win_dib,
+			hwndMainDIB,
+			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
 
-	SelectPalette(hDC,oldPal,FALSE);
-	ReleaseDC(hwndMain,hDC);
+		SelectPalette(hDC,oldPal,FALSE);
+		ReleaseDC(hwndMain,hDC);
 
-	MakeRgnEmpty(upd_region);
-	upd_region_valid = false;
+		MakeRgnEmpty(upd_region);
+		upd_region_valid = false;
+	}
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -283,7 +286,7 @@ static void p_InitVideo(void) {
 		}
 
 		{
-			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER;
+			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX;
 			RECT um;
 
 			um.top = 0;
@@ -431,7 +434,7 @@ IFEMouseEvent *p_GetMouseInput(void) {
 }
 
 void p_UpdateScreen(void) {
-	if (upd_region_valid) {
+	if (upd_region_valid && !is_minimized) {
 		HDC hDC = GetDC(hwndMain);
 		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 		HRGN oldRgn = (HRGN)SelectObject(hDC,upd_region);
@@ -725,7 +728,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				winQuit = true;
 			break;
 		case WM_SETCURSOR:
-			if (LOWORD(lParam) == HTCLIENT) {
+			if (LOWORD(lParam) == HTCLIENT && !is_minimized) {
 				/* ONLY the client area, allow the cursor normal operation otherwise */
 				win32updatecursor();
 				return TRUE;
@@ -744,21 +747,25 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 		case WM_RBUTTONUP:
 			/* NTS: LOWORD(lParam) returns a 16-bit integer. Mouse coordinates may be negative, therefore
 			 *      typecast as signed 16-bit integer then sign extend to int */
+			if (!is_minimized)
 			priv_ProcessMouseMotion(wParam,(int)((int16_t)LOWORD(lParam)),(int)((int16_t)HIWORD(lParam)));
 			break;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
-			p_win32_ProcessKeyEvent(wParam,lParam,uMsg,true);
+			if (!is_minimized)
+				p_win32_ProcessKeyEvent(wParam,lParam,uMsg,true);
 			break;
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
-			p_win32_ProcessKeyEvent(wParam,lParam,uMsg,false);
+			if (!is_minimized)
+				p_win32_ProcessKeyEvent(wParam,lParam,uMsg,false);
 			break;
 		case WM_CHAR:
-			p_win32_ProcessCharEvent(wParam,lParam);
+			if (!is_minimized)
+				p_win32_ProcessCharEvent(wParam,lParam);
 			break;
 		case WM_PALETTECHANGED:
-			if (winScreenIsPal && hwndMainPAL != NULL && (HWND)wParam != hwnd) {
+			if (winScreenIsPal && hwndMainPAL != NULL && (HWND)wParam != hwnd && !is_minimized) {
 				HPALETTE oldPal;
 				HDC hDC;
 
@@ -774,7 +781,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			}
 			break;
 		case WM_QUERYNEWPALETTE:
-			if (winScreenIsPal && hwndMainPAL != NULL) {
+			if (winScreenIsPal && hwndMainPAL != NULL && !is_minimized) {
 				HPALETTE oldPal;
 				HDC hDC;
 
@@ -790,7 +797,11 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			}
 			break;
 		case WM_PAINT:
-			{
+			if (is_minimized) {
+				/* Let windows handle it */
+				return DefWindowProc(hwnd,uMsg,wParam,lParam);
+			}
+			else {
 				PAINTSTRUCT ps;
 				HDC hDC = BeginPaint(hwnd,&ps);
 
@@ -810,6 +821,17 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			break;
 		case WM_ACTIVATE:
 			UpdateWin32ModFlags();
+			break;
+		case WM_SIZE:
+			if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED) {
+				InvalidateRect(hwnd,NULL,TRUE); /* need to redraw */
+			}
+
+			/* NTS: In Windows 3.1, WM_PAINT applies even to the small icon that is visible when your application is minimized */
+			if (wParam == SIZE_MINIMIZED)
+				is_minimized = true;
+			else
+				is_minimized = false;
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
