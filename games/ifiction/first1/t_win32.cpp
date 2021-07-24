@@ -872,7 +872,6 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 					 * own icon is to use WM_ICONERASEBACKGROUND to paint the desktop
 					 * window background then draw the icon. Furthermore for WM_ERASEBKGND
 					 * you do nothing (as we do already). */
-					RECT um;
 
 					/* make Windows 3.1 paint the desktop background over our window */
 					DefWindowProc(hwnd,WM_ICONERASEBKGND,(WORD)hDC,0L);
