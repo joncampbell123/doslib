@@ -21,6 +21,8 @@
 #include "fatal.h"
 #include "palette.h"
 
+DWORD					hwndMainPopupStyle = WS_POPUP;
+DWORD					hwndMainDefaultStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX|WS_MAXIMIZEBOX;
 BITMAPINFO*				hwndMainDIB = NULL;
 HPALETTE				hwndMainPAL = NULL;
 HPALETTE				hwndMainPALPrev = NULL;
@@ -380,7 +382,7 @@ static void p_InitVideo(void) {
 		upd_region_valid = false;
 
 		{
-			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX|WS_MAXIMIZEBOX;
+			DWORD dwStyle = hwndMainDefaultStyle;
 			RECT um;
 
 			um.top = 0;
@@ -389,8 +391,8 @@ static void p_InitVideo(void) {
 			um.bottom = 480;
 			if (sw <= 640 && sh <= 480) {
 				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
+				dwStyle = hwndMainPopupStyle;
 				is_fullscreen = true;
-				dwStyle = WS_POPUP;
 			}
 			else {
 				is_fullscreen = false;
