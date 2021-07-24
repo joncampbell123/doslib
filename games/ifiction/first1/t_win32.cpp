@@ -179,9 +179,9 @@ static void p_ResetTicks(const uint32_t base) {
 	win32_tick_base += base;
 }
 
-static void p_UpdateFullScreen(void) {
+static void p_DoUpdateFullScreen(HDC useDC=NULL) {
 	if (!is_minimized) {
-		HDC hDC = GetDC(hwndMain);
+		HDC hDC = (useDC != NULL) ? useDC : GetDC(hwndMain);
 		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 
 		SetDIBitsToDevice(hDC,
@@ -195,11 +195,15 @@ static void p_UpdateFullScreen(void) {
 			winScreenIsPal ? DIB_PAL_COLORS : DIB_RGB_COLORS);
 
 		SelectPalette(hDC,oldPal,FALSE);
-		ReleaseDC(hwndMain,hDC);
+		if (useDC == NULL) ReleaseDC(hwndMain,hDC);
 
 		MakeRgnEmpty(upd_region);
 		upd_region_valid = false;
 	}
+}
+
+static void p_UpdateFullScreen(void) {
+	p_DoUpdateFullScreen();
 }
 
 static ifevidinfo_t* p_GetVidInfo(void) {
@@ -876,8 +880,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 					SelectPalette(hDC,oldPal,FALSE);
 				}
 
+				p_DoUpdateFullScreen(hDC);
 				EndPaint(hwnd,&ps);
-				ifeapi->UpdateFullScreen();
 			}
 			break;
 		case WM_ACTIVATE:
