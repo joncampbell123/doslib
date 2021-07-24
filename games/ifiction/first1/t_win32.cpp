@@ -820,9 +820,18 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				return TRUE;
 			}
 			break;
+		case WM_ICONERASEBKGND:
+			if (is_minimized) {
+				/* do nothing */
+				return TRUE;
+			}
+			else {
+				return DefWindowProc(hwnd,uMsg,wParam,lParam);
+			}
 		case WM_ERASEBKGND:
 			if (is_minimized) {
-				return DefWindowProc(hwnd,uMsg,wParam,lParam);
+				/* do nothing */
+				return TRUE;
 			}
 			else {
 				RECT um;
@@ -865,28 +874,36 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				return TRUE;
 			}
 		case WM_PAINT:
-			if (is_minimized) {
-				/* Let windows handle it */
-				return DefWindowProc(hwnd,uMsg,wParam,lParam);
-			}
-			else {
+			{
 				PAINTSTRUCT ps;
 				HDC hDC = BeginPaint(hwnd,&ps);
 
 				IFEDBG("WM_PAINT");
 
-				if (winScreenIsPal && hwndMainPAL != NULL) {
-					HPALETTE oldPal;
+				if (is_minimized) {
+					/* draw application icon */
+					RECT um;
 
-					oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
-					RealizePalette(hDC);
-					SelectPalette(hDC,oldPal,FALSE);
+					HICON hIcon = LoadIcon(NULL,IDI_APPLICATION);
+
+					GetClientRect(hwnd,&um);
+					DrawIcon(hDC,(um.right - GetSystemMetrics(SM_CXICON))/2,((um.bottom - GetSystemMetrics(SM_CYICON)) / 2),hIcon);
+				}
+				else {
+					if (winScreenIsPal && hwndMainPAL != NULL) {
+						HPALETTE oldPal;
+
+						oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
+						RealizePalette(hDC);
+						SelectPalette(hDC,oldPal,FALSE);
+					}
+
+					p_DoUpdateFullScreen(hDC);
 				}
 
-				p_DoUpdateFullScreen(hDC);
 				EndPaint(hwnd,&ps);
-				return TRUE;
 			}
+			return TRUE;
 		case WM_ACTIVATE:
 			UpdateWin32ModFlags();
 			break;
