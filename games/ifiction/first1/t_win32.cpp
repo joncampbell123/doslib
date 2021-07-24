@@ -44,10 +44,26 @@ HRGN					upd_region = NULL;
 HRGN					upd_rect = NULL;
 bool					upd_region_valid = false;
 bool					is_minimized = false;
+bool					is_maximized = false;
+POINT					screen_region_offset = {0,0};
 
 unsigned int				win32_std_cursor = 0;
 HCURSOR					win32_std_cursor_obj = NULL;
 bool					win32_std_cursor_show = false;
+
+void UpdateScreenPosOffset(void) {
+	if (is_maximized) {
+		const int sx = GetSystemMetrics(SM_CXSCREEN);
+		const int sy = GetSystemMetrics(SM_CYSCREEN);
+
+		screen_region_offset.x = (sx - abs((int)hwndMainDIB->bmiHeader.biWidth)) / 2;
+		screen_region_offset.y = (sy - abs((int)hwndMainDIB->bmiHeader.biHeight)) / 2;
+	}
+	else {
+		screen_region_offset.x = 0;
+		screen_region_offset.y = 0;
+	}
+}
 
 void MakeRgnEmpty(HRGN r) {
 	SetRectRgn(r,0,0,0,0); /* region is x1 <= x < x2, y1 <= y < y2, therefore this rectangle makes an empty region */
@@ -74,8 +90,8 @@ void priv_CaptureMouse(const bool cap) {
 void priv_ProcessMouseMotion(const WPARAM wParam,int x,int y) {
 	IFEMouseEvent me;
 
-	ifemousestat.x = x;
-	ifemousestat.y = y;
+	ifemousestat.x = x - screen_region_offset.x;
+	ifemousestat.y = y - screen_region_offset.y;
 
 	memset(&me,0,sizeof(me));
 	me.pstatus = ifemousestat.status;
@@ -169,7 +185,7 @@ static void p_UpdateFullScreen(void) {
 		HPALETTE oldPal = SelectPalette(hDC,hwndMainPAL,FALSE);
 
 		SetDIBitsToDevice(hDC,
-			/*dest x/y*/0,0,
+			/*dest x/y*/screen_region_offset.x,screen_region_offset.y,
 			abs((int)hwndMainDIB->bmiHeader.biWidth),
 			abs((int)hwndMainDIB->bmiHeader.biHeight),
 			/*src x/y*/0,0,
@@ -286,7 +302,7 @@ static void p_InitVideo(void) {
 		}
 
 		{
-			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX;
+			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX|WS_MAXIMIZEBOX;
 			RECT um;
 
 			um.top = 0;
@@ -440,7 +456,7 @@ void p_UpdateScreen(void) {
 		HRGN oldRgn = (HRGN)SelectObject(hDC,upd_region);
 
 		SetDIBitsToDevice(hDC,
-			/*dest x/y*/0,0,
+			/*dest x/y*/screen_region_offset.x,screen_region_offset.y,
 			abs((int)hwndMainDIB->bmiHeader.biWidth),
 			abs((int)hwndMainDIB->bmiHeader.biHeight),
 			/*src x/y*/0,0,
@@ -461,7 +477,11 @@ void p_UpdateScreen(void) {
 void p_AddScreenUpdate(int x1,int y1,int x2,int y2) {
 	if (x1 < x2 && y1 < y2) {
 		upd_region_valid = true;
-		SetRectRgn(upd_rect,x1,y1,x2,y2); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
+
+		SetRectRgn(upd_rect,
+			x1+screen_region_offset.x,y1+screen_region_offset.y,
+			x2+screen_region_offset.x,y2+screen_region_offset.y); /* "The region does not include the lower and right boundaries of the rectangle", same as this API */
+
 		if (CombineRgn(upd_region,upd_region,upd_rect,RGN_OR) == ERROR)
 			IFEDBG("CombineRgn error");
 	}
@@ -748,7 +768,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			/* NTS: LOWORD(lParam) returns a 16-bit integer. Mouse coordinates may be negative, therefore
 			 *      typecast as signed 16-bit integer then sign extend to int */
 			if (!is_minimized)
-			priv_ProcessMouseMotion(wParam,(int)((int16_t)LOWORD(lParam)),(int)((int16_t)HIWORD(lParam)));
+				priv_ProcessMouseMotion(wParam,(int)((int16_t)LOWORD(lParam)),(int)((int16_t)HIWORD(lParam)));
 			break;
 		case WM_SYSKEYDOWN:/* or else this game is "hung" by DefWindowProc if the user taps the Alt key */
 		case WM_KEYDOWN:
@@ -796,6 +816,47 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				return TRUE;
 			}
 			break;
+		case WM_ERASEBKGND:
+			{
+				RECT um;
+				RECT scr;
+				HDC hDC = (HDC)wParam; /* Windows provides this for us */
+				HBRUSH prevBrush = (HBRUSH)SelectObject(hDC,GetStockObject(BLACK_BRUSH));
+				HPEN prevPen = (HPEN)SelectObject(hDC,GetStockObject(BLACK_PEN)); /* NTS: Rectangles are rendered 1 pixel less on each side if NULL_PEN */
+
+				GetClientRect(hwnd,&um);
+
+				scr.left = screen_region_offset.x;
+				scr.top = screen_region_offset.y;
+				scr.right = screen_region_offset.x + abs((int)hwndMainDIB->bmiHeader.biWidth);
+				scr.bottom = screen_region_offset.y + abs((int)hwndMainDIB->bmiHeader.biHeight);
+
+				/* NTS: Rectangle() does not include bottom and right edge pixels */
+				/* +-------------------------+
+				 * |          TOP            |
+				 * |                         |
+				 * |.....+-------------+.....|
+				 * |     |             |     |
+				 * |  L  |             |  R  |
+				 * |     |             |     |
+				 * |.....+-------------+.....|
+				 * |                         |
+				 * |         BOTTOM          |
+				 * +-------------------------+ */
+
+				/* top */
+				Rectangle(hDC,/*L*/0,/*T*/0,/*R*/um.right,/*B*/scr.top);
+				/* bottom */
+				Rectangle(hDC,/*L*/0,/*T*/scr.bottom,/*R*/um.right,/*B*/um.bottom);
+				/* left */
+				Rectangle(hDC,/*L*/0,/*T*/scr.top,/*R*/scr.left,/*B*/scr.bottom);
+				/* right */
+				Rectangle(hDC,/*L*/scr.right,/*T*/scr.top,/*R*/um.right,/*B*/scr.bottom);
+
+				SelectObject(hDC,prevPen);
+				SelectObject(hDC,prevBrush);
+			}
+			return TRUE;
 		case WM_PAINT:
 			if (is_minimized) {
 				/* Let windows handle it */
@@ -832,6 +893,14 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				is_minimized = true;
 			else
 				is_minimized = false;
+
+			/* If maximized, then it's nice to center it in the window */
+			if (wParam == SIZE_MAXIMIZED)
+				is_maximized = true;
+			else
+				is_maximized = false;
+
+			UpdateScreenPosOffset();
 			break;
 		default:
 			return DefWindowProc(hwnd,uMsg,wParam,lParam);
