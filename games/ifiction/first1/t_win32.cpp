@@ -821,7 +821,10 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			}
 			break;
 		case WM_ERASEBKGND:
-			{
+			if (is_minimized) {
+				return DefWindowProc(hwnd,uMsg,wParam,lParam);
+			}
+			else {
 				RECT um;
 				RECT scr;
 				HDC hDC = (HDC)wParam; /* Windows provides this for us */
@@ -859,8 +862,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 				SelectObject(hDC,prevPen);
 				SelectObject(hDC,prevBrush);
+				return TRUE;
 			}
-			return TRUE;
 		case WM_PAINT:
 			if (is_minimized) {
 				/* Let windows handle it */
@@ -882,8 +885,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 				p_DoUpdateFullScreen(hDC);
 				EndPaint(hwnd,&ps);
+				return TRUE;
 			}
-			break;
 		case WM_ACTIVATE:
 			UpdateWin32ModFlags();
 			break;
