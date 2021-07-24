@@ -45,6 +45,7 @@ HRGN					upd_rect = NULL;
 bool					upd_region_valid = false;
 bool					is_minimized = false;
 bool					is_maximized = false;
+bool					is_fullscreen = false;
 POINT					screen_region_offset = {0,0};
 
 unsigned int				win32_std_cursor = 0;
@@ -388,9 +389,11 @@ static void p_InitVideo(void) {
 			um.bottom = 480;
 			if (sw <= 640 && sh <= 480) {
 				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
+				is_fullscreen = true;
 				dwStyle = WS_POPUP;
 			}
 			else {
+				is_fullscreen = false;
 				AdjustWindowRect(&um,dwStyle,FALSE);
 			}
 
@@ -677,9 +680,15 @@ void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,UINT msg,bool down) {
 		 * Did you know that in Windows 3.1, you can prevent the user from using Alt+Tab
 		 * to switch away from your window if you intercept all WM_SYSKEYDOWN messages? */
 		if (w == VK_SPACE) {
-			IFEDBG("ALT+Space detected, Windows user is attempting to access system menu");
-			DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
-			DefWindowProc(hwndMain,msg,w,l);
+			if (!is_fullscreen) {
+				IFEDBG("ALT+Space detected, Windows user is attempting to access system menu");
+				DefWindowProc(hwndMain,WM_SYSKEYDOWN,VK_MENU,0x00000001u);
+				DefWindowProc(hwndMain,msg,w,l);
+			}
+		}
+		else if (w == VK_RETURN) {
+			IFEDBG("ALT+Enter detected, minimizing window");
+			ShowWindow(hwndMain,SW_MINIMIZE);
 		}
 		else if (w == VK_TAB) {
 			IFEDBG("ALT+Tab detected, Windows user is attempting to switch tasks");
