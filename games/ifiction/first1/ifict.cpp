@@ -323,48 +323,49 @@ void IFETestRGBPalettePattern2(void) {
 	ifeapi->EndScreenDraw();
 }
 
-static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &w,int &h,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor,const bool has_mask) {
+static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,const IFEBitmap &bmp,iferect_t &scissor,const bool has_mask) {
 	/* BMP with no storage? caller wants to draw bitmaps with negative dimensions? Exit now. Assume scissor rect is valid. */
-	if (bmp.bitmap == NULL || w <= 0 || h <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
+	if (bmp.bitmap == NULL || dw <= 0 || dh <= 0 || scissor.w <= 0 || scissor.h <= 0) return false;
 
 	/* simplify code below by subtracting scissor rect top/left from dx/dy here, to add it back later */
 	dx -= scissor.x;
 	dy -= scissor.y;
 
 	/* upper top/left source/dest clipping */
-	if (sx < 0) { w += sx; dx -= sx; sx = 0; }
-	if (sy < 0) { h += sy; dy -= sy; sy = 0; }
-	if (dx < 0) { w += dx; sx -= dx; dx = 0; }
-	if (dy < 0) { h += dy; sy -= dy; dy = 0; }
-	if (w <= 0 || h <= 0) return false;
+	if (sx < 0) { dw += sx; dx -= sx; sx = 0; }
+	if (sy < 0) { dh += sy; dy -= sy; sy = 0; }
+	if (dx < 0) { dw += dx; sx -= dx; dx = 0; }
+	if (dy < 0) { dh += dy; sy -= dy; dy = 0; }
+	if (dw <= 0 || dh <= 0) return false;
 
 	/* assume by this point, sx/sy/dx/dy are >= 0, w/h are > 0 */
 #if 1//DEBUG
 	if (sx < 0 || sy < 0 || dx < 0 || dy < 0)
-		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d w=%d h=%d",__LINE__,sx,sy,dx,dy,w,h);
+		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d dw=%d dh=%d",__LINE__,sx,sy,dx,dy,dw,dh);
 #endif
 
-	int actual_w = has_mask ? (w * 2) : w;
+	int actual_dw = has_mask ? (dw * 2) : dw;
 
-	if ((unsigned int)(sx+actual_w) > bmp.width)
-		w = bmp.width - sx;
-	if ((unsigned int)(sy+h) > bmp.height)
-		h = bmp.height - sy;
-	if ((unsigned int)(dx+w) > (unsigned int)scissor.w)
-		w = scissor.w - dx;
-	if ((unsigned int)(dy+h) > (unsigned int)scissor.h)
-		h = scissor.h - dy;
+	if ((unsigned int)(sx+actual_dw) > bmp.width)
+		dw = bmp.width - sx;
+	if ((unsigned int)(sy+dh) > bmp.height)
+		dh = bmp.height - sy;
+	if ((unsigned int)(dx+dw) > (unsigned int)scissor.w)
+		dw = scissor.w - dx;
+	if ((unsigned int)(dy+dh) > (unsigned int)scissor.h)
+		dh = scissor.h - dy;
 
-	if (w <= 0 || h <= 0) return false;
+	if (dw <= 0 || dh <= 0) return false;
 
 	/* remove adjustment above */
 	dx += scissor.x;
 	dy += scissor.y;
 
 #if 1//DEBUG
-	if ((unsigned int)(sx+actual_w) > bmp.width && (unsigned int)(sy+h) > bmp.height && (unsigned int)(dx+w) > (unsigned int)scissor.w && (unsigned int)(dy+h) > (unsigned int)scissor.h)
-		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d w=%d h=%d bw=%d bh=%d scw=%d sch=%d",
-			__LINE__,sx,sy,dx,dy,actual_w,h,bmp.width,bmp.height,scissor.w,scissor.h);
+	if ((unsigned int)(sx+actual_dw) > bmp.width && (unsigned int)(sy+dh) > bmp.height &&
+		(unsigned int)(dx+dw) > (unsigned int)scissor.w && (unsigned int)(dy+dh) > (unsigned int)scissor.h)
+		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d dw=%d dh=%d bw=%d bh=%d scw=%d sch=%d",
+			__LINE__,sx,sy,dx,dy,actual_dw,dh,bmp.width,bmp.height,scissor.w,scissor.h);
 #endif
 
 	return true;
@@ -618,8 +619,8 @@ int main(int argc,char **argv) {
 		IFEFatalError("Failed to load wait image");
 	{/* by the way the hotspot is in the middle of the hourglass */
 		IFEBitmap::subrect &r = IFEcursor_wait.get_subrect(0);
-		r.offset_x = -r.r.w / 2;
-		r.offset_y = -r.r.h / 2;
+		r.offset_x = (short int)(-r.r.w / 2);
+		r.offset_y = (short int)(-r.r.h / 2);
 	}
 
 	ifeapi->InitVideo();
