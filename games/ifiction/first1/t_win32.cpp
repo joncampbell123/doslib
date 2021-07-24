@@ -641,6 +641,11 @@ void win32keyfill(IFEKeyEvent &ke,WPARAM w,LPARAM l) {
 void p_win32_ProcessKeyEvent(WPARAM w,LPARAM l,UINT msg,bool down) {
 	IFEKeyEvent ke;
 
+	if (w == VK_CANCEL) {
+		IFEDBG("User wants to VK_CANCEL");
+		winQuit = true;
+	}
+
 	if (w == VK_CONTROL || w == VK_LCONTROL || w == VK_RCONTROL ||
 		w == VK_MENU || w == VK_LMENU || w == VK_RMENU ||
 		w == VK_SHIFT || w == VK_LSHIFT || w == VK_RSHIFT ||
