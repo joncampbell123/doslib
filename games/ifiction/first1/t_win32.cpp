@@ -52,17 +52,13 @@ HCURSOR					win32_std_cursor_obj = NULL;
 bool					win32_std_cursor_show = false;
 
 void UpdateScreenPosOffset(void) {
-	if (is_maximized) {
-		RECT r = {0,0,0,0};
+	RECT r = {0,0,0,0};
 
-		GetClientRect(hwndMain,&r);
-		screen_region_offset.x = ((r.right - r.left) - abs((int)hwndMainDIB->bmiHeader.biWidth)) / 2;
-		screen_region_offset.y = ((r.bottom - r.top) - abs((int)hwndMainDIB->bmiHeader.biHeight)) / 2;
-	}
-	else {
-		screen_region_offset.x = 0;
-		screen_region_offset.y = 0;
-	}
+	GetClientRect(hwndMain,&r);
+	screen_region_offset.x = ((r.right - r.left) - abs((int)hwndMainDIB->bmiHeader.biWidth)) / 2;
+	screen_region_offset.y = ((r.bottom - r.top) - abs((int)hwndMainDIB->bmiHeader.biHeight)) / 2;
+	if (screen_region_offset.x < 0) screen_region_offset.x = 0;
+	if (screen_region_offset.y < 0) screen_region_offset.y = 0;
 }
 
 void MakeRgnEmpty(HRGN r) {
@@ -305,44 +301,6 @@ static void p_InitVideo(void) {
 			ReleaseDC(NULL,hDC);
 		}
 
-		{
-			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX|WS_MAXIMIZEBOX;
-			RECT um;
-
-			um.top = 0;
-			um.left = 0;
-			um.right = 640;
-			um.bottom = 480;
-			if (sw == 640 && sh == 480) {
-				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
-				dwStyle = WS_POPUP;
-			}
-			else {
-				AdjustWindowRect(&um,dwStyle,FALSE);
-			}
-
-			hwndMain = CreateWindow(hwndMainClassName,"",dwStyle,
-				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
-				NULL,NULL,
-				myInstance,
-				NULL);
-		}
-
-		if (hwndMain == NULL)
-			IFEFatalError("CreateWindow failed");
-
-		{
-			int ww,wh;
-
-			{
-				RECT um = {0,0,0,0};
-				GetWindowRect(hwndMain,&um);
-				ww = (um.right - um.left);
-				wh = (um.bottom - um.top);
-			}
-			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
-		}
-
 		hwndMainDIB = (BITMAPINFO*)calloc(1,sizeof(BITMAPINFOHEADER) + (256 * 2/*16-bit integers, DIB_PAL_COLORS*/) + 4096/*for good measure*/);
 		if (hwndMainDIB == NULL)
 			IFEFatalError("hwndMainDIB malloc fail");
@@ -419,6 +377,44 @@ static void p_InitVideo(void) {
 		if (upd_rect == NULL)
 			IFEFatalError("Update Region create fail 2");
 		upd_region_valid = false;
+
+		{
+			DWORD dwStyle = WS_OVERLAPPED|WS_SYSMENU|WS_CAPTION|WS_BORDER|WS_MINIMIZEBOX|WS_MAXIMIZEBOX;
+			RECT um;
+
+			um.top = 0;
+			um.left = 0;
+			um.right = 640;
+			um.bottom = 480;
+			if (sw <= 640 && sh <= 480) {
+				/* make it borderless, which is impossible if Windows sees a WS_OVERLAPPED style combo */
+				dwStyle = WS_POPUP;
+			}
+			else {
+				AdjustWindowRect(&um,dwStyle,FALSE);
+			}
+
+			hwndMain = CreateWindow(hwndMainClassName,"",dwStyle,
+				CW_USEDEFAULT,CW_USEDEFAULT,um.right - um.left,um.bottom - um.top,
+				NULL,NULL,
+				myInstance,
+				NULL);
+		}
+
+		if (hwndMain == NULL)
+			IFEFatalError("CreateWindow failed");
+
+		{
+			int ww,wh;
+
+			{
+				RECT um = {0,0,0,0};
+				GetWindowRect(hwndMain,&um);
+				ww = (um.right - um.left);
+				wh = (um.bottom - um.top);
+			}
+			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
+		}
 
 		ifeapi->UpdateFullScreen();
 		ifeapi->CheckEvents();
