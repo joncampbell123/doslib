@@ -48,6 +48,7 @@ bool					upd_region_valid = false;
 bool					is_minimized = false;
 bool					is_maximized = false;
 bool					is_fullscreen = false;
+bool					is_active = false;
 POINT					screen_region_offset = {0,0};
 
 unsigned int				win32_std_cursor = 0;
@@ -69,7 +70,9 @@ void MakeRgnEmpty(HRGN r) {
 }
 
 void win32updatecursor(void) {
-	if (win32_std_cursor_show)
+	if (!is_active)
+		SetCursor(LoadCursor(NULL,IDC_ARROW));
+	else if (win32_std_cursor_show)
 		SetCursor(win32_std_cursor_obj); /* NTS: If win32_std_cursor_obj == NULL, then the cursor is invisible */
 	else
 		SetCursor(NULL);
@@ -88,6 +91,8 @@ void priv_CaptureMouse(const bool cap) {
 
 void priv_ProcessMouseMotion(const WPARAM wParam,int x,int y) {
 	IFEMouseEvent me;
+
+	if (!is_active) return;
 
 	ifemousestat.x = x - screen_region_offset.x;
 	ifemousestat.y = y - screen_region_offset.y;
@@ -419,6 +424,7 @@ static void p_InitVideo(void) {
 				wh = (um.bottom - um.top);
 			}
 			SetWindowPos(hwndMain,NULL,(sw - ww) / 2,(sh - wh) / 2,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
+			is_active = true;
 		}
 
 		ifeapi->UpdateFullScreen();
@@ -917,6 +923,12 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			}
 			return TRUE;
 		case WM_ACTIVATE:
+			if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+				is_active = true;
+			else
+				is_active = false;
+
+			win32updatecursor();
 			UpdateWin32ModFlags();
 			break;
 		case WM_SIZE:
