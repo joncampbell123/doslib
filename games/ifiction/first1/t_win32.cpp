@@ -829,50 +829,8 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 				return DefWindowProc(hwnd,uMsg,wParam,lParam);
 			}
 		case WM_ERASEBKGND:
-			if (is_minimized) {
-				/* do nothing */
-				return TRUE;
-			}
-			else {
-				RECT um;
-				RECT scr;
-				HDC hDC = (HDC)wParam; /* Windows provides this for us */
-				HBRUSH prevBrush = (HBRUSH)SelectObject(hDC,GetStockObject(BLACK_BRUSH));
-				HPEN prevPen = (HPEN)SelectObject(hDC,GetStockObject(BLACK_PEN)); /* NTS: Rectangles are rendered 1 pixel less on each side if NULL_PEN */
-
-				GetClientRect(hwnd,&um);
-
-				scr.left = screen_region_offset.x;
-				scr.top = screen_region_offset.y;
-				scr.right = screen_region_offset.x + abs((int)hwndMainDIB->bmiHeader.biWidth);
-				scr.bottom = screen_region_offset.y + abs((int)hwndMainDIB->bmiHeader.biHeight);
-
-				/* NTS: Rectangle() does not include bottom and right edge pixels */
-				/* +-------------------------+
-				 * |          TOP            |
-				 * |                         |
-				 * |.....+-------------+.....|
-				 * |     |             |     |
-				 * |  L  |             |  R  |
-				 * |     |             |     |
-				 * |.....+-------------+.....|
-				 * |                         |
-				 * |         BOTTOM          |
-				 * +-------------------------+ */
-
-				/* top */
-				Rectangle(hDC,/*L*/0,/*T*/0,/*R*/um.right,/*B*/scr.top);
-				/* bottom */
-				Rectangle(hDC,/*L*/0,/*T*/scr.bottom,/*R*/um.right,/*B*/um.bottom);
-				/* left */
-				Rectangle(hDC,/*L*/0,/*T*/scr.top,/*R*/scr.left,/*B*/scr.bottom);
-				/* right */
-				Rectangle(hDC,/*L*/scr.right,/*T*/scr.top,/*R*/um.right,/*B*/scr.bottom);
-
-				SelectObject(hDC,prevPen);
-				SelectObject(hDC,prevBrush);
-				return TRUE;
-			}
+			/* do nothing */
+			return TRUE;
 		case WM_PAINT:
 			{
 				PAINTSTRUCT ps;
@@ -892,6 +850,46 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 					DrawIcon(hDC,(um.right - GetSystemMetrics(SM_CXICON))/2,((um.bottom - GetSystemMetrics(SM_CYICON)) / 2),hIcon);
 				}
 				else {
+					/* paint black border if maximized */
+					if (is_maximized) {
+						RECT um;
+						RECT scr;
+						HBRUSH prevBrush = (HBRUSH)SelectObject(hDC,GetStockObject(BLACK_BRUSH));
+						HPEN prevPen = (HPEN)SelectObject(hDC,GetStockObject(BLACK_PEN)); /* NTS: Rectangles are rendered 1 pixel less on each side if NULL_PEN */
+
+						GetClientRect(hwnd,&um);
+
+						scr.left = screen_region_offset.x;
+						scr.top = screen_region_offset.y;
+						scr.right = screen_region_offset.x + abs((int)hwndMainDIB->bmiHeader.biWidth);
+						scr.bottom = screen_region_offset.y + abs((int)hwndMainDIB->bmiHeader.biHeight);
+
+						/* NTS: Rectangle() does not include bottom and right edge pixels */
+						/* +-------------------------+
+						 * |          TOP            |
+						 * |                         |
+						 * |.....+-------------+.....|
+						 * |     |             |     |
+						 * |  L  |             |  R  |
+						 * |     |             |     |
+						 * |.....+-------------+.....|
+						 * |                         |
+						 * |         BOTTOM          |
+						 * +-------------------------+ */
+
+						/* top */
+						Rectangle(hDC,/*L*/0,/*T*/0,/*R*/um.right,/*B*/scr.top);
+						/* bottom */
+						Rectangle(hDC,/*L*/0,/*T*/scr.bottom,/*R*/um.right,/*B*/um.bottom);
+						/* left */
+						Rectangle(hDC,/*L*/0,/*T*/scr.top,/*R*/scr.left,/*B*/scr.bottom);
+						/* right */
+						Rectangle(hDC,/*L*/scr.right,/*T*/scr.top,/*R*/um.right,/*B*/scr.bottom);
+
+						SelectObject(hDC,prevPen);
+						SelectObject(hDC,prevBrush);
+					}
+
 					if (winScreenIsPal && hwndMainPAL != NULL) {
 						HPALETTE oldPal;
 
