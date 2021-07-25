@@ -74,7 +74,8 @@ public:
 	}
 	virtual void free_palette(void) {
 	}
-	virtual bool alloc_storage(unsigned int w,unsigned int h) {
+	virtual bool alloc_storage(unsigned int w,unsigned int h,enum image_type_t new_image_type) {
+		(void)new_image_type;
 		(void)w;
 		(void)h;
 		return false;

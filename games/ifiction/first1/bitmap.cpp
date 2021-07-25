@@ -24,6 +24,12 @@ IFEBitmap::~IFEBitmap() {
 	free_palette();
 }
 
+void IFEBitmap::subrect::reset(void) {
+	r.x = r.y = r.w = r.h = 0;
+	offset_x = offset_y = 0;
+	index_bias = 0;
+}
+
 bool IFEBitmap::lock_surface(void) {
 	is_locked++;
 	return true;
@@ -110,13 +116,19 @@ const IFEBitmap::subrect &IFEBitmap::get_subrect(const size_t i) const {
 	return subrects[i];
 }
 
-bool IFEBitmap::alloc_storage(unsigned int w,unsigned int h) {
+bool IFEBitmap::alloc_storage(unsigned int w,unsigned int h,enum image_type_t new_image_type) {
 	size_t nalloc,nstride;
+
+	if (new_image_type >= IMT_MAX) return false;
 
 	if (w == 0 || h == 0 || w > 2048 || h > 2048)
 		return false; /* Oh come now, this is a mid 1990s point and click. We didn't have none of that newfangled Ultra High Definition back then :) */
 
-	nstride = (w + 3u) & (~3u); /* allocate and render DWORD aligned */
+	if (new_image_type == IMT_TRANSPARENT_MASK)
+		nstride = ((w + 3u) & (~3u)) * 2u; /* allocate and render DWORD aligned and double for transparency mask */
+	else
+		nstride = (w + 3u) & (~3u); /* allocate and render DWORD aligned */
+
 	nalloc = nstride * h;
 
 	if (bitmap == NULL) {
@@ -133,6 +145,7 @@ bool IFEBitmap::alloc_storage(unsigned int w,unsigned int h) {
 	height = h;
 	alloc = nalloc;
 	stride = nstride;
+	image_type = new_image_type;
 	bitmap_first_row = bitmap; /* our own allocation code does top-down DIBs */
 	reset_scissor_rect();
 	return true;
@@ -177,7 +190,7 @@ bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
 	if (bitmap == NULL) return false;
 	if (s.r.w <= 0 || s.r.h <= 0) return true;
 	if (s.r.x < 0 || s.r.y < 0) return false;
-	if ((unsigned int)(s.r.x+(s.r.w*(s.has_mask?2:1))) > width || (unsigned int)(s.r.y+s.r.h) > height) return false;
+	if ((unsigned int)(s.r.x+s.r.w) > width || (unsigned int)(s.r.y+s.r.h) > height) return false;
 	if (s.index_bias == new_bias) return true;
 
 	unsigned char *row,*ptr;
@@ -200,7 +213,7 @@ bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
 	row = (unsigned char*)bitmap + ((unsigned int)s.r.y * (unsigned int)stride) + (unsigned int)s.r.x;
 	h = (unsigned int)s.r.h;
 
-	if (s.has_mask) {
+	if (image_type == IMT_TRANSPARENT_MASK) {
 		const unsigned char *mrow = row + (unsigned int)s.r.w;
 		const unsigned char *mptr;
 
