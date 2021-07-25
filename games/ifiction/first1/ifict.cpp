@@ -336,9 +336,7 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 		IFEFatalError("IFEBitBlt bug check fail line %d: sx=%d sy=%d dx=%d dy=%d dw=%d dh=%d",__LINE__,sx,sy,dx,dy,dw,dh);
 #endif
 
-	int actual_dw = has_mask ? (dw * 2) : dw;
-
-	if ((unsigned int)(sx+actual_dw) > (unsigned int)sw)
+	if ((unsigned int)(sx+dw) > (unsigned int)sw)
 		dw = sw - sx;
 	if ((unsigned int)(sy+dh) > (unsigned int)sh)
 		dh = sh - sy;
@@ -348,6 +346,10 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 		dh = scissor.h - dy;
 
 	if (dw <= 0 || dh <= 0) return false;
+
+	/* transparency mask doubles the image width */
+	int actual_dw = dw * (has_mask ? 2 : 1);
+	if ((sx+actual_dw) > sw) return false; /* don't waste time clipping, just reject it */
 
 	/* remove adjustment above */
 	dx += scissor.x;
@@ -452,7 +454,7 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
 	int orig_w = w;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,true/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,true/*has mask*/)) return;
 
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
