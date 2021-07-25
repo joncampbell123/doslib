@@ -378,24 +378,65 @@ void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 	if (dw <= 0 || dh <= 0) return;
 
 	if (IFELockSurface(dbmp)) {
-		if (dbmp.image_type == IFEBitmap::IMT_TRANSPARENT_MASK) {
-			unsigned char *row = dbmp.row(y1,x1);
-			unsigned char *msk = row + dbmp.get_transparent_mask_offset();
+		switch (dbmp.image_type) {
+			case IFEBitmap::IMT_TRANSPARENT_MASK:
+				{
+					unsigned char *row = dbmp.row(y1,x1);
+					unsigned char *msk = row + dbmp.get_transparent_mask_offset();
 
-			do {
-				memset(row,color,(unsigned int)dw);
-				memset(msk,0x00,(unsigned int)dw);
-				row += dbmp.stride;
-				msk += dbmp.stride;
-			} while ((--dh) > 0);
+					do {
+						memset(row,color,(unsigned int)dw);
+						memset(msk,0x00,(unsigned int)dw);
+						row += dbmp.stride;
+						msk += dbmp.stride;
+					} while ((--dh) > 0);
+				}
+				break;
+			default:
+				{
+					unsigned char *row = dbmp.row(y1,x1);
+
+					do {
+						memset(row,color,(unsigned int)dw);
+						row += dbmp.stride;
+					} while ((--dh) > 0);
+				}
+				break;
 		}
-		else {
-			unsigned char *row = dbmp.row(y1,x1);
 
-			do {
-				memset(row,color,(unsigned int)dw);
-				row += dbmp.stride;
-			} while ((--dh) > 0);
+		IFEUnlockSurface(dbmp);
+	}
+}
+
+/* draw a rectangle, region x1 <= x < x2, y1 <= y < y2 */
+void IFETFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2) {
+	if (x1 >= x2 || y1 >= y2) return;
+	if (x1 < dbmp.scissor.x) x1 = dbmp.scissor.x;
+	if (y1 < dbmp.scissor.y) y1 = dbmp.scissor.y;
+	if (x2 > (dbmp.scissor.x+dbmp.scissor.w)) x2 = (dbmp.scissor.x+dbmp.scissor.w);
+	if (y2 > (dbmp.scissor.y+dbmp.scissor.h)) y2 = (dbmp.scissor.y+dbmp.scissor.h);
+
+	int dw = x2 - x1;
+	int dh = y2 - y1;
+	if (dw <= 0 || dh <= 0) return;
+
+	if (IFELockSurface(dbmp)) {
+		switch (dbmp.image_type) {
+			case IFEBitmap::IMT_TRANSPARENT_MASK:
+				{
+					unsigned char *row = dbmp.row(y1,x1);
+					unsigned char *msk = row + dbmp.get_transparent_mask_offset();
+
+					do {
+						memset(row,0x00,(unsigned int)dw);
+						memset(msk,0xFF,(unsigned int)dw);
+						row += dbmp.stride;
+						msk += dbmp.stride;
+					} while ((--dh) > 0);
+				}
+				break;
+			default:
+				break;
 		}
 
 		IFEUnlockSurface(dbmp);
@@ -428,22 +469,60 @@ void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap
 
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
-			const unsigned char *src = sbmp.row(sy,sx);
-			if (src == NULL) return;
+			switch (dbmp.image_type) {
+				case IFEBitmap::IMT_TRANSPARENT_MASK:
+					{
+						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *sms = src + sbmp.get_transparent_mask_offset();
 
-			unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dms = dst + dbmp.get_transparent_mask_offset();
 
-			while (h > 0) {
-				memcpy(dst,src,w);
-				dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
-				src += sbmp.stride;
-				h--;
+						while (h > 0) {
+							memcpy(dst,src,w);
+							dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
+							src += sbmp.stride;
+							memcpy(dms,sms,w);
+							dms += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
+							sms += sbmp.stride;
+							h--;
+						}
+					}
+					break;
+				default:
+					{
+						const unsigned char *src = sbmp.row(sy,sx);
+						unsigned char *dst = dbmp.row(dy,dx);
+
+						while (h > 0) {
+							memcpy(dst,src,w);
+							dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
+							src += sbmp.stride;
+							h--;
+						}
+					}
+					break;
 			}
 
 			IFEUnlockSurface(sbmp);
 		}
 
 		IFEUnlockSurface(dbmp);
+	}
+}
+
+static inline void memcpyand(unsigned char *dst,const unsigned char *src,unsigned int w) {
+	while (w >= 4) {
+		*((uint32_t*)dst) &= *((uint32_t*)src);
+		dst += 4;
+		src += 4;
+		w -= 4;
+	}
+	while (w > 0) {
+		*dst &= *src;
+		dst++;
+		src++;
+		w--;
 	}
 }
 
@@ -469,18 +548,42 @@ void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitma
 
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
-			const unsigned char *src = sbmp.row(sy,sx);
-			if (src == NULL) return;
+			switch (dbmp.image_type) {
+				case IFEBitmap::IMT_TRANSPARENT_MASK:
+					{
+						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *sms = src + sbmp.get_transparent_mask_offset();
 
-			unsigned char *dst = dbmp.row(dy,dx);
-			const unsigned char *msk = src + sbmp.get_transparent_mask_offset();
+						unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dms = dst + dbmp.get_transparent_mask_offset();
 
-			while (h > 0) {
-				memcpymask(dst,src,msk,w);
-				dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
-				src += sbmp.stride;
-				msk += sbmp.stride;
-				h--;
+						while (h > 0) {
+							memcpymask(dst,src,sms,w); /* mask combine pixels given source mask */
+							dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
+							src += sbmp.stride;
+							memcpyand(dms,sms,w); /* then combine masks */
+							dms += dbmp.stride;
+							sms += sbmp.stride;
+							h--;
+						}
+					}
+					break;
+				default:
+					{
+						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *msk = src + sbmp.get_transparent_mask_offset();
+
+						unsigned char *dst = dbmp.row(dy,dx);
+
+						while (h > 0) {
+							memcpymask(dst,src,msk,w);
+							dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
+							src += sbmp.stride;
+							msk += sbmp.stride;
+							h--;
+						}
+					}
+					break;
 			}
 
 			IFEUnlockSurface(sbmp);
@@ -977,11 +1080,11 @@ int main(int argc,char **argv) {
 			IFEFatalError("savebmp alloc fail");
 
 		IFEFillRect(combo_woo,0,0,combo_woo.width,combo_woo.height,0);
-		IFETBitBlt(combo_woo,0,             0,             tbmp.width,tbmp.height,0,0,tbmp);
-		IFETBitBlt(combo_woo,tbmp.width,    0,             tbmp.width,tbmp.height,0,0,tbmp);
-		IFETBitBlt(combo_woo,0,             tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
-		IFETBitBlt(combo_woo,tbmp.width,    tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
-		IFETBitBlt(combo_woo,tbmp.width/2,  tbmp.height/2, tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,0,             0,             tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width,    0,             tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,0,             tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width,    tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width/2,  tbmp.height/2, tbmp.width,tbmp.height,0,0,tbmp);
 
 		IFEShowCursor(false);
 
@@ -1034,7 +1137,65 @@ int main(int argc,char **argv) {
 		if (!savebmp.alloc_storage(combo_woo.width,combo_woo.height))
 			IFEFatalError("savebmp alloc fail");
 
-		IFEFillRect(combo_woo,0,0,combo_woo.width,combo_woo.height,0); /* fill image with black */
+		IFEFillRect(combo_woo,0,0,combo_woo.width,combo_woo.height,0);
+		IFEBitBlt(combo_woo,0,             0,             tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width,    0,             tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,0,             tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width,    tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
+		IFEBitBlt(combo_woo,tbmp.width/2,  tbmp.height/2, tbmp.width,tbmp.height,0,0,tbmp);
+
+		IFEShowCursor(false);
+
+		/* test clipping by letting the user mouse around with it, this time using IFEBitBlt() to save and restore the background
+		 * under the image. */
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
+					px = ms->x;
+					py = ms->y;
+					IFEBitBlt(savebmp,/*dest*/0,0,/*width,height*/savebmp.width,savebmp.height,/*source*/px,py,IFEGetScreenBitmap());
+					IFETBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/combo_woo.width,combo_woo.height,/*source*/0,0,combo_woo);
+					IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
+
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				IFEWaitEvent(1);
+			} while (1);
+
+			IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+			IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
+		}
+
+		IFEShowCursor(true);
+
+		if (!combo_woo.alloc_storage(tbmp.width*2,tbmp.height*2,IFEBitmap::IMT_TRANSPARENT_MASK))
+			IFEFatalError("combo woo alloc fail");
+		if (!savebmp.alloc_storage(combo_woo.width,combo_woo.height))
+			IFEFatalError("savebmp alloc fail");
+
+		IFETFillRect(combo_woo,0,0,combo_woo.width,combo_woo.height); /* fill image with transparent */
 		IFETBitBlt(combo_woo,0,             0,             tbmp.width,tbmp.height,0,0,tbmp);
 		IFETBitBlt(combo_woo,tbmp.width,    0,             tbmp.width,tbmp.height,0,0,tbmp);
 		IFETBitBlt(combo_woo,0,             tbmp.height,   tbmp.width,tbmp.height,0,0,tbmp);
