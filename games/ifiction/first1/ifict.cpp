@@ -403,6 +403,27 @@ void IFEFillRect(int x1,int y1,int x2,int y2,const uint8_t color) {
 	ifeapi->EndScreenDraw();
 }
 
+/* draws a line rect at x1,y1 to x2-1,y2-1.
+ * If combined with fill rect, the line rect will draw on the edge (outermost pixels) of
+ * the fill rect. */
+void IFELineRect(int x1,int y1,int x2,int y2,const uint8_t color,const int thickness=1) {
+	/* +----------------------+
+	 * |         (1)          |
+	 * +---+--------------+---+
+	 * |   |              |   |
+	 * |   |              |   |
+	 * |(3)|              |(4)|
+	 * |   |              |   |
+	 * |   |              |   |
+	 * +---+--------------+---+
+	 * |         (2)          |
+	 * +----------------------+ */
+	IFEFillRect(x1,            y1,            x2,            y1+thickness,  color);
+	IFEFillRect(x1,            y2-thickness,  x2,            y2,            color);
+	IFEFillRect(x1,            y1+thickness,  x1+thickness,  y2-thickness,  color);
+	IFEFillRect(x2-thickness,  y1+thickness,  x2,            y2-thickness,  color);
+}
+
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
@@ -727,6 +748,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -766,6 +788,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -805,6 +828,7 @@ int main(int argc,char **argv) {
 					py = ms->y;
 
 					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
