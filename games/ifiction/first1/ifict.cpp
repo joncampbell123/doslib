@@ -452,7 +452,7 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
 	int orig_w = w;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,true/*no mask*/)) return;
 
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
