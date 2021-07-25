@@ -32,6 +32,8 @@ extern "C" {
 
 ifeapi_t *ifeapi = &ifeapi_default;
 
+IFEBitmap* IFEscrbmp = NULL;
+
 IFEBitmap IFEcursor_arrow;
 IFEBitmap IFEcursor_wait;
 
@@ -196,7 +198,7 @@ void IFESetScissorRect(int x1,int y1,int x2,int y2) {
 }
 
 void IFECompleteVideoInit(void) {
-	// TODO
+	IFEscrbmp = ifeapi->GetScreenBitmap();
 }
 
 void IFETestRGBPalette() {
@@ -645,6 +647,7 @@ void IFENormalExit(void) {
 #endif
 
 	ifeapi->ShutdownVideo();
+	IFEscrbmp = NULL;
 	exit(0);
 }
 

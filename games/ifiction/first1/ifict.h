@@ -77,7 +77,7 @@ struct ifeapi_t {
 	ifefunc_SetHostStdCursor_t*				SetHostStdCursor;
 	ifefunc_ShowHostStdCursor_t*				ShowHostStdCursor;
 	ifefunc_SetWindowTitle_t*				SetWindowTitle;
-	ifefunc_GetScreenBitmap_t*				GetScreenBitmap;
+	ifefunc_GetScreenBitmap_t*				GetScreenBitmap; /* after video init, code is expected to call once and cache pointer until video shutdown */
 };
 
 extern ifeapi_t *ifeapi;
@@ -106,4 +106,6 @@ bool priv_IFEMainInit(int argc,char **argv);
 #endif
 
 void IFECompleteVideoInit(void);
+
+extern IFEBitmap* IFEscrbmp;
 
