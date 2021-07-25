@@ -97,6 +97,47 @@ uint32_t			keyb_mod=0;
 
 IFEMouseStatus			ifemousestat;
 
+/* IFEBitmap subclass for the screen */
+class IFESDLBitmap : public IFEBitmap {
+public:
+	IFESDLBitmap() : IFEBitmap() {
+		must_lock = false; /* VESA BIOS framebuffer never needs locking */
+		ctrl_palette = false; /* SDL manages palette */
+		ctrl_storage = false; /* SDL manages storage */
+		ctrl_bias = false;
+		ctrl_subrect = false;
+	}
+	virtual ~IFESDLBitmap() {
+	}
+public:
+	virtual bool alloc_palette(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_palette(void) {
+	}
+	virtual bool alloc_storage(unsigned int w,unsigned int h) {
+		(void)w;
+		(void)h;
+		return false;
+	}
+	virtual void free_storage(void) {
+	}
+	virtual bool alloc_subrects(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_subrects(void) {
+	}
+	virtual bool bias_subrect(subrect &s,uint8_t new_bias) {
+		(void)s;
+		(void)new_bias;
+		return false;
+	}
+};
+
+static IFESDLBitmap		IFEScreenBMP;
+
 /* NTS: Do not attempt a protected mode INT 33h driver callback routine, it won't work and will crash a lot */
 
 /* read keyboard buffer */
@@ -841,6 +882,14 @@ static void p_InitVideo(void) {
 			IFEFatalError("DPMI VESA LFB shadow malloc fail");
 
 		ifevidinfo_doslib.buf_base = ifevidinfo_doslib.buf_first_row = vesa_lfb_offscreen;
+
+		IFEScreenBMP.width = ifevidinfo_doslib.width;
+		IFEScreenBMP.height = ifevidinfo_doslib.height;
+		IFEScreenBMP.alloc = vesa_lfb_map_size;
+		IFEScreenBMP.stride = vesa_lfb_stride;
+		IFEScreenBMP.bitmap = vesa_lfb_offscreen;
+		IFEScreenBMP.bitmap_first_row = vesa_lfb_offscreen;
+		IFEScreenBMP.reset_scissor_rect();
 	}
 
 	/* hook keyboard */
@@ -1150,6 +1199,10 @@ static bool p_SetWindowTitle(const char *msg) {
 	return false;
 }
 
+static IFEBitmap *p_GetScreenBitmap(void) {
+	return &IFEScreenBMP;
+}
+
 ifeapi_t ifeapi_doslib = {
 	"DOSLIB (IBM PC/AT)",
 	p_SetPaletteColors,
@@ -1174,7 +1227,8 @@ ifeapi_t ifeapi_doslib = {
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
 	p_ShowHostStdCursor,
-	p_SetWindowTitle
+	p_SetWindowTitle,
+	p_GetScreenBitmap
 };
 #endif
 

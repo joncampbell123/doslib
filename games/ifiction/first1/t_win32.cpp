@@ -414,7 +414,7 @@ static void p_InitVideo(void) {
 
 		IFEScreenBMP.width = ifevidinfo_win32.width;
 		IFEScreenBMP.height = ifevidinfo_win32.height;
-		IFEScreenBMP.alloc = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);;
+		IFEScreenBMP.alloc = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);
 		IFEScreenBMP.stride = win_dib_pitch;
 		IFEScreenBMP.bitmap = win_dib;
 		IFEScreenBMP.bitmap_first_row = win_dib_first_row;
