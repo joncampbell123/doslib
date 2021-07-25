@@ -1127,7 +1127,6 @@ int main(int argc,char **argv) {
 			} while (1);
 
 			IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
-			IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
 		}
 
 		IFEShowCursor(true);
@@ -1185,7 +1184,6 @@ int main(int argc,char **argv) {
 			} while (1);
 
 			IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
-			IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
 		}
 
 		IFEShowCursor(true);
@@ -1243,7 +1241,6 @@ int main(int argc,char **argv) {
 			} while (1);
 
 			IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
-			IFEAddScreenUpdate(px,py,px+(combo_woo.width/2),py+combo_woo.height);
 		}
 	}
 
