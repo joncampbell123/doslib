@@ -252,6 +252,31 @@ bool IFEUnlockSurface(IFEBitmap *scrbmp) {
 	return true;
 }
 
+bool IFELockSurface(IFEBitmap &scrbmp) {
+	if (!scrbmp.lock_surface()) {
+		IFEDBG("IFELockSurface cannot lock surface");
+		return false;
+	}
+
+	if (scrbmp.bitmap_first_row == NULL) {
+		IFEDBG("IFELockSurface lock did not provide pointer");
+
+		if (!scrbmp.unlock_surface())
+			IFEDBG("IFELockSurface cannot unlock surface after failure to provide pointer with lock");
+
+		return false;
+	}
+
+	return true;
+}
+
+bool IFEUnlockSurface(IFEBitmap &scrbmp) {
+	if (!scrbmp.unlock_surface())
+		IFEFatalError("IFEUnlockSurface cannot unlock surface");
+
+	return true;
+}
+
 void IFEBlankScreen(void) {
 	if (!IFELockSurface(IFEscrbmp)) return;
 
@@ -357,32 +382,32 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 }
 
 /* draw a rectangle, region x1 <= x < x2, y1 <= y < y2 */
-void IFEFillRect(int x1,int y1,int x2,int y2,const uint8_t color) {
+void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color) {
 	if (x1 >= x2 || y1 >= y2) return;
-	if (x1 < IFEscrbmp->scissor.x) x1 = IFEscrbmp->scissor.x;
-	if (y1 < IFEscrbmp->scissor.y) y1 = IFEscrbmp->scissor.y;
-	if (x2 > (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w)) x2 = (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w);
-	if (y2 > (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h)) y2 = (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h);
+	if (x1 < dbmp.scissor.x) x1 = dbmp.scissor.x;
+	if (y1 < dbmp.scissor.y) y1 = dbmp.scissor.y;
+	if (x2 > (dbmp.scissor.x+dbmp.scissor.w)) x2 = (dbmp.scissor.x+dbmp.scissor.w);
+	if (y2 > (dbmp.scissor.y+dbmp.scissor.h)) y2 = (dbmp.scissor.y+dbmp.scissor.h);
 
 	int dw = x2 - x1;
 	int dh = y2 - y1;
 	if (dw <= 0 || dh <= 0) return;
 
-	if (!IFELockSurface(IFEscrbmp)) return;
-	unsigned char *row = IFEscrbmp->row(y1,x1);
+	if (!IFELockSurface(dbmp)) return;
+	unsigned char *row = dbmp.row(y1,x1);
 
 	do {
 		memset(row,color,(unsigned int)dw);
-		row += IFEscrbmp->stride;
+		row += dbmp.stride;
 	} while ((--dh) > 0);
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
 /* draws a line rect at x1,y1 to x2-1,y2-1.
  * If combined with fill rect, the line rect will draw on the edge (outermost pixels) of
  * the fill rect. */
-void IFELineRect(int x1,int y1,int x2,int y2,const uint8_t color,const int thickness=1) {
+void IFELineRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color,const int thickness=1) {
 	/* +----------------------+
 	 * |         (1)          |
 	 * +---+--------------+---+
@@ -394,54 +419,54 @@ void IFELineRect(int x1,int y1,int x2,int y2,const uint8_t color,const int thick
 	 * +---+--------------+---+
 	 * |         (2)          |
 	 * +----------------------+ */
-	IFEFillRect(x1,            y1,            x2,            y1+thickness,  color);
-	IFEFillRect(x1,            y2-thickness,  x2,            y2,            color);
-	IFEFillRect(x1,            y1+thickness,  x1+thickness,  y2-thickness,  color);
-	IFEFillRect(x2-thickness,  y1+thickness,  x2,            y2-thickness,  color);
+	IFEFillRect(dbmp, x1,            y1,            x2,            y1+thickness,  color);
+	IFEFillRect(dbmp, x1,            y2-thickness,  x2,            y2,            color);
+	IFEFillRect(dbmp, x1,            y1+thickness,  x1+thickness,  y2-thickness,  color);
+	IFEFillRect(dbmp, x2-thickness,  y1+thickness,  x2,            y2-thickness,  color);
 }
 
-void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
+void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	if (bmp.bitmap == NULL) return;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
 
-	if (!IFELockSurface(IFEscrbmp)) return;
+	if (!IFELockSurface(dbmp)) return;
 
 	const unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) return;
 
-	unsigned char *dst = IFEscrbmp->row(dy,dx);
+	unsigned char *dst = dbmp.row(dy,dx);
 
 	while (h > 0) {
 		memcpy(dst,src,w);
-		dst += IFEscrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
+		dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
-void IFEBitBltFrom(int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
+void IFEBitBltFrom(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
 	if (bmp.bitmap == NULL) return;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
 
-	if (!IFELockSurface(IFEscrbmp)) return;
+	if (!IFELockSurface(dbmp)) return;
 
 	unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) return;
 
-	const unsigned char *dst = IFEscrbmp->row(dy,dx);
+	const unsigned char *dst = dbmp.row(dy,dx);
 
 	while (h > 0) {
 		memcpy(src,dst,w); /* from SCREEN to bitmap */
-		dst += IFEscrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
+		dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
@@ -461,30 +486,30 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 	}
 }
 
-void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
+void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	int orig_w = w;
 
 	if (bmp.bitmap == NULL) return;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
 
-	if (!IFELockSurface(IFEscrbmp)) return;
+	if (!IFELockSurface(dbmp)) return;
 
 	const unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) return;
 
-	unsigned char *dst = IFEscrbmp->row(dy,dx);
+	unsigned char *dst = dbmp.row(dy,dx);
 	const unsigned char *msk = src + orig_w;
 
 	while (h > 0) {
 		memcpymask(dst,src,msk,w);
-		dst += IFEscrbmp->stride; /* NTS: buf_pitch is negative if Windows 3.1 */
+		dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
 		src += bmp.stride;
 		msk += bmp.stride;
 		h--;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
 void priv_IFEUndrawCursor(void) {
@@ -493,7 +518,8 @@ void priv_IFEUndrawCursor(void) {
 	if (priv_IFEcursor.saved_valid) {
 		const IFEBitmap::subrect &r = priv_IFEcursor.bitmap->get_subrect(priv_IFEcursor.bitmap_sr);
 
-		IFEBitBlt(	/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+		IFEBitBlt(	*IFEscrbmp,
+				/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
 				/*width/height*/r.r.w,r.r.h,
 				/*source*/0,0,
 				priv_IFEcursor.saved);
@@ -516,15 +542,16 @@ void priv_IFEDrawCursor(void) {
 		if (!priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h))
 			return;
 
-		IFEBitBltFrom(	/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+		IFEBitBltFrom(	*IFEscrbmp,
+				/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
 				/*width/height*/r.r.w,r.r.h,
 				/*source*/0,0,
 				priv_IFEcursor.saved);
 
 		if (r.has_mask)
-			IFETBitBlt(/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
+			IFETBitBlt(*IFEscrbmp,/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
 		else
-			IFEBitBlt(/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
+			IFEBitBlt(*IFEscrbmp,/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
 
 		ifeapi->AddScreenUpdate(
 			priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
@@ -699,7 +726,7 @@ int main(int argc,char **argv) {
 
 		ifeapi->SetWindowTitle("BitBlt BMP test");
 
-		IFEBitBlt(/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(*IFEscrbmp,/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEAddScreenUpdate(20,20,20+bmp.width,20+bmp.height);
 		ifeapi->UpdateScreen();
 
@@ -712,14 +739,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -752,14 +779,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -792,14 +819,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -857,9 +884,9 @@ int main(int argc,char **argv) {
 		ifeapi->UpdateFullScreen();
 		ifeapi->SetPaletteColors(0,bmp.palette_size,bmp.palette);
 
-		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
-		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		IFEBitBlt(*IFEscrbmp,/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(*IFEscrbmp,/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(*IFEscrbmp,/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFESetCursor(&IFEcursor_wait);
@@ -882,11 +909,11 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2,tbmp.height,/*source*/px,py,bmp);
+					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2,tbmp.height,/*source*/px,py,bmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
-					IFETBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFETBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
 					ifeapi->UpdateScreen();
@@ -912,9 +939,9 @@ int main(int argc,char **argv) {
 
 		ifeapi->SetWindowTitle("BitBlt transparency test with save/restore");
 
-		IFEBitBlt(/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-		IFEBitBlt(/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
-		IFETBitBlt(/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		IFEBitBlt(*IFEscrbmp,/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(*IFEscrbmp,/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(*IFEscrbmp,/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFEShowCursor(true);
@@ -937,12 +964,12 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEBitBlt(/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
-					IFEBitBltFrom(/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
-					IFETBitBlt(/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFEBitBltFrom(*IFEscrbmp,/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFETBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
 					ifeapi->UpdateScreen();
