@@ -175,30 +175,30 @@ done:
 }
 
 void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
-	IFEBitmap *scrbmp = ifeapi->GetScreenBitmap();
-
-	if (x1 < scrbmp->scissor.x)
-		x1 = scrbmp->scissor.x;
-	if (y1 < scrbmp->scissor.y)
-		y1 = scrbmp->scissor.y;
-	if (x2 > (scrbmp->scissor.x+scrbmp->scissor.w))
-		x2 = (scrbmp->scissor.x+scrbmp->scissor.w);
-	if (y2 > (scrbmp->scissor.y+scrbmp->scissor.h))
-		y2 = (scrbmp->scissor.y+scrbmp->scissor.h);
+	if (x1 < IFEscrbmp->scissor.x)
+		x1 = IFEscrbmp->scissor.x;
+	if (y1 < IFEscrbmp->scissor.y)
+		y1 = IFEscrbmp->scissor.y;
+	if (x2 > (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w))
+		x2 = (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w);
+	if (y2 > (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h))
+		y2 = (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h);
 
 	ifeapi->AddScreenUpdate(x1,y1,x2,y2);
 }
 
 void IFEResetScissorRect(void) {
-	ifeapi->GetScreenBitmap()->reset_scissor_rect();
+	IFEscrbmp->reset_scissor_rect();
 }
 
 void IFESetScissorRect(int x1,int y1,int x2,int y2) {
-	ifeapi->GetScreenBitmap()->set_scissor_rect(x1,y1,x2,y2);
+	IFEscrbmp->set_scissor_rect(x1,y1,x2,y2);
 }
 
 void IFECompleteVideoInit(void) {
 	IFEscrbmp = ifeapi->GetScreenBitmap();
+	if (IFEscrbmp == NULL)
+		IFEFatalError("Video code failed to provide screen bitmap");
 }
 
 void IFETestRGBPalette() {
