@@ -467,6 +467,9 @@ void IFELineRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
 	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor)) return;
 
+	if (!(sbmp.image_type == IFEBitmap::IMT_OPAQUE || sbmp.image_type == IFEBitmap::IMT_TRANSPARENT_MASK))
+		return;
+
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
 			switch (dbmp.image_type) {
@@ -545,6 +548,9 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 
 void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
 	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor)) return;
+
+	if (!(sbmp.image_type == IFEBitmap::IMT_TRANSPARENT_MASK))
+		return;
 
 	if (IFELockSurface(dbmp)) {
 		if (IFELockSurface(sbmp)) {
