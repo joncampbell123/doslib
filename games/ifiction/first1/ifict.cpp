@@ -226,32 +226,6 @@ void IFETestRGBPalette() {
 	ifeapi->SetPaletteColors(0,256,pal);
 }
 
-/* avoid copypasta, retain debug out */
-bool IFELockSurface(IFEBitmap *scrbmp) {
-	if (!scrbmp->lock_surface()) {
-		IFEDBG("IFELockSurface cannot lock surface");
-		return false;
-	}
-
-	if (scrbmp->bitmap_first_row == NULL) {
-		IFEDBG("IFELockSurface lock did not provide pointer");
-
-		if (!scrbmp->unlock_surface())
-			IFEDBG("IFELockSurface cannot unlock surface after failure to provide pointer with lock");
-
-		return false;
-	}
-
-	return true;
-}
-
-bool IFEUnlockSurface(IFEBitmap *scrbmp) {
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("IFEUnlockSurface cannot unlock surface");
-
-	return true;
-}
-
 bool IFELockSurface(IFEBitmap &scrbmp) {
 	if (!scrbmp.lock_surface()) {
 		IFEDBG("IFELockSurface cannot lock surface");
@@ -277,25 +251,25 @@ bool IFEUnlockSurface(IFEBitmap &scrbmp) {
 	return true;
 }
 
-void IFEBlankScreen(void) {
-	if (!IFELockSurface(IFEscrbmp)) return;
+void IFEBlankScreen(IFEBitmap &dbmp) {
+	if (!IFELockSurface(dbmp)) return;
 
-	unsigned int y,h=(unsigned int)(IFEscrbmp->height);
-	unsigned char *row = IFEscrbmp->row(0);
+	unsigned int y,h=(unsigned int)(dbmp.height);
+	unsigned char *row = dbmp.row(0);
 
 	for (y=0;y < h;y++) {
-		memset(row,0,IFEscrbmp->width);
-		row += IFEscrbmp->stride;
+		memset(row,0,dbmp.width);
+		row += dbmp.stride;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
-void IFETestRGBPalettePattern(void) {
-	if (!IFELockSurface(IFEscrbmp)) return;
+void IFETestRGBPalettePattern(IFEBitmap &dbmp) {
+	if (!IFELockSurface(dbmp)) return;
 
-	unsigned int x,y,w=(unsigned int)(IFEscrbmp->width),h=(unsigned int)(IFEscrbmp->height);
-	unsigned char *row = IFEscrbmp->row(0);
+	unsigned int x,y,w=(unsigned int)(dbmp.width),h=(unsigned int)(dbmp.height);
+	unsigned char *row = dbmp.row(0);
 
 	for (y=0;y < h;y++) {
 		for (x=0;x < w;x++) {
@@ -305,26 +279,26 @@ void IFETestRGBPalettePattern(void) {
 				row[x] = 0;
 		}
 
-		row += IFEscrbmp->stride;
+		row += dbmp.stride;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
-void IFETestRGBPalettePattern2(void) {
-	if (!IFELockSurface(IFEscrbmp)) return;
+void IFETestRGBPalettePattern2(IFEBitmap &dbmp) {
+	if (!IFELockSurface(dbmp)) return;
 
-	unsigned int x,y,w=(unsigned int)(IFEscrbmp->width),h=(unsigned int)(IFEscrbmp->height);
-	unsigned char *row = IFEscrbmp->row(0);
+	unsigned int x,y,w=(unsigned int)(dbmp.width),h=(unsigned int)(dbmp.height);
+	unsigned char *row = dbmp.row(0);
 
 	for (y=0;y < h;y++) {
 		for (x=0;x < w;x++)
 			row[x] = (unsigned char)(x ^ y);
 
-		row += IFEscrbmp->stride;
+		row += dbmp.stride;
 	}
 
-	IFEUnlockSurface(IFEscrbmp);
+	IFEUnlockSurface(dbmp);
 }
 
 /* in: destination x,y,w,h
@@ -691,7 +665,7 @@ int main(int argc,char **argv) {
 
 	IFEHideCursorDrawing(true);
 	IFETestRGBPalette();
-	IFETestRGBPalettePattern();
+	IFETestRGBPalettePattern(*IFEscrbmp);
 	IFEHideCursorDrawing(false);
 	ifeapi->UpdateFullScreen();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
@@ -880,7 +854,7 @@ int main(int argc,char **argv) {
 			IFEFatalError("SaveBMP alloc fail");
 
 		/* blank screen to avoid palette flash */
-		IFEBlankScreen();
+		IFEBlankScreen(*IFEscrbmp);
 		ifeapi->UpdateFullScreen();
 		ifeapi->SetPaletteColors(0,bmp.palette_size,bmp.palette);
 
@@ -999,12 +973,12 @@ int main(int argc,char **argv) {
 	IFESetCursor(&IFEcursor_arrow);
 
 	/* blank screen to avoid palette flash */
-	IFEBlankScreen();
+	IFEBlankScreen(*IFEscrbmp);
 	ifeapi->UpdateFullScreen();
 
 	IFETestRGBPalette();
 
-	IFETestRGBPalettePattern2();
+	IFETestRGBPalettePattern2(*IFEscrbmp);
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	{
 		int py = -1;
@@ -1021,7 +995,7 @@ int main(int argc,char **argv) {
 			IFEWaitEvent(1);
 		}
 	}
-	IFETestRGBPalettePattern();
+	IFETestRGBPalettePattern(*IFEscrbmp);
 	{
 		int py = -1;
 		while (ifeapi->GetTicks() < 4000) {
