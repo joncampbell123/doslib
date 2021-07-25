@@ -429,28 +429,6 @@ void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,const IFE
 	IFEUnlockSurface(dbmp);
 }
 
-void IFEBitBltFrom(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
-	if (bmp.bitmap == NULL) return;
-
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
-
-	if (!IFELockSurface(dbmp)) return;
-
-	unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) return;
-
-	const unsigned char *dst = dbmp.row(dy,dx);
-
-	while (h > 0) {
-		memcpy(src,dst,w); /* from SCREEN to bitmap */
-		dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
-		src += bmp.stride;
-		h--;
-	}
-
-	IFEUnlockSurface(dbmp);
-}
-
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
 	while (w >= 4) {
 		*((uint32_t*)dst) = (*((uint32_t*)dst) & *((uint32_t*)msk)) + *((uint32_t*)src);
@@ -524,11 +502,11 @@ void priv_IFEDrawCursor(void) {
 		if (!priv_IFEcursor.saved.alloc_storage(r.r.w,r.r.h))
 			return;
 
-		IFEBitBltFrom(	*IFEscrbmp,
-				/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+		IFEBitBlt(	priv_IFEcursor.saved,
+				/*dest*/0,0,
 				/*width/height*/r.r.w,r.r.h,
-				/*source*/0,0,
-				priv_IFEcursor.saved);
+				/*source*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,
+				*IFEscrbmp);
 
 		if (r.has_mask)
 			IFETBitBlt(*IFEscrbmp,/*dest*/priv_IFEcursor.x+r.offset_x,priv_IFEcursor.y+r.offset_y,/*width/height*/r.r.w,r.r.h,/*source*/0,0,*priv_IFEcursor.bitmap);
@@ -936,7 +914,7 @@ int main(int argc,char **argv) {
 
 		IFEShowCursor(false);
 
-		/* test clipping by letting the user mouse around with it, this time using IFEBitBltFrom() to save and restore the background
+		/* test clipping by letting the user mouse around with it, this time using IFEBitBlt() to save and restore the background
 		 * under the image. */
 		{
 			int px = -999,py = -999;
@@ -950,7 +928,7 @@ int main(int argc,char **argv) {
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
-					IFEBitBltFrom(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEBitBlt(savebmp,/*dest*/0,0,/*width,height*/savebmp.width,savebmp.height,/*source*/px,py,IFEGetScreenBitmap());
 					IFETBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
