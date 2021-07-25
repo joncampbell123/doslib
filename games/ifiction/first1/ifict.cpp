@@ -32,8 +32,6 @@ extern "C" {
 
 ifeapi_t *ifeapi = &ifeapi_default;
 
-iferect_t IFEScissor;
-
 IFEBitmap IFEcursor_arrow;
 IFEBitmap IFEcursor_wait;
 
@@ -175,52 +173,30 @@ done:
 }
 
 void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
-	if (x1 < IFEScissor.x)
-		x1 = IFEScissor.x;
-	if (y1 < IFEScissor.y)
-		y1 = IFEScissor.y;
-	if (x2 > (IFEScissor.x+IFEScissor.w))
-		x2 = (IFEScissor.x+IFEScissor.w);
-	if (y2 > (IFEScissor.y+IFEScissor.h))
-		y2 = (IFEScissor.y+IFEScissor.h);
+	IFEBitmap *scrbmp = ifeapi->GetScreenBitmap();
+
+	if (x1 < scrbmp->scissor.x)
+		x1 = scrbmp->scissor.x;
+	if (y1 < scrbmp->scissor.y)
+		y1 = scrbmp->scissor.y;
+	if (x2 > (scrbmp->scissor.x+scrbmp->scissor.w))
+		x2 = (scrbmp->scissor.x+scrbmp->scissor.w);
+	if (y2 > (scrbmp->scissor.y+scrbmp->scissor.h))
+		y2 = (scrbmp->scissor.y+scrbmp->scissor.h);
 
 	ifeapi->AddScreenUpdate(x1,y1,x2,y2);
 }
 
 void IFEResetScissorRect(void) {
 	ifeapi->GetScreenBitmap()->reset_scissor_rect();
-
-	ifevidinfo_t* vi = ifeapi->GetVidInfo();
-
-	IFEScissor.x = IFEScissor.y = 0;
-	IFEScissor.w = (int)vi->width;
-	IFEScissor.h = (int)vi->height;
 }
 
 void IFESetScissorRect(int x1,int y1,int x2,int y2) {
 	ifeapi->GetScreenBitmap()->set_scissor_rect(x1,y1,x2,y2);
-
-	ifevidinfo_t* vi = ifeapi->GetVidInfo();
-
-	if (x1 < 0) x1 = 0;
-	if (y1 < 0) y1 = 0;
-	if ((unsigned int)x2 > vi->width) x2 = vi->width;
-	if ((unsigned int)y2 > vi->height) y2 = vi->height;
-	if (x1 > x2) x1 = x2;
-	if (y1 > y2) y1 = y2;
-
-	IFEScissor.x = x1;
-	IFEScissor.y = y1;
-	IFEScissor.w = x2-x1;
-	IFEScissor.h = y2-y1;
 }
 
 void IFECompleteVideoInit(void) {
-	ifevidinfo_t* vi = ifeapi->GetVidInfo();
-
-	IFEScissor.x = IFEScissor.y = 0;
-	IFEScissor.w = (int)vi->width;
-	IFEScissor.h = (int)vi->height;
+	// TODO
 }
 
 void IFETestRGBPalette() {
