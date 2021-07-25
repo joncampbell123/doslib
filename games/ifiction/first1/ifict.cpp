@@ -226,72 +226,80 @@ void IFETestRGBPalette() {
 	ifeapi->SetPaletteColors(0,256,pal);
 }
 
-void IFEBlankScreen(void) {
-	unsigned char *row;
-	IFEBitmap *scrbmp;
-	unsigned int y;
-
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if ((row=scrbmp->bitmap_first_row) == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
-
-	for (y=0;y < scrbmp->height;y++) {
-		memset(row,0,scrbmp->width);
-		row += scrbmp->stride;
+/* avoid copypasta, retain debug out */
+bool IFELockSurface(IFEBitmap *scrbmp) {
+	if (!scrbmp->lock_surface()) {
+		IFEDBG("IFELockSurface cannot lock surface");
+		return false;
 	}
 
+	if (scrbmp->bitmap_first_row == NULL) {
+		IFEDBG("IFELockSurface lock did not provide pointer");
+
+		if (!scrbmp->unlock_surface())
+			IFEDBG("IFELockSurface cannot unlock surface after failure to provide pointer with lock");
+
+		return false;
+	}
+
+	return true;
+}
+
+bool IFEUnlockSurface(IFEBitmap *scrbmp) {
 	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+		IFEFatalError("IFEUnlockSurface cannot unlock surface");
+
+	return true;
+}
+
+void IFEBlankScreen(void) {
+	if (!IFELockSurface(IFEscrbmp)) return;
+
+	unsigned int y,h=(unsigned int)(IFEscrbmp->height);
+	unsigned char *row = IFEscrbmp->row(0);
+
+	for (y=0;y < h;y++) {
+		memset(row,0,IFEscrbmp->width);
+		row += IFEscrbmp->stride;
+	}
+
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 void IFETestRGBPalettePattern(void) {
-	unsigned char *row;
-	IFEBitmap *scrbmp;
-	unsigned int x,y;
+	if (!IFELockSurface(IFEscrbmp)) return;
 
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if ((row=scrbmp->bitmap_first_row) == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+	unsigned int x,y,w=(unsigned int)(IFEscrbmp->width),h=(unsigned int)(IFEscrbmp->height);
+	unsigned char *row = IFEscrbmp->row(0);
 
-	for (y=0;y < scrbmp->height;y++) {
-		for (x=0;x < scrbmp->width;x++) {
+	for (y=0;y < h;y++) {
+		for (x=0;x < w;x++) {
 			if ((x & 0xF0u) != 0xF0u)
 				row[x] = (unsigned char)(y & 0xFFu);
 			else
 				row[x] = 0;
 		}
 
-		row += scrbmp->stride;
+		row += IFEscrbmp->stride;
 	}
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 void IFETestRGBPalettePattern2(void) {
-	unsigned char *row;
-	IFEBitmap *scrbmp;
-	unsigned int x,y;
+	if (!IFELockSurface(IFEscrbmp)) return;
 
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if ((row=scrbmp->bitmap_first_row) == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+	unsigned int x,y,w=(unsigned int)(IFEscrbmp->width),h=(unsigned int)(IFEscrbmp->height);
+	unsigned char *row = IFEscrbmp->row(0);
 
-	for (y=0;y < scrbmp->height;y++) {
-		for (x=0;x < scrbmp->width;x++)
+	for (y=0;y < h;y++) {
+		for (x=0;x < w;x++)
 			row[x] = (unsigned char)(x ^ y);
 
-		row += scrbmp->stride;
+		row += IFEscrbmp->stride;
 	}
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 /* in: destination x,y,w,h
