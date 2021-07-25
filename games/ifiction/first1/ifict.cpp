@@ -378,12 +378,25 @@ void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 	if (dw <= 0 || dh <= 0) return;
 
 	if (IFELockSurface(dbmp)) {
-		unsigned char *row = dbmp.row(y1,x1);
+		if (dbmp.image_type == IFEBitmap::IMT_TRANSPARENT_MASK) {
+			unsigned char *row = dbmp.row(y1,x1);
+			unsigned char *msk = row + dbmp.get_transparent_mask_offset();
 
-		do {
-			memset(row,color,(unsigned int)dw);
-			row += dbmp.stride;
-		} while ((--dh) > 0);
+			do {
+				memset(row,color,(unsigned int)dw);
+				memset(msk,0x00,(unsigned int)dw);
+				row += dbmp.stride;
+				msk += dbmp.stride;
+			} while ((--dh) > 0);
+		}
+		else {
+			unsigned char *row = dbmp.row(y1,x1);
+
+			do {
+				memset(row,color,(unsigned int)dw);
+				row += dbmp.stride;
+			} while ((--dh) > 0);
+		}
 
 		IFEUnlockSurface(dbmp);
 	}
