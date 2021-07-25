@@ -375,15 +375,16 @@ void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 	int dh = y2 - y1;
 	if (dw <= 0 || dh <= 0) return;
 
-	if (!IFELockSurface(dbmp)) return;
-	unsigned char *row = dbmp.row(y1,x1);
+	if (IFELockSurface(dbmp)) {
+		unsigned char *row = dbmp.row(y1,x1);
 
-	do {
-		memset(row,color,(unsigned int)dw);
-		row += dbmp.stride;
-	} while ((--dh) > 0);
+		do {
+			memset(row,color,(unsigned int)dw);
+			row += dbmp.stride;
+		} while ((--dh) > 0);
 
-	IFEUnlockSurface(dbmp);
+		IFEUnlockSurface(dbmp);
+	}
 }
 
 /* draws a line rect at x1,y1 to x2-1,y2-1.
@@ -407,26 +408,28 @@ void IFELineRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 	IFEFillRect(dbmp, x2-thickness,  y1+thickness,  x2,            y2-thickness,  color);
 }
 
-void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
-	if (bmp.bitmap == NULL) return;
+void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,false/*no mask*/)) return;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
+	if (IFELockSurface(dbmp)) {
+		if (IFELockSurface(sbmp)) {
+			const unsigned char *src = sbmp.row(sy,sx);
+			if (src == NULL) return;
 
-	if (!IFELockSurface(dbmp)) return;
+			unsigned char *dst = dbmp.row(dy,dx);
 
-	const unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) return;
+			while (h > 0) {
+				memcpy(dst,src,w);
+				dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
+				src += sbmp.stride;
+				h--;
+			}
 
-	unsigned char *dst = dbmp.row(dy,dx);
+			IFEUnlockSurface(sbmp);
+		}
 
-	while (h > 0) {
-		memcpy(dst,src,w);
-		dst += dbmp.stride; /* NTS: stride is negative if Windows 3.1 */
-		src += bmp.stride;
-		h--;
+		IFEUnlockSurface(dbmp);
 	}
-
-	IFEUnlockSurface(dbmp);
 }
 
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
@@ -446,30 +449,32 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 	}
 }
 
-void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
+void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &sbmp) {
 	int orig_w = w;
 
-	if (bmp.bitmap == NULL) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)sbmp.width,(int)sbmp.height,dbmp.scissor,false/*no mask*/)) return;
 
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,dbmp.scissor,false/*no mask*/)) return;
+	if (IFELockSurface(dbmp)) {
+		if (IFELockSurface(sbmp)) {
+			const unsigned char *src = sbmp.row(sy,sx);
+			if (src == NULL) return;
 
-	if (!IFELockSurface(dbmp)) return;
+			unsigned char *dst = dbmp.row(dy,dx);
+			const unsigned char *msk = src + orig_w;
 
-	const unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) return;
+			while (h > 0) {
+				memcpymask(dst,src,msk,w);
+				dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
+				src += sbmp.stride;
+				msk += sbmp.stride;
+				h--;
+			}
 
-	unsigned char *dst = dbmp.row(dy,dx);
-	const unsigned char *msk = src + orig_w;
+			IFEUnlockSurface(sbmp);
+		}
 
-	while (h > 0) {
-		memcpymask(dst,src,msk,w);
-		dst += dbmp.stride; /* NTS: buf_pitch is negative if Windows 3.1 */
-		src += bmp.stride;
-		msk += bmp.stride;
-		h--;
+		IFEUnlockSurface(dbmp);
 	}
-
-	IFEUnlockSurface(dbmp);
 }
 
 void priv_IFEUndrawCursor(void) {
