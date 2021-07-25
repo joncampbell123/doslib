@@ -15,7 +15,7 @@
 #include "fatal.h"
 #include "bitmap.h"
 
-IFEBitmap::IFEBitmap() : bitmap(NULL), bitmap_first_row(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0), palette(NULL), palette_alloc(0), palette_size(0), must_lock(false), is_locked(0), ctrl_palette(true), ctrl_storage(true), ctrl_bias(true), ctrl_subrect(true) {
+IFEBitmap::IFEBitmap() : bitmap(NULL), bitmap_first_row(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0), palette(NULL), palette_alloc(0), palette_size(0), must_lock(false), is_locked(0), ctrl_palette(true), ctrl_storage(true), ctrl_bias(true), ctrl_subrect(true), scissor(0,0,0,0) {
 }
 
 IFEBitmap::~IFEBitmap() {
@@ -134,6 +134,7 @@ bool IFEBitmap::alloc_storage(unsigned int w,unsigned int h) {
 	alloc = nalloc;
 	stride = nstride;
 	bitmap_first_row = bitmap; /* our own allocation code does top-down DIBs */
+	reset_scissor_rect();
 	return true;
 }
 
@@ -150,26 +151,26 @@ void IFEBitmap::free_storage(void) {
 
 unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) {
 	/* this version error and range checks */
-	if (bitmap != NULL && y < height && x < width)
-		return bitmap + ((int)y * /*signed*/stride) + x;
+	if (bitmap_first_row != NULL && y < height && x < width)
+		return bitmap_first_row + ((int)y * /*signed*/stride) + x;
 
 	return NULL;
 }
 
 unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) {
-	return bitmap + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
+	return bitmap_first_row + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
 }
 
 const unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) const {
 	/* this version error and range checks */
-	if (bitmap != NULL && y < height && x < width)
-		return bitmap + ((int)y * /*signed*/stride) + x;
+	if (bitmap_first_row != NULL && y < height && x < width)
+		return bitmap_first_row + ((int)y * /*signed*/stride) + x;
 
 	return NULL;
 }
 
 const unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) const {
-	return bitmap + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
+	return bitmap_first_row + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
 }
 
 bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
@@ -293,5 +294,28 @@ bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
 
 	s.index_bias = new_bias;
 	return true;
+}
+
+void IFEBitmap::set_scissor_rect(int x1,int y1,int x2,int y2) {
+	if (x1 < 0) x1 = 0;
+	if ((unsigned int)x2 > width) x2 = width;
+
+	if (y1 < 0) y1 = 0;
+	if ((unsigned int)y2 > height) y2 = height;
+
+	if (x1 > x2) x1 = x2;
+	if (y1 > y2) y1 = y2;
+
+	scissor.x = x1;
+	scissor.y = y1;
+	scissor.w = x2-x1;
+	scissor.h = y2-y1;
+}
+
+void IFEBitmap::reset_scissor_rect(void) {
+	scissor.x = 0;
+	scissor.y = 0;
+	scissor.w = width;
+	scissor.h = height;
 }
 

@@ -1,4 +1,7 @@
 
+#ifndef IFE_BITMAP_H
+#define IFE_BITMAP_H
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -34,6 +37,8 @@ public:
 	bool			ctrl_storage;		/* storage can be allocated/freed (not screen objects) */
 	bool			ctrl_bias;		/* can bias subrects (not screen objects) */
 	bool			ctrl_subrect;		/* can allocate/free subrects (not screen objects) */
+
+	iferect_t		scissor;
 public:
 	IFEBitmap();
 	virtual ~IFEBitmap();
@@ -53,5 +58,9 @@ public:
 	const unsigned char *row(const unsigned int y,const unsigned int x=0) const;
 	const unsigned char *rowfast(const unsigned int y,const unsigned int x=0) const;
 	virtual bool bias_subrect(subrect &s,uint8_t new_bias); /* bias (add to pixel values) for simple palette remapping */
+	void set_scissor_rect(int x1,int y1,int x2,int y2);
+	void reset_scissor_rect(void);
 };
+
+#endif //IFE_BITMAP_H
 

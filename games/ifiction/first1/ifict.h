@@ -6,10 +6,14 @@
 
 struct iferect_t {
 	int							x,y,w,h;
+
+	iferect_t() { };
+	iferect_t(const int _x,const int _y,const int _w,const int _h) : x(_x), y(_y), w(_w), h(_h) { }
 };
 
 #include "palette.h"
 #include "keyboard.h"
+#include "bitmap.h"
 #include "mouse.h"
 
 struct ifevidinfo_t {
@@ -46,6 +50,7 @@ typedef void ifefunc_AddScreenUpdate_t(int x1,int y1,int x2,int y2); /* update x
 typedef bool ifefunc_SetHostStdCursor_t(const unsigned int id);
 typedef bool ifefunc_ShowHostStdCursor_t(const bool show);
 typedef bool ifefunc_SetWindowTitle_t(const char *msg);
+typedef IFEBitmap *ifefunc_GetScreenBitmap_t(void);
 
 struct ifeapi_t {
 	const char*						name;
@@ -72,6 +77,7 @@ struct ifeapi_t {
 	ifefunc_SetHostStdCursor_t*				SetHostStdCursor;
 	ifefunc_ShowHostStdCursor_t*				ShowHostStdCursor;
 	ifefunc_SetWindowTitle_t*				SetWindowTitle;
+	ifefunc_GetScreenBitmap_t*				GetScreenBitmap;
 };
 
 extern ifeapi_t *ifeapi;

@@ -50,6 +50,74 @@ SDL_TouchID			touchscreen_touch_lock = no_touch_id;
 unsigned int			upd_ystep = 8;
 std::vector<SDL_Rect>		upd_yspan;
 
+/* IFEBitmap subclass for the screen */
+class IFESDLBitmap : public IFEBitmap {
+public:
+	IFESDLBitmap() : IFEBitmap() {
+		must_lock = false; /* will update later whether SDL surface needs to be locked */
+		ctrl_palette = false; /* SDL manages palette */
+		ctrl_storage = false; /* SDL manages storage */
+		ctrl_bias = false;
+		ctrl_subrect = false;
+	}
+	virtual ~IFESDLBitmap() {
+	}
+public:
+	virtual bool lock_surface(void) {
+		if (is_locked == 0) {
+			if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
+				return false;
+			if (sdl_game_surface->pixels == NULL)
+				IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
+			if (sdl_game_surface->pitch < 0)
+				IFEFatalError("SDL2 game surface pitch is negative");
+
+			bitmap = bitmap_first_row =(unsigned char*)(sdl_game_surface->pixels);
+		}
+
+		is_locked++;
+		return true;
+	}
+	virtual bool unlock_surface(void) {
+		if (is_locked > 0) {
+			if ((--is_locked) == 0) {
+				if (SDL_MUSTLOCK(sdl_game_surface))
+					SDL_UnlockSurface(sdl_game_surface);
+
+				bitmap = bitmap_first_row = NULL;
+			}
+		}
+
+		return true;
+	}
+	virtual bool alloc_palette(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_palette(void) {
+	}
+	virtual bool alloc_storage(unsigned int w,unsigned int h) {
+		(void)w;
+		(void)h;
+		return false;
+	}
+	virtual void free_storage(void) {
+	}
+	virtual bool alloc_subrects(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_subrects(void) {
+	}
+	virtual bool bias_subrect(subrect &s,uint8_t new_bias) {
+		(void)s;
+		(void)new_bias;
+		return false;
+	}
+};
+
+static IFESDLBitmap		IFEScreenBMP;
+
 static void SDL_UpdateCursorFromID(void) {
 	if (sdl_std_cursor_obj != NULL && sdl_std_cursor_show) {
 		SDL_SetCursor(sdl_std_cursor_obj);
@@ -352,22 +420,17 @@ static void p_WaitEvent(const int wait_ms) {
 }
 
 static bool p_BeginScreenDraw(void) {
-	if (SDL_MUSTLOCK(sdl_game_surface) && SDL_LockSurface(sdl_game_surface) != 0)
+	if (!IFEScreenBMP.lock_surface())
 		return false;
-	if (sdl_game_surface->pixels == NULL)
-		IFEFatalError("SDL2 game surface pixels == NULL"); /* that's a BUG if this happens! */
-	if (sdl_game_surface->pitch < 0)
-		IFEFatalError("SDL2 game surface pitch is negative");
 
-	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)(sdl_game_surface->pixels);
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)IFEScreenBMP.bitmap_first_row;
 	return true;
 }
 
 static void p_EndScreenDraw(void) {
-	if (SDL_MUSTLOCK(sdl_game_surface))
-		SDL_UnlockSurface(sdl_game_surface);
+	IFEScreenBMP.unlock_surface();
 
-	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = NULL;
+	ifevidinfo_sdl2.buf_base = ifevidinfo_sdl2.buf_first_row = (unsigned char*)IFEScreenBMP.bitmap_first_row;
 }
 
 static void p_ShutdownVideo(void) {
@@ -429,6 +492,12 @@ static void p_InitVideo(void) {
 		IFEFatalError("SDL2 game surface (256-color) failed");
 	if (sdl_game_palette == NULL && (sdl_game_palette=SDL_AllocPalette(256)) == NULL)
 		IFEFatalError("SDL2 game palette");
+
+	IFEScreenBMP.must_lock = !!SDL_MUSTLOCK(sdl_game_surface);
+	IFEScreenBMP.width = sdl_game_surface->w;
+	IFEScreenBMP.height = sdl_game_surface->h;
+	IFEScreenBMP.alloc = sdl_game_surface->pitch * sdl_game_surface->h;
+	IFEScreenBMP.stride = sdl_game_surface->pitch;
 
 	ifevidinfo_sdl2.buf_alloc = ifevidinfo_sdl2.buf_size = sdl_game_surface->pitch * sdl_game_surface->h;
 	ifevidinfo_sdl2.buf_pitch = sdl_game_surface->pitch;
@@ -602,6 +671,10 @@ static bool p_SetWindowTitle(const char *msg) {
 	return true;
 }
 
+static IFEBitmap *p_GetScreenBitmap(void) {
+	return &IFEScreenBMP;
+}
+
 ifeapi_t ifeapi_sdl2 = {
 	"SDL2",
 	p_SetPaletteColors,
@@ -626,7 +699,8 @@ ifeapi_t ifeapi_sdl2 = {
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
 	p_ShowHostStdCursor,
-	p_SetWindowTitle
+	p_SetWindowTitle,
+	p_GetScreenBitmap
 };
 
 bool priv_IFEMainInit(int argc,char **argv) {
