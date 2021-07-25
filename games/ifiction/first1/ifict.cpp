@@ -34,6 +34,10 @@ ifeapi_t *ifeapi = &ifeapi_default;
 
 IFEBitmap* IFEscrbmp = NULL;
 
+IFEBitmap &IFEGetScreenBitmap(void) {
+	return *IFEscrbmp;
+}
+
 IFEBitmap IFEcursor_arrow;
 IFEBitmap IFEcursor_wait;
 
@@ -665,7 +669,7 @@ int main(int argc,char **argv) {
 
 	IFEHideCursorDrawing(true);
 	IFETestRGBPalette();
-	IFETestRGBPalettePattern(*IFEscrbmp);
+	IFETestRGBPalettePattern(IFEGetScreenBitmap());
 	IFEHideCursorDrawing(false);
 	ifeapi->UpdateFullScreen();
 	ifeapi->ResetTicks(ifeapi->GetTicks());
@@ -700,7 +704,7 @@ int main(int argc,char **argv) {
 
 		ifeapi->SetWindowTitle("BitBlt BMP test");
 
-		IFEBitBlt(*IFEscrbmp,/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/20,20,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEAddScreenUpdate(20,20,20+bmp.width,20+bmp.height);
 		ifeapi->UpdateScreen();
 
@@ -713,14 +717,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -753,14 +757,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -793,14 +797,14 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEFillRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,0);
+					IFEFillRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,0);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 
 					px = ms->x;
 					py = ms->y;
 
-					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-					IFELineRect(*IFEscrbmp,px,py,px+bmp.width,py+bmp.height,127);
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+					IFELineRect(IFEGetScreenBitmap(),px,py,px+bmp.width,py+bmp.height,127);
 					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
 					ifeapi->UpdateScreen();
 				}
@@ -854,13 +858,13 @@ int main(int argc,char **argv) {
 			IFEFatalError("SaveBMP alloc fail");
 
 		/* blank screen to avoid palette flash */
-		IFEBlankScreen(*IFEscrbmp);
+		IFEBlankScreen(IFEGetScreenBitmap());
 		ifeapi->UpdateFullScreen();
 		ifeapi->SetPaletteColors(0,bmp.palette_size,bmp.palette);
 
-		IFEBitBlt(*IFEscrbmp,/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-		IFEBitBlt(*IFEscrbmp,/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
-		IFETBitBlt(*IFEscrbmp,/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFESetCursor(&IFEcursor_wait);
@@ -883,11 +887,11 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2,tbmp.height,/*source*/px,py,bmp);
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/tbmp.width/2,tbmp.height,/*source*/px,py,bmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
-					IFETBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFETBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
 					ifeapi->UpdateScreen();
@@ -913,9 +917,9 @@ int main(int argc,char **argv) {
 
 		ifeapi->SetWindowTitle("BitBlt transparency test with save/restore");
 
-		IFEBitBlt(*IFEscrbmp,/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
-		IFEBitBlt(*IFEscrbmp,/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
-		IFETBitBlt(*IFEscrbmp,/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFEShowCursor(true);
@@ -938,12 +942,12 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
-					IFEBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 					px = ms->x;
 					py = ms->y;
-					IFEBitBltFrom(*IFEscrbmp,/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
-					IFETBitBlt(*IFEscrbmp,/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+					IFEBitBltFrom(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFETBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
 
 					ifeapi->UpdateScreen();
@@ -973,12 +977,12 @@ int main(int argc,char **argv) {
 	IFESetCursor(&IFEcursor_arrow);
 
 	/* blank screen to avoid palette flash */
-	IFEBlankScreen(*IFEscrbmp);
+	IFEBlankScreen(IFEGetScreenBitmap());
 	ifeapi->UpdateFullScreen();
 
 	IFETestRGBPalette();
 
-	IFETestRGBPalettePattern2(*IFEscrbmp);
+	IFETestRGBPalettePattern2(IFEGetScreenBitmap());
 	ifeapi->ResetTicks(ifeapi->GetTicks());
 	{
 		int py = -1;
@@ -995,7 +999,7 @@ int main(int argc,char **argv) {
 			IFEWaitEvent(1);
 		}
 	}
-	IFETestRGBPalettePattern(*IFEscrbmp);
+	IFETestRGBPalettePattern(IFEGetScreenBitmap());
 	{
 		int py = -1;
 		while (ifeapi->GetTicks() < 4000) {
