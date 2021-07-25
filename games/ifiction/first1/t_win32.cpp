@@ -55,6 +55,47 @@ unsigned int				win32_std_cursor = 0;
 HCURSOR					win32_std_cursor_obj = NULL;
 bool					win32_std_cursor_show = false;
 
+/* IFEBitmap subclass for the screen */
+class IFESDLBitmap : public IFEBitmap {
+public:
+	IFESDLBitmap() : IFEBitmap() {
+		must_lock = false; /* Windows DIBs never need locking */
+		ctrl_palette = false; /* SDL manages palette */
+		ctrl_storage = false; /* SDL manages storage */
+		ctrl_bias = false;
+		ctrl_subrect = false;
+	}
+	virtual ~IFESDLBitmap() {
+	}
+public:
+	virtual bool alloc_palette(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_palette(void) {
+	}
+	virtual bool alloc_storage(unsigned int w,unsigned int h) {
+		(void)w;
+		(void)h;
+		return false;
+	}
+	virtual void free_storage(void) {
+	}
+	virtual bool alloc_subrects(size_t count) {
+		(void)count;
+		return false;
+	}
+	virtual void free_subrects(void) {
+	}
+	virtual bool bias_subrect(subrect &s,uint8_t new_bias) {
+		(void)s;
+		(void)new_bias;
+		return false;
+	}
+};
+
+static IFESDLBitmap		IFEScreenBMP;
+
 void UpdateScreenPosOffset(void) {
 	RECT r = {0,0,0,0};
 
@@ -371,6 +412,14 @@ static void p_InitVideo(void) {
 			win_dib_pitch = -((int)hwndMainDIB->bmiHeader.biWidth);
 		}
 
+		IFEScreenBMP.width = ifevidinfo_win32.width;
+		IFEScreenBMP.height = ifevidinfo_win32.height;
+		IFEScreenBMP.alloc = (uint32_t)(hwndMainDIB->bmiHeader.biSizeImage);;
+		IFEScreenBMP.stride = win_dib_pitch;
+		IFEScreenBMP.bitmap = win_dib;
+		IFEScreenBMP.bitmap_first_row = win_dib_first_row;
+		IFEScreenBMP.reset_scissor_rect();
+
 		ifevidinfo_win32.buf_base = win_dib;
 		ifevidinfo_win32.buf_first_row = win_dib_first_row;
 		ifevidinfo_win32.buf_pitch = win_dib_pitch;
@@ -533,6 +582,10 @@ static bool p_SetWindowTitle(const char *msg) {
 	return true;
 }
 
+static IFEBitmap *p_GetScreenBitmap(void) {
+	return &IFEScreenBMP;
+}
+
 ifeapi_t ifeapi_win32 = {
 	"Win32",
 	p_SetPaletteColors,
@@ -557,7 +610,8 @@ ifeapi_t ifeapi_win32 = {
 	p_AddScreenUpdate,
 	p_SetHostStdCursor,
 	p_ShowHostStdCursor,
-	p_SetWindowTitle
+	p_SetWindowTitle,
+	p_GetScreenBitmap
 };
 
 void UpdateWin32ModFlags(void) {
