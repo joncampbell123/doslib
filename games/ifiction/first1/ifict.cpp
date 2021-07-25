@@ -35,7 +35,11 @@ ifeapi_t *ifeapi = &ifeapi_default;
 IFEBitmap* IFEscrbmp = NULL;
 
 IFEBitmap &IFEGetScreenBitmap(void) {
-	return *IFEscrbmp;
+	if (IFEscrbmp != NULL)
+		return *IFEscrbmp;
+
+	IFEFatalError("IFEGetScreenBitmap == NULL");
+	abort();
 }
 
 IFEBitmap IFEcursor_arrow;
