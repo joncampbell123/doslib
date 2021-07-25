@@ -796,7 +796,7 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 			break;
 		case WM_SYSCHAR:
 		case WM_SYSDEADCHAR:
-			/* Intereception is necessary or Alt combinations we handle ourselves will cause "Dings" in Windows 3.1 */
+			/* Interception is necessary or Alt combinations we handle ourselves will cause "Dings" in Windows 3.1 */
 			if (wParam == ' ' || wParam == 9) /* but we must pass spacebar and tab so Alt+Spacebar still calls up the system menu */
 				p_win32_ProcessKeyEvent(wParam,lParam,uMsg,true);
 
