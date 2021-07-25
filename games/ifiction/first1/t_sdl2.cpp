@@ -498,6 +498,7 @@ static void p_InitVideo(void) {
 	IFEScreenBMP.height = sdl_game_surface->h;
 	IFEScreenBMP.alloc = sdl_game_surface->pitch * sdl_game_surface->h;
 	IFEScreenBMP.stride = sdl_game_surface->pitch;
+	IFEScreenBMP.reset_scissor_rect();
 
 	ifevidinfo_sdl2.buf_alloc = ifevidinfo_sdl2.buf_size = sdl_game_surface->pitch * sdl_game_surface->h;
 	ifevidinfo_sdl2.buf_pitch = sdl_game_surface->pitch;

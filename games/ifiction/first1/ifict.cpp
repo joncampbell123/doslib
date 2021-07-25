@@ -188,6 +188,8 @@ void IFEAddScreenUpdate(int x1,int y1,int x2,int y2) {
 }
 
 void IFEResetScissorRect(void) {
+	ifeapi->GetScreenBitmap()->reset_scissor_rect();
+
 	ifevidinfo_t* vi = ifeapi->GetVidInfo();
 
 	IFEScissor.x = IFEScissor.y = 0;
@@ -196,6 +198,8 @@ void IFEResetScissorRect(void) {
 }
 
 void IFESetScissorRect(int x1,int y1,int x2,int y2) {
+	ifeapi->GetScreenBitmap()->set_scissor_rect(x1,y1,x2,y2);
+
 	ifevidinfo_t* vi = ifeapi->GetVidInfo();
 
 	if (x1 < 0) x1 = 0;
@@ -249,8 +253,7 @@ void IFEBlankScreen(void) {
 	IFEBitmap *scrbmp;
 	unsigned int y;
 
-	if ((scrbmp=ifeapi->GetScreenBitmap()) == NULL)
-		IFEFatalError("BeginScreenDraw cannot get screen bitmap");
+	scrbmp = ifeapi->GetScreenBitmap();
 	if (!scrbmp->lock_surface())
 		IFEFatalError("BeginScreenDraw cannot lock surface");
 	if ((row=scrbmp->bitmap_first_row) == NULL)
@@ -270,8 +273,7 @@ void IFETestRGBPalettePattern(void) {
 	IFEBitmap *scrbmp;
 	unsigned int x,y;
 
-	if ((scrbmp=ifeapi->GetScreenBitmap()) == NULL)
-		IFEFatalError("BeginScreenDraw cannot get screen bitmap");
+	scrbmp = ifeapi->GetScreenBitmap();
 	if (!scrbmp->lock_surface())
 		IFEFatalError("BeginScreenDraw cannot lock surface");
 	if ((row=scrbmp->bitmap_first_row) == NULL)
@@ -297,8 +299,7 @@ void IFETestRGBPalettePattern2(void) {
 	IFEBitmap *scrbmp;
 	unsigned int x,y;
 
-	if ((scrbmp=ifeapi->GetScreenBitmap()) == NULL)
-		IFEFatalError("BeginScreenDraw cannot get screen bitmap");
+	scrbmp = ifeapi->GetScreenBitmap();
 	if (!scrbmp->lock_surface())
 		IFEFatalError("BeginScreenDraw cannot lock surface");
 	if ((row=scrbmp->bitmap_first_row) == NULL)
@@ -371,28 +372,34 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 
 /* draw a rectangle, region x1 <= x < x2, y1 <= y < y2 */
 void IFEFillRect(int x1,int y1,int x2,int y2,const uint8_t color) {
-	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+	IFEBitmap *scrbmp;
+
+	scrbmp = ifeapi->GetScreenBitmap();
 
 	if (x1 >= x2 || y1 >= y2) return;
-	if (x1 < IFEScissor.x) x1 = IFEScissor.x;
-	if (y1 < IFEScissor.y) y1 = IFEScissor.y;
-	if (x2 > (IFEScissor.x+IFEScissor.w)) x2 = (IFEScissor.x+IFEScissor.w);
-	if (y2 > (IFEScissor.y+IFEScissor.h)) y2 = (IFEScissor.y+IFEScissor.h);
+	if (x1 < scrbmp->scissor.x) x1 = scrbmp->scissor.x;
+	if (y1 < scrbmp->scissor.y) y1 = scrbmp->scissor.y;
+	if (x2 > (scrbmp->scissor.x+scrbmp->scissor.w)) x2 = (scrbmp->scissor.x+scrbmp->scissor.w);
+	if (y2 > (scrbmp->scissor.y+scrbmp->scissor.h)) y2 = (scrbmp->scissor.y+scrbmp->scissor.h);
 
 	int dw = x2 - x1;
 	int dh = y2 - y1;
 	if (dw <= 0 || dh <= 0) return;
 
-	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
-	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
-	unsigned char *row = vi->buf_first_row + (y1 * vi->buf_pitch) + x1;
+	if (!scrbmp->lock_surface())
+		IFEFatalError("BeginScreenDraw cannot lock surface");
+	if (scrbmp->bitmap_first_row == NULL)
+		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+
+	unsigned char *row = scrbmp->row(y1,x1);
 
 	do {
 		memset(row,color,(unsigned int)dw);
-		row += vi->buf_pitch;
+		row += scrbmp->stride;
 	} while ((--dh) > 0);
 
-	ifeapi->EndScreenDraw();
+	if (!scrbmp->unlock_surface())
+		IFEFatalError("BeginScreenDraw cannot unlock surface");
 }
 
 /* draws a line rect at x1,y1 to x2-1,y2-1.
@@ -417,51 +424,61 @@ void IFELineRect(int x1,int y1,int x2,int y2,const uint8_t color,const int thick
 }
 
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
-	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+	IFEBitmap *scrbmp;
 
 	if (bmp.bitmap == NULL) return;
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,false/*no mask*/)) return;
 
-	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
-	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+	scrbmp = ifeapi->GetScreenBitmap();
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+
+	if (!scrbmp->lock_surface())
+		IFEFatalError("BeginScreenDraw cannot lock surface");
+	if (scrbmp->bitmap_first_row == NULL)
+		IFEFatalError("BeginScreenDraw lock did not provide pointer");
 
 	const unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
 
-	unsigned char *dst = vi->buf_first_row + (dy * vi->buf_pitch) + dx; /* remember, buf_pitch is signed because Windows 3.1 upside down DIBs to allow negative pitch */
+	unsigned char *dst = scrbmp->row(dy,dx);
 
 	while (h > 0) {
 		memcpy(dst,src,w);
-		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
+		dst += scrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	ifeapi->EndScreenDraw();
+	if (!scrbmp->unlock_surface())
+		IFEFatalError("BeginScreenDraw cannot unlock surface");
 }
 
 void IFEBitBltFrom(int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
-	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+	IFEBitmap *scrbmp;
 
 	if (bmp.bitmap == NULL) return;
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,false/*no mask*/)) return;
 
-	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
-	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+	scrbmp = ifeapi->GetScreenBitmap();
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+
+	if (!scrbmp->lock_surface())
+		IFEFatalError("BeginScreenDraw cannot lock surface");
+	if (scrbmp->bitmap_first_row == NULL)
+		IFEFatalError("BeginScreenDraw lock did not provide pointer");
 
 	unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
 
-	const unsigned char *dst = vi->buf_first_row + (dy * vi->buf_pitch) + dx; /* remember, buf_pitch is signed because Windows 3.1 upside down DIBs to allow negative pitch */
+	const unsigned char *dst = scrbmp->row(dy,dx);
 
 	while (h > 0) {
-		memcpy(src,dst,w); /* copy TO the bitmap, not FROM the bitmap */
-		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
+		memcpy(src,dst,w); /* from SCREEN to bitmap */
+		dst += scrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	ifeapi->EndScreenDraw();
+	if (!scrbmp->unlock_surface())
+		IFEFatalError("BeginScreenDraw cannot unlock surface");
 }
 
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
@@ -482,31 +499,35 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 }
 
 void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
+	IFEBitmap *scrbmp;
 	int orig_w = w;
 
-	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
-
 	if (bmp.bitmap == NULL) return;
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEScissor,true/*has mask*/)) return;
 
-	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
-	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+	scrbmp = ifeapi->GetScreenBitmap();
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+
+	if (!scrbmp->lock_surface())
+		IFEFatalError("BeginScreenDraw cannot lock surface");
+	if (scrbmp->bitmap_first_row == NULL)
+		IFEFatalError("BeginScreenDraw lock did not provide pointer");
 
 	const unsigned char *src = bmp.row(sy,sx);
 	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
 	const unsigned char *msk = src + orig_w;
 
-	unsigned char *dst = vi->buf_first_row + (dy * vi->buf_pitch) + dx; /* remember, buf_pitch is signed because Windows 3.1 upside down DIBs to allow negative pitch */
+	unsigned char *dst = scrbmp->row(dy,dx);
 
 	while (h > 0) {
 		memcpymask(dst,src,msk,w);
-		dst += vi->buf_pitch; /* NTS: buf_pitch is negative if Windows 3.1 */
+		dst += scrbmp->stride; /* NTS: buf_pitch is negative if Windows 3.1 */
 		src += bmp.stride;
 		msk += bmp.stride;
 		h--;
 	}
 
-	ifeapi->EndScreenDraw();
+	if (!scrbmp->unlock_surface())
+		IFEFatalError("BeginScreenDraw cannot unlock surface");
 }
 
 void priv_IFEUndrawCursor(void) {
