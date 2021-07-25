@@ -816,6 +816,7 @@ int main(int argc,char **argv) {
 	}
 
 	{
+		IFEBitmap combo_woo;
 		IFEBitmap bmp,tbmp;
 		IFEBitmap savebmp;
 
@@ -936,6 +937,74 @@ int main(int argc,char **argv) {
 					IFEBitBlt(savebmp,/*dest*/0,0,/*width,height*/savebmp.width,savebmp.height,/*source*/px,py,IFEGetScreenBitmap());
 					IFETBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
 					IFEAddScreenUpdate(px,py,px+(tbmp.width/2),py+tbmp.height);
+
+					ifeapi->UpdateScreen();
+				}
+
+				if (ms->status & IFEMouseStatus_LBUTTON) {
+					if (lx == -999 && ly == -999) {
+						lx = ms->x;
+						ly = ms->y;
+					}
+				}
+				else {
+					if (abs(lx - ms->x) < 8 && abs(ly - ms->y) < 8) /* lbutton released without moving */
+						break;
+
+					lx = ly = -999;
+				}
+
+				if (ifeapi->UserWantsToQuit()) IFENormalExit();
+				IFEWaitEvent(1);
+			} while (1);
+		}
+
+		ifeapi->SetWindowTitle("BitBlt transparency test with save/restore composite blt");
+
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
+		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width/2/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		ifeapi->UpdateFullScreen();
+
+		IFEShowCursor(true);
+
+		if (!combo_woo.alloc_storage((tbmp.width/2)*2,tbmp.height*2))
+			IFEFatalError("combo woo alloc fail");
+		if (!savebmp.alloc_storage(combo_woo.width,combo_woo.height))
+			IFEFatalError("savebmp alloc fail");
+
+		IFEFillRect(combo_woo,0,0,combo_woo.width,combo_woo.height,0);
+		IFETBitBlt(combo_woo,0,             0,             tbmp.width/2,tbmp.height,0,0,tbmp);
+		IFETBitBlt(combo_woo,tbmp.width/2,  0,             tbmp.width/2,tbmp.height,0,0,tbmp);
+		IFETBitBlt(combo_woo,0,             tbmp.height,   tbmp.width/2,tbmp.height,0,0,tbmp);
+		IFETBitBlt(combo_woo,tbmp.width/2,  tbmp.height,   tbmp.width/2,tbmp.height,0,0,tbmp);
+		IFETBitBlt(combo_woo,tbmp.width/4,  tbmp.height/2, tbmp.width/2,tbmp.height,0,0,tbmp);
+
+		ifeapi->ResetTicks(ifeapi->GetTicks());
+		while (ifeapi->GetTicks() < 3000) {
+			if (ifeapi->UserWantsToQuit()) IFENormalExit();
+			IFEWaitEvent(1);
+		}
+
+		IFEShowCursor(false);
+
+		/* test clipping by letting the user mouse around with it, this time using IFEBitBlt() to save and restore the background
+		 * under the image. */
+		{
+			int px = -999,py = -999;
+			int lx = -999,ly = -999;
+
+			do {
+				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
+
+				if (px != ms->x || py != ms->y) {
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/savebmp.width,savebmp.height,/*source*/0,0,savebmp);
+					IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
+					px = ms->x;
+					py = ms->y;
+					IFEBitBlt(savebmp,/*dest*/0,0,/*width,height*/savebmp.width,savebmp.height,/*source*/px,py,IFEGetScreenBitmap());
+					IFEBitBlt(IFEGetScreenBitmap(),/*dest*/px,py,/*width,height*/combo_woo.width,combo_woo.height,/*source*/0,0,combo_woo);
+					IFEAddScreenUpdate(px,py,px+combo_woo.width,py+combo_woo.height);
 
 					ifeapi->UpdateScreen();
 				}
