@@ -377,6 +377,32 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 	return true;
 }
 
+/* draw a rectangle, region x1 <= x < x2, y1 <= y < y2 */
+void IFEFillRect(int x1,int y1,int x2,int y2,const uint8_t color) {
+	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
+
+	if (x1 >= x2 || y1 >= y2) return;
+	if (x1 < IFEScissor.x) x1 = IFEScissor.x;
+	if (y1 < IFEScissor.y) y1 = IFEScissor.y;
+	if (x2 > (IFEScissor.x+IFEScissor.w)) x2 = (IFEScissor.x+IFEScissor.w);
+	if (y2 > (IFEScissor.y+IFEScissor.h)) y2 = (IFEScissor.y+IFEScissor.h);
+
+	int dw = x2 - x1;
+	int dh = y2 - y1;
+	if (dw <= 0 || dh <= 0) return;
+
+	if (!ifeapi->BeginScreenDraw()) IFEFatalError("IFEBitBlt unable to begin screen draw");
+	if (vi->buf_first_row == NULL) IFEFatalError("IFEBitBlt video output buffer first row == NULL");
+	unsigned char *row = vi->buf_first_row + (y1 * vi->buf_pitch) + x1;
+
+	do {
+		memset(row,color,(unsigned int)dw);
+		row += vi->buf_pitch;
+	} while ((--dh) > 0);
+
+	ifeapi->EndScreenDraw();
+}
+
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
 	ifevidinfo_t* vi = ifeapi->GetVidInfo(); /* cannot return NULL */
 
@@ -694,6 +720,9 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
+					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+
 					px = ms->x;
 					py = ms->y;
 
@@ -730,6 +759,9 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
+					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+
 					px = ms->x;
 					py = ms->y;
 
@@ -766,6 +798,9 @@ int main(int argc,char **argv) {
 				IFEMouseStatus *ms = ifeapi->GetMouseStatus();
 
 				if (px != ms->x || py != ms->y) {
+					IFEFillRect(px,py,px+bmp.width,py+bmp.height,0);
+					IFEAddScreenUpdate(px,py,px+bmp.width,py+bmp.height);
+
 					px = ms->x;
 					py = ms->y;
 
