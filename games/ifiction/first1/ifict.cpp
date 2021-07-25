@@ -160,8 +160,6 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 			unsigned char *ptr = bmp.bitmap;
 			unsigned char *msk = ptr + bmp.get_transparent_mask_offset();
 
-			IFEDBG("stride=%u width=%u offset=%u",
-				bmp.stride,bmp.width,bmp.get_transparent_mask_offset());
 			assert((bmp.get_transparent_mask_offset() + bmp.width) <= abs(bmp.stride));
 
 			for (i=0;i < bmp.height;i++) {
