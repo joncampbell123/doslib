@@ -358,34 +358,25 @@ static bool IFEBitBlt_clipcheck(int &dx,int &dy,int &dw,int &dh,int &sx,int &sy,
 
 /* draw a rectangle, region x1 <= x < x2, y1 <= y < y2 */
 void IFEFillRect(int x1,int y1,int x2,int y2,const uint8_t color) {
-	IFEBitmap *scrbmp;
-
-	scrbmp = ifeapi->GetScreenBitmap();
-
 	if (x1 >= x2 || y1 >= y2) return;
-	if (x1 < scrbmp->scissor.x) x1 = scrbmp->scissor.x;
-	if (y1 < scrbmp->scissor.y) y1 = scrbmp->scissor.y;
-	if (x2 > (scrbmp->scissor.x+scrbmp->scissor.w)) x2 = (scrbmp->scissor.x+scrbmp->scissor.w);
-	if (y2 > (scrbmp->scissor.y+scrbmp->scissor.h)) y2 = (scrbmp->scissor.y+scrbmp->scissor.h);
+	if (x1 < IFEscrbmp->scissor.x) x1 = IFEscrbmp->scissor.x;
+	if (y1 < IFEscrbmp->scissor.y) y1 = IFEscrbmp->scissor.y;
+	if (x2 > (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w)) x2 = (IFEscrbmp->scissor.x+IFEscrbmp->scissor.w);
+	if (y2 > (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h)) y2 = (IFEscrbmp->scissor.y+IFEscrbmp->scissor.h);
 
 	int dw = x2 - x1;
 	int dh = y2 - y1;
 	if (dw <= 0 || dh <= 0) return;
 
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if (scrbmp->bitmap_first_row == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
-
-	unsigned char *row = scrbmp->row(y1,x1);
+	if (!IFELockSurface(IFEscrbmp)) return;
+	unsigned char *row = IFEscrbmp->row(y1,x1);
 
 	do {
 		memset(row,color,(unsigned int)dw);
-		row += scrbmp->stride;
+		row += IFEscrbmp->stride;
 	} while ((--dh) > 0);
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 /* draws a line rect at x1,y1 to x2-1,y2-1.
@@ -410,61 +401,47 @@ void IFELineRect(int x1,int y1,int x2,int y2,const uint8_t color,const int thick
 }
 
 void IFEBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
-	IFEBitmap *scrbmp;
-
 	if (bmp.bitmap == NULL) return;
 
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
 
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if (scrbmp->bitmap_first_row == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+	if (!IFELockSurface(IFEscrbmp)) return;
 
 	const unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
+	if (src == NULL) return;
 
-	unsigned char *dst = scrbmp->row(dy,dx);
+	unsigned char *dst = IFEscrbmp->row(dy,dx);
 
 	while (h > 0) {
 		memcpy(dst,src,w);
-		dst += scrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
+		dst += IFEscrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 void IFEBitBltFrom(int dx,int dy,int w,int h,int sx,int sy,IFEBitmap &bmp) { /* FROM the screen, not TO the screen */
-	IFEBitmap *scrbmp;
-
 	if (bmp.bitmap == NULL) return;
 
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
 
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if (scrbmp->bitmap_first_row == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+	if (!IFELockSurface(IFEscrbmp)) return;
 
 	unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
+	if (src == NULL) return;
 
-	const unsigned char *dst = scrbmp->row(dy,dx);
+	const unsigned char *dst = IFEscrbmp->row(dy,dx);
 
 	while (h > 0) {
 		memcpy(src,dst,w); /* from SCREEN to bitmap */
-		dst += scrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
+		dst += IFEscrbmp->stride; /* NTS: stride is negative if Windows 3.1 */
 		src += bmp.stride;
 		h--;
 	}
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 static inline void memcpymask(unsigned char *dst,const unsigned char *src,const unsigned char *msk,unsigned int w) {
@@ -485,35 +462,29 @@ static inline void memcpymask(unsigned char *dst,const unsigned char *src,const 
 }
 
 void IFETBitBlt(int dx,int dy,int w,int h,int sx,int sy,const IFEBitmap &bmp) {
-	IFEBitmap *scrbmp;
 	int orig_w = w;
 
 	if (bmp.bitmap == NULL) return;
 
-	scrbmp = ifeapi->GetScreenBitmap();
-	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,scrbmp->scissor,false/*no mask*/)) return;
+	if (!IFEBitBlt_clipcheck(dx,dy,w,h,sx,sy,(int)bmp.width,(int)bmp.height,IFEscrbmp->scissor,false/*no mask*/)) return;
 
-	if (!scrbmp->lock_surface())
-		IFEFatalError("BeginScreenDraw cannot lock surface");
-	if (scrbmp->bitmap_first_row == NULL)
-		IFEFatalError("BeginScreenDraw lock did not provide pointer");
+	if (!IFELockSurface(IFEscrbmp)) return;
 
 	const unsigned char *src = bmp.row(sy,sx);
-	if (src == NULL) IFEFatalError("IFEBitBlt BMP row returned NULL, line %d",__LINE__); /* What? Despite all validation in clipcheck? */
-	const unsigned char *msk = src + orig_w;
+	if (src == NULL) return;
 
-	unsigned char *dst = scrbmp->row(dy,dx);
+	unsigned char *dst = IFEscrbmp->row(dy,dx);
+	const unsigned char *msk = src + orig_w;
 
 	while (h > 0) {
 		memcpymask(dst,src,msk,w);
-		dst += scrbmp->stride; /* NTS: buf_pitch is negative if Windows 3.1 */
+		dst += IFEscrbmp->stride; /* NTS: buf_pitch is negative if Windows 3.1 */
 		src += bmp.stride;
 		msk += bmp.stride;
 		h--;
 	}
 
-	if (!scrbmp->unlock_surface())
-		IFEFatalError("BeginScreenDraw cannot unlock surface");
+	IFEUnlockSurface(IFEscrbmp);
 }
 
 void priv_IFEUndrawCursor(void) {
