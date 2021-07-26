@@ -80,6 +80,7 @@ void IFESetCursor(IFEBitmap* new_cursor,size_t sr=0);
 bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 	bool res = false,transparency = false;
 	struct minipng_reader *rdr = NULL;
+	unsigned int alloc_w;
 	unsigned int i;
 
 	if ((rdr=minipng_reader_open(path)) == NULL)
@@ -99,13 +100,34 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 		}
 	}
 
+	switch (rdr->ihdr.bit_depth) {
+		case 8:
+			alloc_w = rdr->ihdr.width;
+			break;
+		case 4:
+			alloc_w = (rdr->ihdr.width + 1u) & (~1u); /* round up to multiple of 2 */
+			break;
+		case 1:
+			alloc_w = (rdr->ihdr.width + 7u) & (~7u); /* round up to multiple of 8 */
+			break;
+		default:
+			goto done;
+	};
+
 	/* transparency is accomplished by allocating twice the width,
 	 * making the right hand side the mask and the left hand the image */
 
 	if (!bmp.alloc_subrects(1))
 		goto done;
-	if (!bmp.alloc_storage(rdr->ihdr.width, rdr->ihdr.height, transparency ? IFEBitmap::IMT_TRANSPARENT_MASK : IFEBitmap::IMT_OPAQUE))
+	if (!bmp.alloc_storage(alloc_w, rdr->ihdr.height, transparency ? IFEBitmap::IMT_TRANSPARENT_MASK : IFEBitmap::IMT_OPAQUE))
 		goto done;
+
+	/* reset bitmap width to what we intended */
+	if (bmp.width < rdr->ihdr.width)
+		goto done;
+
+	bmp.width = rdr->ihdr.width;
+	bmp.reset_scissor_rect();
 
 	if (rdr->ihdr.bit_depth >= 1 && rdr->ihdr.bit_depth <= 8) {
 		if (rdr->plte == NULL)
@@ -147,6 +169,26 @@ bool IFELoadPNG(IFEBitmap &bmp,const char *path) {
 			for (i=0;i < bmp.height;i++) {
 				minipng_reader_read_idat(rdr,ptr,1); /* pad byte */
 				minipng_reader_read_idat(rdr,ptr,rdr->ihdr.width); /* row */
+				ptr += bmp.stride;
+			}
+		}
+		else if (rdr->ihdr.bit_depth == 4) {
+			unsigned char *ptr = bmp.bitmap;
+
+			for (i=0;i < bmp.height;i++) {
+				minipng_reader_read_idat(rdr,ptr,1); /* pad byte */
+				minipng_reader_read_idat(rdr,ptr,(rdr->ihdr.width+1u)/2u); /* row */
+				minipng_expand4to8(ptr,rdr->ihdr.width);
+				ptr += bmp.stride;
+			}
+		}
+		else if (rdr->ihdr.bit_depth == 1) {
+			unsigned char *ptr = bmp.bitmap;
+
+			for (i=0;i < bmp.height;i++) {
+				minipng_reader_read_idat(rdr,ptr,1); /* pad byte */
+				minipng_reader_read_idat(rdr,ptr,(rdr->ihdr.width+7u)/8u); /* row */
+				minipng_expand1to8(ptr,rdr->ihdr.width);
 				ptr += bmp.stride;
 			}
 		}
@@ -939,6 +981,7 @@ int main(int argc,char **argv) {
 		IFEBitmap combo_woo;
 		IFEBitmap bmp,tbmp;
 		IFEBitmap savebmp;
+		IFEBitmap fontbmp;
 
 		IFEResetScissorRect();
 
@@ -962,6 +1005,17 @@ int main(int argc,char **argv) {
 		if (tbmp.image_type != IFEBitmap::IMT_TRANSPARENT_MASK)
 			IFEFatalError("PNG should have transparency");
 
+		if (!IFELoadPNG(fontbmp,"ariarlg.png"))
+			IFEFatalError("Unable to load PNG");
+		if (fontbmp.row(0) == NULL)
+			IFEFatalError("BMP storage failure, row");
+		if (fontbmp.palette == NULL)
+			IFEFatalError("PNG did not have palette");
+		if (fontbmp.subrects_alloc < 1)
+			IFEFatalError("PNG without subrect");
+		if (fontbmp.image_type != IFEBitmap::IMT_TRANSPARENT_MASK)
+			IFEFatalError("PNG should have transparency");
+
 		if (!savebmp.alloc_storage(tbmp.width,tbmp.height))
 			IFEFatalError("SaveBMP alloc fail");
 
@@ -973,6 +1027,7 @@ int main(int argc,char **argv) {
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
 		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width/*image is 2x the width for mask*/,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/380,40,/*width,height*/fontbmp.width/*image is 2x the width for mask*/,fontbmp.height,/*source*/0,0,fontbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFESetCursor(&IFEcursor_wait);
@@ -1028,6 +1083,7 @@ int main(int argc,char **argv) {
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
 		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/380,40,/*width,height*/fontbmp.width/*image is 2x the width for mask*/,fontbmp.height,/*source*/0,0,fontbmp);
 		ifeapi->UpdateFullScreen();
 
 		/* test clipping by letting the user mouse around with it, this time using IFEBitBlt() to save and restore the background
@@ -1074,6 +1130,7 @@ int main(int argc,char **argv) {
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/0,0,/*width,height*/bmp.width,bmp.height,/*source*/0,0,bmp);
 		IFEBitBlt(IFEGetScreenBitmap(),/*dest*/40,40,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
 		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/40,240,/*width,height*/tbmp.width,tbmp.height,/*source*/0,0,tbmp);
+		IFETBitBlt(IFEGetScreenBitmap(),/*dest*/380,40,/*width,height*/fontbmp.width/*image is 2x the width for mask*/,fontbmp.height,/*source*/0,0,fontbmp);
 		ifeapi->UpdateFullScreen();
 
 		IFEShowCursor(true);

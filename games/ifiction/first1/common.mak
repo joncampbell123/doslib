@@ -47,6 +47,11 @@ $(IFICT_EXE): $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(HW_DOSBOXID_L
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat dos4gw.exe
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)ctmouse.bin ctmouse.exe
 ! endif
+	@cp ../../dgjamfall2020/codenamesunfish3d/devasset/arialfont/arialsmall_final.png  ariarsm.png
+	@cp ../../dgjamfall2020/codenamesunfish3d/devasset/arialfont/arialmed_final.png    ariarmd.png
+	@cp ../../dgjamfall2020/codenamesunfish3d/devasset/arialfont/ariallarge_final.png  ariarlg.png
+	@cp ../../dgjamfall2020/codenamesunfish3d/devasset/arialfont/ariallargei_final.png ariailg.png
+	@cp ../../dgjamfall2020/codenamesunfish3d/devasset/arialfont/ariallarge2_final.png ariarl2.png
 !endif
 
 clean: .SYMBOLIC
