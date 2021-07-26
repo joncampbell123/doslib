@@ -421,7 +421,7 @@ void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 		switch (dbmp.image_type) {
 			case IFEBitmap::IMT_TRANSPARENT_MASK:
 				{
-					unsigned char *row = dbmp.row(y1,x1);
+					unsigned char *row = dbmp.row(y1) + x1;
 					unsigned char *msk = row + dbmp.get_transparent_mask_offset();
 
 					do {
@@ -434,7 +434,7 @@ void IFEFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2,const uint8_t color
 				break;
 			default:
 				{
-					unsigned char *row = dbmp.row(y1,x1);
+					unsigned char *row = dbmp.row(y1) + x1;
 
 					do {
 						memset(row,color,(unsigned int)dw);
@@ -464,7 +464,7 @@ void IFETFillRect(IFEBitmap &dbmp,int x1,int y1,int x2,int y2) {
 		switch (dbmp.image_type) {
 			case IFEBitmap::IMT_TRANSPARENT_MASK:
 				{
-					unsigned char *row = dbmp.row(y1,x1);
+					unsigned char *row = dbmp.row(y1) + x1;
 					unsigned char *msk = row + dbmp.get_transparent_mask_offset();
 
 					do {
@@ -515,10 +515,10 @@ void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap
 			switch (dbmp.image_type) {
 				case IFEBitmap::IMT_TRANSPARENT_MASK:
 					{
-						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *src = sbmp.row(sy) + sx;
 						const unsigned char *sms = src + sbmp.get_transparent_mask_offset();
 
-						unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dst = dbmp.row(dy) + dx;
 						unsigned char *dms = dst + dbmp.get_transparent_mask_offset();
 
 						while (h > 0) {
@@ -534,8 +534,8 @@ void IFEBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitmap
 					break;
 				default:
 					{
-						const unsigned char *src = sbmp.row(sy,sx);
-						unsigned char *dst = dbmp.row(dy,dx);
+						const unsigned char *src = sbmp.row(sy) + sx;
+						unsigned char *dst = dbmp.row(dy) + dx;
 
 						while (h > 0) {
 							memcpy(dst,src,w);
@@ -597,10 +597,10 @@ void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitma
 			switch (dbmp.image_type) {
 				case IFEBitmap::IMT_TRANSPARENT_MASK:
 					{
-						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *src = sbmp.row(sy) + sx;
 						const unsigned char *sms = src + sbmp.get_transparent_mask_offset();
 
-						unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dst = dbmp.row(dy) + dx;
 						unsigned char *dms = dst + dbmp.get_transparent_mask_offset();
 
 						while (h > 0) {
@@ -616,10 +616,10 @@ void IFETBitBlt(IFEBitmap &dbmp,int dx,int dy,int w,int h,int sx,int sy,IFEBitma
 					break;
 				default:
 					{
-						const unsigned char *src = sbmp.row(sy,sx);
+						const unsigned char *src = sbmp.row(sy) + sx;
 						const unsigned char *msk = src + sbmp.get_transparent_mask_offset();
 
-						unsigned char *dst = dbmp.row(dy,dx);
+						unsigned char *dst = dbmp.row(dy) + dx;
 
 						while (h > 0) {
 							memcpymask(dst,src,msk,w);

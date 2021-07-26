@@ -162,28 +162,28 @@ void IFEBitmap::free_storage(void) {
 	stride = 0;
 }
 
-unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) {
+unsigned char *IFEBitmap::row(const unsigned int y) {
 	/* this version error and range checks */
-	if (bitmap_first_row != NULL && y < height && x < width)
-		return bitmap_first_row + ((int)y * /*signed*/stride) + x;
+	if (bitmap_first_row != NULL && y < height)
+		return bitmap_first_row + ((int)y * /*signed*/stride);
 
 	return NULL;
 }
 
-unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) {
-	return bitmap_first_row + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
+unsigned char *IFEBitmap::rowfast(const unsigned int y) {
+	return bitmap_first_row + ((int)y * /*signed*/stride); /* for code that has already validated the bitmap */
 }
 
-const unsigned char *IFEBitmap::row(const unsigned int y,const unsigned int x) const {
+const unsigned char *IFEBitmap::row(const unsigned int y) const {
 	/* this version error and range checks */
-	if (bitmap_first_row != NULL && y < height && x < width)
-		return bitmap_first_row + ((int)y * /*signed*/stride) + x;
+	if (bitmap_first_row != NULL && y < height)
+		return bitmap_first_row + ((int)y * /*signed*/stride);
 
 	return NULL;
 }
 
-const unsigned char *IFEBitmap::rowfast(const unsigned int y,const unsigned int x) const {
-	return bitmap_first_row + ((int)y * /*signed*/stride) + x; /* for code that has already validated the bitmap */
+const unsigned char *IFEBitmap::rowfast(const unsigned int y) const {
+	return bitmap_first_row + ((int)y * /*signed*/stride); /* for code that has already validated the bitmap */
 }
 
 bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {

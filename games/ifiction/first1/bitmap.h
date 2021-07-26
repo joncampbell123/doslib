@@ -68,10 +68,10 @@ public:
 	virtual void free_subrects(void);
 	subrect &get_subrect(const size_t i);
 	const subrect &get_subrect(const size_t i) const;
-	unsigned char *row(const unsigned int y,const unsigned int x=0);
-	unsigned char *rowfast(const unsigned int y,const unsigned int x=0);
-	const unsigned char *row(const unsigned int y,const unsigned int x=0) const;
-	const unsigned char *rowfast(const unsigned int y,const unsigned int x=0) const;
+	unsigned char *row(const unsigned int y);
+	unsigned char *rowfast(const unsigned int y);
+	const unsigned char *row(const unsigned int y) const;
+	const unsigned char *rowfast(const unsigned int y) const;
 	virtual bool bias_subrect(subrect &s,uint8_t new_bias); /* bias (add to pixel values) for simple palette remapping */
 	void set_scissor_rect(int x1,int y1,int x2,int y2);
 	void reset_scissor_rect(void);
