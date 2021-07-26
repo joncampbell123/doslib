@@ -971,7 +971,7 @@ bool priv_IFEMainInit(int argc,char **argv) {
 	if (!(vga_state.vga_flags & VGA_IS_VGA))
 		IFEFatalError("Standard VGA not detected");
 	if (!vbe_probe() || vbe_info == NULL || vbe_info->video_mode_ptr == 0)
-			IFEFatalError("VESA BIOS extensions not detected");
+		IFEFatalError("VESA BIOS extensions not detected");
 
 	if ((!ifedbg_en && ifedbg_auto) || want_dosbox_ig) {
 		if (probe_dosbox_id()) {

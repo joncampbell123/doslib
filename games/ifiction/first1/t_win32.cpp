@@ -5,6 +5,7 @@
 
 #include <conio.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -1145,6 +1146,52 @@ bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean
 bool priv_IFEMainInit(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
+
+	/* look for debug options to disable various things in case of problems */
+	{
+		int i;
+		char *a;
+
+		for (i=1;i < argc;i++) {
+			a = argv[i];
+
+			if (!strcmp(a,"/DBIG")) {
+				want_dosbox_ig = true;
+				ifedbg_auto = false;
+			}
+			else if (!strcmp(a,"/BE9")) {
+				want_bochs_e9 = true;
+				ifedbg_auto = false;
+			}
+			else if (!strcmp(a,"/DBGF")) {
+				want_debug_file = true;
+				ifedbg_auto = false;
+			}
+		}
+	}
+
+	if ((!ifedbg_en && ifedbg_auto) || want_dosbox_ig) {
+		if (probe_dosbox_id()) {
+			printf("DOSBox Integration Device detected\n");
+			dosbox_ig = ifedbg_en = true;
+
+			IFEDBG("Using DOSBox Integration Device for debug info. This should appear in your DOSBox/DOSBox-X log file");
+		}
+	}
+
+	if (want_bochs_e9) {
+		/* never automatically. not sure if there's a way to detect port E9h exists or that we're running in Bochs */
+		bochs_e9 = ifedbg_en = true;
+
+		IFEDBG("Using Bochs port E9h for debug info. This should appear in your DOSBox/DOSBox-X log file or your Bochs console");
+	}
+
+	if (want_debug_file) {
+		debug_fd = open("IFEDEBUG.LOG",O_WRONLY|O_CREAT|O_TRUNC,0644);
+		if (debug_fd < 0) IFEFatalError("Unable to open IFE debug log file");
+		debug_file = ifedbg_en = true;
+	}
+
 	return true;
 }
 #endif
