@@ -101,6 +101,7 @@ extern ifeapi_t ifeapi_doslib;
 
 #if defined(USE_WIN32)
 bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow);
+void win32_free_command_line(void);
 #endif
 bool priv_IFEMainInit(int argc,char **argv);
 

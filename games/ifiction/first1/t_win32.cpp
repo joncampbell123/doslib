@@ -997,6 +997,22 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 
 int win32_argc = 0;
 char **win32_argv = NULL;
+
+void win32_free_command_line(void) {
+	if (win32_argv != NULL) {
+		for (int i=0;i < win32_argc;i++) {
+			if (win32_argv[i] != NULL) {
+				free((void*)win32_argv[i]);
+				win32_argv[i] = NULL;
+			}
+		}
+
+		free((void*)win32_argv);
+		win32_argv = NULL;
+		win32_argc = 0;
+	}
+}
+
 bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
 	//not used yet
 	(void)hInstance;
