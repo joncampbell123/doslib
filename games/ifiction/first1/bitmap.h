@@ -81,5 +81,19 @@ public:
 	}
 };
 
+class IFEScreenBitmap : public IFEBitmap {
+public:
+	IFEScreenBitmap(enum subclass_t _subclass=SC_SCREEN);
+	virtual ~IFEScreenBitmap();
+public:
+	virtual bool alloc_palette(size_t count);
+	virtual void free_palette(void);
+	virtual bool alloc_storage(unsigned int w,unsigned int h,enum image_type_t new_image_type=IMT_OPAQUE);
+	virtual void free_storage(void);
+	virtual bool alloc_subrects(size_t count);
+	virtual void free_subrects(void);
+	virtual bool bias_subrect(subrect &s,uint8_t new_bias); /* bias (add to pixel values) for simple palette remapping */
+};
+
 #endif //IFE_BITMAP_H
 

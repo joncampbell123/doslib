@@ -332,3 +332,46 @@ void IFEBitmap::reset_scissor_rect(void) {
 	scissor.h = height;
 }
 
+IFEScreenBitmap::IFEScreenBitmap(enum subclass_t _subclass) : IFEBitmap(_subclass) {
+	ctrl_palette = false;
+	ctrl_storage = false;
+	ctrl_subrect = false;
+	ctrl_bias = false;
+	must_lock = false;
+}
+
+IFEScreenBitmap::~IFEScreenBitmap() {
+}
+
+bool IFEScreenBitmap::alloc_palette(size_t count) {
+	(void)count;
+	return false;
+}
+
+void IFEScreenBitmap::free_palette(void) {
+}
+
+bool IFEScreenBitmap::alloc_storage(unsigned int w,unsigned int h,enum image_type_t new_image_type) {
+	(void)new_image_type;
+	(void)w;
+	(void)h;
+	return false;
+}
+
+void IFEScreenBitmap::free_storage(void) {
+}
+
+bool IFEScreenBitmap::alloc_subrects(size_t count) {
+	(void)count;
+	return false;
+}
+
+void IFEScreenBitmap::free_subrects(void) {
+}
+
+bool IFEScreenBitmap::bias_subrect(subrect &s,uint8_t new_bias) {
+	(void)s;
+	(void)new_bias;
+	return false;
+}
+

@@ -51,15 +51,9 @@ unsigned int			upd_ystep = 8;
 std::vector<SDL_Rect>		upd_yspan;
 
 /* IFEBitmap subclass for the screen */
-class IFESDLBitmap : public IFEBitmap {
+class IFESDLBitmap : public IFEScreenBitmap {
 public:
-	IFESDLBitmap() : IFEBitmap() {
-		must_lock = false; /* will update later whether SDL surface needs to be locked */
-		ctrl_palette = false; /* SDL manages palette */
-		ctrl_storage = false; /* SDL manages storage */
-		ctrl_bias = false;
-		ctrl_subrect = false;
-		subclass = IFEBitmap::SC_SCREEN;
+	IFESDLBitmap() : IFEScreenBitmap() {
 	}
 	virtual ~IFESDLBitmap() {
 	}
@@ -90,31 +84,6 @@ public:
 		}
 
 		return true;
-	}
-	virtual bool alloc_palette(size_t count) {
-		(void)count;
-		return false;
-	}
-	virtual void free_palette(void) {
-	}
-	virtual bool alloc_storage(unsigned int w,unsigned int h,enum image_type_t new_image_type) {
-		(void)new_image_type;
-		(void)w;
-		(void)h;
-		return false;
-	}
-	virtual void free_storage(void) {
-	}
-	virtual bool alloc_subrects(size_t count) {
-		(void)count;
-		return false;
-	}
-	virtual void free_subrects(void) {
-	}
-	virtual bool bias_subrect(subrect &s,uint8_t new_bias) {
-		(void)s;
-		(void)new_bias;
-		return false;
 	}
 };
 
