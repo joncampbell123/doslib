@@ -332,6 +332,8 @@ void IFEBitmap::reset_scissor_rect(void) {
 	scissor.h = height;
 }
 
+/* screen bitmap, you cannot allocate/free palette, storage, subrects, or bias anything
+ * because the screen driver manages it. */
 IFEScreenBitmap::IFEScreenBitmap(enum subclass_t _subclass) : IFEBitmap(_subclass) {
 	ctrl_palette = false;
 	ctrl_storage = false;
