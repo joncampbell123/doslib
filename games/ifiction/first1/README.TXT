@@ -22,7 +22,7 @@ MS-DOS version:
     4MB of RAM
     MS-DOS mouse driver required
     SVGA graphics card capable of 640x480 256-color mode
-    VESA BIOS extensions 1.2 or higher
+    VESA BIOS extensions 1.0 or higher
 - Recommended:
     Intel 486 or Pentium processor at 66MHz or higher (because mid 1990s PC gaming, right?)
     8MB of RAM
