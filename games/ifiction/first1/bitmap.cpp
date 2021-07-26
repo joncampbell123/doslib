@@ -15,7 +15,7 @@
 #include "fatal.h"
 #include "bitmap.h"
 
-IFEBitmap::IFEBitmap() : bitmap(NULL), bitmap_first_row(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0), palette(NULL), palette_alloc(0), palette_size(0), must_lock(false), is_locked(0), ctrl_palette(true), ctrl_storage(true), ctrl_bias(true), ctrl_subrect(true), scissor(0,0,0,0), subclass(SC_BASE) {
+IFEBitmap::IFEBitmap(enum subclass_t _subclass) : bitmap(NULL), bitmap_first_row(NULL), alloc(0), width(0), height(0), stride(0), subrects(NULL), subrects_alloc(0), palette(NULL), palette_alloc(0), palette_size(0), must_lock(false), is_locked(0), ctrl_palette(true), ctrl_storage(true), ctrl_bias(true), ctrl_subrect(true), scissor(0,0,0,0), subclass(_subclass) {
 }
 
 IFEBitmap::~IFEBitmap() {

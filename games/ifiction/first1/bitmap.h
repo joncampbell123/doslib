@@ -55,7 +55,7 @@ public:
 
 	enum subclass_t		subclass;
 public:
-	IFEBitmap();
+	IFEBitmap(enum subclass_t _subclass=SC_BASE);
 	virtual ~IFEBitmap();
 public:
 	virtual bool lock_surface(void);
