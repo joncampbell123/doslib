@@ -785,14 +785,21 @@ void IFENormalExit(void) {
 }
 
 #if defined(USE_WIN32)
+# define main __win32_main /* compiler may try to use a fake command line in a window (Microsoft QuickC) if main() is present */
+int main(int argc,char **argv);
+extern int win32_argc;
+extern char **win32_argv;
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
 	if (!priv_IFEWin32Init(hInstance,hPrevInstance,lpCmdLine,nCmdShow))
 		return 1;
-#else
+
+	return main(win32_argc,win32_argv);
+}
+#endif
+
 int main(int argc,char **argv) {
 	if (!priv_IFEMainInit(argc,argv))
 		return 1;
-#endif
 
 	if (!IFELoadPNG(IFEcursor_arrow,"st_arrow.png"))
 		IFEFatalError("Failed to load arrow image");

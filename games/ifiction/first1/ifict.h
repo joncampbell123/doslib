@@ -101,9 +101,8 @@ extern ifeapi_t ifeapi_doslib;
 
 #if defined(USE_WIN32)
 bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow);
-#else
-bool priv_IFEMainInit(int argc,char **argv);
 #endif
+bool priv_IFEMainInit(int argc,char **argv);
 
 void IFECompleteVideoInit(void);
 

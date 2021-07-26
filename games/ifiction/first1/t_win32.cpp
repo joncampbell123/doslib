@@ -5,6 +5,7 @@
 
 #include <conio.h>
 #include <stdio.h>
+#include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -992,12 +993,98 @@ LRESULT CALLBACK hwndMainProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) {
 	return 0;
 }
 
+#define MAX_ARGV 128
+
+int win32_argc = 0;
+char **win32_argv = NULL;
 bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean anything in Win32*/,LPSTR lpCmdLine,int nCmdShow) {
 	//not used yet
 	(void)hInstance;
 	(void)hPrevInstance;
 	(void)lpCmdLine;
 	(void)nCmdShow;
+
+	/* convert lpCmdLine into argc/argv */
+	/* Microsoft has an MSDN article on the weird arcane way backslashes and quotes are handled.
+	 * We don't do that here, but we do recognize simple quotation mark arguments.
+	 * At least when they created the UWP application architecture they finally figured out
+	 * argv parameters in the form of std::string vectors. */
+	/* WARNING: Not widechar safe, and this will break if someday this code runs as 16-bit Windows (where LPSTR is a FAR pointer).
+	 *          This code assumes that since lpCmdLine is not LPCSTR, that the memory backing the command line is writeable. */
+	{
+		int argv_alloc = 16;
+
+		win32_argc = 0;
+
+		win32_argv = (char**)malloc(sizeof(char*) * argv_alloc);
+		if (win32_argv == NULL) return 1;
+
+		/* generate argv[0] */
+		{
+			/* NTS: GetModuleFilename() exists in Windows 3.1, in fact the old documentation says it appeared in Windows 2.0. */
+			/* NTS: Assume Microsoft code might truncate at length and fail to write NUL, because Microsoft. */
+			size_t tmp_sz = 1024;
+
+			char *tmp = (char*)malloc(tmp_sz);
+			if (tmp == NULL) return 1;
+
+			int l = GetModuleFileName(hInstance,tmp,tmp_sz-1);
+			if (l < 0) l = 0;
+			if (l > (tmp_sz-1)) l = (tmp_sz-1);
+			tmp[l] = 0; /* make sure there is NUL */
+
+			assert(win32_argc < argv_alloc);
+			win32_argv[win32_argc++] = strdup(tmp);
+
+			free((void*)tmp);
+		}
+
+		/* generate argv[1..n] */
+		{
+			const char *s = (const char*)lpCmdLine;
+			const char *start,*end;
+
+			while (*s != 0) {
+				if (*s == ' ' || *s == '\t') {
+					s++;
+				}
+				else {
+					if (*s == '\"') {
+						start = ++s; /* after quote */
+						while (*s != 0 && *s != '\"') s++;
+						end = s;
+						if (*s == '\"') s++;
+					}
+					else {
+						start = s; /* at char */
+						while (*s != 0 && *s != ' ') s++;
+						end = s;
+					}
+
+					if ((win32_argc+2) > argv_alloc) {
+						char **np;
+
+						argv_alloc += 32;
+						np = (char**)realloc((void*)win32_argv,sizeof(char*) * argv_alloc);
+						if (np == NULL) return 1;
+						win32_argv = np;
+					}
+
+					size_t sz = (size_t)(end - start);
+					char *dstr = (char*)malloc(sz + 1/*NUL*/);
+					if (dstr == NULL) return 1;
+
+					memcpy(dstr,start,sz);
+					dstr[sz] = 0;
+
+					win32_argv[win32_argc++] = dstr;
+				}
+			}
+		}
+
+		assert(win32_argc < argv_alloc);
+		win32_argv[win32_argc  ] = NULL;
+	}
 
 	cpu_probe();
 	probe_dos();
@@ -1036,6 +1123,12 @@ bool priv_IFEWin32Init(HINSTANCE hInstance,HINSTANCE hPrevInstance/*doesn't mean
 		}
 	}
 
+	return true;
+}
+
+bool priv_IFEMainInit(int argc,char **argv) {
+	(void)argc;
+	(void)argv;
 	return true;
 }
 #endif
