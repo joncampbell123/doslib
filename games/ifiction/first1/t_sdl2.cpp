@@ -59,6 +59,7 @@ public:
 		ctrl_storage = false; /* SDL manages storage */
 		ctrl_bias = false;
 		ctrl_subrect = false;
+		subclass = IFEBitmap::SC_SCREEN;
 	}
 	virtual ~IFESDLBitmap() {
 	}

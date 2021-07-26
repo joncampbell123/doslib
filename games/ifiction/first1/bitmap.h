@@ -17,6 +17,10 @@ public:
 
 		IMT_MAX
 	};
+	enum subclass_t {
+		SC_BASE=0,
+		SC_SCREEN=1
+	};
 public:
 	struct subrect {
 		iferect_t	r;
@@ -48,6 +52,8 @@ public:
 
 	iferect_t		scissor;
 	enum image_type_t	image_type;
+
+	enum subclass_t		subclass;
 public:
 	IFEBitmap();
 	virtual ~IFEBitmap();
