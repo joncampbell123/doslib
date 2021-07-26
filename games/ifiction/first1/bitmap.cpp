@@ -170,20 +170,12 @@ unsigned char *IFEBitmap::row(const unsigned int y) {
 	return NULL;
 }
 
-unsigned char *IFEBitmap::rowfast(const unsigned int y) {
-	return bitmap_first_row + ((int)y * /*signed*/stride); /* for code that has already validated the bitmap */
-}
-
 const unsigned char *IFEBitmap::row(const unsigned int y) const {
 	/* this version error and range checks */
 	if (bitmap_first_row != NULL && y < height)
 		return bitmap_first_row + ((int)y * /*signed*/stride);
 
 	return NULL;
-}
-
-const unsigned char *IFEBitmap::rowfast(const unsigned int y) const {
-	return bitmap_first_row + ((int)y * /*signed*/stride); /* for code that has already validated the bitmap */
 }
 
 bool IFEBitmap::bias_subrect(subrect &s,uint8_t new_bias) {

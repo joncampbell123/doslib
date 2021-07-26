@@ -845,10 +845,12 @@ int main(int argc,char **argv) {
 		if (bmp.row(0) == NULL)
 			IFEFatalError("BMP storage failure, row");
 
+		row = bmp.row(0);
 		for (y=0;y < bmp.height;y++) {
-			row = bmp.rowfast(y);
 			for (x=0;x < bmp.width;x++)
 				row[x] = (unsigned char)(x ^ y);
+
+			row += bmp.stride;
 		}
 
 		ifeapi->SetWindowTitle("BitBlt BMP test");
