@@ -63,3 +63,23 @@ opcode 0x2D iw               name "SUB"            display "SUB ax,   imm16"    
 opcode 0x2E                  name "CS:"            display "CS:"                        prefix segoverride src cs
 opcode 0x2F                  name "DAS"            display "DAS"                        dest rw al      src al
 
+opcode 0x30 /r               name "XOR"            display "XOR r/m8, r8"               dest rw r/m8    src r8
+opcode 0x31 /r               name "XOR"            display "XOR r/m16,r16"              dest rw r/m16   src r16
+opcode 0x32 /r               name "XOR"            display "XOR r8,   r/m8"             dest rw r8      src r/m8
+opcode 0x33 /r               name "XOR"            display "XOR r16,  r/m16"            dest rw r16     src r/m16
+opcode 0x34 ib               name "XOR"            display "XOR al,   imm8"             dest rw al      src imm8
+opcode 0x35 iw               name "XOR"            display "XOR ax,   imm16"            dest rw ax      src imm16
+
+opcode 0x36                  name "SS:"            display "SS:"                        prefix segoverride src ss
+opcode 0x37                  name "AAA"            display "AAA"                        dest rw ax      src al
+
+opcode 0x38 /r               name "CMP"            display "CMP r/m8, r8"               dest rw r/m8    src r8
+opcode 0x39 /r               name "CMP"            display "CMP r/m16,r16"              dest rw r/m16   src r16
+opcode 0x3A /r               name "CMP"            display "CMP r8,   r/m8"             dest rw r8      src r/m8
+opcode 0x3B /r               name "CMP"            display "CMP r16,  r/m16"            dest rw r16     src r/m16
+opcode 0x3C ib               name "CMP"            display "CMP al,   imm8"             dest rw al      src imm8
+opcode 0x3D iw               name "CMP"            display "CMP ax,   imm16"            dest rw ax      src imm16
+
+opcode 0x3E                  name "DS:"            display "DS:"                        prefix segoverride src ds
+opcode 0x3F                  name "AAS"            display "AAS"                        dest rw ax      src al
+
