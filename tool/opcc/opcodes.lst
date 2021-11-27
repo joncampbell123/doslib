@@ -83,3 +83,39 @@ opcode 0x3D iw               name "CMP"            display "CMP ax,   imm16"    
 opcode 0x3E                  name "DS:"            display "DS:"                        prefix segoverride src ds
 opcode 0x3F                  name "AAS"            display "AAS"                        dest rw ax      src al
 
+opcode 0x40                  name "INC"            display "INC AX"                     dest rw ax      src ax
+opcode 0x41                  name "INC"            display "INC CX"                     dest rw cx      src cx
+opcode 0x42                  name "INC"            display "INC DX"                     dest rw dx      src dx
+opcode 0x43                  name "INC"            display "INC BX"                     dest rw bx      src bx
+opcode 0x44                  name "INC"            display "INC SP"                     dest rw sp      src sp
+opcode 0x45                  name "INC"            display "INC BP"                     dest rw bp      src bp
+opcode 0x46                  name "INC"            display "INC SI"                     dest rw si      src si
+opcode 0x47                  name "INC"            display "INC DI"                     dest rw di      src di
+
+opcode 0x48                  name "DEC"            display "DEC AX"                     dest rw ax      src ax
+opcode 0x49                  name "DEC"            display "DEC CX"                     dest rw cx      src cx
+opcode 0x4A                  name "DEC"            display "DEC DX"                     dest rw dx      src dx
+opcode 0x4B                  name "DEC"            display "DEC BX"                     dest rw bx      src bx
+opcode 0x4C                  name "DEC"            display "DEC SP"                     dest rw sp      src sp
+opcode 0x4D                  name "DEC"            display "DEC BP"                     dest rw bp      src bp
+opcode 0x4E                  name "DEC"            display "DEC SI"                     dest rw si      src si
+opcode 0x4F                  name "DEC"            display "DEC DI"                     dest rw di      src di
+
+opcode 0x50                  name "PUSH"           display "PUSH AX"                    dest w stack16  src ax
+opcode 0x51                  name "PUSH"           display "PUSH CX"                    dest w stack16  src cx
+opcode 0x52                  name "PUSH"           display "PUSH DX"                    dest w stack16  src dx
+opcode 0x53                  name "PUSH"           display "PUSH BX"                    dest w stack16  src bx
+opcode 0x54                  name "PUSH"           display "PUSH SP"                    dest w stack16  src sp
+opcode 0x55                  name "PUSH"           display "PUSH BP"                    dest w stack16  src bp
+opcode 0x56                  name "PUSH"           display "PUSH SI"                    dest w stack16  src si
+opcode 0x57                  name "PUSH"           display "PUSH DI"                    dest w stack16  src di
+
+opcode 0x58                  name "POP"            display "POP AX"                     dest w ax       src stack16
+opcode 0x59                  name "POP"            display "POP CX"                     dest w cx       src stack16
+opcode 0x5A                  name "POP"            display "POP DX"                     dest w dx       src stack16
+opcode 0x5B                  name "POP"            display "POP BX"                     dest w bx       src stack16
+opcode 0x5C                  name "POP"            display "POP SP"                     dest w sp       src stack16
+opcode 0x5D                  name "POP"            display "POP BP"                     dest w bp       src stack16
+opcode 0x5E                  name "POP"            display "POP SI"                     dest w si       src stack16
+opcode 0x5F                  name "POP"            display "POP DI"                     dest w di       src stack16
+
