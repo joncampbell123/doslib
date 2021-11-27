@@ -119,3 +119,20 @@ opcode 0x5D                  name "POP"            display "POP BP"             
 opcode 0x5E                  name "POP"            display "POP SI"                     dest w si       src stack16
 opcode 0x5F                  name "POP"            display "POP DI"                     dest w di       src stack16
 
+opcode 0x70 cb               name "JO"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x71 cb               name "JNO"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x72 cb               name "JB"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x73 cb               name "JNB"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x74 cb               name "JZ"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x75 cb               name "JNZ"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x76 cb               name "JBE"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x77 cb               name "JA"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x78 cb               name "JS"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x79 cb               name "JNS"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7A cb               name "JPE"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7B cb               name "JPO"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7C cb               name "JL"             display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7D cb               name "JGE"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7E cb               name "JLE"            display "JO rel8"                    dest rw ip      src rel8
+opcode 0x7F cb               name "JG"             display "JO rel8"                    dest rw ip      src rel8
+
