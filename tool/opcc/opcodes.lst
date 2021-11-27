@@ -3,172 +3,172 @@
 
 ; 8086 opcodes
 
-opcode 0x00 /r,               name "ADD",            display "ADD r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x01 /r,               name "ADD",            display "ADD r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x02 /r,               name "ADD",            display "ADD r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x03 /r,               name "ADD",            display "ADD r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x04 ib,               name "ADD",            display "ADD al,   imm8",             dest rw al,      src imm8
-opcode 0x05 iw,               name "ADD",            display "ADD ax,   imm16",            dest rw ax,      src imm16
+opcode 0x00 /r,               name "ADD",            display "ADD r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x01 /r,               name "ADD",            display "ADD r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x02 /r,               name "ADD",            display "ADD r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x03 /r,               name "ADD",            display "ADD r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x04 ib,               name "ADD",            display "ADD al,   imm8",             dest rw al,      src imm8;
+opcode 0x05 iw,               name "ADD",            display "ADD ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x06,                  name "PUSH",           display "PUSH es",                    dest w stack16,  src es
-opcode 0x07,                  name "POP",            display "POP es",                     dest w es,       src stack16
+opcode 0x06,                  name "PUSH",           display "PUSH es",                    dest w stack16,  src es;
+opcode 0x07,                  name "POP",            display "POP es",                     dest w es,       src stack16;
 
-opcode 0x08 /r,               name "OR",             display "OR r/m8, r8",                dest rw r/m8,    src r8
-opcode 0x09 /r,               name "OR",             display "OR r/m16,r16",               dest rw r/m16,   src r16
-opcode 0x0A /r,               name "OR",             display "OR r8,   r/m8",              dest rw r8,      src r/m8
-opcode 0x0B /r,               name "OR",             display "OR r16,  r/m16",             dest rw r16,     src r/m16
-opcode 0x0C ib,               name "OR",             display "OR al,   imm8",              dest rw al,      src imm8
-opcode 0x0D iw,               name "OR",             display "OR ax,   imm16",             dest rw ax,      src imm16
+opcode 0x08 /r,               name "OR",             display "OR r/m8, r8",                dest rw r/m8,    src r8;
+opcode 0x09 /r,               name "OR",             display "OR r/m16,r16",               dest rw r/m16,   src r16;
+opcode 0x0A /r,               name "OR",             display "OR r8,   r/m8",              dest rw r8,      src r/m8;
+opcode 0x0B /r,               name "OR",             display "OR r16,  r/m16",             dest rw r16,     src r/m16;
+opcode 0x0C ib,               name "OR",             display "OR al,   imm8",              dest rw al,      src imm8;
+opcode 0x0D iw,               name "OR",             display "OR ax,   imm16",             dest rw ax,      src imm16;
 
-opcode 0x0E,                  name "PUSH",           display "PUSH cs",                    dest w stack16,  src cs
-opcode 0x0F,                  name "POP",            display "POP cs",                     dest w cs,       src stack16
+opcode 0x0E,                  name "PUSH",           display "PUSH cs",                    dest w stack16,  src cs;
+opcode 0x0F,                  name "POP",            display "POP cs",                     dest w cs,       src stack16;
 
-opcode 0x10 /r,               name "ADC",            display "ADC r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x11 /r,               name "ADC",            display "ADC r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x12 /r,               name "ADC",            display "ADC r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x13 /r,               name "ADC",            display "ADC r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x14 ib,               name "ADC",            display "ADC al,   imm8",             dest rw al,      src imm8
-opcode 0x15 iw,               name "ADC",            display "ADC ax,   imm16",            dest rw ax,      src imm16
+opcode 0x10 /r,               name "ADC",            display "ADC r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x11 /r,               name "ADC",            display "ADC r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x12 /r,               name "ADC",            display "ADC r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x13 /r,               name "ADC",            display "ADC r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x14 ib,               name "ADC",            display "ADC al,   imm8",             dest rw al,      src imm8;
+opcode 0x15 iw,               name "ADC",            display "ADC ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x16,                  name "PUSH",           display "PUSH ss",                    dest w stack16,  src ss
-opcode 0x17,                  name "POP",            display "POP ss",                     dest w ss,       src stack16
+opcode 0x16,                  name "PUSH",           display "PUSH ss",                    dest w stack16,  src ss;
+opcode 0x17,                  name "POP",            display "POP ss",                     dest w ss,       src stack16;
 
-opcode 0x18 /r,               name "SBB",            display "SBB r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x19 /r,               name "SBB",            display "SBB r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x1A /r,               name "SBB",            display "SBB r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x1B /r,               name "SBB",            display "SBB r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x1C ib,               name "SBB",            display "SBB al,   imm8",             dest rw al,      src imm8
-opcode 0x1D iw,               name "SBB",            display "SBB ax,   imm16",            dest rw ax,      src imm16
+opcode 0x18 /r,               name "SBB",            display "SBB r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x19 /r,               name "SBB",            display "SBB r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x1A /r,               name "SBB",            display "SBB r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x1B /r,               name "SBB",            display "SBB r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x1C ib,               name "SBB",            display "SBB al,   imm8",             dest rw al,      src imm8;
+opcode 0x1D iw,               name "SBB",            display "SBB ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x1E,                  name "PUSH",           display "PUSH ds",                    dest w stack16,  src ds
-opcode 0x1F,                  name "POP",            display "POP ds",                     dest w ds,       src stack16
+opcode 0x1E,                  name "PUSH",           display "PUSH ds",                    dest w stack16,  src ds;
+opcode 0x1F,                  name "POP",            display "POP ds",                     dest w ds,       src stack16;
 
-opcode 0x20 /r,               name "AND",            display "AND r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x21 /r,               name "AND",            display "AND r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x22 /r,               name "AND",            display "AND r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x23 /r,               name "AND",            display "AND r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x24 ib,               name "AND",            display "AND al,   imm8",             dest rw al,      src imm8
-opcode 0x25 iw,               name "AND",            display "AND ax,   imm16",            dest rw ax,      src imm16
+opcode 0x20 /r,               name "AND",            display "AND r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x21 /r,               name "AND",            display "AND r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x22 /r,               name "AND",            display "AND r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x23 /r,               name "AND",            display "AND r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x24 ib,               name "AND",            display "AND al,   imm8",             dest rw al,      src imm8;
+opcode 0x25 iw,               name "AND",            display "AND ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x26,                  name "ES:",            display "ES:",                        prefix segoverride, src es
-opcode 0x27,                  name "DAA",            display "DAA",                        dest rw al,      src al
+opcode 0x26,                  name "ES:",            display "ES:",                        prefix segoverride, src es;
+opcode 0x27,                  name "DAA",            display "DAA",                        dest rw al,      src al;
 
-opcode 0x28 /r,               name "SUB",            display "SUB r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x29 /r,               name "SUB",            display "SUB r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x2A /r,               name "SUB",            display "SUB r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x2B /r,               name "SUB",            display "SUB r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x2C ib,               name "SUB",            display "SUB al,   imm8",             dest rw al,      src imm8
-opcode 0x2D iw,               name "SUB",            display "SUB ax,   imm16",            dest rw ax,      src imm16
+opcode 0x28 /r,               name "SUB",            display "SUB r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x29 /r,               name "SUB",            display "SUB r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x2A /r,               name "SUB",            display "SUB r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x2B /r,               name "SUB",            display "SUB r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x2C ib,               name "SUB",            display "SUB al,   imm8",             dest rw al,      src imm8;
+opcode 0x2D iw,               name "SUB",            display "SUB ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x2E,                  name "CS:",            display "CS:",                        prefix segoverride, src cs
-opcode 0x2F,                  name "DAS",            display "DAS",                        dest rw al,      src al
+opcode 0x2E,                  name "CS:",            display "CS:",                        prefix segoverride, src cs;
+opcode 0x2F,                  name "DAS",            display "DAS",                        dest rw al,      src al;
 
-opcode 0x30 /r,               name "XOR",            display "XOR r/m8, r8",               dest rw r/m8,    src r8
-opcode 0x31 /r,               name "XOR",            display "XOR r/m16,r16",              dest rw r/m16,   src r16
-opcode 0x32 /r,               name "XOR",            display "XOR r8,   r/m8",             dest rw r8,      src r/m8
-opcode 0x33 /r,               name "XOR",            display "XOR r16,  r/m16",            dest rw r16,     src r/m16
-opcode 0x34 ib,               name "XOR",            display "XOR al,   imm8",             dest rw al,      src imm8
-opcode 0x35 iw,               name "XOR",            display "XOR ax,   imm16",            dest rw ax,      src imm16
+opcode 0x30 /r,               name "XOR",            display "XOR r/m8, r8",               dest rw r/m8,    src r8;
+opcode 0x31 /r,               name "XOR",            display "XOR r/m16,r16",              dest rw r/m16,   src r16;
+opcode 0x32 /r,               name "XOR",            display "XOR r8,   r/m8",             dest rw r8,      src r/m8;
+opcode 0x33 /r,               name "XOR",            display "XOR r16,  r/m16",            dest rw r16,     src r/m16;
+opcode 0x34 ib,               name "XOR",            display "XOR al,   imm8",             dest rw al,      src imm8;
+opcode 0x35 iw,               name "XOR",            display "XOR ax,   imm16",            dest rw ax,      src imm16;
 
-opcode 0x36,                  name "SS:",            display "SS:",                        prefix segoverride, src ss
-opcode 0x37,                  name "AAA",            display "AAA",                        dest rw ax,      src al
+opcode 0x36,                  name "SS:",            display "SS:",                        prefix segoverride, src ss;
+opcode 0x37,                  name "AAA",            display "AAA",                        dest rw ax,      src al;
 
-opcode 0x38 /r,               name "CMP",            display "CMP r/m8, r8",               dest no r/m8,    src r8
-opcode 0x39 /r,               name "CMP",            display "CMP r/m16,r16",              dest no r/m16,   src r16
-opcode 0x3A /r,               name "CMP",            display "CMP r8,   r/m8",             dest no r8,      src r/m8
-opcode 0x3B /r,               name "CMP",            display "CMP r16,  r/m16",            dest no r16,     src r/m16
-opcode 0x3C ib,               name "CMP",            display "CMP al,   imm8",             dest no al,      src imm8
-opcode 0x3D iw,               name "CMP",            display "CMP ax,   imm16",            dest no ax,      src imm16
+opcode 0x38 /r,               name "CMP",            display "CMP r/m8, r8",               dest no r/m8,    src r8;
+opcode 0x39 /r,               name "CMP",            display "CMP r/m16,r16",              dest no r/m16,   src r16;
+opcode 0x3A /r,               name "CMP",            display "CMP r8,   r/m8",             dest no r8,      src r/m8;
+opcode 0x3B /r,               name "CMP",            display "CMP r16,  r/m16",            dest no r16,     src r/m16;
+opcode 0x3C ib,               name "CMP",            display "CMP al,   imm8",             dest no al,      src imm8;
+opcode 0x3D iw,               name "CMP",            display "CMP ax,   imm16",            dest no ax,      src imm16;
 
-opcode 0x3E,                  name "DS:",            display "DS:",                        prefix segoverride, src ds
-opcode 0x3F,                  name "AAS",            display "AAS",                        dest rw ax,      src al
+opcode 0x3E,                  name "DS:",            display "DS:",                        prefix segoverride, src ds;
+opcode 0x3F,                  name "AAS",            display "AAS",                        dest rw ax,      src al;
 
-opcode 0x40,                  name "INC",            display "INC AX",                     dest rw ax,      src ax
-opcode 0x41,                  name "INC",            display "INC CX",                     dest rw cx,      src cx
-opcode 0x42,                  name "INC",            display "INC DX",                     dest rw dx,      src dx
-opcode 0x43,                  name "INC",            display "INC BX",                     dest rw bx,      src bx
-opcode 0x44,                  name "INC",            display "INC SP",                     dest rw sp,      src sp
-opcode 0x45,                  name "INC",            display "INC BP",                     dest rw bp,      src bp
-opcode 0x46,                  name "INC",            display "INC SI",                     dest rw si,      src si
-opcode 0x47,                  name "INC",            display "INC DI",                     dest rw di,      src di
+opcode 0x40,                  name "INC",            display "INC AX",                     dest rw ax,      src ax;
+opcode 0x41,                  name "INC",            display "INC CX",                     dest rw cx,      src cx;
+opcode 0x42,                  name "INC",            display "INC DX",                     dest rw dx,      src dx;
+opcode 0x43,                  name "INC",            display "INC BX",                     dest rw bx,      src bx;
+opcode 0x44,                  name "INC",            display "INC SP",                     dest rw sp,      src sp;
+opcode 0x45,                  name "INC",            display "INC BP",                     dest rw bp,      src bp;
+opcode 0x46,                  name "INC",            display "INC SI",                     dest rw si,      src si;
+opcode 0x47,                  name "INC",            display "INC DI",                     dest rw di,      src di;
 
-opcode 0x48,                  name "DEC",            display "DEC AX",                     dest rw ax,      src ax
-opcode 0x49,                  name "DEC",            display "DEC CX",                     dest rw cx,      src cx
-opcode 0x4A,                  name "DEC",            display "DEC DX",                     dest rw dx,      src dx
-opcode 0x4B,                  name "DEC",            display "DEC BX",                     dest rw bx,      src bx
-opcode 0x4C,                  name "DEC",            display "DEC SP",                     dest rw sp,      src sp
-opcode 0x4D,                  name "DEC",            display "DEC BP",                     dest rw bp,      src bp
-opcode 0x4E,                  name "DEC",            display "DEC SI",                     dest rw si,      src si
-opcode 0x4F,                  name "DEC",            display "DEC DI",                     dest rw di,      src di
+opcode 0x48,                  name "DEC",            display "DEC AX",                     dest rw ax,      src ax;
+opcode 0x49,                  name "DEC",            display "DEC CX",                     dest rw cx,      src cx;
+opcode 0x4A,                  name "DEC",            display "DEC DX",                     dest rw dx,      src dx;
+opcode 0x4B,                  name "DEC",            display "DEC BX",                     dest rw bx,      src bx;
+opcode 0x4C,                  name "DEC",            display "DEC SP",                     dest rw sp,      src sp;
+opcode 0x4D,                  name "DEC",            display "DEC BP",                     dest rw bp,      src bp;
+opcode 0x4E,                  name "DEC",            display "DEC SI",                     dest rw si,      src si;
+opcode 0x4F,                  name "DEC",            display "DEC DI",                     dest rw di,      src di;
 
-opcode 0x50,                  name "PUSH",           display "PUSH AX",                    dest w stack16,  src ax
-opcode 0x51,                  name "PUSH",           display "PUSH CX",                    dest w stack16,  src cx
-opcode 0x52,                  name "PUSH",           display "PUSH DX",                    dest w stack16,  src dx
-opcode 0x53,                  name "PUSH",           display "PUSH BX",                    dest w stack16,  src bx
-opcode 0x54,                  name "PUSH",           display "PUSH SP",                    dest w stack16,  src sp
-opcode 0x55,                  name "PUSH",           display "PUSH BP",                    dest w stack16,  src bp
-opcode 0x56,                  name "PUSH",           display "PUSH SI",                    dest w stack16,  src si
-opcode 0x57,                  name "PUSH",           display "PUSH DI",                    dest w stack16,  src di
+opcode 0x50,                  name "PUSH",           display "PUSH AX",                    dest w stack16,  src ax;
+opcode 0x51,                  name "PUSH",           display "PUSH CX",                    dest w stack16,  src cx;
+opcode 0x52,                  name "PUSH",           display "PUSH DX",                    dest w stack16,  src dx;
+opcode 0x53,                  name "PUSH",           display "PUSH BX",                    dest w stack16,  src bx;
+opcode 0x54,                  name "PUSH",           display "PUSH SP",                    dest w stack16,  src sp;
+opcode 0x55,                  name "PUSH",           display "PUSH BP",                    dest w stack16,  src bp;
+opcode 0x56,                  name "PUSH",           display "PUSH SI",                    dest w stack16,  src si;
+opcode 0x57,                  name "PUSH",           display "PUSH DI",                    dest w stack16,  src di;
+;
+opcode 0x58,                  name "POP",            display "POP AX",                     dest w ax,       src stack16;
+opcode 0x59,                  name "POP",            display "POP CX",                     dest w cx,       src stack16;
+opcode 0x5A,                  name "POP",            display "POP DX",                     dest w dx,       src stack16;
+opcode 0x5B,                  name "POP",            display "POP BX",                     dest w bx,       src stack16;
+opcode 0x5C,                  name "POP",            display "POP SP",                     dest w sp,       src stack16;
+opcode 0x5D,                  name "POP",            display "POP BP",                     dest w bp,       src stack16;
+opcode 0x5E,                  name "POP",            display "POP SI",                     dest w si,       src stack16;
+opcode 0x5F,                  name "POP",            display "POP DI",                     dest w di,       src stack16;
 
-opcode 0x58,                  name "POP",            display "POP AX",                     dest w ax,       src stack16
-opcode 0x59,                  name "POP",            display "POP CX",                     dest w cx,       src stack16
-opcode 0x5A,                  name "POP",            display "POP DX",                     dest w dx,       src stack16
-opcode 0x5B,                  name "POP",            display "POP BX",                     dest w bx,       src stack16
-opcode 0x5C,                  name "POP",            display "POP SP",                     dest w sp,       src stack16
-opcode 0x5D,                  name "POP",            display "POP BP",                     dest w bp,       src stack16
-opcode 0x5E,                  name "POP",            display "POP SI",                     dest w si,       src stack16
-opcode 0x5F,                  name "POP",            display "POP DI",                     dest w di,       src stack16
+opcode 0x70 cb,               name "JO",             display "JO rel8",                    dest rw ip,      src rel8;
+opcode 0x71 cb,               name "JNO",            display "JNO rel8",                   dest rw ip,      src rel8;
+opcode 0x72 cb,               name "JB",             display "JB rel8",                    dest rw ip,      src rel8;
+opcode 0x73 cb,               name "JNB",            display "JNB rel8",                   dest rw ip,      src rel8;
+opcode 0x74 cb,               name "JZ",             display "JZ rel8",                    dest rw ip,      src rel8;
+opcode 0x75 cb,               name "JNZ",            display "JNZ rel8",                   dest rw ip,      src rel8;
+opcode 0x76 cb,               name "JBE",            display "JBE rel8",                   dest rw ip,      src rel8;
+opcode 0x77 cb,               name "JA",             display "JA rel8",                    dest rw ip,      src rel8;
+opcode 0x78 cb,               name "JS",             display "JS rel8",                    dest rw ip,      src rel8;
+opcode 0x79 cb,               name "JNS",            display "JNS rel8",                   dest rw ip,      src rel8;
+opcode 0x7A cb,               name "JPE",            display "JPE rel8",                   dest rw ip,      src rel8;
+opcode 0x7B cb,               name "JPO",            display "JPO rel8",                   dest rw ip,      src rel8;
+opcode 0x7C cb,               name "JL",             display "JL rel8",                    dest rw ip,      src rel8;
+opcode 0x7D cb,               name "JGE",            display "JGE rel8",                   dest rw ip,      src rel8;
+opcode 0x7E cb,               name "JLE",            display "JLE rel8",                   dest rw ip,      src rel8;
+opcode 0x7F cb,               name "JG",             display "JG rel8",                    dest rw ip,      src rel8;
 
-opcode 0x70 cb,               name "JO",             display "JO rel8",                    dest rw ip,      src rel8
-opcode 0x71 cb,               name "JNO",            display "JNO rel8",                   dest rw ip,      src rel8
-opcode 0x72 cb,               name "JB",             display "JB rel8",                    dest rw ip,      src rel8
-opcode 0x73 cb,               name "JNB",            display "JNB rel8",                   dest rw ip,      src rel8
-opcode 0x74 cb,               name "JZ",             display "JZ rel8",                    dest rw ip,      src rel8
-opcode 0x75 cb,               name "JNZ",            display "JNZ rel8",                   dest rw ip,      src rel8
-opcode 0x76 cb,               name "JBE",            display "JBE rel8",                   dest rw ip,      src rel8
-opcode 0x77 cb,               name "JA",             display "JA rel8",                    dest rw ip,      src rel8
-opcode 0x78 cb,               name "JS",             display "JS rel8",                    dest rw ip,      src rel8
-opcode 0x79 cb,               name "JNS",            display "JNS rel8",                   dest rw ip,      src rel8
-opcode 0x7A cb,               name "JPE",            display "JPE rel8",                   dest rw ip,      src rel8
-opcode 0x7B cb,               name "JPO",            display "JPO rel8",                   dest rw ip,      src rel8
-opcode 0x7C cb,               name "JL",             display "JL rel8",                    dest rw ip,      src rel8
-opcode 0x7D cb,               name "JGE",            display "JGE rel8",                   dest rw ip,      src rel8
-opcode 0x7E cb,               name "JLE",            display "JLE rel8",                   dest rw ip,      src rel8
-opcode 0x7F cb,               name "JG",             display "JG rel8",                    dest rw ip,      src rel8
+opcode 0x80 /0 ib,            name "ADD",            display "ADD r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /1 ib,            name "OR",             display "OR r/m8, imm8",              dest rw r/m8,    src imm8;
+opcode 0x80 /2 ib,            name "ADC",            display "ADC r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /3 ib,            name "SBB",            display "SBB r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /4 ib,            name "AND",            display "AND r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /5 ib,            name "SUB",            display "SUB r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /6 ib,            name "XOR",            display "XOR r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x80 /7 ib,            name "CMP",            display "CMP r/m8, imm8",             dest no r/m8,    src imm8;
 
-opcode 0x80 /0 ib,            name "ADD",            display "ADD r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /1 ib,            name "OR",             display "OR r/m8, imm8",              dest rw r/m8,    src imm8
-opcode 0x80 /2 ib,            name "ADC",            display "ADC r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /3 ib,            name "SBB",            display "SBB r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /4 ib,            name "AND",            display "AND r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /5 ib,            name "SUB",            display "SUB r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /6 ib,            name "XOR",            display "XOR r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x80 /7 ib,            name "CMP",            display "CMP r/m8, imm8",             dest no r/m8,    src imm8
+opcode 0x81 /0 iw,            name "ADD",            display "ADD r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /1 iw,            name "OR",             display "OR r/m16, imm16",            dest rw r/m16,   src imm16;
+opcode 0x81 /2 iw,            name "ADC",            display "ADC r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /3 iw,            name "SBB",            display "SBB r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /4 iw,            name "AND",            display "AND r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /5 iw,            name "SUB",            display "SUB r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /6 iw,            name "XOR",            display "XOR r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x81 /7 iw,            name "CMP",            display "CMP r/m16, imm16",           dest no r/m16,   src imm16;
 
-opcode 0x81 /0 iw,            name "ADD",            display "ADD r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /1 iw,            name "OR",             display "OR r/m16, imm16",            dest rw r/m16,   src imm16
-opcode 0x81 /2 iw,            name "ADC",            display "ADC r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /3 iw,            name "SBB",            display "SBB r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /4 iw,            name "AND",            display "AND r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /5 iw,            name "SUB",            display "SUB r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /6 iw,            name "XOR",            display "XOR r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x81 /7 iw,            name "CMP",            display "CMP r/m16, imm16",           dest no r/m16,   src imm16
+opcode 0x82 /0 ib,            name "ADD",            display "ADD r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /1 ib,            name "OR",             display "OR r/m8, imm8",              dest rw r/m8,    src imm8;
+opcode 0x82 /2 ib,            name "ADC",            display "ADC r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /3 ib,            name "SBB",            display "SBB r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /4 ib,            name "AND",            display "AND r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /5 ib,            name "SUB",            display "SUB r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /6 ib,            name "XOR",            display "XOR r/m8, imm8",             dest rw r/m8,    src imm8;
+opcode 0x82 /7 ib,            name "CMP",            display "CMP r/m8, imm8",             dest no r/m8,    src imm8;
 
-opcode 0x82 /0 ib,            name "ADD",            display "ADD r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /1 ib,            name "OR",             display "OR r/m8, imm8",              dest rw r/m8,    src imm8
-opcode 0x82 /2 ib,            name "ADC",            display "ADC r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /3 ib,            name "SBB",            display "SBB r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /4 ib,            name "AND",            display "AND r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /5 ib,            name "SUB",            display "SUB r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /6 ib,            name "XOR",            display "XOR r/m8, imm8",             dest rw r/m8,    src imm8
-opcode 0x82 /7 ib,            name "CMP",            display "CMP r/m8, imm8",             dest no r/m8,    src imm8
-
-opcode 0x83 /0 ib.sx,         name "ADD",            display "ADD r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /1 ib.sx,         name "OR",             display "OR r/m16, imm16",            dest rw r/m16,   src imm16
-opcode 0x83 /2 ib.sx,         name "ADC",            display "ADC r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /3 ib.sx,         name "SBB",            display "SBB r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /4 ib.sx,         name "AND",            display "AND r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /5 ib.sx,         name "SUB",            display "SUB r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /6 ib.sx,         name "XOR",            display "XOR r/m16, imm16",           dest rw r/m16,   src imm16
-opcode 0x83 /7 ib.sx,         name "CMP",            display "CMP r/m16, imm16",           dest no r/m16,   src imm16
+opcode 0x83 /0 ib.sx,         name "ADD",            display "ADD r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /1 ib.sx,         name "OR",             display "OR r/m16, imm16",            dest rw r/m16,   src imm16;
+opcode 0x83 /2 ib.sx,         name "ADC",            display "ADC r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /3 ib.sx,         name "SBB",            display "SBB r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /4 ib.sx,         name "AND",            display "AND r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /5 ib.sx,         name "SUB",            display "SUB r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /6 ib.sx,         name "XOR",            display "XOR r/m16, imm16",           dest rw r/m16,   src imm16;
+opcode 0x83 /7 ib.sx,         name "CMP",            display "CMP r/m16, imm16",           dest no r/m16,   src imm16;
 
