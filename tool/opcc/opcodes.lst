@@ -109,7 +109,7 @@ opcode 0x54,                  name "PUSH",           display "PUSH SP",         
 opcode 0x55,                  name "PUSH",           display "PUSH BP",                    dest w stack16,  src bp;
 opcode 0x56,                  name "PUSH",           display "PUSH SI",                    dest w stack16,  src si;
 opcode 0x57,                  name "PUSH",           display "PUSH DI",                    dest w stack16,  src di;
-;
+
 opcode 0x58,                  name "POP",            display "POP AX",                     dest w ax,       src stack16;
 opcode 0x59,                  name "POP",            display "POP CX",                     dest w cx,       src stack16;
 opcode 0x5A,                  name "POP",            display "POP DX",                     dest w dx,       src stack16;
