@@ -360,7 +360,19 @@ opcode 0xF4,                  name "HLT",            display "HLT",             
 opcode 0xF5,                  name "CMC",            display "CMC",                        dest rw flags;
 
 opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",                             src r/m8 imm8;
+opcode 0xF6 /2,               name "NOT",            display "NOT r/m8",                   dest rw r/m8;
+opcode 0xF6 /3,               name "NEG",            display "NEG r/m8",                   dest rw r/m8;
+opcode 0xF6 /4,               name "MUL",            display "MUL r/m8",                   dest rw ax,      src al r/m8;
+opcode 0xF6 /5,               name "IMUL",           display "IMUL r/m8",                  dest rw ax,      src al r/m8;
+opcode 0xF6 /6,               name "DIV",            display "DIV r/m8",                   dest rw ax,      src ax r/m8;
+opcode 0xF6 /7,               name "IDIV",           display "IDIV r/m8",                  dest rw ax,      src ax r/m8;
 opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",                           src r/m16 imm16;
+opcode 0xF7 /2,               name "NOT",            display "NOT r/m16",                  dest rw r/m16;
+opcode 0xF7 /3,               name "NEG",            display "NEG r/m16",                  dest rw r/m16;
+opcode 0xF7 /4,               name "MUL",            display "MUL r/m16",                  dest rw dx ax,   src ax r/m16;
+opcode 0xF7 /5,               name "IMUL",           display "IMUL r/m16",                 dest rw dx ax,   src ax r/m16;
+opcode 0xF7 /6,               name "DIV",            display "DIV r/m16",                  dest rw dx ax,   src dx ax r/m16;
+opcode 0xF7 /7,               name "IDIV",           display "IDIV r/m16",                 dest rw dx ax,   src dx ax r/m16;
 
 opcode 0xF8,                  name "CLC",            display "CLC",                        dest rw flags;
 opcode 0xF9,                  name "STC",            display "STC",                        dest rw flags;
@@ -368,4 +380,15 @@ opcode 0xFA,                  name "CLI",            display "CLI",             
 opcode 0xFB,                  name "STI",            display "STI",                        dest rw flags;
 opcode 0xFC,                  name "CLD",            display "CLD",                        dest rw flags;
 opcode 0xFD,                  name "STD",            display "STD",                        dest rw flags;
+
+opcode 0xFE /0,               name "INC",            display "INC r/m8",                   dest rw r/m8;
+opcode 0xFE /1,               name "DEC",            display "DEC r/m8",                   dest rw r/m8;
+
+opcode 0xFF /0,               name "INC",            display "INC r/m16",                  dest rw r/m16;
+opcode 0xFF /1,               name "DEC",            display "DEC r/m16",                  dest rw r/m16;
+opcode 0xFF /2,               name "CALL",           display "CALL r/m16",                 dest rw ip,      src r/m16;
+opcode 0xFF /3,               name "CALL",           display "CALL m16:16",                dest rw cs:ip,   src r/m16*2;
+opcode 0xFF /4,               name "JMP",            display "JMP r/m16",                  dest w ip,       src r/m16;
+opcode 0xFF /5,               name "JMP",            display "JMP m16:16",                 dest w cs:ip     src r/m16*2;
+opcode 0xFF /6,               name "PUSH",           display "PUSH r/m16",                 dest w stack16,  src r/m16;
 
