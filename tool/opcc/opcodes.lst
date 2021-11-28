@@ -349,6 +349,23 @@ opcode 0xED,                  name "IN",             display "IN ax,dx",        
 opcode 0xEE,                  name "OUT",            display "OUT dx,al",                                   src dx al;
 opcode 0xEF,                  name "OUT",            display "OUT dx,ax",                                   src dx ax;
 
+opcode 0xF0,                  name "LOCK",           display "LOCK",                       prefix lock;
+opcode 0xF1,                  alias of 0xF0;
+
+opcode 0xF2,                  name "REPNZ",          display "REPNZ",                      prefix rep zf=0;
+opcode 0xF3,                  name "REPZ",           display "REPZ",                       prefix rep zf=1;
+
+opcode 0xF4,                  name "HLT",            display "HLT",                        flow interruption;
+
+opcode 0xF5,                  name "CMC",            display "CMC",                        dest rw flags;
+
 opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",                             src r/m8 imm8;
 opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",                           src r/m16 imm16;
+
+opcode 0xF8,                  name "CLC",            display "CLC",                        dest rw flags;
+opcode 0xF9,                  name "STC",            display "STC",                        dest rw flags;
+opcode 0xFA,                  name "CLI",            display "CLI",                        dest rw flags;
+opcode 0xFB,                  name "STI",            display "STI",                        dest rw flags;
+opcode 0xFC,                  name "CLD",            display "CLD",                        dest rw flags;
+opcode 0xFD,                  name "STD",            display "STD",                        dest rw flags;
 
