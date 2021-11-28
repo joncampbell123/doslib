@@ -1,5 +1,14 @@
 
 ; This syntax tries to match how Intel documents their opcodes in terms of keywords
+; /r = mod/reg/rm field, opcode uses mod, reg, and rm fields
+; /0 through /7 = mod/reg/rm field, opcode is chosen by reg field, uses mod and r/m fields
+; ib = immediate byte
+; ib.sx = immediate byte sign extended to a word (non-standard extension to Intel syntax)
+; iw = immediate word
+; mo = immediate memory address, meaning a word that describes a memory address
+; cb = immediate byte, when in the context of a jump or call
+; cw = immediate word, when in the context of a jump or call
+; cd = immediate double word, usually a memory offset followed by a word containing a segment value
 
 ; 8086 opcodes
 
