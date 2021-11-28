@@ -177,3 +177,33 @@ opcode 0x85 /r,               name "TEST",           display "TEST r/m16, r16", 
 opcode 0x86 /r,               name "XCHG",           display "XCHG r/m8, r8",              dest rw r/m8,    src rw r8;
 opcode 0x87 /r,               name "XCHG",           display "XCHG r/m16, r16",            dest rw r/m16,   src rw r16;
 
+opcode 0x88 /r,               name "MOV",            display "MOV r/m8, r8",               dest w r/m8,     src r8;
+opcode 0x89 /r,               name "MOV",            display "MOV r/m16, r16",             dest w r/m16,    src r16;
+opcode 0x8A /r,               name "MOV",            display "MOV r8, r/m8",               dest w r8,       src r/m8;
+opcode 0x8B /r,               name "MOV",            display "MOV r16, r/m16",             dest w r16,      src r/m16;
+opcode 0x8C /r,               name "MOV",            display "MOV r/m16, sreg",            dest w r/m16,    src sreg;
+
+opcode 0x8E /r,               name "MOV",            display "MOV sreg, r/m16",            dest w sreg,     src r/m16;
+
+opcode 0xA0 io,               name "MOV",            display "MOV al,io",                  dest w al,       src io;
+opcode 0xA1 io,               name "MOV",            display "MOV ax,io",                  dest w ax,       src io;
+opcode 0xA2 io,               name "MOV",            display "MOV io,al",                  dest w io,       src al;
+opcode 0xA3 io,               name "MOV',            display "MOV io,ax",                  dest w io,       src ax;
+
+opcode 0xB0 ib,               name "MOV",            display "MOV al,ib",                  dest w al,       src ib;
+opcode 0xB1 ib,               name "MOV",            display "MOV cl,ib",                  dest w cl,       src ib;
+opcode 0xB2 ib,               name "MOV",            display "MOV dl,ib",                  dest w dl,       src ib;
+opcode 0xB3 ib,               name "MOV",            display "MOV bl,ib",                  dest w bl,       src ib;
+opcode 0xB4 ib,               name "MOV",            display "MOV ah,ib",                  dest w ah,       src ib;
+opcode 0xB5 ib,               name "MOV",            display "MOV ch,ib",                  dest w ch,       src ib;
+opcode 0xB6 ib,               name "MOV",            display "MOV dh,ib",                  dest w dh,       src ib;
+opcode 0xB7 ib,               name "MOV",            display "MOV bh,ib",                  dest w bh,       src ib;
+opcode 0xB8 iw,               name "MOV",            display "MOV ax,iw",                  dest w ax,       src iw;
+opcode 0xB9 iw,               name "MOV",            display "MOV cx,iw",                  dest w cx,       src iw;
+opcode 0xBA iw,               name "MOV",            display "MOV dx,iw",                  dest w dx,       src iw;
+opcode 0xBB iw,               name "MOV",            display "MOV bx,iw",                  dest w bx,       src iw;
+opcode 0xBC iw,               name "MOV",            display "MOV sp,iw",                  dest w sp,       src iw;
+opcode 0xBD iw,               name "MOV",            display "MOV bp,iw",                  dest w bp,       src iw;
+opcode 0xBE iw,               name "MOV",            display "MOV si,iw",                  dest w si,       src iw;
+opcode 0xBF iw,               name "MOV",            display "MOV di,iw",                  dest w di,       src iw;
+
