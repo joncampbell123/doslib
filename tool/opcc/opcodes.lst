@@ -233,6 +233,14 @@ opcode 0xA1 mo,               name "MOV",            display "MOV ax,moffs16",  
 opcode 0xA2 mo,               name "MOV",            display "MOV moffs8,al",              dest w moffs8,   src al;
 opcode 0xA3 mo,               name "MOV',            display "MOV moffs16,ax",             dest w moffs16,  src ax;
 
+opcode 0xA4,                  name "MOVSB",          display "MOVSB",                      dest w es:di,    src r ds:si,   mb;
+opcode 0xA5,                  name "MOVSW",          display "MOVSW",                      dest w es:di,    src r ds:si,   mw;
+opcode 0xA6,                  name "CMPSB",          display "CMPSB",                      dest r es:di,    src r ds:si,   mb;
+opcode 0xA7,                  name "CMPSW",          display "CMPSW",                      dest r es:di,    src r ds:si,   mw;
+
+opcode 0xA8 ib,               name "TEST",           display "TEST al,imm8",               dest no al,      src imm8;
+opcode 0xA9 iw,               name "TEST",           display "TEST ax,imm16",              dest no ax,      src imm16;
+
 opcode 0xB0 ib,               name "MOV",            display "MOV al,ib",                  dest w al,       src ib;
 opcode 0xB1 ib,               name "MOV",            display "MOV cl,ib",                  dest w cl,       src ib;
 opcode 0xB2 ib,               name "MOV",            display "MOV dl,ib",                  dest w dl,       src ib;
@@ -252,4 +260,7 @@ opcode 0xBF iw,               name "MOV",            display "MOV di,iw",       
 
 opcode 0xC6 /0 ib,            name "MOV",            display "MOV r/m8, imm8",             dest w r/m8,     src imm8;
 opcode 0xC7 /0 iw,            name "MOV",            display "MOV r/m16, imm16",           dest w r/m16,    src imm16;
+
+opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",            dest no r/m8,    src imm8;
+opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",          dest no r/m16,   src imm16;
 
