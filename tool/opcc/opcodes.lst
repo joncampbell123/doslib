@@ -200,7 +200,11 @@ opcode 0x8A /r,               name "MOV",            display "MOV r8, r/m8",    
 opcode 0x8B /r,               name "MOV",            display "MOV r16, r/m16",             dest w r16,      src r/m16;
 opcode 0x8C /r,               name "MOV",            display "MOV r/m16, sreg",            dest w r/m16,    src sreg;
 
+opcode 0x8D /r,               name "LEA",            display "LEA r16, r/m16",             dest w r16,      src effective r/m16,     if r/m16 is memory;
+
 opcode 0x8E /r,               name "MOV",            display "MOV sreg, r/m16",            dest w sreg,     src r/m16;
+
+opcode 0x8F /0,               name "POP",            display "POP r/m16",                  dest w r/m16,    src stack16;
 
 opcode 0xA0 mo,               name "MOV",            display "MOV al,moffs8",              dest w al,       src moffs8;
 opcode 0xA1 mo,               name "MOV",            display "MOV ax,moffs16",             dest w ax,       src moffs16;
