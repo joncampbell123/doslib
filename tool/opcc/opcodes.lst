@@ -321,6 +321,11 @@ opcode 0xD3 /5,               name "SHR",            display "SHR r/m16, cl",   
 opcode 0xD3 /6,               name "SAL",            display "SAL r/m16, cl",              dest rw r/m16,   src cl;
 opcode 0xD3 /7,               name "SAR",            display "SAR r/m16, cl",              dest rw r/m16,   src cl;
 
+opcode 0xD4 ib,               name "AAM",            display "AAM ib",                     dest rw ax,      src al ib;
+opcode 0xD5 ib,               name "AAD",            display "AAD ib",                     dest rw ax,      src ax ib;
+
+opcode 0xD7,                  name "XLAT",           display "XLAT",                       dest rw al,      src ds:bx;
+
 opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",            dest no r/m8,    src imm8;
 opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",          dest no r/m16,   src imm16;
 
