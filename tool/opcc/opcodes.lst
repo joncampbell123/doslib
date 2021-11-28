@@ -119,6 +119,23 @@ opcode 0x5D,                  name "POP",            display "POP BP",          
 opcode 0x5E,                  name "POP",            display "POP SI",                     dest w si,       src stack16;
 opcode 0x5F,                  name "POP",            display "POP DI",                     dest w di,       src stack16;
 
+opcode 0x60,                  alias of 0x70;
+opcode 0x61,                  alias of 0x71;
+opcode 0x62,                  alias of 0x72;
+opcode 0x63,                  alias of 0x73;
+opcode 0x64,                  alias of 0x74;
+opcode 0x65,                  alias of 0x75;
+opcode 0x66,                  alias of 0x76;
+opcode 0x67,                  alias of 0x77;
+opcode 0x68,                  alias of 0x78;
+opcode 0x69,                  alias of 0x79;
+opcode 0x6A,                  alias of 0x7A;
+opcode 0x6B,                  alias of 0x7B;
+opcode 0x6C,                  alias of 0x7C;
+opcode 0x6D,                  alias of 0x7D;
+opcode 0x6E,                  alias of 0x7E;
+opcode 0x6F,                  alias of 0x7F;
+
 opcode 0x70 cb,               name "JO",             display "JO rel8",                    dest rw ip,      src rel8;
 opcode 0x71 cb,               name "JNO",            display "JNO rel8",                   dest rw ip,      src rel8;
 opcode 0x72 cb,               name "JB",             display "JB rel8",                    dest rw ip,      src rel8;
