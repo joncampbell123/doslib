@@ -215,6 +215,19 @@ opcode 0x95,                  name "XCHG",           display "XCHG bp,ax",      
 opcode 0x96,                  name "XCHG",           display "XCHG si,ax",                 dest rw si,      src rw ax;
 opcode 0x97,                  name "XCHG",           display "XCHG di,ax",                 dest rw di,      src rw ax;
 
+opcode 0x98,                  name "CBW",            display "CBW",                        dest rw ax,      src al;
+opcode 0x99,                  name "CWD",            display "CWD",                        dest rw dx:ax,   src ax;
+
+opcode 0x9A cd,               name "CALL",           display "CALL ptr16:16",              dest rw cs:ip,   src ptr16:16;
+
+opcode 0x9B,                  name "WAIT",           display "WAIT";
+
+opcode 0x9C,                  name "PUSHF",          display "PUSHF",                      dest w stack16,  src flags;
+opcode 0x9D,                  name "POPF",           display "POPF",                       dest flags,      src w stack16;
+
+opcode 0x9E,                  name "SAHF",           display "SAHF",                       dest flags,      src ah;
+opcode 0x9F,                  name "LAHF",           display "LAHF",                       dest ah,         src flags;
+
 opcode 0xA0 mo,               name "MOV",            display "MOV al,moffs8",              dest w al,       src moffs8;
 opcode 0xA1 mo,               name "MOV",            display "MOV ax,moffs16",             dest w ax,       src moffs16;
 opcode 0xA2 mo,               name "MOV",            display "MOV moffs8,al",              dest w moffs8,   src al;
