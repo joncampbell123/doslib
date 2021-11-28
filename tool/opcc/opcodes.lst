@@ -326,6 +326,29 @@ opcode 0xD5 ib,               name "AAD",            display "AAD ib",          
 
 opcode 0xD7,                  name "XLAT",           display "XLAT",                       dest rw al,      src ds:bx;
 
+opcode 0xE0 cb,               name "LOOPNZ",         display "LOOPNZ",                     dest rw ip,      src rel8;
+opcode 0xE1 cb,               name "LOOPZ",          display "LOOPZ",                      dest rw ip,      src rel8;
+opcode 0xE2 cb,               name "LOOP",           display "LOOP",                       dest rw ip,      src rel8;
+opcode 0xE3 cb,               name "JCXZ",           display "JCXZ",                       dest rw ip,      src rel8;
+
+opcode 0xE4 ib,               name "IN",             display "IN al,imm8",                 dest w al,       src imm8;
+opcode 0xE5 iw,               name "IN",             display "IN ax,imm16",                dest w ax,       src imm16;
+opcode 0xE6 ib,               name "OUT",            display "OUT imm8,al",                                 src al imm8;
+opcode 0xE7 iw,               name "OUT",            display "OUT imm16,ax",                                src ax imm16;
+
+opcode 0xE8 cw,               name "CALL",           display "CALL rel16",                 dest rw ip,      src rel16;
+opcode 0xE9 cw,               name "JMP",            display "JMP rel16",                  dest rw ip,      src rel16;
+
+opcode 0xEA cd,               name "JMP",            display "JMP ptr16:16",               dest rw cs:ip,   src ptr16:16;
+
+opcode 0xEB cb,               name "JMP",            display "JMP rel8",                   dest rw ip,      src rel8;
+
+opcode 0xEC,                  name "IN",             display "IN al,dx",                   dest w al,       src dx;
+opcode 0xED,                  name "IN",             display "IN ax,dx",                   dest w ax,       src dx;
+
+opcode 0xEE,                  name "OUT",            display "OUT dx,al",                                   src dx al;
+opcode 0xEF,                  name "OUT",            display "OUT dx,ax",                                   src dx ax;
+
 opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",            dest no r/m8,    src imm8;
 opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",          dest no r/m16,   src imm16;
 
