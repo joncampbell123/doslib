@@ -206,6 +206,15 @@ opcode 0x8E /r,               name "MOV",            display "MOV sreg, r/m16", 
 
 opcode 0x8F /0,               name "POP",            display "POP r/m16",                  dest w r/m16,    src stack16;
 
+opcode 0x90,                  name "NOP",            display "NOP";
+opcode 0x91,                  name "XCHG",           display "XCHG cx,ax",                 dest rw cx,      src rw ax;
+opcode 0x92,                  name "XCHG",           display "XCHG dx,ax",                 dest rw dx,      src rw ax;
+opcode 0x93,                  name "XCHG",           display "XCHG bx,ax",                 dest rw bx,      src rw ax;
+opcode 0x94,                  name "XCHG",           display "XCHG sp,ax",                 dest rw sp,      src rw ax;
+opcode 0x95,                  name "XCHG",           display "XCHG bp,ax",                 dest rw bp,      src rw ax;
+opcode 0x96,                  name "XCHG",           display "XCHG si,ax",                 dest rw si,      src rw ax;
+opcode 0x97,                  name "XCHG",           display "XCHG di,ax",                 dest rw di,      src rw ax;
+
 opcode 0xA0 mo,               name "MOV",            display "MOV al,moffs8",              dest w al,       src moffs8;
 opcode 0xA1 mo,               name "MOV",            display "MOV ax,moffs16",             dest w ax,       src moffs16;
 opcode 0xA2 mo,               name "MOV",            display "MOV moffs8,al",              dest w moffs8,   src al;
