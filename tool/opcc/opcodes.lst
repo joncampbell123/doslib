@@ -285,6 +285,42 @@ opcode 0xCD ib,               name "INT",            display "INT ib",          
 opcode 0xCE,                  name "INTO",           display "INTO",                       software interrupt 4 conditional, src flags;
 opcode 0xCF,                  name "IRET",           display "IRET",                       interrupt return;
 
+opcode 0xD0 /0,               name "ROL",            display "ROL r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /1,               name "ROR",            display "ROR r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /2,               name "RCL",            display "RCL r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /3,               name "RCR",            display "RCR r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /4,               name "SHL",            display "SHL r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /5,               name "SHR",            display "SHR r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /6,               name "SAL",            display "SAL r/m8, 1",                dest rw r/m8;
+opcode 0xD0 /7,               name "SAR",            display "SAR r/m8, 1",                dest rw r/m8;
+
+opcode 0xD1 /0,               name "ROL",            display "ROL r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /1,               name "ROR",            display "ROR r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /2,               name "RCL",            display "RCL r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /3,               name "RCR",            display "RCR r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /4,               name "SHL",            display "SHL r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /5,               name "SHR",            display "SHR r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /6,               name "SAL",            display "SAL r/m16, 1",               dest rw r/m16;
+opcode 0xD1 /7,               name "SAR",            display "SAR r/m16, 1",               dest rw r/m16;
+
+opcode 0xD2 /0,               name "ROL",            display "ROL r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /1,               name "ROR",            display "ROR r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /2,               name "RCL",            display "RCL r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /3,               name "RCR",            display "RCR r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /4,               name "SHL",            display "SHL r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /5,               name "SHR",            display "SHR r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /6,               name "SAL",            display "SAL r/m8, cl",               dest rw r/m8,    src cl;
+opcode 0xD2 /7,               name "SAR",            display "SAR r/m8, cl",               dest rw r/m8,    src cl;
+
+opcode 0xD3 /0,               name "ROL",            display "ROL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /1,               name "ROR",            display "ROR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /2,               name "RCL",            display "RCL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /3,               name "RCR",            display "RCR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /4,               name "SHL",            display "SHL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /5,               name "SHR",            display "SHR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /6,               name "SAL",            display "SAL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /7,               name "SAR",            display "SAR r/m16, cl",              dest rw r/m16,   src cl;
+
 opcode 0xF6 /0 ib,            name "TEST",           display "TEST r/m8, imm8",            dest no r/m8,    src imm8;
 opcode 0xF7 /0 iw,            name "TEST",           display "TEST r/m16, imm16",          dest no r/m16,   src imm16;
 
