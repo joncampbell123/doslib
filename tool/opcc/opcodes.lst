@@ -235,11 +235,18 @@ opcode 0xA3 mo,               name "MOV',            display "MOV moffs16,ax",  
 
 opcode 0xA4,                  name "MOVSB",          display "MOVSB",                      dest w es:di,    src r ds:si,   mb;
 opcode 0xA5,                  name "MOVSW",          display "MOVSW",                      dest w es:di,    src r ds:si,   mw;
-opcode 0xA6,                  name "CMPSB",          display "CMPSB",                      dest r es:di,    src r ds:si,   mb;
-opcode 0xA7,                  name "CMPSW",          display "CMPSW",                      dest r es:di,    src r ds:si,   mw;
+opcode 0xA6,                  name "CMPSB",          display "CMPSB",                      dest no es:di,   src r ds:si,   mb;
+opcode 0xA7,                  name "CMPSW",          display "CMPSW",                      dest no es:di,   src r ds:si,   mw;
 
 opcode 0xA8 ib,               name "TEST",           display "TEST al,imm8",               dest no al,      src imm8;
 opcode 0xA9 iw,               name "TEST",           display "TEST ax,imm16",              dest no ax,      src imm16;
+
+opcode 0xAA,                  name "STOSB",          display "STOSB",                      dest w es:di,    src al;
+opcode 0xAB,                  name "STOSW",          display "STOSW",                      dest w es:di,    src ax;
+opcode 0xAC,                  name "LODSB",          display "LODSB",                      dest al,         src r ds:si;
+opcode 0xAD,                  name "LODSW",          display "LODSW",                      dest ax,         src r ds:si;
+opcode 0xAE,                  name "SCASB",          display "SCASB",                      dest no es:di,   src al;
+opcode 0xAF,                  name "SCASW",          display "SCASW",                      dest no es:di,   src ax;
 
 opcode 0xB0 ib,               name "MOV",            display "MOV al,ib",                  dest w al,       src ib;
 opcode 0xB1 ib,               name "MOV",            display "MOV cl,ib",                  dest w cl,       src ib;
