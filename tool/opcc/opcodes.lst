@@ -326,10 +326,10 @@ opcode 0xD5 ib,               name "AAD",            display "AAD ib",          
 
 opcode 0xD7,                  name "XLAT",           display "XLAT",                       dest rw al,      src ds:bx;
 
-opcode 0xE0 cb,               name "LOOPNZ",         display "LOOPNZ",                     dest rw ip,      src rel8;
-opcode 0xE1 cb,               name "LOOPZ",          display "LOOPZ",                      dest rw ip,      src rel8;
-opcode 0xE2 cb,               name "LOOP",           display "LOOP",                       dest rw ip,      src rel8;
-opcode 0xE3 cb,               name "JCXZ",           display "JCXZ",                       dest rw ip,      src rel8;
+opcode 0xE0 cb,               name "LOOPNZ",         display "LOOPNZ rel8",                dest rw ip,      src rel8;
+opcode 0xE1 cb,               name "LOOPZ",          display "LOOPZ rel8",                 dest rw ip,      src rel8;
+opcode 0xE2 cb,               name "LOOP",           display "LOOP rel8",                  dest rw ip,      src rel8;
+opcode 0xE3 cb,               name "JCXZ",           display "JCXZ rel8",                  dest rw ip,      src rel8;
 
 opcode 0xE4 ib,               name "IN",             display "IN al,imm8",                 dest w al,       src imm8;
 opcode 0xE5 iw,               name "IN",             display "IN ax,imm16",                dest w ax,       src imm16;
