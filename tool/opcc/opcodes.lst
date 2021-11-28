@@ -185,10 +185,10 @@ opcode 0x8C /r,               name "MOV",            display "MOV r/m16, sreg", 
 
 opcode 0x8E /r,               name "MOV",            display "MOV sreg, r/m16",            dest w sreg,     src r/m16;
 
-opcode 0xA0 io,               name "MOV",            display "MOV al,io",                  dest w al,       src io;
-opcode 0xA1 io,               name "MOV",            display "MOV ax,io",                  dest w ax,       src io;
-opcode 0xA2 io,               name "MOV",            display "MOV io,al",                  dest w io,       src al;
-opcode 0xA3 io,               name "MOV',            display "MOV io,ax",                  dest w io,       src ax;
+opcode 0xA0 mo,               name "MOV",            display "MOV al,moffs8",              dest w al,       src moffs8;
+opcode 0xA1 mo,               name "MOV",            display "MOV ax,moffs16",             dest w ax,       src moffs16;
+opcode 0xA2 mo,               name "MOV",            display "MOV moffs8,al",              dest w moffs8,   src al;
+opcode 0xA3 mo,               name "MOV',            display "MOV moffs16,ax",             dest w moffs16,  src ax;
 
 opcode 0xB0 ib,               name "MOV",            display "MOV al,ib",                  dest w al,       src ib;
 opcode 0xB1 ib,               name "MOV",            display "MOV cl,ib",                  dest w cl,       src ib;
