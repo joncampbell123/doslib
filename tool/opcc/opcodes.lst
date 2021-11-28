@@ -294,6 +294,8 @@ opcode 0xD9 /3,               name "FST",            display "FSTP m32fp",      
 opcode 0xD9 [0xC0-0xC7],      name "FLD",            display "FLD st(i)",                  dest w fpustack, src st(i),                      stidx=oplow3, fpustackpush;
 
 opcode 0xDB /0,               name "FILD",           display "FLD m32int",                 dest w fpustack, src r/m32,                                    fpustackpush;
+opcode 0xDB /2,               name "FIST",           display "FIST m32int",                dest r/m32,      src st(0);
+opcode 0xDB /3,               name "FISTP",          display "FISTP m32int",               dest r/m32,      src st(0),                                    fpustackpop;
 opcode 0xDB /5,               name "FLD",            display "FLD m80fp",                  dest w fpustack, src r/m80,                                    fpustackpush;
 opcode 0xDB /7,               name "FSTP",           display "FSTP m80fp",                 dest r/m80,      src st(0),                                    fpustackpop;
 
@@ -305,8 +307,12 @@ opcode 0xDD [0xD8-0xDF],      name "FSTP",           display "FSTP st(i)",      
 
 ; the 8087 datasheet still refers to this as FLD but with BCD, I am using later documentation
 opcode 0xDF /0,               name "FILD",           display "FILD m16int",                dest w fpustack, src r/m16,                                    fpustackpush;
+opcode 0xDF /2,               name "FIST",           display "FIST m16int",                dest r/m16,      src st(0);
+opcode 0xDF /3,               name "FISTP",          display "FISTP m16int",               dest r/m16,      src st(0),                                    fpustackpush;
 opcode 0xDF /4,               name "FBLD",           display "FBLD m80dec",                dest w fpustack, src r/m80,                                    fpustackpush;
 opcode 0xDF /5,               name "FILD",           display "FILD m64int",                dest w fpustack, src r/m64,                                    fpustackpush;
+opcode 0xDF /6,               name "FBSTP",          display "FBSTP m80bcd",               dest r/m80,      src st(0),                                    fpustackpop;
+opcode 0xDF /7,               name "FISTP",          display "FISTP m64int",               dest r/m64,      src st(0),                                    fpustackpush;
 
 opcode 0xE0 cb,               name "LOOPNZ",         display "LOOPNZ rel8",                dest rw ip,      src rel8;
 opcode 0xE1 cb,               name "LOOPZ",          display "LOOPZ rel8",                 dest rw ip,      src rel8;
