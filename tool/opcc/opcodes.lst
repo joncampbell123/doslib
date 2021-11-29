@@ -291,11 +291,13 @@ opcode 0xD8 /1,               name "FMUL",           display "FMUL m32fp",      
 opcode 0xD8 /2,               name "FCOM",           display "FCOM m32fp",                                  src st(0), r/m32;
 opcode 0xD8 /3,               name "FCOMP",          display "FCOMP m32fp",                                 src st(0), r/m32;                             fpustackpop;
 opcode 0xD8 /4,               name "FSUB",           display "FSUB m32fp",                 dest rw st(0),   src r/m32;
+opcode 0xD8 /6,               name "FDIV",           display "FDIV m32fp",                 dest rw st(0),   src r/m32;
 opcode 0xD8 [0xC0-0xC7],      name "FADD",           display "FADD st(0),st(i)",           dest rw st(0),   src st(i),                      stidx=oplow3;
 opcode 0xD8 [0xC8-0xCF],      name "FMUL",           display "FMUL st(i)",                 dest rw st(0),   src st(i),                      stidx=oplow3;
 opcode 0xD8 [0xD0-0xD7],      name "FCOM",           display "FCOM st(i)",                                  src st(0), st(i),               stidx=oplow3;
 opcode 0xD8 [0xD8-0xDF],      name "FCOMP",          display "FCOMP st(i)",                                 src st(0), st(i),               stidx=oplow3;
 opcode 0xD8 [0xE0-0xE7],      name "FSUB",           display "FSUB st(0),st(i)",           dest rw st(0),   src st(i),                      stidx=oplow3;
+opcode 0xD8 [0xF0-0xF7],      name "FDIV",           display "FDIV st(0),st(i)",           dest rw st(0),   src st(i),                      stidx=oplow3;
 opcode 0xD9 /0,               name "FLD",            display "FLD m32fp",                  dest w fpustack, src r/m32,                                    fpustackpush;
 opcode 0xD9 /2,               name "FST",            display "FST m32fp",                  dest r/m32,      src st(0);
 opcode 0xD9 /3,               name "FST",            display "FSTP m32fp",                 dest r/m32,      src st(0),                                    fpustackpop;
@@ -316,6 +318,7 @@ opcode 0xD9 0xEE,             name "FLDZ",           display "FLDZ",            
 opcode 0xDA /0,               name "FIADD",          display "FIADD m32int",               dest rw st(0),   src r/m32;
 opcode 0xDA /1,               name "FIMUL",          display "FIMUL m32int",               dest rw st(0),   src r/m32;
 opcode 0xDA /4,               name "FISUB",          display "FISUB m32int",               dest rw st(0),   src r/m32;
+opcode 0xDA /6,               name "FIDIV",          display "FIDIV m32int",               dest rw st(0),   src r/m32;
 
 opcode 0xDB /0,               name "FILD",           display "FLD m32int",                 dest w fpustack, src r/m32,                                    fpustackpush;
 opcode 0xDB /2,               name "FIST",           display "FIST m32int",                dest r/m32,      src st(0);
@@ -328,9 +331,11 @@ opcode 0xDC /1,               name "FMUL",           display "FMUL m64fp",      
 opcode 0xDC /2,               name "FCOM",           display "FCOM m64fp",                                  src st(0), r/m64;
 opcode 0xDC /3,               name "FCOMP",          display "FCOMP m64fp",                                 src st(0), r/m64,                             fpustackpop;
 opcode 0xDC /4,               name "FSUB",           display "FSUB m64fp",                 dest rw st(0),   src r/m64;
+opcode 0xDC /6,               name "FDIV",           display "FDIV m64fp",                 dest rw st(0),   src r/m64;
 opcode 0xDC [0xC0-0xC7],      name "FADD",           display "FADD st(i),st(0)",           dest rw st(i),   src st(0),                      stidx=oplow3;
 opcode 0xDC [0xC8-0xCF],      name "FMUL",           display "FMUL st(i),st(0)",           dest rw st(i),   src st(0),                      stidx=oplow3;
 opcode 0xDC [0xE8-0xEF],      name "FSUB",           display "FSUB st(i),st(0)",           dest rw st(i),   src st(0),                      stidx=oplow3;
+opcode 0xDC [0xF8-0xFF],      name "FDIV",           display "FDIV st(i),st(0)",           dest rw st(i),   src st(0),                      stidx=oplow3;
 
 opcode 0xDD /0,               name "FLD",            display "FLD m64fp",                  dest w fpustack, src r/m64,                                    fpustackpush;
 opcode 0xDD /2,               name "FST",            display "FST m64fp",                  dest r/m64,      src st(0),                                    fpustackpop;
@@ -341,9 +346,11 @@ opcode 0xDD [0xD8-0xDF],      name "FSTP",           display "FSTP st(i)",      
 opcode 0xDE /0,               name "FIADD",          display "FIADD m16int",               dest rw st(0),   src r/m16;
 opcode 0xDE /1,               name "FIMUL",          display "FIMUL m16int",               dest rw st(0),   src r/m16;
 opcode 0xDE /4,               name "FISUB",          display "FISUB m16int",               dest rw st(0),   src r/m16;
+opcode 0xDE /6,               name "FIDIV",          display "FIDIV m16int",               dest rw st(0),   src r/m16;
 opcode 0xDE [0xC0-0xC7],      name "FADDP",          display "FADDP st(i)",                dest rw st(i),   src st(0),                      stidx=oplow3, fpustackpop;
 opcode 0xDE [0xC8-0xCF],      name "FMULP",          display "FMULP st(i)",                dest rw st(i),   src st(0),                      stidx=oplow3, fpustackpop;
 opcode 0xDE [0xE8-0xEF],      name "FSUBP",          display "FSUBP st(i)",                dest rw st(i),   src st(0),                      stidx=oplow3, fpustackpop;
+opcode 0xDE [0xF8-0xFF],      name "FDIVP",          display "FDIVP st(i)",                dest rw st(i),   src st(0),                      stidx=oplow3, fpustackpop;
 opcode 0xDE 0xD9,             name "FCOMPP",         display "FCOMPP",                                      src st(0), st(1),                             fpustackpop*2;
 
 ; the 8087 datasheet still refers to this as FLD but with BCD, I am using later documentation
