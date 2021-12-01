@@ -9,6 +9,15 @@
 ; cb = immediate byte, when in the context of a jump or call
 ; cw = immediate word, when in the context of a jump or call
 ; cd = immediate double word, usually a memory offset followed by a word containing a segment value
+; r/m = register or memory according to r/m field of mod/reg/rm
+; r = register according to reg field of mod/reg/rm
+; imm = immediate word
+; rel = byte value, sign extended to word, relative to something (often the instruction pointer)
+; sreg = segment register, defined by the reg field of mod/reg/rm
+; ptr16:16 = far pointer, 16-bit offset and 16-bit segment
+; m16:16 = far memory address reference
+; st(i) = FPU register at stack position + i
+; m16int, m32int, etc. = memory address of a 16-bit, 32-bit, etc. value
 
 ; 8086 opcodes
 
