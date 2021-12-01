@@ -19,6 +19,12 @@
 ; st(i) = FPU register at stack position + i
 ; m16int, m32int, etc. = memory address of a 16-bit, 32-bit, etc. value
 
+; if a line starts with a semicolon, then everything after it is a comment.
+; otherwise, it ends an opcode definition.
+; each part of the definition is separated by a comma.
+; it provides the opcode, the name, how to display it, the source and destination operands.
+; in Intel fashion, the first operand is destination.
+
 ; 8086 opcodes
 
 opcode 0x00 /r,               name "ADD",            display "ADD r/m8, r8",               dest rw r/m8,    src r8;
