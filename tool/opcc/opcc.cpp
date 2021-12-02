@@ -288,7 +288,10 @@ enum token_type_t {
 	TK_NEG,
 	TK_POS,
 	TK_COMMA,
-	TK_SEMICOLON
+	TK_SEMICOLON,
+	TK_EQUAL,
+	TK_SQRBRKT_OPEN,
+	TK_SQRBRKT_CLOSE
 };
 
 struct token_type {
@@ -362,6 +365,15 @@ struct token_t {
 			case TK_SEMICOLON:
 				fprintf(fp,"TK_SEMICOLON\n");
 				break;
+			case TK_EQUAL:
+				fprintf(fp,"TK_EQUAL\n");
+				break;
+			case TK_SQRBRKT_OPEN:
+				fprintf(fp,"TK_SQRBRKT_OPEN\n");
+				break;
+			case TK_SQRBRKT_CLOSE:
+				fprintf(fp,"TK_SQRBRKT_CLOSE\n");
+				break;
 		}
 	}
 
@@ -412,6 +424,15 @@ void fsrctok(token_t &tok) {
 	}
 	else if (c == ',') {
 		tok.type = TK_COMMA;
+	}
+	else if (c == '=') {
+		tok.type = TK_EQUAL;
+	}
+	else if (c == '[') {
+		tok.type = TK_SQRBRKT_OPEN;
+	}
+	else if (c == ']') {
+		tok.type = TK_SQRBRKT_CLOSE;
 	}
 	else if (c == '\"') {
 		tok.type = TK_STRING;
