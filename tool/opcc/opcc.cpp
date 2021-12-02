@@ -694,23 +694,43 @@ eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
 	return;
 }
 
-bool process_source_statement(vector<token_t> &tokens,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
+struct token_statement_t {
+	vector<token_t>		tokens;
+	bool			eof;
+	bool			err;
+
+	void clear(void) {
+		eof = err = false;
+		tokens.clear();
+	}
+
+	token_statement_t() : eof(false), err(false) { }
+	~token_statement_t() { }
+};
+
+bool process_source_statement(token_statement_t &statement,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
 	token_t tok;
 
 	do {
 		fsrctok(tok);
-		if (tok == TK_EOF) break;
-		if (tok == TK_ERR) return false;
+		if (tok == TK_EOF) {
+			statement.eof = true;
+			break;
+		}
+		if (tok == TK_ERR) {
+			statement.err = true;
+			return false;
+		}
 
-		tokens.push_back(tok);
+		statement.tokens.push_back(tok);
 
 		if (tok == end_token) break;
 
 		if (tok == TK_SQRBRKT_OPEN) {
-			if (!process_source_statement(tokens,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement(statement,TK_SQRBRKT_CLOSE)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
-			if (!process_source_statement(tokens,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement(statement,TK_PAREN_CLOSE)) return false;
 		}
 	} while (1);
 
@@ -718,17 +738,17 @@ bool process_source_statement(vector<token_t> &tokens,enum token_type_t end_toke
 }
 
 bool process_source_file(void) {
-	vector<token_t> tokens;
+	token_statement_t statement;
 	size_t si;
 
 	while (!fsrceof()) {
-		tokens.clear();
-		if (!process_source_statement(tokens)) return false;
+		statement.clear();
+		if (!process_source_statement(statement)) return false;
 
 		fprintf(stderr,"Statement: ");
-		for (si=0;si < tokens.size();si++) {
-			tokens[si].dump(stderr);
-			if ((si+1u) < tokens.size()) fprintf(stderr," ");
+		for (si=0;si < statement.tokens.size();si++) {
+			statement.tokens[si].dump(stderr);
+			if ((si+1u) < statement.tokens.size()) fprintf(stderr," ");
 		}
 		fprintf(stderr,"\n");
 	}
