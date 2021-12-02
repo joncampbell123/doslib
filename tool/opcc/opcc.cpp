@@ -704,6 +704,17 @@ struct token_statement_t {
 		tokens.clear();
 	}
 
+	void dump(FILE *fp) {
+		size_t si;
+
+		for (si=0;si < tokens.size();si++) {
+			tokens[si].dump(fp);
+			if ((si+1u) < tokens.size()) fprintf(fp," ");
+		}
+		if (eof) fprintf(fp," <eof>");
+		if (err) fprintf(fp," <err>");
+	}
+
 	token_statement_t() : eof(false), err(false) { }
 	~token_statement_t() { }
 };
@@ -741,19 +752,13 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 
 bool process_source_file(void) {
 	token_statement_t statement;
-	size_t si;
 
 	while (!fsrceof()) {
 		statement.clear();
 		if (!process_source_statement(statement)) return false;
 
 		fprintf(stderr,"Statement: ");
-		for (si=0;si < statement.tokens.size();si++) {
-			statement.tokens[si].dump(stderr);
-			if ((si+1u) < statement.tokens.size()) fprintf(stderr," ");
-		}
-		if (statement.eof) fprintf(stderr," <eof>");
-		if (statement.err) fprintf(stderr," <err>");
+		statement.dump(stderr);
 		fprintf(stderr,"\n");
 	}
 
