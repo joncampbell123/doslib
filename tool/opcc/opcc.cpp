@@ -396,6 +396,41 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"STIDX"					// 45
 };
 
+struct token_identifier_t {
+	enum token_type_t	type;
+	const char*		str;
+};
+
+struct token_identifier_t token_identifiers[] = {
+	{TK_OPCODE,				"opcode"},
+	{TK_NAME,				"name"},
+	{TK_DISPLAY,				"display"},
+	{TK_DEST,				"dest"},
+	{TK_SRC,				"src"},
+	{TK_DS,					"ds"},
+	{TK_I,					"i"},
+	{TK_R,					"r"},
+	{TK_W,					"w"},
+	{TK_RW,					"rw"},
+	{TK_RI,					"ri"},
+	{TK_ST,					"st"},
+	{TK_STACK16,				"stack16"},
+	{TK_M8,					"m8"},
+	{TK_M16,				"m16"},
+	{TK_M32,				"m32"},
+	{TK_M32FP,				"m32fp"},
+	{TK_M64FP,				"m64fp"},
+	{TK_M80FP,				"m80fp"},
+	{TK_R8,					"r8"},
+	{TK_R16,				"r16"},
+	{TK_AX,					"ax"},
+	{TK_AL,					"al"},
+	{TK_CL,					"cl"},
+	{TK_OPLOW3,				"oplow3"},
+	{TK_STIDX,				"stidx"},
+	{TK_NONE,				NULL}
+};
+
 struct token_type {
 	enum token_type_t	type;
 
@@ -584,58 +619,15 @@ void fsrctok(token_t &tok) {
 			}
 		} while (1);
 
-		if (tok.str == "opcode")
-			tok.type = TK_OPCODE;
-		else if (tok.str == "name")
-			tok.type = TK_NAME;
-		else if (tok.str == "display")
-			tok.type = TK_DISPLAY;
-		else if (tok.str == "dest")
-			tok.type = TK_DEST;
-		else if (tok.str == "src")
-			tok.type = TK_SRC;
-		else if (tok.str == "ds")
-			tok.type = TK_DS;
-		else if (tok.str == "i")
-			tok.type = TK_I;
-		else if (tok.str == "r")
-			tok.type = TK_R;
-		else if (tok.str == "w")
-			tok.type = TK_W;
-		else if (tok.str == "rw")
-			tok.type = TK_RW;
-		else if (tok.str == "ri")
-			tok.type = TK_RI;
-		else if (tok.str == "st")
-			tok.type = TK_ST;
-		else if (tok.str == "stack16")
-			tok.type = TK_STACK16;
-		else if (tok.str == "m8")
-			tok.type = TK_M8;
-		else if (tok.str == "m16")
-			tok.type = TK_M16;
-		else if (tok.str == "m32")
-			tok.type = TK_M32;
-		else if (tok.str == "m32fp")
-			tok.type = TK_M32FP;
-		else if (tok.str == "m64fp")
-			tok.type = TK_M64FP;
-		else if (tok.str == "m80fp")
-			tok.type = TK_M80FP;
-		else if (tok.str == "r8")
-			tok.type = TK_R8;
-		else if (tok.str == "r16")
-			tok.type = TK_R16;
-		else if (tok.str == "ax")
-			tok.type = TK_AX;
-		else if (tok.str == "al")
-			tok.type = TK_AL;
-		else if (tok.str == "cl")
-			tok.type = TK_CL;
-		else if (tok.str == "oplow3")
-			tok.type = TK_OPLOW3;
-		else if (tok.str == "stidx")
-			tok.type = TK_STIDX;
+		c = 0;
+		while (token_identifiers[c].str != NULL) {
+			if (tok.str == token_identifiers[c].str) {
+				tok.type = token_identifiers[c].type;
+				break;
+			}
+
+			c++;
+		}
 	}
 	else if (isdigit(c)) {
 		char maxdec = '9';
