@@ -313,6 +313,8 @@ enum token_type_t {
 	TK_RW,
 	TK_STACK_N,
 	TK_R_N,
+	TK_M_N,
+	TK_MFP_N,
 	TK_RI,
 	TK_ST,
 	TK_AX,
@@ -390,6 +392,8 @@ struct token_t {
 			case TK_RW:				fprintf(fp,"TK_RW\n"); break;
 			case TK_STACK_N:			fprintf(fp,"TK_STACK%llu\n",(unsigned long long)vali.ui); break;
 			case TK_R_N:				fprintf(fp,"TK_R%llu\n",(unsigned long long)vali.ui); break;
+			case TK_M_N:				fprintf(fp,"TK_M%llu\n",(unsigned long long)vali.ui); break;
+			case TK_MFP_N:				fprintf(fp,"TK_M%lluFP\n",(unsigned long long)vali.ui); break;
 			case TK_RI:				fprintf(fp,"TK_RI\n"); break;
 			case TK_ST:				fprintf(fp,"TK_ST\n"); break;
 			case TK_AX:				fprintf(fp,"TK_AX\n"); break;
@@ -560,6 +564,18 @@ void fsrctok(token_t &tok) {
 			tok.type = TK_ST;
 		else if (tok.str == "stack16")
 			{ tok.type = TK_STACK_N; tok.vali.ui = 16; }
+		else if (tok.str == "m8")
+			{ tok.type = TK_M_N; tok.vali.ui = 8; }
+		else if (tok.str == "m16")
+			{ tok.type = TK_M_N; tok.vali.ui = 16; }
+		else if (tok.str == "m32")
+			{ tok.type = TK_M_N; tok.vali.ui = 32; }
+		else if (tok.str == "m80fp")
+			{ tok.type = TK_MFP_N; tok.vali.ui = 80; }
+		else if (tok.str == "m64fp")
+			{ tok.type = TK_MFP_N; tok.vali.ui = 64; }
+		else if (tok.str == "m32fp")
+			{ tok.type = TK_MFP_N; tok.vali.ui = 32; }
 		else if (tok.str == "r8")
 			{ tok.type = TK_R_N; tok.vali.ui = 8; }
 		else if (tok.str == "r16")
