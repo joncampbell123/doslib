@@ -6,8 +6,8 @@ opcode 0x1F,                  name "POP",            display ["POP", ds],       
 opcode [0x91-0x97],           name "XCHG",           display ["XCHG", r16, ax],            dest rw r16,     src rw ax,                      ri=oplow3;
 opcode 0xD8 /0,               name "FADD",           display ["FADD", m32fp],              dest rw st(0),   src r/m32;
 opcode 0xD8 /1,               name "FMUL",           display ["FMUL", m32fp],              dest rw st(0),   src r/m32;
-opcode 0xD8 [0xD0-0xD7],      name "FCOM",           display "FCOM st(i)",                                  src st(0), st(i),               stidx=oplow3;
-opcode 0xD8 [0xD8-0xDF],      name "FCOMP",          display "FCOMP st(i)",                                 src st(0), st(i),               stidx=oplow3;
+opcode 0xD8 [0xD0-0xD7],      name "FCOM",           display ["FCOM", st(i)],                               src st(0), st(i),               stidx=oplow3;
+opcode 0xD8 [0xD8-0xDF],      name "FCOMP",          display ["FCOMP", st(i)],                              src st(0), st(i),               stidx=oplow3;
 
 opcode 0xD3 /0,               name "ROL",            display ["ROL", r/m16, cl],           dest rw r/m16,   src cl;
 opcode 0xD3 /1,               name "ROR",            display ["ROR", r/m16, cl],           dest rw r/m16,   src cl;
