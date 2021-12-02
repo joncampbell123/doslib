@@ -311,13 +311,19 @@ enum token_type_t {
 	TK_R,
 	TK_W,
 	TK_RW,
-	TK_STACK_N,
-	TK_R_N,
-	TK_M_N,
-	TK_MFP_N,
+	TK_STACK16,
+	TK_R8,
+	TK_R16,
+	TK_M8,
+	TK_M16,
+	TK_M32,
+	TK_M32FP,
+	TK_M64FP,
+	TK_M80FP,
 	TK_RI,
 	TK_ST,
 	TK_AX,
+	TK_AL,
 	TK_CL,
 	TK_OPLOW3,
 	TK_STIDX
@@ -390,13 +396,19 @@ struct token_t {
 			case TK_R:				fprintf(fp,"TK_R\n"); break;
 			case TK_W:				fprintf(fp,"TK_W\n"); break;
 			case TK_RW:				fprintf(fp,"TK_RW\n"); break;
-			case TK_STACK_N:			fprintf(fp,"TK_STACK%llu\n",(unsigned long long)vali.ui); break;
-			case TK_R_N:				fprintf(fp,"TK_R%llu\n",(unsigned long long)vali.ui); break;
-			case TK_M_N:				fprintf(fp,"TK_M%llu\n",(unsigned long long)vali.ui); break;
-			case TK_MFP_N:				fprintf(fp,"TK_M%lluFP\n",(unsigned long long)vali.ui); break;
+			case TK_STACK16:			fprintf(fp,"TK_STACK16\n"); break;
+			case TK_R8:				fprintf(fp,"TK_R8\n"); break;
+			case TK_R16:				fprintf(fp,"TK_R16\n"); break;
+			case TK_M8:				fprintf(fp,"TK_M8\n"); break;
+			case TK_M16:				fprintf(fp,"TK_M16\n"); break;
+			case TK_M32:				fprintf(fp,"TK_M32\n"); break;
+			case TK_M32FP:				fprintf(fp,"TK_M32FP\n"); break;
+			case TK_M64FP:				fprintf(fp,"TK_M64FP\n"); break;
+			case TK_M80FP:				fprintf(fp,"TK_M80FP\n"); break;
 			case TK_RI:				fprintf(fp,"TK_RI\n"); break;
 			case TK_ST:				fprintf(fp,"TK_ST\n"); break;
 			case TK_AX:				fprintf(fp,"TK_AX\n"); break;
+			case TK_AL:				fprintf(fp,"TK_AL\n"); break;
 			case TK_CL:				fprintf(fp,"TK_CL\n"); break;
 			case TK_OPLOW3:				fprintf(fp,"TK_OPLOW3\n"); break;
 			case TK_STIDX:				fprintf(fp,"TK_STIDX\n"); break;
@@ -563,25 +575,27 @@ void fsrctok(token_t &tok) {
 		else if (tok.str == "st")
 			tok.type = TK_ST;
 		else if (tok.str == "stack16")
-			{ tok.type = TK_STACK_N; tok.vali.ui = 16; }
+			tok.type = TK_STACK16;
 		else if (tok.str == "m8")
-			{ tok.type = TK_M_N; tok.vali.ui = 8; }
+			tok.type = TK_M8;
 		else if (tok.str == "m16")
-			{ tok.type = TK_M_N; tok.vali.ui = 16; }
+			tok.type = TK_M16;
 		else if (tok.str == "m32")
-			{ tok.type = TK_M_N; tok.vali.ui = 32; }
-		else if (tok.str == "m80fp")
-			{ tok.type = TK_MFP_N; tok.vali.ui = 80; }
-		else if (tok.str == "m64fp")
-			{ tok.type = TK_MFP_N; tok.vali.ui = 64; }
+			tok.type = TK_M32;
 		else if (tok.str == "m32fp")
-			{ tok.type = TK_MFP_N; tok.vali.ui = 32; }
+			tok.type = TK_M32FP;
+		else if (tok.str == "m64fp")
+			tok.type = TK_M64FP;
+		else if (tok.str == "m80fp")
+			tok.type = TK_M80FP;
 		else if (tok.str == "r8")
-			{ tok.type = TK_R_N; tok.vali.ui = 8; }
+			tok.type = TK_R8;
 		else if (tok.str == "r16")
-			{ tok.type = TK_R_N; tok.vali.ui = 16; }
+			tok.type = TK_R16;
 		else if (tok.str == "ax")
 			tok.type = TK_AX;
+		else if (tok.str == "al")
+			tok.type = TK_AL;
 		else if (tok.str == "cl")
 			tok.type = TK_CL;
 		else if (tok.str == "oplow3")
