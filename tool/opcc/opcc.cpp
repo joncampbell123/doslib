@@ -728,9 +728,11 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			if (!process_source_statement(statement,TK_SQRBRKT_CLOSE)) return false;
+			if (statement.eof) break;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			if (!process_source_statement(statement,TK_PAREN_CLOSE)) return false;
+			if (statement.eof) break;
 		}
 	} while (1);
 
