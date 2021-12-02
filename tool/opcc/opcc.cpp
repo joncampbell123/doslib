@@ -335,67 +335,27 @@ struct token_t {
 
 	void dump(FILE *fp) {
 		switch (type.type) {
-			case TK_NONE:
-				fprintf(fp,"TK_NONE\n");
-				break;
-			case TK_EOF:
-				fprintf(fp,"TK_EOF\n");
-				break;
-			case TK_ERR:
-				fprintf(fp,"TK_ERR\n");
-				break;
-			case TK_STRING:
-				fprintf(fp,"TK_STRING \"%s\"\n",str.c_str());
-				break;
-			case TK_UNKNOWN_IDENTIFIER:
-				fprintf(fp,"TK_UNKNOWN_IDENTIFIER \"%s\"\n",str.c_str());
-				break;
-			case TK_CHAR:
-				fprintf(fp,"TK_CHAR 0x%llx\n",(unsigned long long)vali.ui);
-				break;
-			case TK_INT:
-				fprintf(fp,"TK_INT 0x%llx\n",(unsigned long long)vali.ui);
-				break;
-			case TK_FLOAT:
-				fprintf(fp,"TK_FLOAT %.20Lf\n",valf);
-				break;
-			case TK_NEG:
-				fprintf(fp,"TK_NEG\n");
-				break;
-			case TK_POS:
-				fprintf(fp,"TK_POS\n");
-				break;
-			case TK_COMMA:
-				fprintf(fp,"TK_COMMA\n");
-				break;
-			case TK_SEMICOLON:
-				fprintf(fp,"TK_SEMICOLON\n");
-				break;
-			case TK_EQUAL:
-				fprintf(fp,"TK_EQUAL\n");
-				break;
-			case TK_STAR:
-				fprintf(fp,"TK_STAR\n");
-				break;
-			case TK_FWSLASH:
-				fprintf(fp,"TK_FWSLASH\n");
-				break;
-			case TK_PAREN_OPEN:
-				fprintf(fp,"TK_PAREN_OPEN\n");
-				break;
-			case TK_PAREN_CLOSE:
-				fprintf(fp,"TK_PAREN_CLOSE\n");
-				break;
-			case TK_SQRBRKT_OPEN:
-				fprintf(fp,"TK_SQRBRKT_OPEN\n");
-				break;
-			case TK_SQRBRKT_CLOSE:
-				fprintf(fp,"TK_SQRBRKT_CLOSE\n");
-				break;
+			case TK_NONE:				fprintf(fp,"TK_NONE\n"); break;
+			case TK_EOF:				fprintf(fp,"TK_EOF\n"); break;
+			case TK_ERR:				fprintf(fp,"TK_ERR\n"); break;
+			case TK_STRING:				fprintf(fp,"TK_STRING \"%s\"\n",str.c_str()); break;
+			case TK_UNKNOWN_IDENTIFIER:		fprintf(fp,"TK_UNKNOWN_IDENTIFIER \"%s\"\n",str.c_str()); break;
+			case TK_CHAR:				fprintf(fp,"TK_CHAR 0x%llx\n",(unsigned long long)vali.ui); break;
+			case TK_INT:				fprintf(fp,"TK_INT 0x%llx\n",(unsigned long long)vali.ui); break;
+			case TK_FLOAT:				fprintf(fp,"TK_FLOAT %.20Lf\n",valf); break;
+			case TK_NEG:				fprintf(fp,"TK_NEG\n"); break;
+			case TK_POS:				fprintf(fp,"TK_POS\n"); break;
+			case TK_COMMA:				fprintf(fp,"TK_COMMA\n"); break;
+			case TK_SEMICOLON:			fprintf(fp,"TK_SEMICOLON\n"); break;
+			case TK_EQUAL:				fprintf(fp,"TK_EQUAL\n"); break;
+			case TK_STAR:				fprintf(fp,"TK_STAR\n"); break;
+			case TK_FWSLASH:			fprintf(fp,"TK_FWSLASH\n"); break;
+			case TK_PAREN_OPEN:			fprintf(fp,"TK_PAREN_OPEN\n"); break;
+			case TK_PAREN_CLOSE:			fprintf(fp,"TK_PAREN_CLOSE\n"); break;
+			case TK_SQRBRKT_OPEN:			fprintf(fp,"TK_SQRBRKT_OPEN\n"); break;
+			case TK_SQRBRKT_CLOSE:			fprintf(fp,"TK_SQRBRKT_CLOSE\n"); break;
 
-			case TK_OPCODE:
-				fprintf(fp,"TK_OPCODE\n");
-				break;
+			case TK_OPCODE:				fprintf(fp,"TK_OPCODE\n"); break;
 		}
 	}
 
