@@ -428,6 +428,7 @@ struct token_identifier_t token_identifiers[] = {
 	{TK_STACK16,				"stack16"},
 	{TK_STIDX,				"stidx"},
 	{TK_W,					"w"},
+
 	{TK_NONE,				NULL}
 };
 
