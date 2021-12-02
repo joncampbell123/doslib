@@ -299,7 +299,15 @@ enum token_type_t {
 
 	TK_OPCODE,
 	TK_NAME,
-	TK_DISPLAY
+	TK_DISPLAY,
+	TK_DEST,
+	TK_SRC,
+
+	TK_DS,
+	TK_R,
+	TK_W,
+	TK_RW,
+	TK_STACK_N
 };
 
 struct token_type {
@@ -360,6 +368,14 @@ struct token_t {
 			case TK_OPCODE:				fprintf(fp,"TK_OPCODE\n"); break;
 			case TK_NAME:				fprintf(fp,"TK_NAME\n"); break;
 			case TK_DISPLAY:			fprintf(fp,"TK_DISPLAY\n"); break;
+			case TK_DEST:				fprintf(fp,"TK_DEST\n"); break;
+			case TK_SRC:				fprintf(fp,"TK_SRC\n"); break;
+
+			case TK_DS:				fprintf(fp,"TK_DS\n"); break;
+			case TK_R:				fprintf(fp,"TK_R\n"); break;
+			case TK_W:				fprintf(fp,"TK_W\n"); break;
+			case TK_RW:				fprintf(fp,"TK_RW\n"); break;
+			case TK_STACK_N:			fprintf(fp,"TK_STACK%llu\n",(unsigned long long)vali.ui); break;
 		}
 	}
 
@@ -476,6 +492,20 @@ void fsrctok(token_t &tok) {
 			tok.type = TK_NAME;
 		else if (tok.str == "display")
 			tok.type = TK_DISPLAY;
+		else if (tok.str == "dest")
+			tok.type = TK_DEST;
+		else if (tok.str == "src")
+			tok.type = TK_SRC;
+		else if (tok.str == "ds")
+			tok.type = TK_DS;
+		else if (tok.str == "r")
+			tok.type = TK_R;
+		else if (tok.str == "w")
+			tok.type = TK_W;
+		else if (tok.str == "rw")
+			tok.type = TK_RW;
+		else if (tok.str == "stack16")
+			{ tok.type = TK_STACK_N; tok.vali.ui = 16; }
 	}
 	else if (isdigit(c)) {
 		char maxdec = '9';
