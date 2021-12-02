@@ -510,44 +510,44 @@ void fsrctok(token_t &tok) {
 
 		if (c == '0') {
 			maxdec = '6'; // octal
-			if ((c=fsrcpeekc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto inteof;
 
 			if (c == 'x' || isdigit(c))
 				tok.str += (char)c;
 			else
-				goto tokeof;
+				goto inteof;
 
 			if (c == 'x') {
 				fsrcgetc();//discard 'x'
-				if ((c=fsrcpeekc()) < 0) goto tokeof;
+				if ((c=fsrcpeekc()) < 0) goto inteof;
 				maxdec = '9';
 				hex = true;
 			}
 		}
 		else {
-			if ((c=fsrcpeekc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto inteof;
 		}
 
 		while ((c >= '0' && c <= maxdec) || (hex && isxdigit(c))) {
 			tok.str += (char)c;
 			fsrcgetc();
-			if ((c=fsrcpeekc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto inteof;
 		}
 
 		if (maxdec == '9' && !hex && c == '.') {
 			tok.str += (char)c;
 			tok.type = TK_FLOAT;
 			fsrcgetc();
-			if ((c=fsrcpeekc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto inteof;
 
 			while (isdigit(c)) {
 				tok.str += (char)c;
 				fsrcgetc();
-				if ((c=fsrcpeekc()) < 0) goto tokeof;
+				if ((c=fsrcpeekc()) < 0) goto inteof;
 			}
 		}
 
-		if (tok.type == TK_INT)
+inteof:		if (tok.type == TK_INT)
 			tok.vali.ui = strtoul(tok.str.c_str(),NULL,0);
 		else
 			tok.valf = strtof(tok.str.c_str(),NULL);
