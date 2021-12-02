@@ -67,7 +67,8 @@ struct filesource {
 			return -1;
 	}
 	int getc(void) {
-		const int r = getc_internal();
+		int r = getc_internal();
+		if (r == '\r') r = getc_internal(); /* MS-DOS style \r \n -> \n */
 		if (r == '\n') {
 			srcpos.line++;
 			srcpos.col = srcpos.col_count = 1;
@@ -253,15 +254,233 @@ static bool parse_argv(int argc,char **argv) {
 	return true;
 }
 
-bool process_source_file(void) {
+enum token_type_t {
+	TK_NONE=0,
+	TK_EOF,
+	TK_ERR,
+	TK_STRING,
+	TK_SYNTAX_ERROR,
+	TK_UNKNOWN_IDENTIFIER,
+	TK_CHAR,
+	TK_INT,
+	TK_FLOAT,
+	TK_NEG,
+	TK_POS,
+	TK_COMMA,
+	TK_SEMICOLON
+};
+
+struct token_type {
+	enum token_type_t	type;
+
+	token_type() : type(TK_NONE) { }
+	token_type(const enum token_type_t &t) : type(t) { }
+
+	token_type &operator=(const enum token_type_t &v) { type = v; return *this; }
+	bool operator==(const enum token_type_t &v) { return type == v; }
+
+	void clear(void) {
+		type = TK_NONE;
+	}
+};
+
+struct token_t {
+	filesrcpos		srcpos;
+	token_type		type;
+	union {
+		int64_t		si;
+		uint64_t	ui;
+	} vali;
+	long double		valf;
+	string			str;
+
+	void clear(void) {
+		type.clear();
+	}
+	token_t() : valf(0.0) {
+		vali.ui = 0;
+	}
+	~token_t() {
+	}
+
+	void dump(FILE *fp) {
+		switch (type.type) {
+			case TK_NONE:
+				fprintf(fp,"TK_NONE\n");
+				break;
+			case TK_EOF:
+				fprintf(fp,"TK_EOF\n");
+				break;
+			case TK_ERR:
+				fprintf(fp,"TK_ERR\n");
+				break;
+			case TK_STRING:
+				fprintf(fp,"TK_STRING \"%s\"\n",str.c_str());
+				break;
+			case TK_SYNTAX_ERROR:
+				fprintf(fp,"TK_SYNTAX_ERROR\n");
+				break;
+			case TK_UNKNOWN_IDENTIFIER:
+				fprintf(fp,"TK_UNKNOWN_IDENTIFIER \"%s\"\n",str.c_str());
+				break;
+			case TK_CHAR:
+				fprintf(fp,"TK_CHAR 0x%llx\n",(unsigned long long)vali.ui);
+				break;
+			case TK_INT:
+				fprintf(fp,"TK_INT 0x%llx\n",(unsigned long long)vali.ui);
+				break;
+			case TK_FLOAT:
+				fprintf(fp,"TK_FLOAT %.20Lf\n",valf);
+				break;
+			case TK_NEG:
+				fprintf(fp,"TK_NEG\n");
+				break;
+			case TK_POS:
+				fprintf(fp,"TK_POS\n");
+				break;
+			case TK_COMMA:
+				fprintf(fp,"TK_COMMA\n");
+				break;
+			case TK_SEMICOLON:
+				fprintf(fp,"TK_SEMICOLON\n");
+				break;
+		}
+	}
+
+	bool operator==(const enum token_type_t &v) { return type == v; }
+};
+
+bool is_whitespace(int c) {
+	return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
+}
+
+void fsrctok(token_t &tok) {
 	int c;
 
-	while (!fsrceof()) {
-		c = fsrcc();
-		if (c < 0) {
-			if (fsrceof()) break;
-			return false;
+	do {
+		if ((c=fsrcc()) < 0) {
+			tok.srcpos = fsrccur()->srcpos;
+			goto eof;
 		}
+	} while (is_whitespace(c));
+	tok.srcpos = fsrccur()->srcpos;
+
+	if (c == ';') {
+		tok.type = TK_SEMICOLON;
+	}
+	else if (c == '-') {
+		tok.type = TK_NEG;
+	}
+	else if (c == '+') {
+		tok.type = TK_POS;
+	}
+	else if (c == ',') {
+		tok.type = TK_COMMA;
+	}
+	else if (c == '\"') {
+		tok.type = TK_STRING;
+		tok.str.clear();
+
+		do {
+			if ((c=fsrcc()) < 0) goto eof;
+			if (c == '\"') break;
+			tok.str += (char)c;
+		} while (1);
+	}
+	else if (c == '\'') {
+		tok.type = TK_CHAR;
+		tok.vali.ui = 0;
+
+		do {
+			if ((c=fsrcc()) < 0) goto eof;
+			if (c == '\'') break;
+			tok.vali.ui <<= 8ull;
+			tok.vali.ui += (unsigned int)c & 0xFFu;
+		} while (1);
+	}
+	else if (isalpha(c) || c == '_') {
+		tok.type = TK_UNKNOWN_IDENTIFIER;
+		tok.str.clear();
+		tok.str += (char)c;
+
+		do {
+			if ((c=fsrcc()) < 0) goto tokeof;
+			if (isalpha(c) || c == '_' || isdigit(c))
+				tok.str += (char)c;
+			else
+				break;
+		} while (1);
+	}
+	else if (isdigit(c)) {
+		char maxdec = '9';
+		bool hex = false;
+
+		tok.type = TK_INT;
+		tok.str.clear();
+		tok.str += (char)c;
+		if (c == '0') {
+			maxdec = '6'; // octal
+			if ((c=fsrcc()) < 0) goto tokeof;
+			if (c == 'x' || isdigit(c))
+				tok.str += (char)c;
+			else
+				goto syntaxerr;
+
+			if (c == 'x') {
+				if ((c=fsrcc()) < 0) goto tokeof;
+				maxdec = '9';
+				hex = true;
+			}
+		}
+		else {
+			if ((c=fsrcc()) < 0) goto tokeof;
+		}
+
+		while ((c >= '0' && c <= maxdec) || (hex && isxdigit(c))) {
+			tok.str += (char)c;
+			if ((c=fsrcc()) < 0) goto tokeof;
+		}
+
+		if (maxdec == '9' && !hex && c == '.') {
+			tok.str += (char)c;
+			tok.type = TK_FLOAT;
+			if ((c=fsrcc()) < 0) goto tokeof;
+
+			while (isdigit(c)) {
+				tok.str += (char)c;
+				if ((c=fsrcc()) < 0) goto tokeof;
+			}
+		}
+
+		if (tok.type == TK_INT)
+			tok.vali.ui = strtoul(tok.str.c_str(),NULL,0);
+		else
+			tok.valf = strtof(tok.str.c_str(),NULL);
+	}
+	else {
+		tok.type = TK_NONE;
+	}
+
+	return;
+
+tokeof:	return;
+
+eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
+	return;
+
+syntaxerr:
+	tok.type = TK_SYNTAX_ERROR;
+	return;
+}
+
+bool process_source_file(void) {
+	token_t tok;
+
+	while (!fsrceof()) {
+		fsrctok(tok);
+		tok.dump(stderr);
+		if (tok == TK_EOF) break;
+		if (tok == TK_ERR) return false;
 	}
 
 	fsrc_pop();
