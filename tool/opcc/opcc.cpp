@@ -27,6 +27,7 @@ struct filesource {
 	string		path;
 	bool		cpudef;
 	filesrcpos	srcpos;
+	int		next;
 
 	filesource() : fp(NULL), cpudef(false) { }
 
@@ -35,6 +36,7 @@ struct filesource {
 	}
 
 	void close(void) {
+		next = -1;
 		if (fp != NULL) {
 			fclose(fp);
 			fp = NULL;
@@ -51,17 +53,25 @@ struct filesource {
 		srcpos.clear();
 		cpudef = false;
 		path = fpath;
+		next = -1;
 
 		return true;
 	}
 	bool eof(void) {
 		if (fp != NULL)
-			return feof(fp);
+			return next < 0 && feof(fp);
 		else
 			return false;
 	}
+	int getc_next(void) {
+		const int c = next;
+		next = -1;
+		return c;
+	}
 	int getc_internal(void) {
-		if (fp != NULL)
+		if (next >= 0)
+			return getc_next();
+		else if (fp != NULL)
 			return fgetc(fp);
 		else
 			return -1;
@@ -78,6 +88,10 @@ struct filesource {
 		}
 
 		return r;
+	}
+	int peekc(void) {
+		if (next < 0) next = getc();
+		return next;
 	}
 };
 
@@ -145,7 +159,14 @@ static void fsrc_pop(void) {
 	}
 }
 
-static int fsrcc(void) {
+static int fsrcpeekc(void) {
+	if (fsrc_cur >= 0)
+		return fsrc[fsrc_cur].peekc();
+
+	return -1;
+}
+
+static int fsrcgetc(void) {
 	if (fsrc_cur >= 0)
 		return fsrc[fsrc_cur].getc();
 
@@ -259,7 +280,6 @@ enum token_type_t {
 	TK_EOF,
 	TK_ERR,
 	TK_STRING,
-	TK_SYNTAX_ERROR,
 	TK_UNKNOWN_IDENTIFIER,
 	TK_CHAR,
 	TK_INT,
@@ -317,9 +337,6 @@ struct token_t {
 			case TK_STRING:
 				fprintf(fp,"TK_STRING \"%s\"\n",str.c_str());
 				break;
-			case TK_SYNTAX_ERROR:
-				fprintf(fp,"TK_SYNTAX_ERROR\n");
-				break;
 			case TK_UNKNOWN_IDENTIFIER:
 				fprintf(fp,"TK_UNKNOWN_IDENTIFIER \"%s\"\n",str.c_str());
 				break;
@@ -358,7 +375,7 @@ void fsrctok(token_t &tok) {
 	int c;
 
 	do {
-		if ((c=fsrcc()) < 0) {
+		if ((c=fsrcgetc()) < 0) {
 			tok.srcpos = fsrccur()->srcpos;
 			goto eof;
 		}
@@ -382,7 +399,7 @@ void fsrctok(token_t &tok) {
 		tok.str.clear();
 
 		do {
-			if ((c=fsrcc()) < 0) goto eof;
+			if ((c=fsrcgetc()) < 0) goto eof;
 			if (c == '\"') break;
 			tok.str += (char)c;
 		} while (1);
@@ -392,7 +409,7 @@ void fsrctok(token_t &tok) {
 		tok.vali.ui = 0;
 
 		do {
-			if ((c=fsrcc()) < 0) goto eof;
+			if ((c=fsrcgetc()) < 0) goto eof;
 			if (c == '\'') break;
 			tok.vali.ui <<= 8ull;
 			tok.vali.ui += (unsigned int)c & 0xFFu;
@@ -404,11 +421,15 @@ void fsrctok(token_t &tok) {
 		tok.str += (char)c;
 
 		do {
-			if ((c=fsrcc()) < 0) goto tokeof;
-			if (isalpha(c) || c == '_' || isdigit(c))
+			if ((c=fsrcpeekc()) < 0) goto tokeof;
+
+			if (isalpha(c) || c == '_' || isdigit(c)) {
 				tok.str += (char)c;
-			else
+				fsrcgetc();
+			}
+			else {
 				break;
+			}
 		} while (1);
 	}
 	else if (isdigit(c)) {
@@ -418,37 +439,43 @@ void fsrctok(token_t &tok) {
 		tok.type = TK_INT;
 		tok.str.clear();
 		tok.str += (char)c;
+
 		if (c == '0') {
 			maxdec = '6'; // octal
-			if ((c=fsrcc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto tokeof;
+
 			if (c == 'x' || isdigit(c))
 				tok.str += (char)c;
 			else
-				goto syntaxerr;
+				goto tokeof;
 
 			if (c == 'x') {
-				if ((c=fsrcc()) < 0) goto tokeof;
+				fsrcgetc();//discard 'x'
+				if ((c=fsrcpeekc()) < 0) goto tokeof;
 				maxdec = '9';
 				hex = true;
 			}
 		}
 		else {
-			if ((c=fsrcc()) < 0) goto tokeof;
+			if ((c=fsrcpeekc()) < 0) goto tokeof;
 		}
 
 		while ((c >= '0' && c <= maxdec) || (hex && isxdigit(c))) {
 			tok.str += (char)c;
-			if ((c=fsrcc()) < 0) goto tokeof;
+			fsrcgetc();
+			if ((c=fsrcpeekc()) < 0) goto tokeof;
 		}
 
 		if (maxdec == '9' && !hex && c == '.') {
 			tok.str += (char)c;
 			tok.type = TK_FLOAT;
-			if ((c=fsrcc()) < 0) goto tokeof;
+			fsrcgetc();
+			if ((c=fsrcpeekc()) < 0) goto tokeof;
 
 			while (isdigit(c)) {
 				tok.str += (char)c;
-				if ((c=fsrcc()) < 0) goto tokeof;
+				fsrcgetc();
+				if ((c=fsrcpeekc()) < 0) goto tokeof;
 			}
 		}
 
@@ -466,10 +493,6 @@ void fsrctok(token_t &tok) {
 tokeof:	return;
 
 eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
-	return;
-
-syntaxerr:
-	tok.type = TK_SYNTAX_ERROR;
 	return;
 }
 
