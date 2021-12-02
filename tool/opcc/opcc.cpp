@@ -307,10 +307,18 @@ enum token_type_t {
 	TK_SRC,
 
 	TK_DS,
+	TK_I,
 	TK_R,
 	TK_W,
 	TK_RW,
-	TK_STACK_N
+	TK_STACK_N,
+	TK_R_N,
+	TK_RI,
+	TK_ST,
+	TK_AX,
+	TK_CL,
+	TK_OPLOW3,
+	TK_STIDX
 };
 
 struct token_type {
@@ -376,10 +384,18 @@ struct token_t {
 			case TK_SRC:				fprintf(fp,"TK_SRC\n"); break;
 
 			case TK_DS:				fprintf(fp,"TK_DS\n"); break;
+			case TK_I:				fprintf(fp,"TK_I\n"); break;
 			case TK_R:				fprintf(fp,"TK_R\n"); break;
 			case TK_W:				fprintf(fp,"TK_W\n"); break;
 			case TK_RW:				fprintf(fp,"TK_RW\n"); break;
 			case TK_STACK_N:			fprintf(fp,"TK_STACK%llu\n",(unsigned long long)vali.ui); break;
+			case TK_R_N:				fprintf(fp,"TK_R%llu\n",(unsigned long long)vali.ui); break;
+			case TK_RI:				fprintf(fp,"TK_RI\n"); break;
+			case TK_ST:				fprintf(fp,"TK_ST\n"); break;
+			case TK_AX:				fprintf(fp,"TK_AX\n"); break;
+			case TK_CL:				fprintf(fp,"TK_CL\n"); break;
+			case TK_OPLOW3:				fprintf(fp,"TK_OPLOW3\n"); break;
+			case TK_STIDX:				fprintf(fp,"TK_STIDX\n"); break;
 		}
 	}
 
@@ -530,14 +546,32 @@ void fsrctok(token_t &tok) {
 			tok.type = TK_SRC;
 		else if (tok.str == "ds")
 			tok.type = TK_DS;
+		else if (tok.str == "i")
+			tok.type = TK_I;
 		else if (tok.str == "r")
 			tok.type = TK_R;
 		else if (tok.str == "w")
 			tok.type = TK_W;
 		else if (tok.str == "rw")
 			tok.type = TK_RW;
+		else if (tok.str == "ri")
+			tok.type = TK_RI;
+		else if (tok.str == "st")
+			tok.type = TK_ST;
 		else if (tok.str == "stack16")
 			{ tok.type = TK_STACK_N; tok.vali.ui = 16; }
+		else if (tok.str == "r8")
+			{ tok.type = TK_R_N; tok.vali.ui = 8; }
+		else if (tok.str == "r16")
+			{ tok.type = TK_R_N; tok.vali.ui = 16; }
+		else if (tok.str == "ax")
+			tok.type = TK_AX;
+		else if (tok.str == "cl")
+			tok.type = TK_CL;
+		else if (tok.str == "oplow3")
+			tok.type = TK_OPLOW3;
+		else if (tok.str == "stidx")
+			tok.type = TK_STIDX;
 	}
 	else if (isdigit(c)) {
 		char maxdec = '9';
