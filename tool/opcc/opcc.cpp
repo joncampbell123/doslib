@@ -297,7 +297,9 @@ enum token_type_t {
 	TK_SQRBRKT_OPEN,
 	TK_SQRBRKT_CLOSE,
 
-	TK_OPCODE
+	TK_OPCODE,
+	TK_NAME,
+	TK_DISPLAY
 };
 
 struct token_type {
@@ -356,6 +358,8 @@ struct token_t {
 			case TK_SQRBRKT_CLOSE:			fprintf(fp,"TK_SQRBRKT_CLOSE\n"); break;
 
 			case TK_OPCODE:				fprintf(fp,"TK_OPCODE\n"); break;
+			case TK_NAME:				fprintf(fp,"TK_NAME\n"); break;
+			case TK_DISPLAY:			fprintf(fp,"TK_DISPLAY\n"); break;
 		}
 	}
 
@@ -468,6 +472,10 @@ void fsrctok(token_t &tok) {
 
 		if (tok.str == "opcode")
 			tok.type = TK_OPCODE;
+		else if (tok.str == "name")
+			tok.type = TK_NAME;
+		else if (tok.str == "display")
+			tok.type = TK_DISPLAY;
 	}
 	else if (isdigit(c)) {
 		char maxdec = '9';
