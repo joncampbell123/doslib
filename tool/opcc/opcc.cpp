@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include <string>
 #include <vector>
@@ -371,15 +372,33 @@ bool is_whitespace(int c) {
 	return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
 }
 
-void fsrctok(token_t &tok) {
+bool fsrc_skip_whitespace(token_t &tok) {
 	int c;
 
 	do {
-		if ((c=fsrcgetc()) < 0) {
+		if ((c=fsrcpeekc()) < 0) {
 			tok.srcpos = fsrccur()->srcpos;
-			goto eof;
+			tok.type = fsrceof() ? TK_EOF : TK_ERR;
+			return false;
 		}
-	} while (is_whitespace(c));
+
+		if (is_whitespace(c))
+			fsrcgetc();
+		else
+			break;
+	} while (1);
+
+	return true;
+}
+
+void fsrctok(token_t &tok) {
+	int c;
+
+	if (!fsrc_skip_whitespace(tok))
+		return;
+
+	c = fsrcgetc();
+	assert(c >= 0);
 	tok.srcpos = fsrccur()->srcpos;
 
 	if (c == ';') {
