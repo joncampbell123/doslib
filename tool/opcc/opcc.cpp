@@ -752,6 +752,8 @@ bool process_source_file(void) {
 			statement.tokens[si].dump(stderr);
 			if ((si+1u) < statement.tokens.size()) fprintf(stderr," ");
 		}
+		if (statement.eof) fprintf(stderr," <eof>");
+		if (statement.err) fprintf(stderr," <err>");
 		fprintf(stderr,"\n");
 	}
 
