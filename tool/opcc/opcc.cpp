@@ -12,11 +12,12 @@
 using namespace std;
 
 struct filesrcpos {
-	unsigned int	line,col,col_count;
+	unsigned int	line,col,col_count,token_count;
 
-	filesrcpos() : line(1), col(1), col_count(1) { }
+	filesrcpos() : line(1), col(1), col_count(1), token_count(0) { }
 
 	void clear(void) {
+		token_count = 0;
 		col_count = 1;
 		line = 1;
 		col = 1;
@@ -82,6 +83,7 @@ struct filesource {
 		if (r == '\r') r = getc_internal(); /* MS-DOS style \r \n -> \n */
 		if (r == '\n') {
 			srcpos.line++;
+			srcpos.token_count = 0;
 			srcpos.col = srcpos.col_count = 1;
 		}
 		else if (r >= 32 || r == 9) {
@@ -289,6 +291,7 @@ enum token_type_t {
 	TK_POS,
 	TK_COMMA,
 	TK_SEMICOLON,
+	TK_COMMENT,
 	TK_EQUAL,
 	TK_STAR,
 	TK_FWSLASH,
@@ -357,6 +360,7 @@ struct token_t {
 			case TK_POS:				fprintf(fp,"TK_POS\n"); break;
 			case TK_COMMA:				fprintf(fp,"TK_COMMA\n"); break;
 			case TK_SEMICOLON:			fprintf(fp,"TK_SEMICOLON\n"); break;
+			case TK_COMMENT:			fprintf(fp,"TK_COMMENT\n"); break;
 			case TK_EQUAL:				fprintf(fp,"TK_EQUAL\n"); break;
 			case TK_STAR:				fprintf(fp,"TK_STAR\n"); break;
 			case TK_FWSLASH:			fprintf(fp,"TK_FWSLASH\n"); break;
@@ -405,6 +409,25 @@ bool fsrc_skip_whitespace(token_t &tok) {
 	return true;
 }
 
+bool fsrc_skip_until_newline(token_t &tok) {
+	int c;
+
+	do {
+		if ((c=fsrcpeekc()) < 0) {
+			tok.srcpos = fsrccur()->srcpos;
+			tok.type = fsrceof() ? TK_EOF : TK_ERR;
+			return false;
+		}
+
+		if (c == '\n')
+			break;
+		else
+			fsrcgetc();
+	} while (1);
+
+	return true;
+}
+
 void fsrctok(token_t &tok) {
 	int c;
 
@@ -413,10 +436,19 @@ void fsrctok(token_t &tok) {
 
 	c = fsrcgetc();
 	assert(c >= 0);
+	fsrccur()->srcpos.token_count++;
 	tok.srcpos = fsrccur()->srcpos;
 
 	if (c == ';') {
 		tok.type = TK_SEMICOLON;
+
+		/* if this is the first token of the line, then it is a comment.
+		 * NTS: Newline resets token count to zero, token count is incremented then assigned to this token, therefore first token is token_count == 1 */
+		if (tok.srcpos.token_count <= 1) {
+			tok.type = TK_COMMENT;
+			fsrc_skip_until_newline(tok);
+			return;
+		}
 	}
 	else if (c == '-') {
 		tok.type = TK_NEG;
