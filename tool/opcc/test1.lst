@@ -1,0 +1,17 @@
+
+opcode 0x1E,                  name "PUSH",           display "PUSH ds",                    dest w stack16,  src ds;
+opcode 0x1F,                  name "POP",            display "POP ds",                     dest w ds,       src stack16;
+opcode [0x91-0x97],           name "XCHG",           display "XCHG r16,ax",                dest rw r16,     src rw ax,                      ri=oplow3;
+opcode 0xD8 /0,               name "FADD",           display "FADD m32fp",                 dest rw st(0),   src r/m32;
+opcode 0xD8 /1,               name "FMUL",           display "FMUL m32fp",                 dest rw st(0),   src r/m32;
+
+opcode 0xD3 /0,               name "ROL",            display "ROL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /1,               name "ROR",            display "ROR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /2,               name "RCL",            display "RCL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /3,               name "RCR",            display "RCR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /4,               name "SHL",            display "SHL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /5,               name "SHR",            display "SHR r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /6,               name "SAL",            display "SAL r/m16, cl",              dest rw r/m16,   src cl;
+opcode 0xD3 /7,               name "SAR",            display "SAR r/m16, cl",              dest rw r/m16,   src cl;
+
+
