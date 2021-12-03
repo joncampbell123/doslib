@@ -554,20 +554,21 @@ struct token_t {
 	void dump(FILE *fp) {
 		assert(type.type < TK__MAX);
 
-		if (type.type != TK_ARRAYOP && type.type != TK_PARENOP)
-			fprintf(fp,"%s",token_type_t_to_str[type.type]);
-
 		switch (type.type) {
 			case TK_STRING:
+				fprintf(fp,"STR(\"%s\")",str.c_str());
+				break;
 			case TK_UNKNOWN_IDENTIFIER:
-				fprintf(fp," \"%s\"",str.c_str());
+				fprintf(fp,"UNKNOWNID(\"%s\")",str.c_str());
 				break;
 			case TK_CHAR:
+				fprintf(fp,"CHAR(0x%llx)",(unsigned long long)vali.ui);
+				break;
 			case TK_INT:
-				fprintf(fp," 0x%llx",(unsigned long long)vali.ui);
+				fprintf(fp,"INT(0x%llx)",(unsigned long long)vali.ui);
 				break;
 			case TK_FLOAT:
-				fprintf(fp," %.20Lf",valf);
+				fprintf(fp,"FLOAT(%.20Lf)",valf);
 				break;
 			case TK_ARRAYOP:
 				fprintf(fp,"[");
@@ -580,6 +581,7 @@ struct token_t {
 				fprintf(fp,")");
 				break;
 			default:
+				fprintf(fp,"%s",token_type_t_to_str[type.type]);
 				break;
 		}
 	}
