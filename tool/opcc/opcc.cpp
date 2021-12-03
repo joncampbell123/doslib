@@ -823,7 +823,8 @@ bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enu
 			return false;
 		}
 
-		if (tok == end_token) break;
+		if (tok == end_token) break; /* do not include end token */
+		if (tok == TK_COMMENT) continue; /* ignore */
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
@@ -835,8 +836,6 @@ bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enu
 		}
 
 		ptok.subtok.push_back(tok);
-
-		if (statement.eof) break;
 	} while (1);
 
 	return true;
@@ -856,6 +855,9 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 			return false;
 		}
 
+		if (tok == end_token) break; /* do not include end token */
+		if (tok == TK_COMMENT) continue; /* ignore */
+
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
 			if (!process_source_statement_sub(statement,tok,TK_SQRBRKT_CLOSE)) return false;
@@ -866,9 +868,6 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 		}
 
 		statement.tokens.push_back(tok);
-
-		if (tok == end_token) break;
-		if (statement.eof) break;
 	} while (1);
 
 	return true;
