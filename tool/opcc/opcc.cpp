@@ -870,6 +870,9 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 		ptok.subtok[ptok.subtok.size()-1u].push_back(tok);
 	} while (1);
 
+	while (!ptok.subtok.empty() && ptok.subtok.back().empty()/*back=[size()-1u]*/)
+		ptok.subtok.pop_back();
+
 	return true;
 }
 
