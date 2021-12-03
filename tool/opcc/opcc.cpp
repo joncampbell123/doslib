@@ -838,6 +838,7 @@ struct token_statement_t {
 bool process_source_statement_sub(token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token,filesource *fsrc) { /* always apppends */
 	token_t tok;
 
+	ptok.subtok.clear();
 	ptok.subtok.resize(1);
 
 	do {
