@@ -525,8 +525,11 @@ struct token_t {
 	vector<token_t>		subtok;
 
 	void clear(void) {
-		type.clear();
+		srcpos.clear();
 		subtok.clear();
+		type.clear();
+		vali.ui = 0;
+		valf = 0;
 	}
 	token_t() : valf(0.0) {
 		vali.ui = 0;
