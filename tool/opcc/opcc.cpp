@@ -877,8 +877,8 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 		}
 
 		if (tok == TK_COMMENT) continue; /* ignore */
-		if (tok == TK_COMMA) break;
-		if (tok == TK_SEMICOLON) return false; /* time to stop */
+		if (tok == TK_SEMICOLON) return false; /* time to stop, end of statement */
+		if (tok == TK_COMMA) break; /* time to stop, end of substatement */
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
