@@ -181,9 +181,9 @@ bool is_string_a_number(const std::string &s,int64_t *v) {
 		return false;
 
 	const char *sc = s.c_str();
-	char *rc;
+	const char *rc = sc;
 
-	*v = (int64_t)strtoll(sc,&rc,0);
+	*v = (int64_t)strtoll(sc,(char**)(&rc),0);
 	if (*rc == 0) return true;
 
 	return false;
