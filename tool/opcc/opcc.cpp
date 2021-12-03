@@ -779,7 +779,7 @@ inteof:		if (tok.type == TK_INT)
 			tok.valf = strtof(tok.str.c_str(),NULL);
 	}
 	else {
-		tok.type = TK_NONE;
+		tok.type = TK_ERR;
 	}
 
 	return;
@@ -842,7 +842,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 
 	do {
 		fsrctok(tok);
-		if (tok == TK_EOF || tok == TK_NONE) {
+		if (tok == TK_EOF) {
 			statement.eof = true;
 			break;
 		}
@@ -875,7 +875,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 
 	do {
 		fsrctok(tok);
-		if (tok == TK_EOF || tok == TK_NONE) {
+		if (tok == TK_EOF) {
 			statement.eof = true;
 			break;
 		}
