@@ -162,27 +162,6 @@ static void fsrc_pop(void) {
 	}
 }
 
-static int fsrcpeekc(void) {
-	if (fsrc_cur >= 0)
-		return fsrc[fsrc_cur].peekc();
-
-	return -1;
-}
-
-static int fsrcgetc(void) {
-	if (fsrc_cur >= 0)
-		return fsrc[fsrc_cur].getc();
-
-	return -1;
-}
-
-static bool fsrceof(void) {
-	if (fsrc_cur >= 0)
-		return fsrc[fsrc_cur].eof();
-
-	return true;
-}
-
 static bool fsrcend(void) {
 	return fsrc_cur < 0;
 }
@@ -593,18 +572,18 @@ bool is_whitespace(int c) {
 	return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
 }
 
-bool fsrc_skip_whitespace(token_t &tok) {
+bool fsrc_skip_whitespace(token_t &tok,filesource *fsrc) {
 	int c;
 
 	do {
-		if ((c=fsrcpeekc()) < 0) {
-			tok.srcpos = fsrccur()->srcpos;
-			tok.type = fsrceof() ? TK_EOF : TK_ERR;
+		if ((c=fsrc->peekc()) < 0) {
+			tok.srcpos = fsrc->srcpos;
+			tok.type = fsrc->eof() ? TK_EOF : TK_ERR;
 			return false;
 		}
 
 		if (is_whitespace(c))
-			fsrcgetc();
+			fsrc->getc();
 		else
 			break;
 	} while (1);
@@ -612,37 +591,37 @@ bool fsrc_skip_whitespace(token_t &tok) {
 	return true;
 }
 
-bool fsrc_skip_until_newline(token_t &tok) {
+bool fsrc_skip_until_newline(token_t &tok,filesource *fsrc) {
 	int c;
 
 	do {
-		if ((c=fsrcpeekc()) < 0) {
-			tok.srcpos = fsrccur()->srcpos;
-			tok.type = fsrceof() ? TK_EOF : TK_ERR;
+		if ((c=fsrc->peekc()) < 0) {
+			tok.srcpos = fsrc->srcpos;
+			tok.type = fsrc->eof() ? TK_EOF : TK_ERR;
 			return false;
 		}
 
 		if (c == '\n')
 			break;
 		else
-			fsrcgetc();
+			fsrc->getc();
 	} while (1);
 
 	return true;
 }
 
-void fsrctok(token_t &tok) {
+void fsrctok(token_t &tok,filesource *fsrc) {
 	int c;
 
 	tok.clear();
 
-	if (!fsrc_skip_whitespace(tok))
+	if (!fsrc_skip_whitespace(tok,fsrc))
 		return;
 
-	c = fsrcgetc();
+	c = fsrc->getc();
 	assert(c >= 0);
-	fsrccur()->srcpos.token_count++;
-	tok.srcpos = fsrccur()->srcpos;
+	fsrc->srcpos.token_count++;
+	tok.srcpos = fsrc->srcpos;
 
 	if (c == ';') {
 		tok.type = TK_SEMICOLON;
@@ -651,7 +630,7 @@ void fsrctok(token_t &tok) {
 		 * NTS: Newline resets token count to zero, token count is incremented then assigned to this token, therefore first token is token_count == 1 */
 		if (tok.srcpos.token_count <= 1) {
 			tok.type = TK_COMMENT;
-			fsrc_skip_until_newline(tok);
+			fsrc_skip_until_newline(tok,fsrc);
 			return;
 		}
 	}
@@ -693,7 +672,7 @@ void fsrctok(token_t &tok) {
 		tok.str.clear();
 
 		do {
-			if ((c=fsrcgetc()) < 0) goto eof;
+			if ((c=fsrc->getc()) < 0) goto eof;
 			if (c == '\"') break;
 			tok.str += (char)c;
 		} while (1);
@@ -703,7 +682,7 @@ void fsrctok(token_t &tok) {
 		tok.vali.ui = 0;
 
 		do {
-			if ((c=fsrcgetc()) < 0) goto eof;
+			if ((c=fsrc->getc()) < 0) goto eof;
 			if (c == '\'') break;
 			tok.vali.ui <<= 8ull;
 			tok.vali.ui += (unsigned int)c & 0xFFu;
@@ -715,11 +694,11 @@ void fsrctok(token_t &tok) {
 		tok.str += (char)c;
 
 		do {
-			if ((c=fsrcpeekc()) < 0) goto tokeof;
+			if ((c=fsrc->peekc()) < 0) goto tokeof;
 
 			if (isalpha(c) || c == '_' || isdigit(c)) {
 				tok.str += (char)c;
-				fsrcgetc();
+				fsrc->getc();
 			}
 			else {
 				break;
@@ -746,7 +725,7 @@ void fsrctok(token_t &tok) {
 
 		if (c == '0') {
 			maxdec = '6'; // octal
-			if ((c=fsrcpeekc()) < 0) goto inteof;
+			if ((c=fsrc->peekc()) < 0) goto inteof;
 
 			if (c == 'x' || isdigit(c))
 				tok.str += (char)c;
@@ -754,32 +733,32 @@ void fsrctok(token_t &tok) {
 				goto inteof;
 
 			if (c == 'x') {
-				fsrcgetc();//discard 'x'
-				if ((c=fsrcpeekc()) < 0) goto inteof;
+				fsrc->getc();//discard 'x'
+				if ((c=fsrc->peekc()) < 0) goto inteof;
 				maxdec = '9';
 				hex = true;
 			}
 		}
 		else {
-			if ((c=fsrcpeekc()) < 0) goto inteof;
+			if ((c=fsrc->peekc()) < 0) goto inteof;
 		}
 
 		while ((c >= '0' && c <= maxdec) || (hex && isxdigit(c))) {
 			tok.str += (char)c;
-			fsrcgetc();
-			if ((c=fsrcpeekc()) < 0) goto inteof;
+			fsrc->getc();
+			if ((c=fsrc->peekc()) < 0) goto inteof;
 		}
 
 		if (maxdec == '9' && !hex && c == '.') {
 			tok.str += (char)c;
 			tok.type = TK_FLOAT;
-			fsrcgetc();
-			if ((c=fsrcpeekc()) < 0) goto inteof;
+			fsrc->getc();
+			if ((c=fsrc->peekc()) < 0) goto inteof;
 
 			while (isdigit(c)) {
 				tok.str += (char)c;
-				fsrcgetc();
-				if ((c=fsrcpeekc()) < 0) goto inteof;
+				fsrc->getc();
+				if ((c=fsrc->peekc()) < 0) goto inteof;
 			}
 		}
 
@@ -796,7 +775,7 @@ inteof:		if (tok.type == TK_INT)
 
 tokeof:	return;
 
-eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
+eof:	tok.type = fsrc->eof() ? TK_EOF : TK_ERR;
 	return;
 }
 
@@ -851,7 +830,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 	token_t tok;
 
 	do {
-		fsrctok(tok);
+		fsrctok(tok,fsrc);
 		if (tok == TK_EOF) {
 			statement.eof = true;
 			break;
@@ -884,7 +863,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 	tss.clear();
 
 	do {
-		fsrctok(tok);
+		fsrctok(tok,fsrc);
 		if (tok == TK_EOF) {
 			statement.eof = true;
 			break;
@@ -919,7 +898,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /* always apppends */
 	token_substatement_t tss;
 
-	while (!fsrceof()) {
+	while (!fsrc->eof()) {
 		tss.clear();
 		if (!process_source_substatement(tss,statement,fsrc)) return false;
 		statement.subst.push_back(tss);
@@ -932,7 +911,7 @@ bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /
 bool process_source_file(filesource *fsrc) {
 	token_statement_t statement;
 
-	while (!fsrceof()) {
+	while (!fsrc->eof()) {
 		statement.clear();
 		if (!process_source_statement(statement,fsrc)) return false;
 
