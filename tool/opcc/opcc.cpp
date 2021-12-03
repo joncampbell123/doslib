@@ -334,6 +334,10 @@ enum token_type_t {
 	TK_OPLOW3,
 
 	TK_STIDX,				// 45
+	TK_BX,
+	TK_CX,
+	TK_DX,
+	TK_SI,
 
 	TK__MAX
 };
@@ -393,7 +397,11 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"CL",
 	"OPLOW3",
 
-	"STIDX"					// 45
+	"STIDX",				// 45
+	"BX",
+	"CX",
+	"DX",
+	"SI",
 };
 
 struct token_identifier_t {
@@ -404,7 +412,10 @@ struct token_identifier_t {
 struct token_identifier_t token_identifiers[] = {
 	{TK_AL,					"al"},
 	{TK_AX,					"ax"},
+	{TK_BX,					"bx"},
 	{TK_CL,					"cl"},
+	{TK_CX,					"cx"},
+	{TK_DX,					"dx"},
 	{TK_DEST,				"dest"},
 	{TK_DISPLAY,				"display"},
 	{TK_DS,					"ds"},
@@ -423,6 +434,7 @@ struct token_identifier_t token_identifiers[] = {
 	{TK_R16,				"r16"},
 	{TK_RI,					"ri"},
 	{TK_RW,					"rw"},
+	{TK_SI,					"si"},
 	{TK_SRC,				"src"},
 	{TK_ST,					"st"},
 	{TK_STACK16,				"stack16"},
