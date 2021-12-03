@@ -621,6 +621,8 @@ bool fsrc_skip_until_newline(token_t &tok) {
 void fsrctok(token_t &tok) {
 	int c;
 
+	tok.clear();
+
 	if (!fsrc_skip_whitespace(tok))
 		return;
 
@@ -628,8 +630,6 @@ void fsrctok(token_t &tok) {
 	assert(c >= 0);
 	fsrccur()->srcpos.token_count++;
 	tok.srcpos = fsrccur()->srcpos;
-	tok.subtok.clear();
-	tok.str.clear();
 
 	if (c == ';') {
 		tok.type = TK_SEMICOLON;
@@ -784,15 +784,8 @@ eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
 	return;
 }
 
-struct token_statement_t {
-	vector<token_t>		tokens;
-	bool			eof;
-	bool			err;
-
-	void clear(void) {
-		eof = err = false;
-		tokens.clear();
-	}
+struct token_substatement_t {
+	vector<token_t>			tokens;
 
 	void dump(FILE *fp) {
 		size_t si;
@@ -800,6 +793,33 @@ struct token_statement_t {
 		for (si=0;si < tokens.size();si++) {
 			tokens[si].dump(fp);
 			if ((si+1u) < tokens.size()) fprintf(fp," ");
+		}
+	}
+
+	void clear(void) {
+		tokens.clear();
+	}
+
+	token_substatement_t() { }
+	~token_substatement_t() { }
+};
+
+struct token_statement_t {
+	vector<token_substatement_t> 	subst;
+	bool				eof;
+	bool				err;
+
+	void clear(void) {
+		eof = err = false;
+		subst.clear();
+	}
+
+	void dump(FILE *fp) {
+		size_t si;
+
+		for (si=0;si < subst.size();si++) {
+			subst[si].dump(fp);
+			if ((si+1u) < subst.size()) fprintf(fp,",\n");
 		}
 		if (eof) fprintf(fp," <eof>");
 		if (err) fprintf(fp," <err>");
@@ -809,12 +829,12 @@ struct token_statement_t {
 	~token_statement_t() { }
 };
 
-bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
-	token_t tok;
+bool process_source_statement_sub(token_t &tok,token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
+	token_t lasttok; /* last token read by subroutine */
 
 	do {
 		fsrctok(tok);
-		if (tok == TK_EOF) {
+		if (tok == TK_EOF || tok == TK_NONE) {
 			statement.eof = true;
 			break;
 		}
@@ -824,15 +844,14 @@ bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enu
 		}
 
 		if (tok == end_token) break; /* do not include end token */
-		if (tok == TK_COMMENT) continue; /* ignore */
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(statement,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(statement,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_PAREN_CLOSE)) return false;
 		}
 
 		ptok.subtok.push_back(tok);
@@ -841,12 +860,14 @@ bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enu
 	return true;
 }
 
-bool process_source_statement(token_statement_t &statement,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
-	token_t tok;
+bool process_source_substatement(token_t &tok,token_substatement_t &tss,token_statement_t &statement) { /* always apppends */
+	token_t lasttok; /* last token read by subroutine */
+
+	tss.clear();
 
 	do {
 		fsrctok(tok);
-		if (tok == TK_EOF) {
+		if (tok == TK_EOF || tok == TK_NONE) {
 			statement.eof = true;
 			break;
 		}
@@ -855,19 +876,40 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 			return false;
 		}
 
-		if (tok == end_token) break; /* do not include end token */
 		if (tok == TK_COMMENT) continue; /* ignore */
+		if (tok == TK_COMMA || tok == TK_SEMICOLON) break;
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(statement,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(statement,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_PAREN_CLOSE)) return false;
 		}
 
-		statement.tokens.push_back(tok);
+		tss.tokens.push_back(tok);
+	} while (1);
+
+	return true;
+}
+
+bool process_source_statement(token_statement_t &statement) { /* always apppends */
+	token_substatement_t tss;
+	token_t lasttok; /* last token read by subroutine */
+
+	do {
+		if (fsrceof()) break;
+
+		if (!process_source_substatement(lasttok,tss,statement)) {
+			statement.err = true;
+			return false;
+		}
+
+		statement.subst.push_back(tss);
+
+		/* if the last token was a semicolon, then stop */
+		if (lasttok == TK_SEMICOLON) break;
 	} while (1);
 
 	return true;
