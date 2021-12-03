@@ -345,6 +345,12 @@ enum token_type_t {
 	TK_IP,
 	TK_FLAGS,
 
+	TK_CS,					// 55
+	TK_ES,
+	TK_SS,
+	TK_BL,
+	TK_DL,
+
 	TK__MAX
 };
 
@@ -413,7 +419,13 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"SP",
 	"BP",
 	"IP",
-	"FLAGS"
+	"FLAGS",
+
+	"CS",					// 55
+	"ES",
+	"SS",
+	"BL",
+	"DL",
 
 };
 
@@ -424,16 +436,20 @@ struct token_identifier_t {
 
 struct token_identifier_t token_identifiers[] = {
 	{TK_AL,					"al"},
+	{TK_BL,					"bl"},
 	{TK_AX,					"ax"},
 	{TK_BP,					"bp"},
 	{TK_BX,					"bx"},
 	{TK_CL,					"cl"},
+	{TK_CS,					"cs"},
 	{TK_CX,					"cx"},
 	{TK_DI,					"di"},
+	{TK_DL,					"dl"},
 	{TK_DX,					"dx"},
 	{TK_DEST,				"dest"},
 	{TK_DISPLAY,				"display"},
 	{TK_DS,					"ds"},
+	{TK_ES,					"es"},
 	{TK_FLAGS,				"flags"},
 	{TK_I,					"i"},
 	{TK_IP,					"ip"},
@@ -454,6 +470,7 @@ struct token_identifier_t token_identifiers[] = {
 	{TK_SI,					"si"},
 	{TK_SP,					"sp"},
 	{TK_SRC,				"src"},
+	{TK_SS,					"ss"},
 	{TK_ST,					"st"},
 	{TK_STACK16,				"stack16"},
 	{TK_STIDX,				"stidx"},
