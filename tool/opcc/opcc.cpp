@@ -898,16 +898,15 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 bool process_source_statement(token_statement_t &statement) { /* always apppends */
 	token_substatement_t tss;
 
-	do {
-		if (fsrceof()) break;
-
+	while (!fsrceof()) {
+		tss.clear();
 		if (!process_source_substatement(tss,statement)) {
-			if (statement.err) return false;
-			else break;
+			if (statement.err) return false; /* error condition */
+			else break; /* eof or last read token was a semicolon */
 		}
 
 		statement.subst.push_back(tss);
-	} while (1);
+	}
 
 	return true;
 }
