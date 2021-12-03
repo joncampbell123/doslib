@@ -872,7 +872,9 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 
 	/* if only one element, no comma was encountered.
 	 * if that one element is empty, then it should be removed.
-	 * without this "[]" will have one element of nothing */
+	 * without this "[]" will have one element of nothing.
+	 * [token] should result in subtok.size() == 1 and subtok[0].size() == 1.
+	 * [,] should result in subtok.size() == 2 and subtok[0].size() == 0, subtok[1].size() == 0 */
 	if (ptok.subtok.size() == 1 && ptok.subtok[0].empty())
 		ptok.subtok.pop_back();
 
