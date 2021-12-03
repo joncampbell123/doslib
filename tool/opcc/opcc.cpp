@@ -498,15 +498,15 @@ struct token_type {
 };
 
 struct token_t {
-	filesrcpos		srcpos;
-	token_type		type;
+	filesrcpos			srcpos;
+	token_type			type;
 	union {
-		int64_t		si;
-		uint64_t	ui;
+		int64_t			si;
+		uint64_t		ui;
 	} vali;
-	long double		valf;
-	string			str;
-	vector<token_t>		subtok;
+	long double			valf;
+	string				str;
+	vector< vector<token_t>	>	subtok;
 
 	void clear(void) {
 		srcpos.clear();
@@ -527,6 +527,15 @@ struct token_t {
 		for (si=0;si < tokens.size();si++) {
 			tokens[si].dump(fp);
 			if ((si+1u) < tokens.size()) fprintf(fp," ");
+		}
+	}
+
+	void dumpvvector(FILE *fp,vector< vector<token_t> > &tokens) {
+		size_t si;
+
+		for (si=0;si < tokens.size();si++) {
+			dumpvector(fp,tokens[si]);
+			if ((si+1u) < tokens.size()) fprintf(fp,", ");
 		}
 	}
 
@@ -551,12 +560,12 @@ struct token_t {
 				break;
 			case TK_ARRAYOP:
 				fprintf(fp,"[");
-				dumpvector(fp,subtok);
+				dumpvvector(fp,subtok);
 				fprintf(fp,"]");
 				break;
 			case TK_PARENOP:
 				fprintf(fp,"(");
-				dumpvector(fp,subtok);
+				dumpvvector(fp,subtok);
 				fprintf(fp,")");
 				break;
 			default:
@@ -829,6 +838,8 @@ struct token_statement_t {
 bool process_source_statement_sub(token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token,filesource *fsrc) { /* always apppends */
 	token_t tok;
 
+	ptok.subtok.resize(1);
+
 	do {
 		fsrctok(tok,fsrc);
 		if (tok == TK_EOF) {
@@ -842,7 +853,11 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 
 		if (tok == end_token) break; /* do not include end token */
 
-		if (tok == TK_SQRBRKT_OPEN) {
+		if (tok == TK_COMMA) {
+			ptok.subtok.push_back(vector<token_t>());
+			continue;
+		}
+		else if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
 			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE,fsrc)) return false;
 		}
@@ -851,7 +866,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE,fsrc)) return false;
 		}
 
-		ptok.subtok.push_back(tok);
+		ptok.subtok[ptok.subtok.size()-1u].push_back(tok);
 	} while (1);
 
 	return true;
