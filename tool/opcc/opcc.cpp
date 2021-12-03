@@ -358,6 +358,7 @@ enum token_type_t {
 	TK_ARRAYOP,/*statement parser*/
 
 	TK_PARENOP,/*statement parser*/		// 65
+	TK_COLON,
 
 	TK__MAX
 };
@@ -442,6 +443,7 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"ARRAYOP",
 
 	"PARENOP",				// 65
+	"COLON",
 
 };
 
@@ -677,6 +679,9 @@ void fsrctok(token_t &tok) {
 	}
 	else if (c == '/') {
 		tok.type = TK_FWSLASH;
+	}
+	else if (c == ':') {
+		tok.type = TK_COLON;
 	}
 	else if (c == '\"') {
 		tok.type = TK_STRING;
