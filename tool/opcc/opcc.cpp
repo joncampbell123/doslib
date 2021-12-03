@@ -359,6 +359,7 @@ enum token_type_t {
 
 	TK_PARENOP,/*statement parser*/		// 65
 	TK_COLON,
+	TK_M,
 
 	TK__MAX
 };
@@ -444,6 +445,7 @@ const char *token_type_t_to_str[TK__MAX] = {
 
 	"PARENOP",				// 65
 	"COLON",
+	"M",
 
 };
 
@@ -476,6 +478,7 @@ struct token_identifier_t token_identifiers[] = {
 	{TK_I,					"i"},
 	{TK_IP,					"ip"},
 	{TK_OPLOW3,				"oplow3"},
+	{TK_M,					"m"},
 	{TK_M8,					"m8"},
 	{TK_M16,				"m16"},
 	{TK_M32,				"m32"},

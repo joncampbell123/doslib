@@ -24,8 +24,8 @@ opcode 0xFE /1,               name "DEC",            display "DEC r/m8",        
 opcode 0xFF /0,               name "INC",            display "INC r/m16",                  dest rw r/m16;
 opcode 0xFF /1,               name "DEC",            display "DEC r/m16",                  dest rw r/m16;
 opcode 0xFF /2,               name "CALL",           display "CALL r/m16",                 dest rw ip,      src r/m16;
-opcode 0xFF /3,               name "CALL",           display "CALL m16:16",                dest rw cs:ip,   src r/m16*2;
+opcode 0xFF /3,               name "CALL",           display "CALL m16:16",                dest rw cs:ip,   src r/m[16,16];
 opcode 0xFF /4,               name "JMP",            display "JMP r/m16",                  dest w ip,       src r/m16;
-opcode 0xFF /5,               name "JMP",            display "JMP m16:16",                 dest w cs:ip     src r/m16*2;
+opcode 0xFF /5,               name "JMP",            display "JMP m16:16",                 dest w cs:ip,    src r/m[16,16];
 opcode 0xFF /6,               name "PUSH",           display "PUSH r/m16",                 dest w stack16,  src r/m16;
 
