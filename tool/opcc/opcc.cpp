@@ -802,6 +802,7 @@ struct token_substatement_t {
 
 	void clear(void) {
 		tokens.clear();
+		eom = false;
 	}
 
 	token_substatement_t() : eom(false) { }
