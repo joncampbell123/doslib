@@ -870,6 +870,12 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 		ptok.subtok[ptok.subtok.size()-1u].push_back(tok);
 	} while (1);
 
+	/* if only one element, no comma was encountered.
+	 * if that one element is empty, then it should be removed.
+	 * without this "[]" will have one element of nothing */
+	if (ptok.subtok.size() == 1 && ptok.subtok[0].empty())
+		ptok.subtok.pop_back();
+
 	return true;
 }
 
