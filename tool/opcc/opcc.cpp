@@ -789,6 +789,7 @@ eof:	tok.type = fsrceof() ? TK_EOF : TK_ERR;
 
 struct token_substatement_t {
 	vector<token_t>			tokens;
+	bool				eom;
 
 	void dump(FILE *fp) {
 		size_t si;
@@ -803,7 +804,7 @@ struct token_substatement_t {
 		tokens.clear();
 	}
 
-	token_substatement_t() { }
+	token_substatement_t() : eom(false) { }
 	~token_substatement_t() { }
 };
 
@@ -880,10 +881,13 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 		}
 
 		if (tok == TK_COMMENT) continue; /* ignore */
-		if (tok == TK_SEMICOLON) return false; /* time to stop, end of statement */
 		if (tok == TK_COMMA) break; /* time to stop, end of substatement */
 
-		if (tok == TK_SQRBRKT_OPEN) {
+		if (tok == TK_SEMICOLON) {
+			tss.eom = true;
+			break; /* time to stop, end of statement */
+		}
+		else if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
 			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
 		}
@@ -903,12 +907,9 @@ bool process_source_statement(token_statement_t &statement) { /* always apppends
 
 	while (!fsrceof()) {
 		tss.clear();
-		if (!process_source_substatement(tss,statement)) {
-			if (statement.err) return false; /* error condition */
-			else break; /* eof or last read token was a semicolon */
-		}
-
+		if (!process_source_substatement(tss,statement)) return false;
 		statement.subst.push_back(tss);
+		if (tss.eom) break;
 	}
 
 	return true;
