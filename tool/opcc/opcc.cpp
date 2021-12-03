@@ -829,8 +829,8 @@ struct token_statement_t {
 	~token_statement_t() { }
 };
 
-bool process_source_statement_sub(token_t &tok,token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
-	token_t lasttok; /* last token read by subroutine */
+bool process_source_statement_sub(token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
+	token_t tok;
 
 	do {
 		fsrctok(tok);
@@ -847,11 +847,11 @@ bool process_source_statement_sub(token_t &tok,token_statement_t &statement,toke
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE)) return false;
 		}
 
 		ptok.subtok.push_back(tok);
@@ -860,8 +860,8 @@ bool process_source_statement_sub(token_t &tok,token_statement_t &statement,toke
 	return true;
 }
 
-bool process_source_substatement(token_t &tok,token_substatement_t &tss,token_statement_t &statement) { /* always apppends */
-	token_t lasttok; /* last token read by subroutine */
+bool process_source_substatement(token_substatement_t &tss,token_statement_t &statement) { /* always apppends */
+	token_t tok;
 
 	tss.clear();
 
@@ -877,15 +877,16 @@ bool process_source_substatement(token_t &tok,token_substatement_t &tss,token_st
 		}
 
 		if (tok == TK_COMMENT) continue; /* ignore */
-		if (tok == TK_COMMA || tok == TK_SEMICOLON) break;
+		if (tok == TK_COMMA) break;
+		if (tok == TK_SEMICOLON) return false; /* time to stop */
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(lasttok,statement,tss,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE)) return false;
 		}
 
 		tss.tokens.push_back(tok);
@@ -896,20 +897,16 @@ bool process_source_substatement(token_t &tok,token_substatement_t &tss,token_st
 
 bool process_source_statement(token_statement_t &statement) { /* always apppends */
 	token_substatement_t tss;
-	token_t lasttok; /* last token read by subroutine */
 
 	do {
 		if (fsrceof()) break;
 
-		if (!process_source_substatement(lasttok,tss,statement)) {
-			statement.err = true;
-			return false;
+		if (!process_source_substatement(tss,statement)) {
+			if (statement.err) return false;
+			else break;
 		}
 
 		statement.subst.push_back(tss);
-
-		/* if the last token was a semicolon, then stop */
-		if (lasttok == TK_SEMICOLON) break;
 	} while (1);
 
 	return true;
