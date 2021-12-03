@@ -355,6 +355,9 @@ enum token_type_t {
 	TK_BH,
 	TK_CH,
 	TK_DH,
+	TK_ARRAYOP,/*statement parser*/
+
+	TK_PARENOP,/*statement parser*/		// 65
 
 	TK__MAX
 };
@@ -436,6 +439,9 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"BH",
 	"CH",
 	"DH",
+	"ARRAYOP",
+
+	"PARENOP",				// 65
 
 };
 
@@ -516,14 +522,25 @@ struct token_t {
 	} vali;
 	long double		valf;
 	string			str;
+	vector<token_t>		subtok;
 
 	void clear(void) {
 		type.clear();
+		subtok.clear();
 	}
 	token_t() : valf(0.0) {
 		vali.ui = 0;
 	}
 	~token_t() {
+	}
+
+	void dumpvector(FILE *fp,vector<token_t> &tokens) {
+		size_t si;
+
+		for (si=0;si < tokens.size();si++) {
+			tokens[si].dump(fp);
+			if ((si+1u) < tokens.size()) fprintf(fp," ");
+		}
 	}
 
 	void dump(FILE *fp) {
@@ -540,6 +557,16 @@ struct token_t {
 				break;
 			case TK_FLOAT:
 				fprintf(fp," %.20Lf",valf);
+				break;
+			case TK_ARRAYOP:
+				fprintf(fp," [");
+				dumpvector(fp,subtok);
+				fprintf(fp,"]");
+				break;
+			case TK_PARENOP:
+				fprintf(fp," (");
+				dumpvector(fp,subtok);
+				fprintf(fp,")");
 				break;
 			default:
 				break;
@@ -601,6 +628,8 @@ void fsrctok(token_t &tok) {
 	assert(c >= 0);
 	fsrccur()->srcpos.token_count++;
 	tok.srcpos = fsrccur()->srcpos;
+	tok.subtok.clear();
+	tok.str.clear();
 
 	if (c == ';') {
 		tok.type = TK_SEMICOLON;
@@ -780,6 +809,39 @@ struct token_statement_t {
 	~token_statement_t() { }
 };
 
+bool process_source_statement_sub(token_statement_t &statement,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
+	token_t tok;
+
+	do {
+		fsrctok(tok);
+		if (tok == TK_EOF) {
+			statement.eof = true;
+			break;
+		}
+		if (tok == TK_ERR) {
+			statement.err = true;
+			return false;
+		}
+
+		if (tok == end_token) break;
+
+		if (tok == TK_SQRBRKT_OPEN) {
+			tok.type = TK_ARRAYOP;
+			if (!process_source_statement_sub(statement,tok,TK_SQRBRKT_CLOSE)) return false;
+		}
+		else if (tok == TK_PAREN_OPEN) {
+			tok.type = TK_PARENOP;
+			if (!process_source_statement_sub(statement,tok,TK_PAREN_CLOSE)) return false;
+		}
+
+		ptok.subtok.push_back(tok);
+
+		if (statement.eof) break;
+	} while (1);
+
+	return true;
+}
+
 bool process_source_statement(token_statement_t &statement,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
 	token_t tok;
 
@@ -794,18 +856,19 @@ bool process_source_statement(token_statement_t &statement,enum token_type_t end
 			return false;
 		}
 
+		if (tok == TK_SQRBRKT_OPEN) {
+			tok.type = TK_ARRAYOP;
+			if (!process_source_statement_sub(statement,tok,TK_SQRBRKT_CLOSE)) return false;
+		}
+		else if (tok == TK_PAREN_OPEN) {
+			tok.type = TK_PARENOP;
+			if (!process_source_statement_sub(statement,tok,TK_PAREN_CLOSE)) return false;
+		}
+
 		statement.tokens.push_back(tok);
 
 		if (tok == end_token) break;
-
-		if (tok == TK_SQRBRKT_OPEN) {
-			if (!process_source_statement(statement,TK_SQRBRKT_CLOSE)) return false;
-			if (statement.eof) break;
-		}
-		else if (tok == TK_PAREN_OPEN) {
-			if (!process_source_statement(statement,TK_PAREN_CLOSE)) return false;
-			if (statement.eof) break;
-		}
+		if (statement.eof) break;
 	} while (1);
 
 	return true;
