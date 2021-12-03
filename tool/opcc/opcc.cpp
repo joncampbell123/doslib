@@ -847,7 +847,7 @@ struct token_statement_t {
 	~token_statement_t() { }
 };
 
-bool process_source_statement_sub(token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token=TK_SEMICOLON) { /* always apppends */
+bool process_source_statement_sub(token_statement_t &statement,token_substatement_t &tss,token_t &ptok,enum token_type_t end_token,filesource *fsrc) { /* always apppends */
 	token_t tok;
 
 	do {
@@ -865,11 +865,11 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 
 		if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE,fsrc)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE,fsrc)) return false;
 		}
 
 		ptok.subtok.push_back(tok);
@@ -878,7 +878,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 	return true;
 }
 
-bool process_source_substatement(token_substatement_t &tss,token_statement_t &statement) { /* always apppends */
+bool process_source_substatement(token_substatement_t &tss,token_statement_t &statement,filesource *fsrc) { /* always apppends */
 	token_t tok;
 
 	tss.clear();
@@ -903,11 +903,11 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 		}
 		else if (tok == TK_SQRBRKT_OPEN) {
 			tok.type = TK_ARRAYOP;
-			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_SQRBRKT_CLOSE,fsrc)) return false;
 		}
 		else if (tok == TK_PAREN_OPEN) {
 			tok.type = TK_PARENOP;
-			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE)) return false;
+			if (!process_source_statement_sub(statement,tss,tok,TK_PAREN_CLOSE,fsrc)) return false;
 		}
 
 		tss.tokens.push_back(tok);
@@ -916,12 +916,12 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 	return true;
 }
 
-bool process_source_statement(token_statement_t &statement) { /* always apppends */
+bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /* always apppends */
 	token_substatement_t tss;
 
 	while (!fsrceof()) {
 		tss.clear();
-		if (!process_source_substatement(tss,statement)) return false;
+		if (!process_source_substatement(tss,statement,fsrc)) return false;
 		statement.subst.push_back(tss);
 		if (tss.eom) break;
 	}
@@ -929,12 +929,12 @@ bool process_source_statement(token_statement_t &statement) { /* always apppends
 	return true;
 }
 
-bool process_source_file(void) {
+bool process_source_file(filesource *fsrc) {
 	token_statement_t statement;
 
 	while (!fsrceof()) {
 		statement.clear();
-		if (!process_source_statement(statement)) return false;
+		if (!process_source_statement(statement,fsrc)) return false;
 
 		fprintf(stderr,"Statement: ");
 		statement.dump(stderr);
@@ -947,7 +947,7 @@ bool process_source_file(void) {
 
 bool process_source_stack(void) {
 	while (!fsrcend()) {
-		if (!process_source_file())
+		if (!process_source_file(fsrccur()))
 			return false;
 	}
 
