@@ -351,6 +351,11 @@ enum token_type_t {
 	TK_BL,
 	TK_DL,
 
+	TK_AH,					// 60
+	TK_BH,
+	TK_CH,
+	TK_DH,
+
 	TK__MAX
 };
 
@@ -427,6 +432,11 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"BL",
 	"DL",
 
+	"AH",					// 60
+	"BH",
+	"CH",
+	"DH",
+
 };
 
 struct token_identifier_t {
@@ -435,14 +445,18 @@ struct token_identifier_t {
 };
 
 struct token_identifier_t token_identifiers[] = {
+	{TK_AH,					"ah"},
 	{TK_AL,					"al"},
-	{TK_BL,					"bl"},
 	{TK_AX,					"ax"},
+	{TK_BH,					"bh"},
+	{TK_BL,					"bl"},
 	{TK_BP,					"bp"},
 	{TK_BX,					"bx"},
+	{TK_CH,					"ch"},
 	{TK_CL,					"cl"},
 	{TK_CS,					"cs"},
 	{TK_CX,					"cx"},
+	{TK_DH,					"dh"},
 	{TK_DI,					"di"},
 	{TK_DL,					"dl"},
 	{TK_DX,					"dx"},
