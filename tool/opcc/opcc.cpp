@@ -501,6 +501,11 @@ struct token_type {
 	void clear(void) {
 		type = TK_NONE;
 	}
+	bool iserr(void) const {
+		return	(type == TK_ERR) ||
+			(type == TK_UNKNOWN_IDENTIFIER) ||
+			(type == TK_UNKNOWNCHAR);
+	}
 };
 
 struct token_t {
@@ -520,6 +525,9 @@ struct token_t {
 		type.clear();
 		vali.ui = 0;
 		valf = 0;
+	}
+	bool iserr(void) const {
+		return type.iserr();
 	}
 	token_t() : valf(0.0) {
 		vali.ui = 0;
@@ -859,7 +867,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 			statement.eof = true;
 			break;
 		}
-		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
+		if (tok.iserr()) {
 			statement.errtok = tok;
 			statement.err = true;
 			return false;
@@ -906,7 +914,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 			statement.eof = true;
 			break;
 		}
-		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
+		if (tok.iserr()) {
 			statement.errtok = tok;
 			statement.err = true;
 			return false;
