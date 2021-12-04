@@ -78,9 +78,13 @@ struct filesource {
 		else
 			return -1;
 	}
-	int getc(void) {
+	int getc_filter(void) {
 		int r = getc_internal();
 		if (r == '\r') r = getc_internal(); /* MS-DOS style \r \n -> \n */
+		return r;
+	}
+	int getc(void) {
+		int r = getc_filter();
 		if (r == '\n') {
 			srcpos.line++;
 			srcpos.token_count = 0;
@@ -93,7 +97,7 @@ struct filesource {
 		return r;
 	}
 	int peekc(void) {
-		if (next < 0) next = getc();
+		if (next < 0) next = getc_filter();
 		return next;
 	}
 };
@@ -790,6 +794,7 @@ eof:	tok.type = fsrc->eof() ? TK_EOF : TK_ERR;
 
 struct token_substatement_t {
 	vector<token_t>			tokens;
+	filesrcpos			srcpos;
 	bool				eom;
 
 	void dump(FILE *fp) {
@@ -803,6 +808,7 @@ struct token_substatement_t {
 
 	void clear(void) {
 		tokens.clear();
+		srcpos.clear();
 		eom = false;
 	}
 
@@ -813,12 +819,14 @@ struct token_substatement_t {
 struct token_statement_t {
 	vector<token_substatement_t> 	subst;
 	filesrcpos			errpos;
+	filesrcpos			srcpos;
 	bool				eof;
 	bool				err;
 
 	void clear(void) {
 		eof = err = false;
 		errpos.clear();
+		srcpos.clear();
 		subst.clear();
 	}
 
@@ -855,6 +863,8 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 			return false;
 		}
 
+		if (tok == TK_COMMENT) continue; /* ignore */
+
 		if (tok == end_token) break; /* do not include end token */
 
 		if (tok == TK_COMMA) {
@@ -885,9 +895,8 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 }
 
 bool process_source_substatement(token_substatement_t &tss,token_statement_t &statement,filesource *fsrc) { /* always apppends */
+	int count = 0;
 	token_t tok;
-
-	tss.clear();
 
 	do {
 		fsrctok(tok,fsrc);
@@ -902,6 +911,10 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 		}
 
 		if (tok == TK_COMMENT) continue; /* ignore */
+
+		if ((count++) == 0)
+			tss.srcpos = tok.srcpos;
+
 		if (tok == TK_COMMA) break; /* time to stop, end of substatement */
 
 		if (tok == TK_SEMICOLON) {
@@ -925,11 +938,16 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 
 bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /* always apppends */
 	token_substatement_t tss;
+	int count = 0;
 
 	while (!fsrc->eof()) {
 		tss.clear();
 		if (!process_source_substatement(tss,statement,fsrc)) return false;
 		statement.subst.push_back(tss);
+
+		if ((count++) == 0)
+			statement.srcpos = tss.srcpos;
+
 		if (tss.eom) break;
 	}
 
