@@ -535,6 +535,21 @@ struct token_t {
 	~token_t() {
 	}
 
+	string errmsg(void) const {
+		switch (type.type) {
+			case TK_ERR:
+				return "General or I/O error";
+			case TK_UNKNOWN_IDENTIFIER:
+				return string("Unknown identifier \"")+str+"\"";
+			case TK_UNKNOWNCHAR:
+				return string("Unknown character '")+(char)vali.ui+"\'";
+			default:
+				break;
+		};
+
+		return "No error message available";
+	}
+
 	void dumpvector(FILE *fp,vector<token_t> &tokens) {
 		size_t si;
 
@@ -792,6 +807,7 @@ inteof:		if (tok.type == TK_INT)
 	}
 	else {
 		tok.type = TK_UNKNOWNCHAR;
+		tok.vali.si = c;
 	}
 
 	return;
@@ -970,8 +986,8 @@ bool process_source_file(filesource *fsrc) {
 	while (!fsrc->eof()) {
 		statement.clear();
 		if (!process_source_statement(statement,fsrc)) {
-			fprintf(stderr,"Error in statement in %s, line %u, col %u\n",
-				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+			fprintf(stderr,"Error in statement in %s, line %u, col %u: %s\n",
+				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col,statement.errtok.errmsg().c_str());
 			return false;
 		}
 
