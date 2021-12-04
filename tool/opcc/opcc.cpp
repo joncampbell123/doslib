@@ -820,15 +820,15 @@ struct token_substatement_t {
 
 struct token_statement_t {
 	vector<token_substatement_t> 	subst;
-	filesrcpos			errpos;
 	filesrcpos			srcpos;
+	token_t				errtok;
 	bool				eof;
 	bool				err;
 
 	void clear(void) {
 		eof = err = false;
-		errpos.clear();
 		srcpos.clear();
+		errtok.clear();
 		subst.clear();
 	}
 
@@ -860,7 +860,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 			break;
 		}
 		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
-			statement.errpos = tok.srcpos;
+			statement.errtok = tok;
 			statement.err = true;
 			return false;
 		}
@@ -907,7 +907,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 			break;
 		}
 		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
-			statement.errpos = tok.srcpos;
+			statement.errtok = tok;
 			statement.err = true;
 			return false;
 		}
@@ -963,7 +963,7 @@ bool process_source_file(filesource *fsrc) {
 		statement.clear();
 		if (!process_source_statement(statement,fsrc)) {
 			fprintf(stderr,"Error in statement in %s, line %u, col %u\n",
-				fsrc->path.c_str(),statement.errpos.line,statement.errpos.col);
+				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
 			return false;
 		}
 
