@@ -343,6 +343,7 @@ enum token_type_t {
 	TK_PARENOP,/*statement parser*/		// 65
 	TK_COLON,
 	TK_M,
+	TK_UNKNOWNCHAR,
 
 	TK__MAX
 };
@@ -429,6 +430,7 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"PARENOP",				// 65
 	"COLON",
 	"M",
+	"UNKNOWNCHAR"
 
 };
 
@@ -781,7 +783,7 @@ inteof:		if (tok.type == TK_INT)
 			tok.valf = strtof(tok.str.c_str(),NULL);
 	}
 	else {
-		tok.type = TK_ERR;
+		tok.type = TK_UNKNOWNCHAR;
 	}
 
 	return;
@@ -857,7 +859,7 @@ bool process_source_statement_sub(token_statement_t &statement,token_substatemen
 			statement.eof = true;
 			break;
 		}
-		if (tok == TK_ERR) {
+		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
 			statement.errpos = tok.srcpos;
 			statement.err = true;
 			return false;
@@ -904,7 +906,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 			statement.eof = true;
 			break;
 		}
-		if (tok == TK_ERR) {
+		if (tok == TK_ERR || tok == TK_UNKNOWNCHAR) {
 			statement.errpos = tok.srcpos;
 			statement.err = true;
 			return false;
