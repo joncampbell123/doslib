@@ -1036,6 +1036,8 @@ bool process_source_file(filesource *fsrc) {
 
 				if (!process_source_file(fsrccur()))
 					return false;
+
+				fsrc_pop();
 			}
 			else {
 				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement without string\n",
