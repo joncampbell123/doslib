@@ -344,6 +344,7 @@ enum token_type_t {
 	TK_COLON,
 	TK_M,
 	TK_UNKNOWNCHAR,
+	TK_INCLUDE,
 
 	TK__MAX
 };
@@ -430,7 +431,8 @@ const char *token_type_t_to_str[TK__MAX] = {
 	"PARENOP",				// 65
 	"COLON",
 	"M",
-	"UNKNOWNCHAR"
+	"UNKNOWNCHAR",
+	"INCLUDE"
 
 };
 
@@ -461,6 +463,7 @@ struct token_identifier_t token_identifiers[] = {
 	{TK_ES,					"es"},
 	{TK_FLAGS,				"flags"},
 	{TK_I,					"i"},
+	{TK_INCLUDE,				"include"},
 	{TK_IP,					"ip"},
 	{TK_OPLOW3,				"oplow3"},
 	{TK_M,					"m"},
@@ -977,6 +980,9 @@ bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /
 		if (tss.eom) break;
 	}
 
+	if (statement.subst.size() == 1 && statement.subst[0].tokens.empty())
+		statement.subst.pop_back();
+
 	return true;
 }
 
@@ -994,9 +1000,53 @@ bool process_source_file(filesource *fsrc) {
 		fprintf(stderr,"Statement: ");
 		statement.dump(stderr);
 		fprintf(stderr,"\n");
+
+		if (statement.subst.empty()) continue;
+
+		assert(statement.subst.size() > 0);
+		token_substatement_t &first = statement.subst[0];
+
+		/* do not tolerate a line like: " , something" */
+		if (first.tokens.empty()) {
+			fprintf(stderr,"Error in statement in %s, line %u, col %u: No primary substatment\n",
+				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+			return false;
+		}
+
+		assert(first.tokens.size() > 0);
+		if (first.tokens[0] == TK_INCLUDE) {
+			if (first.tokens.size() < 2) {
+				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement without argument\n",
+					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				return false;
+			}
+			if (first.tokens[1] == TK_STRING) {
+				if (!fsrc_push(first.tokens[1].str.c_str())) {
+					fprintf(stderr,"Error in statement in %s, line %u, col %u: Unable to open include file %s\n",
+						fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col,first.tokens[1].str.c_str());
+					return false;
+				}
+
+				if (!process_source_file(fsrccur()))
+					return false;
+			}
+			else {
+				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement without string\n",
+					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				return false;
+			}
+		}
+		else if (first.tokens[0] == TK_OPCODE) {
+		}
+		else {
+			fprintf(stderr,"Error in statement in %s, line %u, col %u: Unknown primary substatment ",
+				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+			first.tokens[0].dump(stderr);
+			fprintf(stderr,"\n");
+			return false;
+		}
 	}
 
-	fsrc_pop();
 	return true;
 }
 
@@ -1004,6 +1054,8 @@ bool process_source_stack(void) {
 	while (!fsrcend()) {
 		if (!process_source_file(fsrccur()))
 			return false;
+
+		fsrc_pop();
 	}
 
 	return true;

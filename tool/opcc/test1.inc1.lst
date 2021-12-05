@@ -1,0 +1,6 @@
+
+include "test1.inc1.inc1.lst";
+
+opcode 0xFE /0,               name "INC",            display ["INC", r/m8],                dest rw r/m8;
+opcode 0xFE /1,               name "DEC",            display ["DEC", r/m8],                dest rw r/m8;
+
