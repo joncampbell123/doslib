@@ -1000,6 +1000,10 @@ void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,..
 	}
 
 	fprintf(stderr,"\n");
+
+	fprintf(stderr,"  -> ");
+	statement.dump(stderr);
+	fprintf(stderr,"\n");
 }
 
 bool process_source_file(filesource *fsrc) {
@@ -1011,12 +1015,6 @@ bool process_source_file(filesource *fsrc) {
 			emit_error(statement,fsrc,"%s",statement.errtok.errmsg().c_str());
 			return false;
 		}
-
-		if (statement.subst.empty() && statement.eof) continue;
-
-		fprintf(stderr,"Statement: ");
-		statement.dump(stderr);
-		fprintf(stderr,"\n");
 
 		if (statement.subst.empty()) continue;
 
