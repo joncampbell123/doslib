@@ -1020,6 +1020,11 @@ bool process_source_file(filesource *fsrc) {
 					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
 				return false;
 			}
+			if (first.tokens.size() > 2) {
+				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement with too many tokens\n",
+					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				return false;
+			}
 			if (first.tokens[1] == TK_STRING) {
 				if (!fsrc_push(first.tokens[1].str.c_str())) {
 					fprintf(stderr,"Error in statement in %s, line %u, col %u: Unable to open include file %s\n",
