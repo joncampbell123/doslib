@@ -112,6 +112,8 @@ static vector<string>		fsrc_to_process;
 static string			cpudef_file;
 static string			cpu_name;
 
+static bool			dbg_tok = false;
+
 enum defvar_type_t {
 	DVT_NONE=0,
 	DVT_STRING,
@@ -215,6 +217,9 @@ static bool parse_argv(int argc,char **argv) {
 			else if (!strcmp(a,"cpu")) {
 				if (i >= argc) return false;
 				cpu_name = argv[i++];
+			}
+			else if (!strcmp(a,"dbg-tok")) {
+				dbg_tok = true;
 			}
 			else if (*a == 'D') {
 				/* -DNAME or -DNAME=VALUE */
@@ -1086,7 +1091,7 @@ bool process_source_file(filesource *fsrc) {
 			return false;
 		}
 
-		if (0) {//DEBUG
+		if (dbg_tok) {
 			fprintf(stderr,"Statement: ");
 			statement.dump(stderr);
 			fprintf(stderr,"\n");
