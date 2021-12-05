@@ -999,6 +999,12 @@ bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /
 	return true;
 }
 
+void emit_dump_statement(token_statement_t &statement) {
+	fprintf(stderr,"  -> ");
+	statement.dump(stderr);
+	fprintf(stderr,"\n");
+}
+
 void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,...) {
 	fprintf(stderr,"Error in statement in %s, line %u, col %u: ",
 		fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
@@ -1013,9 +1019,7 @@ void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,..
 
 	fprintf(stderr,"\n");
 
-	fprintf(stderr,"  -> ");
-	statement.dump(stderr);
-	fprintf(stderr,"\n");
+	emit_dump_statement(statement);
 }
 
 bool process_source_file(filesource *fsrc);
