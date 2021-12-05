@@ -1006,6 +1006,65 @@ void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,..
 	fprintf(stderr,"\n");
 }
 
+bool process_source_file(filesource *fsrc);
+
+bool process_statement_include(token_statement_t &statement,filesource *fsrc) {
+	assert(statement.subst.size() > 0);
+	token_substatement_t &first = statement.subst[0];
+	assert(first.tokens[0] == TK_INCLUDE);
+
+	if (first.tokens.size() < 2) {
+		emit_error(statement,fsrc,"Include statement without argument");
+		return false;
+	}
+	if (first.tokens.size() > 2) {
+		emit_error(statement,fsrc,"Include statement with too many tokens");
+		return false;
+	}
+	if (first.tokens[1] == TK_STRING) {
+		if (!fsrc_push(first.tokens[1].str.c_str())) {
+			emit_error(statement,fsrc,"Unable to open include file %s",first.tokens[1].str.c_str());
+			return false;
+		}
+
+		if (!process_source_file(fsrccur()))
+			return false;
+
+		fsrc_pop();
+	}
+	else {
+		emit_error(statement,fsrc,"Include statement without string");
+		return false;
+	}
+
+	return true;
+}
+
+bool process_statement(token_statement_t &statement,filesource *fsrc) {
+	if (statement.subst.empty()) return true; /* not an error */
+
+	assert(statement.subst.size() > 0);
+	token_substatement_t &first = statement.subst[0];
+
+	/* do not tolerate a line like: " , something" */
+	if (first.tokens.empty()) {
+		emit_error(statement,fsrc,"No primary substatement");
+		return false;
+	}
+
+	assert(first.tokens.size() > 0);
+	if (first.tokens[0] == TK_INCLUDE)
+		return process_statement_include(statement,fsrc);
+	else if (first.tokens[0] == TK_OPCODE)
+		{ }
+	else {
+		emit_error(statement,fsrc,"Unknown primary substatment");
+		return false;
+	}
+
+	return true;
+}
+
 bool process_source_file(filesource *fsrc) {
 	token_statement_t statement;
 
@@ -1016,49 +1075,14 @@ bool process_source_file(filesource *fsrc) {
 			return false;
 		}
 
-		if (statement.subst.empty()) continue;
-
-		assert(statement.subst.size() > 0);
-		token_substatement_t &first = statement.subst[0];
-
-		/* do not tolerate a line like: " , something" */
-		if (first.tokens.empty()) {
-			emit_error(statement,fsrc,"No primary substatement");
-			return false;
+		if (0) {//DEBUG
+			fprintf(stderr,"Statement: ");
+			statement.dump(stderr);
+			fprintf(stderr,"\n");
 		}
 
-		assert(first.tokens.size() > 0);
-		if (first.tokens[0] == TK_INCLUDE) {
-			if (first.tokens.size() < 2) {
-				emit_error(statement,fsrc,"Include statement without argument");
-				return false;
-			}
-			if (first.tokens.size() > 2) {
-				emit_error(statement,fsrc,"Include statement with too many tokens");
-				return false;
-			}
-			if (first.tokens[1] == TK_STRING) {
-				if (!fsrc_push(first.tokens[1].str.c_str())) {
-					emit_error(statement,fsrc,"Unable to open include file %s",first.tokens[1].str.c_str());
-					return false;
-				}
-
-				if (!process_source_file(fsrccur()))
-					return false;
-
-				fsrc_pop();
-			}
-			else {
-				emit_error(statement,fsrc,"Include statement without string");
-				return false;
-			}
-		}
-		else if (first.tokens[0] == TK_OPCODE) {
-		}
-		else {
-			emit_error(statement,fsrc,"Unknown primary substatment");
-			return false;
-		}
+		if (!process_statement(statement,fsrc))
+			return false; /* will have already printed error */
 	}
 
 	return true;
