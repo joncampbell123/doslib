@@ -14,12 +14,14 @@ using namespace std;
 
 struct filesrcpos {
 	unsigned int	line,col,col_count,token_count;
+	bool		init;
 
-	filesrcpos() : line(1), col(1), col_count(1), token_count(0) { }
+	filesrcpos() : line(1), col(1), col_count(1), token_count(0), init(false) { }
 
 	void clear(void) {
 		token_count = 0;
 		col_count = 1;
+		init = false;
 		line = 1;
 		col = 1;
 	}
@@ -40,6 +42,7 @@ struct filesource {
 
 	void close(void) {
 		next = -1;
+		srcpos.init = false;
 		if (fp != NULL) {
 			fclose(fp);
 			fp = NULL;
@@ -58,6 +61,7 @@ struct filesource {
 		path = fpath;
 		next = -1;
 
+		srcpos.init = true;
 		return true;
 	}
 	bool eof(void) {
@@ -933,6 +937,8 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 	int count = 0;
 	token_t tok;
 
+	tss.srcpos = tok.srcpos;
+
 	do {
 		fsrctok(tok,fsrc);
 		if (tok == TK_EOF) {
@@ -975,6 +981,7 @@ bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /
 	token_substatement_t tss;
 	int count = 0;
 
+	statement.srcpos = fsrc->srcpos;
 	while (!fsrc->eof()) {
 		tss.clear();
 		if (!process_source_substatement(tss,statement,fsrc)) return false;
@@ -1092,7 +1099,11 @@ bool process_source_file(filesource *fsrc) {
 		}
 
 		if (dbg_tok) {
-			fprintf(stderr,"Statement in %s line %u col %u: ",fsrc->path.c_str(),statement.srcpos.line,statement.srcpos.col);
+			if (statement.srcpos.init)
+				fprintf(stderr,"Statement in %s line %u col %u: ",fsrc->path.c_str(),statement.srcpos.line,statement.srcpos.col);
+			else
+				fprintf(stderr,"Statement in %s: ",fsrc->path.c_str());
+
 			statement.dump(stderr);
 			fprintf(stderr,"\n");
 		}
