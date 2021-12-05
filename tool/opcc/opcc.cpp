@@ -997,6 +997,8 @@ bool process_source_file(filesource *fsrc) {
 			return false;
 		}
 
+		if (statement.subst.empty() && statement.eof) continue;
+
 		fprintf(stderr,"Statement: ");
 		statement.dump(stderr);
 		fprintf(stderr,"\n");
