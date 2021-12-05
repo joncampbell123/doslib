@@ -937,7 +937,7 @@ bool process_source_substatement(token_substatement_t &tss,token_statement_t &st
 	int count = 0;
 	token_t tok;
 
-	tss.srcpos = tok.srcpos;
+	tss.srcpos = fsrc->srcpos;
 
 	do {
 		fsrctok(tok,fsrc);
