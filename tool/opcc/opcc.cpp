@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include <string>
 #include <vector>
@@ -986,14 +987,28 @@ bool process_source_statement(token_statement_t &statement,filesource *fsrc) { /
 	return true;
 }
 
+void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,...) {
+	fprintf(stderr,"Error in statement in %s, line %u, col %u: ",
+		fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+
+	{
+		va_list va;
+
+		va_start(va,fmt);
+		vfprintf(stderr,fmt,va);
+		va_end(va);
+	}
+
+	fprintf(stderr,"\n");
+}
+
 bool process_source_file(filesource *fsrc) {
 	token_statement_t statement;
 
 	while (!fsrc->eof()) {
 		statement.clear();
 		if (!process_source_statement(statement,fsrc)) {
-			fprintf(stderr,"Error in statement in %s, line %u, col %u: %s\n",
-				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col,statement.errtok.errmsg().c_str());
+			emit_error(statement,fsrc,"%s",statement.errtok.errmsg().c_str());
 			return false;
 		}
 
@@ -1010,27 +1025,23 @@ bool process_source_file(filesource *fsrc) {
 
 		/* do not tolerate a line like: " , something" */
 		if (first.tokens.empty()) {
-			fprintf(stderr,"Error in statement in %s, line %u, col %u: No primary substatment\n",
-				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+			emit_error(statement,fsrc,"No primary substatement");
 			return false;
 		}
 
 		assert(first.tokens.size() > 0);
 		if (first.tokens[0] == TK_INCLUDE) {
 			if (first.tokens.size() < 2) {
-				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement without argument\n",
-					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				emit_error(statement,fsrc,"Include statement without argument");
 				return false;
 			}
 			if (first.tokens.size() > 2) {
-				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement with too many tokens\n",
-					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				emit_error(statement,fsrc,"Include statement with too many tokens");
 				return false;
 			}
 			if (first.tokens[1] == TK_STRING) {
 				if (!fsrc_push(first.tokens[1].str.c_str())) {
-					fprintf(stderr,"Error in statement in %s, line %u, col %u: Unable to open include file %s\n",
-						fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col,first.tokens[1].str.c_str());
+					emit_error(statement,fsrc,"Unable to open include file %s",first.tokens[1].str.c_str());
 					return false;
 				}
 
@@ -1040,18 +1051,14 @@ bool process_source_file(filesource *fsrc) {
 				fsrc_pop();
 			}
 			else {
-				fprintf(stderr,"Error in statement in %s, line %u, col %u: Include statement without string\n",
-					fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
+				emit_error(statement,fsrc,"Include statement without string");
 				return false;
 			}
 		}
 		else if (first.tokens[0] == TK_OPCODE) {
 		}
 		else {
-			fprintf(stderr,"Error in statement in %s, line %u, col %u: Unknown primary substatment ",
-				fsrc->path.c_str(),statement.errtok.srcpos.line,statement.errtok.srcpos.col);
-			first.tokens[0].dump(stderr);
-			fprintf(stderr,"\n");
+			emit_error(statement,fsrc,"Unknown primary substatment");
 			return false;
 		}
 	}
