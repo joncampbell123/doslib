@@ -1092,7 +1092,7 @@ bool process_source_file(filesource *fsrc) {
 		}
 
 		if (dbg_tok) {
-			fprintf(stderr,"Statement: ");
+			fprintf(stderr,"Statement in %s line %u col %u: ",fsrc->path.c_str(),statement.srcpos.line,statement.srcpos.col);
 			statement.dump(stderr);
 			fprintf(stderr,"\n");
 		}
