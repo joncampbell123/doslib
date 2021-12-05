@@ -1011,17 +1011,22 @@ bool process_source_file(filesource *fsrc);
 bool process_statement_include(token_statement_t &statement,filesource *fsrc) {
 	assert(statement.subst.size() > 0);
 	token_substatement_t &first = statement.subst[0];
-	assert(first.tokens[0] == TK_INCLUDE);
 
-	if (first.tokens.size() < 2) {
+	if (statement.subst.size() > 1) {
+		emit_error(statement,fsrc,"Include statement with too many substatements");
+		return false;
+	}
+
+	vector<token_t>::iterator toki = first.tokens.begin();
+	assert(toki != first.tokens.end());
+	assert((*toki) == TK_INCLUDE);
+	toki++;
+
+	if (toki == first.tokens.end()) {
 		emit_error(statement,fsrc,"Include statement without argument");
 		return false;
 	}
-	if (first.tokens.size() > 2) {
-		emit_error(statement,fsrc,"Include statement with too many tokens");
-		return false;
-	}
-	if (first.tokens[1] == TK_STRING) {
+	if ((*toki) == TK_STRING) {
 		if (!fsrc_push(first.tokens[1].str.c_str())) {
 			emit_error(statement,fsrc,"Unable to open include file %s",first.tokens[1].str.c_str());
 			return false;
@@ -1034,6 +1039,12 @@ bool process_statement_include(token_statement_t &statement,filesource *fsrc) {
 	}
 	else {
 		emit_error(statement,fsrc,"Include statement without string");
+		return false;
+	}
+	toki++;
+
+	if (toki != first.tokens.end()) {
+		emit_error(statement,fsrc,"Excess tokens in include statement");
 		return false;
 	}
 
