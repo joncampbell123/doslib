@@ -1024,44 +1024,63 @@ void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,..
 
 bool process_source_file(filesource *fsrc);
 
+struct include_st {
+	vector<string>		paths;
+};
+
 bool process_statement_include(token_statement_t &statement,filesource *fsrc) {
 	assert(statement.subst.size() > 0);
-	token_substatement_t &first = statement.subst[0];
-
-	if (statement.subst.size() > 1) {
-		emit_error(statement,fsrc,"Include statement with too many substatements");
-		return false;
-	}
+	vector<token_substatement_t>::iterator subsi = statement.subst.begin();
+	token_substatement_t &first = *subsi;
+	subsi++;
 
 	vector<token_t>::iterator toki = first.tokens.begin();
 	assert(toki != first.tokens.end());
 	assert((*toki) == TK_INCLUDE);
 	toki++;
 
-	if (toki == first.tokens.end()) {
-		emit_error(statement,fsrc,"Include statement without argument");
-		return false;
-	}
-	if ((*toki) == TK_STRING) {
-		if (!fsrc_push(first.tokens[1].str.c_str())) {
-			emit_error(statement,fsrc,"Unable to open include file %s",first.tokens[1].str.c_str());
+	include_st incl_st;
+
+	do {
+		if (toki == first.tokens.end()) {
+			emit_error(statement,fsrc,"Include statement without argument");
 			return false;
 		}
 
-		if (!process_source_file(fsrccur()))
+		if ((*toki) == TK_STRING) {
+			incl_st.paths.push_back(first.tokens[1].str);
+		}
+		else {
+			emit_error(statement,fsrc,"Include statement without string");
 			return false;
+		}
+		toki++;
 
-		fsrc_pop();
-	}
-	else {
-		emit_error(statement,fsrc,"Include statement without string");
-		return false;
-	}
-	toki++;
+		if (toki != first.tokens.end()) {
+			emit_error(statement,fsrc,"Excess tokens in include statement");
+			return false;
+		}
 
-	if (toki != first.tokens.end()) {
-		emit_error(statement,fsrc,"Excess tokens in include statement");
-		return false;
+		if (subsi == statement.subst.end()) break;
+		first = *subsi; subsi++;
+		toki = first.tokens.begin();
+	} while (1);
+
+	{
+		vector<string>::iterator pi = incl_st.paths.begin();
+		while (pi != incl_st.paths.end()) {
+			string &path = *pi; pi++;
+
+			if (!fsrc_push(path.c_str())) {
+				emit_error(statement,fsrc,"Unable to open include file %s",path.c_str());
+				return false;
+			}
+
+			if (!process_source_file(fsrccur()))
+				return false;
+
+			fsrc_pop();
+		}
 	}
 
 	return true;
