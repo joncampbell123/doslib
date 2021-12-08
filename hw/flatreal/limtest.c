@@ -43,11 +43,19 @@ static const uint32_t maddrs[] = {
 	0x0000FFFE,
 	0x0000FFFD,
 	0x0000FFFC,
+	0x0000FFFB,
+	0x0000FFFA,
+	0x0000FFF9,
+	0x0000FFF8,
 	0x0000FFF0,
 	0x0000EFFF,
 	0x0000EFFE,
 	0x0000EFFD,
 	0x0000EFFC,
+	0x0000EFFB,
+	0x0000EFFA,
+	0x0000EFF9,
+	0x0000EFF8,
 	0x0000EFF0,
 	0//end
 };
@@ -57,8 +65,11 @@ static const uint32_t limits[] = {
 	FLATREALMODE_4GB - 0x1000,
 	0x00FFFFFF, /* 16MB */
 	FLATREALMODE_64KB,
+	FLATREALMODE_64KB-1,
+	FLATREALMODE_64KB-2,			// 5
+	FLATREALMODE_64KB-4,
 	FLATREALMODE_64KB - 0x1000,
-	0					// 5
+	0
 };
 
 static const char *limits_str[] = {
@@ -66,8 +77,11 @@ static const char *limits_str[] = {
 	"4GB-4KB",
 	"16MB",
 	"64KB",
+	"64KB-1",
+	"64KB-2",				// 5
+	"64KB-4",
 	"64KB-4KB",
-	NULL					// 5
+	NULL
 };
 
 static char results[64];
@@ -103,7 +117,7 @@ int main() {
 	printf("\n");
 
 	for (moa=0;(maddr=maddrs[moa]) != (uint32_t)0ul;moa++) {
-		printf("Read mem 0x%08lx: ",(unsigned long)maddr);
+		printf("%08lx: ",(unsigned long)maddr);
 
 		_cli(); /* disable interrupts especially since some tests set limits below 64KB, which could cause real-mode code around us to fault */
 		for (col=0;limits[col] != (uint32_t)0ul;col++) {
