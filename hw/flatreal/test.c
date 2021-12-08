@@ -40,6 +40,20 @@ int main() {
         unsigned long d;
         unsigned short w;
 
+        printf("Flat real mode testing: will your CPU GP# fault if I access beyond 64KB?\n");
+
+        flatrealmode_setup(FLATREALMODE_4GB);  i = flatrealmode_test();
+        printf("Processor with segment limits @ 4GB,         result: %d (%s)\n",i,i?"yes":"no");
+
+        flatrealmode_setup(FLATREALMODE_64KB); i = flatrealmode_test();
+        printf("Processor with segment limits reset to 64KB, result: %d (%s)\n",i,i?"yes":"no");
+
+        flatrealmode_setup(FLATREALMODE_4GB);  i = flatrealmode_test();
+        printf("Processor with segment limits @ 4GB,         result: %d (%s)\n",i,i?"yes":"no");
+
+        flatrealmode_setup(FLATREALMODE_64KB); i = flatrealmode_test();
+        printf("Processor with segment limits reset to 64KB, result: %d (%s)\n",i,i?"yes":"no");
+
         for (i=0;i < 0x40;i++) {
             c = flatrealmode_readb(0xB8000UL + (uint32_t)i);
             printf("%02X ",c);
@@ -71,20 +85,6 @@ int main() {
             flatrealmode_writed(0xB8000UL + (uint32_t)(i*4),i*0x1010101UL);
         }
         while (getch() != 13);
-
-        printf("Flat real mode testing: will your CPU GP# fault if I access beyond 64KB?\n");
-
-        flatrealmode_setup(FLATREALMODE_4GB);  i = flatrealmode_test();
-        printf("Processor with segment limits @ 4GB,         result: %d (%s)\n",i,i?"yes":"no");
-
-        flatrealmode_setup(FLATREALMODE_64KB); i = flatrealmode_test();
-        printf("Processor with segment limits reset to 64KB, result: %d (%s)\n",i,i?"yes":"no");
-
-        flatrealmode_setup(FLATREALMODE_4GB);  i = flatrealmode_test();
-        printf("Processor with segment limits @ 4GB,         result: %d (%s)\n",i,i?"yes":"no");
-
-        flatrealmode_setup(FLATREALMODE_64KB); i = flatrealmode_test();
-        printf("Processor with segment limits reset to 64KB, result: %d (%s)\n",i,i?"yes":"no");
     }
     else {
         printf("Unable to set up Flat Real Mode\n");
