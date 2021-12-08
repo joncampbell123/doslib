@@ -28,13 +28,20 @@
 %endif
 
 %if TARGET_MSDOS == 16
-; int flatrealmode_test()
-global flatrealmode_test_
-flatrealmode_test_:
+; int flatrealmode_testaddr(uint32_t addr)
+global flatrealmode_testaddr_
+flatrealmode_testaddr_:
 		pushf
 		push		ds
 		push		esi
+		push		edi
 		push		cx
+
+		; _watcall says the 32-bit int is in DX:AX.
+		; we have to do this NOW before anything modifies DX:AX
+		movzx		edi,dx
+		shl		edi,16
+		mov		di,ax
 
 		; clear interrupts, to ensure IRQ 5 is not mistaken for a GP fault
 		cli
@@ -46,19 +53,18 @@ flatrealmode_test_:
 		; hook interrupt 0x0D (general protection fault and IRQ 5)
 		mov		si,0x0D * 4
 		mov		cx,[si]			; offset
-		mov		word [si],_flatrealmode_test_fail
+		mov		word [si],_flatrealmode_testaddr_fail
 		push		cx
 		mov		cx,[si+2]
 		mov		word [si+2],cs
 		push		cx
 
 		; now try it. either we'll make it through unscathed or it will cause a GP fault and branch to our handler
-		mov		esi,0xFFFFFFF8
-		mov		esi,[esi]
+		mov		edi,[edi]
 
 		; either nothing happened, or control jmp'd here from the exception handler (who also set AX=1)
 		; restore interrupt routine and clean up
-_flatrealmode_test_conclude:
+_flatrealmode_testaddr_conclude:
 		mov		si,0x0D * 4
 		pop		cx
 		mov		word [si+2],cx
@@ -66,13 +72,14 @@ _flatrealmode_test_conclude:
 		mov		word [si],cx
 
 		pop		cx
+		pop		edi
 		pop		esi
 		pop		ds
 		popf
 		retnative
-_flatrealmode_test_fail:
+_flatrealmode_testaddr_fail:
 		add		sp,6			; throw away IRETF address (IP+CS+FLAGS)
 		inc		ax			; make AX nonzero
-		jmp short	_flatrealmode_test_conclude
+		jmp short	_flatrealmode_testaddr_conclude
 %endif
 

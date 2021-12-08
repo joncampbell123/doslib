@@ -133,11 +133,18 @@ void flatrealmode_writed(uint32_t addr,uint32_t c);
     parm [dx ax] [cx bx]
 
 int flatrealmode_setup(uint32_t limit);
-int flatrealmode_test(); /* ASM */ /* 1=flat real mode not active   0=flat real mode active */ /* FIXME: Give this a more descriptive name. It's confusing in it's current form */
+int flatrealmode_testaddr(uint32_t addr); /* ASM */ /* 1=flat real mode not active   0=flat real mode active */ /* FIXME: Give this a more descriptive name. It's confusing in it's current form */
 
 /* you can't do flat real mode when Windows is running. Nor can you use it when running in virtual 8086 mode (such as when EMM386.EXE is resident) */
 #define flatrealmode_allowed() (cpu_v86_active == 0 && windows_mode == WINDOWS_NONE)
 #define flatrealmode_ok() (flatrealmode_test() == 0)
+
+/* ideal for test */
+#define FLATREALMODE_TEST           0xFFFFFFF8UL
+
+static inline int flatrealmode_test(void) {
+	return flatrealmode_testaddr(FLATREALMODE_TEST);
+}
 
 /* feed this constant into the setup function to enable the full 4GB range */
 #define FLATREALMODE_4GB            0xFFFFFFFFUL
