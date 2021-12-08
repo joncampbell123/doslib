@@ -108,7 +108,7 @@ int main() {
 		_cli(); /* disable interrupts especially since some tests set limits below 64KB, which could cause real-mode code around us to fault */
 		for (col=0;limits[col] != (uint32_t)0ul;col++) {
 			flatrealmode_setup(limits[col]); i = flatrealmode_testaddr(maddr);
-			results[col] = i?'y':'n';
+			results[col] = i?'Y':'N';
 		}
 		flatrealmode_setup(FLATREALMODE_64KB);
 		_sti();
