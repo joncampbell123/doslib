@@ -35,7 +35,7 @@ int flatrealmode_setup(uint32_t limit) {
     if (!flatrealmode_allowed())
         return 0;
 
-    if (limit < 0xFFFFUL) limit = 0xFFFFUL;
+    if (limit < 0xE000UL) limit = 0xE000UL; /* WARNING: Do not allow limit much below 64KB or real-mode code will start crashing */
     limit >>= 12UL;
 
     buf = malloc(16 + (8*3));
