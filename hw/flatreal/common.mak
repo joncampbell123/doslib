@@ -4,11 +4,11 @@ NOW_BUILDING = HW_FLATREAL_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    flatreal.c
-OBJS =        $(SUBDIR)$(HPS)flatreal.obj $(SUBDIR)$(HPS)flatmode.obj
+OBJS =        $(SUBDIR)$(HPS)flatreal.obj $(SUBDIR)$(HPS)flatmode.obj $(SUBDIR)$(HPS)flattest.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_FLATREAL_LIB): $(OBJS)
-	wlib -q -b -c $(HW_FLATREAL_LIB) -+$(SUBDIR)$(HPS)flatreal.obj -+$(SUBDIR)$(HPS)flatmode.obj
+	wlib -q -b -c $(HW_FLATREAL_LIB) -+$(SUBDIR)$(HPS)flatreal.obj -+$(SUBDIR)$(HPS)flatmode.obj -+$(SUBDIR)$(HPS)flattest.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-FLATREAL
 # systems all arguments would exceed the pitiful 128 char command line limit
