@@ -42,6 +42,7 @@ flatrealmode_testaddr_:
 		movzx		edi,dx
 		shl		edi,16
 		mov		di,ax
+		mov		dword [cs:_modifyme+3],edi ; overwrite memaddr field
 
 		; clear interrupts, to ensure IRQ 5 is not mistaken for a GP fault
 		cli
@@ -59,8 +60,10 @@ flatrealmode_testaddr_:
 		mov		word [si+2],cs
 		push		cx
 
-		; now try it. either we'll make it through unscathed or it will cause a GP fault and branch to our handler
-		mov		edi,[edi]
+		; now try it. either we'll make it through unscathed or it will cause a GP fault and branch to our handler.
+		; NTS: Use MOV EAX,[mem] because while DOSBox-X does not fully check segment limits it does check for that particular instruction.
+_modifyme:	mov		eax,[dword 0]
+		xor		eax,eax
 
 		; either nothing happened, or control jmp'd here from the exception handler (who also set AX=1)
 		; restore interrupt routine and clean up
@@ -79,7 +82,7 @@ _flatrealmode_testaddr_conclude:
 		retnative
 _flatrealmode_testaddr_fail:
 		add		sp,6			; throw away IRETF address (IP+CS+FLAGS)
-		inc		ax			; make AX nonzero
+		mov		ax,1			; make AX nonzero
 		jmp short	_flatrealmode_testaddr_conclude
 %endif
 
