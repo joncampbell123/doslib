@@ -74,12 +74,8 @@ int main() {
 
     {
 	unsigned int row=1;
-        unsigned int i;
-        unsigned char c;
-        unsigned long d;
-        unsigned short w;
-	unsigned int count;
         unsigned int moa;
+        unsigned int i;
 	uint32_t maddr;
 
 	printf("Whether or not a memory address faults given limits\n");
