@@ -1,4 +1,7 @@
 
+#ifndef __HW_FLATREAL_H
+#define __HW_FLATREAL_H
+
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/emm.h>
@@ -157,4 +160,6 @@ static inline int flatrealmode_test(void) {
 # define flatrealmode_allowed() (0)
 # define flatrealmode_ok() (0)
 #endif
+
+#endif //__HW_FLATREAL_H
 
