@@ -24,6 +24,7 @@ void __cdecl flatrealmode_force_datasel(void *ptr);
 
 int flatrealmode_setup(uint32_t limit) {
     const unsigned long segds = 0;
+    uint8_t bits = 16;
     uint32_t *ap;
     void *buf;
 
@@ -36,7 +37,10 @@ int flatrealmode_setup(uint32_t limit) {
         return 0;
 
     /* WARNING: Limits below 64KB are NOT recommended in real mode! */
-    limit >>= 12UL;
+    if (limit > 0xFFFFul) {
+	    limit >>= 12UL;
+	    bits = 32;
+    }
 
     buf = malloc(16 + (8*3));
     if (buf == NULL) return 0;
@@ -58,7 +62,7 @@ int flatrealmode_setup(uint32_t limit) {
     ap[0] = ap[1] = 0;
     /* GDT[1] = 32-bit data segment */
     ap[2] = (segds << 16UL) | (limit & 0xFFFFUL);
-    ap[3] = (limit & 0xF0000UL) | (0x80UL << 16UL) | (0x93UL << 8UL) | (segds >> 16UL);
+    ap[3] = (limit & 0xF0000UL) | ((bits == 32 ? 0x80UL : 0x00UL) << 16UL) | (0x93UL << 8UL) | (segds >> 16UL);
     /* GDT[2] = 16-bit code segment */
     {
         void far *ptr = (void far*)flatrealmode_force_datasel;
