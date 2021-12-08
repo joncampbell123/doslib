@@ -51,6 +51,26 @@ static const uint32_t maddrs[] = {
 	0x0000EFF0,
 	0//end
 };
+
+static const uint32_t limits[] = {
+	FLATREALMODE_4GB,			// 0
+	FLATREALMODE_4GB - 0x1000,
+	0x00FFFFFF, /* 16MB */
+	FLATREALMODE_64KB,
+	FLATREALMODE_64KB - 0x1000,
+	0					// 5
+};
+
+static const char *limits_str[] = {
+	"4GB",					// 0
+	"4GB-4KB",
+	"16MB",
+	"64KB",
+	"64KB-4KB",
+	NULL					// 5
+};
+
+static char results[64];
 #endif
 
 int main() {
@@ -74,6 +94,7 @@ int main() {
 
     {
 	unsigned int row=1;
+	unsigned int col;
         unsigned int moa;
         unsigned int i;
 	uint32_t maddr;
@@ -84,24 +105,18 @@ int main() {
 	for (moa=0;(maddr=maddrs[moa]) != (uint32_t)0ul;moa++) {
 		printf("Read mem 0x%08lx: ",(unsigned long)maddr);
 
-		flatrealmode_setup(FLATREALMODE_4GB); i = flatrealmode_testaddr(maddr);
-		printf("4GB:%c ",i?'y':'n');
-
-		flatrealmode_setup(FLATREALMODE_4GB - 0x1000); i = flatrealmode_testaddr(maddr);
-		printf("4GB-4K:%c ",i?'y':'n');
-
-		flatrealmode_setup(0x00FFFFFFul); i = flatrealmode_testaddr(maddr);
-		printf("16MB:%c ",i?'y':'n');
-
-		flatrealmode_setup(FLATREALMODE_64KB); i = flatrealmode_testaddr(maddr);
-		printf("64KB:%c ",i?'y':'n');
-
-		flatrealmode_setup(FLATREALMODE_64KB - 0x1000); i = flatrealmode_testaddr(maddr);
-		printf("64KB-4K:%c ",i?'y':'n');
-
-		printf("\n");
-
+		_cli(); /* disable interrupts especially since some tests set limits below 64KB, which could cause real-mode code around us to fault */
+		for (col=0;limits[col] != (uint32_t)0ul;col++) {
+			flatrealmode_setup(limits[col]); i = flatrealmode_testaddr(maddr);
+			results[col] = i?'y':'n';
+		}
 		flatrealmode_setup(FLATREALMODE_64KB);
+		_sti();
+
+		for (col=0;limits[col] != (uint32_t)0ul;col++) {
+			printf("%s:%c ",limits_str[col],results[col]);
+		}
+		printf("\n");
 
 		if ((++row) >= 24) {
 			while (getch() != 13);
