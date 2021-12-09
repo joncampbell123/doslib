@@ -31,6 +31,12 @@
  %error retnative not defined
 %endif
 
+%if TARGET_MSDOS == 16
+ %ifdef TARGET_WINDOWS
+  extern cpu_basic_probe_via_winflags_
+ %endif
+%endif
+
 ; 0 = 8086
 ; 1 = 186
 ; 2 = 286
@@ -85,6 +91,7 @@ cpu_basic_probe_:
 
 ; inner core of the function. outer core takes care of saving regs
 cpu_basic_probe_f_:
+
 	; check: is a FPU present?
 	; FIXME: given the Open Watcom issue with 8086 processors, does this have the same problem??
 	fninit
@@ -102,6 +109,30 @@ cpu_basic_probe_f_:
 	or		byte [_cpu_flags],2
 
 no_fpu:
+
+int 1
+
+%if TARGET_MSDOS == 16
+ %ifdef TARGET_WINDOWS
+	; 286 detection is not reliable from protected mode when running as a 16-bit Windows application,
+	; the method depends on real-mode behavior. Try to use GetWinFlags()
+  %ifdef MMODE_CODE_CALL_DEF_FAR
+	call far	cpu_basic_probe_via_winflags_
+  %else
+	call		cpu_basic_probe_via_winflags_
+  %endif
+	; if return value is negative, continue to normal detect.
+	; if return value is less than 4 (something less than a 486) return that immediately.
+	; if a 486 or higher, jump straight to 486 CPUID detect.
+	or		ax,ax
+	js		no_winf
+	cmp		ax,4
+	jae		test486
+	mov		result_reg,ax
+	retnative
+no_winf:
+ %endif
+%endif
 
 ; 32-bit mode: If this code is executing then DUH the CPU is at least a 386.
 ;              Skip the 8086 test.
