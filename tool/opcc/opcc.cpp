@@ -1089,22 +1089,9 @@ bool validate_range_uint8(uint64_t i) {
 	return i < (uint64_t)256u;
 }
 
-bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
-	assert(statement.subst.size() > 0);
-	vector<token_substatement_t>::iterator subsi = statement.subst.begin();
-	token_substatement_t &first = *subsi;
-	subsi++;
-
-	vector<token_t>::iterator toki = first.tokens.begin();
-	assert(toki != first.tokens.end());
-	assert((*toki) == TK_OPCODE);
-	toki++;
-
-	opcode_st opcode;
-
-	/* OPCODE <pattern>, name <string>, display [ ... ], ... */
+bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator &toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
 	/* toki points just after OPCODE */
-	while (toki != first.tokens.end()) {
+	while (toki != toki_end) {
 		if ((*toki) == TK_INT) {
 			if (!validate_range_uint8(toki->vali.ui)) {
 				emit_error(statement,fsrc,"Invalid opcode byte value");
@@ -1158,7 +1145,7 @@ bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
 			toki++;
 			std::sort(b.val.begin(),b.val.end());
 		}
-		else if ((toki+1) < first.tokens.end() && (*toki) == TK_FWSLASH && toki[1] == TK_INT) { /* /0, /2, etc. syntax meaning opcode defined by mod/reg/rm */
+		else if ((toki+1) < toki_end && (*toki) == TK_FWSLASH && toki[1] == TK_INT) { /* /0, /2, etc. syntax meaning opcode defined by mod/reg/rm */
 			if (!validate_range_regfield(toki[1].vali.ui)) {
 				emit_error(statement,fsrc,"Invalid reg field in /N syntax");
 				return false;
@@ -1169,7 +1156,7 @@ bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
 			opcode.match_reg = (int8_t)(toki[1].vali.ui);
 
 			toki += 2;
-			assert(toki <= first.tokens.end());
+			assert(toki <= toki_end);
 		}
 		else {
 			emit_error(statement,fsrc,"Unexpected token in opcode");
@@ -1177,33 +1164,55 @@ bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
 		}
 	}
 
-	if (true) {
-		fprintf(stderr,"Opcode: ");
-		{
-			vector<opcode_byte>::iterator bi = opcode.opcode_seq.seq.begin();
-			while (bi != opcode.opcode_seq.seq.end()) {
-				fprintf(stderr,"[");
-				vector<uint8_t>::iterator obi = (*bi).val.begin();
-				while (obi != (*bi).val.end()) {
-					fprintf(stderr,"%02x",*obi);
-					obi++;
-					if (obi != (*bi).val.end()) fprintf(stderr,",");
-				}
-				fprintf(stderr,"]");
-				bi++;
-				if (bi != opcode.opcode_seq.seq.end()) fprintf(stderr,",");
+	return true;
+}
+
+void debug_dump_opcode_st(opcode_st &opcode) {
+	fprintf(stderr,"Opcode: ");
+	{
+		vector<opcode_byte>::iterator bi = opcode.opcode_seq.seq.begin();
+		while (bi != opcode.opcode_seq.seq.end()) {
+			fprintf(stderr,"[");
+			vector<uint8_t>::iterator obi = (*bi).val.begin();
+			while (obi != (*bi).val.end()) {
+				fprintf(stderr,"%02x",*obi);
+				obi++;
+				if (obi != (*bi).val.end()) fprintf(stderr,",");
 			}
+			fprintf(stderr,"]");
+			bi++;
+			if (bi != opcode.opcode_seq.seq.end()) fprintf(stderr,",");
 		}
-
-		if (opcode.mod_reg_rm) {
-			fprintf(stderr," m/r/m");
-
-			if (opcode.match_reg >= 0)
-				fprintf(stderr," reg=%d ",opcode.match_reg);
-		}
-
-		fprintf(stderr,"\n");
 	}
+
+	if (opcode.mod_reg_rm) {
+		fprintf(stderr," m/r/m");
+
+		if (opcode.match_reg >= 0)
+			fprintf(stderr," /%d ",opcode.match_reg);
+	}
+
+	fprintf(stderr,"\n");
+}
+
+bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
+	assert(statement.subst.size() > 0);
+	vector<token_substatement_t>::iterator subsi = statement.subst.begin();
+	token_substatement_t &first = *subsi;
+	subsi++;
+
+	vector<token_t>::iterator toki = first.tokens.begin();
+	assert(toki != first.tokens.end());
+	assert((*toki) == TK_OPCODE);
+	toki++;
+
+	opcode_st opcode;
+
+	/* OPCODE <pattern>, name <string>, display [ ... ], ... */
+	if (!process_statement_opcode_OPCODE(opcode,toki,first.tokens.end(),statement,fsrc))
+		return false;
+
+	if (true) debug_dump_opcode_st(opcode);
 
 	return true;
 }
