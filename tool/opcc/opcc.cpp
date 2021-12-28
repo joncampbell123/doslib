@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <map>
@@ -1024,6 +1025,189 @@ void emit_error(token_statement_t &statement,filesource *fsrc,const char *fmt,..
 
 bool process_source_file(filesource *fsrc);
 
+struct opcode_byte {
+	vector<uint8_t>		val;		/* to support ranges */
+
+	opcode_byte() {
+	}
+
+	~opcode_byte() {
+	}
+};
+
+struct opcode_sequence {
+	vector<opcode_byte>	seq;
+
+	opcode_sequence() {
+	}
+
+	~opcode_sequence() {
+	}
+
+	void add(const uint8_t v) {
+		const size_t idx = seq.size();
+		seq.resize(idx+1u);
+		assert(seq[idx].val.empty());
+		seq[idx].val.push_back(v);
+	}
+
+	opcode_byte &add_seq(void) {
+		const size_t idx = seq.size();
+		seq.resize(idx+1u);
+		assert(seq[idx].val.empty());
+		return seq[idx];
+	}
+};
+
+enum {
+	PF_NONE=0,
+	PF_REPNE,
+	PF_REPE,
+	PF_LOCK,
+	PF_SEG_OVERRIDE
+};
+
+struct opcode_st {
+	string			name;
+	opcode_sequence		opcode_seq;
+	bool			mod_reg_rm;
+	int8_t			match_reg; /* mod/reg/rm match reg i.e. opcode 0xFE /2 */
+	uint8_t			prefix;
+	int8_t			seg_override;
+
+	opcode_st() : mod_reg_rm(false), match_reg(-1), prefix(PF_NONE), seg_override(-1) {
+	}
+	~opcode_st() {
+	}
+};
+
+bool validate_range_regfield(uint64_t i) {
+	return i < (uint64_t)8u;
+}
+
+bool validate_range_uint8(uint64_t i) {
+	return i < (uint64_t)256u;
+}
+
+bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
+	assert(statement.subst.size() > 0);
+	vector<token_substatement_t>::iterator subsi = statement.subst.begin();
+	token_substatement_t &first = *subsi;
+	subsi++;
+
+	vector<token_t>::iterator toki = first.tokens.begin();
+	assert(toki != first.tokens.end());
+	assert((*toki) == TK_OPCODE);
+	toki++;
+
+	opcode_st opcode;
+
+	/* OPCODE <pattern>, name <string>, display [ ... ], ... */
+	/* toki points just after OPCODE */
+	while (toki != first.tokens.end()) {
+		if ((*toki) == TK_INT) {
+			if (!validate_range_uint8(toki->vali.ui)) {
+				emit_error(statement,fsrc,"Invalid opcode byte value");
+				return false;
+			}
+
+			opcode.opcode_seq.add((uint8_t)toki->vali.ui);
+			toki++;
+		}
+		else if ((*toki) == TK_ARRAYOP) {
+			opcode_byte &b = opcode.opcode_seq.add_seq();
+			{
+				vector< vector<token_t> >::iterator tli = toki->subtok.begin();
+				while (tli != toki->subtok.end()) {
+					vector<token_t>::iterator stli = (*tli).begin();
+					while (stli != (*tli).end()) {
+						if ((*stli) == TK_INT) {
+							if (!validate_range_uint8(stli->vali.ui)) {
+								emit_error(statement,fsrc,"Invalid opcode byte value");
+								return false;
+							}
+
+							if ((stli+2) < (*tli).end() && stli[1] == TK_NEG && stli[2] == TK_INT) {
+								if (!validate_range_uint8(stli[2].vali.ui) || stli[2].vali.ui < stli->vali.ui) {
+									emit_error(statement,fsrc,"Invalid opcode byte value");
+									return false;
+								}
+
+								unsigned int i = (unsigned int)(stli->vali.ui);
+								while (i <= (unsigned int)(stli[2].vali.ui)) {
+									b.val.push_back((uint8_t)i);
+									i++;
+								}
+
+								stli += 3;
+								assert(stli <= (*tli).end());
+							}
+							else {
+								b.val.push_back((uint8_t)stli->vali.ui);
+								stli++;
+							}
+						}
+						else {
+							emit_error(statement,fsrc,"Unexpected token in opcode byte sequence");
+							return false;
+						}
+					}
+					tli++;
+				}
+			}
+			toki++;
+			std::sort(b.val.begin(),b.val.end());
+		}
+		else if ((toki+1) < first.tokens.end() && (*toki) == TK_FWSLASH && toki[1] == TK_INT) { /* /0, /2, etc. syntax meaning opcode defined by mod/reg/rm */
+			if (!validate_range_regfield(toki[1].vali.ui)) {
+				emit_error(statement,fsrc,"Invalid reg field in /N syntax");
+				return false;
+			}
+
+			/* this means there is a mod/reg/rm field */
+			opcode.mod_reg_rm = true;
+			opcode.match_reg = (int8_t)(toki[1].vali.ui);
+
+			toki += 2;
+			assert(toki <= first.tokens.end());
+		}
+		else {
+			emit_error(statement,fsrc,"Unexpected token in opcode");
+			return false;
+		}
+	}
+
+	if (true) {
+		fprintf(stderr,"Opcode: ");
+		{
+			vector<opcode_byte>::iterator bi = opcode.opcode_seq.seq.begin();
+			while (bi != opcode.opcode_seq.seq.end()) {
+				fprintf(stderr,"[");
+				vector<uint8_t>::iterator obi = (*bi).val.begin();
+				while (obi != (*bi).val.end()) {
+					fprintf(stderr,"%02x",*obi);
+					obi++;
+					if (obi != (*bi).val.end()) fprintf(stderr,",");
+				}
+				fprintf(stderr,"]");
+				bi++;
+				if (bi != opcode.opcode_seq.seq.end()) fprintf(stderr,",");
+			}
+		}
+
+		if (opcode.mod_reg_rm) {
+			fprintf(stderr," m/r/m");
+
+			if (opcode.match_reg >= 0)
+				fprintf(stderr," reg=%d ",opcode.match_reg);
+		}
+
+		fprintf(stderr,"\n");
+	}
+
+	return true;
+}
+
 struct include_st {
 	vector<string>		paths;
 };
@@ -1102,7 +1286,7 @@ bool process_statement(token_statement_t &statement,filesource *fsrc) {
 	if (first.tokens[0] == TK_INCLUDE)
 		return process_statement_include(statement,fsrc);
 	else if (first.tokens[0] == TK_OPCODE)
-		{ }
+		return process_statement_opcode(statement,fsrc);
 	else {
 		emit_error(statement,fsrc,"Unknown primary substatment");
 		return false;
