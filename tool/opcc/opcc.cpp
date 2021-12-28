@@ -1167,23 +1167,32 @@ bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator
 	return true;
 }
 
+void debug_dump_opcode_st_seq_vals(vector<uint8_t> &val) {
+	vector<uint8_t>::iterator obi = val.begin();
+	while (obi != val.end()) {
+		fprintf(stderr,"%02x",*obi);
+
+		obi++;
+		if (obi != val.end()) fprintf(stderr,",");
+	}
+}
+
+void debug_dump_opcode_st_seq(vector<opcode_byte> &seq) {
+	vector<opcode_byte>::iterator bi = seq.begin();
+	while (bi != seq.end()) {
+		fprintf(stderr,"[");
+
+		debug_dump_opcode_st_seq_vals((*bi).val);
+		bi++;
+
+		fprintf(stderr,"]");
+		if (bi != seq.end()) fprintf(stderr,",");
+	}
+}
+
 void debug_dump_opcode_st(opcode_st &opcode) {
 	fprintf(stderr,"Opcode: ");
-	{
-		vector<opcode_byte>::iterator bi = opcode.opcode_seq.seq.begin();
-		while (bi != opcode.opcode_seq.seq.end()) {
-			fprintf(stderr,"[");
-			vector<uint8_t>::iterator obi = (*bi).val.begin();
-			while (obi != (*bi).val.end()) {
-				fprintf(stderr,"%02x",*obi);
-				obi++;
-				if (obi != (*bi).val.end()) fprintf(stderr,",");
-			}
-			fprintf(stderr,"]");
-			bi++;
-			if (bi != opcode.opcode_seq.seq.end()) fprintf(stderr,",");
-		}
-	}
+	debug_dump_opcode_st_seq(opcode.opcode_seq.seq);
 
 	if (opcode.mod_reg_rm) {
 		fprintf(stderr," m/r/m");
