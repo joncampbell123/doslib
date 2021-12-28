@@ -1248,6 +1248,30 @@ bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator
 	return true;
 }
 
+bool process_statement_opcode_NAME(opcode_st &opcode,vector<token_t>::iterator &toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
+	/* toki already points past TK_NAME */
+	if (toki == toki_end) {
+		emit_error(statement,fsrc,"Opcode name without any other tokens");
+		return false;
+	}
+
+	if (*toki == TK_STRING) {
+		if (opcode.name.empty() || opcode.name == (*toki).str) {
+			opcode.name = (*toki).str;
+		}
+		else {
+			emit_error(statement,fsrc,"Opcode name already defined");
+			return false;
+		}
+	}
+	else {
+		emit_error(statement,fsrc,"Unexpected token after NAME");
+		return false;
+	}
+
+	return true;
+}
+
 void debug_dump_opcode_st_seq_vals(vector<uint8_t> &val) {
 	vector<uint8_t>::iterator obi = val.begin();
 	while (obi != val.end()) {
@@ -1272,7 +1296,7 @@ void debug_dump_opcode_st_seq(vector<opcode_byte> &seq) {
 }
 
 void debug_dump_opcode_st(opcode_st &opcode) {
-	fprintf(stderr,"Opcode: ");
+	fprintf(stderr,"Opcode '%s': ",opcode.name.c_str());
 	debug_dump_opcode_st_seq(opcode.opcode_seq.seq);
 
 	if (opcode.mod_reg_rm) {
@@ -1301,6 +1325,37 @@ bool process_statement_opcode(token_statement_t &statement,filesource *fsrc) {
 	/* OPCODE <pattern>, name <string>, display [ ... ], ... */
 	if (!process_statement_opcode_OPCODE(opcode,toki,first.tokens.end(),statement,fsrc))
 		return false;
+
+	/* anything else to parse...? */
+	while (subsi != statement.subst.end()) {
+		token_substatement_t &current = *subsi;
+		subsi++;
+
+		toki = current.tokens.begin();
+		if (toki == current.tokens.end()) continue;
+
+		if ((*toki) == TK_NAME) {
+			toki++;
+			if (!process_statement_opcode_NAME(opcode,toki,current.tokens.end(),statement,fsrc))
+				return false;
+		}
+		else if ((*toki) == TK_DISPLAY) {
+		}
+		else if ((*toki) == TK_DEST) {
+		}
+		else if ((*toki) == TK_SRC) {
+		}
+		else if ((*toki) == TK_RI) {
+		}
+		else if ((*toki) == TK_ST) {
+		}
+		else if ((*toki) == TK_STIDX) {
+		}
+		else {
+			emit_error(statement,fsrc,"Unexpected substatement in opcode");
+			return false;
+		}
+	}
 
 	if (true) debug_dump_opcode_st(opcode);
 
