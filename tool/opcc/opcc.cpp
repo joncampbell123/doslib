@@ -1296,7 +1296,9 @@ void debug_dump_opcode_st_seq(vector<opcode_byte> &seq) {
 }
 
 void debug_dump_opcode_st(opcode_st &opcode) {
-	fprintf(stderr,"Opcode '%s': ",opcode.name.c_str());
+	fprintf(stderr,"Opcode '%s':\n",opcode.name.c_str());
+
+	fprintf(stderr,"  Sequence:    ");
 	debug_dump_opcode_st_seq(opcode.opcode_seq.seq);
 
 	if (opcode.mod_reg_rm) {
