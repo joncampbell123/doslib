@@ -1033,6 +1033,27 @@ struct opcode_byte {
 
 	~opcode_byte() {
 	}
+
+	void sort(void) {
+		std::sort(val.begin(),val.end());
+	}
+
+	bool has_duplicates(void) { /* you must sort first */
+		vector<uint8_t>::iterator i = val.begin();
+		uint8_t pv;
+
+		if (i != val.end()) {
+			pv = *i;
+			i++;
+			while (i != val.end()) {
+				if (pv == *i) return true;
+				pv = *i;
+				i++;
+			}
+		}
+
+		return false;
+	}
 };
 
 struct opcode_sequence {
@@ -1089,61 +1110,114 @@ bool validate_range_uint8(uint64_t i) {
 	return i < (uint64_t)256u;
 }
 
+bool process_statement_opcode_OPCODE_singleval(opcode_st &opcode,vector<token_t>::iterator toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
+	assert(toki != toki_end);
+
+	if (!validate_range_uint8(toki->vali.ui)) {
+		emit_error(statement,fsrc,"Invalid opcode byte value");
+		return false;
+	}
+
+	opcode.opcode_seq.add((uint8_t)toki->vali.ui);
+	return true;
+}
+
+bool process_statement_opcode_OPCODE_multivalarray_statement_oneval(opcode_byte &b,opcode_st &opcode,vector<token_t>::iterator stli,vector<token_t>::iterator stli_end,token_statement_t &statement,filesource *fsrc) {
+	assert(stli != stli_end);
+
+	(void)opcode;
+
+	if (!validate_range_uint8(stli->vali.ui)) {
+		emit_error(statement,fsrc,"Invalid opcode byte value");
+		return false;
+	}
+
+	b.val.push_back((uint8_t)stli->vali.ui);
+	return true;
+}
+
+bool process_statement_opcode_OPCODE_multivalarray_statement_rangeval(opcode_byte &b,opcode_st &opcode,vector<token_t>::iterator stli,vector<token_t>::iterator stli_end,token_statement_t &statement,filesource *fsrc) {
+	assert((stli+2) < stli_end);
+
+	(void)opcode;
+
+	if (!validate_range_uint8(stli[0].vali.ui) || !validate_range_uint8(stli[2].vali.ui) || stli[0].vali.ui > stli[2].vali.ui) {
+		emit_error(statement,fsrc,"Invalid opcode byte values");
+		return false;
+	}
+
+	unsigned int i;
+
+	for (i=(unsigned int)stli[0].vali.ui;i <= (unsigned int)stli[2].vali.ui;i++)
+		b.val.push_back((uint8_t)i);
+
+	return true;
+}
+
+bool process_statement_opcode_OPCODE_multivalarray_statement(opcode_byte &b,opcode_st &opcode,vector< vector<token_t> >::iterator tli,vector< vector<token_t> >::iterator tli_end,token_statement_t &statement,filesource *fsrc) {
+	assert(tli != tli_end);
+
+	(void)opcode;
+
+	vector<token_t>::iterator stli = (*tli).begin();
+	while (stli != (*tli).end()) {
+		if ((stli+2) < (*tli).end() && (*stli) == TK_INT && stli[1] == TK_NEG && stli[2] == TK_INT) { /* INT-INT range inclusive */
+			if (!process_statement_opcode_OPCODE_multivalarray_statement_rangeval(b,opcode,stli,(*tli).end(),statement,fsrc))
+				return false;
+
+			stli += 3;
+		}
+		else if ((*stli) == TK_INT) { /* INT single value */
+			if (!process_statement_opcode_OPCODE_multivalarray_statement_oneval(b,opcode,stli,(*tli).end(),statement,fsrc))
+				return false;
+
+			stli++;
+		}
+		else {
+			emit_error(statement,fsrc,"Unexpected token in opcode byte sequence");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool process_statement_opcode_OPCODE_multivalarray(opcode_st &opcode,vector<token_t>::iterator toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
+	assert(toki != toki_end);
+
+	opcode_byte &b = opcode.opcode_seq.add_seq();
+	vector< vector<token_t> >::iterator tli = toki->subtok.begin();
+
+	while (tli != toki->subtok.end()) {
+		if (!process_statement_opcode_OPCODE_multivalarray_statement(b,opcode,tli,toki->subtok.end(),statement,fsrc))
+			return false;
+
+		tli++;
+	}
+
+	b.sort();
+	if (b.has_duplicates()) {
+		emit_error(statement,fsrc,"Duplicate value in opcode range or multiple values");
+		return false;
+	}
+
+	return true;
+}
+
 bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator &toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
 	/* toki points just after OPCODE */
 	while (toki != toki_end) {
-		if ((*toki) == TK_INT) {
-			if (!validate_range_uint8(toki->vali.ui)) {
-				emit_error(statement,fsrc,"Invalid opcode byte value");
+		if ((*toki) == TK_INT) { // 1 token match
+			if (!process_statement_opcode_OPCODE_singleval(opcode,toki,toki_end,statement,fsrc))
 				return false;
-			}
 
-			opcode.opcode_seq.add((uint8_t)toki->vali.ui);
 			toki++;
 		}
-		else if ((*toki) == TK_ARRAYOP) {
-			opcode_byte &b = opcode.opcode_seq.add_seq();
-			{
-				vector< vector<token_t> >::iterator tli = toki->subtok.begin();
-				while (tli != toki->subtok.end()) {
-					vector<token_t>::iterator stli = (*tli).begin();
-					while (stli != (*tli).end()) {
-						if ((*stli) == TK_INT) {
-							if (!validate_range_uint8(stli->vali.ui)) {
-								emit_error(statement,fsrc,"Invalid opcode byte value");
-								return false;
-							}
+		else if ((*toki) == TK_ARRAYOP) { // 1 token match
+			if (!process_statement_opcode_OPCODE_multivalarray(opcode,toki,toki_end,statement,fsrc))
+				return false;
 
-							if ((stli+2) < (*tli).end() && stli[1] == TK_NEG && stli[2] == TK_INT) {
-								if (!validate_range_uint8(stli[2].vali.ui) || stli[2].vali.ui < stli->vali.ui) {
-									emit_error(statement,fsrc,"Invalid opcode byte value");
-									return false;
-								}
-
-								unsigned int i = (unsigned int)(stli->vali.ui);
-								while (i <= (unsigned int)(stli[2].vali.ui)) {
-									b.val.push_back((uint8_t)i);
-									i++;
-								}
-
-								stli += 3;
-								assert(stli <= (*tli).end());
-							}
-							else {
-								b.val.push_back((uint8_t)stli->vali.ui);
-								stli++;
-							}
-						}
-						else {
-							emit_error(statement,fsrc,"Unexpected token in opcode byte sequence");
-							return false;
-						}
-					}
-					tli++;
-				}
-			}
 			toki++;
-			std::sort(b.val.begin(),b.val.end());
 		}
 		else if ((toki+1) < toki_end && (*toki) == TK_FWSLASH && toki[1] == TK_INT) { /* /0, /2, etc. syntax meaning opcode defined by mod/reg/rm */
 			if (!validate_range_regfield(toki[1].vali.ui)) {
