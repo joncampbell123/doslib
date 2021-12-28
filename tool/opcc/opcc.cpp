@@ -1204,6 +1204,20 @@ bool process_statement_opcode_OPCODE_multivalarray(opcode_st &opcode,vector<toke
 	return true;
 }
 
+bool process_statement_opcode_OPCODE_slashreg(opcode_st &opcode,vector<token_t>::iterator toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
+	assert(toki != toki_end);
+
+	if (!validate_range_regfield(toki[1].vali.ui)) {
+		emit_error(statement,fsrc,"Invalid reg field in /N syntax");
+		return false;
+	}
+
+	/* this means there is a mod/reg/rm field */
+	opcode.match_reg = (int8_t)(toki[1].vali.ui);
+	opcode.mod_reg_rm = true;
+	return true;
+}
+
 bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator &toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
 	/* toki points just after OPCODE */
 	while (toki != toki_end) {
@@ -1220,17 +1234,10 @@ bool process_statement_opcode_OPCODE(opcode_st &opcode,vector<token_t>::iterator
 			toki++;
 		}
 		else if ((toki+1) < toki_end && (*toki) == TK_FWSLASH && toki[1] == TK_INT) { /* /0, /2, etc. syntax meaning opcode defined by mod/reg/rm */
-			if (!validate_range_regfield(toki[1].vali.ui)) {
-				emit_error(statement,fsrc,"Invalid reg field in /N syntax");
+			if (!process_statement_opcode_OPCODE_slashreg(opcode,toki,toki_end,statement,fsrc))
 				return false;
-			}
-
-			/* this means there is a mod/reg/rm field */
-			opcode.mod_reg_rm = true;
-			opcode.match_reg = (int8_t)(toki[1].vali.ui);
 
 			toki += 2;
-			assert(toki <= toki_end);
 		}
 		else {
 			emit_error(statement,fsrc,"Unexpected token in opcode");
