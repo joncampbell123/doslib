@@ -1205,7 +1205,7 @@ bool process_statement_opcode_OPCODE_multivalarray(opcode_st &opcode,vector<toke
 }
 
 bool process_statement_opcode_OPCODE_slashreg(opcode_st &opcode,vector<token_t>::iterator toki,vector<token_t>::iterator toki_end,token_statement_t &statement,filesource *fsrc) {
-	assert(toki != toki_end);
+	assert((toki+1) < toki_end);
 
 	if (!validate_range_regfield(toki[1].vali.ui)) {
 		emit_error(statement,fsrc,"Invalid reg field in /N syntax");
