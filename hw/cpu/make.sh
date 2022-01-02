@@ -30,7 +30,7 @@ if [ "$1" == "disk" ]; then
     make_msdos_data_disk test.dsk || exit 1
     mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
 
-    mcopy -i test.dsk grtest.bat ::grtest.bat
+    #mcopy -i test.dsk grtest.bat ::grtest.bat
 
     mcopy -i test.dsk dos86l/grind.exe ::grind86.exe
     mcopy -i test.dsk dos386f/grind.exe ::grin386.exe
@@ -60,11 +60,11 @@ if [ "$1" == "disk" ]; then
 #   mcopy -i test.dsk os2w2l/mmx.exe ::mmxo216.exe
 #   mcopy -i test.dsk os2d3f/mmx.exe ::mmxo232.exe
 
-#   mcopy -i test.dsk dos86l/sse.exe ::sse86l.exe
-#   mcopy -i test.dsk dos386f/sse.exe ::sse386.exe
+    mcopy -i test.dsk dos86l/sse.exe ::sse86l.exe
+    mcopy -i test.dsk dos386f/sse.exe ::sse386.exe
 
-#   mcopy -i test.dsk win313l/sse.exe ::ssew313l.exe
-#   mcopy -i test.dsk win32s3/sse.exe ::ssew32s.exe
+    mcopy -i test.dsk win313l/sse.exe ::ssew313l.exe
+    mcopy -i test.dsk win32s3/sse.exe ::ssew32s.exe
 #   mcopy -i test.dsk win32/sse.exe ::ssew9x.exe
 #   mcopy -i test.dsk win386/sse.exe ::ssew386.exe
 
@@ -117,7 +117,7 @@ if [ "$1" == "disk" ]; then
     mdel -i bochstst/win95.dsk ::test86.exe
     mdel -i bochstst/win95.dsk ::v86kern.com
     mcopy -i bochstst/win95.dsk dos86s/v86kern.com ::v86kern.com
-    mdel -i bochstst/win95.dsk ::v86kern2.com
+    #mdel -i bochstst/win95.dsk ::v86kern2.com
     mdel -i bochstst/win95.dsk ::scandisk.exe
     mdel -i bochstst/win95.dsk ::scandisk.ini
     mcopy -i bochstst/win95.dsk dos86s/v86kern2.com ::v86kern2.com
