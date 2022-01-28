@@ -313,6 +313,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <assert.h>
 #include <unistd.h>
 #include <malloc.h>
