@@ -61,6 +61,7 @@ void probe_dpmi() {
 
 			__asm {
 				push	es
+;--------------------------------------------------------------
 				mov	ax,0x1687
 				int	2Fh
 				or	ax,ax
@@ -72,8 +73,9 @@ void probe_dpmi() {
 				mov	privv,si
 				mov	word ptr [entry+0],di
 				mov	word ptr [entry+2],es
-				pop	es
+;--------------------------------------------------------------
 err1:
+				pop	es
 			}
 
 			dpmi_flags = flags;
