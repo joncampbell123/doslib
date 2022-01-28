@@ -23,15 +23,19 @@
 
 #if TARGET_MSDOS == 32
 uint16_t cpu_read_my_cs() {
-	uint16_t r=0;
+	uint32_t r=0;
 
+	/* NTS: Don't forget that in 32-bit mode, PUSH <sreg> pushes the 16-bit segment value zero extended to 32-bit!
+	 *      However Open Watcom will encode "pop ax" as "pop 16 bits off stack to AX" so the "pop eax" is needed
+	 *      to keep the stack proper. It didn't used to do that, but some change made it happen that way, so,
+	 *      now we have to explicitly say "pop eax" (2022/01/28) */
 	__asm {
 		push	cs
-		pop	ax
-		mov	r,ax
+		pop	eax
+		mov	r,eax
 	}
 
-	return r;
+	return (uint16_t)r;
 }
 #endif
 
