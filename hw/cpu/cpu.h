@@ -38,6 +38,10 @@ uint32_t __cdecl inpd(uint16_t port);
 void __cdecl outpd(uint16_t port,uint32_t data);
 #endif
 
+#if TARGET_MSDOS == 32
+uint16_t __declspec(naked) cpu_read_my_cs();
+#endif
+
 #if TARGET_MSDOS == 16
 static inline uint32_t ptr2phys(void far *p) {
     return (((uint32_t)FP_SEG(p)) << 4UL) +

@@ -83,15 +83,7 @@ void cpu_probe() {
 #elif !defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
 	/* 32-bit DOS: Generally yes we can, but only if we're Ring 0 */
 	{
-		unsigned int s=0;
-
-		__asm {
-			xor	eax,eax
-			mov	ax,cs
-			and	ax,3
-			mov	s,eax
-		}
-
+		const uint16_t s = cpu_read_my_cs() & 3;
 		if (s != 0) cpu_flags |= CPU_FLAG_DONT_WRITE_RDTSC;
 	}
 #endif
