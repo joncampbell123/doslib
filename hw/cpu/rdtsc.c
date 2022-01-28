@@ -254,7 +254,7 @@ int main(int argc,char *argv[],char *envp[]) {
 			if (c == 27)
 				break;
 			else if (c == 'r' || c == 'R') {
-				if (c == 'r' || (cpu_flags & CPU_FLAG_DONT_WRITE_RDTSC)) {
+				if (c == 'r' && (cpu_flags & CPU_FLAG_DONT_WRITE_RDTSC)) {
 					printf("\nI am not able to write the TSC register within this environment\nYou can force me by typing SHIFT+R, don't blame me when I crash...\n");
 				}
 				else {
