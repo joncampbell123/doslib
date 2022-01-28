@@ -110,8 +110,6 @@ cpu_basic_probe_f_:
 
 no_fpu:
 
-int 1
-
 %if TARGET_MSDOS == 16
  %ifdef TARGET_WINDOWS
 	; 286 detection is not reliable from protected mode when running as a 16-bit Windows application,
