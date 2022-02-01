@@ -142,17 +142,19 @@ int _dos_xread(int fd,void *buffer,int bsz);
     parm [ebx] [edx] [ecx] \
     value [eax];
 # else
+/* NTS: I would love to just say [ds dx] and avoid all the segment reg hack fuckery but NOOOOO, Open Watcom says we're not allowed to modify DS >:( */
 int _dos_xread(int fd,void far *buffer,int bsz);
 #  pragma aux _dos_xread = \
     "push  ds" \
-    "mov   ds,di" \
+    "push  es" \
+    "pop   ds" \
     "mov   ah,0x3F" \
     "int   0x21" \
     "mov   bx,ax" \
     "sbb   bx,bx" \
     "or    ax,bx" \
     "pop   ds" \
-    parm [bx] [di si] [cx] \
+    parm [bx] [es dx] [cx] \
     value [ax];
 # endif
 
@@ -167,17 +169,19 @@ int _dos_xwrite(int fd,void *buffer,int bsz);
     parm [ebx] [edx] [ecx] \
     value [eax];
 # else
+/* NTS: I would love to just say [ds dx] and avoid all the segment reg hack fuckery but NOOOOO, Open Watcom says we're not allowed to modify DS >:( */
 int _dos_xwrite(int fd,void far *buffer,int bsz);
 #  pragma aux _dos_xwrite = \
     "push  ds" \
-    "mov   ds,di" \
+    "push  es" \
+    "pop   ds" \
     "mov   ah,0x40" \
     "int   0x21" \
     "mov   bx,ax" \
     "sbb   bx,bx" \
     "or    ax,bx" \
     "pop   ds" \
-    parm [bx] [di si] [cx] \
+    parm [bx] [es dx] [cx] \
     value [ax];
 # endif
 #endif
