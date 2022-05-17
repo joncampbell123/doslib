@@ -220,6 +220,9 @@ struct token {
 		MulAssign,
 		DivAssign,
 		ModAssign,
+		QuestionMark,
+		Colon,				// 25
+		ScopeResolution,
 
 		MAX
 	};
@@ -414,7 +417,26 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == '=') {
+	if (c == '?') {
+		s.getc(); // discard
+
+		// No, I am not going to support trigraphs
+
+		t.token_id = token::tokid::QuestionMark;
+	}
+	else if (c == ':') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == ':') { /* :: */
+			t.token_id = token::tokid::ScopeResolution;
+			s.getc(); // discard
+		}
+		else {
+			t.token_id = token::tokid::Colon;
+		}
+	}
+	else if (c == '=') {
 		s.getc(); // discard
 		c = s.peekc();
 
@@ -726,6 +748,15 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::ModAssign:
 			fprintf(fp,"modasn");
+			break;
+		case token::tokid::QuestionMark:
+			fprintf(fp,"quesmrk");
+			break;
+		case token::tokid::Colon:
+			fprintf(fp,"colon");
+			break;
+		case token::tokid::ScopeResolution:
+			fprintf(fp,"scope");
 			break;
 		default:
 			fprintf(fp,"?");
