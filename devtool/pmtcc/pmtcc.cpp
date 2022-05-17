@@ -223,6 +223,16 @@ struct token {
 		QuestionMark,
 		Colon,				// 25
 		ScopeResolution,
+		BitwiseNot,
+		LogicalNot,
+		LogicalOr,
+		BitwiseOrAssign,		// 30
+		BitwiseOr,
+		BitwiseXorAssign,
+		BitwiseXor,
+		LogicalAnd,
+		BitwiseAndAssign,		// 35
+		BitwiseAnd,
 
 		MAX
 	};
@@ -417,7 +427,59 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == '?') {
+	if (c == '~') { /* ~ */
+		t.token_id = token::tokid::BitwiseNot;
+		s.getc();
+	}
+	else if (c == '!') { /* ! */
+		t.token_id = token::tokid::LogicalNot;
+		s.getc();
+	}
+	else if (c == '|') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '|') { /* || */
+			t.token_id = token::tokid::LogicalOr;
+			s.getc();
+		}
+		else if (c == '=') { /* |= */
+			t.token_id = token::tokid::BitwiseOrAssign;
+			s.getc();
+		}
+		else { /* | */
+			t.token_id = token::tokid::BitwiseOr;
+		}
+	}
+	else if (c == '^') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '=') { /* ^= */
+			t.token_id = token::tokid::BitwiseXorAssign;
+			s.getc();
+		}
+		else { /* ^ */
+			t.token_id = token::tokid::BitwiseXor;
+		}
+	}
+	else if (c == '&') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '&') { /* && */
+			t.token_id = token::tokid::LogicalAnd;
+			s.getc();
+		}
+		else if (c == '=') { /* &= */
+			t.token_id = token::tokid::BitwiseAndAssign;
+			s.getc();
+		}
+		else { /* & */
+			t.token_id = token::tokid::BitwiseAnd;
+		}
+	}
+	else if (c == '?') {
 		s.getc(); // discard
 
 		// No, I am not going to support trigraphs
@@ -757,6 +819,36 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::ScopeResolution:
 			fprintf(fp,"scope");
+			break;
+		case token::tokid::BitwiseNot:
+			fprintf(fp,"bitnot");
+			break;
+		case token::tokid::LogicalNot:
+			fprintf(fp,"lognot");
+			break;
+		case token::tokid::LogicalOr:
+			fprintf(fp,"logor");
+			break;
+		case token::tokid::BitwiseOrAssign:
+			fprintf(fp,"bitorasn");
+			break;
+		case token::tokid::BitwiseOr:
+			fprintf(fp,"bitor");
+			break;
+		case token::tokid::BitwiseXorAssign:
+			fprintf(fp,"bitxorasn");
+			break;
+		case token::tokid::BitwiseXor:
+			fprintf(fp,"bitxor");
+			break;
+		case token::tokid::LogicalAnd:
+			fprintf(fp,"logand");
+			break;
+		case token::tokid::BitwiseAndAssign:
+			fprintf(fp,"bitandasn");
+			break;
+		case token::tokid::BitwiseAnd:
+			fprintf(fp,"bitand");
 			break;
 		default:
 			fprintf(fp,"?");
