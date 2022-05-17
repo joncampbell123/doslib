@@ -515,18 +515,26 @@ bool source_toke(token &t,sourcestack::entry &s) {
 //////////////////////// debug
 
 void source_dbg_print_token(FILE *fp,token &t) {
-	fprintf(fp,"@r%d,c%d ",t.pos.row,t.pos.column);
+	fprintf(fp,"{");
+	fprintf(fp,"@%d,%d ",t.pos.row,t.pos.column);
 	if (t.token_id == token::tokid::Integer) {
 		if (t.u.iv.signbit)
-			fprintf(fp,"{int=%lld} ",(signed long long)t.u.iv.v.s);
+			fprintf(fp,"sint=%lld",(signed long long)t.u.iv.v.s);
 		else if (t.u.iv.unsignbit)
-			fprintf(fp,"{uint=%llu} ",(unsigned long long)t.u.iv.v.u);
+			fprintf(fp,"uint=%llu",(unsigned long long)t.u.iv.v.u);
 		else
-			fprintf(fp,"{?int=%llu} ",(unsigned long long)t.u.iv.v.u);
+			fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
 	}
 	else if (t.token_id == token::tokid::Float) {
-		fprintf(fp,"{float=%.20Lf} ",t.u.fv.v);
+		fprintf(fp,"float=%.20Lf",t.u.fv.v);
 	}
+	else if (t.token_id == token::tokid::Eof) {
+		fprintf(fp,"eof");
+	}
+	else {
+		fprintf(fp,"?");
+	}
+	fprintf(fp,"} ");
 }
 
 //////////////////////// source file stream provider
