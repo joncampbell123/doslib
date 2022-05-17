@@ -204,6 +204,8 @@ struct token {
 		Identifier,			// 5
 		Eof,
 		DivideOp,
+		MultiplyOp,
+		PowerOp,
 
 		MAX
 	};
@@ -438,6 +440,19 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			t.token_id = token::tokid::DivideOp;
 		}
 	}
+	else if (c == '*') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '*') { /* ** operator */
+			s.getc();
+
+			t.token_id = token::tokid::PowerOp;
+		}
+		else {
+			t.token_id = token::tokid::MultiplyOp;
+		}
+	}
 	/* char constant, or even multi-char constant */
 	else if (c == '\'') {
 		token::IntegerValue iv;
@@ -576,6 +591,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::DivideOp:
 			fprintf(fp,"div");
+			break;
+		case token::tokid::MultiplyOp:
+			fprintf(fp,"mul");
+			break;
+		case token::tokid::PowerOp:
+			fprintf(fp,"pow");
 			break;
 		default:
 			fprintf(fp,"?");
