@@ -192,6 +192,7 @@ struct token {
 		String,
 		Typedef,
 		Identifier,			// 5
+		Eof,
 
 		MAX
 	};
@@ -272,13 +273,21 @@ void source_skip_whitespace(sourcestack::entry &s) {
 	while (isspace(s.peekc())) s.getc();
 }
 
-unsigned int source_strtoul_iv(token::IntegerValue &iv,sourcestack::entry &s,const unsigned base) {
+static constexpr uint32_t STRTOUL_SINGLE_QUOTE_MARKERS = uint32_t(1u) << uint32_t(0u);
+
+unsigned int source_strtoul_iv(token::IntegerValue &iv,sourcestack::entry &s,const unsigned base,const uint32_t flags=0) {
 	unsigned int count = 0;
 	int digit;
 
 	/* then remaining digits until we hit a non-digit.
 	 * TODO: Overflow detection */
 	do {
+		/* The C++ standard allows long hex constants to have single quotes in the middle
+		 * to help count digits, which are ignored by the compiler */
+		if ((flags & STRTOUL_SINGLE_QUOTE_MARKERS) && s.peekc() == '\'') {
+			s.getc();//discard
+			continue;
+		}
 		digit = tokchar2int(s.peekc());
 		if (digit >= 0 && (unsigned int)digit < base) {
 			count++;
@@ -300,6 +309,10 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	t.token_id = token::tokid::None;
 
 	source_skip_whitespace(s);
+	if (s.eof()) {
+		t.token_id = token::tokid::Eof;
+		return true;
+	}
 
 	c = s.peekc();
 	/* integer value (decimal)? If we find a decimal point, then it becomes a float. */
@@ -325,7 +338,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		}
 
 		/* parse digits */
-		source_strtoul_iv(iv,s,base);
+		source_strtoul_iv(iv,s,base,STRTOUL_SINGLE_QUOTE_MARKERS);
 
 		/* if the number is just zero then it's decimal, not octal */
 		if (base == 8 && iv.v.u == 0ull) base = 10;
@@ -346,7 +359,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			 * 0x1.a00fff1111111111p+3 */
 
 			/* parse digits */
-			fivdigits = source_strtoul_iv(fiv,s,base);
+			fivdigits = source_strtoul_iv(fiv,s,base,STRTOUL_SINGLE_QUOTE_MARKERS);
 
 			if (s.peekc() == 'p' || s.peekc() == 'e') {
 				bool negative = false;
@@ -504,23 +517,19 @@ int main(int argc,char **argv) {
 		}
 		srcstack.push(sfile);
 
-		token t;
-
-		if (!source_toke(t,srcstack.top())) {
-			fprintf(stderr,"Parse fail\n");
-			return 1;
-		}
-
-		if (t.token_id == token::tokid::Integer)
-			fprintf(stderr,"%llu\n",(unsigned long long)t.u.iv.v.u);
-		else
-			fprintf(stderr,"%.9Lf\n",t.u.fv.v);
-
 		while (!srcstack.top().eof()) {
-			int c = srcstack.top().getc();
-			if (c >= 0) printf("%c",(char)c);
+			token t;
+
+			if (!source_toke(t,srcstack.top())) {
+				fprintf(stderr,"Parse fail\n");
+				return 1;
+			}
+
+			if (t.token_id == token::tokid::Integer)
+				fprintf(stderr,"%llu\n",(unsigned long long)t.u.iv.v.u);
+			else if (t.token_id == token::tokid::Float)
+				fprintf(stderr,"%.9Lf\n",t.u.fv.v);
 		}
-		printf("\n");
 	}
 
 	return 0;
