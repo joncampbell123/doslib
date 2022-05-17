@@ -404,6 +404,22 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	return true;
 }
 
+//////////////////////// debug
+
+void source_dbg_print_token(FILE *fp,token &t) {
+	if (t.token_id == token::tokid::Integer) {
+		if (t.u.iv.signbit)
+			fprintf(fp,"{int=%lld} ",(signed long long)t.u.iv.v.s);
+		else if (t.u.iv.unsignbit)
+			fprintf(fp,"{uint=%llu} ",(unsigned long long)t.u.iv.v.u);
+		else
+			fprintf(fp,"{?int=%llu} ",(unsigned long long)t.u.iv.v.u);
+	}
+	else if (t.token_id == token::tokid::Float) {
+		fprintf(fp,"{float=%.20Lf} ",t.u.fv.v);
+	}
+}
+
 //////////////////////// source file stream provider
 
 struct sourcestream_file : public sourcestream {
@@ -525,11 +541,9 @@ int main(int argc,char **argv) {
 				return 1;
 			}
 
-			if (t.token_id == token::tokid::Integer)
-				fprintf(stderr,"%llu\n",(unsigned long long)t.u.iv.v.u);
-			else if (t.token_id == token::tokid::Float)
-				fprintf(stderr,"%.9Lf\n",t.u.fv.v);
+			source_dbg_print_token(stderr,t);
 		}
+		fprintf(stderr,"\n");
 	}
 
 	return 0;
