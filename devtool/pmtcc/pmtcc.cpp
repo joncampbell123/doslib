@@ -233,6 +233,7 @@ struct token {
 		LogicalAnd,
 		BitwiseAndAssign,		// 35
 		BitwiseAnd,
+		NotEqualsOp,
 
 		MAX
 	};
@@ -432,8 +433,16 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		s.getc();
 	}
 	else if (c == '!') { /* ! */
-		t.token_id = token::tokid::LogicalNot;
 		s.getc();
+		c = s.peekc();
+
+		if (c == '=') { /* != */
+			t.token_id = token::tokid::NotEqualsOp;
+			s.getc();
+		}
+		else {
+			t.token_id = token::tokid::LogicalNot;
+		}
 	}
 	else if (c == '|') {
 		s.getc();
@@ -849,6 +858,9 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::BitwiseAnd:
 			fprintf(fp,"bitand");
+			break;
+		case token::tokid::NotEqualsOp:
+			fprintf(fp,"notequ");
 			break;
 		default:
 			fprintf(fp,"?");
