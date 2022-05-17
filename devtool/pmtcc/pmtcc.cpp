@@ -27,10 +27,20 @@ struct textposition {
 	textposition();
 	void next_line(void);
 	void reset(void);
+	int procchar(int c);
 };
 
 textposition::textposition() {
 	reset();
+}
+
+int textposition::procchar(int c) {
+	if (c == '\n')
+		next_line();
+	else if (c > 0 && c != '\r')
+		column++;
+
+	return c;
 }
 
 void textposition::next_line(void) {
@@ -122,7 +132,7 @@ void sourcestack::entry::ungetc(int c) {
 int sourcestack::entry::peekc(void) {
 	if (savedc < 0) {
 		sourcestream *s;
-		if ((s=src.get()) != NULL) savedc = s->getc();
+		if ((s=src.get()) != NULL) savedc = pos.procchar(s->getc());
 	}
 
 	return savedc;
@@ -135,7 +145,7 @@ int sourcestack::entry::getc(void) {
 		savedc = -1;
 		return c;
 	}
-	if ((s=src.get()) != NULL) return s->getc();
+	if ((s=src.get()) != NULL) return pos.procchar(s->getc());
 	return -1;
 }
 
@@ -235,6 +245,7 @@ struct token {
 		size_t				typedef_id;
 		size_t				identifier_id;
 	} u;
+	textposition pos;
 	tokid token_id = tokid::None;
 	std::vector<uint8_t> blob; /* WARNING: String stored as blob, StringValue stringtype says what type. Do not assume trailing NUL */
 };
@@ -379,6 +390,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	t.token_id = token::tokid::None;
 
 	source_skip_whitespace(s);
+	s.getpos(t.pos);
 	if (s.eof()) {
 		t.token_id = token::tokid::Eof;
 		return true;
@@ -503,6 +515,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 //////////////////////// debug
 
 void source_dbg_print_token(FILE *fp,token &t) {
+	fprintf(fp,"@r%d,c%d ",t.pos.row,t.pos.column);
 	if (t.token_id == token::tokid::Integer) {
 		if (t.u.iv.signbit)
 			fprintf(fp,"{int=%lld} ",(signed long long)t.u.iv.v.s);
