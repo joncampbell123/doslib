@@ -215,6 +215,11 @@ struct token {
 		DecrOp,
 		EqualsOp,
 		AssignOp,
+		AddAssign,
+		SubAssign,			// 20
+		MulAssign,
+		DivAssign,
+		ModAssign,
 
 		MAX
 	};
@@ -434,6 +439,10 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			t.token_id = token::tokid::IncrOp;
 			s.getc(); // discard
 		}
+		else if (c == '=') { /* += operator */
+			t.token_id = token::tokid::AddAssign;
+			s.getc(); // discard
+		}
 		else {
 			t.token_id = token::tokid::AddGen; // could be positive sign or add
 		}
@@ -444,6 +453,10 @@ bool source_toke(token &t,sourcestack::entry &s) {
 
 		if (c == '-') { /* -- operator */
 			t.token_id = token::tokid::DecrOp;
+			s.getc(); // discard
+		}
+		else if (c == '=') { /* -= operator */
+			t.token_id = token::tokid::SubAssign;
 			s.getc(); // discard
 		}
 		else {
@@ -457,8 +470,15 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 	else if (c == '%') {
 		s.getc();
+		c = s.peekc();
 
-		t.token_id = token::tokid::ModuloOp;
+		if (c == '=') { /* -= operator */
+			t.token_id = token::tokid::ModAssign;
+			s.getc(); // discard
+		}
+		else {
+			t.token_id = token::tokid::ModuloOp;
+		}
 	}
 	/* divide operator or beginning of comment */
 	else if (c == '/') {
@@ -496,6 +516,10 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			/* then recursively call ourself to parse past the comment */
 			return source_toke(t,s);
 		}
+		else if (c == '=') { /* /= operator */
+			t.token_id = token::tokid::DivAssign;
+			s.getc(); // discard
+		}
 		else {
 			t.token_id = token::tokid::DivideOp;
 		}
@@ -505,9 +529,12 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		c = s.peekc();
 
 		if (c == '*') { /* ** operator */
-			s.getc();
-
 			t.token_id = token::tokid::PowerOp;
+			s.getc();
+		}
+		else if (c == '=') { /* *= operator */
+			t.token_id = token::tokid::MulAssign;
+			s.getc(); // discard
 		}
 		else {
 			t.token_id = token::tokid::MultiplyOp;
@@ -684,6 +711,21 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::AssignOp:
 			fprintf(fp,"assign");
+			break;
+		case token::tokid::AddAssign:
+			fprintf(fp,"addasn");
+			break;
+		case token::tokid::SubAssign:
+			fprintf(fp,"subasn");
+			break;
+		case token::tokid::MulAssign:
+			fprintf(fp,"mulasn");
+			break;
+		case token::tokid::DivAssign:
+			fprintf(fp,"divasn");
+			break;
+		case token::tokid::ModAssign:
+			fprintf(fp,"modasn");
 			break;
 		default:
 			fprintf(fp,"?");
