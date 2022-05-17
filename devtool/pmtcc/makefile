@@ -12,7 +12,7 @@ linux-host/%.o : %.cpp
 	g++ -DLINUX -Wall -Wextra -pedantic -std=gnu++11 -g3 -c -o $@ $^
 
 linux-host/% : linux-host/%.o
-	g++ -o $@ $^
+	g++ -lm -o $@ $^
 
 clean:
 	rm -f linux-host/gstcc linux-host/*.o linux-host/*.a

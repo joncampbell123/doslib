@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <math.h>
 
 #include <exception>
 #include <string>
@@ -84,8 +85,12 @@ struct sourcestack {
 	struct entry {
 		unique_ptr<sourcestream>	src;
 		textposition			pos;
+		int				savedc = -1;
 
+		void				getpos(textposition &t);
+		void				ungetc(int c);
 		void				rewind(void);
+		int				peekc(void);
 		int				getc(void);
 		bool				eof(void);
 	};
@@ -99,19 +104,44 @@ struct sourcestack {
 	void _errifempty(void);
 };
 
+void sourcestack::entry::getpos(textposition &t) {
+	t = pos;
+	if (savedc && t.column > 1) t.column--;
+}
+
 void sourcestack::entry::rewind(void) {
 	sourcestream *s;
 	if ((s=src.get()) != NULL) s->rewind();
+	savedc = -1;
+}
+
+void sourcestack::entry::ungetc(int c) {
+	savedc = c;
+}
+
+int sourcestack::entry::peekc(void) {
+	if (savedc < 0) {
+		sourcestream *s;
+		if ((s=src.get()) != NULL) savedc = s->getc();
+	}
+
+	return savedc;
 }
 
 int sourcestack::entry::getc(void) {
 	sourcestream *s;
+	if (savedc >= 0) {
+		const int c = savedc;
+		savedc = -1;
+		return c;
+	}
 	if ((s=src.get()) != NULL) return s->getc();
 	return -1;
 }
 
 bool sourcestack::entry::eof(void) {
 	sourcestream *s;
+	if (savedc >= 0) return false;
 	if ((s=src.get()) != NULL) return s->eof;
 	return true;
 }
@@ -151,6 +181,215 @@ unique_ptr<sourcestream> source_stream_open_null(const char *path) {
 
 // change this if compiling from something other than normal files such as memory or perhaps container formats
 unique_ptr<sourcestream> (*source_stream_open)(const char *path) = source_stream_open_null;
+
+//////////////////////// token from source
+
+struct token {
+	enum class tokid {
+		None=0,				// 0
+		Integer,
+		Float,
+		String,
+		Typedef,
+		Identifier,			// 5
+
+		MAX
+	};
+	typedef uint8_t Char_t;
+	typedef uint32_t Widechar_t;
+	enum class stringtype {
+		None=0,
+		Char,
+		Widechar,
+
+		MAX
+	};
+	struct IntegerValue {
+		union {
+			uint64_t		u;
+			int64_t			s;
+		} v;
+		unsigned int			datatype_size:6; // 0 = unspecified
+		unsigned int			signbit:1;       // 0 = not signed
+		unsigned int			unsignbit:1;     // 0 = not unsigned
+
+		void reset(void);
+	};
+	struct FloatValue {
+		long double			v;
+		unsigned int			datatype_size:8;
+
+		void reset(void);
+	};
+	struct StringValue {
+		stringtype			st;
+		// For pointer safety reasons string is not stored here! Is is in the blob field.
+
+		void reset(void);
+	};
+	union {
+		IntegerValue			iv;
+		FloatValue			fv;
+		StringValue			sv;
+		size_t				typedef_id;
+		size_t				identifier_id;
+	} u;
+	tokid token_id = tokid::None;
+	std::vector<uint8_t> blob; /* WARNING: String stored as blob, StringValue stringtype says what type. Do not assume trailing NUL */
+};
+
+void token::StringValue::reset(void) {
+	st = stringtype::None;
+}
+
+void token::FloatValue::reset(void) {
+	datatype_size = 0;
+	v = 0;
+}
+
+void token::IntegerValue::reset(void) {
+	datatype_size = 0;
+	unsignbit = 0;
+	signbit = 0;
+	v.u = 0;
+}
+
+//////////////////////// token parser
+
+static int tokchar2int(int c) {
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	else if (c >= 'a' && c <= 'f')
+		return c + 10 - 'a';
+	else if (c >= 'A' && c <= 'F')
+		return c + 10 - 'A';
+
+	return -1;
+}
+
+void source_skip_whitespace(sourcestack::entry &s) {
+	/* skip whitespace */
+	while (isspace(s.peekc())) s.getc();
+}
+
+unsigned int source_strtoul_iv(token::IntegerValue &iv,sourcestack::entry &s,const unsigned base) {
+	unsigned int count = 0;
+	int digit;
+
+	/* then remaining digits until we hit a non-digit.
+	 * TODO: Overflow detection */
+	do {
+		digit = tokchar2int(s.peekc());
+		if (digit >= 0 && (unsigned int)digit < base) {
+			count++;
+			s.getc();//discard
+			iv.v.u *= (uint64_t)base;
+			iv.v.u += (uint64_t)((unsigned)digit);
+		}
+		else {
+			break;
+		}
+	} while (1);
+
+	return count;
+}
+
+bool source_toke(token &t,sourcestack::entry &s) {
+	int c;
+
+	t.token_id = token::tokid::None;
+
+	source_skip_whitespace(s);
+
+	c = s.peekc();
+	/* integer value (decimal)? If we find a decimal point, then it becomes a float. */
+	if (isdigit(c)) {
+		token::IntegerValue iv;
+		unsigned int base = 10; // decimal [0-9]+
+
+		iv.reset(); // prepare integer
+		if (c == '0') {
+			base = 8; // octal 0[0-7]+
+			s.getc(); // discard c
+			c = s.peekc();
+			if (c == 'x') {
+				s.getc(); // discard
+				base = 16; // hexadecimal 0x[0-9a-f]+
+				c = s.peekc();
+			}
+			else if (c == 'b') {
+				s.getc(); // discard
+				base = 2; // binary 0b[01]+
+				c = s.peekc();
+			}
+		}
+
+		/* parse digits */
+		source_strtoul_iv(iv,s,base);
+
+		/* if the number is just zero then it's decimal, not octal */
+		if (base == 8 && iv.v.u == 0ull) base = 10;
+
+		/* if we hit a decimal '.' then we just parsed the whole part of a float, valid
+		 * only if we were parsing decimal or hexadecimal. */
+		if (s.peekc() == '.' && (base == 10 || base == 16)) {
+			unsigned int fivdigits=0;
+			token::IntegerValue fiv;
+			token::IntegerValue eiv;
+			token::FloatValue fv;
+
+			eiv.reset(); // prepare
+			fiv.reset(); // prepare
+			s.getc(); // discard
+
+			/* it could be something like 27271.2127274727 or
+			 * 0x1.a00fff1111111111p+3 */
+
+			/* parse digits */
+			fivdigits = source_strtoul_iv(fiv,s,base);
+
+			if (s.peekc() == 'p' || s.peekc() == 'e') {
+				bool negative = false;
+
+				// then parse the exponent, which is signed
+				s.getc(); // discard
+				eiv.signbit = 1;
+
+				if (s.peekc() == '+') {
+					negative = false;
+					s.getc(); // discard
+				}
+				else if (s.peekc() == '-') {
+					negative = true;
+					s.getc(); // discard
+				}
+
+				/* parse digits */
+				source_strtoul_iv(eiv,s,base);
+
+				if (negative)
+					eiv.v.s = -eiv.v.s;
+			}
+
+			if (base == 16)
+				fv.v = ldexpl(iv.v.u,(int)eiv.v.s) + ldexpl(fiv.v.u,(int)eiv.v.s - ((int)fivdigits * 4));
+			else
+				fv.v = ldexpl((long double)iv.v.u + ((long double)powl(10,-((int)fivdigits)) * (long double)fiv.v.u),(int)eiv.v.s);
+
+			t.token_id = token::tokid::Float;
+			t.u.fv = fv;
+		}
+		else {
+			t.token_id = token::tokid::Integer;
+			t.u.iv = iv;
+		}
+	}
+	else {
+		return false;
+	}
+
+	return true;
+}
 
 //////////////////////// source file stream provider
 
@@ -264,6 +503,18 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 		srcstack.push(sfile);
+
+		token t;
+
+		if (!source_toke(t,srcstack.top())) {
+			fprintf(stderr,"Parse fail\n");
+			return 1;
+		}
+
+		if (t.token_id == token::tokid::Integer)
+			fprintf(stderr,"%llu\n",(unsigned long long)t.u.iv.v.u);
+		else
+			fprintf(stderr,"%.9Lf\n",t.u.fv.v);
 
 		while (!srcstack.top().eof()) {
 			int c = srcstack.top().getc();
