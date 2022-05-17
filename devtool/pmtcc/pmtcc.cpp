@@ -234,6 +234,15 @@ struct token {
 		BitwiseAndAssign,		// 35
 		BitwiseAnd,
 		NotEqualsOp,
+		RightShiftAssign,
+		RightShift,
+		LeftShiftAssign,		// 40
+		LeftShift,
+		LessThanOp,
+		LessOrEquOp,
+		GreaterThanOp,
+		GreaterOrEquOp,			// 45
+		StarshipOp,
 
 		MAX
 	};
@@ -428,7 +437,60 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == '~') { /* ~ */
+	if (c == '<') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '<') { /* << */
+			s.getc();
+			c = s.peekc();
+			if (c == '=') { /* <<= */
+				s.getc();
+				t.token_id = token::tokid::LeftShiftAssign;
+			}
+			else { /* << */
+				t.token_id = token::tokid::LeftShift;
+			}
+		}
+		else if (c == '=') { /* <= */
+			s.getc();
+			c = s.peekc();
+			if (c == '>') { /* <=> */
+				s.getc();
+				t.token_id = token::tokid::StarshipOp;
+			}
+			else { /* <= */
+				t.token_id = token::tokid::LessOrEquOp;
+			}
+		}
+		else { /* < */
+			t.token_id = token::tokid::LessThanOp;
+		}
+	}
+	else if (c == '>') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '>') { /* >> */
+			s.getc();
+			c = s.peekc();
+			if (c == '=') { /* >>= */
+				s.getc();
+				t.token_id = token::tokid::RightShiftAssign;
+			}
+			else { /* >> */
+				t.token_id = token::tokid::RightShift;
+			}
+		}
+		else if (c == '=') { /* >= */
+			t.token_id = token::tokid::GreaterOrEquOp;
+			s.getc();
+		}
+		else { /* > */
+			t.token_id = token::tokid::GreaterThanOp;
+		}
+	}
+	else if (c == '~') { /* ~ */
 		t.token_id = token::tokid::BitwiseNot;
 		s.getc();
 	}
@@ -861,6 +923,33 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::NotEqualsOp:
 			fprintf(fp,"notequ");
+			break;
+		case token::tokid::RightShiftAssign:
+			fprintf(fp,"rshfasn");
+			break;
+		case token::tokid::RightShift:
+			fprintf(fp,"rshf");
+			break;
+		case token::tokid::LeftShiftAssign:
+			fprintf(fp,"lshfasn");
+			break;
+		case token::tokid::LeftShift:
+			fprintf(fp,"lshf");
+			break;
+		case token::tokid::LessThanOp:
+			fprintf(fp,"lt");
+			break;
+		case token::tokid::LessOrEquOp:
+			fprintf(fp,"ltoe");
+			break;
+		case token::tokid::GreaterThanOp:
+			fprintf(fp,"gt");
+			break;
+		case token::tokid::GreaterOrEquOp:
+			fprintf(fp,"gtoe");
+			break;
+		case token::tokid::StarshipOp:
+			fprintf(fp,"starship");
 			break;
 		default:
 			fprintf(fp,"?");
