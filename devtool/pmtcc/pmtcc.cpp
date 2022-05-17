@@ -203,6 +203,7 @@ struct token {
 		Typedef,
 		Identifier,			// 5
 		Eof,
+		DivideOp,
 
 		MAX
 	};
@@ -434,7 +435,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			return source_toke(t,s);
 		}
 		else {
-			return false;
+			t.token_id = token::tokid::DivideOp;
 		}
 	}
 	/* char constant, or even multi-char constant */
@@ -557,23 +558,30 @@ bool source_toke(token &t,sourcestack::entry &s) {
 void source_dbg_print_token(FILE *fp,token &t) {
 	fprintf(fp,"{");
 	fprintf(fp,"@%d,%d ",t.pos.row,t.pos.column);
-	if (t.token_id == token::tokid::Integer) {
-		if (t.u.iv.signbit)
-			fprintf(fp,"sint=%lld",(signed long long)t.u.iv.v.s);
-		else if (t.u.iv.unsignbit)
-			fprintf(fp,"uint=%llu",(unsigned long long)t.u.iv.v.u);
-		else
-			fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
-	}
-	else if (t.token_id == token::tokid::Float) {
-		fprintf(fp,"float=%.20Lf",t.u.fv.v);
-	}
-	else if (t.token_id == token::tokid::Eof) {
-		fprintf(fp,"eof");
-	}
-	else {
-		fprintf(fp,"?");
-	}
+
+	switch (t.token_id) {
+		case token::tokid::Integer:
+			if (t.u.iv.signbit)
+				fprintf(fp,"sint=%lld",(signed long long)t.u.iv.v.s);
+			else if (t.u.iv.unsignbit)
+				fprintf(fp,"uint=%llu",(unsigned long long)t.u.iv.v.u);
+			else
+				fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
+			break;
+		case token::tokid::Float:
+			fprintf(fp,"float=%.20Lf",t.u.fv.v);
+			break;
+		case token::tokid::Eof:
+			fprintf(fp,"eof");
+			break;
+		case token::tokid::DivideOp:
+			fprintf(fp,"div");
+			break;
+		default:
+			fprintf(fp,"?");
+			break;
+	};
+
 	fprintf(fp,"} ");
 }
 
