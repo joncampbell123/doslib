@@ -208,6 +208,9 @@ struct token {
 		PowerOp,
 		Comma,				// 10
 		ModuloOp,
+		AddGen,
+		SubGen,
+		Semicolon,
 
 		MAX
 	};
@@ -402,7 +405,22 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == ',') {
+	if (c == ';') {
+		s.getc(); // discard
+
+		t.token_id = token::tokid::Semicolon;
+	}
+	else if (c == '+') {
+		s.getc(); // discard
+
+		t.token_id = token::tokid::AddGen; // could be positive sign or add
+	}
+	else if (c == '-') {
+		s.getc(); // discard
+
+		t.token_id = token::tokid::SubGen; // could be negate or subtract
+	}
+	else if (c == ',') {
 		s.getc(); // discard
 
 		t.token_id = token::tokid::Comma;
@@ -615,6 +633,15 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::ModuloOp:
 			fprintf(fp,"mod");
+			break;
+		case token::tokid::AddGen:
+			fprintf(fp,"addg");
+			break;
+		case token::tokid::SubGen:
+			fprintf(fp,"subg");
+			break;
+		case token::tokid::Semicolon:
+			fprintf(fp,"semcol");
 			break;
 		default:
 			fprintf(fp,"?");
