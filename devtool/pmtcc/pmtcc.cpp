@@ -211,6 +211,8 @@ struct token {
 		AddGen,
 		SubGen,
 		Semicolon,
+		IncrOp,				// 15
+		DecrOp,
 
 		MAX
 	};
@@ -412,13 +414,27 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 	else if (c == '+') {
 		s.getc(); // discard
+		c = s.peekc();
 
-		t.token_id = token::tokid::AddGen; // could be positive sign or add
+		if (c == '+') { /* ++ operator */
+			t.token_id = token::tokid::IncrOp;
+			s.getc(); // discard
+		}
+		else {
+			t.token_id = token::tokid::AddGen; // could be positive sign or add
+		}
 	}
 	else if (c == '-') {
 		s.getc(); // discard
+		c = s.peekc();
 
-		t.token_id = token::tokid::SubGen; // could be negate or subtract
+		if (c == '-') { /* -- operator */
+			t.token_id = token::tokid::DecrOp;
+			s.getc(); // discard
+		}
+		else {
+			t.token_id = token::tokid::SubGen; // could be negate or subtract
+		}
 	}
 	else if (c == ',') {
 		s.getc(); // discard
@@ -642,6 +658,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::Semicolon:
 			fprintf(fp,"semcol");
+			break;
+		case token::tokid::IncrOp:
+			fprintf(fp,"incr");
+			break;
+		case token::tokid::DecrOp:
+			fprintf(fp,"decr");
 			break;
 		default:
 			fprintf(fp,"?");
