@@ -303,6 +303,76 @@ unsigned int source_strtoul_iv(token::IntegerValue &iv,sourcestack::entry &s,con
 	return count;
 }
 
+bool source_read_string_esc_char(uint64_t &pv,unsigned int &pvlen,sourcestack::entry &s) {
+	int c;
+
+	pv = 0;
+	pvlen = 1;
+
+	c = s.peekc();
+	if (c < 32) return false;
+	s.getc();//discard
+
+	if (c == '\\') {
+		c = s.getc();
+		switch (c) {
+			case '\'': pv = '\''; break;
+			case '"':  pv = '"';  break;
+			case '?':  pv = '?';  break;
+			case '\\': pv = '\\'; break;
+			case 'a':  pv = 0x07; break;
+			case 'b':  pv = 0x08; break;
+			case 'f':  pv = 0x0C; break;
+			case 'n':  pv = 0x0A; break;
+			case 'r':  pv = 0x0D; break;
+			case 't':  pv = 0x09; break;
+			case 'v':  pv = 0x0B; break;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7': /* \nnn octal, maximum 3 digits */
+				pv = tokchar2int(c);
+				c = s.peekc(); if (c >= '0' && c <= '7') { pv <<= (uint64_t)3u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (c >= '0' && c <= '7') { pv <<= (uint64_t)3u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				break;
+			case 'x': /* \xnn hex */
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				break;
+			case 'u': /* \unnnn unicode */
+				pvlen = 2;
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				break;
+			case 'U': /* \unnnnnnnn unicode */
+				pvlen = 4;
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				c = s.peekc(); if (isxdigit(c)) { pv <<= (uint64_t)4u; pv += (uint64_t)tokchar2int(c); s.getc();/*discard*/ };
+				break;
+			default:
+				pvlen = 0;
+				break;
+		};
+	}
+	else {
+		pv = (uint64_t)c;
+	}
+
+	return true;
+}
+
 bool source_toke(token &t,sourcestack::entry &s) {
 	int c;
 
@@ -315,8 +385,34 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
+	/* char constant, or even multi-char constant */
+	if (c == '\'') {
+		token::IntegerValue iv;
+		unsigned int pvlen;
+		uint64_t pv;
+
+		s.getc();//discard
+		iv.reset();
+
+		do {
+			if (s.peekc() == '\'') {
+				s.getc();//discard
+				break;
+			}
+			else {
+				if (!source_read_string_esc_char(pv,pvlen,s))
+					return false;
+
+				iv.v.u <<= (uint64_t)pvlen * (uint64_t)8u;
+				iv.v.u += pv;
+			}
+		} while(1);
+
+		t.token_id = token::tokid::Integer;
+		t.u.iv = iv;
+	}
 	/* integer value (decimal)? If we find a decimal point, then it becomes a float. */
-	if (isdigit(c)) {
+	else if (isdigit(c)) {
 		token::IntegerValue iv;
 		unsigned int base = 10; // decimal [0-9]+
 
