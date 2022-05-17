@@ -213,6 +213,8 @@ struct token {
 		Semicolon,
 		IncrOp,				// 15
 		DecrOp,
+		EqualsOp,
+		AssignOp,
 
 		MAX
 	};
@@ -407,7 +409,19 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == ';') {
+	if (c == '=') {
+		s.getc(); // discard
+		c = s.peekc();
+
+		if (c == '=') { /* == operator */
+			t.token_id = token::tokid::EqualsOp;
+			s.getc(); // discard
+		}
+		else {
+			t.token_id = token::tokid::AssignOp;
+		}
+	}
+	else if (c == ';') {
 		s.getc(); // discard
 
 		t.token_id = token::tokid::Semicolon;
@@ -664,6 +678,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::DecrOp:
 			fprintf(fp,"decr");
+			break;
+		case token::tokid::EqualsOp:
+			fprintf(fp,"equ");
+			break;
+		case token::tokid::AssignOp:
+			fprintf(fp,"assign");
 			break;
 		default:
 			fprintf(fp,"?");
