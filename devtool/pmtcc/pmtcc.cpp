@@ -397,8 +397,48 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
+	/* divide operator or beginning of comment */
+	if (c == '/') {
+		s.getc(); // discard
+		c = s.peekc();
+
+		if (c == '*') { /* / and then * to start comment */
+			s.getc();//discard
+
+			// scan and discard characters until * and then /
+			do {
+				c = s.getc();
+				if (c == '*') {
+					if (s.peekc() == '/') {
+						s.getc();//discard
+						break;
+					}
+				}
+				else if (c < 0) {
+					return false;
+				}
+			} while (1);
+
+			/* then recursively call ourself to parse past the comment */
+			return source_toke(t,s);
+		}
+		else if (c == '/') { /* / and then / until end of line */
+			s.getc();//discard
+
+			do {
+				c = s.getc();
+				if (c < 0 || c == '\n') break;
+			} while (1);
+
+			/* then recursively call ourself to parse past the comment */
+			return source_toke(t,s);
+		}
+		else {
+			return false;
+		}
+	}
 	/* char constant, or even multi-char constant */
-	if (c == '\'') {
+	else if (c == '\'') {
 		token::IntegerValue iv;
 		unsigned int pvlen;
 		uint64_t pv;
