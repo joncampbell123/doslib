@@ -206,6 +206,8 @@ struct token {
 		DivideOp,
 		MultiplyOp,
 		PowerOp,
+		Comma,				// 10
+		ModuloOp,
 
 		MAX
 	};
@@ -400,8 +402,18 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
+	if (c == ',') {
+		s.getc(); // discard
+
+		t.token_id = token::tokid::Comma;
+	}
+	else if (c == '%') {
+		s.getc();
+
+		t.token_id = token::tokid::ModuloOp;
+	}
 	/* divide operator or beginning of comment */
-	if (c == '/') {
+	else if (c == '/') {
 		s.getc(); // discard
 		c = s.peekc();
 
@@ -597,6 +609,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::PowerOp:
 			fprintf(fp,"pow");
+			break;
+		case token::tokid::Comma:
+			fprintf(fp,"comma");
+			break;
+		case token::tokid::ModuloOp:
+			fprintf(fp,"mod");
 			break;
 		default:
 			fprintf(fp,"?");
