@@ -415,15 +415,19 @@ struct token {
 			uint64_t		u;
 			int64_t			s;
 		} v;
-		unsigned int			datatype_size:6; // 0 = unspecified
+		unsigned int			datatype_size:12;// 0 = unspecified
 		unsigned int			signbit:1;       // 0 = not signed
 		unsigned int			unsignbit:1;     // 0 = not unsigned
+		unsigned int			longbit:1;       // 1 = long value
+		unsigned int			longlongbit:1;   // 1 = long long value
 
 		void reset(void);
 	};
 	struct FloatValue {
 		long double			v;
-		unsigned int			datatype_size:8;
+		unsigned int			datatype_size:14;
+		unsigned int			floatbit:1;      // 1 = float instead of double
+		unsigned int			longbit:1;       // 1 = long double
 
 		void reset(void);
 	};
@@ -449,11 +453,15 @@ void token::StringValue::reset(void) {
 
 void token::FloatValue::reset(void) {
 	datatype_size = 0;
+	floatbit = 0;
+	longbit = 0;
 	v = 0;
 }
 
 void token::IntegerValue::reset(void) {
+	longbit = 0;
 	datatype_size = 0;
+	longlongbit = 0;
 	unsignbit = 0;
 	signbit = 0;
 	v.u = 0;
@@ -505,6 +513,52 @@ unsigned int source_strtoul_iv(token::IntegerValue &iv,sourcestack::entry &s,con
 	} while (1);
 
 	return count;
+}
+
+void source_read_const_int_suffixes(token::IntegerValue &iv,sourcestack::entry &s) {
+	int c;
+
+	c = tolower(s.peekc());
+	if (c == 'u') { /* u */
+		s.getc(); // discard
+		iv.signbit = 0;
+		iv.unsignbit = 1;
+		c = tolower(s.peekc());
+		if (c == 'l') { /* ul */
+			s.getc();
+			iv.longbit = 1;
+			c = tolower(s.peekc());
+			if (c == 'l') { /* ull */
+				s.getc();
+				iv.longlongbit = 1;
+			}
+		}
+	}
+	else if (c == 'l') { /* l */
+		s.getc(); // discard
+		iv.signbit = 1;
+		iv.unsignbit = 0;
+		iv.longbit = 1;
+		c = tolower(s.peekc());
+		if (c == 'l') { /* ll */
+			s.getc();
+			iv.longlongbit = 1;
+		}
+	}
+}
+
+void source_read_const_float_suffixes(token::FloatValue &fv,sourcestack::entry &s) {
+	int c;
+
+	c = tolower(s.peekc());
+	if (c == 'f') {
+		s.getc();
+		fv.floatbit = 1;
+	}
+	else if (c == 'l') {
+		s.getc();
+		fv.longbit = 1;
+	}
 }
 
 bool source_read_string_esc_char(uint64_t &pv,unsigned int &pvlen,sourcestack::entry &s) {
@@ -918,6 +972,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 		} while(1);
 
+		source_read_const_int_suffixes(iv,s);
 		t.token_id = token::tokid::Integer;
 		t.u.iv = iv;
 	}
@@ -959,6 +1014,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 
 			eiv.reset(); // prepare
 			fiv.reset(); // prepare
+			fv.reset(); // prepare
 			s.getc(); // discard
 
 			/* it could be something like 27271.2127274727 or
@@ -995,10 +1051,12 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			else
 				fv.v = ldexpl((long double)iv.v.u + ((long double)powl(10,-((int)fivdigits)) * (long double)fiv.v.u),(int)eiv.v.s);
 
+			source_read_const_float_suffixes(fv,s);
 			t.token_id = token::tokid::Float;
 			t.u.fv = fv;
 		}
 		else {
+			source_read_const_int_suffixes(iv,s);
 			t.token_id = token::tokid::Integer;
 			t.u.iv = iv;
 		}
@@ -1018,15 +1076,20 @@ void source_dbg_print_token(FILE *fp,token &t) {
 
 	switch (t.token_id) {
 		case token::tokid::Integer:
-			if (t.u.iv.signbit)
-				fprintf(fp,"sint=%lld",(signed long long)t.u.iv.v.s);
-			else if (t.u.iv.unsignbit)
-				fprintf(fp,"uint=%llu",(unsigned long long)t.u.iv.v.u);
-			else
-				fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
+			fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
+			if (t.u.iv.unsignbit)
+				fprintf(fp,"U");
+			if (t.u.iv.longbit) {
+				fprintf(fp,"L");
+				if (t.u.iv.longlongbit) fprintf(fp,"L");
+			}
 			break;
 		case token::tokid::Float:
 			fprintf(fp,"float=%.20Lf",t.u.fv.v);
+			if (t.u.fv.floatbit)
+				fprintf(fp,"F");
+			else if (t.u.fv.longbit)
+				fprintf(fp,"L");
 			break;
 		case token::tokid::Eof:
 			fprintf(fp,"eof");
