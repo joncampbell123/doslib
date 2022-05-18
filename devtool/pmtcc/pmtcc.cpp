@@ -448,38 +448,38 @@ struct token {
 		CloseSqBrk,
 		OpenCurlBrk,			// 55
 		CloseCurlBrk,
-		Auto,
-		Break,
-		Case,
-		Char,				// 60
-		Const,
-		Continue,
-		Default,
-		Do,
-		Double,				// 65
-		Else,
-		Enum,
-		Extern,
+		AutoKeyword,
+		BreakKeyword,
+		CaseKeyword,
+		CharKeyword,			// 60
+		ConstKeyword,
+		ContinueKeyword,
+		DefaultKeyword,
+		DoKeyword,
+		DoubleKeyword,			// 65
+		ElseKeyword,
+		EnumKeyword,
+		ExternKeyword,
 		FloatKeyword,
-		For,				// 70
-		Goto,
-		If,
-		Int,
-		Long,
-		Register,			// 75
-		Return,
-		Short,
-		Signed,
-		Sizeof,
-		Static,				// 80
-		Struct,
-		Switch,
+		ForKeyword,			// 70
+		GotoKeyword,
+		IfKeyword,
+		IntKeyword,
+		LongKeyword,
+		RegisterKeyword,		// 75
+		ReturnKeyword,
+		ShortKeyword,
+		SignedKeyword,
+		SizeofKeyword,
+		StaticKeyword,			// 80
+		StructKeyword,
+		SwitchKeyword,
 		TypedefKeyword,
-		Union,
-		Unsigned,			// 85
-		Void,
-		Volatile,
-		While,
+		UnionKeyword,
+		UnsignedKeyword,		// 85
+		VoidKeyword,
+		VolatileKeyword,
+		WhileKeyword,
 		PackedKeyword,
 
 		MAX
@@ -755,101 +755,100 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		if (isIdent) {
 			/* maybe it's a reserved word */
 			if (identifier == "auto") {
-				t.token_id = token::tokid::Auto;
+				t.token_id = token::tokid::AutoKeyword;
 			}
 			else if (identifier == "break") {
-				t.token_id = token::tokid::Break;
+				t.token_id = token::tokid::BreakKeyword;
 			}
 			else if (identifier == "case") {
-				t.token_id = token::tokid::Case;
+				t.token_id = token::tokid::CaseKeyword;
 			}
 			else if (identifier == "char") {
-				t.token_id = token::tokid::Char;
+				t.token_id = token::tokid::CharKeyword;
 			}
 			else if (identifier == "const") {
-				t.token_id = token::tokid::Const;
+				t.token_id = token::tokid::ConstKeyword;
 			}
 			else if (identifier == "continue") {
-				t.token_id = token::tokid::Continue;
+				t.token_id = token::tokid::ContinueKeyword;
 			}
 			else if (identifier == "default") {
-				t.token_id = token::tokid::Default;
+				t.token_id = token::tokid::DefaultKeyword;
 			}
 			else if (identifier == "do") {
-				t.token_id = token::tokid::Do;
+				t.token_id = token::tokid::DoKeyword;
 			}
 			else if (identifier == "double") {
-				t.token_id = token::tokid::Double;
+				t.token_id = token::tokid::DoubleKeyword;
 			}
 			else if (identifier == "else") {
-				t.token_id = token::tokid::Else;
+				t.token_id = token::tokid::ElseKeyword;
 			}
 			else if (identifier == "enum") {
-				t.token_id = token::tokid::Enum;
+				t.token_id = token::tokid::EnumKeyword;
 			}
 			else if (identifier == "extern") {
-				t.token_id = token::tokid::Extern;
+				t.token_id = token::tokid::ExternKeyword;
 			}
 			else if (identifier == "float") {
 				t.token_id = token::tokid::FloatKeyword;
 			}
 			else if (identifier == "for") {
-				t.token_id = token::tokid::For;
+				t.token_id = token::tokid::ForKeyword;
 			}
 			else if (identifier == "goto") {
-				t.token_id = token::tokid::Goto;
+				t.token_id = token::tokid::GotoKeyword;
 			}
 			else if (identifier == "if") {
-				t.token_id = token::tokid::If;
+				t.token_id = token::tokid::IfKeyword;
 			}
 			else if (identifier == "int") {
-				t.token_id = token::tokid::Int;
+				t.token_id = token::tokid::IntKeyword;
 			}
 			else if (identifier == "long") {
-				t.token_id = token::tokid::Long;
+				t.token_id = token::tokid::LongKeyword;
 			}
 			else if (identifier == "register") {
-				t.token_id = token::tokid::Register;
+				t.token_id = token::tokid::RegisterKeyword;
 			}
 			else if (identifier == "return") {
-				t.token_id = token::tokid::Return;
+				t.token_id = token::tokid::ReturnKeyword;
 			}
 			else if (identifier == "short") {
-				t.token_id = token::tokid::Short;
+				t.token_id = token::tokid::ShortKeyword;
 			}
 			else if (identifier == "signed") {
-				t.token_id = token::tokid::Signed;
+				t.token_id = token::tokid::SignedKeyword;
 			}
 			else if (identifier == "sizeof") {
-				t.token_id = token::tokid::Sizeof;
+				t.token_id = token::tokid::SizeofKeyword;
 			}
 			else if (identifier == "static") {
-				t.token_id = token::tokid::Static;
+				t.token_id = token::tokid::StaticKeyword;
 			}
 			else if (identifier == "struct") {
-				t.token_id = token::tokid::Struct;
+				t.token_id = token::tokid::StructKeyword;
 			}
-
 			else if (identifier == "switch") {
-				t.token_id = token::tokid::Switch;
+				t.token_id = token::tokid::SwitchKeyword;
 			}
 			else if (identifier == "typedef") {
 				t.token_id = token::tokid::TypedefKeyword;
 			}
 			else if (identifier == "union") {
-				t.token_id = token::tokid::Union;
+				t.token_id = token::tokid::UnionKeyword;
 			}
 			else if (identifier == "unsigned") {
-				t.token_id = token::tokid::Unsigned;
+				t.token_id = token::tokid::UnsignedKeyword;
 			}
 			else if (identifier == "void") {
-				t.token_id = token::tokid::Void;
+				t.token_id = token::tokid::VoidKeyword;
 			}
 			else if (identifier == "volatile") {
-				t.token_id = token::tokid::Volatile;
+				t.token_id = token::tokid::VolatileKeyword;
 			}
 			else if (identifier == "while") {
-				t.token_id = token::tokid::While;
+				t.token_id = token::tokid::WhileKeyword;
 			}
 			else if (identifier == "_Packed") {
 				t.token_id = token::tokid::PackedKeyword;
@@ -1586,107 +1585,105 @@ void source_dbg_print_token(FILE *fp,token &t) {
 		case token::tokid::CloseCurlBrk:
 			fprintf(fp,"clocrlbrk");
 			break;
-		case token::tokid::Auto:
+		case token::tokid::AutoKeyword:
 			fprintf(fp,"auto");
 			break;
-		case token::tokid::Break:
+		case token::tokid::BreakKeyword:
 			fprintf(fp,"break");
 			break;
-		case token::tokid::Case:
+		case token::tokid::CaseKeyword:
 			fprintf(fp,"case");
 			break;
-		case token::tokid::Char:
+		case token::tokid::CharKeyword:
 			fprintf(fp,"char");
 			break;
-		case token::tokid::Const:
+		case token::tokid::ConstKeyword:
 			fprintf(fp,"const");
 			break;
-		case token::tokid::Continue:
+		case token::tokid::ContinueKeyword:
 			fprintf(fp,"continue");
 			break;
-		case token::tokid::Default:
+		case token::tokid::DefaultKeyword:
 			fprintf(fp,"default");
 			break;
-		case token::tokid::Do:
+		case token::tokid::DoKeyword:
 			fprintf(fp,"do");
 			break;
-		case token::tokid::Double:
+		case token::tokid::DoubleKeyword:
 			fprintf(fp,"double");
 			break;
-		case token::tokid::Else:
+		case token::tokid::ElseKeyword:
 			fprintf(fp,"else");
 			break;
-		case token::tokid::Enum:
+		case token::tokid::EnumKeyword:
 			fprintf(fp,"enum");
 			break;
-		case token::tokid::Extern:
+		case token::tokid::ExternKeyword:
 			fprintf(fp,"extern");
 			break;
 		case token::tokid::FloatKeyword:
 			fprintf(fp,"float");
 			break;
-		case token::tokid::For:
+		case token::tokid::ForKeyword:
 			fprintf(fp,"for");
 			break;
-		case token::tokid::Goto:
+		case token::tokid::GotoKeyword:
 			fprintf(fp,"goto");
 			break;
-		case token::tokid::If:
+		case token::tokid::IfKeyword:
 			fprintf(fp,"if");
 			break;
-		case token::tokid::Int:
+		case token::tokid::IntKeyword:
 			fprintf(fp,"int");
 			break;
-		case token::tokid::Long:
+		case token::tokid::LongKeyword:
 			fprintf(fp,"long");
 			break;
-		case token::tokid::Register:
+		case token::tokid::RegisterKeyword:
 			fprintf(fp,"register");
 			break;
-		case token::tokid::Return:
+		case token::tokid::ReturnKeyword:
 			fprintf(fp,"return");
 			break;
-		case token::tokid::Short:
+		case token::tokid::ShortKeyword:
 			fprintf(fp,"short");
 			break;
-		case token::tokid::Signed:
+		case token::tokid::SignedKeyword:
 			fprintf(fp,"signed");
 			break;
-		case token::tokid::Sizeof:
+		case token::tokid::SizeofKeyword:
 			fprintf(fp,"sizeof");
 			break;
-		case token::tokid::Static:
+		case token::tokid::StaticKeyword:
 			fprintf(fp,"static");
 			break;
-		case token::tokid::Struct:
+		case token::tokid::StructKeyword:
 			fprintf(fp,"struct");
 			break;
-
-		case token::tokid::Switch:
+		case token::tokid::SwitchKeyword:
 			fprintf(fp,"switch");
 			break;
 		case token::tokid::TypedefKeyword:
 			fprintf(fp,"typedef");
 			break;
-		case token::tokid::Union:
+		case token::tokid::UnionKeyword:
 			fprintf(fp,"union");
 			break;
-		case token::tokid::Unsigned:
+		case token::tokid::UnsignedKeyword:
 			fprintf(fp,"unsigned");
 			break;
-		case token::tokid::Void:
+		case token::tokid::VoidKeyword:
 			fprintf(fp,"void");
 			break;
-		case token::tokid::Volatile:
+		case token::tokid::VolatileKeyword:
 			fprintf(fp,"volatile");
 			break;
-		case token::tokid::While:
+		case token::tokid::WhileKeyword:
 			fprintf(fp,"while");
 			break;
 		case token::tokid::PackedKeyword:
 			fprintf(fp,"_Packed");
 			break;
-
 		default:
 			fprintf(fp,"?");
 			break;
