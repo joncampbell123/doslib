@@ -221,6 +221,8 @@ struct stringtblent {
 	void set(const std::basic_string<int16_t> &s);
 	void set(const std::basic_string<int32_t> &s);
 
+	std::string converttoutf(void) const;
+
 	const char *cstring(void) const;
 	const int16_t *c16string(void) const;
 	const int32_t *c32string(void) const;
@@ -235,6 +237,42 @@ struct stringtblent {
 private:
 	void _movefrom(stringtblent &x);
 };
+
+std::string stringtblent::converttoutf(void) const {
+	std::string r;
+
+	switch (type) {
+		case type_t::Char:
+		case type_t::Utf8:
+			return cstring();
+		case type_t::Char16:
+			{
+				const int16_t *s = c16string();
+				while (*s != 0) {
+					if (*s >= 0 && *s <= 0xFF)
+						r += (char)(*s);
+
+					s++;
+				}
+			}
+			break;
+		case type_t::Char32:
+			{
+				const int32_t *s = c32string();
+				while (*s != 0) {
+					if (*s >= 0 && *s <= 0xFF)
+						r += (char)(*s);
+
+					s++;
+				}
+			}
+			break;
+		default:
+			break;
+	}
+
+	return r;
+}
 
 const char *stringtblent::cstring(void) const {
 	if (strobj != NULL) {
@@ -1226,10 +1264,10 @@ void source_dbg_print_token(FILE *fp,token &t) {
 						fprintf(stderr,"u8=\"%s\"",ste.cstring());
 						break;
 					case stringtblent::type_t::Char16:
-						fprintf(stderr,"u16=");//TODO
+						fprintf(stderr,"u16=\"%s\"",ste.converttoutf().c_str());
 						break;
 					case stringtblent::type_t::Char32:
-						fprintf(stderr,"u32=");//TODO
+						fprintf(stderr,"u32=\"%s\"",ste.converttoutf().c_str());
 						break;
 					default:
 						break;
