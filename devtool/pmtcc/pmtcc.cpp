@@ -213,6 +213,9 @@ struct stringtblent {
 	void set(const std::basic_string<char> &s); // aka std::string
 	void set(const std::basic_string<int32_t> &s);
 
+	const char *cstring(void) const;
+	const int32_t *wstring(void) const;
+
 	stringtblent();
 	stringtblent(const stringtblent &x) = delete;
 	stringtblent(stringtblent &&x);
@@ -223,6 +226,24 @@ struct stringtblent {
 private:
 	void _movefrom(stringtblent &x);
 };
+
+const char *stringtblent::cstring(void) const {
+	if (strobj != NULL) {
+		if (type == type_t::Char)
+			return (reinterpret_cast< std::basic_string<char>* >(strobj))->c_str();
+	}
+
+	return NULL;
+}
+
+const int32_t *stringtblent::wstring(void) const {
+	if (strobj != NULL) {
+		if (type == type_t::Char)
+			return (reinterpret_cast< std::basic_string<int32_t>* >(strobj))->c_str();
+	}
+
+	return NULL;
+}
 
 void stringtblent::_movefrom(stringtblent &x) {
 	clear();
