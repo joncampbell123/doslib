@@ -139,6 +139,8 @@ int sourcestack::entry::peekc(void) {
 	return savedc;
 }
 
+// TODO: We return int, this should eventually read as UTF-8 or UTF-16.
+//       Let the base class read raw bytes.
 int sourcestack::entry::getc(void) {
 	sourcestream *s;
 	if (savedc >= 0) {
@@ -1005,6 +1007,11 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			else {
 				if (!source_read_string_esc_char(pv,pvlen,s))
 					return false;
+
+				if (identifier == "u") pvlen = 2; /* char16_t */
+				else if (identifier == "U") pvlen = 4; /* char32_t */
+				// TODO: identifier == "L" for wchar_t, which depends on the target platform i.e. wchar_t is 32-bit on Linux, 16-bit on Windows
+				// TODO: identifier == "u8", what do we do exactly?
 
 				iv.v.u <<= (uint64_t)pvlen * (uint64_t)8u;
 				iv.v.u += pv;
