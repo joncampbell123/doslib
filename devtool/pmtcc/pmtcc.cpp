@@ -465,6 +465,14 @@ struct token {
 		Goto,
 		If,
 		Int,
+		Long,
+		Register,			// 75
+		Return,
+		Short,
+		Signed,
+		Sizeof,
+		Static,				// 80
+		Struct,
 
 		MAX
 	};
@@ -788,6 +796,30 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "int") {
 				t.token_id = token::tokid::Int;
+			}
+			else if (identifier == "long") {
+				t.token_id = token::tokid::Long;
+			}
+			else if (identifier == "register") {
+				t.token_id = token::tokid::Register;
+			}
+			else if (identifier == "return") {
+				t.token_id = token::tokid::Return;
+			}
+			else if (identifier == "short") {
+				t.token_id = token::tokid::Short;
+			}
+			else if (identifier == "signed") {
+				t.token_id = token::tokid::Signed;
+			}
+			else if (identifier == "sizeof") {
+				t.token_id = token::tokid::Sizeof;
+			}
+			else if (identifier == "static") {
+				t.token_id = token::tokid::Static;
+			}
+			else if (identifier == "struct") {
+				t.token_id = token::tokid::Struct;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1571,6 +1603,30 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::Int:
 			fprintf(fp,"int");
+			break;
+		case token::tokid::Long:
+			fprintf(fp,"long");
+			break;
+		case token::tokid::Register:
+			fprintf(fp,"register");
+			break;
+		case token::tokid::Return:
+			fprintf(fp,"return");
+			break;
+		case token::tokid::Short:
+			fprintf(fp,"short");
+			break;
+		case token::tokid::Signed:
+			fprintf(fp,"signed");
+			break;
+		case token::tokid::Sizeof:
+			fprintf(fp,"sizeof");
+			break;
+		case token::tokid::Static:
+			fprintf(fp,"static");
+			break;
+		case token::tokid::Struct:
+			fprintf(fp,"struct");
 			break;
 		default:
 			fprintf(fp,"?");
