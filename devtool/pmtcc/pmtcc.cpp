@@ -243,6 +243,10 @@ struct token {
 		GreaterThanOp,
 		GreaterOrEquOp,			// 45
 		StarshipOp,
+		PtrToMemDotOp,
+		PtrToMemArrowOp,
+		MemberDotOp,
+		MemberArrowOp,			// 50
 
 		MAX
 	};
@@ -437,7 +441,19 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == '<') {
+	if (c == '.') {
+		s.getc();
+		c = s.peekc();
+
+		if (c == '*') { /* .* */
+			t.token_id = token::tokid::PtrToMemDotOp;
+			s.getc();
+		}
+		else { /* . */
+			t.token_id = token::tokid::MemberDotOp;
+		}
+	}
+	else if (c == '<') {
 		s.getc();
 		c = s.peekc();
 
@@ -614,7 +630,18 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			t.token_id = token::tokid::SubAssign;
 			s.getc(); // discard
 		}
-		else {
+		else if (c == '>') { /* -> operator */
+			s.getc(); // discard
+			c = s.peekc();
+			if (c == '*') { /* ->* operator */
+				t.token_id = token::tokid::PtrToMemArrowOp;
+				s.getc(); // discard
+			}
+			else { /* -> operator */
+				t.token_id = token::tokid::MemberArrowOp;
+			}
+		}
+		else { /* - operator */
 			t.token_id = token::tokid::SubGen; // could be negate or subtract
 		}
 	}
@@ -950,6 +977,18 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::StarshipOp:
 			fprintf(fp,"starship");
+			break;
+		case token::tokid::PtrToMemDotOp:
+			fprintf(fp,"ptmdot");
+			break;
+		case token::tokid::PtrToMemArrowOp:
+			fprintf(fp,"ptmarr");
+			break;
+		case token::tokid::MemberDotOp:
+			fprintf(fp,"mbrdot");
+			break;
+		case token::tokid::MemberArrowOp:
+			fprintf(fp,"mbrarr");
 			break;
 		default:
 			fprintf(fp,"?");
