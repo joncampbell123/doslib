@@ -445,6 +445,7 @@ struct token {
 	} u;
 	textposition pos;
 	tokid token_id = tokid::None;
+	std::string identifier;
 };
 
 void token::StringValue::reset(void) {
@@ -632,6 +633,7 @@ bool source_read_string_esc_char(uint64_t &pv,unsigned int &pvlen,sourcestack::e
 }
 
 bool source_toke(token &t,sourcestack::entry &s) {
+	std::string identifier;
 	int c;
 
 	t.token_id = token::tokid::None;
@@ -644,6 +646,43 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
+
+	/* identifier parsing, but the identifier followed by specific chars could mean
+	 * specific prefixes instead */
+	if (isalpha(c) || c == '_') { /* identifiers can start with [a-z_] */
+		bool isIdent = true;
+
+		identifier = c;
+		s.getc();
+
+		/* the identifier continues until the char is not [a-z0-9_] */
+		do {
+			c = s.peekc();
+			if (isalpha(c) || isdigit(c) || c == '_') {
+				identifier += c;
+				s.getc();
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+		/* if specific identifiers and the next char is specific, then it's a prefix.
+		 * The C/C++ standard doesn't allow a space between u8 and "string" in u8"string" so neither do we. */
+		c = s.peekc();
+		if (c == '\"' || c == '\''/*next char begins char literal or string*/) {
+			if (identifier == "u" || identifier == "U" || identifier == "u8" || identifier == "L") {
+				isIdent = false; /* c contains next char ready for token parsing below */
+			}
+		}
+
+		if (isIdent) {
+			t.token_id = token::tokid::Identifier;
+			t.identifier = identifier;
+			return true;
+		}
+	}
+
 	if (c == '{') {
 		t.token_id = token::tokid::OpenCurlBrk;
 		s.getc();
@@ -1075,6 +1114,9 @@ void source_dbg_print_token(FILE *fp,token &t) {
 	fprintf(fp,"@%d,%d ",t.pos.row,t.pos.column);
 
 	switch (t.token_id) {
+		case token::tokid::Identifier:
+			fprintf(fp,"ident='%s'",t.identifier.c_str());
+			break;
 		case token::tokid::Integer:
 			fprintf(fp,"int=%llu",(unsigned long long)t.u.iv.v.u);
 			if (t.u.iv.unsignbit)
