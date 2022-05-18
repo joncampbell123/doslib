@@ -305,8 +305,8 @@ void stringtblent::set(const char *s,const type_t Type) {
 	assert(strobj == NULL);
 	if (s != NULL && (Type == type_t::Char || Type == type_t::Utf8)) {
 		std::basic_string<char>* n = new std::basic_string<char>(s);
-		type = Type;
 		strobj = (void*)n;
+		type = Type;
 	}
 }
 
@@ -315,8 +315,8 @@ void stringtblent::set(const std::basic_string<char> &s,const type_t Type) {
 	assert(strobj == NULL);
 	if (Type == type_t::Char || Type == type_t::Utf8) {
 		std::basic_string<char>* n = new std::basic_string<char>(s);
-		type = type_t::Char;
 		strobj = (void*)n;
+		type = Type;
 	}
 }
 
@@ -1025,6 +1025,95 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		t.token_id = token::tokid::Integer;
 		t.u.iv = iv;
 	}
+	/* string constant */
+	else if (c == '\"') {
+		const size_t idx = src_stringtbl.size();
+		unsigned int pvlen;
+		stringtblent ste;
+		uint64_t pv;
+
+		t.token_id = token::tokid::String;
+		t.u.sv.stblidx = idx;
+
+		s.getc();//discard
+
+		if (identifier == "L")
+			pvlen = string_wchar_size;
+		else if (identifier == "U")
+			pvlen = 4;
+		else if (identifier == "u")
+			pvlen = 2;
+
+		// TODO: UTF-8 u8
+
+		if (pvlen == 4) {
+			std::basic_string<int32_t> str;
+
+			do {
+				if (s.peekc() == '\"') {
+					s.getc();//discard
+					break;
+				}
+				else {
+					if (!source_read_string_esc_char(pv,pvlen,s))
+						return false;
+
+					if (pv > (uint64_t)0xFFFFFFFFu)
+						return false;
+
+					str += (int32_t)pv;
+				}
+			} while(1);
+			ste.set(str);
+		}
+		else if (pvlen == 2) {
+			std::basic_string<int16_t> str;
+
+			do {
+				if (s.peekc() == '\"') {
+					s.getc();//discard
+					break;
+				}
+				else {
+					if (!source_read_string_esc_char(pv,pvlen,s))
+						return false;
+
+					if (pv > (uint64_t)0xFFFFu)
+						return false;
+
+					str += (int16_t)pv;
+				}
+			} while(1);
+			ste.set(str);
+		}
+		else {
+			std::basic_string<char> str;
+			stringtblent::type_t type = stringtblent::type_t::Char;
+
+			if (identifier == "u8")
+				type = stringtblent::type_t::Utf8;
+
+			do {
+				if (s.peekc() == '\"') {
+					s.getc();//discard
+					break;
+				}
+				else {
+					if (!source_read_string_esc_char(pv,pvlen,s))
+						return false;
+
+					/* TODO: UTF-8 */
+					if (pv > (uint64_t)0xFFu)
+						return false;
+
+					str += (char)pv;
+				}
+			} while(1);
+			ste.set(str,type);
+		}
+
+		src_stringtbl.push_back(std::move(ste));
+	}
 	/* integer value (decimal)? If we find a decimal point, then it becomes a float. */
 	else if (isdigit(c)) {
 		token::IntegerValue iv;
@@ -1124,6 +1213,32 @@ void source_dbg_print_token(FILE *fp,token &t) {
 	fprintf(fp,"@%d,%d ",t.pos.row,t.pos.column);
 
 	switch (t.token_id) {
+		case token::tokid::String:
+			fprintf(fp,"str");
+			if (t.u.sv.stblidx != stringtblent::no_string && t.u.sv.stblidx < src_stringtbl.size()) {
+				const stringtblent &ste = src_stringtbl[t.u.sv.stblidx];
+
+				switch (ste.type) {
+					case stringtblent::type_t::Char:
+						fprintf(stderr,"c=\"%s\"",ste.cstring());
+						break;
+					case stringtblent::type_t::Utf8:
+						fprintf(stderr,"u8=\"%s\"",ste.cstring());
+						break;
+					case stringtblent::type_t::Char16:
+						fprintf(stderr,"u16=");//TODO
+						break;
+					case stringtblent::type_t::Char32:
+						fprintf(stderr,"u32=");//TODO
+						break;
+					default:
+						break;
+				};
+			}
+			else {
+				fprintf(stderr,"none");
+			}
+			break;
 		case token::tokid::Identifier:
 			fprintf(fp,"ident='%s'",t.identifier.c_str());
 			break;
