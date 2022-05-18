@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include <exception>
+#include <cassert>
 #include <string>
 #include <vector>
 #include <memory>
@@ -192,6 +193,110 @@ unique_ptr<sourcestream> source_stream_open_null(const char *path) {
 // change this if compiling from something other than normal files such as memory or perhaps container formats
 unique_ptr<sourcestream> (*source_stream_open)(const char *path) = source_stream_open_null;
 
+//////////////////////// string table
+struct stringtblent {
+	enum class type_t {
+		None=0,
+		Char,		// std::string<char>
+		Widechar,	// std::string<int32_t>
+
+		MAX
+	};
+
+	static constexpr size_t no_string = (size_t)(~0ull);
+
+	type_t		type = type_t::None;
+	void*		strobj = NULL;
+
+	void clear(void);
+	void set(const char *s);
+	void set(const std::basic_string<char> &s); // aka std::string
+	void set(const std::basic_string<int32_t> &s);
+
+	stringtblent();
+	stringtblent(const stringtblent &x) = delete;
+	stringtblent(stringtblent &&x);
+	~stringtblent();
+	stringtblent &operator=(const stringtblent &x) = delete;
+	stringtblent &operator=(stringtblent &&x);
+
+private:
+	void _movefrom(stringtblent &x);
+};
+
+void stringtblent::_movefrom(stringtblent &x) {
+	clear();
+
+	type = x.type;
+	x.type = type_t::None;
+
+	strobj = x.strobj;
+	x.strobj = NULL;
+}
+
+stringtblent::stringtblent(stringtblent &&x) {
+	_movefrom(x);
+}
+
+stringtblent &stringtblent::operator=(stringtblent &&x) {
+	_movefrom(x);
+	return *this;
+}
+
+void stringtblent::clear(void) {
+	if (strobj) {
+		switch (type) {
+			case type_t::Char:
+				delete reinterpret_cast< std::basic_string<char>* >(strobj); break;
+			case type_t::Widechar:
+				delete reinterpret_cast< std::basic_string<int32_t>* >(strobj); break;
+			default:
+				break;
+		};
+
+		strobj = NULL;
+	}
+}
+
+void stringtblent::set(const char *s) {
+	clear();
+	assert(strobj == NULL);
+	if (s != NULL) {
+		std::basic_string<char>* n = new std::basic_string<char>(s);
+		type = type_t::Char;
+		strobj = (void*)n;
+	}
+}
+
+void stringtblent::set(const std::basic_string<char> &s) {
+	clear();
+	assert(strobj == NULL);
+	{
+		std::basic_string<char>* n = new std::basic_string<char>(s);
+		type = type_t::Char;
+		strobj = (void*)n;
+	}
+}
+
+void stringtblent::set(const std::basic_string<int32_t> &s) {
+	clear();
+	assert(strobj == NULL);
+	{
+		std::basic_string<int32_t>* n = new std::basic_string<int32_t>(s);
+		type = type_t::Widechar;
+		strobj = (void*)n;
+	}
+}
+
+stringtblent::stringtblent() {
+}
+
+stringtblent::~stringtblent() {
+	clear();
+}
+
+std::vector<stringtblent>		src_stringtbl;
+
 //////////////////////// token from source
 
 struct token {
@@ -258,13 +363,6 @@ struct token {
 	};
 	typedef uint8_t Char_t;
 	typedef uint32_t Widechar_t;
-	enum class stringtype {
-		None=0,
-		Char,
-		Widechar,
-
-		MAX
-	};
 	struct IntegerValue {
 		union {
 			uint64_t		u;
@@ -283,8 +381,7 @@ struct token {
 		void reset(void);
 	};
 	struct StringValue {
-		stringtype			st;
-		// For pointer safety reasons string is not stored here! Is is in the blob field.
+		size_t				stblidx; // index into string table or stringtblent::no_string
 
 		void reset(void);
 	};
@@ -297,11 +394,10 @@ struct token {
 	} u;
 	textposition pos;
 	tokid token_id = tokid::None;
-	std::vector<uint8_t> blob; /* WARNING: String stored as blob, StringValue stringtype says what type. Do not assume trailing NUL */
 };
 
 void token::StringValue::reset(void) {
-	st = stringtype::None;
+	stblidx = stringtblent::no_string;
 }
 
 void token::FloatValue::reset(void) {
