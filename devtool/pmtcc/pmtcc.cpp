@@ -448,6 +448,15 @@ struct token {
 		CloseSqBrk,
 		OpenCurlBrk,			// 55
 		CloseCurlBrk,
+		Auto,
+		Break,
+		Case,
+		Char,				// 60
+		Const,
+		Continue,
+		Default,
+		Do,
+		Double,				// 65
 
 		MAX
 	};
@@ -720,8 +729,39 @@ bool source_toke(token &t,sourcestack::entry &s) {
 		}
 
 		if (isIdent) {
-			t.token_id = token::tokid::Identifier;
-			t.identifier = identifier;
+			/* maybe it's a reserved word */
+			if (identifier == "auto") {
+				t.token_id = token::tokid::Auto;
+			}
+			else if (identifier == "break") {
+				t.token_id = token::tokid::Break;
+			}
+			else if (identifier == "case") {
+				t.token_id = token::tokid::Case;
+			}
+			else if (identifier == "char") {
+				t.token_id = token::tokid::Char;
+			}
+			else if (identifier == "const") {
+				t.token_id = token::tokid::Const;
+			}
+			else if (identifier == "continue") {
+				t.token_id = token::tokid::Continue;
+			}
+			else if (identifier == "default") {
+				t.token_id = token::tokid::Default;
+			}
+			else if (identifier == "do") {
+				t.token_id = token::tokid::Do;
+			}
+			else if (identifier == "double") {
+				t.token_id = token::tokid::Double;
+			}
+			else {
+				t.token_id = token::tokid::Identifier;
+				t.identifier = identifier;
+			}
+
 			return true;
 		}
 	}
@@ -1448,6 +1488,33 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::CloseCurlBrk:
 			fprintf(fp,"clocrlbrk");
+			break;
+		case token::tokid::Auto:
+			fprintf(fp,"auto");
+			break;
+		case token::tokid::Break:
+			fprintf(fp,"break");
+			break;
+		case token::tokid::Case:
+			fprintf(fp,"case");
+			break;
+		case token::tokid::Char:
+			fprintf(fp,"char");
+			break;
+		case token::tokid::Const:
+			fprintf(fp,"const");
+			break;
+		case token::tokid::Continue:
+			fprintf(fp,"continue");
+			break;
+		case token::tokid::Default:
+			fprintf(fp,"default");
+			break;
+		case token::tokid::Do:
+			fprintf(fp,"do");
+			break;
+		case token::tokid::Double:
+			fprintf(fp,"double");
 			break;
 		default:
 			fprintf(fp,"?");
