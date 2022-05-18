@@ -473,6 +473,14 @@ struct token {
 		Sizeof,
 		Static,				// 80
 		Struct,
+		Switch,
+		TypedefKeyword,
+		Union,
+		Unsigned,			// 85
+		Void,
+		Volatile,
+		While,
+		PackedKeyword,
 
 		MAX
 	};
@@ -820,6 +828,31 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "struct") {
 				t.token_id = token::tokid::Struct;
+			}
+
+			else if (identifier == "switch") {
+				t.token_id = token::tokid::Switch;
+			}
+			else if (identifier == "typedef") {
+				t.token_id = token::tokid::TypedefKeyword;
+			}
+			else if (identifier == "union") {
+				t.token_id = token::tokid::Union;
+			}
+			else if (identifier == "unsigned") {
+				t.token_id = token::tokid::Unsigned;
+			}
+			else if (identifier == "void") {
+				t.token_id = token::tokid::Void;
+			}
+			else if (identifier == "volatile") {
+				t.token_id = token::tokid::Volatile;
+			}
+			else if (identifier == "while") {
+				t.token_id = token::tokid::While;
+			}
+			else if (identifier == "_Packed") {
+				t.token_id = token::tokid::PackedKeyword;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1628,6 +1661,32 @@ void source_dbg_print_token(FILE *fp,token &t) {
 		case token::tokid::Struct:
 			fprintf(fp,"struct");
 			break;
+
+		case token::tokid::Switch:
+			fprintf(fp,"switch");
+			break;
+		case token::tokid::TypedefKeyword:
+			fprintf(fp,"typedef");
+			break;
+		case token::tokid::Union:
+			fprintf(fp,"union");
+			break;
+		case token::tokid::Unsigned:
+			fprintf(fp,"unsigned");
+			break;
+		case token::tokid::Void:
+			fprintf(fp,"void");
+			break;
+		case token::tokid::Volatile:
+			fprintf(fp,"volatile");
+			break;
+		case token::tokid::While:
+			fprintf(fp,"while");
+			break;
+		case token::tokid::PackedKeyword:
+			fprintf(fp,"_Packed");
+			break;
+
 		default:
 			fprintf(fp,"?");
 			break;
