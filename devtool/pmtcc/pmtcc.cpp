@@ -195,6 +195,9 @@ unique_ptr<sourcestream> source_stream_open_null(const char *path) {
 // change this if compiling from something other than normal files such as memory or perhaps container formats
 unique_ptr<sourcestream> (*source_stream_open)(const char *path) = source_stream_open_null;
 
+// string constant info for runtime
+unsigned char string_wchar_size = 4; // 32-bit: Linux, Mac OS X, etc.  16-bit: Windows NT/9x/ME
+
 //////////////////////// string table
 struct stringtblent {
 	enum class type_t {
@@ -1010,8 +1013,8 @@ bool source_toke(token &t,sourcestack::entry &s) {
 
 				if (identifier == "u") pvlen = 2; /* char16_t */
 				else if (identifier == "U") pvlen = 4; /* char32_t */
-				// TODO: identifier == "L" for wchar_t, which depends on the target platform i.e. wchar_t is 32-bit on Linux, 16-bit on Windows
-				// TODO: identifier == "u8", what do we do exactly?
+				else if (identifier == "L") pvlen = string_wchar_size; /* wchar_t */
+				// TODO: identifier == "u8", pvlen depends on the length of the char when encoded to UTF-8
 
 				iv.v.u <<= (uint64_t)pvlen * (uint64_t)8u;
 				iv.v.u += pv;
