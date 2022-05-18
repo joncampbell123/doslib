@@ -457,6 +457,14 @@ struct token {
 		Default,
 		Do,
 		Double,				// 65
+		Else,
+		Enum,
+		Extern,
+		FloatKeyword,
+		For,				// 70
+		Goto,
+		If,
+		Int,
 
 		MAX
 	};
@@ -756,6 +764,30 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "double") {
 				t.token_id = token::tokid::Double;
+			}
+			else if (identifier == "else") {
+				t.token_id = token::tokid::Else;
+			}
+			else if (identifier == "enum") {
+				t.token_id = token::tokid::Enum;
+			}
+			else if (identifier == "extern") {
+				t.token_id = token::tokid::Extern;
+			}
+			else if (identifier == "float") {
+				t.token_id = token::tokid::FloatKeyword;
+			}
+			else if (identifier == "for") {
+				t.token_id = token::tokid::For;
+			}
+			else if (identifier == "goto") {
+				t.token_id = token::tokid::Goto;
+			}
+			else if (identifier == "if") {
+				t.token_id = token::tokid::If;
+			}
+			else if (identifier == "int") {
+				t.token_id = token::tokid::Int;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1515,6 +1547,30 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::Double:
 			fprintf(fp,"double");
+			break;
+		case token::tokid::Else:
+			fprintf(fp,"else");
+			break;
+		case token::tokid::Enum:
+			fprintf(fp,"enum");
+			break;
+		case token::tokid::Extern:
+			fprintf(fp,"extern");
+			break;
+		case token::tokid::FloatKeyword:
+			fprintf(fp,"float");
+			break;
+		case token::tokid::For:
+			fprintf(fp,"for");
+			break;
+		case token::tokid::Goto:
+			fprintf(fp,"goto");
+			break;
+		case token::tokid::If:
+			fprintf(fp,"if");
+			break;
+		case token::tokid::Int:
+			fprintf(fp,"int");
 			break;
 		default:
 			fprintf(fp,"?");
