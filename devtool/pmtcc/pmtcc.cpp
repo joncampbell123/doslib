@@ -198,7 +198,9 @@ struct stringtblent {
 	enum class type_t {
 		None=0,
 		Char,		// std::string<char>
-		Widechar,	// std::string<int32_t>
+		Utf8,		// std::string<char>
+		Char16,		// std::string<int16_t>
+		Char32,		// std::string<int32_t>
 
 		MAX
 	};
@@ -209,12 +211,14 @@ struct stringtblent {
 	void*		strobj = NULL;
 
 	void clear(void);
-	void set(const char *s);
-	void set(const std::basic_string<char> &s); // aka std::string
+	void set(const char *s,const type_t Type=type_t::Char);
+	void set(const std::basic_string<char> &s,const type_t Type=type_t::Char); // aka std::string
+	void set(const std::basic_string<int16_t> &s);
 	void set(const std::basic_string<int32_t> &s);
 
 	const char *cstring(void) const;
-	const int32_t *wstring(void) const;
+	const int16_t *c16string(void) const;
+	const int32_t *c32string(void) const;
 
 	stringtblent();
 	stringtblent(const stringtblent &x) = delete;
@@ -229,16 +233,25 @@ private:
 
 const char *stringtblent::cstring(void) const {
 	if (strobj != NULL) {
-		if (type == type_t::Char)
+		if (type == type_t::Char || type == type_t::Utf8)
 			return (reinterpret_cast< std::basic_string<char>* >(strobj))->c_str();
 	}
 
 	return NULL;
 }
 
-const int32_t *stringtblent::wstring(void) const {
+const int16_t *stringtblent::c16string(void) const {
 	if (strobj != NULL) {
-		if (type == type_t::Char)
+		if (type == type_t::Char16)
+			return (reinterpret_cast< std::basic_string<int16_t>* >(strobj))->c_str();
+	}
+
+	return NULL;
+}
+
+const int32_t *stringtblent::c32string(void) const {
+	if (strobj != NULL) {
+		if (type == type_t::Char32)
 			return (reinterpret_cast< std::basic_string<int32_t>* >(strobj))->c_str();
 	}
 
@@ -268,8 +281,11 @@ void stringtblent::clear(void) {
 	if (strobj) {
 		switch (type) {
 			case type_t::Char:
+			case type_t::Utf8:
 				delete reinterpret_cast< std::basic_string<char>* >(strobj); break;
-			case type_t::Widechar:
+			case type_t::Char16:
+				delete reinterpret_cast< std::basic_string<int16_t>* >(strobj); break;
+			case type_t::Char32:
 				delete reinterpret_cast< std::basic_string<int32_t>* >(strobj); break;
 			default:
 				break;
@@ -279,22 +295,32 @@ void stringtblent::clear(void) {
 	}
 }
 
-void stringtblent::set(const char *s) {
+void stringtblent::set(const char *s,const type_t Type) {
 	clear();
 	assert(strobj == NULL);
-	if (s != NULL) {
+	if (s != NULL && (Type == type_t::Char || Type == type_t::Utf8)) {
+		std::basic_string<char>* n = new std::basic_string<char>(s);
+		type = Type;
+		strobj = (void*)n;
+	}
+}
+
+void stringtblent::set(const std::basic_string<char> &s,const type_t Type) {
+	clear();
+	assert(strobj == NULL);
+	if (Type == type_t::Char || Type == type_t::Utf8) {
 		std::basic_string<char>* n = new std::basic_string<char>(s);
 		type = type_t::Char;
 		strobj = (void*)n;
 	}
 }
 
-void stringtblent::set(const std::basic_string<char> &s) {
+void stringtblent::set(const std::basic_string<int16_t> &s) {
 	clear();
 	assert(strobj == NULL);
 	{
-		std::basic_string<char>* n = new std::basic_string<char>(s);
-		type = type_t::Char;
+		std::basic_string<int16_t>* n = new std::basic_string<int16_t>(s);
+		type = type_t::Char16;
 		strobj = (void*)n;
 	}
 }
@@ -304,7 +330,7 @@ void stringtblent::set(const std::basic_string<int32_t> &s) {
 	assert(strobj == NULL);
 	{
 		std::basic_string<int32_t>* n = new std::basic_string<int32_t>(s);
-		type = type_t::Widechar;
+		type = type_t::Char32;
 		strobj = (void*)n;
 	}
 }
