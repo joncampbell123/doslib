@@ -1028,7 +1028,7 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	/* string constant */
 	else if (c == '\"') {
 		const size_t idx = src_stringtbl.size();
-		unsigned int pvlen;
+		unsigned int pvlen = 1;
 		stringtblent ste;
 		uint64_t pv;
 
