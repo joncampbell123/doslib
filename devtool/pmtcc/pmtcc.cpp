@@ -251,6 +251,8 @@ struct token {
 		CloseParen,
 		OpenSqBrk,
 		CloseSqBrk,
+		OpenCurlBrk,			// 55
+		CloseCurlBrk,
 
 		MAX
 	};
@@ -445,7 +447,15 @@ bool source_toke(token &t,sourcestack::entry &s) {
 	}
 
 	c = s.peekc();
-	if (c == '[') {
+	if (c == '{') {
+		t.token_id = token::tokid::OpenCurlBrk;
+		s.getc();
+	}
+	else if (c == '}') {
+		t.token_id = token::tokid::CloseCurlBrk;
+		s.getc();
+	}
+	else if (c == '[') {
 		t.token_id = token::tokid::OpenSqBrk;
 		s.getc();
 	}
@@ -1021,6 +1031,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::CloseSqBrk:
 			fprintf(fp,"closqbrk");
+			break;
+		case token::tokid::OpenCurlBrk:
+			fprintf(fp,"ocrlbrk");
+			break;
+		case token::tokid::CloseCurlBrk:
+			fprintf(fp,"clocrlbrk");
 			break;
 		default:
 			fprintf(fp,"?");
