@@ -495,6 +495,7 @@ struct token {
 		UndefKeyword,
 		DefinedKeyword,
 		ConstexprKeyword,
+		InlineKeyword,
 
 		MAX
 	};
@@ -908,6 +909,9 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "constexpr") {
 				t.token_id = token::tokid::ConstexprKeyword;
+			}
+			else if (identifier == "inline") {
+				t.token_id = token::tokid::InlineKeyword;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1781,6 +1785,9 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::ConstexprKeyword:
 			fprintf(fp,"constexpr");
+			break;
+		case token::tokid::InlineKeyword:
+			fprintf(fp,"inline");
 			break;
 		default:
 			fprintf(fp,"?");
