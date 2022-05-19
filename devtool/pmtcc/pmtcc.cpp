@@ -487,6 +487,14 @@ struct token {
 		ClassKeyword,
 		InterfaceKeyword,
 		FunctionKeyword,		// 95
+		MacroKeyword,
+		NearKeyword,
+		FarKeyword,
+		HugeKeyword,
+		DefineKeyword,			// 100
+		UndefKeyword,
+		DefinedKeyword,
+		ConstexprKeyword,
 
 		MAX
 	};
@@ -876,6 +884,30 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "function") {
 				t.token_id = token::tokid::FunctionKeyword;
+			}
+			else if (identifier == "macro") {
+				t.token_id = token::tokid::MacroKeyword;
+			}
+			else if (identifier == "near") {
+				t.token_id = token::tokid::NearKeyword;
+			}
+			else if (identifier == "far") {
+				t.token_id = token::tokid::FarKeyword;
+			}
+			else if (identifier == "huge") {
+				t.token_id = token::tokid::HugeKeyword;
+			}
+			else if (identifier == "define") {
+				t.token_id = token::tokid::DefineKeyword;
+			}
+			else if (identifier == "undef") {
+				t.token_id = token::tokid::UndefKeyword;
+			}
+			else if (identifier == "defined") {
+				t.token_id = token::tokid::DefinedKeyword;
+			}
+			else if (identifier == "constexpr") {
+				t.token_id = token::tokid::ConstexprKeyword;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1725,6 +1757,30 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::FunctionKeyword:
 			fprintf(fp,"function");
+			break;
+		case token::tokid::MacroKeyword:
+			fprintf(fp,"macro");
+			break;
+		case token::tokid::NearKeyword:
+			fprintf(fp,"near");
+			break;
+		case token::tokid::FarKeyword:
+			fprintf(fp,"far");
+			break;
+		case token::tokid::HugeKeyword:
+			fprintf(fp,"huge");
+			break;
+		case token::tokid::DefineKeyword:
+			fprintf(fp,"define");
+			break;
+		case token::tokid::UndefKeyword:
+			fprintf(fp,"undef");
+			break;
+		case token::tokid::DefinedKeyword:
+			fprintf(fp,"defined");
+			break;
+		case token::tokid::ConstexprKeyword:
+			fprintf(fp,"constexpr");
 			break;
 		default:
 			fprintf(fp,"?");
