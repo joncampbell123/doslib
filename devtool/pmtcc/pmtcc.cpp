@@ -484,6 +484,8 @@ struct token {
 		LetKeyword,			// 90
 		NewKeyword,
 		DeleteKeyword,
+		ClassKeyword,
+		InterfaceKeyword,
 
 		MAX
 	};
@@ -864,6 +866,12 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "delete") {
 				t.token_id = token::tokid::DeleteKeyword;
+			}
+			else if (identifier == "class") {
+				t.token_id = token::tokid::ClassKeyword;
+			}
+			else if (identifier == "interface") {
+				t.token_id = token::tokid::InterfaceKeyword;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1704,6 +1712,12 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::DeleteKeyword:
 			fprintf(fp,"delete");
+			break;
+		case token::tokid::ClassKeyword:
+			fprintf(fp,"class");
+			break;
+		case token::tokid::InterfaceKeyword:
+			fprintf(fp,"interface");
 			break;
 		default:
 			fprintf(fp,"?");
