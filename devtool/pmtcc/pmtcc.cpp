@@ -481,6 +481,9 @@ struct token {
 		VolatileKeyword,
 		WhileKeyword,
 		PackedKeyword,
+		LetKeyword,			// 90
+		NewKeyword,
+		DeleteKeyword,
 
 		MAX
 	};
@@ -852,6 +855,15 @@ bool source_toke(token &t,sourcestack::entry &s) {
 			}
 			else if (identifier == "_Packed") {
 				t.token_id = token::tokid::PackedKeyword;
+			}
+			else if (identifier == "let") {
+				t.token_id = token::tokid::LetKeyword;
+			}
+			else if (identifier == "new") {
+				t.token_id = token::tokid::NewKeyword;
+			}
+			else if (identifier == "delete") {
+				t.token_id = token::tokid::DeleteKeyword;
 			}
 			else {
 				t.token_id = token::tokid::Identifier;
@@ -1683,6 +1695,15 @@ void source_dbg_print_token(FILE *fp,token &t) {
 			break;
 		case token::tokid::PackedKeyword:
 			fprintf(fp,"_Packed");
+			break;
+		case token::tokid::LetKeyword:
+			fprintf(fp,"let");
+			break;
+		case token::tokid::NewKeyword:
+			fprintf(fp,"new");
+			break;
+		case token::tokid::DeleteKeyword:
+			fprintf(fp,"delete");
 			break;
 		default:
 			fprintf(fp,"?");
