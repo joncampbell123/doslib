@@ -127,6 +127,7 @@ void sourcestack::entry::rewind(void) {
 }
 
 void sourcestack::entry::ungetc(int c) {
+	if (savedc >= 0) fprintf(stderr,"sourcestack::entry::ungetc() overrun\n");
 	savedc = c;
 }
 
