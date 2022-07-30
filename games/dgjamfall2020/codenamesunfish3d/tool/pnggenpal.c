@@ -207,6 +207,7 @@ void rgb2yuv(unsigned char *Y,unsigned char *U,unsigned char *V,unsigned char r,
 }
 
 struct color_bucket {
+	unsigned int			count;
 	unsigned char			R,G,B,A;
 	unsigned char			Y,U,V;
 	struct color_bucket*		next;
@@ -238,12 +239,14 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 		if (buckets[idx] != NULL) {
 			if (buckets[idx]->R == nb->R && buckets[idx]->G == nb->G && buckets[idx]->B == nb->B && buckets[idx]->A == nb->A) {
 				/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
+				buckets[idx]->count++;
 				free(nb);
 				return;
 			}
 		}
 		// add to head, for performance
 		nb->next = buckets[idx];
+		nb->count = 1;
 		buckets[idx] = nb;
 	}
 }
@@ -278,6 +281,7 @@ static int make_palette() {
 
 		for (x=0;x < (gen_png_width * src_png_bypp);x += src_png_bypp) {
 			nbucket = (struct color_bucket*)malloc(sizeof(struct color_bucket));
+			nbucket->count = 0;
 			nbucket->next = NULL;
 			if (src_png_bypp >= 4) {
 				nbucket->R = row[x+0];
@@ -341,6 +345,7 @@ static int make_palette() {
 			while (n != NULL) {
 				if (pn->R == n->R && pn->G == n->G && pn->B == n->B && pn->A == n->A) {
 					// remove from list and free
+					pn->count += n->count;
 					pn->next = n->next;
 					free(n);
 					n = pn->next;
@@ -359,14 +364,15 @@ static int make_palette() {
 		printf("  Bucket %u\n",y);
 		nbucket = color_buckets[y];
 		while (nbucket != NULL) {
-			printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u\n",
+			printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u count=%u\n",
 				nbucket->R,
 				nbucket->G,
 				nbucket->B,
 				nbucket->A,
 				nbucket->Y,
 				nbucket->U,
-				nbucket->V);
+				nbucket->V,
+				nbucket->count);
 
 			nbucket = nbucket->next;
 		}
