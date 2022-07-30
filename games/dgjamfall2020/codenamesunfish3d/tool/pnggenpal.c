@@ -248,6 +248,16 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 	}
 }
 
+int colorrgbcompare(struct color_bucket *a,struct color_bucket *b) {
+	if (a->Y > b->Y) return 1;
+	if (a->Y < b->Y) return 0;
+	if (a->U > b->U) return 1;
+	if (a->U < b->U) return 0;
+	if (a->V > b->V) return 1;
+	if (a->V < b->V) return 0;
+	return 0;
+}
+
 static int make_palette() {
 #define COLOR_BUCKETS 256
 	struct color_bucket* color_buckets[COLOR_BUCKETS];
@@ -305,7 +315,7 @@ static int make_palette() {
 					const int ndx = (int)(n->U) - 128;
 					const int ndy = (int)(n->V) - 128;
 					const int nd = ndx * ndx + ndy * ndy;
-					if (nd > cd) {
+					if (nd > cd || (nd == cd && colorrgbcompare(n,*c) > 0)) {
 						/* remove "n" from list */
 						pn->next = n->next;
 						/* then insert "n" before node *c */
@@ -321,6 +331,24 @@ static int make_palette() {
 			}
 			else {
 				c = &((*c)->next);
+			}
+		}
+
+		// remove duplicates
+		pn = color_buckets[x];
+		if (pn != NULL) {
+			n = pn->next;
+			while (n != NULL) {
+				if (pn->R == n->R && pn->G == n->G && pn->B == n->B && pn->A == n->A) {
+					// remove from list and free
+					pn->next = n->next;
+					free(n);
+					n = pn->next;
+				}
+				else {
+					pn = n;
+					n = n->next;
+				}
 			}
 		}
 	}
