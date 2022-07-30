@@ -331,10 +331,11 @@ static int make_palette() {
 		printf("  Bucket %u\n",y);
 		nbucket = color_buckets[y];
 		while (nbucket != NULL) {
-			printf("    RGB=%03u/%03u/%03u YUV=%03u/%03u/%03u\n",
+			printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u\n",
 				nbucket->R,
 				nbucket->G,
 				nbucket->B,
+				nbucket->A,
 				nbucket->Y,
 				nbucket->U,
 				nbucket->V);
