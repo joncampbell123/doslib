@@ -233,21 +233,35 @@ void color_buckets_free(struct color_bucket **buckets,unsigned int num) {
 	for (x=0;x < num;x++) color_bucket_free(&buckets[x]);
 }
 
+/* NTS: It turns out taking the time to check for existing duplicates HERE is faster than sorting through all the
+ *      duplicates later. */
 void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned int idx,struct color_bucket *nb) {
 	if (idx < num && nb->next == NULL) {
-		// same as last color? then drop it
 		if (buckets[idx] != NULL) {
-			if (buckets[idx]->R == nb->R && buckets[idx]->G == nb->G && buckets[idx]->B == nb->B && buckets[idx]->A == nb->A) {
-				/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
-				buckets[idx]->count++;
-				free(nb);
-				return;
+			struct color_bucket *s = buckets[idx];
+			while (s != NULL) {
+				if (s->R == nb->R && s->G == nb->G && s->B == nb->B && s->A == nb->A) {
+					/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
+					s->count++;
+					free(nb);
+					return;
+				}
+
+				if (s->next != NULL) {
+					s = s->next;
+				}
+				else {
+					/* end of chain, add the new entry to the end */
+					s->next = nb;
+					nb->count = 1;
+					break;
+				}
 			}
 		}
-		// add to head, for performance
-		nb->next = buckets[idx];
-		nb->count = 1;
-		buckets[idx] = nb;
+		else {
+			buckets[idx] = nb;
+			nb->count = 1;
+		}
 	}
 }
 
@@ -339,25 +353,6 @@ static int make_palette() {
 			}
 			else {
 				c = &((*c)->next);
-			}
-		}
-
-		// remove duplicates
-		pn = color_buckets[x];
-		if (pn != NULL) {
-			n = pn->next;
-			while (n != NULL) {
-				if (pn->R == n->R && pn->G == n->G && pn->B == n->B && pn->A == n->A) {
-					// remove from list and free
-					pn->count += n->count;
-					pn->next = n->next;
-					free(n);
-					n = pn->next;
-				}
-				else {
-					pn = n;
-					n = n->next;
-				}
 			}
 		}
 	}
