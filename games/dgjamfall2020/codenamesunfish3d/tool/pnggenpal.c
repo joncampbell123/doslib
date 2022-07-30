@@ -175,12 +175,6 @@ static int load_in_png(void) {
 
     png_read_rows(png_context, src_png_image_rows, NULL, png_height);
 
-    {
-        unsigned int y;
-        for (y=0;y < png_height;y++)
-            memcpy(gen_png_image_rows[y], src_png_image_rows[y], png_width * src_png_bypp);
-    }
-
     gen_png_width = png_width;
     gen_png_height = png_height;
     gen_png_bit_depth = png_bit_depth;
@@ -212,41 +206,56 @@ void rgb2yuv(unsigned char *Y,unsigned char *U,unsigned char *V,unsigned char r,
 	*V = clamp255((((r * 112) + (g * -94) + (b * -18) + 128) >> 8) + 128);
 }
 
-int rgbasortvalue(unsigned char r,unsigned char g,unsigned char b,unsigned char a) {
-	unsigned char Y,U,V;
-	rgb2yuv(&Y,&U,&V,(r*a)/255u,(g*a)/255u,(b*a)/255u);
-	return (int)((Y << 16u) + (U << 8u) + V);
+struct color_bucket {
+	unsigned char			R,G,B,A;
+	unsigned char			Y,U,V;
+	struct color_bucket*		next;
+};
+
+void color_buckets_init(struct color_bucket **buckets,unsigned int num) {
+	unsigned int x;
+
+	for (x=0;x < num;x++) buckets[x] = NULL;
 }
 
-int sortxpixelqsortcommonrgba(unsigned char ra,unsigned char ga,unsigned char ba,unsigned char aa,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char ab) {
-    return rgbasortvalue(ra,ga,ba,aa) - rgbasortvalue(rb,gb,bb,ab);
+void color_bucket_free(struct color_bucket **b) {
+	while (*b != NULL) {
+		struct color_bucket *n = (*b)->next;
+		free(*b);
+		*b = n;
+	}
 }
 
-int sortxpixelqsort3(const void *a,const void *b) {
-    const unsigned char *ba = (const unsigned char*)a;
-    const unsigned char *bb = (const unsigned char*)b;
-    return sortxpixelqsortcommonrgba(ba[0],ba[1],ba[2],0xFF,bb[0],bb[1],bb[2],0xFF);
+void color_buckets_free(struct color_bucket **buckets,unsigned int num) {
+	unsigned int x;
+
+	for (x=0;x < num;x++) color_bucket_free(&buckets[x]);
 }
 
-int sortxpixelqsort4(const void *a,const void *b) {
-    const unsigned char *ba = (const unsigned char*)a;
-    const unsigned char *bb = (const unsigned char*)b;
-    return sortxpixelqsortcommonrgba(ba[0],ba[1],ba[2],ba[3],bb[0],bb[1],bb[2],bb[3]);
-}
-
-void sortxpixels(unsigned char *pixels,unsigned int w,unsigned int bypp) {
-    if (bypp == 3)
-        qsort(pixels,w,bypp,sortxpixelqsort3);
-    else if (bypp == 4)
-        qsort(pixels,w,bypp,sortxpixelqsort4);
+void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned int idx,struct color_bucket *nb) {
+	if (idx < num) {
+		// same as last color? then drop it
+		if (buckets[idx] != NULL) {
+			if (buckets[idx]->R == nb->R && buckets[idx]->G == nb->G && buckets[idx]->B == nb->B && buckets[idx]->A == nb->A)
+				return;
+		}
+		// add to head, for performance
+		nb->next = buckets[idx];
+		buckets[idx] = nb;
+	}
 }
 
 static int make_palette() {
-	unsigned int x,y,o;
+#define COLOR_BUCKETS 256
+	struct color_bucket* color_buckets[COLOR_BUCKETS];
+	struct color_bucket* nbucket;
+	unsigned int x,y;
 	png_bytep row;
 
-	/* take each row and sort the pixel values in groups */
+	color_buckets_init(color_buckets,COLOR_BUCKETS);
+
 	for (y=0;y < gen_png_height;y++) {
+		memcpy(gen_png_image_rows[y], src_png_image_rows[y], gen_png_width * src_png_bypp);
 		row = gen_png_image_rows[y];
 
 		if (pal_vga) {
@@ -254,10 +263,49 @@ static int make_palette() {
 				row[x] &= 0xFC; // strip to 6 bits
 		}
 
-		sortxpixels(row,gen_png_width,src_png_bypp);
+		for (x=0;x < (gen_png_width * src_png_bypp);x += src_png_bypp) {
+			nbucket = (struct color_bucket*)malloc(sizeof(struct color_bucket));
+			if (src_png_bypp >= 4) {
+				nbucket->R = row[x+0];
+				nbucket->G = row[x+1];
+				nbucket->B = row[x+2];
+				nbucket->A = row[x+3];
+				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,(nbucket->R*nbucket->A)/255u,(nbucket->G*nbucket->A)/255u,(nbucket->B*nbucket->A)/255u);
+			}
+			else { // assume 3
+				nbucket->R = row[x+0];
+				nbucket->G = row[x+1];
+				nbucket->B = row[x+2];
+				nbucket->A = 0xFF;
+				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,nbucket->R,nbucket->G,nbucket->B);
+			}
+
+			color_bucket_add(color_buckets,COLOR_BUCKETS,nbucket->Y,nbucket); // bucket index by Y (grayscale)
+		}
 	}
 
+#if 1//DEBUG
+	printf("Colors:\n");
+	for (y=0;y < COLOR_BUCKETS;y++) {
+		printf("  Bucket %u\n",y);
+		nbucket = color_buckets[y];
+		while (nbucket != NULL) {
+			printf("    RGB=%03u/%03u/%03u YUV=%03u/%03u/%03u\n",
+				nbucket->R,
+				nbucket->G,
+				nbucket->B,
+				nbucket->Y,
+				nbucket->U,
+				nbucket->V);
+
+			nbucket = nbucket->next;
+		}
+	}
+#endif
+
+	color_buckets_free(color_buckets,COLOR_BUCKETS);
 	return 0;
+#undef COLOR_BUCKETS
 }
 
 static int save_out_png(void) {
