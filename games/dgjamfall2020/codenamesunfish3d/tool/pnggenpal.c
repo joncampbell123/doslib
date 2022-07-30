@@ -21,6 +21,8 @@ static int              gen_png_interlace_method = 0;
 static int              gen_png_compression_method = 0;
 static int              gen_png_filter_method = 0;
 
+static char             pal_vga = 0;
+
 static void free_src_png(void) {
     if (src_png_image) {
         free(src_png_image);
@@ -46,6 +48,7 @@ static void free_gen_png(void) {
 static void help(void) {
     fprintf(stderr,"pnggenpal -i <input PNG> -o <output PNG>\n");
     fprintf(stderr,"Read a non-paletted PNG, generate a palette as PNG,\n");
+    fprintf(stderr," -vga        Palettize for VGA (6 bits per RGB)\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -69,6 +72,9 @@ static int parse_argv(int argc,char **argv) {
             else if (!strcmp(a,"o")) {
                 if ((out_png = argv[i++]) == NULL)
                     return 1;
+            }
+            else if (!strcmp(a,"vga")) {
+                pal_vga = 1;
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -230,6 +236,11 @@ static int make_palette() {
 	/* take each row and sort the pixel values in groups */
 	for (y=0;y < gen_png_height;y++) {
 		row = gen_png_image_rows[y];
+
+		if (pal_vga)
+			for (x=0;x < (gen_png_width * src_png_bypp);x++)
+				row[x] &= 0xFC; // strip to 6 bits
+
 		sortxpixels(row,gen_png_width,src_png_bypp);
 	}
 
