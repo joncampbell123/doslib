@@ -196,6 +196,46 @@ fail:
     return ret;
 }
 
+int rgbasortvalue(unsigned char r,unsigned char g,unsigned char b,unsigned char a) {
+    return (int)((((r * 30u) + (g * 59u) + (b * 11u)) * a) / 255u);
+}
+
+int sortxpixelqsortcommonrgba(unsigned char ra,unsigned char ga,unsigned char ba,unsigned char aa,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char ab) {
+    return rgbasortvalue(ra,ga,ba,aa) - rgbasortvalue(rb,gb,bb,ab);
+}
+
+int sortxpixelqsort3(const void *a,const void *b) {
+    const unsigned char *ba = (const unsigned char*)a;
+    const unsigned char *bb = (const unsigned char*)b;
+    return sortxpixelqsortcommonrgba(ba[0],ba[1],ba[2],0xFF,bb[0],bb[1],bb[2],0xFF);
+}
+
+int sortxpixelqsort4(const void *a,const void *b) {
+    const unsigned char *ba = (const unsigned char*)a;
+    const unsigned char *bb = (const unsigned char*)b;
+    return sortxpixelqsortcommonrgba(ba[0],ba[1],ba[2],ba[3],bb[0],bb[1],bb[2],bb[3]);
+}
+
+void sortxpixels(unsigned char *pixels,unsigned int w,unsigned int bypp) {
+    if (bypp == 3)
+        qsort(pixels,w,bypp,sortxpixelqsort3);
+    else if (bypp == 4)
+        qsort(pixels,w,bypp,sortxpixelqsort4);
+}
+
+static int make_palette() {
+	unsigned int x,y,o;
+	png_bytep row;
+
+	/* take each row and sort the pixel values in groups */
+	for (y=0;y < gen_png_height;y++) {
+		row = gen_png_image_rows[y];
+		sortxpixels(row,gen_png_width,src_png_bypp);
+	}
+
+	return 0;
+}
+
 static int save_out_png(void) {
     png_structp png_context = NULL;
     png_infop png_context_info = NULL;
@@ -247,6 +287,8 @@ int main(int argc,char **argv) {
         return 1;
 
     if (load_in_png())
+        return 1;
+    if (make_palette())
         return 1;
     if (save_out_png())
         return 1;
