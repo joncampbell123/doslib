@@ -265,6 +265,49 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 	}
 }
 
+unsigned int color_bucket_count(struct color_bucket *b) {
+	unsigned int c = 0;
+
+	while (b != NULL) {
+		b = b->next;
+		c++;
+	}
+
+	return c;
+}
+
+// code assumes *d and *s have already been sorted by count
+void color_bucket_merge_count(struct color_bucket **d,struct color_bucket **s) {
+	if (*d == NULL) {
+		*d = *s;
+		*s = NULL;
+	}
+	else if (*s != NULL) {
+		struct color_bucket **sd = d,*n;
+
+		while (*sd != NULL && *s != NULL) {
+			if ((*s)->count > (*sd)->count) {
+				/* remove first from *s */
+				n = (*s); *s = (*s)->next;
+				/* insert to first in *d */
+				n->next = *sd;
+				*sd = n;
+			}
+			else {
+				/* advance *sd, or at the end of the list, copy the rest of *s */
+				if ((*sd)->next != NULL) {
+					sd = &((*sd)->next);
+				}
+				else {
+					(*sd)->next = *s;
+					*s = NULL;
+					break;
+				}
+			}
+		}
+	}
+}
+
 void color_bucket_sort_by_count(struct color_bucket **c) {
 	struct color_bucket *n,*pn;
 
@@ -296,8 +339,8 @@ void color_bucket_sort_by_count(struct color_bucket **c) {
 static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	struct color_bucket** color_buckets;
+	unsigned int x,y,ci,colors,buckets;
 	struct color_bucket* nbucket;
-	unsigned int x,y,ci;
 	png_bytep row;
 
 	color_buckets = (struct color_bucket**)malloc(sizeof(struct color_bucket*) * COLOR_BUCKETS);
@@ -342,8 +385,45 @@ static int make_palette() {
 	for (x=0;x < COLOR_BUCKETS;x++)
 		color_bucket_sort_by_count(&color_buckets[x]);
 
+	/* if colors need to be reduced, do it */
+	do {
+		unsigned int drop,droptpb,maxpb;
+
+		maxpb = 0;
+		colors = 0;
+		buckets = 0;
+		for (x=0;x < COLOR_BUCKETS;x++) {
+			if (color_buckets[x] != NULL) {
+				unsigned int count = color_bucket_count(color_buckets[x]);
+				buckets++;
+				colors += count;
+				if (maxpb < count) maxpb = count;
+			}
+		}
+		printf("%u colors across %u buckets, %u max per bucket:\n",colors,buckets,maxpb);
+		if (colors <= 256) break;
+		if (buckets == 0) abort(); /* Wait, what? */
+
+		/* merge into bigger buckets */
+		for (x=0;x < COLOR_BUCKETS;) {
+			const unsigned int ym = (x | ((8u * 8u * 8u) - 1u)) + 1u;
+
+			y = x + 1u;
+			while (y < ym) {
+				while (y < ym && color_buckets[y] == NULL) y++;
+				if (x < ym && y < ym) {
+					color_bucket_merge_count(&color_buckets[x],&color_buckets[y]);
+					y++;
+				}
+			}
+			x = y;
+		}
+
+		break;
+	} while(1);
+
 #if 1//DEBUG
-	printf("Colors:\n");
+	printf("%u Colors:\n",colors,buckets);
 	for (y=0;y < COLOR_BUCKETS;y++) {
 		printf("  Bucket %u\n",y);
 		nbucket = color_buckets[y];
