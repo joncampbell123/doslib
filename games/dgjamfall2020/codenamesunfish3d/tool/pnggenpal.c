@@ -262,15 +262,14 @@ int colorrgbcompare(struct color_bucket *a,struct color_bucket *b) {
 }
 
 static int make_palette() {
-	/* all 256 shades of gray plus sign bits of U and V, effectively the quadrant on the color wheel.
-	 * more buckets means shorter linked lists for each bucket and sorting is faster, in fact on my
-	 * system going from 256 to 256*4 brought the overall process from 6 seconds for an image to 2
-	 * seconds. */
 #define COLOR_BUCKETS (256*4)
-	struct color_bucket* color_buckets[COLOR_BUCKETS];
+	struct color_bucket** color_buckets;
 	struct color_bucket* nbucket;
 	unsigned int x,y,ci;
 	png_bytep row;
+
+	color_buckets = (struct color_bucket**)malloc(sizeof(struct color_bucket*) * COLOR_BUCKETS);
+	if (color_buckets == NULL) return 1;
 
 	color_buckets_init(color_buckets,COLOR_BUCKETS);
 
@@ -385,6 +384,7 @@ static int make_palette() {
 #endif
 
 	color_buckets_free(color_buckets,COLOR_BUCKETS);
+	free(color_buckets);
 	return 0;
 #undef COLOR_BUCKETS
 }
