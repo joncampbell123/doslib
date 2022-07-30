@@ -265,6 +265,34 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 	}
 }
 
+void color_bucket_sort_by_count(struct color_bucket **c) {
+	struct color_bucket *n,*pn;
+
+	while (*c != NULL) {
+		pn = *c;
+		n = (*c)->next;
+		if (n != NULL) {
+			while (n != NULL) {
+				if (n->count > (*c)->count) {
+					/* remove "n" from list */
+					pn->next = n->next;
+					/* then insert "n" before node *c */
+					n->next = *c;
+					*c = n;
+					break;
+				}
+				pn = n;
+				n = n->next;
+				if (n == NULL)
+					c = &((*c)->next);
+			}
+		}
+		else {
+			c = &((*c)->next);
+		}
+	}
+}
+
 static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	struct color_bucket** color_buckets;
@@ -311,34 +339,8 @@ static int make_palette() {
 	}
 
 	/* sort from highest to lowest count (occurrence) */
-	for (x=0;x < COLOR_BUCKETS;x++) {
-		struct color_bucket **c,*n,*pn;
-
-		c = &color_buckets[x];
-		while (*c != NULL) {
-			pn = *c;
-			n = (*c)->next;
-			if (n != NULL) {
-				while (n != NULL) {
-					if (n->count > (*c)->count) {
-						/* remove "n" from list */
-						pn->next = n->next;
-						/* then insert "n" before node *c */
-						n->next = *c;
-						*c = n;
-						break;
-					}
-					pn = n;
-					n = n->next;
-					if (n == NULL)
-						c = &((*c)->next);
-				}
-			}
-			else {
-				c = &((*c)->next);
-			}
-		}
-	}
+	for (x=0;x < COLOR_BUCKETS;x++)
+		color_bucket_sort_by_count(&color_buckets[x]);
 
 #if 1//DEBUG
 	printf("Colors:\n");
