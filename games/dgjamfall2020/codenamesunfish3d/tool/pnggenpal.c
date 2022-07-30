@@ -262,10 +262,14 @@ int colorrgbcompare(struct color_bucket *a,struct color_bucket *b) {
 }
 
 static int make_palette() {
-#define COLOR_BUCKETS 256
+	/* all 256 shades of gray plus sign bits of U and V, effectively the quadrant on the color wheel.
+	 * more buckets means shorter linked lists for each bucket and sorting is faster, in fact on my
+	 * system going from 256 to 256*4 brought the overall process from 6 seconds for an image to 2
+	 * seconds. */
+#define COLOR_BUCKETS (256*4)
 	struct color_bucket* color_buckets[COLOR_BUCKETS];
 	struct color_bucket* nbucket;
-	unsigned int x,y;
+	unsigned int x,y,ci;
 	png_bytep row;
 
 	color_buckets_init(color_buckets,COLOR_BUCKETS);
@@ -298,7 +302,8 @@ static int make_palette() {
 				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,nbucket->R,nbucket->G,nbucket->B);
 			}
 
-			color_bucket_add(color_buckets,COLOR_BUCKETS,nbucket->Y,nbucket); // bucket index by Y (grayscale)
+			ci = (nbucket->Y * 4u) + ((nbucket->U < 128)?2u:0u) + ((nbucket->V < 128)?1u:0u);
+			color_bucket_add(color_buckets,COLOR_BUCKETS,ci,nbucket); // bucket index by Y (grayscale)
 		}
 	}
 
