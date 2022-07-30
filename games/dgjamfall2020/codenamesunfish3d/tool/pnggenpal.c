@@ -233,11 +233,14 @@ void color_buckets_free(struct color_bucket **buckets,unsigned int num) {
 }
 
 void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned int idx,struct color_bucket *nb) {
-	if (idx < num) {
+	if (idx < num && nb->next == NULL) {
 		// same as last color? then drop it
 		if (buckets[idx] != NULL) {
-			if (buckets[idx]->R == nb->R && buckets[idx]->G == nb->G && buckets[idx]->B == nb->B && buckets[idx]->A == nb->A)
+			if (buckets[idx]->R == nb->R && buckets[idx]->G == nb->G && buckets[idx]->B == nb->B && buckets[idx]->A == nb->A) {
+				/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
+				free(nb);
 				return;
+			}
 		}
 		// add to head, for performance
 		nb->next = buckets[idx];
@@ -265,6 +268,7 @@ static int make_palette() {
 
 		for (x=0;x < (gen_png_width * src_png_bypp);x += src_png_bypp) {
 			nbucket = (struct color_bucket*)malloc(sizeof(struct color_bucket));
+			nbucket->next = NULL;
 			if (src_png_bypp >= 4) {
 				nbucket->R = row[x+0];
 				nbucket->G = row[x+1];
@@ -281,6 +285,43 @@ static int make_palette() {
 			}
 
 			color_bucket_add(color_buckets,COLOR_BUCKETS,nbucket->Y,nbucket); // bucket index by Y (grayscale)
+		}
+	}
+
+	/* sort from least similar to most similar */
+	for (x=0;x < COLOR_BUCKETS;x++) {
+		struct color_bucket **c,*n,*pn;
+
+		c = &color_buckets[x];
+		while (*c != NULL) {
+			const int cdx = (int)((*c)->U) - 128;
+			const int cdy = (int)((*c)->V) - 128;
+			const int cd = cdx * cdx + cdy * cdy;
+
+			pn = *c;
+			n = (*c)->next;
+			if (n != NULL) {
+				while (n != NULL) {
+					const int ndx = (int)(n->U) - 128;
+					const int ndy = (int)(n->V) - 128;
+					const int nd = ndx * ndx + ndy * ndy;
+					if (nd > cd) {
+						/* remove "n" from list */
+						pn->next = n->next;
+						/* then insert "n" before node *c */
+						n->next = *c;
+						*c = n;
+						break;
+					}
+					pn = n;
+					n = n->next;
+					if (n == NULL)
+						c = &((*c)->next);
+				}
+			}
+			else {
+				c = &((*c)->next);
+			}
 		}
 	}
 
