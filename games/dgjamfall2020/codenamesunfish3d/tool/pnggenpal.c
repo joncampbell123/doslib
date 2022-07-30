@@ -262,7 +262,7 @@ int colorrgbcompare(struct color_bucket *a,struct color_bucket *b) {
 }
 
 static int make_palette() {
-#define COLOR_BUCKETS (256*4)
+#define COLOR_BUCKETS (256u * 8u * 8u)
 	struct color_bucket** color_buckets;
 	struct color_bucket* nbucket;
 	unsigned int x,y,ci;
@@ -301,7 +301,7 @@ static int make_palette() {
 				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,nbucket->R,nbucket->G,nbucket->B);
 			}
 
-			ci = (nbucket->Y * 4u) + ((nbucket->U < 128)?2u:0u) + ((nbucket->V < 128)?1u:0u);
+			ci = (nbucket->Y * 8u * 8u) + ((nbucket->U / (256u / 8u)) * 8u) + (nbucket->V / (256u / 8u));
 			color_bucket_add(color_buckets,COLOR_BUCKETS,ci,nbucket); // bucket index by Y (grayscale)
 		}
 	}
