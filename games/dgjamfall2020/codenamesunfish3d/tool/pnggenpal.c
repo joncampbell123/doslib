@@ -202,8 +202,20 @@ fail:
     return ret;
 }
 
+static inline unsigned char clamp255(int x) {
+	return (x > 255) ? 255 : ((x < 0) ? 0 : x);
+}
+
+void rgb2yuv(unsigned char *Y,unsigned char *U,unsigned char *V,unsigned char r,unsigned char g,unsigned char b) {
+	*Y = clamp255((((r *  66) + (g * 129) + (b *  25) + 128) >> 8) + 16);
+	*U = clamp255((((r * -38) + (g * -74) + (b * 112) + 128) >> 8) + 128);
+	*V = clamp255((((r * 112) + (g * -94) + (b * -18) + 128) >> 8) + 128);
+}
+
 int rgbasortvalue(unsigned char r,unsigned char g,unsigned char b,unsigned char a) {
-    return (int)((((r * 30u) + (g * 59u) + (b * 11u)) * a) / 255u);
+	unsigned char Y,U,V;
+	rgb2yuv(&Y,&U,&V,(r*a)/255u,(g*a)/255u,(b*a)/255u);
+	return (int)((Y << 16u) + (U << 8u) + V);
 }
 
 int sortxpixelqsortcommonrgba(unsigned char ra,unsigned char ga,unsigned char ba,unsigned char aa,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char ab) {
@@ -237,9 +249,10 @@ static int make_palette() {
 	for (y=0;y < gen_png_height;y++) {
 		row = gen_png_image_rows[y];
 
-		if (pal_vga)
+		if (pal_vga) {
 			for (x=0;x < (gen_png_width * src_png_bypp);x++)
 				row[x] &= 0xFC; // strip to 6 bits
+		}
 
 		sortxpixels(row,gen_png_width,src_png_bypp);
 	}
