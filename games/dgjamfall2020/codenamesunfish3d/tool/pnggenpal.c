@@ -265,16 +265,6 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 	}
 }
 
-int colorrgbcompare(struct color_bucket *a,struct color_bucket *b) {
-	if (a->Y > b->Y) return 1;
-	if (a->Y < b->Y) return 0;
-	if (a->U > b->U) return 1;
-	if (a->U < b->U) return 0;
-	if (a->V > b->V) return 1;
-	if (a->V < b->V) return 0;
-	return 0;
-}
-
 static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	struct color_bucket** color_buckets;
@@ -320,24 +310,17 @@ static int make_palette() {
 		}
 	}
 
-	/* sort from least similar to most similar */
+	/* sort from highest to lowest count (occurrence) */
 	for (x=0;x < COLOR_BUCKETS;x++) {
 		struct color_bucket **c,*n,*pn;
 
 		c = &color_buckets[x];
 		while (*c != NULL) {
-			const int cdx = (int)((*c)->U) - 128;
-			const int cdy = (int)((*c)->V) - 128;
-			const int cd = cdx * cdx + cdy * cdy;
-
 			pn = *c;
 			n = (*c)->next;
 			if (n != NULL) {
 				while (n != NULL) {
-					const int ndx = (int)(n->U) - 128;
-					const int ndy = (int)(n->V) - 128;
-					const int nd = ndx * ndx + ndy * ndy;
-					if (nd > cd || (nd == cd && colorrgbcompare(n,*c) > 0)) {
+					if (n->count > (*c)->count) {
 						/* remove "n" from list */
 						pn->next = n->next;
 						/* then insert "n" before node *c */
