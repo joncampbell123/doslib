@@ -510,6 +510,9 @@ static int make_palette() {
 			break;
 	} while(1);
 
+	for (x=1;x < COLOR_BUCKETS;x++)
+		color_bucket_merge_count(&color_buckets[0],&color_buckets[x]);
+
 #if 1//DEBUG
 	printf("%u Colors:\n",colors,buckets);
 	for (y=0;y < COLOR_BUCKETS;y++) {
