@@ -22,11 +22,6 @@ test: pngmatchpal
 	./pnggenpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.palgen.vga.png -vga
 	./pngquantpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.quant.png -p rainbow-clipart-background3.png.palgen.png
 	./pngquantpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.quant.vga.png -p rainbow-clipart-background3.png.palgen.vga.png
-	./pnggenpal -i rgba.png -o rgba.png.palgen.png
-	./pnggenpal -i rgba.png -o rgba.png.palgen.vga.png -vga
-	./pngquantpal -i rgba.png -o rgba.png.quant.png -p rgba.png.palgen.png
-	./pngquantpal -i rgba.png -o rgba.png.quant.vga.png -p rgba.png.palgen.vga.png
-
 
 clean:
 	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.png.quant.png *.png.quant.vga.png
