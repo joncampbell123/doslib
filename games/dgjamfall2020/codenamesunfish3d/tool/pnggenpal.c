@@ -503,59 +503,34 @@ static int make_palette() {
 	for (x=1;x < COLOR_BUCKETS;x++)
 		color_bucket_merge_channel(&color_buckets[0],&color_buckets[x],selchannel);
 
-	/* median cut -- all pixel data is in bucket 0 */
 	{
-		unsigned int i,o;
-		unsigned int buckets = 1;
-		unsigned int tmpoff = COLOR_BUCKETS / 2u;
-		if (COLOR_BUCKETS < (target_colors * 2u)) abort();
+		struct color_bucket *scan = color_buckets[0];
+		unsigned int c,i,o,ci;
 
-		do {
-			i = 0;
-			o = tmpoff;
+		color_buckets[0] = NULL;
 
-			while (i < buckets) {
-				struct color_bucket *scan;
-
-				colors = color_bucket_count(color_buckets[i]) / 2u;
-				scan = color_buckets[i];
-				x = 0;
-
-				if (i >= COLOR_BUCKETS) abort();
-				if ((o+1u) >= COLOR_BUCKETS) abort();
-
-				if (color_buckets[o] != NULL) abort();
-				if (color_buckets[o+1u] != NULL) abort();
-				color_buckets[o] = scan;
-				color_buckets[i] = NULL;
-
-				while (scan != NULL && x < colors) {
-					if ((++x) == colors) {
-						/* cut in half */
-						color_buckets[o+1u] = scan->next;
+		colors = color_bucket_count(scan);
+		for (i=0,o=0,ci=0;i < target_colors && o < target_colors;i++) {
+			if (scan == NULL) abort();
+			c = (colors * (i+1u)) / target_colors;
+			if (ci < c) {
+				if (o >= target_colors) abort();
+				color_buckets[o++] = scan;
+				while (ci < c) {
+					if (scan == NULL) abort();
+					if ((++ci) == c) {
+						struct color_bucket *n = scan->next;
 						scan->next = NULL;
+						scan = n;
 					}
 					else {
 						scan = scan->next;
 					}
 				}
-
-				i++;
-				o += 2u;
 			}
-
-			/* buckets have been doubled */
-			buckets *= 2u;
-
-			/* copy back */
-			for (i=0;i < buckets;i++) {
-				if (color_buckets[i] != NULL) abort();
-				if ((i+tmpoff) >= COLOR_BUCKETS) abort();
-				color_buckets[i] = color_buckets[i+tmpoff];
-				color_buckets[i+tmpoff] = NULL;
-			}
-		} while (buckets < target_colors);
-		colors = buckets;
+		}
+		fflush(stdout);
+		colors = o;
 	}
 
 	/* Median cut, but instead of using an average of the buckets, use the color that's most common in the bucket (highest count).
