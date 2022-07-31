@@ -276,6 +276,17 @@ unsigned int color_bucket_count(struct color_bucket *b) {
 	return c;
 }
 
+void color_bucket_truncate(struct color_bucket **b,unsigned int limit) {
+	unsigned int count = 0;
+
+	while (*b != NULL && count < limit) {
+		b = &((*b)->next);
+		count++;
+	}
+
+	color_bucket_free(b);
+}
+
 // code assumes *d and *s have already been sorted by count
 void color_bucket_merge_count(struct color_bucket **d,struct color_bucket **s) {
 	if (*d == NULL) {
@@ -499,6 +510,7 @@ static int make_palette() {
 
 		if (bucketmerge < (16 * 8u * 8u))
 			bucketmerge *= 4u;
+
 		if (mergethr < 32u)
 			mergethr += mergethr / 2u;
 
@@ -512,6 +524,14 @@ static int make_palette() {
 
 	for (x=1;x < COLOR_BUCKETS;x++)
 		color_bucket_merge_count(&color_buckets[0],&color_buckets[x]);
+
+	buckets = 1;
+	colors = color_bucket_count(color_buckets[0]);
+	if (colors > target_colors) {
+		printf("Too many colors (%u > %u), truncating\n",colors,target_colors);
+		color_bucket_truncate(&color_buckets[0],target_colors);
+		colors = color_bucket_count(color_buckets[0]);
+	}
 
 #if 1//DEBUG
 	printf("%u Colors:\n",colors,buckets);
