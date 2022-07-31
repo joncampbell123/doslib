@@ -437,7 +437,7 @@ static int make_palette() {
 					const int dv = (int)((*n)->V) - (int)((*n)->next->V);
 					const int d = dy*dy + ((du*du)/4) + ((dv*dv)/4);
 
-					if ((unsigned int)d < bucketmerge) {
+					if ((unsigned int)d < (bucketmerge/2u)) {
 						struct color_bucket *nn = (*n)->next;
 
 						/* combine counts */
@@ -489,30 +489,31 @@ static int make_palette() {
 			else x--;
 		} while (1);
 
+		printf("%u dropped\n",dropped);
+
 		if (bucketmerge < (16 * 8u * 8u))
 			bucketmerge *= 4u;
-
-		printf("%u dropped\n",dropped);
-		break;
 	} while(1);
 
 #if 1//DEBUG
 	printf("%u Colors:\n",colors,buckets);
 	for (y=0;y < COLOR_BUCKETS;y++) {
-		printf("  Bucket %u\n",y);
 		nbucket = color_buckets[y];
-		while (nbucket != NULL) {
-			printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u count=%u\n",
-				nbucket->R,
-				nbucket->G,
-				nbucket->B,
-				nbucket->A,
-				nbucket->Y,
-				nbucket->U,
-				nbucket->V,
-				nbucket->count);
+		if (nbucket != NULL) {
+			printf("  Bucket %u\n",y);
+			while (nbucket != NULL) {
+				printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u count=%u\n",
+					nbucket->R,
+					nbucket->G,
+					nbucket->B,
+					nbucket->A,
+					nbucket->Y,
+					nbucket->U,
+					nbucket->V,
+					nbucket->count);
 
-			nbucket = nbucket->next;
+				nbucket = nbucket->next;
+			}
 		}
 	}
 #endif
