@@ -3,7 +3,7 @@ TOOLS=pngmatchpal pngquantpal pnggenpal
 all: $(TOOLS)
 
 pnggenpal: pnggenpal.c
-	gcc -g3 -lpng -o $@ $<
+	gcc -lpng -lm -o $@ $<
 
 pngquantpal: pngquantpal.c
 	gcc -lpng -o $@ $<
