@@ -290,9 +290,28 @@ static inline unsigned char color_bucket_channel(struct color_bucket *b,unsigned
 	return *((unsigned char*)b + co);
 }
 
+static unsigned int color_bucket_lt(struct color_bucket *a,struct color_bucket *b,const unsigned int co[4]) {
+	unsigned char ca,cb;
+	unsigned int i;
+
+	for (i=0;i < 4;i++) {
+		ca = color_bucket_channel(a,co[i]);
+		cb = color_bucket_channel(b,co[i]);
+		if (ca < cb) return 1;
+		if (ca > cb) return 0;
+	}
+
+	return 0;
+}
+
 // code assumes *d and *s have already been sorted by count
 void color_bucket_merge_channel(struct color_bucket **d,struct color_bucket **s,unsigned int channel) {
-	const unsigned int co = color_bucket_channel_po(channel);
+	const unsigned int co[4] = {
+		color_bucket_channel_po( channel       ),
+		color_bucket_channel_po((channel+1u)&3u),
+		color_bucket_channel_po((channel+2u)&3u),
+		color_bucket_channel_po((channel+3u)&3u)
+	};
 
 	if (*d == NULL) {
 		*d = *s;
@@ -302,7 +321,7 @@ void color_bucket_merge_channel(struct color_bucket **d,struct color_bucket **s,
 		struct color_bucket **sd = d,*n;
 
 		while (*sd != NULL && *s != NULL) {
-			if (color_bucket_channel(*s,co) < color_bucket_channel(*sd,co)) {
+			if (color_bucket_lt(*s,*sd,co)) {
 				/* remove first from *s */
 				n = (*s); *s = (*s)->next;
 				/* insert to first in *d */
@@ -325,7 +344,12 @@ void color_bucket_merge_channel(struct color_bucket **d,struct color_bucket **s,
 }
 
 void color_bucket_sort_by_channel(struct color_bucket **c,unsigned int channel) {
-	const unsigned int co = color_bucket_channel_po(channel);
+	const unsigned int co[4] = {
+		color_bucket_channel_po( channel       ),
+		color_bucket_channel_po((channel+1u)&3u),
+		color_bucket_channel_po((channel+2u)&3u),
+		color_bucket_channel_po((channel+3u)&3u)
+	};
 	struct color_bucket *n,*pn;
 
 	while (*c != NULL) {
@@ -333,7 +357,7 @@ void color_bucket_sort_by_channel(struct color_bucket **c,unsigned int channel) 
 		n = (*c)->next;
 		if (n != NULL) {
 			while (n != NULL) {
-				if (color_bucket_channel(n,co) < color_bucket_channel(*c,co)) {
+				if (color_bucket_lt(n,*c,co)) {
 					/* remove "n" from list */
 					pn->next = n->next;
 					/* then insert "n" before node *c */
