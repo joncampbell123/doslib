@@ -388,11 +388,13 @@ static int make_palette() {
 	/* if colors need to be reduced, do it */
 	bucketmerge = 8u;
 	do {
+		unsigned int dropped;
 		unsigned int drop,droptpb,maxpb;
 
 		maxpb = 0;
 		colors = 0;
 		buckets = 0;
+		dropped = 0;
 		for (x=0;x < COLOR_BUCKETS;x++) {
 			if (color_buckets[x] != NULL) {
 				unsigned int count = color_bucket_count(color_buckets[x]);
@@ -420,9 +422,50 @@ static int make_palette() {
 			x = y;
 		}
 
+		/* look for buckets with similar counts and similar colors, and combine the similar colors.
+		 * prefer the brighter color. */
+		for (x=0;x < COLOR_BUCKETS;x++) {
+			struct color_bucket **n = &color_buckets[x];
+
+			if (colors <= 256) break;
+
+			while (*n != NULL && (*n)->next != NULL) {
+				if ((*n)->next->count >= (((*n)->count * 4u) / 5u)) { /* count is too similar */
+					const int dy = (int)((*n)->Y) - (int)((*n)->next->Y);
+					const int du = (int)((*n)->U) - (int)((*n)->next->U);
+					const int dv = (int)((*n)->V) - (int)((*n)->next->V);
+					const int d = dy*dy + ((du*du)/4) + ((dv*dv)/4);
+
+					if ((unsigned int)d < bucketmerge) {
+						struct color_bucket *nn = (*n)->next;
+
+						/* combine counts */
+						(*n)->count += nn->count;
+						nn->count = 0;
+
+						/* remove node from list and free it */
+						(*n)->next = nn->next;
+						free(nn);
+
+						/* track color changes */
+						dropped++;
+						if (colors > 0) colors--;
+						if (colors <= 256) break;
+						continue;
+					}
+				}
+
+				n = &((*n)->next);
+			}
+
+			/* this process may have put counts out of order */
+			color_bucket_sort_by_count(&color_buckets[x]);
+		}
+
 		if (bucketmerge < (16 * 8u * 8u))
 			bucketmerge *= 4u;
 
+		printf("%u dropped\n",dropped);
 		break;
 	} while(1);
 
