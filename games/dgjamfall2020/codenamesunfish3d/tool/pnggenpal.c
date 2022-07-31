@@ -340,7 +340,7 @@ static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	unsigned int target_colors = 256;
 	struct color_bucket** color_buckets;
-	unsigned int x,y,ci,colors,buckets,bucketmerge;
+	unsigned int x,y,ci,colors,buckets,bucketmerge,mergethr,patience;
 	struct color_bucket* nbucket;
 	png_bytep row;
 
@@ -387,6 +387,8 @@ static int make_palette() {
 		color_bucket_sort_by_count(&color_buckets[x]);
 
 	/* if colors need to be reduced, do it */
+	mergethr = 4u;
+	patience = 3u;
 	bucketmerge = 8u;
 	do {
 		unsigned int dropped;
@@ -440,7 +442,7 @@ static int make_palette() {
 					const int dv = (int)((*n)->V) - (int)((*n)->next->V);
 					const int d = dy*dy + ((du*du)/4) + ((dv*dv)/4);
 
-					if ((unsigned int)d < (bucketmerge/2u)) {
+					if ((unsigned int)d < mergethr) {
 						struct color_bucket *nn = (*n)->next;
 
 						/* combine counts */
@@ -497,6 +499,15 @@ static int make_palette() {
 
 		if (bucketmerge < (16 * 8u * 8u))
 			bucketmerge *= 4u;
+		if (mergethr < 32u)
+			mergethr += mergethr / 2u;
+
+		if (dropped != 0)
+			patience = 3;
+		else if (patience > 0)
+			patience--;
+		else
+			break;
 	} while(1);
 
 #if 1//DEBUG
