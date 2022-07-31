@@ -17,9 +17,11 @@ test: pngmatchpal
 	./pnggenpal -i 1843513.png -o 1843513.png.palgen.png
 	./pnggenpal -i 1843513.png -o 1843513.png.palgen.vga.png -vga
 	./pngquantpal -i 1843513.png -o 1843513.png.quant.png -p 1843513.png.palgen.png
+	./pngquantpal -i 1843513.png -o 1843513.png.quant.vga.png -p 1843513.png.palgen.vga.png
 	./pnggenpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.palgen.png
 	./pnggenpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.palgen.vga.png -vga
 	./pngquantpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.quant.png -p rainbow-clipart-background3.png.palgen.png
+	./pngquantpal -i rainbow-clipart-background3.png -o rainbow-clipart-background3.png.quant.vga.png -p rainbow-clipart-background3.png.palgen.vga.png
 
 clean:
-	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png
+	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.png.quant.png *.png.quant.vga.png

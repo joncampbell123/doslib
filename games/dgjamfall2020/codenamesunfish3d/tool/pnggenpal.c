@@ -211,6 +211,7 @@ void rgb2yuv(unsigned char *Y,unsigned char *U,unsigned char *V,unsigned char r,
 }
 
 struct color_bucket {
+	unsigned int			count;
 	unsigned char			R,G,B,A;
 	struct color_bucket*		next;
 };
@@ -244,6 +245,7 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 			while (s != NULL) {
 				if (s->R == nb->R && s->G == nb->G && s->B == nb->B && s->A == nb->A) {
 					/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
+					s->count++;
 					free(nb);
 					return;
 				}
@@ -253,6 +255,7 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 				}
 				else {
 					/* end of chain, add the new entry to the end */
+					nb->count = 1;
 					s->next = nb;
 					break;
 				}
@@ -260,6 +263,7 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 		}
 		else {
 			buckets[idx] = nb;
+			nb->count = 1;
 		}
 	}
 }
@@ -377,6 +381,34 @@ void color_bucket_sort_by_channel(struct color_bucket **c,unsigned int channel) 
 	}
 }
 
+void color_bucket_sort_by_count(struct color_bucket **c) {
+	struct color_bucket *n,*pn;
+
+	while (*c != NULL) {
+		pn = *c;
+		n = (*c)->next;
+		if (n != NULL) {
+			while (n != NULL) {
+				if (n->count > (*c)->count) {
+					/* remove "n" from list */
+					pn->next = n->next;
+					/* then insert "n" before node *c */
+					n->next = *c;
+					*c = n;
+					break;
+				}
+				pn = n;
+				n = n->next;
+				if (n == NULL)
+					c = &((*c)->next);
+			}
+		}
+		else {
+			c = &((*c)->next);
+		}
+	}
+}
+
 static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	unsigned int target_colors = 256;
@@ -412,6 +444,7 @@ static int make_palette() {
 		for (x=0;x < (gen_png_width * src_png_bypp);x += src_png_bypp) {
 			nbucket = (struct color_bucket*)malloc(sizeof(struct color_bucket));
 			nbucket->next = NULL;
+			nbucket->count = 0;
 			if (src_png_bypp >= 4) {
 				nbucket->R = row[x+0];
 				nbucket->G = row[x+1];
@@ -525,6 +558,11 @@ static int make_palette() {
 		colors = buckets;
 	}
 
+	/* Median cut, but instead of using an average of the buckets, use the color that's most common in the bucket (highest count).
+	 * Using the average produces a picture that is often desaturated and dull compared to the original image. */
+	for (x=0;x < colors;x++)
+		color_bucket_sort_by_count(&color_buckets[x]);
+
 #if 1//DEBUG
 	printf("%u Colors:\n",colors);
 	for (y=0;y < COLOR_BUCKETS;y++) {
@@ -532,11 +570,12 @@ static int make_palette() {
 		if (nbucket != NULL) {
 			printf("  Bucket %u\n",y);
 			while (nbucket != NULL) {
-				printf("    RGB=%03u/%03u/%03u/%03u\n",
+				printf("    RGB=%03u/%03u/%03u/%03u count=%u\n",
 					nbucket->R,
 					nbucket->G,
 					nbucket->B,
-					nbucket->A);
+					nbucket->A,
+					nbucket->count);
 
 				nbucket = nbucket->next;
 			}
@@ -579,21 +618,9 @@ static int make_palette() {
 			struct color_bucket *s = color_buckets[bucket++];
 
 			if (s != NULL) {
-				unsigned int sR=0,sG=0,sB=0,sA=0;
-				unsigned int sdiv=0;
-
-				while (s != NULL) {
-					sR += s->R;
-					sG += s->G;
-					sB += s->B;
-					sA += s->A;
-					s = s->next;
-					sdiv++;
-				}
-
-				gen_png_pal[gen_png_pal_count].red = (sR + ((sdiv + 1u) / 2u)) / sdiv;
-				gen_png_pal[gen_png_pal_count].green = (sG + ((sdiv + 1u) / 2u)) / sdiv;
-				gen_png_pal[gen_png_pal_count].blue = (sB + ((sdiv + 1u) / 2u)) / sdiv;
+				gen_png_pal[gen_png_pal_count].red = s->R;
+				gen_png_pal[gen_png_pal_count].green = s->G;
+				gen_png_pal[gen_png_pal_count].blue = s->B;
 
 #if 1//DEBUG
 				printf("Palette[%u]: R=%03u G=%03u B=%03u\n",
