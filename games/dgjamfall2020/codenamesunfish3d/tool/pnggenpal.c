@@ -338,6 +338,7 @@ void color_bucket_sort_by_count(struct color_bucket **c) {
 
 static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
+	unsigned int target_colors = 256;
 	struct color_bucket** color_buckets;
 	unsigned int x,y,ci,colors,buckets,bucketmerge;
 	struct color_bucket* nbucket;
@@ -404,7 +405,7 @@ static int make_palette() {
 			}
 		}
 		printf("%u colors across %u buckets, %u max per bucket:\n",colors,buckets,maxpb);
-		if (colors <= 256) break;
+		if (colors <= target_colors) break;
 		if (buckets == 0) abort(); /* Wait, what? */
 
 		/* merge into bigger buckets */
@@ -428,10 +429,10 @@ static int make_palette() {
 		do {
 			struct color_bucket **n = &color_buckets[x];
 
-			if (colors <= 256) break;
+			if (colors <= target_colors) break;
 
 			while (*n != NULL && (*n)->next != NULL) {
-				if (colors <= 256) break;
+				if (colors <= target_colors) break;
 
 				if ((*n)->next->count >= (((*n)->count * 4u) / 5u)) { /* count is too similar */
 					const int dy = (int)((*n)->Y) - (int)((*n)->next->Y);
@@ -453,7 +454,7 @@ static int make_palette() {
 						/* track color changes */
 						dropped++;
 						if (colors > 0) colors--;
-						if (colors <= 256) break;
+						if (colors <= target_colors) break;
 						continue;
 					}
 				}
@@ -476,14 +477,14 @@ static int make_palette() {
 				}
 				/* NTS: fn points to the node just before the ones we want to remove */
 				while (fn != NULL && *fn != NULL && (*fn)->next != NULL) {
-					if (colors <= 256) break;
+					if (colors <= target_colors) break;
 					/* remove the next node */
 					struct color_bucket *nn = (*fn)->next;
 					(*fn)->next = nn->next;
 					free(nn);
 					dropped++;
 					if (colors > 0) colors--;
-					if (colors <= 256) break;
+					if (colors <= target_colors) break;
 				}
 			}
 
