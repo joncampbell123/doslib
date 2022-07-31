@@ -34,4 +34,4 @@ test: pngmatchpal
 	./pngquantpal -i rgba.png -o rgba.png.quant.vga16.png -p rgba.png.palgen.vga16.png
 
 clean:
-	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.png.quant.png *.png.quant.vga.png *.png.quant.vga16.png
+	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.palgen.vga16.png *.png.quant.png *.png.quant.vga.png *.png.quant.vga16.png
