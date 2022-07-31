@@ -21,6 +21,9 @@ static int              gen_png_interlace_method = 0;
 static int              gen_png_compression_method = 0;
 static int              gen_png_filter_method = 0;
 
+static png_color        gen_png_pal[256] = {0};
+static int              gen_png_pal_count = 0;
+
 static char             pal_vga = 0;
 
 static void free_src_png(void) {
@@ -355,6 +358,9 @@ static int make_palette() {
 	struct color_bucket* nbucket;
 	png_bytep row;
 
+	if (gen_png_color_type == PNG_COLOR_TYPE_PALETTE)
+		return 1;
+
 	color_buckets = (struct color_bucket**)malloc(sizeof(struct color_bucket*) * COLOR_BUCKETS);
 	if (color_buckets == NULL) return 1;
 
@@ -556,6 +562,55 @@ static int make_palette() {
 	}
 #endif
 
+	if (gen_png_image != NULL) {
+		free(gen_png_image);
+		gen_png_image = NULL;
+	}
+
+	if (gen_png_image_rows != NULL) {
+		free(gen_png_image_rows);
+		gen_png_image_rows = NULL;
+	}
+
+	gen_png_width = 16 * 4;
+	gen_png_height = 16 * 4;
+	gen_png_bit_depth = 8;
+	gen_png_color_type = PNG_COLOR_TYPE_PALETTE;
+
+	gen_png_image = malloc((gen_png_width * gen_png_height) + 4096);
+	if (gen_png_image == NULL) abort();
+
+	gen_png_image_rows = (png_bytep*)malloc(sizeof(png_bytep) * gen_png_height);
+	if (gen_png_image_rows == NULL) abort();
+
+	{
+		unsigned int y;
+		for (y=0;y < gen_png_height;y++)
+			gen_png_image_rows[y] = gen_png_image + (y * gen_png_width);
+	}
+
+	{
+		struct color_bucket *s = color_buckets[0];
+
+		gen_png_pal_count = 0;
+		while (gen_png_pal_count < target_colors && s != NULL) {
+			gen_png_pal[gen_png_pal_count].red = s->R;
+			gen_png_pal[gen_png_pal_count].green = s->G;
+			gen_png_pal[gen_png_pal_count].blue = s->B;
+			gen_png_pal_count++;
+			s = s->next;
+		}
+	}
+
+	for (y=0;y < gen_png_height;y++) {
+		row = gen_png_image_rows[y];
+		for (x=0;x < gen_png_width;x++) {
+			unsigned int i = ((y / 4u) * 16u) + (x / 4u);
+			if (i >= gen_png_pal_count) i = 0;
+			row[x] = i;
+		}
+	}
+
 	color_buckets_free(color_buckets,COLOR_BUCKETS);
 	free(color_buckets);
 	return 0;
@@ -590,6 +645,9 @@ static int save_out_png(void) {
     png_init_io(png_context, fp);
 
     png_set_IHDR(png_context, png_context_info, gen_png_width, gen_png_height, gen_png_bit_depth, gen_png_color_type, gen_png_interlace_method, gen_png_compression_method, gen_png_filter_method);
+
+    if (gen_png_color_type == PNG_COLOR_TYPE_PALETTE)
+	    png_set_PLTE(png_context, png_context_info, gen_png_pal, gen_png_pal_count);
 
     png_write_info(png_context, png_context_info);
     png_write_rows(png_context, gen_png_image_rows, gen_png_height);
