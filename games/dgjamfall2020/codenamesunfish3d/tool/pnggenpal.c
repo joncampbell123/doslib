@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #include <png.h>    /* libpng */
 
@@ -210,9 +211,7 @@ void rgb2yuv(unsigned char *Y,unsigned char *U,unsigned char *V,unsigned char r,
 }
 
 struct color_bucket {
-	unsigned int			count;
 	unsigned char			R,G,B,A;
-	unsigned char			Y,U,V;
 	struct color_bucket*		next;
 };
 
@@ -245,7 +244,6 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 			while (s != NULL) {
 				if (s->R == nb->R && s->G == nb->G && s->B == nb->B && s->A == nb->A) {
 					/* we're expected to insert it, if we do not, then we must free it, else a memory leak occurs */
-					s->count++;
 					free(nb);
 					return;
 				}
@@ -256,14 +254,12 @@ void color_bucket_add(struct color_bucket **buckets,unsigned int num,unsigned in
 				else {
 					/* end of chain, add the new entry to the end */
 					s->next = nb;
-					nb->count = 1;
 					break;
 				}
 			}
 		}
 		else {
 			buckets[idx] = nb;
-			nb->count = 1;
 		}
 	}
 }
@@ -279,19 +275,25 @@ unsigned int color_bucket_count(struct color_bucket *b) {
 	return c;
 }
 
-void color_bucket_truncate(struct color_bucket **b,unsigned int limit) {
-	unsigned int count = 0;
+static inline unsigned int color_bucket_channel_po(unsigned int channel) {
+	switch (channel) {
+		case 0:		return (unsigned char)offsetof(struct color_bucket,R);
+		case 1:		return (unsigned char)offsetof(struct color_bucket,G);
+		case 2:		return (unsigned char)offsetof(struct color_bucket,B);
+		case 3:		return (unsigned char)offsetof(struct color_bucket,A);
+	};
 
-	while (*b != NULL && count < limit) {
-		b = &((*b)->next);
-		count++;
-	}
+	return 0;
+}
 
-	color_bucket_free(b);
+static inline unsigned char color_bucket_channel(struct color_bucket *b,unsigned int co) {
+	return *((unsigned char*)b + co);
 }
 
 // code assumes *d and *s have already been sorted by count
-void color_bucket_merge_count(struct color_bucket **d,struct color_bucket **s) {
+void color_bucket_merge_channel(struct color_bucket **d,struct color_bucket **s,unsigned int channel) {
+	const unsigned int co = color_bucket_channel_po(channel);
+
 	if (*d == NULL) {
 		*d = *s;
 		*s = NULL;
@@ -300,7 +302,7 @@ void color_bucket_merge_count(struct color_bucket **d,struct color_bucket **s) {
 		struct color_bucket **sd = d,*n;
 
 		while (*sd != NULL && *s != NULL) {
-			if ((*s)->count > (*sd)->count) {
+			if (color_bucket_channel(*s,co) < color_bucket_channel(*sd,co)) {
 				/* remove first from *s */
 				n = (*s); *s = (*s)->next;
 				/* insert to first in *d */
@@ -322,7 +324,8 @@ void color_bucket_merge_count(struct color_bucket **d,struct color_bucket **s) {
 	}
 }
 
-void color_bucket_sort_by_count(struct color_bucket **c) {
+void color_bucket_sort_by_channel(struct color_bucket **c,unsigned int channel) {
+	const unsigned int co = color_bucket_channel_po(channel);
 	struct color_bucket *n,*pn;
 
 	while (*c != NULL) {
@@ -330,7 +333,7 @@ void color_bucket_sort_by_count(struct color_bucket **c) {
 		n = (*c)->next;
 		if (n != NULL) {
 			while (n != NULL) {
-				if (n->count > (*c)->count) {
+				if (color_bucket_channel(n,co) < color_bucket_channel(*c,co)) {
 					/* remove "n" from list */
 					pn->next = n->next;
 					/* then insert "n" before node *c */
@@ -354,11 +357,16 @@ static int make_palette() {
 #define COLOR_BUCKETS (256u * 8u * 8u)
 	unsigned int target_colors = 256;
 	struct color_bucket** color_buckets;
-	unsigned int x,y,ci,colors,buckets,bucketmerge,mergethr,patience;
 	struct color_bucket* nbucket;
+	unsigned char minr=0xFF,ming=0xFF,minb=0xFF,mina=0xFF;
+	unsigned char maxr=0,maxg=0,maxb=0,maxa=0;
+	unsigned int x,y,ci,colors;
+	unsigned char selchannel;
 	png_bytep row;
 
 	if (gen_png_color_type == PNG_COLOR_TYPE_PALETTE)
+		return 1;
+	if (target_colors > 256)
 		return 1;
 
 	color_buckets = (struct color_bucket**)malloc(sizeof(struct color_bucket*) * COLOR_BUCKETS);
@@ -367,6 +375,8 @@ static int make_palette() {
 	color_buckets_init(color_buckets,COLOR_BUCKETS);
 
 	for (y=0;y < gen_png_height;y++) {
+		unsigned char Y,U,V;
+
 		memcpy(gen_png_image_rows[y], src_png_image_rows[y], gen_png_width * src_png_bypp);
 		row = gen_png_image_rows[y];
 
@@ -377,184 +387,132 @@ static int make_palette() {
 
 		for (x=0;x < (gen_png_width * src_png_bypp);x += src_png_bypp) {
 			nbucket = (struct color_bucket*)malloc(sizeof(struct color_bucket));
-			nbucket->count = 0;
 			nbucket->next = NULL;
 			if (src_png_bypp >= 4) {
 				nbucket->R = row[x+0];
 				nbucket->G = row[x+1];
 				nbucket->B = row[x+2];
 				nbucket->A = row[x+3];
-				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,(nbucket->R*nbucket->A)/255u,(nbucket->G*nbucket->A)/255u,(nbucket->B*nbucket->A)/255u);
+				rgb2yuv(&Y,&U,&V,nbucket->R,nbucket->G,nbucket->B);
 			}
 			else { // assume 3
 				nbucket->R = row[x+0];
 				nbucket->G = row[x+1];
 				nbucket->B = row[x+2];
 				nbucket->A = 0xFF;
-				rgb2yuv(&nbucket->Y,&nbucket->U,&nbucket->V,nbucket->R,nbucket->G,nbucket->B);
+				rgb2yuv(&Y,&U,&V,nbucket->R,nbucket->G,nbucket->B);
 			}
 
-			ci = (nbucket->Y * 8u * 8u) + ((nbucket->U / (256u / 8u)) * 8u) + (nbucket->V / (256u / 8u));
+			if (minr > nbucket->R) minr = nbucket->R;
+			if (ming > nbucket->G) ming = nbucket->G;
+			if (minb > nbucket->B) minb = nbucket->B;
+			if (mina > nbucket->A) mina = nbucket->A;
+			if (maxr < nbucket->R) maxr = nbucket->R;
+			if (maxg < nbucket->G) maxg = nbucket->G;
+			if (maxb < nbucket->B) maxb = nbucket->B;
+			if (maxa < nbucket->A) maxa = nbucket->A;
+
+			ci = (Y * 8u * 8u) + ((U / (256u / 8u)) * 8u) + (V / (256u / 8u));
 			color_bucket_add(color_buckets,COLOR_BUCKETS,ci,nbucket); // bucket index by Y (grayscale)
 		}
 	}
 
+	{
+		unsigned char mr = maxr-minr;
+		selchannel = 0;
+
+		if (mr < (maxg-ming)) {
+			mr = maxg-ming;
+			selchannel=1;
+		}
+
+		if (mr < (maxb-minb)) {
+			mr = maxb-minb;
+			selchannel=2;
+		}
+
+		if (mr < (maxa-mina)) {
+			mr = maxa-mina;
+			selchannel=3;
+		}
+	}
+
+	printf("Min/Max R=%u-%u G=%u-%u B=%u-%u A=%u-%u selchannel=%u\n",minr,maxr,ming,maxg,minb,maxb,mina,maxa,selchannel);
+
 	/* sort from highest to lowest count (occurrence) */
 	for (x=0;x < COLOR_BUCKETS;x++)
-		color_bucket_sort_by_count(&color_buckets[x]);
+		color_bucket_sort_by_channel(&color_buckets[x],selchannel);
 
-	/* if colors need to be reduced, do it */
-	mergethr = 4u;
-	patience = 3u;
-	bucketmerge = 8u;
-	do {
-		unsigned int dropped;
-		unsigned int drop,droptpb,maxpb;
+	for (x=1;x < COLOR_BUCKETS;x++)
+		color_bucket_merge_channel(&color_buckets[0],&color_buckets[x],selchannel);
 
-		maxpb = 0;
-		colors = 0;
-		buckets = 0;
-		dropped = 0;
-		for (x=0;x < COLOR_BUCKETS;x++) {
-			if (color_buckets[x] != NULL) {
-				unsigned int count = color_bucket_count(color_buckets[x]);
-				buckets++;
-				colors += count;
-				if (maxpb < count) maxpb = count;
-			}
-		}
-		printf("%u colors across %u buckets, %u max per bucket:\n",colors,buckets,maxpb);
-		if (colors <= target_colors) break;
-		if (buckets == 0) abort(); /* Wait, what? */
+	/* median cut -- all pixel data is in bucket 0 */
+	{
+		unsigned int i,o;
+		unsigned int buckets = 1;
+		unsigned int tmpoff = COLOR_BUCKETS / 2u;
+		if (COLOR_BUCKETS < (target_colors * 2u)) abort();
 
-		/* merge into bigger buckets */
-		for (x=0;x < COLOR_BUCKETS;) {
-			const unsigned int ym = (x | (bucketmerge - 1u)) + 1u;
-
-			y = x + 1u;
-			while (y < ym) {
-				while (y < ym && color_buckets[y] == NULL) y++;
-				if (x < ym && y < ym) {
-					color_bucket_merge_count(&color_buckets[x],&color_buckets[y]);
-					y++;
-				}
-			}
-			x = y;
-		}
-
-		/* look for buckets with similar counts and similar colors, and combine the similar colors.
-		 * scan backwards to emphasize quantization on the bright colors because VGA display is non-linear with a gamma curve. */
-		x = COLOR_BUCKETS - 1;
 		do {
-			struct color_bucket **n = &color_buckets[x];
+			i = 0;
+			o = tmpoff;
 
-			if (colors <= target_colors) break;
+			while (i < buckets) {
+				struct color_bucket *scan;
 
-			while (*n != NULL && (*n)->next != NULL) {
-				if (colors <= target_colors) break;
+				colors = color_bucket_count(color_buckets[i]) / 2u;
+				scan = color_buckets[i];
+				x = 0;
 
-				if ((*n)->next->count >= (((*n)->count * 4u) / 5u)) { /* count is too similar */
-					const int dy = (int)((*n)->Y) - (int)((*n)->next->Y);
-					const int du = (int)((*n)->U) - (int)((*n)->next->U);
-					const int dv = (int)((*n)->V) - (int)((*n)->next->V);
-					const int d = dy*dy + ((du*du)/4) + ((dv*dv)/4);
+				if (i >= COLOR_BUCKETS) abort();
+				if ((o+1u) >= COLOR_BUCKETS) abort();
 
-					if ((unsigned int)d < mergethr) {
-						struct color_bucket *nn = (*n)->next;
+				if (color_buckets[o] != NULL) abort();
+				if (color_buckets[o+1u] != NULL) abort();
+				color_buckets[o] = scan;
+				color_buckets[i] = NULL;
 
-						/* combine counts */
-						(*n)->count += nn->count;
-						nn->count = 0;
-
-						/* remove node from list and free it */
-						(*n)->next = nn->next;
-						free(nn);
-
-						/* track color changes */
-						dropped++;
-						if (colors > 0) colors--;
-						if (colors <= target_colors) break;
-						continue;
+				while (scan != NULL && x < colors) {
+					if ((++x) == colors) {
+						/* cut in half */
+						color_buckets[o+1u] = scan->next;
+						scan->next = NULL;
+					}
+					else {
+						scan = scan->next;
 					}
 				}
 
-				n = &((*n)->next);
+				i++;
+				o += 2u;
 			}
 
-			/* this process may have put counts out of order */
-			color_bucket_sort_by_count(&color_buckets[x]);
+			/* buckets have been doubled */
+			buckets *= 2u;
 
-			/* trim the lowest counts down as well */
-			{
-				struct color_bucket **fn = NULL;
-
-				n = &color_buckets[x];
-				while (*n != NULL && (*n)->next != NULL) {
-					if (fn == NULL) fn = n;
-					if ((*n)->count != (*n)->next->count) fn = n;
-					n = &((*n)->next);
-				}
-				/* NTS: fn points to the node just before the ones we want to remove */
-				while (fn != NULL && *fn != NULL && (*fn)->next != NULL) {
-					if (colors <= target_colors) break;
-					/* remove the next node */
-					struct color_bucket *nn = (*fn)->next;
-					(*fn)->next = nn->next;
-					free(nn);
-					dropped++;
-					if (colors > 0) colors--;
-					if (colors <= target_colors) break;
-				}
+			/* copy back */
+			for (i=0;i < buckets;i++) {
+				if (color_buckets[i] != NULL) abort();
+				if ((i+tmpoff) >= COLOR_BUCKETS) abort();
+				color_buckets[i] = color_buckets[i+tmpoff];
+				color_buckets[i+tmpoff] = NULL;
 			}
-
-			/* scan backwards */
-			if (x == 0) break;
-			else x--;
-		} while (1);
-
-		printf("%u dropped\n",dropped);
-
-		if (bucketmerge < (16 * 8u * 8u))
-			bucketmerge *= 4u;
-
-		if (mergethr < 32u)
-			mergethr += mergethr / 2u;
-
-		if (dropped != 0)
-			patience = 3;
-		else if (patience > 0)
-			patience--;
-		else
-			break;
-	} while(1);
-
-	for (x=1;x < COLOR_BUCKETS;x++)
-		color_bucket_merge_count(&color_buckets[0],&color_buckets[x]);
-
-	buckets = 1;
-	colors = color_bucket_count(color_buckets[0]);
-	if (colors > target_colors) {
-		printf("Too many colors (%u > %u), truncating\n",colors,target_colors);
-		color_bucket_truncate(&color_buckets[0],target_colors);
-		colors = color_bucket_count(color_buckets[0]);
+		} while (buckets < target_colors);
+		colors = buckets;
 	}
 
 #if 1//DEBUG
-	printf("%u Colors:\n",colors,buckets);
+	printf("%u Colors:\n",colors);
 	for (y=0;y < COLOR_BUCKETS;y++) {
 		nbucket = color_buckets[y];
 		if (nbucket != NULL) {
 			printf("  Bucket %u\n",y);
 			while (nbucket != NULL) {
-				printf("    RGB=%03u/%03u/%03u/%03u YUV=%03u/%03u/%03u count=%u\n",
+				printf("    RGB=%03u/%03u/%03u/%03u\n",
 					nbucket->R,
 					nbucket->G,
 					nbucket->B,
-					nbucket->A,
-					nbucket->Y,
-					nbucket->U,
-					nbucket->V,
-					nbucket->count);
+					nbucket->A);
 
 				nbucket = nbucket->next;
 			}
@@ -590,15 +548,39 @@ static int make_palette() {
 	}
 
 	{
-		struct color_bucket *s = color_buckets[0];
+		unsigned int bucket=0;
 
 		gen_png_pal_count = 0;
-		while (gen_png_pal_count < target_colors && s != NULL) {
-			gen_png_pal[gen_png_pal_count].red = s->R;
-			gen_png_pal[gen_png_pal_count].green = s->G;
-			gen_png_pal[gen_png_pal_count].blue = s->B;
-			gen_png_pal_count++;
-			s = s->next;
+		while (gen_png_pal_count < target_colors && bucket < colors) {
+			struct color_bucket *s = color_buckets[bucket++];
+
+			if (s != NULL) {
+				unsigned int sR=0,sG=0,sB=0,sA=0;
+				unsigned int sdiv=0;
+
+				while (s != NULL) {
+					sR += s->R;
+					sG += s->G;
+					sB += s->B;
+					sA += s->A;
+					s = s->next;
+					sdiv++;
+				}
+
+				gen_png_pal[gen_png_pal_count].red = (sR + ((sdiv + 1u) / 2u)) / sdiv;
+				gen_png_pal[gen_png_pal_count].green = (sG + ((sdiv + 1u) / 2u)) / sdiv;
+				gen_png_pal[gen_png_pal_count].blue = (sB + ((sdiv + 1u) / 2u)) / sdiv;
+
+#if 1//DEBUG
+				printf("Palette[%u]: R=%03u G=%03u B=%03u\n",
+					gen_png_pal_count,
+					gen_png_pal[gen_png_pal_count].red,
+					gen_png_pal[gen_png_pal_count].green,
+					gen_png_pal[gen_png_pal_count].blue);
+#endif
+
+				gen_png_pal_count++;
+			}
 		}
 	}
 
