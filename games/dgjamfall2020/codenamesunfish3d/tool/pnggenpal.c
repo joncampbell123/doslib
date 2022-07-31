@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <math.h>
 
 #include <png.h>    /* libpng */
 
@@ -619,44 +618,9 @@ static int make_palette() {
 			struct color_bucket *s = color_buckets[bucket++];
 
 			if (s != NULL) {
-				double sR=0,sG=0,sB=0,sA=0;
-				unsigned long long sdiv=0;
-				int iR=0,iG=128,iB=128;
-				unsigned long long ac;
-				unsigned int d;
-				int dx;
-
-				if (s != NULL) {
-					iR = s->R;
-					iG = s->G;
-					iB = s->B;
-				}
-
-				while (s != NULL) {
-					ac = s->count;
-
-					dx = (int)s->R - (int)iR;
-					d  = dx*dx;
-
-					dx = (int)s->G - (int)iG;
-					d += dx*dx;
-
-					dx = (int)s->B - (int)iB;
-					d += dx*dx;
-
-					ac = (ac * 32ull) / (32ull + (unsigned long long)d);
-
-					sR += s->R * ac;
-					sG += s->G * ac;
-					sB += s->B * ac;
-					sA += s->A * ac;
-					sdiv += ac;
-					s = s->next;
-				}
-
-				gen_png_pal[gen_png_pal_count].red = (unsigned char)floor((sR / sdiv) + 0.5);
-				gen_png_pal[gen_png_pal_count].green = (unsigned char)floor((sG / sdiv) + 0.5);
-				gen_png_pal[gen_png_pal_count].blue = (unsigned char)floor((sB / sdiv) + 0.5);
+				gen_png_pal[gen_png_pal_count].red = s->R;
+				gen_png_pal[gen_png_pal_count].green = s->G;
+				gen_png_pal[gen_png_pal_count].blue = s->B;
 
 #if 1//DEBUG
 				printf("Palette[%u]: R=%03u G=%03u B=%03u\n",
