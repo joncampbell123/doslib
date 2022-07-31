@@ -431,6 +431,8 @@ static int make_palette() {
 			if (colors <= 256) break;
 
 			while (*n != NULL && (*n)->next != NULL) {
+				if (colors <= 256) break;
+
 				if ((*n)->next->count >= (((*n)->count * 4u) / 5u)) { /* count is too similar */
 					const int dy = (int)((*n)->Y) - (int)((*n)->next->Y);
 					const int du = (int)((*n)->U) - (int)((*n)->next->U);
@@ -474,6 +476,7 @@ static int make_palette() {
 				}
 				/* NTS: fn points to the node just before the ones we want to remove */
 				while (fn != NULL && *fn != NULL && (*fn)->next != NULL) {
+					if (colors <= 256) break;
 					/* remove the next node */
 					struct color_bucket *nn = (*fn)->next;
 					(*fn)->next = nn->next;
