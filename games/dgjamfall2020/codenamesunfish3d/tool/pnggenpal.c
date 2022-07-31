@@ -423,8 +423,9 @@ static int make_palette() {
 		}
 
 		/* look for buckets with similar counts and similar colors, and combine the similar colors.
-		 * prefer the brighter color. */
-		for (x=0;x < COLOR_BUCKETS;x++) {
+		 * scan backwards to emphasize quantization on the bright colors because VGA display is non-linear with a gamma curve. */
+		x = COLOR_BUCKETS - 1;
+		do {
 			struct color_bucket **n = &color_buckets[x];
 
 			if (colors <= 256) break;
@@ -460,7 +461,33 @@ static int make_palette() {
 
 			/* this process may have put counts out of order */
 			color_bucket_sort_by_count(&color_buckets[x]);
-		}
+
+			/* trim the lowest counts down as well */
+			{
+				struct color_bucket **fn = NULL;
+
+				n = &color_buckets[x];
+				while (*n != NULL && (*n)->next != NULL) {
+					if (fn == NULL) fn = n;
+					if ((*n)->count != (*n)->next->count) fn = n;
+					n = &((*n)->next);
+				}
+				/* NTS: fn points to the node just before the ones we want to remove */
+				while (fn != NULL && *fn != NULL && (*fn)->next != NULL) {
+					/* remove the next node */
+					struct color_bucket *nn = (*fn)->next;
+					(*fn)->next = nn->next;
+					free(nn);
+					dropped++;
+					if (colors > 0) colors--;
+					if (colors <= 256) break;
+				}
+			}
+
+			/* scan backwards */
+			if (x == 0) break;
+			else x--;
+		} while (1);
 
 		if (bucketmerge < (16 * 8u * 8u))
 			bucketmerge *= 4u;
