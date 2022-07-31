@@ -9,6 +9,9 @@
 static char*            in_png = NULL;
 static char*            out_png = NULL;
 
+static unsigned int	want_colors = 256;
+static unsigned char	color0_black = 1;
+
 static unsigned int	src_png_bypp = 0;
 static unsigned char*   src_png_image = NULL;
 static png_bytep*       src_png_image_rows = NULL;
@@ -53,6 +56,8 @@ static void help(void) {
     fprintf(stderr,"pnggenpal -i <input PNG> -o <output PNG>\n");
     fprintf(stderr,"Read a non-paletted PNG, generate a palette as PNG,\n");
     fprintf(stderr," -vga        Palettize for VGA (6 bits per RGB)\n");
+    fprintf(stderr," -nc <n>     Number of colors (default 256)\n");
+    fprintf(stderr," -b0 / -nb0  Color #0 is fixed black (default) / not fixed\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -77,8 +82,22 @@ static int parse_argv(int argc,char **argv) {
                 if ((out_png = argv[i++]) == NULL)
                     return 1;
             }
+            else if (!strcmp(a,"nc")) {
+                if ((a=argv[i++]) == NULL)
+                    return 1;
+
+		want_colors = atoi(a);
+                if (want_colors == 0 || want_colors > 256)
+                    return 1;
+            }
             else if (!strcmp(a,"vga")) {
                 pal_vga = 1;
+            }
+            else if (!strcmp(a,"b0")) {
+                color0_black = 1;
+            }
+            else if (!strcmp(a,"nb0")) {
+                color0_black = 0;
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -420,6 +439,12 @@ static int make_palette() {
 	unsigned char selchannel;
 	png_bytep row;
 
+	target_colors = want_colors;
+	if (color0_black) {
+		if (target_colors == 0) return 1;
+		target_colors--;
+	}
+
 	if (gen_png_color_type == PNG_COLOR_TYPE_PALETTE)
 		return 1;
 	if (target_colors > 256)
@@ -586,10 +611,26 @@ static int make_palette() {
 	}
 
 	{
+		unsigned int endcolor = target_colors;
 		unsigned int bucket=0;
 
 		gen_png_pal_count = 0;
-		while (gen_png_pal_count < target_colors && bucket < colors) {
+
+		if (color0_black) {
+			endcolor++;
+			if (endcolor > want_colors)
+				return 1;
+
+			gen_png_pal[gen_png_pal_count].red = 0;
+			gen_png_pal[gen_png_pal_count].green = 0;
+			gen_png_pal[gen_png_pal_count].blue = 0;
+			gen_png_pal_count++;
+		}
+
+		if (endcolor > want_colors || endcolor > 256)
+			abort();
+
+		while (gen_png_pal_count < endcolor && bucket < colors) {
 			struct color_bucket *s = color_buckets[bucket++];
 
 			if (s != NULL) {
