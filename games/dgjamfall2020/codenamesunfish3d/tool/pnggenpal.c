@@ -530,24 +530,38 @@ static int make_palette() {
 
 	/* eliminate any color that occurs less than 1 out of (N*N) times of the total picture -- all colors in bucket 0 */
 	{
-		struct color_bucket **scan = &color_buckets[0];
+		struct color_bucket **scan;
 		unsigned int thr;
 
+		scan = &color_buckets[0];
 		colors = color_bucket_count(*scan);
 		thr = colors / (target_colors * target_colors);
-		if (thr >= 2) {
-			printf("Dropping entries that occurs less than %u times\n",thr);
-			while (*scan != NULL) {
-				if ((*scan)->count < thr) {
-					/* drop the node */
-					struct color_bucket *n = *scan;
-					*scan = n->next;
-					free(n);
-				}
-				else {
-					scan = &((*scan)->next);
+		while (colors > (target_colors * 4u)) {
+			if (thr >= 2) {
+				printf("Dropping entries that occurs less than %u times (colors=%u)\n",thr,colors);
+				while (*scan != NULL) {
+					if ((*scan)->count < thr) {
+						/* drop the node */
+						struct color_bucket *n = *scan;
+						*scan = n->next;
+						if (*scan != NULL) (*scan)->count += n->count;
+						free(n);
+
+						colors--;
+						if (colors <= (target_colors * 4u)) break;
+					}
+					else {
+						scan = &((*scan)->next);
+					}
 				}
 			}
+
+			if (thr < 2)
+				thr = 2;
+			else
+				thr += (thr + 1u) / 2u;
+
+			scan = &color_buckets[0];
 		}
 	}
 
