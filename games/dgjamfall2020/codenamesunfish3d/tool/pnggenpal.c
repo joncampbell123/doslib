@@ -536,7 +536,7 @@ static int make_palette() {
 		scan = &color_buckets[0];
 		colors = color_bucket_count(*scan);
 		thr = colors / (target_colors * target_colors);
-		while (colors > (target_colors * 4u)) {
+		while (colors > target_colors) {
 			if (thr >= 2) {
 				printf("Dropping entries that occurs less than %u times (colors=%u)\n",thr,colors);
 				while (*scan != NULL) {
@@ -548,7 +548,7 @@ static int make_palette() {
 						free(n);
 
 						colors--;
-						if (colors <= (target_colors * 4u)) break;
+						if (colors <= target_colors) break;
 					}
 					else {
 						scan = &((*scan)->next);
