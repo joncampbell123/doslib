@@ -16,11 +16,11 @@ PS2MOUSE_DRV = $(SUBDIR)$(HPS)ps2mouse.drv
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(DISCARDABLE_CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
-.ASM.OBJ:
+.asm.obj:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
 $(SUBDIR)$(HPS)inthndlr.obj: inthndlr.c

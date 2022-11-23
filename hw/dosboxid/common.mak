@@ -103,25 +103,25 @@ $(HW_DOSBOXID_LIB_DRVN): $(SUBDIR_DRVN) $(DRVN_OBJS)
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C{$(SUBDIR)}.OBJ:
+.c{$(SUBDIR)}.obj:
 !ifdef TARGET_VXD
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_VXD) $[@
 !else
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS) $[@
 !endif
 
-.C{$(SUBDIR_CON)}.OBJ:
+.c{$(SUBDIR_CON)}.obj:
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 
 !ifdef HW_DOSBOXID_LIB_DRV
-.C{$(SUBDIR_DRV)}.OBJ:
+.c{$(SUBDIR_DRV)}.obj:
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV) $[@
-.C{$(SUBDIR_DRV_ND)}.OBJ:
+.c{$(SUBDIR_DRV_ND)}.obj:
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV_ND) $[@
 !endif
 
 !ifdef HW_DOSBOXID_LIB_DRVN
-.C{$(SUBDIR_DRVN)}.OBJ:
+.c{$(SUBDIR_DRVN)}.obj:
 	@$(CC) $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRVN) $[@
 !endif
 

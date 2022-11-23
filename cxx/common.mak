@@ -10,21 +10,21 @@ NOW_BUILDING = CXX
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i..
 
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-.CPP.OBJ:
+.cpp.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CXX) @tmp.cmd
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-.ASM.OBJ:
+.asm.obj:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@

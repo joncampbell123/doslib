@@ -22,7 +22,7 @@ $(WINDOWS_NTVDMLIB_LIB): $(SUBDIR)$(HPS)ntvdmlib.obj $(SUBDIR)$(HPS)nterrstr.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	$(CC) @tmp.cmd
 !ifdef TINYMODE
@@ -33,7 +33,7 @@ $(SUBDIR)$(HPS)vddc1d.obj: vddc1d.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
 
-.ASM.OBJ:
+.asm.obj:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@

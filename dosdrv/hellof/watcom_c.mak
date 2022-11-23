@@ -18,7 +18,7 @@ drva.asm:
 dos86s/drva.obj: drva.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
-.C.OBJ:
+.c.obj:
 	$(CC) $(CFLAGS) $[@
 
 ../../hw/dos/dos86l/dos.lib:
