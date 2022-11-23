@@ -27,11 +27,11 @@ $(DOSLIBLINKER):
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $(CFLAGS_END) $[@
 	@$(CC) @tmp.cmd
 
-.ASM.OBJ:
+.asm.obj:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
 dos86t/drvci.obj: drvci.c

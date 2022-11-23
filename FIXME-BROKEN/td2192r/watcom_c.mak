@@ -5,7 +5,7 @@ CC       = wcc
 LINKER   = wcl
 CFLAGS   = -zq -ms -s -bt=com -oilrtfm -fr=nul -wx -0 -fo=.obj -dSTDC -q
 
-.C.OBJ:
+.c.obj:
 	$(CC) $(CFLAGS) $[@
 
 all: tdchoose.com

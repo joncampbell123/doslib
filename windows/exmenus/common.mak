@@ -19,7 +19,7 @@ HELLO4_RES =  $(SUBDIR)$(HPS)hello4.res
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
 

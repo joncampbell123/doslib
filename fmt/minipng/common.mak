@@ -17,7 +17,7 @@ TESTOLD1_EXE = $(SUBDIR)$(HPS)testold1.$(EXEEXT)
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
-.C.OBJ:
+.c.obj:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	$(CC) @tmp.cmd
 !ifdef TINYMODE
