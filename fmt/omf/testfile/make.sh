@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ "$1" == "clean" ]; then
+	rm -fv *.obj *.OBJ
+	exit 0
+fi
+
+if [[ "$1" == "build" || "$1" == "" ]]; then
+	nasm -o 0000.obj -f obj 0000.asm || exit 1
+	nasm -o 0001.obj -f obj 0001.asm || exit 1
+	nasm -o 0002.obj -f obj 0002.asm || exit 1
+	nasm -o 0003.obj -f obj 0003.asm || exit 1
+fi
+

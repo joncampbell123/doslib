@@ -1,0 +1,8 @@
+Test case list.
+For testing linker code.
+
+0000 - Completely empty, no data, no segments, nothing.
+0001 - One segment, one byte of data, no symbols
+0002 - One segment, two bytes, entry point, no symbols
+0003 - One segment, three bytes, entry point, one global symbol
+
