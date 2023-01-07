@@ -18,5 +18,6 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
 	nasm -o 0009.obj -f obj 0009.asm || exit 1
 	./masm.sh 0010.asm 0010.obj || exit 1
 	./masm.sh 0011.asm 0011.obj || exit 1
+	./masm.sh 0012.asm 0012.obj || exit 1
 fi
 
