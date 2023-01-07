@@ -11,5 +11,6 @@ For testing linker code.
 0007 - 
 0008 - Absolute segment
 0009 - 
-0010 - Microsoft MASM segment with nonzero ORG
+0010 - Microsoft MASM segment with nonzero ORG (100h)
+0011 - Microsoft MASM segment with multiple ORG
 
