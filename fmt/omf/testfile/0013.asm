@@ -15,9 +15,19 @@ _start:	mov	ax,4C00h
 	ret
 
 	; iterated data
-	dw	1234h dup (512)
+	dw	512 dup(1234h)
 
 	db	'Normal data'
+
+	; iterated data #2
+	dw	32 dup(1234h,0ABCDh)
+
+	db	'Normal data again'
+
+	; iterated data #2
+	dw	32 dup(1234h,16 dup(0ABCDh,09876h))
+
+	db	'Normal data again #2'
 
 	org	0
 
