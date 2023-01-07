@@ -12,6 +12,7 @@ masm $asm,$obj;
 _EOF
 
 /usr/src/dosbox-x/src/dosbox-x -conf dosbox.conf -fastlaunch -exit -log-con
+rm -f dosbox.conf
 mv -v "$uc" "$obj"
 [ -f "$obj" ] || exit 1
 exit 0
