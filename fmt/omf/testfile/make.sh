@@ -20,5 +20,6 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
 	./masm.sh 0011.asm 0011.obj || exit 1
 	./masm.sh 0012.asm 0012.obj || exit 1
 	./masm.sh 0013.asm 0013.obj || exit 1
+	./masm.sh 0014.asm 0014.obj || exit 1
 fi
 
