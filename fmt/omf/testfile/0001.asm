@@ -6,5 +6,3 @@
 
 	ret
 
-; nothing
-

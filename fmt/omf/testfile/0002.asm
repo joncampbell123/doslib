@@ -8,5 +8,3 @@
 ..start:
 	ret
 
-; nothing
-
