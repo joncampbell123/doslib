@@ -9,4 +9,5 @@ For testing linker code.
 0005 - 
 0006 - 
 0007 - 
+0008 - Absolute segment
 
