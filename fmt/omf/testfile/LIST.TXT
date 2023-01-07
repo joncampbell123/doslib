@@ -10,4 +10,6 @@ For testing linker code.
 0006 - 
 0007 - 
 0008 - Absolute segment
+0009 - 
+0010 - Microsoft MASM segment with nonzero ORG
 
