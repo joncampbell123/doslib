@@ -6,4 +6,7 @@ For testing linker code.
 0002 - One segment, two bytes, entry point, no symbols
 0003 - One segment, three bytes, entry point, one global symbol
 0004 - One segment, three bytes, entry point, one global symbol, stack segment
+0005 - 
+0006 - 
+0007 - 
 
