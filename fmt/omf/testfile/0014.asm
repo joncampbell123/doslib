@@ -35,7 +35,7 @@ _iter3:
 
 	db	'Normal data again #2'
 
-	org	100h
+	org	0h
 
 _hello:
 	db	'Hello world'
