@@ -37,6 +37,8 @@ _iter3:
 
 	org	0h
 
+	dw	_iter1
+
 _hello:
 	db	'Hello world'
 
