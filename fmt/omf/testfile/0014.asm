@@ -38,7 +38,7 @@ _iter3:
 
 	db	'Normal data again #2'
 
-	org	0h
+	org	200h
 
 	dw	_iter1
 
