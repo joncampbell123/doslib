@@ -12,6 +12,9 @@
 
 	org	400h
 
+	dw	_iter2
+	dw	_iter3
+
 	nop
 _start:	mov	ax,4C00h
 	int	21h
@@ -43,6 +46,8 @@ _hello:
 	db	'Hello world'
 
 	org	8000h
+
+	dw	_iter3
 
 _hello2:
 	db	'And here'
