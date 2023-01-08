@@ -54,5 +54,18 @@ _hello2:
 
 	PROG ends
 
+	DATA segment para public 'DATA'
+	assume cs:DATA
+	assume ds:DATA
+
+	org	200h
+
+	db	90h
+_dsym:	dw	1234h
+
+	DATA ends
+
+	DGROUP GROUP PROG, DATA
+
 	end _start
 
