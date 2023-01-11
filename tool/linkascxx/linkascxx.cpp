@@ -191,6 +191,150 @@ namespace DOSLIBLinker {
 
 }
 
+namespace DOSLIBLinker {
+
+	class OMF_record_data : public std::vector<uint8_t> {
+		public:
+			OMF_record_data();
+			~OMF_record_data();
+		public:
+			void rewind(void);
+			bool seek(const size_t o);
+			size_t offset(void) const;
+			size_t remains(void) const;
+			bool eof(void) const;
+		public:
+			uint8_t gb(void);
+			uint16_t gw(void);
+			uint32_t gd(void);
+			uint16_t gidx(void);
+		private:
+			size_t readp = 0;
+	};
+
+	struct OMF_record {
+		OMF_record_data		data;
+		uint8_t			type = 0;
+		off_t			file_offset = 0;
+
+		void			clear(void);
+	};
+
+	class OMF_record_reader {
+		public:
+			bool		is_library = false;
+			uint32_t	dict_offset = 0;
+			uint32_t	block_size = 0;
+		public:
+			void		clear(void);
+			bool		read(OMF_record &rec,file_io &fio);
+	};
+
+}
+
+namespace DOSLIBLinker {
+
+	OMF_record_data::OMF_record_data() : std::vector<uint8_t>() {
+	}
+
+	OMF_record_data::~OMF_record_data() {
+	}
+
+	uint8_t OMF_record_data::gb(void) {
+		if ((readp+size_t(1u)) <= size()) { const uint8_t r = *(data()+readp); readp++; return r; }
+		return 0;
+	}
+
+	uint16_t OMF_record_data::gw(void) {
+		if ((readp+size_t(2u)) <= size()) { const uint16_t r = *((uint16_t*)(data()+readp)); readp += 2; return le16toh(r); }
+		return 0;
+	}
+
+	uint32_t OMF_record_data::gd(void) {
+		if ((readp+size_t(4u)) <= size()) { const uint32_t r = *((uint32_t*)(data()+readp)); readp += 4; return le32toh(r); }
+		return 0;
+	}
+
+	uint16_t OMF_record_data::gidx(void) {
+		uint16_t r = gb();
+		if (r & 0x80) r = ((r & 0x7Fu) << 8u) + gb();
+		return r;
+	}
+
+	void OMF_record_data::rewind(void) {
+		readp = 0;
+	}
+
+	bool OMF_record_data::eof(void) const {
+		return readp >= size();
+	}
+
+	bool OMF_record_data::seek(const size_t o) {
+		if (o <= size()) {
+			readp = o;
+			return true;
+		}
+		else {
+			readp = size();
+			return false;
+		}
+	}
+
+	size_t OMF_record_data::remains(void) const {
+		return size_t(size() - readp);
+	}
+
+	size_t OMF_record_data::offset(void) const {
+		return readp;
+	}
+
+	void OMF_record::clear(void) {
+		data.clear();
+	}
+
+	void OMF_record_reader::clear(void) {
+		is_library = false;
+		dict_offset = 0;
+		block_size = 0;
+	}
+
+	bool OMF_record_reader::read(OMF_record &rec,file_io &fio) {
+		unsigned char tmp[3],chk;
+
+		rec.clear();
+		rec.file_offset = fio.tell();
+
+		/* <byte: record type> <word: record length> <data> <byte: checksum>
+		 *
+		 * Data length includes checksum but not type and length fields. */
+		if (!fio.read(tmp,3)) return false;
+		rec.type = tmp[0];
+
+		const size_t len = le16toh( *((uint16_t*)(tmp+1)) );
+		if (len == 0) return false;
+
+		rec.data.resize(len - size_t(1u)); /* do not include checksum in the data field */
+		if (!fio.read(rec.data.data(),len - size_t(1u))) return false;
+
+		/* now check the checksum */
+		if (!fio.read(&chk,1)) return false;
+
+		/* checksum byte is a checksum byte if the byte value here is nonzero */
+		if (chk != 0u) {
+			unsigned char sum = 0;
+
+			for (size_t i=0;i < 3;i++) sum += tmp[i];
+			for (size_t i=0;i < rec.data.size();i++) sum += rec.data[i];
+			sum += chk;
+
+			if (sum != 0u) return false;
+		}
+
+		return true;
+	}
+
+}
+
 int main(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
