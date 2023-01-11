@@ -227,7 +227,7 @@ namespace DOSLIBLinker {
 			uint32_t	block_size = 0;
 		public:
 			void		clear(void);
-			bool		read(OMF_record &rec,file_io &fio);
+			bool		read(OMF_record &rec,file_io &fio,log_t &log);
 	};
 
 }
@@ -298,7 +298,7 @@ namespace DOSLIBLinker {
 		block_size = 0;
 	}
 
-	bool OMF_record_reader::read(OMF_record &rec,file_io &fio) {
+	bool OMF_record_reader::read(OMF_record &rec,file_io &fio,log_t &log) {
 		unsigned char tmp[3],chk;
 
 		rec.clear();
@@ -311,13 +311,22 @@ namespace DOSLIBLinker {
 		rec.type = tmp[0];
 
 		const size_t len = le16toh( *((uint16_t*)(tmp+1)) );
-		if (len == 0) return false;
+		if (len == 0) {
+			log.log(LNKLOG_WARNING,"OMF record with zero length");
+			return false;
+		}
 
 		rec.data.resize(len - size_t(1u)); /* do not include checksum in the data field */
-		if (!fio.read(rec.data.data(),len - size_t(1u))) return false;
+		if (!fio.read(rec.data.data(),len - size_t(1u))) {
+			log.log(LNKLOG_WARNING,"OMF record with incomplete data (eof)");
+			return false;
+		}
 
 		/* now check the checksum */
-		if (!fio.read(&chk,1)) return false;
+		if (!fio.read(&chk,1)) {
+			log.log(LNKLOG_WARNING,"OMF record with incomplete data (eof on checksum byte)");
+			return false;
+		}
 
 		/* checksum byte is a checksum byte if the byte value here is nonzero */
 		if (chk != 0u) {
@@ -327,7 +336,10 @@ namespace DOSLIBLinker {
 			for (size_t i=0;i < rec.data.size();i++) sum += rec.data[i];
 			sum += chk;
 
-			if (sum != 0u) return false;
+			if (sum != 0u) {
+				log.log(LNKLOG_WARNING,"OMF record with bad checksum");
+				return false;
+			}
 		}
 
 		return true;
