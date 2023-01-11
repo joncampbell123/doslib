@@ -225,6 +225,8 @@ namespace DOSLIBLinker {
 			bool		is_library = false;
 			uint32_t	dict_offset = 0;
 			uint32_t	block_size = 0;
+			uint32_t	dict_size = 0;
+			uint8_t		lib_flags = 0;
 		public:
 			void		clear(void);
 			bool		read(OMF_record &rec,file_io &fio,log_t &log);
@@ -290,12 +292,15 @@ namespace DOSLIBLinker {
 
 	void OMF_record::clear(void) {
 		data.clear();
+		data.rewind();
 	}
 
 	void OMF_record_reader::clear(void) {
 		is_library = false;
 		dict_offset = 0;
 		block_size = 0;
+		dict_size = 0;
+		lib_flags = 0;
 	}
 
 	bool OMF_record_reader::read(OMF_record &rec,file_io &fio,log_t &log) {
@@ -303,6 +308,11 @@ namespace DOSLIBLinker {
 
 		rec.clear();
 		rec.file_offset = fio.tell();
+
+		if (dict_offset != uint32_t(0)) {
+			if (rec.file_offset >= (off_t)dict_offset)
+				return false;
+		}
 
 		/* <byte: record type> <word: record length> <data> <byte: checksum>
 		 *
@@ -339,6 +349,41 @@ namespace DOSLIBLinker {
 			if (sum != 0u) {
 				log.log(LNKLOG_WARNING,"OMF record with bad checksum");
 				return false;
+			}
+		}
+
+		/* In order to read .LIB files properly this code needs to know the block size */
+		if (rec.file_offset == 0 && rec.type == 0xF0/*Library Header Record*/) {
+			/* <dictionary offset> <dictionary size in blocks> <flags>
+			 * The record length is used to indicate block size */
+			is_library = true;
+			block_size = rec.data.size() + 3/*header*/ + 1/*checksum*/;
+			dict_offset = rec.data.gd();
+			dict_size = rec.data.gw();
+			lib_flags = rec.data.gb();
+
+			/* must be a power of 2 or else it's not valid */
+			if ((block_size & (block_size - uint32_t(1ul))) == uint32_t(0ul)) {
+				dict_size *= block_size;
+			}
+			else {
+				log.log(LNKLOG_WARNING,"OMF ignoring library header record because block size %lu is not a power of 2",(unsigned long)block_size);
+				is_library = false;
+			}
+
+			log.log(LNKLOG_DEBUG,"OMF file is library with block_size=%lu, dict_offset=%lu, dict_size=%lu, flags=0x%02x",
+				(unsigned long)block_size,(unsigned long)dict_offset,(unsigned long)dict_size,lib_flags);
+		}
+
+		if (block_size != uint32_t(0)) {
+			if (rec.type == 0x8A/*module end*/ || rec.type == 0x8B/*module end*/) {
+				off_t p = fio.tell();
+				p += (off_t)(block_size - uint32_t(1u));
+				p -= p % (off_t)block_size;
+				if (!fio.seek(p)) {
+					log.log(LNKLOG_WARNING,"OMF end of module, unable to seek forward to next within library");
+					return false;
+				}
 			}
 		}
 
