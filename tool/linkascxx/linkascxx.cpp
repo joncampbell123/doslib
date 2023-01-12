@@ -6,8 +6,10 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <unordered_map>
 #include <vector>
 #include <string>
+#include <map>
 
 namespace DOSLIBLinker {
 
@@ -87,13 +89,61 @@ namespace DOSLIBLinker {
 			size_t allocate(void) {
 				const size_t r = ref.size();
 				ref.emplace(ref.end());
+				assert(ref.size() == (r+size_t(1u)));
 				return r;
 			}
 
 			size_t allocate(const T &val) {
 				const size_t r = ref.size();
 				ref.emplace(ref.end(),val);
+				assert(ref.size() == (r+size_t(1u)));
 				return r;
+			}
+	};
+
+	class string_table_t {
+		public:
+			static constexpr size_t				undef = ~((size_t)(0ul));
+			typedef std::string				ent_type;
+			typedef size_t					ref_type;
+			std::vector<std::string>			ref;
+			std::unordered_map<std::string,size_t>		ref2rev;
+		public:
+			inline size_t size(void) const { return ref.size(); }
+		public:
+			bool exists(const size_t r) const {
+				return r < ref.size();
+			}
+
+			bool exists(const std::string &r) const {
+				return ref2rev.find(r) != ref2rev.end();
+			}
+
+			size_t lookup(const std::string &r) const {
+				const auto i = ref2rev.find(r);
+				if (i != ref2rev.end()) return i->second;
+				return undef;
+			}
+
+			const std::string &get(const size_t r) const {
+				return ref.at(r); /* std::vector will throw an exception if out of range */
+			}
+
+			std::string &get(const size_t r) {
+				return ref.at(r); /* std::vector will throw an exception if out of range */
+			}
+
+			size_t add(const std::string &r) {
+				{
+					const auto i = ref2rev.find(r);
+					if (i != ref2rev.end()) return i->second;
+				}
+
+				const size_t ri = ref.size();
+				ref.emplace(ref.end(),r);
+				assert(ref.size() == (ri + size_t(1u)));
+				ref2rev[r] = ri;
+				return ri;
 			}
 	};
 
@@ -107,9 +157,12 @@ namespace DOSLIBLinker {
 	typedef _base_handlearray<source_t> source_list_t;
 	typedef source_list_t::ref_type source_ref_t;
 
+	typedef string_table_t::ref_type string_ref_t;
+
 	class linkenv {
 		public:
 			source_list_t				sources;
+			string_table_t				strings;
 		public:
 			log_t					log;
 	};
