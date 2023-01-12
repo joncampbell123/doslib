@@ -21,6 +21,15 @@ namespace DOSLIBLinker {
 		LNKLOG_ERROR = 2
 	};
 
+	/* some formats (OMF) use 1-based indices */
+	template <typename T> static inline constexpr T from1based(const T v) {
+		return v - T(1u);
+	}
+
+	template <typename T> static inline constexpr T to1based(const T v) {
+		return v + T(1u);
+	}
+
 	typedef void (*log_callback_t)(const int level,void *user,const char *str);
 
 	void log_callback_silent(const int level,void *user,const char *str);
@@ -99,6 +108,10 @@ namespace DOSLIBLinker {
 				assert(ref.size() == (r+size_t(1u)));
 				return r;
 			}
+
+			void clear(void) {
+				ref.clear();
+			}
 	};
 
 	class string_table_t {
@@ -144,6 +157,11 @@ namespace DOSLIBLinker {
 				assert(ref.size() == (ri + size_t(1u)));
 				ref2rev[r] = ri;
 				return ri;
+			}
+
+			void clear(void) {
+				ref.clear();
+				ref2rev.clear();
 			}
 	};
 
@@ -339,13 +357,18 @@ namespace DOSLIBLinker {
 
 	class OMF_reader {
 		public:
+			typedef _base_handlearray<string_ref_t> LNAMES_list_t;
+			typedef LNAMES_list_t::ref_type LNAME_ref_t;
+		public:
 			source_ref_t			current_source = source_list_t::undef;
+			LNAMES_list_t			LNAMES;
 			OMF_record_reader		recrdr;
 		public:
 			void				clear(void);
 			bool				read(linkenv &lenv,const char *path);
 			bool				read(linkenv &lenv,file_io &fio,const char *path);
 			bool				read_module(linkenv &lenv,file_io &fio);
+			bool				read_rec_LNAMES(linkenv &lenv,OMF_record &rec);
 	};
 
 }
@@ -519,6 +542,7 @@ namespace DOSLIBLinker {
 
 	void OMF_reader::clear(void) {
 		current_source = source_list_t::undef;
+		LNAMES.clear();
 		recrdr.clear();
 	}
 
@@ -583,8 +607,19 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::read_rec_LNAMES(linkenv &lenv,OMF_record &rec) {
+		/* std::string s = rec.glenstr();
+		 * string_ref_t t = lenv.strings.add(s);
+		 * LNAMES_ref_t l = LNAMES.allocate(t); */
+		while (!rec.data.eof()) LNAMES.allocate(lenv.strings.add(rec.data.glenstr()));
+		return true;
+	}
+
 	bool OMF_reader::read_module(linkenv &lenv,file_io &fio) {
 		OMF_record rec;
+
+		/* each module has it's own LNAMES */
+		LNAMES.clear();
 
 		/* caller has already read THEADR/LHEADR, read until MODEND */
 		while (1) {
@@ -596,6 +631,12 @@ namespace DOSLIBLinker {
 			if (rec.type == 0x8A/*module end*/ || rec.type == 0x8B/*module end*/) {
 				/* TODO: Read entry point and other stuff */
 				break;
+			}
+			else if (rec.type == 0x96/*LNAMES*/ || rec.type == 0xCA/*LLNAMES*/) {
+				if (!read_rec_LNAMES(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading LNAMES");
+					return false;
+				}
 			}
 		}
 
