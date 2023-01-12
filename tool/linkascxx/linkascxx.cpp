@@ -78,11 +78,11 @@ namespace DOSLIBLinker {
 				return r < ref.size();
 			}
 
-			const T &get(const size_t r) const {
+			inline const T &get(const size_t r) const {
 				return ref.at(r); /* std::vector will throw an exception if out of range */
 			}
 
-			T &get(const size_t r) {
+			inline T &get(const size_t r) {
 				return ref.at(r); /* std::vector will throw an exception if out of range */
 			}
 
@@ -125,11 +125,11 @@ namespace DOSLIBLinker {
 				return undef;
 			}
 
-			const std::string &get(const size_t r) const {
+			inline const std::string &get(const size_t r) const {
 				return ref.at(r); /* std::vector will throw an exception if out of range */
 			}
 
-			std::string &get(const size_t r) {
+			inline std::string &get(const size_t r) {
 				return ref.at(r); /* std::vector will throw an exception if out of range */
 			}
 
