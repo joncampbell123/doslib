@@ -292,6 +292,7 @@ namespace DOSLIBLinker {
 			void				clear(void);
 			bool				read(linkenv &lenv,const char *path);
 			bool				read(linkenv &lenv,file_io &fio,const char *path);
+			bool				read_module(linkenv &lenv,file_io &fio);
 	};
 
 }
@@ -496,13 +497,18 @@ namespace DOSLIBLinker {
 
 			while (recrdr.read(rec,fio,lenv.log)) {
 				if (rec.type == 0x80/*THEADR*/ || rec.type == 0x82/*LHEADR*/) {
-					source_t &src = lenv.sources.get(current_source=lenv.sources.allocate());
-					src.file_offset = rec.file_offset;
-					src.index = module_index++;
-					src.path = path;
+					{
+						source_t &src = lenv.sources.get(current_source=lenv.sources.allocate());
+						src.file_offset = rec.file_offset;
+						src.index = module_index++;
+						src.path = path;
 
-					/* THEADR/LHEADR contains a single string */
-					src.name = rec.data.glenstr();
+						/* THEADR/LHEADR contains a single string */
+						src.name = rec.data.glenstr();
+					}
+
+					/* read all records until the next MODEND */
+					if (!read_module(lenv,fio)) return false;
 				}
 			}
 		}
@@ -515,6 +521,28 @@ namespace DOSLIBLinker {
 
 				/* THEADR/LHEADR contains a single string */
 				src.name = rec.data.glenstr();
+			}
+
+			/* read all records until the next MODEND */
+			if (!read_module(lenv,fio)) return false;
+		}
+
+		return true;
+	}
+
+	bool OMF_reader::read_module(linkenv &lenv,file_io &fio) {
+		OMF_record rec;
+
+		/* caller has already read THEADR/LHEADR, read until MODEND */
+		while (1) {
+			if (!recrdr.read(rec,fio,lenv.log)) {
+				lenv.log.log(LNKLOG_ERROR,"OMF module ended early without MODEND");
+				return false;
+			}
+
+			if (rec.type == 0x8A/*module end*/ || rec.type == 0x8B/*module end*/) {
+				/* TODO: Read entry point and other stuff */
+				break;
 			}
 		}
 
