@@ -100,6 +100,7 @@ namespace DOSLIBLinker {
 	struct source_t {
 		public:
 			std::string				path;
+			std::string				name; /* name string (OMF THEADR/LHEADR) */
 			size_t					index = ~((size_t)(0ul));
 			off_t					file_offset = off_t(0ul) - off_t(1ul);
 	};
@@ -258,6 +259,7 @@ namespace DOSLIBLinker {
 			uint16_t gw(void);
 			uint32_t gd(void);
 			uint16_t gidx(void);
+			std::string glenstr(void);
 		private:
 			size_t readp = 0;
 	};
@@ -321,6 +323,17 @@ namespace DOSLIBLinker {
 		uint16_t r = gb();
 		if (r & 0x80) r = ((r & 0x7Fu) << 8u) + gb();
 		return r;
+	}
+
+	std::string OMF_record_data::glenstr(void) {
+		/* <len> <string> */
+		size_t len = gb();
+		if (len > remains()) len = remains();
+
+		const size_t bp = readp; readp += len;
+		assert(readp <= size());
+
+		return std::string((const char*)(data()+bp),len);
 	}
 
 	void OMF_record_data::rewind(void) {
@@ -487,15 +500,21 @@ namespace DOSLIBLinker {
 					src.file_offset = rec.file_offset;
 					src.index = module_index++;
 					src.path = path;
+
+					/* THEADR/LHEADR contains a single string */
+					src.name = rec.data.glenstr();
 				}
 			}
 		}
-		else {
+		else if (rec.type == 0x80/*THEADR*/ || rec.type == 0x82/*LHEADR*/) {
 			lenv.log.log(LNKLOG_DEBUG,"OMF file '%s' is an object",path);
 
 			{
 				source_t &src = lenv.sources.get(current_source=lenv.sources.allocate());
 				src.path = path;
+
+				/* THEADR/LHEADR contains a single string */
+				src.name = rec.data.glenstr();
 			}
 		}
 
@@ -515,9 +534,10 @@ int main(int argc,char **argv) {
 
 	fprintf(stderr,"Sources:\n");
 	for (auto si=lenv.sources.ref.begin();si!=lenv.sources.ref.end();si++) {
-		fprintf(stderr,"  [%lu]: path='%s' index=%ld fileofs=%ld\n",
+		fprintf(stderr,"  [%lu]: path='%s' name='%s' index=%ld fileofs=%ld\n",
 			(unsigned long)(si - lenv.sources.ref.begin()),
 			(*si).path.c_str(),
+			(*si).name.c_str(),
 			(signed long)((*si).index),
 			(signed long)((*si).file_offset));
 	}
