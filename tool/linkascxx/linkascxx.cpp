@@ -63,6 +63,56 @@ namespace DOSLIBLinker {
 			FILE*				fp = NULL;
 	};
 
+	template <typename T> class _base_handlearray {
+		public:
+			static constexpr size_t			undef = ~((size_t)(0ul));
+			typedef T				ent_type;
+			typedef size_t				ref_type;
+			std::vector<T>				ref;
+		public:
+			inline size_t size(void) const { return ref.size(); }
+		public:
+			bool exists(const size_t r) const {
+				return r < ref.size();
+			}
+
+			const T &get(const size_t r) const {
+				return ref.at(r); /* std::vector will throw an exception if out of range */
+			}
+
+			T &get(const size_t r) {
+				return ref.at(r); /* std::vector will throw an exception if out of range */
+			}
+
+			size_t allocate(void) {
+				const size_t r = ref.size();
+				ref.emplace(ref.end());
+				return r;
+			}
+
+			size_t allocate(const T &val) {
+				const size_t r = ref.size();
+				ref.emplace(ref.end(),val);
+				return r;
+			}
+	};
+
+	struct source_t {
+		public:
+			std::string				path;
+			size_t					index = ~((size_t)(0ul));
+			off_t					file_offset = off_t(0ul) - off_t(1ul);
+	};
+	typedef _base_handlearray<source_t> source_list_t;
+	typedef source_list_t::ref_type source_ref_t;
+
+	class linkenv {
+		public:
+			source_list_t				sources;
+		public:
+			log_t					log;
+	};
+
 }
 
 namespace DOSLIBLinker {
@@ -232,6 +282,16 @@ namespace DOSLIBLinker {
 			bool		read(OMF_record &rec,file_io &fio,log_t &log);
 	};
 
+	class OMF_reader {
+		public:
+			source_ref_t			current_source = source_list_t::undef;
+			OMF_record_reader		recrdr;
+		public:
+			void				clear(void);
+			bool				read(linkenv &lenv,const char *path);
+			bool				read(linkenv &lenv,file_io &fio,const char *path);
+	};
+
 }
 
 namespace DOSLIBLinker {
@@ -390,11 +450,78 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	void OMF_reader::clear(void) {
+		current_source = source_list_t::undef;
+		recrdr.clear();
+	}
+
+	bool OMF_reader::read(linkenv &lenv,const char *path) {
+		file_stdio_io fio(path);
+		if (fio.ok()) {
+			return read(lenv,fio,path);
+		}
+		else {
+			lenv.log.log(LNKLOG_ERROR,"OMF reader: Unable to open and read '%s'",path);
+			return false;
+		}
+	}
+
+	bool OMF_reader::read(linkenv &lenv,file_io &fio,const char *path) {
+		OMF_record rec;
+
+		recrdr.clear();
+
+		if (!recrdr.read(rec,fio,lenv.log)) {
+			lenv.log.log(LNKLOG_ERROR,"Unable to read first OMF record in '%s'",path);
+			return false;
+		}
+
+		if (recrdr.is_library) {
+			size_t module_index = 0;
+
+			lenv.log.log(LNKLOG_DEBUG,"OMF file '%s' is a library",path);
+
+			while (recrdr.read(rec,fio,lenv.log)) {
+				if (rec.type == 0x80/*THEADR*/ || rec.type == 0x82/*LHEADR*/) {
+					source_t &src = lenv.sources.get(current_source=lenv.sources.allocate());
+					src.file_offset = rec.file_offset;
+					src.index = module_index++;
+					src.path = path;
+				}
+			}
+		}
+		else {
+			lenv.log.log(LNKLOG_DEBUG,"OMF file '%s' is an object",path);
+
+			{
+				source_t &src = lenv.sources.get(current_source=lenv.sources.allocate());
+				src.path = path;
+			}
+		}
+
+		return true;
+	}
+
 }
 
 int main(int argc,char **argv) {
 	(void)argc;
 	(void)argv;
+	DOSLIBLinker::linkenv lenv;
+	DOSLIBLinker::OMF_reader omfr;
+	lenv.log.min_level = DOSLIBLinker::LNKLOG_DEBUGMORE;
+	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0014.obj")) fprintf(stderr,"Failed to read 0014.obj\n");
+	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86l/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
+
+	fprintf(stderr,"Sources:\n");
+	for (auto si=lenv.sources.ref.begin();si!=lenv.sources.ref.end();si++) {
+		fprintf(stderr,"  [%lu]: path='%s' index=%ld fileofs=%ld\n",
+			(unsigned long)(si - lenv.sources.ref.begin()),
+			(*si).path.c_str(),
+			(signed long)((*si).index),
+			(signed long)((*si).file_offset));
+	}
+
 	return 0;
 }
 
