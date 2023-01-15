@@ -177,10 +177,96 @@ namespace DOSLIBLinker {
 
 	typedef string_table_t::ref_type string_ref_t;
 
+	typedef uint64_t					alignment_t;
+	static constexpr alignment_t				alignment_undef = 0;
+
+	static inline constexpr alignment_t alignment2mask(const alignment_t b) {
+		return ~(b - alignment_t(1u));
+	}
+
+	static inline constexpr alignment_t alignmask2value(const alignment_t b) {
+		return (~b) + alignment_t(1u);
+	}
+
+	static constexpr alignment_t				byte_alignment = alignment2mask(1);
+	static constexpr alignment_t				word_alignment = alignment2mask(2);
+	static constexpr alignment_t				dword_alignment = alignment2mask(4);
+	static constexpr alignment_t				qword_alignment = alignment2mask(8);
+	static constexpr alignment_t				para_alignment = alignment2mask(16);
+	static constexpr alignment_t				page256_alignment = alignment2mask(256);
+	static constexpr alignment_t				page4k_alignment = alignment2mask(4096);
+
+	typedef int64_t						segment_size_t;
+	static constexpr segment_size_t				segment_size_undef = int64_t(-0x8000000000000000ll);
+
+	typedef uint32_t					segment_flags_t;
+	static constexpr segment_flags_t			SEGFLAG_DELETED =        segment_flags_t(1u) << segment_flags_t(0u);
+	static constexpr segment_flags_t			SEGFLAG_NOEMIT =         segment_flags_t(1u) << segment_flags_t(1u);
+	static constexpr segment_flags_t			SEGFLAG_PRIVATE =        segment_flags_t(1u) << segment_flags_t(2u);
+	static constexpr segment_flags_t			SEGFLAG_PUBLIC =         segment_flags_t(1u) << segment_flags_t(3u);
+	static constexpr segment_flags_t			SEGFLAG_STACK =          segment_flags_t(1u) << segment_flags_t(4u);
+	static constexpr segment_flags_t			SEGFLAG_COMMON =         segment_flags_t(1u) << segment_flags_t(5u);
+	static constexpr segment_flags_t			SEGFLAG_ABSOLUTEFRAME =  segment_flags_t(1u) << segment_flags_t(6u); // segmentframe is absolute segment value
+	static constexpr segment_flags_t			SEGFLAG_ABSOLUTEOFFS =   segment_flags_t(1u) << segment_flags_t(7u); // segmentoffset is absolute offset value
+	static constexpr segment_flags_t			SEGFLAG_COMBINEABLE =    segment_flags_t(1u) << segment_flags_t(8u);
+
+	typedef uint16_t					cpu_model_t;
+	static constexpr cpu_model_t				cpu_model_undef = 0;
+	static constexpr cpu_model_t				CPUMODEL_X86_16BIT = 0x0102;
+	static constexpr cpu_model_t				CPUMODEL_X86_32BIT = 0x0104;
+	static constexpr cpu_model_t				CPUMODEL_X86_64BIT = 0x0108;
+
+	typedef int32_t						segment_frame_t;
+	static constexpr segment_frame_t			segment_frame_undef = int32_t(-0x80000000l);
+
+	typedef int64_t						segment_offset_t;
+	static constexpr int64_t				segment_offset_undef = int64_t(-0x8000000000000000ll);
+
+	typedef uint32_t					segment_fragment_flags_t;
+	static constexpr segment_fragment_flags_t		SEGFRAGFL_OFFSET_BY_ORG = segment_fragment_flags_t(1u) << segment_fragment_flags_t(0u); // offset set by MASM ORG directive
+
+	struct segment_fragment_t {
+		public:
+			segment_offset_t			segmentoffset = segment_offset_undef; // assigned offset of fragment within segment counting from segment_t.segmentoffset
+			segment_size_t				fragmentsize = segment_size_undef; /* size of fragment, which may be larger than the data array */
+			source_ref_t				source = source_list_t::undef; /* source of fragment */
+			alignment_t				alignment = alignment_undef;
+			segment_fragment_flags_t		flags = 0;
+			std::vector<uint8_t>			data;
+	};
+
+	typedef _base_handlearray<segment_fragment_t> segment_fragment_list_t;
+	typedef segment_fragment_list_t::ref_type segment_fragment_ref_t;
+
+	struct segment_t {
+		public:
+			string_ref_t				segmentname = string_table_t::undef;
+			string_ref_t				groupname = string_table_t::undef;
+			string_ref_t				classname = string_table_t::undef;
+			string_ref_t				overlayname = string_table_t::undef;
+			alignment_t				alignment = alignment_undef;
+			segment_size_t				segmentsize = segment_size_undef;
+			segment_offset_t			segmentoffset = segment_offset_undef;
+			segment_frame_t				segmentframe = segment_frame_undef;
+			cpu_model_t				cpumodel = cpu_model_undef;
+			source_ref_t				source = source_list_t::undef; /* source of segment, undef if combined from fragments of multiple sources */
+			segment_flags_t				flags = 0;
+			segment_fragment_list_t			fragments;
+	};
+
+	typedef _base_handlearray<segment_t> segment_list_t;
+	typedef segment_list_t::ref_type segment_ref_t;
+
+	struct segment_and_fragment_ref_t {
+		segment_ref_t					seg = segment_list_t::undef;
+		segment_fragment_ref_t				frag = segment_fragment_list_t::undef;
+	};
+
 	class linkenv {
 		public:
 			source_list_t				sources;
 			string_table_t				strings;
+			segment_list_t				segments;
 		public:
 			log_t					log;
 	};
@@ -359,9 +445,13 @@ namespace DOSLIBLinker {
 		public:
 			typedef _base_handlearray<string_ref_t> LNAMES_list_t;
 			typedef LNAMES_list_t::ref_type LNAME_ref_t;
+
+			typedef _base_handlearray<segment_ref_t> SEGDEF_list_t;
+			typedef SEGDEF_list_t::ref_type SEGDEF_ref_t;
 		public:
 			source_ref_t			current_source = source_list_t::undef;
 			LNAMES_list_t			LNAMES;
+			SEGDEF_list_t			SEGDEF;
 			OMF_record_reader		recrdr;
 		public:
 			void				clear(void);
@@ -369,6 +459,7 @@ namespace DOSLIBLinker {
 			bool				read(linkenv &lenv,file_io &fio,const char *path);
 			bool				read_module(linkenv &lenv,file_io &fio);
 			bool				read_rec_LNAMES(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_SEGDEF(linkenv &lenv,OMF_record &fio);
 	};
 
 }
@@ -615,6 +706,131 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::read_rec_SEGDEF(linkenv &lenv,OMF_record &rec) {
+		const bool fmt32 = (rec.type == 0x99/*SEGDEF32*/);
+
+		/* allocate a new segment */
+		const segment_ref_t newsegref = lenv.segments.allocate();
+		segment_t &newseg = lenv.segments.get(newsegref);
+
+		/* keep track of this module's SEGDEFs vs the global linker state */
+		SEGDEF.allocate(newsegref);
+
+		/* <segment attributes> <segment length> <segment name index> <class name index> <overlay name index> */
+
+		/* <alignment 7:5> <combine 4:2> <big 1:1> <P 0:0> */
+		const uint8_t attr = rec.data.gb();
+
+		/* alignment */
+		switch ((attr >> 5u) & 7u) { /* 7:5 */
+			case 0: /* absolute segment <frame number> <offset> */
+				newseg.flags |= SEGFLAG_ABSOLUTEFRAME | SEGFLAG_ABSOLUTEOFFS;
+				newseg.segmentframe = rec.data.gw();
+				newseg.segmentoffset = rec.data.gb();
+				newseg.alignment = byte_alignment;
+				break;
+			case 1:
+				newseg.alignment = byte_alignment;
+				break;
+			case 2:
+				newseg.alignment = word_alignment;
+				break;
+			case 3:
+				newseg.alignment = para_alignment;
+				break;
+			case 4:
+				newseg.alignment = page4k_alignment;
+				break;
+			case 5:
+				newseg.alignment = dword_alignment;
+				break;
+			default:
+				lenv.log.log(LNKLOG_ERROR,"Unknown alignment code in SEGDEF");
+				return false;
+		};
+
+		/* combination */
+		switch ((attr >> 2u) & 7u) { /* 4:2 */
+			case 0:
+				newseg.flags |= SEGFLAG_PRIVATE;
+				break;
+			case 2:
+			case 4:
+			case 7:
+				newseg.flags |= SEGFLAG_PUBLIC | SEGFLAG_COMBINEABLE;
+				break;
+			case 5:
+				newseg.flags |= SEGFLAG_PUBLIC | SEGFLAG_STACK | SEGFLAG_COMBINEABLE;
+				break;
+			case 6:
+				newseg.flags |= SEGFLAG_PUBLIC | SEGFLAG_COMMON | SEGFLAG_COMBINEABLE;
+				break;
+			default:
+				lenv.log.log(LNKLOG_ERROR,"Unknown combination code in SEGDEF");
+				return false;
+		}
+
+		/* "Big". This is a way to extend the segment size field to allow 0x10000 or 0x100000000 which is otherwise impossible. */
+		if (attr & 2u)
+			newseg.segmentsize = fmt32 ? segment_size_t(0x100000000) : segment_size_t(0x10000);
+		else
+			newseg.segmentsize = 0;
+
+		/* "P" bit. This is set when you use USE32 in your assembler */
+		if (attr & 1u)
+			newseg.cpumodel = CPUMODEL_X86_32BIT;
+		else
+			newseg.cpumodel = CPUMODEL_X86_16BIT;
+
+		/* segment size */
+		newseg.segmentsize += fmt32 ? rec.data.gd() : rec.data.gw();
+
+		/* segment name index, which is an index into this module's LNAMES */
+		{
+			const size_t nameidx = from1based(rec.data.gidx());
+			if (LNAMES.exists(nameidx)) { /* must exist */
+				/* the LNAMES index must refer to a valid string index or else that means a bug occurred in this code */
+				newseg.segmentname = LNAMES.get(nameidx);
+			}
+			else {
+				lenv.log.log(LNKLOG_ERROR,"SEGDEF with invalid name index");
+				return false;
+			}
+		}
+
+		/* class name index, which is an index into this module's LNAMES */
+		{
+			const size_t nameidx = from1based(rec.data.gidx());
+			if (LNAMES.exists(nameidx)) { /* must exist */
+				/* the LNAMES index must refer to a valid string index or else that means a bug occurred in this code */
+				newseg.classname = LNAMES.get(nameidx);
+			}
+			else {
+				lenv.log.log(LNKLOG_ERROR,"SEGDEF with invalid class index");
+				return false;
+			}
+		}
+
+		/* overlay name index, which is an index into this module's LNAMES */
+		{
+			const size_t nameidx = from1based(rec.data.gidx());
+			if (nameidx == 0) { /* may or may not exist */
+				/* leave it undef */
+			}
+			else if (LNAMES.exists(nameidx)) {
+				/* the LNAMES index must refer to a valid string index or else that means a bug occurred in this code */
+				newseg.overlayname = LNAMES.get(nameidx);
+			}
+			else {
+				lenv.log.log(LNKLOG_ERROR,"SEGDEF with invalid overlay index");
+				return false;
+			}
+		}
+
+		newseg.source = current_source;
+		return true;
+	}
+
 	bool OMF_reader::read_module(linkenv &lenv,file_io &fio) {
 		OMF_record rec;
 
@@ -638,6 +854,12 @@ namespace DOSLIBLinker {
 					return false;
 				}
 			}
+			else if (rec.type == 0x98/*SEGDEF*/ || rec.type == 0x99/*SEGDEF32*/) {
+				if (!read_rec_SEGDEF(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading SEGDEF");
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -652,6 +874,7 @@ int main(int argc,char **argv) {
 	DOSLIBLinker::OMF_reader omfr;
 	lenv.log.min_level = DOSLIBLinker::LNKLOG_DEBUGMORE;
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0014.obj")) fprintf(stderr,"Failed to read 0014.obj\n");
+	if (!omfr.read(lenv,"/usr/src/doslib/hw/dos/dos386f/dos.lib")) fprintf(stderr,"Failed to read dos.lib\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86l/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
 
 	fprintf(stderr,"Sources:\n");
@@ -663,6 +886,56 @@ int main(int argc,char **argv) {
 			(signed long)((*si).index),
 			(signed long)((*si).file_offset));
 	}
+
+	fprintf(stderr,"Segments:\n");
+	for (auto si=lenv.segments.ref.begin();si!=lenv.segments.ref.end();si++) {
+		const auto &seg = *si;
+
+		fprintf(stderr,"  [%lu]: name='%s' group='%s' class='%s' overlay='%s'\n",
+			(unsigned long)(si - lenv.segments.ref.begin()),
+			(seg.segmentname != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.segmentname).c_str() : "(undef)",
+			(seg.groupname   != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.groupname  ).c_str() : "(undef)",
+			(seg.classname   != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.classname  ).c_str() : "(undef)",
+			(seg.overlayname != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.overlayname).c_str() : "(undef)");
+		fprintf(stderr,"    alignment: mask=0x%lx value=%lu\n",
+			(unsigned long)seg.alignment,(unsigned long)DOSLIBLinker::alignmask2value(seg.alignment));
+		if (seg.segmentsize != DOSLIBLinker::segment_size_undef)
+			fprintf(stderr,"    size: 0x%lx bytes\n",(unsigned long)seg.segmentsize);
+		if (seg.segmentoffset != DOSLIBLinker::segment_offset_undef)
+			fprintf(stderr,"    offset: 0x%lx bytes\n",(unsigned long)seg.segmentoffset);
+		if (seg.segmentframe != DOSLIBLinker::segment_frame_undef)
+			fprintf(stderr,"    frame: 0x%lx bytes\n",(unsigned long)seg.segmentframe);
+		if (seg.source != DOSLIBLinker::source_list_t::undef) {
+			const auto &src = lenv.sources.get(seg.source);
+			fprintf(stderr,"    source: path='%s' name='%s' index=%ld offset=%ld\n",
+				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
+		}
+		if (seg.cpumodel != DOSLIBLinker::cpu_model_undef) {
+			fprintf(stderr,"    CPU model: ");
+			switch (seg.cpumodel) {
+				case DOSLIBLinker::CPUMODEL_X86_16BIT: fprintf(stderr,"80x86 16-bit"); break;
+				case DOSLIBLinker::CPUMODEL_X86_32BIT: fprintf(stderr,"80x86 32-bit"); break;
+				case DOSLIBLinker::CPUMODEL_X86_64BIT: fprintf(stderr,"80x86 64-bit"); break;
+				default: fprintf(stderr,"Unknown 0x%x",(unsigned)seg.cpumodel); break;
+			}
+			fprintf(stderr,"\n");
+		}
+		fprintf(stderr,"    flags:");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_DELETED)       fprintf(stderr," DELETED");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_NOEMIT)        fprintf(stderr," NOEMIT");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_PRIVATE)       fprintf(stderr," PRIVATE");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_PUBLIC)        fprintf(stderr," PUBLIC");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_STACK)         fprintf(stderr," STACK");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_COMMON)        fprintf(stderr," COMMON");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_ABSOLUTEFRAME) fprintf(stderr," ABSOLUTEFRAME");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_ABSOLUTEOFFS)  fprintf(stderr," ABSOLUTEOFFS");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_COMBINEABLE)   fprintf(stderr," COMBINEABLE");
+		fprintf(stderr,"\n");
+	}
+
+	fprintf(stderr,"Strings:\n");
+	for (auto si=lenv.strings.ref.begin();si!=lenv.strings.ref.end();si++)
+		fprintf(stderr,"  [%lu]: '%s'\n",(unsigned long)(si - lenv.strings.ref.begin()),(*si).c_str());
 
 	return 0;
 }
