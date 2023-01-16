@@ -262,11 +262,21 @@ namespace DOSLIBLinker {
 		segment_fragment_ref_t				frag = segment_fragment_list_t::undef;
 	};
 
+	struct group_t {
+		public:
+			string_ref_t				groupname = string_table_t::undef;
+			source_ref_t				source = source_list_t::undef; /* source of segment, undef if combined from fragments of multiple sources */
+	};
+
+	typedef _base_handlearray<group_t> group_list_t;
+	typedef group_list_t::ref_type group_ref_t;
+
 	class linkenv {
 		public:
 			source_list_t				sources;
 			string_table_t				strings;
 			segment_list_t				segments;
+			group_list_t				groups;
 		public:
 			log_t					log;
 	};
@@ -448,10 +458,14 @@ namespace DOSLIBLinker {
 
 			typedef _base_handlearray<segment_ref_t> SEGDEF_list_t;
 			typedef SEGDEF_list_t::ref_type SEGDEF_ref_t;
+
+			typedef _base_handlearray<group_ref_t> GRPDEF_list_t;
+			typedef GRPDEF_list_t::ref_type GRPDEF_ref_t;
 		public:
 			source_ref_t			current_source = source_list_t::undef;
 			LNAMES_list_t			LNAMES;
 			SEGDEF_list_t			SEGDEF;
+			GRPDEF_list_t			GRPDEF;
 			OMF_record_reader		recrdr;
 		public:
 			void				clear(void);
@@ -459,7 +473,8 @@ namespace DOSLIBLinker {
 			bool				read(linkenv &lenv,file_io &fio,const char *path);
 			bool				read_module(linkenv &lenv,file_io &fio);
 			bool				read_rec_LNAMES(linkenv &lenv,OMF_record &rec);
-			bool				read_rec_SEGDEF(linkenv &lenv,OMF_record &fio);
+			bool				read_rec_SEGDEF(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_GRPDEF(linkenv &lenv,OMF_record &rec);
 	};
 
 }
@@ -633,6 +648,8 @@ namespace DOSLIBLinker {
 
 	void OMF_reader::clear(void) {
 		current_source = source_list_t::undef;
+		SEGDEF.clear();
+		GRPDEF.clear();
 		LNAMES.clear();
 		recrdr.clear();
 	}
@@ -831,10 +848,66 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::read_rec_GRPDEF(linkenv &lenv,OMF_record &rec) {
+		/* allocate a new group */
+		const group_ref_t newgrpref = lenv.groups.allocate();
+		group_t &newgrp = lenv.groups.get(newgrpref);
+
+		/* keep track of this module's GRPDEFs vs the global linker state */
+		GRPDEF.allocate(newgrpref);
+
+		/* <groupnameidx> [ <0xFF> <SEGDEF idx> [ ... ] ] */
+
+		/* group name index, which is an index into this module's LNAMES */
+		{
+			const size_t nameidx = from1based(rec.data.gidx());
+			if (LNAMES.exists(nameidx)) { /* must exist */
+				/* the LNAMES index must refer to a valid string index or else that means a bug occurred in this code */
+				newgrp.groupname = LNAMES.get(nameidx);
+			}
+			else {
+				return false;
+			}
+		}
+
+		while (!rec.data.eof()) {
+			const uint8_t typ = rec.data.gb();
+
+			if (typ == 0xFF) {
+				const size_t segidx = from1based(rec.data.gidx());
+				if (SEGDEF.exists(segidx)) {
+					/* the SEGDEF index must exist or else that means a bug occurred in this code */
+					auto &segdef = lenv.segments.get(SEGDEF.get(segidx));
+					/* mark the segment as having membership of this group, unless the segment was already marked */
+					if (segdef.groupname == string_table_t::undef) {
+						segdef.groupname = newgrp.groupname;
+					}
+					else if (segdef.groupname != newgrp.groupname) {
+						lenv.log.log(LNKLOG_ERROR,"GRPDEF assigns membership of a SEGDEF that has already been given membership of another GRPDEF");
+						return false;
+					}
+				}
+				else {
+					lenv.log.log(LNKLOG_ERROR,"GRPDEF refers to invalid SEGDEF index");
+					return false;
+				}
+			}
+			else {
+				lenv.log.log(LNKLOG_ERROR,"GRPDEF with unsupported index value %02x",typ);
+				return false;
+			}
+		}
+
+		newgrp.source = current_source;
+		return true;
+	}
+
 	bool OMF_reader::read_module(linkenv &lenv,file_io &fio) {
 		OMF_record rec;
 
-		/* each module has it's own LNAMES */
+		/* each module has it's own LNAMES, SEGDEF, GRPDEF */
+		SEGDEF.clear();
+		GRPDEF.clear();
 		LNAMES.clear();
 
 		/* caller has already read THEADR/LHEADR, read until MODEND */
@@ -860,6 +933,12 @@ namespace DOSLIBLinker {
 					return false;
 				}
 			}
+			else if (rec.type == 0x9A/*GRPDEF*/) {
+				if (!read_rec_GRPDEF(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading GRPDEF");
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -876,6 +955,7 @@ int main(int argc,char **argv) {
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0014.obj")) fprintf(stderr,"Failed to read 0014.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/dos/dos386f/dos.lib")) fprintf(stderr,"Failed to read dos.lib\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86l/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
+	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86s/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
 
 	fprintf(stderr,"Sources:\n");
 	for (auto si=lenv.sources.ref.begin();si!=lenv.sources.ref.end();si++) {
@@ -931,6 +1011,17 @@ int main(int argc,char **argv) {
 		if (seg.flags & DOSLIBLinker::SEGFLAG_ABSOLUTEOFFS)  fprintf(stderr," ABSOLUTEOFFS");
 		if (seg.flags & DOSLIBLinker::SEGFLAG_COMBINEABLE)   fprintf(stderr," COMBINEABLE");
 		fprintf(stderr,"\n");
+	}
+
+	fprintf(stderr,"Groups:\n");
+	for (auto si=lenv.groups.ref.begin();si!=lenv.groups.ref.end();si++) {
+		const auto &grp = *si;
+		fprintf(stderr,"  [%lu]: '%s'\n",(unsigned long)(si - lenv.groups.ref.begin()),lenv.strings.get(grp.groupname).c_str());
+		if (grp.source != DOSLIBLinker::source_list_t::undef) {
+			const auto &src = lenv.sources.get(grp.source);
+			fprintf(stderr,"    source: path='%s' name='%s' index=%ld offset=%ld\n",
+				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
+		}
 	}
 
 	fprintf(stderr,"Strings:\n");
