@@ -114,6 +114,11 @@ namespace DOSLIBLinker {
 			}
 	};
 
+	/* NTS: All strings, segments, groups, etc. are allocated in a vector and always referred to
+	 *      through a reference (literally just a vector index). By design, you can only allocate
+	 *      from the storage. You cannot delete it, you cannot move it around (that would break
+	 *      the reference). There is a clear() if you need to wipe the slate clean. That is it. */
+
 	class string_table_t {
 		public:
 			static constexpr size_t				undef = ~((size_t)(0ul));
@@ -224,26 +229,40 @@ namespace DOSLIBLinker {
 	typedef int64_t						segment_offset_t;
 	static constexpr int64_t				segment_offset_undef = int64_t(-0x8000000000000000ll);
 
-	typedef uint32_t					segment_fragment_flags_t;
-	static constexpr segment_fragment_flags_t		SEGFRAGFL_OFFSET_BY_ORG = segment_fragment_flags_t(1u) << segment_fragment_flags_t(0u); // offset set by MASM ORG directive
+	typedef uint32_t					fragment_flags_t;
+	static constexpr fragment_flags_t			FRAGFL_OFFSET_BY_ORG = fragment_flags_t(1u) << fragment_flags_t(0u); // offset set by MASM ORG directive
 
-	struct segment_fragment_t {
+	struct segment_t;
+	struct fragment_t;
+	struct group_t;
+
+	typedef _base_handlearray<segment_t> segment_list_t;
+	typedef segment_list_t::ref_type segment_ref_t;
+
+	typedef _base_handlearray<fragment_t> fragment_list_t;
+	typedef fragment_list_t::ref_type fragment_ref_t;
+
+	typedef _base_handlearray<group_t> group_list_t;
+	typedef group_list_t::ref_type group_ref_t;
+
+	/* fragments are allocated from a global table, and everything else merely refers to
+	 * the fragment through a reference. This way you can combine fragments easily when
+	 * joining segments of the same name and such without breaking references */
+	struct fragment_t {
 		public:
+			segment_ref_t				insegment = segment_list_t::undef; // what segment this fragment belongs to
 			segment_offset_t			segmentoffset = segment_offset_undef; // assigned offset of fragment within segment counting from segment_t.segmentoffset
 			segment_size_t				fragmentsize = segment_size_undef; /* size of fragment, which may be larger than the data array */
 			source_ref_t				source = source_list_t::undef; /* source of fragment */
 			alignment_t				alignment = alignment_undef;
-			segment_fragment_flags_t		flags = 0;
+			fragment_flags_t			flags = 0;
 			std::vector<uint8_t>			data;
 	};
-
-	typedef _base_handlearray<segment_fragment_t> segment_fragment_list_t;
-	typedef segment_fragment_list_t::ref_type segment_fragment_ref_t;
 
 	struct segment_t {
 		public:
 			string_ref_t				segmentname = string_table_t::undef;
-			string_ref_t				groupname = string_table_t::undef;
+			group_ref_t				group = group_list_t::undef;
 			string_ref_t				classname = string_table_t::undef;
 			string_ref_t				overlayname = string_table_t::undef;
 			alignment_t				alignment = alignment_undef;
@@ -253,31 +272,22 @@ namespace DOSLIBLinker {
 			cpu_model_t				cpumodel = cpu_model_undef;
 			source_ref_t				source = source_list_t::undef; /* source of segment, undef if combined from fragments of multiple sources */
 			segment_flags_t				flags = 0;
-			segment_fragment_list_t			fragments;
-	};
-
-	typedef _base_handlearray<segment_t> segment_list_t;
-	typedef segment_list_t::ref_type segment_ref_t;
-
-	struct segment_and_fragment_ref_t {
-		segment_ref_t					seg = segment_list_t::undef;
-		segment_fragment_ref_t				frag = segment_fragment_list_t::undef;
+			std::vector<fragment_ref_t>		fragments;
 	};
 
 	struct group_t {
 		public:
 			string_ref_t				groupname = string_table_t::undef;
-			source_ref_t				source = source_list_t::undef; /* source of segment, undef if combined from fragments of multiple sources */
+			source_ref_t				source = source_list_t::undef; /* source of group, undef if combined from multiple sources */
+			std::vector<segment_ref_t>		segments; /* segments with membership in the group */
 	};
-
-	typedef _base_handlearray<group_t> group_list_t;
-	typedef group_list_t::ref_type group_ref_t;
 
 	class linkenv {
 		public:
 			source_list_t				sources;
 			string_table_t				strings;
 			segment_list_t				segments;
+			fragment_list_t				fragments;
 			group_list_t				groups;
 		public:
 			log_t					log;
@@ -888,12 +898,15 @@ namespace DOSLIBLinker {
 				const size_t segidx = from1based(rec.data.gidx());
 				if (SEGDEF.exists(segidx)) {
 					/* the SEGDEF index must exist or else that means a bug occurred in this code */
-					auto &segdef = lenv.segments.get(SEGDEF.get(segidx));
+					const segment_ref_t segref = SEGDEF.get(segidx);
+					auto &segdef = lenv.segments.get(segref);
+					/* track membership */
+					newgrp.segments.push_back(segref);
 					/* mark the segment as having membership of this group, unless the segment was already marked */
-					if (segdef.groupname == string_table_t::undef) {
-						segdef.groupname = newgrp.groupname;
+					if (segdef.group == group_list_t::undef) {
+						segdef.group = newgrpref;
 					}
-					else if (segdef.groupname != newgrp.groupname) {
+					else if (segdef.group != newgrpref) {
 						lenv.log.log(LNKLOG_ERROR,"GRPDEF assigns membership of a SEGDEF that has already been given membership of another GRPDEF");
 						return false;
 					}
@@ -999,7 +1012,7 @@ int main(int argc,char **argv) {
 		fprintf(stderr,"  [%lu]: name='%s' group='%s' class='%s' overlay='%s'\n",
 			(unsigned long)(si - lenv.segments.ref.begin()),
 			(seg.segmentname != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.segmentname).c_str() : "(undef)",
-			(seg.groupname   != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.groupname  ).c_str() : "(undef)",
+			(seg.group       != DOSLIBLinker::group_list_t::undef  ) ? lenv.strings.get(lenv.groups.get(seg.group).groupname).c_str() : "(undef)",
 			(seg.classname   != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.classname  ).c_str() : "(undef)",
 			(seg.overlayname != DOSLIBLinker::string_table_t::undef) ? lenv.strings.get(seg.overlayname).c_str() : "(undef)");
 		fprintf(stderr,"    alignment: mask=0x%lx value=%lu\n",
@@ -1044,6 +1057,12 @@ int main(int argc,char **argv) {
 	for (auto si=lenv.groups.ref.begin();si!=lenv.groups.ref.end();si++) {
 		const auto &grp = *si;
 		fprintf(stderr,"  [%lu]: '%s'\n",(unsigned long)(si - lenv.groups.ref.begin()),lenv.strings.get(grp.groupname).c_str());
+		if (!grp.segments.empty()) {
+			fprintf(stderr,"    segments:");
+			for (auto gsi=grp.segments.begin();gsi!=grp.segments.end();gsi++)
+				fprintf(stderr," [%lu]'%s'",(unsigned long)(*gsi),lenv.strings.get(lenv.segments.get(*gsi).segmentname).c_str());
+			fprintf(stderr,"\n");
+		}
 		if (grp.source != DOSLIBLinker::source_list_t::undef) {
 			const auto &src = lenv.sources.get(grp.source);
 			fprintf(stderr,"    source: path='%s' name='%s' index=%ld offset=%ld\n",
