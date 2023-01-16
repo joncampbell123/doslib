@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
 
@@ -251,7 +252,7 @@ namespace DOSLIBLinker {
 	struct fragment_t {
 		public:
 			segment_ref_t				insegment = segment_list_t::undef; // what segment this fragment has been assigned to
-			segment_offset_t			org_offset = segment_offset_undef; // any specific offset requested by the data (Microsoft MASM ORG directive)
+			segment_offset_t			org_offset = segment_offset_undef; // any specific offset requested by the data (Microsoft MASM ORG directive support)
 			segment_offset_t			segmentoffset = segment_offset_undef; // assigned offset of fragment within segment counting from segment_t.segmentoffset
 			segment_size_t				fragmentsize = segment_size_undef; /* size of fragment, which may be larger than the data array */
 			source_ref_t				source = source_list_t::undef; /* source of fragment */
@@ -491,6 +492,7 @@ namespace DOSLIBLinker {
 			bool				read_rec_LNAMES(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_SEGDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_GRPDEF(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_LEDATA(linkenv &lenv,OMF_record &rec);
 	};
 
 }
@@ -740,6 +742,58 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::read_rec_LEDATA(linkenv &lenv,OMF_record &rec) {
+		const bool fmt32 = (rec.type == 0xA1/*LEDATA32*/);
+
+		/* <segment index> <data offset> <data> */
+		const size_t segidx = from1based(rec.data.gidx());
+		if (!SEGDEF.exists(segidx)) {
+			lenv.log.log(LNKLOG_ERROR,"LEDATA refers to invalid SEGDEF index");
+			return false;
+		}
+		const segment_ref_t segref = SEGDEF.get(segidx);
+		segment_t &sego = lenv.segments.get(segref);
+		const segment_offset_t dataoffset = segment_offset_t(fmt32 ? rec.data.gd() : rec.data.gw());
+
+		if (!rec.data.eof()) {
+			const uint8_t *data = (const uint8_t*)rec.data.data()+rec.data.offset();
+			const size_t datalen = rec.data.remains();
+			assert((data+datalen) == (const uint8_t*)rec.data.data()+rec.data.size());
+			assert(datalen != size_t(0));
+
+			bool newfrag = true;
+
+			if (!sego.fragments.empty()) {
+				const auto &fr = lenv.fragments.get(sego.fragments.back());
+				if ((fr.org_offset+segment_offset_t(fr.data.size())) == dataoffset) newfrag = false;
+			}
+
+			if (newfrag) {
+				fragment_ref_t frref = lenv.fragments.allocate();
+				fragment_t &fr = lenv.fragments.get(frref);
+				sego.fragments.push_back(frref);
+				fr.source = current_source;
+				fr.org_offset = dataoffset;
+				fr.insegment = segref;
+			}
+			else {
+				assert(!sego.fragments.empty());
+			}
+
+			fragment_t &cfr = lenv.fragments.get(sego.fragments.back());
+			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == dataoffset);
+
+			const size_t copyto = cfr.data.size();
+			cfr.data.resize(cfr.data.size()+datalen);
+			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == (dataoffset+segment_offset_t(datalen)));
+
+			assert((copyto+datalen) == cfr.data.size());
+			memcpy((uint8_t*)cfr.data.data()+copyto,data,datalen);
+		}
+
+		return true;
+	}
+
 	bool OMF_reader::read_rec_SEGDEF(linkenv &lenv,OMF_record &rec) {
 		const bool fmt32 = (rec.type == 0x99/*SEGDEF32*/);
 
@@ -967,6 +1021,12 @@ namespace DOSLIBLinker {
 					return false;
 				}
 			}
+			else if (rec.type == 0xA0/*LEDATA*/ || rec.type == 0xA1/*LEDATA32*/) {
+				if (!read_rec_LEDATA(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading LEDATA");
+					return false;
+				}
+			}
 		}
 
 		/* All segments are segmented model, unless the FLAT GRPDEF was seen */
@@ -1083,6 +1143,56 @@ int main(int argc,char **argv) {
 	fprintf(stderr,"Strings:\n");
 	for (auto si=lenv.strings.ref.begin();si!=lenv.strings.ref.end();si++)
 		fprintf(stderr,"  [%lu]: '%s'\n",(unsigned long)(si - lenv.strings.ref.begin()),(*si).c_str());
+
+	fprintf(stderr,"Fragments:\n");
+	for (auto fi=lenv.fragments.ref.begin();fi!=lenv.fragments.ref.end();fi++) {
+		const auto &fr = *fi;
+
+		fprintf(stderr,"  [%lu] segment[%lu]'%s'",
+			(unsigned long)(fi-lenv.fragments.ref.begin()),
+			(unsigned long)(fr.insegment),
+			(fr.insegment != DOSLIBLinker::segment_list_t::undef) ? lenv.strings.get(lenv.segments.get(fr.insegment).segmentname).c_str() : "");
+		if (fr.org_offset != DOSLIBLinker::segment_offset_undef)
+			fprintf(stderr," org_offset=0x%lx",(unsigned long)fr.org_offset);
+		if (fr.segmentoffset != DOSLIBLinker::segment_offset_undef)
+			fprintf(stderr," segmentoffset=0x%lx",(unsigned long)fr.org_offset);
+		if (fr.fragmentsize != DOSLIBLinker::segment_size_undef)
+			fprintf(stderr," fragsize=0x%lx",(unsigned long)fr.fragmentsize);
+		if (fr.alignment != DOSLIBLinker::alignment_undef)
+			fprintf(stderr," alignmask=0x%lx(%lu bytes)",(unsigned long)fr.alignment,(unsigned long)DOSLIBLinker::alignmask2value(fr.alignment));
+		fprintf(stderr,"\n");
+
+		if (fr.source != DOSLIBLinker::source_list_t::undef) {
+			const auto &src = lenv.sources.get(fr.source);
+			fprintf(stderr,"  source: path='%s' name='%s' index=%ld offset=%ld\n",
+				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
+		}
+
+		if (!fr.data.empty()) {
+			size_t si = 0;
+			unsigned char col = 0;
+			DOSLIBLinker::segment_offset_t addr = fr.org_offset;
+			if (addr == DOSLIBLinker::segment_offset_undef) addr = DOSLIBLinker::segment_offset_t(0);
+
+			fprintf(stderr,"  Data [%08lx-%08lx]:\n",(unsigned long)addr,(unsigned long)addr+(unsigned long)fr.data.size()-1ul);
+			while (si < fr.data.size()) {
+				if (col == 0) fprintf(stderr,"    %08lx:",(unsigned long)addr & DOSLIBLinker::para_alignment);
+				if (col == ((unsigned char)addr & 0xFu)) {
+					fprintf(stderr," %02x",fr.data[si]);
+					addr++;
+					si++;
+				}
+				else {
+					fprintf(stderr,"   ");
+				}
+				if ((++col) == 16) {
+					fprintf(stderr,"\n");
+					col = 0;
+				}
+			}
+			if (col != 0) fprintf(stderr,"\n");
+		}
+	}
 
 	return 0;
 }
