@@ -205,7 +205,7 @@ namespace DOSLIBLinker {
 	static constexpr segment_size_t				segment_size_undef = int64_t(-0x8000000000000000ll);
 
 	typedef uint32_t					segment_flags_t;
-	static constexpr segment_flags_t			SEGFLAG_DELETED =        segment_flags_t(1u) << segment_flags_t(0u);
+	static constexpr segment_flags_t			SEGFLAG_DELETED =        segment_flags_t(1u) << segment_flags_t(0u); // removed, usually when merging with another
 	static constexpr segment_flags_t			SEGFLAG_NOEMIT =         segment_flags_t(1u) << segment_flags_t(1u);
 	static constexpr segment_flags_t			SEGFLAG_PRIVATE =        segment_flags_t(1u) << segment_flags_t(2u);
 	static constexpr segment_flags_t			SEGFLAG_PUBLIC =         segment_flags_t(1u) << segment_flags_t(3u);
@@ -289,6 +289,7 @@ namespace DOSLIBLinker {
 			segment_list_t				segments;
 			fragment_list_t				fragments;
 			group_list_t				groups;
+			std::vector<segment_ref_t>		segment_order;
 		public:
 			log_t					log;
 	};
@@ -744,6 +745,7 @@ namespace DOSLIBLinker {
 		/* allocate a new segment */
 		const segment_ref_t newsegref = lenv.segments.allocate();
 		segment_t &newseg = lenv.segments.get(newsegref);
+		lenv.segment_order.push_back(newsegref);
 
 		/* keep track of this module's SEGDEFs vs the global linker state */
 		SEGDEF.allocate(newsegref);
@@ -1052,6 +1054,13 @@ int main(int argc,char **argv) {
 		if (seg.flags & DOSLIBLinker::SEGFLAG_FLAT)          fprintf(stderr," FLAT");
 		fprintf(stderr,"\n");
 	}
+
+	fprintf(stderr,"Segment order:");
+	for (auto soi=lenv.segment_order.begin();soi!=lenv.segment_order.end();soi++) {
+		const auto &segdef = lenv.segments.get(*soi);
+		fprintf(stderr," [%lu]'%s'",(unsigned long)(*soi),lenv.strings.get(segdef.segmentname).c_str());
+	}
+	fprintf(stderr,"\n");
 
 	fprintf(stderr,"Groups:\n");
 	for (auto si=lenv.groups.ref.begin();si!=lenv.groups.ref.end();si++) {
