@@ -230,7 +230,7 @@ namespace DOSLIBLinker {
 	static constexpr int64_t				segment_offset_undef = int64_t(-0x8000000000000000ll);
 
 	typedef uint32_t					fragment_flags_t;
-	static constexpr fragment_flags_t			FRAGFL_OFFSET_BY_ORG = fragment_flags_t(1u) << fragment_flags_t(0u); // offset set by MASM ORG directive
+	// none defined
 
 	struct segment_t;
 	struct fragment_t;
@@ -250,7 +250,8 @@ namespace DOSLIBLinker {
 	 * joining segments of the same name and such without breaking references */
 	struct fragment_t {
 		public:
-			segment_ref_t				insegment = segment_list_t::undef; // what segment this fragment belongs to
+			segment_ref_t				insegment = segment_list_t::undef; // what segment this fragment has been assigned to
+			segment_offset_t			org_offset = segment_offset_undef; // any specific offset requested by the data (Microsoft MASM ORG directive)
 			segment_offset_t			segmentoffset = segment_offset_undef; // assigned offset of fragment within segment counting from segment_t.segmentoffset
 			segment_size_t				fragmentsize = segment_size_undef; /* size of fragment, which may be larger than the data array */
 			source_ref_t				source = source_list_t::undef; /* source of fragment */
