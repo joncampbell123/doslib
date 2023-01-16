@@ -209,6 +209,8 @@ namespace DOSLIBLinker {
 	static constexpr segment_flags_t			SEGFLAG_ABSOLUTEFRAME =  segment_flags_t(1u) << segment_flags_t(6u); // segmentframe is absolute segment value
 	static constexpr segment_flags_t			SEGFLAG_ABSOLUTEOFFS =   segment_flags_t(1u) << segment_flags_t(7u); // segmentoffset is absolute offset value
 	static constexpr segment_flags_t			SEGFLAG_COMBINEABLE =    segment_flags_t(1u) << segment_flags_t(8u);
+	static constexpr segment_flags_t			SEGFLAG_SEGMENTED =      segment_flags_t(1u) << segment_flags_t(9u);
+	static constexpr segment_flags_t			SEGFLAG_FLAT =           segment_flags_t(1u) << segment_flags_t(10u);
 
 	typedef uint16_t					cpu_model_t;
 	static constexpr cpu_model_t				cpu_model_undef = 0;
@@ -468,6 +470,8 @@ namespace DOSLIBLinker {
 			GRPDEF_list_t			GRPDEF;
 			OMF_record_reader		recrdr;
 		public:
+			GRPDEF_ref_t			special_FLAT_GRPDEF = group_list_t::undef; /* FLAT GRPDEF if any, which also means the memory model is FLAT not SEGMENTED */
+		public:
 			void				clear(void);
 			bool				read(linkenv &lenv,const char *path);
 			bool				read(linkenv &lenv,file_io &fio,const char *path);
@@ -647,6 +651,7 @@ namespace DOSLIBLinker {
 	}
 
 	void OMF_reader::clear(void) {
+		special_FLAT_GRPDEF = GRPDEF_list_t::undef;
 		current_source = source_list_t::undef;
 		SEGDEF.clear();
 		GRPDEF.clear();
@@ -870,6 +875,12 @@ namespace DOSLIBLinker {
 			}
 		}
 
+		/* "FLAT" does not usually list any SEGDEFs but means the address space is flat with no segmentation. */
+		if (lenv.strings.get(newgrp.groupname) == "FLAT") {
+			if (special_FLAT_GRPDEF == group_list_t::undef)
+				special_FLAT_GRPDEF = newgrpref;
+		}
+
 		while (!rec.data.eof()) {
 			const uint8_t typ = rec.data.gb();
 
@@ -906,6 +917,7 @@ namespace DOSLIBLinker {
 		OMF_record rec;
 
 		/* each module has it's own LNAMES, SEGDEF, GRPDEF */
+		special_FLAT_GRPDEF = group_list_t::undef;
 		SEGDEF.clear();
 		GRPDEF.clear();
 		LNAMES.clear();
@@ -938,6 +950,19 @@ namespace DOSLIBLinker {
 					lenv.log.log(LNKLOG_ERROR,"Error reading GRPDEF");
 					return false;
 				}
+			}
+		}
+
+		/* All segments are segmented model, unless the FLAT GRPDEF was seen */
+		for (auto si=SEGDEF.ref.begin();si!=SEGDEF.ref.end();si++) {
+			auto &segref = lenv.segments.get(*si);
+
+			/* if not already marked as either, decide now */
+			if ((segref.flags & (SEGFLAG_FLAT|SEGFLAG_SEGMENTED)) == 0) {
+				if (special_FLAT_GRPDEF != group_list_t::undef)
+					segref.flags |= SEGFLAG_FLAT;
+				else
+					segref.flags |= SEGFLAG_SEGMENTED;
 			}
 		}
 
@@ -1010,6 +1035,8 @@ int main(int argc,char **argv) {
 		if (seg.flags & DOSLIBLinker::SEGFLAG_ABSOLUTEFRAME) fprintf(stderr," ABSOLUTEFRAME");
 		if (seg.flags & DOSLIBLinker::SEGFLAG_ABSOLUTEOFFS)  fprintf(stderr," ABSOLUTEOFFS");
 		if (seg.flags & DOSLIBLinker::SEGFLAG_COMBINEABLE)   fprintf(stderr," COMBINEABLE");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_SEGMENTED)     fprintf(stderr," SEGMENTED");
+		if (seg.flags & DOSLIBLinker::SEGFLAG_FLAT)          fprintf(stderr," FLAT");
 		fprintf(stderr,"\n");
 	}
 
