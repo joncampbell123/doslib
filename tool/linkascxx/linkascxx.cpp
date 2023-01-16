@@ -756,11 +756,6 @@ namespace DOSLIBLinker {
 		const segment_offset_t dataoffset = segment_offset_t(fmt32 ? rec.data.gd() : rec.data.gw());
 
 		if (!rec.data.eof()) {
-			const uint8_t *data = (const uint8_t*)rec.data.data()+rec.data.offset();
-			const size_t datalen = rec.data.remains();
-			assert((data+datalen) == (const uint8_t*)rec.data.data()+rec.data.size());
-			assert(datalen != size_t(0));
-
 			bool newfrag = true;
 
 			if (!sego.fragments.empty()) {
@@ -782,6 +777,11 @@ namespace DOSLIBLinker {
 
 			fragment_t &cfr = lenv.fragments.get(sego.fragments.back());
 			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == dataoffset);
+
+			const uint8_t *data = (const uint8_t*)rec.data.data()+rec.data.offset();
+			const size_t datalen = rec.data.remains();
+			assert((data+datalen) == (const uint8_t*)rec.data.data()+rec.data.size());
+			assert(datalen != size_t(0));
 
 			const size_t copyto = cfr.data.size();
 			cfr.data.resize(cfr.data.size()+datalen);
