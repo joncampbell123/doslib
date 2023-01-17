@@ -1369,7 +1369,7 @@ int main(int argc,char **argv) {
 
 			fprintf(stderr,"  Data [%08lx-%08lx]:\n",(unsigned long)addr,(unsigned long)addr+(unsigned long)fr.data.size()-1ul);
 			while (si < fr.data.size()) {
-				if (col == 0) fprintf(stderr,"    %08lx:",(unsigned long)addr & DOSLIBLinker::para_alignment);
+				if (col == 0) fprintf(stderr,"    %08lx:",(unsigned long)(addr & DOSLIBLinker::para_alignment));
 				if (col == ((unsigned char)addr & 0xFu)) {
 					fprintf(stderr," %02x",fr.data[si]);
 					addr++;
