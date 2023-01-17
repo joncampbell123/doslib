@@ -433,6 +433,7 @@ namespace DOSLIBLinker {
 		public:
 			void rewind(void);
 			bool seek(const size_t o);
+			bool advance(const size_t o);
 			size_t offset(void) const;
 			size_t remains(void) const;
 			bool eof(void) const;
@@ -468,6 +469,13 @@ namespace DOSLIBLinker {
 
 	class OMF_reader {
 		public:
+			struct LIDATA_heap_t {
+				size_t				lidata_offset = ~((size_t)0); /* offset within LIDATA */
+				uint32_t			repeat = 0; /* repeat count */
+				uint8_t				length = 0; /* data length */
+				std::vector<LIDATA_heap_t>	sub_blocks; /* sub blocks ref to index */
+			};
+		public:
 			typedef _base_handlearray<string_ref_t> LNAMES_list_t;
 			typedef LNAMES_list_t::ref_type LNAME_ref_t;
 
@@ -478,6 +486,8 @@ namespace DOSLIBLinker {
 			typedef GRPDEF_list_t::ref_type GRPDEF_ref_t;
 		public:
 			source_ref_t			current_source = source_list_t::undef;
+			std::vector<LIDATA_heap_t>	LIDATA_records; /* LIDATA records converted to vector for FIXUPP later on */
+			size_t				LIDATA_expanded_at; /* offset within fragment LIDATA was expanded to */
 			LNAMES_list_t			LNAMES;
 			SEGDEF_list_t			SEGDEF;
 			GRPDEF_list_t			GRPDEF;
@@ -493,6 +503,11 @@ namespace DOSLIBLinker {
 			bool				read_rec_SEGDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_GRPDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_LEDATA(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_LIDATA(linkenv &lenv,OMF_record &rec);
+		private:
+			bool				read_LIDATA_block(linkenv &lenv,const size_t base_lidata,LIDATA_heap_t &ent,OMF_record &rec,const bool fmt32,const size_t depth=0);
+			void				LIDATA_records_dump_debug(linkenv &lenv,const size_t depth,const std::vector<LIDATA_heap_t> &r);
+			bool				expand_LIDATA_blocks(fragment_t &cfr,size_t &copyto,std::vector<LIDATA_heap_t> &r,const unsigned char *lidata,const size_t lidatasize);
 	};
 
 }
@@ -554,6 +569,10 @@ namespace DOSLIBLinker {
 			readp = size();
 			return false;
 		}
+	}
+
+	bool OMF_record_data::advance(const size_t o) {
+		return seek(readp+o);
 	}
 
 	size_t OMF_record_data::remains(void) const {
@@ -667,6 +686,7 @@ namespace DOSLIBLinker {
 	void OMF_reader::clear(void) {
 		special_FLAT_GRPDEF = GRPDEF_list_t::undef;
 		current_source = source_list_t::undef;
+		LIDATA_records.clear();
 		SEGDEF.clear();
 		GRPDEF.clear();
 		LNAMES.clear();
@@ -742,8 +762,174 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::expand_LIDATA_blocks(fragment_t &cfr,size_t &copyto,std::vector<LIDATA_heap_t> &r,const unsigned char *lidata,const size_t lidatasize) {
+		for (auto ri=r.begin();ri!=r.end();ri++) {
+			auto &ent = *ri;
+
+			if (ent.repeat >= (4*1024*1024)) return false;
+			if ((ent.repeat*size_t(ent.length)) >= (4*1024*1024)) return false;
+			if ((ent.repeat*ent.sub_blocks.size()) >= (4*1024*1024)) return false;
+
+			for (size_t rep=0;rep < ent.repeat;rep++) {
+				/* there can be sub blocks, or data, not both */
+				if (ent.sub_blocks.empty()) {
+					if (ent.length != 0) {
+						assert(copyto == cfr.data.size());
+						assert((size_t(ent.lidata_offset)+size_t(ent.length)) <= lidatasize);
+
+						cfr.data.resize(cfr.data.size()+size_t(ent.length));
+						assert((copyto+size_t(ent.length)) == cfr.data.size());
+						memcpy((void*)(((unsigned char*)cfr.data.data())+copyto),lidata+size_t(ent.lidata_offset),ent.length);
+						copyto += size_t(ent.length);
+						assert(copyto <= cfr.data.size());
+					}
+				}
+				else {
+					if (!expand_LIDATA_blocks(cfr,copyto,ent.sub_blocks,lidata,lidatasize)) return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	bool OMF_reader::read_LIDATA_block(linkenv &lenv,const size_t base_lidata,LIDATA_heap_t &ent,OMF_record &rec,const bool fmt32,const size_t depth) {
+		ent.repeat = fmt32 ? rec.data.gd() : rec.data.gw();
+		const uint16_t block_count = rec.data.gw();
+
+		/* data block = <repeat count> 0 <data length> <data>             -> <data> repeated <repeat count> times
+		 *            = <repeat count> <block count> <data block>         -> [ <block count> entries of type <data block> ] repeated <repeat count> times
+		 *
+		 * Yes, this is recursive. */
+
+		if (ent.repeat == 0) {
+			lenv.log.log(LNKLOG_ERROR,"LIDATA data sub block repeat count == 0");
+			return false;
+		}
+		if (rec.data.eof()) {
+			lenv.log.log(LNKLOG_ERROR,"LIDATA data sub block header unexpected eof");
+			return false; /* either a data byte length or data block follows, an eof here is unexpected */
+		}
+		if (ent.repeat > (4*1024*1024)) {
+			lenv.log.log(LNKLOG_ERROR,"LIDATA data sub block repeat count too large");
+			return false;
+		}
+
+		if (block_count == 0) {
+			ent.length = rec.data.gb();
+			ent.lidata_offset = rec.data.offset() - base_lidata;
+			if (size_t(ent.length) > rec.data.remains()) {
+				lenv.log.log(LNKLOG_ERROR,"LIDATA data block contents truncated");
+				return false;
+			}
+			assert(rec.data.advance(ent.length));
+			assert(rec.data.offset() <= rec.data.size());
+		}
+		else {
+			if (depth >= 8) {
+				lenv.log.log(LNKLOG_ERROR,"LIDATA data sub block recursion too deep");
+				return false;
+			}
+			if (block_count > 1024) {
+				lenv.log.log(LNKLOG_ERROR,"LIDATA data sub block count too large");
+				return false;
+			}
+
+			for (size_t bc=0;bc < block_count;bc++) {
+				ent.sub_blocks.emplace(ent.sub_blocks.end());
+				if (!read_LIDATA_block(lenv,base_lidata,ent.sub_blocks.back(),rec,fmt32,depth+1)) {
+					lenv.log.log(LNKLOG_ERROR,"LIDATA unable to read data sub block");
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	void OMF_reader::LIDATA_records_dump_debug(linkenv &lenv,const size_t depth,const std::vector<LIDATA_heap_t> &r) {
+		std::string pref;
+
+		for (size_t s=0;s < depth;s++) pref += "  ";
+
+		for (auto ri=r.begin();ri!=r.end();ri++) {
+			const auto &ent = *ri;
+
+			lenv.log.log(LNKLOG_DEBUG,"%sEntry: lidataofs=%lu repeat=%lu length=%lu subblocks=%lu",
+				pref.c_str(),(unsigned long)ent.lidata_offset,
+				(unsigned long)ent.repeat,(unsigned long)ent.length,(unsigned long)ent.sub_blocks.size());
+
+			LIDATA_records_dump_debug(lenv,depth+size_t(1u),ent.sub_blocks);
+		}
+	}
+
+	bool OMF_reader::read_rec_LIDATA(linkenv &lenv,OMF_record &rec) {
+		const bool fmt32 = (rec.type == 0xA3/*LEDATA32*/);
+
+		LIDATA_records.clear();
+
+		/* <segment index> <data offset> <data> */
+		const size_t segidx = from1based(rec.data.gidx());
+		if (!SEGDEF.exists(segidx)) {
+			lenv.log.log(LNKLOG_ERROR,"LIDATA refers to invalid SEGDEF index");
+			return false;
+		}
+		const segment_ref_t segref = SEGDEF.get(segidx);
+		segment_t &sego = lenv.segments.get(segref);
+		const segment_offset_t dataoffset = segment_offset_t(fmt32 ? rec.data.gd() : rec.data.gw());
+
+		if (!rec.data.eof()) {
+			bool newfrag = true;
+
+			if (!sego.fragments.empty()) {
+				const auto &fr = lenv.fragments.get(sego.fragments.back());
+				if ((fr.org_offset+segment_offset_t(fr.data.size())) == dataoffset) newfrag = false;
+			}
+
+			if (newfrag) {
+				fragment_ref_t frref = lenv.fragments.allocate();
+				fragment_t &fr = lenv.fragments.get(frref);
+				sego.fragments.push_back(frref);
+				fr.source = current_source;
+				fr.org_offset = dataoffset;
+				fr.insegment = segref;
+			}
+			else {
+				assert(!sego.fragments.empty());
+			}
+
+			fragment_t &cfr = lenv.fragments.get(sego.fragments.back());
+			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == dataoffset);
+
+			const size_t base_lidata = rec.data.offset();
+
+			while (!rec.data.eof()) {
+				LIDATA_records.emplace(LIDATA_records.end());
+				if (!read_LIDATA_block(lenv,base_lidata,LIDATA_records.back(),rec,fmt32)) {
+					lenv.log.log(LNKLOG_ERROR,"LIDATA unable to read data block");
+					return false;
+				}
+			}
+
+			size_t copyto = LIDATA_expanded_at = cfr.data.size();
+			if (!expand_LIDATA_blocks(cfr,copyto,LIDATA_records,(const unsigned char*)rec.data.data()+base_lidata,rec.data.size()-base_lidata)) {
+				lenv.log.log(LNKLOG_ERROR,"LIDATA expansion failed");
+				return false;
+			}
+		}
+
+#if 0
+		lenv.log.log(LNKLOG_DEBUG,"LIDATA:");
+		LIDATA_records_dump_debug(lenv,1,LIDATA_records);
+#endif
+
+		return true;
+	}
+
 	bool OMF_reader::read_rec_LEDATA(linkenv &lenv,OMF_record &rec) {
 		const bool fmt32 = (rec.type == 0xA1/*LEDATA32*/);
+
+		LIDATA_records.clear();
 
 		/* <segment index> <data offset> <data> */
 		const size_t segidx = from1based(rec.data.gidx());
@@ -988,6 +1174,7 @@ namespace DOSLIBLinker {
 
 		/* each module has it's own LNAMES, SEGDEF, GRPDEF */
 		special_FLAT_GRPDEF = group_list_t::undef;
+		LIDATA_records.clear();
 		SEGDEF.clear();
 		GRPDEF.clear();
 		LNAMES.clear();
@@ -1024,6 +1211,12 @@ namespace DOSLIBLinker {
 			else if (rec.type == 0xA0/*LEDATA*/ || rec.type == 0xA1/*LEDATA32*/) {
 				if (!read_rec_LEDATA(lenv,rec)) {
 					lenv.log.log(LNKLOG_ERROR,"Error reading LEDATA");
+					return false;
+				}
+			}
+			else if (rec.type == 0xA2/*LIDATA*/ || rec.type == 0xA3/*LIDATA32*/) {
+				if (!read_rec_LIDATA(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading LIDATA");
 					return false;
 				}
 			}
