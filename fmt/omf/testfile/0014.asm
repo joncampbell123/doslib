@@ -20,6 +20,8 @@ _start:	mov	ax,4C00h
 	int	21h
 	ret
 
+	dw	32 dup(1234h)
+
 	; iterated data
 _iter1:
 	dw	512 dup(_start)
@@ -31,6 +33,8 @@ _iter2:
 	dw	32 dup(_start,_hello)
 
 	db	'Normal data again'
+
+	dw	16 dup(0ABCDh,01234h)
 
 	; iterated data #2
 _iter3:
