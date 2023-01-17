@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include "byteorder.h"
+
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -197,9 +199,7 @@ namespace DOSLIBLinker {
 	static constexpr alignment_t				byte_alignment = alignment2mask(1);
 	static constexpr alignment_t				word_alignment = alignment2mask(2);
 	static constexpr alignment_t				dword_alignment = alignment2mask(4);
-	static constexpr alignment_t				qword_alignment = alignment2mask(8);
 	static constexpr alignment_t				para_alignment = alignment2mask(16);
-	static constexpr alignment_t				page256_alignment = alignment2mask(256);
 	static constexpr alignment_t				page4k_alignment = alignment2mask(4096);
 
 	typedef int64_t						segment_size_t;
