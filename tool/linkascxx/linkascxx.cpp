@@ -781,7 +781,7 @@ namespace DOSLIBLinker {
 						assert((copyto+size_t(ent.length)) == cfr.data.size());
 						memcpy((void*)(((unsigned char*)cfr.data.data())+copyto),lidata+size_t(ent.lidata_offset),ent.length);
 						copyto += size_t(ent.length);
-						assert(copyto <= cfr.data.size());
+						assert(copyto == cfr.data.size());
 					}
 				}
 				else {
