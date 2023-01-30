@@ -233,6 +233,9 @@ namespace DOSLIBLinker {
 	typedef uint32_t					fragment_flags_t;
 	// none defined
 
+	typedef uint32_t					group_flags_t;
+	static constexpr group_flags_t				GRPFLAG_DELETED =        group_flags_t(1u) << group_flags_t(0u); // removed, usually when merging with another
+
 	struct segment_t;
 	struct fragment_t;
 	struct group_t;
@@ -273,12 +276,15 @@ namespace DOSLIBLinker {
 			segment_frame_t				segmentframe = segment_frame_undef;
 			cpu_model_t				cpumodel = cpu_model_undef;
 			source_ref_t				source = source_list_t::undef; /* source of segment, undef if combined from fragments of multiple sources */
+			segment_ref_t				segment_moved_to = segment_list_t::undef; /* if deleted, refer to this segment instead */
 			segment_flags_t				flags = 0;
 			std::vector<fragment_ref_t>		fragments;
 	};
 
 	struct group_t {
 		public:
+			group_flags_t				flags = 0;
+			group_ref_t				group_moved_to = group_list_t::undef; /* if deleted, refer to this group instead */
 			string_ref_t				groupname = string_table_t::undef;
 			source_ref_t				source = source_list_t::undef; /* source of group, undef if combined from multiple sources */
 			std::vector<segment_ref_t>		segments; /* segments with membership in the group */
@@ -1294,6 +1300,12 @@ int main(int argc,char **argv) {
 			}
 			fprintf(stderr,"\n");
 		}
+		if (seg.segment_moved_to != DOSLIBLinker::segment_list_t::undef) {
+			fprintf(stderr,"    Moved to: [%lu]'%s'",
+				(unsigned long)seg.segment_moved_to,
+				lenv.strings.get(lenv.segments.get(seg.segment_moved_to).segmentname).c_str());
+			fprintf(stderr,"\n");
+		}
 		fprintf(stderr,"    flags:");
 		if (seg.flags & DOSLIBLinker::SEGFLAG_DELETED)       fprintf(stderr," DELETED");
 		if (seg.flags & DOSLIBLinker::SEGFLAG_NOEMIT)        fprintf(stderr," NOEMIT");
@@ -1331,6 +1343,16 @@ int main(int argc,char **argv) {
 			fprintf(stderr,"    source: path='%s' name='%s' index=%ld offset=%ld\n",
 				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
 		}
+		if (grp.group_moved_to != DOSLIBLinker::group_list_t::undef) {
+			fprintf(stderr,"    Moved to: [%lu]'%s'",
+				(unsigned long)grp.group_moved_to,
+				lenv.strings.get(lenv.groups.get(grp.group_moved_to).groupname).c_str());
+			fprintf(stderr,"\n");
+		}
+		fprintf(stderr,"    flags:");
+		if (grp.flags & DOSLIBLinker::GRPFLAG_DELETED)       fprintf(stderr," DELETED");
+		fprintf(stderr,"\n");
+
 	}
 
 	fprintf(stderr,"Strings:\n");
