@@ -124,13 +124,29 @@ namespace DOSLIBLinker {
 
 	class string_table_t {
 		public:
-			static constexpr size_t				undef = ~((size_t)(0ul));
-			typedef std::string				ent_type;
-			typedef size_t					ref_type;
-			std::vector<std::string>			ref;
-			std::unordered_map<std::string,size_t>		ref2rev;
+			static constexpr size_t						undef = ~((size_t)(0ul));
+			typedef std::string						ent_type;
+			typedef size_t							ref_type;
+			std::vector<std::string>					ref;
+			std::unordered_map<std::string,size_t>				ref2rev;
+			std::unordered_map<std::string, std::vector<size_t> >		ref2revic;
+		private:
+			const std::vector<size_t>					empty_ric;
 		public:
 			inline size_t size(void) const { return ref.size(); }
+		public:
+			static std::string ic(const std::string &s) {
+				std::string r;
+
+				for (auto si=s.begin();si!=s.end();si++) {
+					if (*si >= 32 && *si < 127)
+						r += toupper(*si);
+					else
+						r += *si;
+				}
+
+				return r;
+			}
 		public:
 			bool exists(const size_t r) const {
 				return r < ref.size();
@@ -140,10 +156,24 @@ namespace DOSLIBLinker {
 				return ref2rev.find(r) != ref2rev.end();
 			}
 
+			/* String "r" must be the return value of the ic() function. This function does not do it for you
+			 * in order to avoid redundant calls to ic() when you are searching for symbols. */
+			bool existsic(const std::string &r) const {
+				return ref2revic.find(r) != ref2revic.end(); /* This will not match anything that wasn't added as case insensitive */
+			}
+
 			size_t lookup(const std::string &r) const {
 				const auto i = ref2rev.find(r);
 				if (i != ref2rev.end()) return i->second;
 				return undef;
+			}
+
+			/* String "r" must be the return value of the ic() function. This function does not do it for you
+			 * in order to avoid redundant calls to ic() when you are searching for symbols. */
+			const std::vector<size_t> &lookupic(const std::string &r) const {
+				const auto i = ref2revic.find(r); /* This will not match anything that wasn't added as case insensitive */
+				if (i != ref2revic.end()) return i->second;
+				return empty_ric;
 			}
 
 			inline const std::string &get(const size_t r) const {
@@ -154,7 +184,7 @@ namespace DOSLIBLinker {
 				return ref.at(r); /* std::vector will throw an exception if out of range */
 			}
 
-			size_t add(const std::string &r) {
+			size_t add(const std::string &r,const bool add_ic=false) {
 				{
 					const auto i = ref2rev.find(r);
 					if (i != ref2rev.end()) return i->second;
@@ -163,13 +193,19 @@ namespace DOSLIBLinker {
 				const size_t ri = ref.size();
 				ref.emplace(ref.end(),r);
 				assert(ref.size() == (ri + size_t(1u)));
+				if (add_ic) ref2revic[ic(r)].push_back(ri);
 				ref2rev[r] = ri;
 				return ri;
+			}
+
+			size_t addic(const std::string &r) {
+				return add(r,/*add_ic=*/true);
 			}
 
 			void clear(void) {
 				ref.clear();
 				ref2rev.clear();
+				ref2revic.clear();
 			}
 	};
 
@@ -1358,6 +1394,29 @@ int main(int argc,char **argv) {
 	fprintf(stderr,"Strings:\n");
 	for (auto si=lenv.strings.ref.begin();si!=lenv.strings.ref.end();si++)
 		fprintf(stderr,"  [%lu]: '%s'\n",(unsigned long)(si - lenv.strings.ref.begin()),(*si).c_str());
+
+	fprintf(stderr,"String to ref:\n");
+	for (auto si=lenv.strings.ref2rev.begin();si!=lenv.strings.ref2rev.end();si++) {
+		fprintf(stderr,"  '%s' -> [%lu]\n",si->first.c_str(),(unsigned long)(si->second));
+		if (si->first != lenv.strings.get(si->second)) {
+			fprintf(stderr,"!!! ERROR: Rev lookup error: key='%s' ref='%s'\n",si->first.c_str(),lenv.strings.get(si->second).c_str());
+			abort();
+		}
+	}
+
+	fprintf(stderr,"String case-insensitive to ref:\n");
+	for (auto si=lenv.strings.ref2revic.begin();si!=lenv.strings.ref2revic.end();si++) {
+		const auto &r = si->second;
+
+		fprintf(stderr,"  '%s' ->\n",si->first.c_str());
+		for (auto ri=r.begin();ri!=r.end();ri++) {
+			fprintf(stderr,"    [%lu] '%s'\n",(unsigned long)(*ri),lenv.strings.get(*ri).c_str());
+			if (si->first != lenv.strings.ic(lenv.strings.get(*ri))) {
+				fprintf(stderr,"!!! ERROR: Rev lookup error: key='%s' ref='%s'\n",si->first.c_str(),lenv.strings.ic(lenv.strings.get(*ri)).c_str());
+				abort();
+			}
+		}
+	}
 
 	fprintf(stderr,"Fragments:\n");
 	for (auto fi=lenv.fragments.ref.begin();fi!=lenv.fragments.ref.end();fi++) {
