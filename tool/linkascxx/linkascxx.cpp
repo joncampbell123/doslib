@@ -267,7 +267,7 @@ namespace DOSLIBLinker {
 	static constexpr int64_t				segment_offset_undef = int64_t(-0x8000000000000000ll);
 
 	typedef uint32_t					fragment_flags_t;
-	// none defined
+	static constexpr fragment_flags_t			FRAGFLAG_EMPTY =         fragment_flags_t(1u) << fragment_flags_t(0u); // it's supposed to be empty (data.size() == 0)
 
 	typedef uint32_t					group_flags_t;
 	static constexpr group_flags_t				GRPFLAG_DELETED =        group_flags_t(1u) << group_flags_t(0u); // removed, usually when merging with another
@@ -352,6 +352,7 @@ namespace DOSLIBLinker {
 			segment_size_t				symbolsize = segment_size_undef; /* size of symbol (COMDEF) */
 			group_ref_t				base_group = group_list_t::undef; /* base group if specified */
 			fragment_ref_t				base_fragment = fragment_list_t::undef; /* base segment if specified (as fragment which then refers to segment) */
+			segment_ref_t				base_segment = segment_list_t::undef; /* base segment (should be resolved to fragment) */
 			segment_frame_t				base_frame_number = segment_frame_undef; /* base frame number if set */
 			segment_offset_t			symbol_offset = segment_offset_undef; /* symbol offset within fragment */
 	};
@@ -561,6 +562,9 @@ namespace DOSLIBLinker {
 
 			typedef _base_handlearray<symbol_ref_t> EXTDEF_list_t; /* and COMDEF */
 			typedef EXTDEF_list_t::ref_type EXTDEF_ref_t;
+
+			typedef _base_handlearray<symbol_ref_t> PUBDEF_list_t;
+			typedef EXTDEF_list_t::ref_type PUBDEF_ref_t;
 		public:
 			source_ref_t			current_source = source_list_t::undef;
 			std::vector<LIDATA_heap_t>	LIDATA_records; /* LIDATA records converted to vector for FIXUPP later on */
@@ -570,6 +574,7 @@ namespace DOSLIBLinker {
 			SEGDEF_list_t			SEGDEF;
 			GRPDEF_list_t			GRPDEF;
 			EXTDEF_list_t			EXTDEF;
+			PUBDEF_list_t			PUBDEF;
 			OMF_record_reader		recrdr;
 		public:
 			GRPDEF_ref_t			special_FLAT_GRPDEF = group_list_t::undef; /* FLAT GRPDEF if any, which also means the memory model is FLAT not SEGMENTED */
@@ -585,7 +590,9 @@ namespace DOSLIBLinker {
 			bool				read_rec_LIDATA(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_EXTDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_COMDEF(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_PUBDEF(linkenv &lenv,OMF_record &rec);
 		private:
+			fragment_ref_t			segdef_offset_to_fragment(linkenv &lenv,const segment_ref_t sref,const segment_offset_t sofs);
 			bool				read_LIDATA_block(linkenv &lenv,const size_t base_lidata,LIDATA_heap_t &ent,OMF_record &rec,const bool fmt32,const size_t depth=0);
 			void				LIDATA_records_dump_debug(linkenv &lenv,const size_t depth,const std::vector<LIDATA_heap_t> &r);
 			bool				expand_LIDATA_blocks(fragment_t &cfr,size_t &copyto,std::vector<LIDATA_heap_t> &r,const unsigned char *lidata,const size_t lidatasize);
@@ -785,6 +792,25 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	fragment_ref_t OMF_reader::segdef_offset_to_fragment(linkenv &lenv,const segment_ref_t sref,const segment_offset_t sofs) {
+		if (lenv.segments.exists(sref)) {
+			const auto &sg = lenv.segments.get(sref);
+
+			for (auto fi=sg.fragments.begin();fi!=sg.fragments.end();fi++) {
+				const auto &fr = lenv.fragments.get(*fi);
+				if (fr.org_offset == segment_offset_undef) continue; /* this OMF reader ALWAYS fills this in */
+
+				segment_size_t frsz = segment_size_t(fr.data.size());
+				if (frsz < fr.fragmentsize) frsz = fr.fragmentsize;
+
+				if (sofs >= fr.org_offset && sofs < (sofs+segment_offset_t(frsz)))
+					return *fi;
+			}
+		}
+
+		return fragment_list_t::undef;
+	}
+
 	void OMF_reader::clear(void) {
 		special_FLAT_GRPDEF = GRPDEF_list_t::undef;
 		LIDATA_last_entry = false;
@@ -793,6 +819,7 @@ namespace DOSLIBLinker {
 		GRPDEF.clear();
 		LNAMES.clear();
 		EXTDEF.clear();
+		PUBDEF.clear();
 		recrdr.clear();
 
 		current_source = source_list_t::undef;
@@ -1022,6 +1049,9 @@ namespace DOSLIBLinker {
 				lenv.log.log(LNKLOG_ERROR,"LIDATA expansion failed");
 				return false;
 			}
+
+			if (cfr.fragmentsize < segment_offset_t(cfr.data.size()))
+				cfr.fragmentsize = segment_offset_t(cfr.data.size());
 		}
 
 #if 0
@@ -1082,6 +1112,82 @@ namespace DOSLIBLinker {
 
 			assert((copyto+datalen) == cfr.data.size());
 			memcpy((uint8_t*)cfr.data.data()+copyto,data,datalen);
+
+			if (cfr.fragmentsize < segment_offset_t(cfr.data.size()))
+				cfr.fragmentsize = segment_offset_t(cfr.data.size());
+		}
+
+		return true;
+	}
+
+	bool OMF_reader::read_rec_PUBDEF(linkenv &lenv,OMF_record &rec) {
+		const bool local = (rec.type == 0xB6/*LPUBDEF*/ || rec.type == 0xB7/*LPUBDEF*/);
+		const bool use32 = (rec.type == 0x91/*PUBDEF*/ || rec.type == 0xB7/*LPUBDEF*/);
+
+		/* <base group index> <base segment index> [ <base frame if group==0 and segment==0> ] */
+		const uint16_t basegroupidx = rec.data.gidx();
+		const uint16_t basesegidx = rec.data.gidx();
+		uint16_t baseframe = 0;
+
+		if (basegroupidx == 0 && basesegidx == 0)
+			baseframe = rec.data.gw();
+
+		/* <public name string> <offset> <type index> */
+		while (!rec.data.eof()) {
+			const std::string namestr = rec.data.glenstr();
+			if (namestr.empty()) {
+				lenv.log.log(LNKLOG_ERROR,"PUBDEF with null name");
+				return false;
+			}
+			const string_ref_t nameref = lenv.strings.add(namestr);
+
+			const uint32_t offset = use32 ? rec.data.gd() : rec.data.gw();
+
+			const uint16_t typeindex = rec.data.gidx();
+			(void)typeindex;//ignored
+
+			/* allocate a new symbol */
+			const symbol_ref_t newsymref = lenv.symbols.allocate();
+			symbol_t &newsym = lenv.symbols.get(newsymref);
+
+			/* keep track of this module's PUBDEFs vs the global linker state */
+			PUBDEF.allocate(newsymref);
+
+			if (local)
+				newsym.flags |= SYMFLAG_LOCAL;
+
+			newsym.symbolname = nameref;
+			newsym.symboltype = symbol_type_public;
+			newsym.symbol_offset = segment_offset_t(offset);
+			newsym.source = current_source;
+
+			if (basegroupidx == 0 && basesegidx == 0) {
+				newsym.base_frame_number = segment_frame_t(baseframe);
+			}
+			else {
+				if (basegroupidx != 0) {
+					if (!GRPDEF.exists(from1based(basegroupidx))) {
+						lenv.log.log(LNKLOG_ERROR,"PUBDEF refers to non-existent GRPDEF");
+						return false;
+					}
+					newsym.base_group = GRPDEF.get(from1based(basegroupidx));
+				}
+				if (basesegidx != 0) {
+					if (!SEGDEF.exists(from1based(basesegidx))) {
+						lenv.log.log(LNKLOG_ERROR,"PUBDEF refers to non-existent SEGDEF");
+						return false;
+					}
+					newsym.base_segment = SEGDEF.get(from1based(basesegidx));
+					/* NTS: This code will match to SEGDEF fragments later. Compilers and assemblers can and often will
+					 *      emit PUBDEFs for a segment prior to any LEDATA/LIDATA chunks. However, the SEGDEF does list
+					 *      the size of the segment and we should worry about whether the offset extends past the end
+					 *      of the segment! At this stage in the OMF loader SEGDEFs have not been combined. */
+					if (newsym.symbol_offset >= lenv.segments.get(newsym.base_segment).segmentsize) {
+						lenv.log.log(LNKLOG_ERROR,"PUBDEF symbol offset lies outside the SEGDEF it belongs to");
+						return false;
+					}
+				}
+			}
 		}
 
 		return true;
@@ -1389,6 +1495,7 @@ namespace DOSLIBLinker {
 		GRPDEF.clear();
 		LNAMES.clear();
 		EXTDEF.clear();
+		PUBDEF.clear();
 
 		/* caller has already read THEADR/LHEADR, read until MODEND */
 		while (1) {
@@ -1404,6 +1511,12 @@ namespace DOSLIBLinker {
 			else if (rec.type == 0x8C/*EXTDEF*/ || rec.type == 0xB4/*LEXTDEF*/ || rec.type == 0xB5/*LEXTDEF*/) {
 				if (!read_rec_EXTDEF(lenv,rec)) {
 					lenv.log.log(LNKLOG_ERROR,"Error reading EXTDEF");
+					return false;
+				}
+			}
+			else if (rec.type == 0x90/*PUBDEF*/ || rec.type == 0x91/*PUBDEF*/ || rec.type == 0xB6/*LPUBDEF*/ || rec.type == 0xB7/*LPUBDEF*/) {
+				if (!read_rec_PUBDEF(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading PUBDEF");
 					return false;
 				}
 			}
@@ -1445,7 +1558,11 @@ namespace DOSLIBLinker {
 			}
 		}
 
-		/* All segments are segmented model, unless the FLAT GRPDEF was seen */
+		/* All segments are segmented model, unless the FLAT GRPDEF was seen.
+		 * If no fragment defined then make one with no data (STACK, BSS)
+		 * because the design of this linker expects to arrange and combine
+		 * segments through appending fragment references, and the symbols
+		 * are expected to reference fragments as well. */
 		for (auto si=SEGDEF.ref.begin();si!=SEGDEF.ref.end();si++) {
 			auto &segref = lenv.segments.get(*si);
 
@@ -1455,6 +1572,38 @@ namespace DOSLIBLinker {
 					segref.flags |= SEGFLAG_FLAT;
 				else
 					segref.flags |= SEGFLAG_SEGMENTED;
+			}
+
+			/* if no fragment defined, make one and mark as NOEMIT since the object file did not provide any data for it */
+			if (segref.fragments.empty()) {
+				segref.flags |= SEGFLAG_NOEMIT;
+
+				const fragment_ref_t fref = lenv.fragments.allocate();
+				segref.fragments.push_back(fref);
+
+				auto &fr = lenv.fragments.get(fref);
+				fr.org_offset = 0;
+				fr.insegment = *si;
+				fr.source = current_source;
+				fr.fragmentsize = segref.segmentsize;
+				fr.flags |= FRAGFLAG_EMPTY;
+			}
+		}
+
+		/* PUBDEFs need to be matched up to the fragment they refer to, not just the segment,
+		 * because fragments make the segment combining easier. At the time of the PUBDEF the
+		 * LEDATA/LIDATA probably hadn't occurred yet making the match up at the time impossible,
+		 * so do it here. */
+		for (auto pi=PUBDEF.ref.begin();pi!=PUBDEF.ref.end();pi++) {
+			auto &sym = lenv.symbols.get(*pi);
+			if (sym.symboltype == symbol_type_public && sym.base_segment != segment_list_t::undef &&
+				sym.base_fragment == fragment_list_t::undef && sym.symbol_offset != segment_offset_undef) {
+				sym.base_fragment = segdef_offset_to_fragment(lenv,sym.base_segment,sym.symbol_offset);
+				if (sym.base_fragment == fragment_list_t::undef) {
+					lenv.log.log(LNKLOG_ERROR,"PUBDEF '%s' unable to match symbol offset 0x%lu to fragment",
+						lenv.strings.get(sym.symbolname).c_str(),(unsigned long)sym.symbol_offset);
+					return false;
+				}
 			}
 		}
 
@@ -1471,6 +1620,7 @@ int main(int argc,char **argv) {
 	lenv.log.min_level = DOSLIBLinker::LNKLOG_DEBUGMORE;
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0007.obj")) fprintf(stderr,"Failed to read 0007.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0009.obj")) fprintf(stderr,"Failed to read 0009.obj\n");
+	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0012.obj")) fprintf(stderr,"Failed to read 0012.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0014.obj")) fprintf(stderr,"Failed to read 0014.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/dos/dos386f/dos.lib")) fprintf(stderr,"Failed to read dos.lib\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86l/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
@@ -1617,6 +1767,8 @@ int main(int argc,char **argv) {
 			fprintf(stderr," fragsize=0x%lx",(unsigned long)fr.fragmentsize);
 		if (fr.alignment != DOSLIBLinker::alignment_undef)
 			fprintf(stderr," alignmask=0x%lx(%lu bytes)",(unsigned long)fr.alignment,(unsigned long)DOSLIBLinker::alignmask2value(fr.alignment));
+		if (fr.flags & DOSLIBLinker::FRAGFLAG_EMPTY)
+			fprintf(stderr," EMPTY");
 		fprintf(stderr,"\n");
 
 		if (fr.source != DOSLIBLinker::source_list_t::undef) {
@@ -1702,6 +1854,11 @@ int main(int argc,char **argv) {
 
 		if (sym.base_fragment != DOSLIBLinker::fragment_list_t::undef)
 			fprintf(stderr,"  base fragment: [%lu]\n",(unsigned long)sym.base_fragment);
+
+		if (sym.base_segment != DOSLIBLinker::segment_list_t::undef) {
+			const auto &src = lenv.segments.get(sym.base_segment);
+			fprintf(stderr,"  base segment: [%lu] '%s'\n",(unsigned long)sym.base_segment,lenv.strings.get(src.segmentname).c_str());
+		}
 
 		if (sym.base_frame_number != DOSLIBLinker::segment_frame_undef)
 			fprintf(stderr,"  base frame number: 0x%lx\n",(unsigned long)sym.base_frame_number);
