@@ -272,9 +272,25 @@ namespace DOSLIBLinker {
 	typedef uint32_t					group_flags_t;
 	static constexpr group_flags_t				GRPFLAG_DELETED =        group_flags_t(1u) << group_flags_t(0u); // removed, usually when merging with another
 
+	typedef uint32_t					symbol_flags_t;
+	static constexpr symbol_flags_t				SYMFLAG_DELETED =        symbol_flags_t(1u) << symbol_flags_t(0u); // deleted
+	static constexpr symbol_flags_t                         SYMFLAG_LOCAL =          symbol_flags_t(1u) << symbol_flags_t(1u); // local symbol
+	static constexpr symbol_flags_t				SYMFLAG_NEAR =           symbol_flags_t(1u) << symbol_flags_t(2u); // near symbol
+	static constexpr symbol_flags_t				SYMFLAG_FAR =            symbol_flags_t(1u) << symbol_flags_t(3u); // far symbol
+
+	typedef uint8_t						symbol_type_t;
+	static constexpr symbol_type_t				symbol_type_undef =      symbol_type_t(0xFFu);
+	static constexpr symbol_type_t				symbol_type_extern =     symbol_type_t(0x00u); // extern symbol (EXTDEF)
+	static constexpr symbol_type_t				symbol_type_common =     symbol_type_t(0x01u); // common symbol (COMDEF)
+	static constexpr symbol_type_t				symbol_type_public =     symbol_type_t(0x02u); // public symbol (PUBDEF)
+
+	struct symbol_t;
 	struct segment_t;
 	struct fragment_t;
 	struct group_t;
+
+	typedef _base_handlearray<symbol_t> symbol_list_t;
+	typedef symbol_list_t::ref_type symbol_ref_t;
 
 	typedef _base_handlearray<segment_t> segment_list_t;
 	typedef segment_list_t::ref_type segment_ref_t;
@@ -326,12 +342,27 @@ namespace DOSLIBLinker {
 			std::vector<segment_ref_t>		segments; /* segments with membership in the group */
 	};
 
+	struct symbol_t {
+		public:
+			symbol_flags_t				flags = 0;
+			symbol_ref_t				symbol_moved_to = symbol_list_t::undef; /* symbol moved here if merged */
+			string_ref_t				symbolname = symbol_list_t::undef; /* symbol name */
+			source_ref_t				source = source_list_t::undef; /* source it came from */
+			symbol_type_t				symboltype = symbol_type_undef; /* symbol type */
+			segment_size_t				symbolsize = segment_size_undef; /* size of symbol (COMDEF) */
+			group_ref_t				base_group = group_list_t::undef; /* base group if specified */
+			fragment_ref_t				base_fragment = fragment_list_t::undef; /* base segment if specified (as fragment which then refers to segment) */
+			segment_frame_t				base_frame_number = segment_frame_undef; /* base frame number if set */
+			segment_offset_t			symbol_offset = segment_offset_undef; /* symbol offset within fragment */
+	};
+
 	class linkenv {
 		public:
 			source_list_t				sources;
 			string_table_t				strings;
 			segment_list_t				segments;
 			fragment_list_t				fragments;
+			symbol_list_t				symbols;
 			group_list_t				groups;
 			std::vector<segment_ref_t>		segment_order;
 		public:
@@ -485,6 +516,7 @@ namespace DOSLIBLinker {
 			uint32_t gd(void);
 			uint16_t gidx(void);
 			std::string glenstr(void);
+			uint32_t gcomdeflen(void);
 		private:
 			size_t readp = 0;
 	};
@@ -526,13 +558,18 @@ namespace DOSLIBLinker {
 
 			typedef _base_handlearray<group_ref_t> GRPDEF_list_t;
 			typedef GRPDEF_list_t::ref_type GRPDEF_ref_t;
+
+			typedef _base_handlearray<symbol_ref_t> EXTDEF_list_t; /* and COMDEF */
+			typedef EXTDEF_list_t::ref_type EXTDEF_ref_t;
 		public:
 			source_ref_t			current_source = source_list_t::undef;
 			std::vector<LIDATA_heap_t>	LIDATA_records; /* LIDATA records converted to vector for FIXUPP later on */
 			size_t				LIDATA_expanded_at; /* offset within fragment LIDATA was expanded to */
+			bool				LIDATA_last_entry = false;
 			LNAMES_list_t			LNAMES;
 			SEGDEF_list_t			SEGDEF;
 			GRPDEF_list_t			GRPDEF;
+			EXTDEF_list_t			EXTDEF;
 			OMF_record_reader		recrdr;
 		public:
 			GRPDEF_ref_t			special_FLAT_GRPDEF = group_list_t::undef; /* FLAT GRPDEF if any, which also means the memory model is FLAT not SEGMENTED */
@@ -546,6 +583,8 @@ namespace DOSLIBLinker {
 			bool				read_rec_GRPDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_LEDATA(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_LIDATA(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_EXTDEF(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_COMDEF(linkenv &lenv,OMF_record &rec);
 		private:
 			bool				read_LIDATA_block(linkenv &lenv,const size_t base_lidata,LIDATA_heap_t &ent,OMF_record &rec,const bool fmt32,const size_t depth=0);
 			void				LIDATA_records_dump_debug(linkenv &lenv,const size_t depth,const std::vector<LIDATA_heap_t> &r);
@@ -580,6 +619,27 @@ namespace DOSLIBLinker {
 	uint16_t OMF_record_data::gidx(void) {
 		uint16_t r = gb();
 		if (r & 0x80) r = ((r & 0x7Fu) << 8u) + gb();
+		return r;
+	}
+
+	uint32_t OMF_record_data::gcomdeflen(void) {
+		/* COMDEFs encode symbol size in a very odd variable length manner */
+		uint32_t r = gb();
+
+		if (r == 0x81) { // 0x81 <16-bit WORD>
+			r = gw();
+		}
+		else if (r == 0x84) { // 0x84 <24-bit WORD>
+			r = uint32_t(gb()); /* little endian, correct? */
+			r += uint32_t(gw()) << uint32_t(8u);
+		}
+		else if (r == 0x88) { // 0x88 <32-bit DWORD>
+			r = gd();
+		}
+		else if (r > 0x80) {
+			r = 0;
+		}
+
 		return r;
 	}
 
@@ -727,12 +787,15 @@ namespace DOSLIBLinker {
 
 	void OMF_reader::clear(void) {
 		special_FLAT_GRPDEF = GRPDEF_list_t::undef;
-		current_source = source_list_t::undef;
+		LIDATA_last_entry = false;
 		LIDATA_records.clear();
 		SEGDEF.clear();
 		GRPDEF.clear();
 		LNAMES.clear();
+		EXTDEF.clear();
 		recrdr.clear();
+
+		current_source = source_list_t::undef;
 	}
 
 	bool OMF_reader::read(linkenv &lenv,const char *path) {
@@ -909,6 +972,7 @@ namespace DOSLIBLinker {
 		const bool fmt32 = (rec.type == 0xA3/*LEDATA32*/);
 
 		LIDATA_records.clear();
+		LIDATA_last_entry = true;
 
 		/* <segment index> <data offset> <data> */
 		const size_t segidx = from1based(rec.data.gidx());
@@ -972,6 +1036,7 @@ namespace DOSLIBLinker {
 		const bool fmt32 = (rec.type == 0xA1/*LEDATA32*/);
 
 		LIDATA_records.clear();
+		LIDATA_last_entry = false;
 
 		/* <segment index> <data offset> <data> */
 		const size_t segidx = from1based(rec.data.gidx());
@@ -1017,6 +1082,108 @@ namespace DOSLIBLinker {
 
 			assert((copyto+datalen) == cfr.data.size());
 			memcpy((uint8_t*)cfr.data.data()+copyto,data,datalen);
+		}
+
+		return true;
+	}
+
+	bool OMF_reader::read_rec_EXTDEF(linkenv &lenv,OMF_record &rec) {
+		const bool local = (rec.type == 0xB4/*LEXTDEF*/ || rec.type == 0xB5/*LEXTDEF*/);
+
+		/* extdef = <symbol name> <type index>
+		 * <extdef> [ <extdef> ... ] */
+		while (!rec.data.eof()) {
+			const std::string namestr = rec.data.glenstr();
+			if (namestr.empty()) {
+				lenv.log.log(LNKLOG_ERROR,"EXTDEF with null name");
+				return false;
+			}
+			const string_ref_t nameref = lenv.strings.add(namestr);
+
+			const uint16_t typeindex = rec.data.gidx();
+			(void)typeindex;//ignored
+
+			/* allocate a new symbol */
+			const symbol_ref_t newsymref = lenv.symbols.allocate();
+			symbol_t &newsym = lenv.symbols.get(newsymref);
+
+			/* keep track of this module's EXTDEFs vs the global linker state */
+			EXTDEF.allocate(newsymref);
+
+			if (local)
+				newsym.flags |= SYMFLAG_LOCAL;
+
+			newsym.symbolname = nameref;
+			newsym.symboltype = symbol_type_extern;
+			newsym.source = current_source;
+		}
+
+		return true;
+	}
+
+	bool OMF_reader::read_rec_COMDEF(linkenv &lenv,OMF_record &rec) {
+		const bool local = (rec.type == 0xB8/*LCOMDEF*/);
+
+		/* comdef = <symbol name> <type index> <data type> <communal length>
+		 * <comdef> [ <comdef> ... ] */
+		while (!rec.data.eof()) {
+			const std::string namestr = rec.data.glenstr();
+			if (namestr.empty()) {
+				lenv.log.log(LNKLOG_ERROR,"COMDEF with null name");
+				return false;
+			}
+			const string_ref_t nameref = lenv.strings.add(namestr);
+
+			const uint16_t typeindex = rec.data.gidx();
+			(void)typeindex;//ignored
+
+			const uint8_t datatype = rec.data.gb();
+
+			/* allocate a new symbol */
+			const symbol_ref_t newsymref = lenv.symbols.allocate();
+			symbol_t &newsym = lenv.symbols.get(newsymref);
+
+			/* keep track of this module's EXTDEFs vs the global linker state (COMDEFs are listed the same as EXTDEFs) */
+			EXTDEF.allocate(newsymref);
+
+			/* local symbol? */
+			if (local) newsym.flags |= SYMFLAG_LOCAL;
+
+			/* and then communal symbol length in a strange extended sort of way */
+			uint32_t comlen = 0;
+			if (datatype == 0x61/*FAR data*/) {
+				uint32_t elemcount = rec.data.gcomdeflen();
+				uint32_t elemsize = rec.data.gcomdeflen();
+
+				newsym.flags |= SYMFLAG_FAR;
+				if (elemsize > 0x8000u || elemcount > 0x100000 || elemsize == 0 || elemcount == 0) {
+					/* looks very sus (picious), maybe we misread it */
+					lenv.log.log(LNKLOG_ERROR,"COMDEF with abnormal FAR data type values count=%lu size=%lu",(unsigned long)elemcount,(unsigned long)elemsize);
+					return false;
+				}
+
+				comlen = elemcount * elemsize;
+			}
+			else if (datatype == 0x62/*NEAR data*/) {
+				comlen = rec.data.gcomdeflen();
+
+				newsym.flags |= SYMFLAG_NEAR;
+				if (comlen == 0 || comlen >= 0x100000) {
+					/* looks very sus (picious), maybe we misread it */
+					lenv.log.log(LNKLOG_ERROR,"COMDEF with abnormal NEAR data type values size=%lu",(unsigned long)comlen);
+					return false;
+				}
+			}
+			else {
+				/* Anything else? "Borland segment index"? */
+				lenv.log.log(LNKLOG_ERROR,"COMDEF with unknown data type 0x%02x",datatype);
+				return false;
+			}
+
+			newsym.symbolname = nameref;
+			newsym.symboltype = symbol_type_common;
+			newsym.symbolsize = comlen;
+			newsym.source = current_source;
 		}
 
 		return true;
@@ -1215,11 +1382,13 @@ namespace DOSLIBLinker {
 		OMF_record rec;
 
 		/* each module has it's own LNAMES, SEGDEF, GRPDEF */
-		special_FLAT_GRPDEF = group_list_t::undef;
+		special_FLAT_GRPDEF = GRPDEF_list_t::undef;
+		LIDATA_last_entry = false;
 		LIDATA_records.clear();
 		SEGDEF.clear();
 		GRPDEF.clear();
 		LNAMES.clear();
+		EXTDEF.clear();
 
 		/* caller has already read THEADR/LHEADR, read until MODEND */
 		while (1) {
@@ -1231,6 +1400,12 @@ namespace DOSLIBLinker {
 			if (rec.type == 0x8A/*module end*/ || rec.type == 0x8B/*module end*/) {
 				/* TODO: Read entry point and other stuff */
 				break;
+			}
+			else if (rec.type == 0x8C/*EXTDEF*/ || rec.type == 0xB4/*LEXTDEF*/ || rec.type == 0xB5/*LEXTDEF*/) {
+				if (!read_rec_EXTDEF(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading EXTDEF");
+					return false;
+				}
 			}
 			else if (rec.type == 0x96/*LNAMES*/ || rec.type == 0xCA/*LLNAMES*/) {
 				if (!read_rec_LNAMES(lenv,rec)) {
@@ -1262,6 +1437,12 @@ namespace DOSLIBLinker {
 					return false;
 				}
 			}
+			else if (rec.type == 0xB0/*COMDEF*/ || rec.type == 0xB8/*LCOMDEF*/) {
+				if (!read_rec_COMDEF(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading COMDEF");
+					return false;
+				}
+			}
 		}
 
 		/* All segments are segmented model, unless the FLAT GRPDEF was seen */
@@ -1288,6 +1469,8 @@ int main(int argc,char **argv) {
 	DOSLIBLinker::linkenv lenv;
 	DOSLIBLinker::OMF_reader omfr;
 	lenv.log.min_level = DOSLIBLinker::LNKLOG_DEBUGMORE;
+	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0007.obj")) fprintf(stderr,"Failed to read 0007.obj\n");
+	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0009.obj")) fprintf(stderr,"Failed to read 0009.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/fmt/omf/testfile/0014.obj")) fprintf(stderr,"Failed to read 0014.obj\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/dos/dos386f/dos.lib")) fprintf(stderr,"Failed to read dos.lib\n");
 	if (!omfr.read(lenv,"/usr/src/doslib/hw/cpu/dos86l/cpu.lib")) fprintf(stderr,"Failed to read cpu.lib\n");
@@ -1466,6 +1649,62 @@ int main(int argc,char **argv) {
 			}
 			if (col != 0) fprintf(stderr,"\n");
 		}
+	}
+
+	fprintf(stderr,"Symbols:\n");
+	for (auto si=lenv.symbols.ref.begin();si!=lenv.symbols.ref.end();si++) {
+		const auto &sym = *si;
+
+		fprintf(stderr,"  [%lu] name='%s'",
+			(unsigned long)(si - lenv.symbols.ref.begin()),
+			(sym.symbolname != DOSLIBLinker::symbol_list_t::undef) ? lenv.strings.get(sym.symbolname).c_str() : "(undef)");
+		if (sym.flags & DOSLIBLinker::SYMFLAG_DELETED) fprintf(stderr," DELETED");
+		if (sym.flags & DOSLIBLinker::SYMFLAG_LOCAL) fprintf(stderr," LOCAL");
+		if (sym.flags & DOSLIBLinker::SYMFLAG_NEAR) fprintf(stderr," NEAR");
+		if (sym.flags & DOSLIBLinker::SYMFLAG_FAR) fprintf(stderr," FAR");
+		fprintf(stderr,"\n");
+
+		if (sym.symbol_moved_to != DOSLIBLinker::symbol_list_t::undef) {
+			const auto &msym = lenv.symbols.get(sym.symbol_moved_to);
+			fprintf(stderr,"  moved to [%lu] '%s'\n",
+				(unsigned long)(sym.symbol_moved_to),
+				(msym.symbolname != DOSLIBLinker::symbol_list_t::undef) ? lenv.strings.get(msym.symbolname).c_str() : "(undef)");
+		}
+
+		if (sym.source != DOSLIBLinker::source_list_t::undef) {
+			const auto &src = lenv.sources.get(sym.source);
+			fprintf(stderr,"  source: path='%s' name='%s' index=%ld offset=%ld\n",
+				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
+		}
+
+		if (sym.symboltype != DOSLIBLinker::symbol_type_undef) {
+			fprintf(stderr,"  symbol type 0x%x",(unsigned int)sym.symboltype);
+			switch (sym.symboltype) {
+				case DOSLIBLinker::symbol_type_extern: fprintf(stderr," EXTERN"); break;
+				case DOSLIBLinker::symbol_type_common: fprintf(stderr," COMMON"); break;
+				case DOSLIBLinker::symbol_type_public: fprintf(stderr," PUBLIC"); break;
+				default: break;
+			}
+			if (sym.flags & DOSLIBLinker::SYMFLAG_LOCAL) fprintf(stderr," LOCAL");
+			fprintf(stderr,"\n");
+		}
+
+		if (sym.symbolsize != DOSLIBLinker::segment_size_undef)
+			fprintf(stderr,"  symbol size: %lu\n",(unsigned long)sym.symbolsize);
+
+		if (sym.symbol_offset != DOSLIBLinker::segment_offset_undef)
+			fprintf(stderr,"  symbol offset: 0x%lx\n",(unsigned long)sym.symbol_offset);
+
+		if (sym.base_group != DOSLIBLinker::group_list_t::undef) {
+			const auto &grp = lenv.groups.get(sym.base_group);
+			fprintf(stderr,"  base group: [%lu] '%s'\n",(unsigned long)sym.base_group,lenv.strings.get(grp.groupname).c_str());
+		}
+
+		if (sym.base_fragment != DOSLIBLinker::fragment_list_t::undef)
+			fprintf(stderr,"  base fragment: [%lu]\n",(unsigned long)sym.base_fragment);
+
+		if (sym.base_frame_number != DOSLIBLinker::segment_frame_undef)
+			fprintf(stderr,"  base frame number: 0x%lx\n",(unsigned long)sym.base_frame_number);
 	}
 
 	return 0;
