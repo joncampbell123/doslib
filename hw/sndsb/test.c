@@ -1261,7 +1261,6 @@ static void rec_vu(uint32_t pos) {
 #define DMA_WRAP_DEBUG
 
 static void wav_idle() {
-	const unsigned int leeway = sb_card->buffer_size / 100;
 	uint32_t pos;
 #ifdef DMA_WRAP_DEBUG
 	uint32_t pos2;
@@ -1290,9 +1289,6 @@ static void wav_idle() {
 			if (pos > pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
 			else		pos = max(pos,pos2);
 		}
-
-		pos += leeway;
-		if (pos >= sb_card->buffer_size) pos -= sb_card->buffer_size;
 	}
 	else {
 		if (pos < 0x1000 && pos2 >= (sb_card->buffer_size-0x1000)) {
@@ -1301,15 +1297,6 @@ static void wav_idle() {
 		else {
 			if (pos < pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
 			else		pos = min(pos,pos2);
-		}
-
-		if (pos < leeway) {
-			/* NTS: The subtract backwards is fine for playback but causes junk data when recording */
-			if (wav_record && wav_buffer_filepos == 0) pos = 0;
-			else pos += sb_card->buffer_size - leeway;
-		}
-		else {
-			pos -= leeway;
 		}
 	}
 #endif
@@ -1342,7 +1329,17 @@ static unsigned long playback_live_position() {
 
 		xx -= sb_card->buffer_size; /* because we started from the end */
 	}
+	else if (wav_record) {
+		/* save_audio() is called to up to just behind the DMA position.
+		 * if buffer_last_io wrapped around and it is ahead of the DMA playback position,
+		 * then wav_buffer_filepos was updated. */
+		if (sb_card->buffer_last_io > (unsigned long)xx)
+			xx += sb_card->buffer_size;
+	}
 	else {
+		/* load_audio() is called to always load audio as far ahead as possible.
+		 * if buffer_last_io wrapped around and it is behind the DMA playback position,
+		 * then wav_buffer_filepos was updated. */
 		if (sb_card->buffer_last_io <= (unsigned long)xx)
 			xx -= sb_card->buffer_size;
 	}
