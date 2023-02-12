@@ -1180,9 +1180,12 @@ static void rec_vu(uint32_t pos) {
 	}
 
 	/* caller gives us DMA position, but we read multiple samples (leeway) and need to step back up to it */
-	if (pos >= leeway) pos -= leeway;
-	else pos = (pos + sb_card->buffer_size - leeway) & (~3UL);
-	brem = sb_card->buffer_size - pos;
+	{
+		const uint32_t adj = leeway * wav_bytes_per_sample;
+		if (pos >= adj) pos -= adj;
+		else pos = (pos + sb_card->buffer_size - adj) & (~3UL);
+		brem = sb_card->buffer_size - pos;
+	}
 
 	/* caller should be sample-aligning the position and our calculation should too! */
 	assert((pos & 3UL) == 0UL);
