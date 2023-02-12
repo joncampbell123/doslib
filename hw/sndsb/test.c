@@ -1161,16 +1161,16 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 static void rec_vu(uint32_t pos) {
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + (vga_state.vga_width * (vga_state.vga_height - 1));
-	const unsigned int leeway = 256;
-	unsigned int x,L=0,R=0,max;
+	const unsigned int leeway = (unsigned int)((wav_sample_rate / 60UL) & (~3UL));
+	unsigned int x,L=0,R=0,max,brem;
 	uint16_t sample;
 
 	if (pos == (~0UL)) {
 #if defined(TARGET_PC98)
 		for (x=0;x < (unsigned int)vga_state.vga_width;x++) {
-            wr[x       ] = 0x20;
-            wr[x+0x1000] = 0x25;
-        }
+			wr[x       ] = 0x20;
+			wr[x+0x1000] = 0x25;
+		}
 #else
 		for (x=0;x < (unsigned int)vga_state.vga_width;x++)
 			wr[x] = 0x1E00 | 177;
@@ -1179,7 +1179,12 @@ static void rec_vu(uint32_t pos) {
 		return;
 	}
 
-	/* caller should be sample-aligning the position! */
+	/* caller gives us DMA position, but we read multiple samples (leeway) and need to step back up to it */
+	if (pos >= leeway) pos -= leeway;
+	else pos = (pos + sb_card->buffer_size - leeway) & (~3UL);
+	brem = sb_card->buffer_size - pos;
+
+	/* caller should be sample-aligning the position and our calculation should too! */
 	assert((pos & 3UL) == 0UL);
 
 	if ((pos+(leeway*wav_bytes_per_sample)) < sb_card->buffer_size) {
@@ -1189,50 +1194,63 @@ static void rec_vu(uint32_t pos) {
 			if (wav_stereo) {
 				/* 16-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
-					sample = ptr[x*2];
+					sample = ptr[0];
 					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
 
-					sample = ptr[x*2 + 1];
+					sample = ptr[1];
 					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (R < sample) R = sample;
+
+					if ((brem -= 4) == 0) ptr = (int16_t FAR*)(sb_dma->lin);
+					else ptr++;
 				}
 			}
 			else {
 				/* 16-bit PCM mono */
 				for (x=0;x < leeway;x++) {
-					sample = ptr[x];
+					sample = *ptr;
 					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
+
+					if ((brem -= 2) == 0) ptr = (int16_t FAR*)(sb_dma->lin);
+					else ptr++;
 				}
 			}
 		}
 		else {
+			uint8_t FAR *ptr = (uint8_t FAR*)(sb_dma->lin + pos);
 			max = 127;
 			if (wav_stereo) {
 				/* 8-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
-					sample = sb_dma->lin[x*2 + pos];
+					sample = ptr[0];
 					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
 
-					sample = sb_dma->lin[x*2 + 1 + pos];
+					sample = ptr[1];
 					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (R < sample) R = sample;
+
+					if ((brem -= 2) == 0) ptr = (uint8_t FAR*)(sb_dma->lin);
+					else ptr += 2;
 				}
 			}
 			else {
 				/* 8-bit PCM mono */
 				for (x=0;x < leeway;x++) {
-					sample = sb_dma->lin[x + pos];
+					sample = ptr[0];
 					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
+
+					if ((--brem) == 0) ptr = (uint8_t FAR*)(sb_dma->lin);
+					else ptr++;
 				}
 			}
 		}
