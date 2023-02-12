@@ -1575,78 +1575,80 @@ static void open_wav() {
 	char tmp[64];
 
 	if (wav_fd < 0) {
-        uint32_t riff_length,scan,len;
-        unsigned char fmt=0;
+		uint32_t riff_length,scan,len;
+		unsigned char fmt=0;
 
-	    wav_position = 0;
+		wav_position = 0;
 		wav_data_offset = 0;
 		wav_data_length = 0;
-        wav_sample_rate = 8000;
-        wav_bytes_per_sample = 0;
+		wav_sample_rate = 8000;
+		wav_stereo = 0;
+		wav_16bit = 0;
+		wav_bytes_per_sample = 1;
 		if (strlen(wav_file) < 1) return;
 
 		wav_fd = open(wav_file,O_RDONLY|O_BINARY);
 		if (wav_fd < 0) return;
 
-        if (lseek(wav_fd,0,SEEK_SET) != 0) goto fail;
+		if (lseek(wav_fd,0,SEEK_SET) != 0) goto fail;
 
-        /* first, the RIFF:WAVE chunk */
-        /* 3 DWORDS: 'RIFF' <length> 'WAVE' */
-        if (read(wav_fd,tmp,12) != 12) goto fail;
-        if (memcmp(tmp+0,"RIFF",4) || memcmp(tmp+8,"WAVE",4)) goto fail;
+		/* first, the RIFF:WAVE chunk */
+		/* 3 DWORDS: 'RIFF' <length> 'WAVE' */
+		if (read(wav_fd,tmp,12) != 12) goto fail;
+		if (memcmp(tmp+0,"RIFF",4) || memcmp(tmp+8,"WAVE",4)) goto fail;
 
-        scan = 12;
-        riff_length = *((uint32_t*)(tmp+4));
-        if (riff_length <= 44) goto fail;
-        riff_length -= 4; /* the length includes the 'WAVE' marker */
+		scan = 12;
+		riff_length = *((uint32_t*)(tmp+4));
+		if (riff_length <= 44) goto fail;
+		riff_length -= 4; /* the length includes the 'WAVE' marker */
 
-        while ((scan+8UL) <= riff_length) {
-            /* RIFF chunks */
-            /* 2 WORDS: <fourcc> <length> */
-            if (lseek(wav_fd,scan,SEEK_SET) != scan) goto fail;
-            if (read(wav_fd,tmp,8) != 8) goto fail;
-            len = *((uint32_t*)(tmp+4));
+		while ((scan+8UL) <= riff_length) {
+			/* RIFF chunks */
+			/* 2 WORDS: <fourcc> <length> */
+			if (lseek(wav_fd,scan,SEEK_SET) != scan) goto fail;
+			if (read(wav_fd,tmp,8) != 8) goto fail;
+			len = *((uint32_t*)(tmp+4));
 
-            /* process! */
-            if (!memcmp(tmp,"fmt ",4)) {
-                if (len >= 16 && len <= sizeof(tmp)) {
-                    if (read(wav_fd,tmp,len) == len) {
+			/* process! */
+			if (!memcmp(tmp,"fmt ",4)) {
+				if (len >= 16 && len <= sizeof(tmp)) {
+					if (read(wav_fd,tmp,len) == len) {
 #if 0
-                        typedef struct tWAVEFORMATEX {
-                            WORD  wFormatTag;               /* +0 */
-                            WORD  nChannels;                /* +2 */
-                            DWORD nSamplesPerSec;           /* +4 */
-                            DWORD nAvgBytesPerSec;          /* +8 */
-                            WORD  nBlockAlign;              /* +12 */
-                            WORD  wBitsPerSample;           /* +14 */
-                        } WAVEFORMATEX;
+						typedef struct tWAVEFORMATEX {
+							WORD  wFormatTag;               /* +0 */
+							WORD  nChannels;                /* +2 */
+							DWORD nSamplesPerSec;           /* +4 */
+							DWORD nAvgBytesPerSec;          /* +8 */
+							WORD  nBlockAlign;              /* +12 */
+							WORD  wBitsPerSample;           /* +14 */
+						} WAVEFORMATEX;
 #endif
-                        wav_sample_rate = *((uint32_t*)(tmp + 4));
-                        wav_stereo = *((uint16_t*)(tmp + 2)) > 1;
-                        wav_16bit = *((uint16_t*)(tmp + 14)) > 8;
-                        wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
-                        fmt = 1;
-                    }
-                }
-            }
-            else if (!memcmp(tmp,"data",4)) {
-                wav_data_offset = scan + 8UL;
-                wav_data_length = len;
-            }
+						wav_sample_rate = *((uint32_t*)(tmp + 4));
+						wav_stereo = *((uint16_t*)(tmp + 2)) > 1;
+						wav_16bit = *((uint16_t*)(tmp + 14)) > 8;
+						wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
+						fmt = 1;
+					}
+				}
+			}
+			else if (!memcmp(tmp,"data",4)) {
+				wav_data_offset = scan + 8UL;
+				wav_data_length = len;
+			}
 
-            /* next! */
-            scan += len + 8UL;
-        }
+			/* next! */
+			scan += len + 8UL;
+		}
 
-        if (wav_data_length == 0UL || fmt == 0) goto fail;
+		if (wav_data_length == 0UL || fmt == 0) goto fail;
 	}
 
 	update_cfg();
-    return;
+	return;
 fail:
-    /* assume wav_fd >= 0 */
-    close(wav_fd);
-    wav_fd = -1;
+	/* assume wav_fd >= 0 */
+	close(wav_fd);
+	wav_fd = -1;
 }
 
 static void open_wav_unique_name() {
@@ -1847,6 +1849,7 @@ static void begin_play() {
 		write(wav_fd,"data",4);
 		dw = 0;				write(wav_fd,&dw,4);
 
+		wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
 		wav_data_offset = 44;
 		wav_position = 0;
 	}
@@ -5177,6 +5180,7 @@ int main(int argc,char **argv) {
 				if (wav_record) {
 					stop_play();
 					wav_record = 0;
+					update_cfg();
 				}
 				if (!wav_playing) {
 					begin_play();
@@ -5187,6 +5191,7 @@ int main(int argc,char **argv) {
 				if (!wav_record) {
 					stop_play();
 					wav_record = 1;
+					update_cfg();
 				}
 				if (!wav_playing) {
 					begin_play();
