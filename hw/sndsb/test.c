@@ -784,8 +784,7 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			bufe = 1;
 		}
 		else {
-			if (up_to <= 8UL) break;
-			how = ((up_to-8UL) - cx->buffer_last_io); /* from last IO to up_to */
+			how = (up_to - cx->buffer_last_io); /* from last IO to up_to */
 			bufe = 0;
 		}
 
@@ -1304,8 +1303,14 @@ static void wav_idle() {
 			else		pos = min(pos,pos2);
 		}
 
-		if (pos < leeway) pos += sb_card->buffer_size - leeway;
-		else pos -= leeway;
+		if (pos < leeway) {
+			/* NTS: The subtract backwards is fine for playback but causes junk data when recording */
+			if (wav_record && wav_buffer_filepos == 0) pos = 0;
+			else pos += sb_card->buffer_size - leeway;
+		}
+		else {
+			pos -= leeway;
+		}
 	}
 #endif
 	pos &= (~3UL); /* round down */
@@ -1850,7 +1855,9 @@ static void begin_play() {
 		dw = 0;				write(wav_fd,&dw,4);
 
 		wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
+		wav_buffer_filepos = 0;
 		wav_data_offset = 44;
+		wav_data_length = 0;
 		wav_position = 0;
 	}
 
@@ -5181,6 +5188,7 @@ int main(int argc,char **argv) {
 					stop_play();
 					wav_record = 0;
 					update_cfg();
+					sb_card->buffer_last_io = 0;
 				}
 				if (!wav_playing) {
 					begin_play();
@@ -5192,6 +5200,7 @@ int main(int argc,char **argv) {
 					stop_play();
 					wav_record = 1;
 					update_cfg();
+					sb_card->buffer_last_io = 0;
 				}
 				if (!wav_playing) {
 					begin_play();
