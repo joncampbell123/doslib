@@ -22,6 +22,13 @@ start:
 	fst
 	fmulp
 
+	nop
+
+	finit
+	fld	dword [data1]
+	fld	dword [data1]
+	fdiv
+
 end:
 	ret
 
