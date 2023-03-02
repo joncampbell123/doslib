@@ -2,32 +2,65 @@
 	bits	16
 	org	100h
 
+%macro	NOPS	0
+	; large enough that not even dynamic core will step over more than one instruction
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+%endmacro
+
 start:
 	finit
+	NOPS
 	fldz
+	NOPS
 	fld1
+	NOPS
 	faddp
+	NOPS
 	fld	dword [data1]
+	NOPS
 	fld	qword [data2]
+	NOPS
 	fld	tword [data3]
+	NOPS
 	faddp
+	NOPS
 	faddp
+	NOPS
 	faddp
-
-	nop
-	nop
+	NOPS
 
 	finit
+	NOPS
 	fld	dword [data1]
+	NOPS
 	fst
+	NOPS
 	fmulp
-
-	nop
+	NOPS
 
 	finit
+	NOPS
 	fld	dword [data1]
+	NOPS
 	fld	dword [data1]
+	NOPS
 	fdiv
+	NOPS
 
 end:
 	ret
