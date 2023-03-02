@@ -43,6 +43,9 @@ start:
 	NOPS
 	faddp
 	NOPS
+	fst	qword [store1b]
+	fst	dword [store1c]
+	fstp	tword [store1a]
 
 	finit
 	NOPS
@@ -52,6 +55,9 @@ start:
 	NOPS
 	fmulp
 	NOPS
+	fst	qword [store1b]
+	fst	dword [store1c]
+	fstp	tword [store1a]
 
 	finit
 	NOPS
@@ -61,6 +67,9 @@ start:
 	NOPS
 	fdiv
 	NOPS
+	fst	qword [store1b]
+	fst	dword [store1c]
+	fstp	tword [store1a]
 
 end:
 	ret
@@ -71,3 +80,11 @@ data2:
 	dq	1.23
 data3:
 	dt	1.23
+
+store1a:
+	dt	0.0
+store1b:
+	dq	0.0
+store1c:
+	dd	0.0
+
