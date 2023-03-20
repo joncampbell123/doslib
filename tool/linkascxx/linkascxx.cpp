@@ -1475,13 +1475,31 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	static bool LIDATA_fixup_expand(linkenv &lenv,const std::vector<OMF_reader::LIDATA_heap_t> &rec,fixup_t &fixup,segment_offset_t &doff,const unsigned int what_to_patch,const unsigned int patch_size) {
+		for (auto ri=rec.begin();ri!=rec.end();ri++) {
+			const auto &ric = *ri;
+
+			for (unsigned int count=0;count < ric.repeat;count++) {
+				if (ric.length > 0 && ric.lidata_offset != ~((size_t)0)) {
+					if (what_to_patch >= ric.lidata_offset && (what_to_patch+patch_size) <= (ric.lidata_offset+ric.length)) {
+						if (fixup.apply_at == segment_offset_undef)
+							fixup.apply_at = doff;
+						else
+							lenv.fixups.get(lenv.fixups.allocate(fixup)).apply_at = doff;
+					}
+
+					doff += ric.length;
+				}
+
+				LIDATA_fixup_expand(lenv,ric.sub_blocks,fixup,doff,what_to_patch,patch_size);
+			}
+		}
+
+		return true;
+	}
+
 	bool OMF_reader::read_rec_FIXUPP(linkenv &lenv,OMF_record &rec) {
 		const bool fmt32 = (rec.type == 0x9D/*SEGDEF32*/);
-
-		if (LIDATA_last_entry) {
-			lenv.log.log(LNKLOG_WARNING,"FIXUPP: LIDATA is not yet supported");
-			return true;
-		}
 
 		if (!lenv.fragments.exists(LEDATA_last_fragment) || LEDATA_last_offset == segment_offset_undef) {
 			lenv.log.log(LNKLOG_WARNING,"FIXUPP: No prior LEDATA/LIDATA to fixup");
@@ -1516,6 +1534,7 @@ namespace DOSLIBLinker {
 				auto &fixup = lenv.fixups.get(fixupref);
 				fixup.target_displacement = 0;
 
+				uint8_t patch_size = 0;
 				uint16_t frame_datum = 0,target_datum = 0;
 				uint8_t frametype = (fixdata >> 4u) & 7u;
 				uint8_t targettype = fixdata & 3u;
@@ -1620,18 +1639,38 @@ namespace DOSLIBLinker {
 				}
 
 				switch ((fb >> 10u) & 0xFu) {
-					case 0: fixup.how = fixup_how_offset8; break;
-					case 1: fixup.how = fixup_how_offset16; break;
-					case 2: fixup.how = fixup_how_segbase16; break;
-					case 3: fixup.how = fixup_how_far1616; break;
-					case 4: fixup.how = fixup_how_offset8hi; break;
-					case 5: fixup.how = fixup_how_offset16; break;
-					case 9: fixup.how = fixup_how_offset32; break;
-					case 11:fixup.how = fixup_how_far1632; break;
-					case 13:fixup.how = fixup_how_offset32; break;
+					case 0: fixup.how = fixup_how_offset8; patch_size=1; break;
+					case 1: fixup.how = fixup_how_offset16; patch_size=2; break;
+					case 2: fixup.how = fixup_how_segbase16; patch_size=2; break;
+					case 3: fixup.how = fixup_how_far1616; patch_size=4; break;
+					case 4: fixup.how = fixup_how_offset8hi; patch_size=1; break;
+					case 5: fixup.how = fixup_how_offset16; patch_size=2; break;
+					case 9: fixup.how = fixup_how_offset32; patch_size=4; break;
+					case 11:fixup.how = fixup_how_far1632; patch_size=6; break;
+					case 13:fixup.how = fixup_how_offset32; patch_size=4; break;
 					default:
 						lenv.log.log(LNKLOG_ERROR,"FIXUPP: Unknown location code %u",(fb >> 10u) & 0xFu);
 						return false;
+				}
+
+				if (LIDATA_last_entry) {
+					/* If the previous block was LIDATA, then in reality the relative data offset is the data
+					 * to fixup in the iterated data BEFORE expansion! So to make this work, we have to translate
+					 * the fixup into multiple fixups translated to the final address after expansion.
+					 *
+					 * For safety reasons, this code ensures the FIXUPP does not patch anything outside the data
+					 * blocks i.e. in a way that might possibly corrupt the iterated data. */
+					const unsigned int what_to_patch = (fb & 0x3FFu);
+					segment_offset_t doff = LEDATA_last_offset;
+
+					fixup.apply_at = segment_offset_undef;
+					if (!LIDATA_fixup_expand(lenv,LIDATA_records,/*&*/fixup,/*&*/doff,what_to_patch,patch_size)) 
+						fixup.apply_at = segment_offset_undef;
+
+					if (fixup.apply_at == segment_offset_undef) {
+						lenv.log.log(LNKLOG_ERROR,"FIXUPP: Unable to resolve iterated data fixups");
+						return false;
+					}
 				}
 			}
 			else {
@@ -2044,6 +2083,9 @@ int main(int argc,char **argv) {
 			(unsigned long)fixup.apply_at);
 
 		const auto &fr = lenv.fragments.get(fixup.apply_to);
+
+		if (fr.org_offset != DOSLIBLinker::segment_offset_undef)
+			fprintf(stderr,"frorg=%lx ",(unsigned long)(fixup.apply_at+fr.org_offset));
 
 		fprintf(stderr,"segment[%lu]'%s' ",
 			(unsigned long)(fr.insegment),
