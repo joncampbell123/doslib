@@ -2142,6 +2142,12 @@ int main(int argc,char **argv) {
 				break;
 		}
 		fprintf(stderr,"\n");
+
+		if (fr.source != DOSLIBLinker::source_list_t::undef) {
+			const auto &src = lenv.sources.get(fr.source);
+			fprintf(stderr,"    source: path='%s' name='%s' index=%ld offset=%ld\n",
+				src.path.c_str(),src.name.c_str(),(signed long)src.index,(signed long)src.file_offset);
+		}
 	}
 
 	fprintf(stderr,"Symbols:\n");
