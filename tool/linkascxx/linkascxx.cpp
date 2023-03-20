@@ -284,9 +284,23 @@ namespace DOSLIBLinker {
 	static constexpr symbol_type_t				symbol_type_common =     symbol_type_t(0x01u); // common symbol (COMDEF)
 	static constexpr symbol_type_t				symbol_type_public =     symbol_type_t(0x02u); // public symbol (PUBDEF)
 
+	typedef uint32_t					fixup_flags_t;
+	static constexpr fixup_flags_t				fixup_flag_self_relative = fixup_flags_t(1u) << fixup_flags_t(0u); // self relative
+
+	typedef uint8_t						fixup_how_t;
+	static constexpr fixup_how_t				fixup_how_undef =        fixup_how_t(0xFFu);
+	static constexpr fixup_how_t				fixup_how_offset8 =      fixup_how_t(0x00u); // low 8 bits of offset or 8-bit displacement
+	static constexpr fixup_how_t				fixup_how_offset16 =     fixup_how_t(0x01u); // 16-bit offset
+	static constexpr fixup_how_t				fixup_how_segbase16 =    fixup_how_t(0x02u); // 16-bit segment base value
+	static constexpr fixup_how_t				fixup_how_far1616 =      fixup_how_t(0x03u); // 16:16 segment:offset
+	static constexpr fixup_how_t				fixup_how_offset8hi =    fixup_how_t(0x04u); // high 8 bits of offset (not supported by MASM?)
+	static constexpr fixup_how_t				fixup_how_offset32 =     fixup_how_t(0x05u); // 32-bit offset
+	static constexpr fixup_how_t				fixup_how_far1632 =      fixup_how_t(0x06u); // 16:32 segment:offset (48 bits total)
+
 	struct symbol_t;
 	struct segment_t;
 	struct fragment_t;
+	struct fixup_t;
 	struct group_t;
 
 	typedef _base_handlearray<symbol_t> symbol_list_t;
@@ -298,8 +312,38 @@ namespace DOSLIBLinker {
 	typedef _base_handlearray<fragment_t> fragment_list_t;
 	typedef fragment_list_t::ref_type fragment_ref_t;
 
+	typedef _base_handlearray<fixup_t> fixup_list_t;
+	typedef fixup_list_t::ref_type fixup_ref_t;
+
 	typedef _base_handlearray<group_t> group_list_t;
 	typedef group_list_t::ref_type group_ref_t;
+
+	struct fixup_t {
+		public:
+			struct param_t {
+				enum {
+					TYPE_NONE = 0,
+					TYPE_SEGDEF,
+					TYPE_GRPDEF,
+					TYPE_SYMBOL,
+					TYPE_SEGMENTFRAME
+				};
+				unsigned int type = TYPE_NONE;
+				union {
+					segment_ref_t			segdef;
+					group_ref_t			grpdef;
+					symbol_ref_t			symbol;
+					fragment_ref_t			fragment;
+					segment_frame_t			segmentframe;
+				} p;
+			};
+			struct param_t				frame,target;
+			segment_offset_t			target_displacement = segment_offset_undef;
+			fragment_ref_t				apply_to = fragment_list_t::undef;
+			segment_offset_t			apply_at = segment_offset_undef;
+			fixup_how_t				how = fixup_how_undef;
+			fixup_flags_t				flags = 0;
+	};
 
 	/* fragments are allocated from a global table, and everything else merely refers to
 	 * the fragment through a reference. This way you can combine fragments easily when
@@ -364,6 +408,7 @@ namespace DOSLIBLinker {
 			segment_list_t				segments;
 			fragment_list_t				fragments;
 			symbol_list_t				symbols;
+			fixup_list_t				fixups;
 			group_list_t				groups;
 			std::vector<segment_ref_t>		segment_order;
 		public:
@@ -566,6 +611,8 @@ namespace DOSLIBLinker {
 			typedef _base_handlearray<symbol_ref_t> PUBDEF_list_t;
 			typedef EXTDEF_list_t::ref_type PUBDEF_ref_t;
 		public:
+			fragment_ref_t			LEDATA_last_fragment = fragment_list_t::undef;
+			segment_offset_t		LEDATA_last_offset = segment_offset_undef;
 			source_ref_t			current_source = source_list_t::undef;
 			std::vector<LIDATA_heap_t>	LIDATA_records; /* LIDATA records converted to vector for FIXUPP later on */
 			size_t				LIDATA_expanded_at; /* offset within fragment LIDATA was expanded to */
@@ -591,6 +638,7 @@ namespace DOSLIBLinker {
 			bool				read_rec_EXTDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_COMDEF(linkenv &lenv,OMF_record &rec);
 			bool				read_rec_PUBDEF(linkenv &lenv,OMF_record &rec);
+			bool				read_rec_FIXUPP(linkenv &lenv,OMF_record &rec);
 		private:
 			fragment_ref_t			segdef_offset_to_fragment(linkenv &lenv,const segment_ref_t sref,const segment_offset_t sofs);
 			bool				read_LIDATA_block(linkenv &lenv,const size_t base_lidata,LIDATA_heap_t &ent,OMF_record &rec,const bool fmt32,const size_t depth=0);
@@ -1000,6 +1048,8 @@ namespace DOSLIBLinker {
 
 		LIDATA_records.clear();
 		LIDATA_last_entry = true;
+		LEDATA_last_offset = segment_offset_undef;
+		LEDATA_last_fragment = fragment_list_t::undef;
 
 		/* <segment index> <data offset> <data> */
 		const size_t segidx = from1based(rec.data.gidx());
@@ -1015,12 +1065,12 @@ namespace DOSLIBLinker {
 			bool newfrag = true;
 
 			if (!sego.fragments.empty()) {
-				const auto &fr = lenv.fragments.get(sego.fragments.back());
+				const auto &fr = lenv.fragments.get(LEDATA_last_fragment=sego.fragments.back());
 				if ((fr.org_offset+segment_offset_t(fr.data.size())) == dataoffset) newfrag = false;
 			}
 
 			if (newfrag) {
-				fragment_ref_t frref = lenv.fragments.allocate();
+				fragment_ref_t frref = LEDATA_last_fragment = lenv.fragments.allocate();
 				fragment_t &fr = lenv.fragments.get(frref);
 				sego.fragments.push_back(frref);
 				fr.source = current_source;
@@ -1033,6 +1083,7 @@ namespace DOSLIBLinker {
 
 			fragment_t &cfr = lenv.fragments.get(sego.fragments.back());
 			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == dataoffset);
+			LEDATA_last_offset = (segment_offset_t)dataoffset - (segment_offset_t)cfr.org_offset;
 
 			const size_t base_lidata = rec.data.offset();
 
@@ -1067,6 +1118,8 @@ namespace DOSLIBLinker {
 
 		LIDATA_records.clear();
 		LIDATA_last_entry = false;
+		LEDATA_last_offset = segment_offset_undef;
+		LEDATA_last_fragment = fragment_list_t::undef;
 
 		/* <segment index> <data offset> <data> */
 		const size_t segidx = from1based(rec.data.gidx());
@@ -1082,12 +1135,12 @@ namespace DOSLIBLinker {
 			bool newfrag = true;
 
 			if (!sego.fragments.empty()) {
-				const auto &fr = lenv.fragments.get(sego.fragments.back());
+				const auto &fr = lenv.fragments.get(LEDATA_last_fragment=sego.fragments.back());
 				if ((fr.org_offset+segment_offset_t(fr.data.size())) == dataoffset) newfrag = false;
 			}
 
 			if (newfrag) {
-				fragment_ref_t frref = lenv.fragments.allocate();
+				fragment_ref_t frref = LEDATA_last_fragment = lenv.fragments.allocate();
 				fragment_t &fr = lenv.fragments.get(frref);
 				sego.fragments.push_back(frref);
 				fr.source = current_source;
@@ -1100,6 +1153,7 @@ namespace DOSLIBLinker {
 
 			fragment_t &cfr = lenv.fragments.get(sego.fragments.back());
 			assert((cfr.org_offset+segment_offset_t(cfr.data.size())) == dataoffset);
+			LEDATA_last_offset = (segment_offset_t)dataoffset - (segment_offset_t)cfr.org_offset;
 
 			const uint8_t *data = (const uint8_t*)rec.data.data()+rec.data.offset();
 			const size_t datalen = rec.data.remains();
@@ -1421,6 +1475,176 @@ namespace DOSLIBLinker {
 		return true;
 	}
 
+	bool OMF_reader::read_rec_FIXUPP(linkenv &lenv,OMF_record &rec) {
+		const bool fmt32 = (rec.type == 0x9D/*SEGDEF32*/);
+
+		if (LIDATA_last_entry) {
+			lenv.log.log(LNKLOG_WARNING,"FIXUPP: LIDATA is not yet supported");
+			return true;
+		}
+
+		if (!lenv.fragments.exists(LEDATA_last_fragment) || LEDATA_last_offset == segment_offset_undef) {
+			lenv.log.log(LNKLOG_WARNING,"FIXUPP: No prior LEDATA/LIDATA to fixup");
+			return true;
+		}
+		const auto &fr = lenv.fragments.get(LEDATA_last_fragment);
+
+		while (!rec.data.eof()) {
+			/* <THREAD>: <0|D|0|METHOD|THREAD> [<index>]
+			 * <FIXUP>: <LOCAT=1|M|LOCATION|DATARECORDOFFSET> <FIXDATA=F|FRAME|T|P|TARGET> [<frame>] [<target>] [<target displacement>] */
+			unsigned int fb = rec.data.gb();
+			if (fb & 0x80) {
+				// FIXUP
+				fb = (fb << 8u) + rec.data.gb();
+				/* [bit 15] = 1
+				 * [bit 14] = M 1=segment-relative 0=self-relative
+				 * [bit 13:10] = Location
+				 * [bit 9:0] = data record offset */
+				unsigned char fixdata = rec.data.gb();
+				/* [bit 7] = F 1=frame refers to thread 0=frame refers to method
+				 * [bit 6:4] = frame code
+				 * [bit 3] = T 1=target refers to thread 0=target refers to method
+				 * [bit 2] = P 1=no displacement 0=displacement
+				 * [bit 1:0] = target code */
+				if (fixdata & 0x88) {
+					/* bit 7 or 3 set, refers to thread */
+					lenv.log.log(LNKLOG_ERROR,"FIXUPP: THREAD refrences not supported");
+					return false;
+				}
+
+				fixup_ref_t fixupref = lenv.fixups.allocate();
+				auto &fixup = lenv.fixups.get(fixupref);
+				fixup.target_displacement = 0;
+
+				uint16_t frame_datum = 0,target_datum = 0;
+				uint8_t frametype = (fixdata >> 4u) & 7u;
+				uint8_t targettype = fixdata & 3u;
+
+				if (frametype <= 3) frame_datum = rec.data.gidx();
+				target_datum = rec.data.gidx();
+				if ((fixdata & 4) == 0) fixup.target_displacement = fmt32 ? rec.data.gd() : rec.data.gw();
+
+#if 0
+				lenv.log.log(LNKLOG_DEBUG,"fb %04x fix %02x ft=%u tt=%u how=%u frame=%04x target=%04x disp=%08x",
+					fb,fixdata,frametype,targettype,(fb >> 10u) & 0xFu,frame_datum,target_datum,fixup.target_displacement);
+#endif
+
+				if (!(fb & 0x4000)) fixup.flags |= fixup_flag_self_relative;
+
+				fixup.apply_to = LEDATA_last_fragment;
+				fixup.apply_at = LEDATA_last_offset + (fb & 0x3FFu);
+
+				switch (targettype) {
+					case 0: // SEGDEF
+						{
+							if (!SEGDEF.exists(from1based(target_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: SEGDEF not found");
+								return false;
+							}
+							fixup.target.type = fixup_t::param_t::TYPE_SEGDEF;
+							fixup.target.p.segdef = SEGDEF.get(from1based(target_datum));
+						}
+						break;
+					case 1: // GRPDEF
+						{
+							if (!GRPDEF.exists(from1based(target_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: GRPDEF not found");
+								return false;
+							}
+							fixup.target.type = fixup_t::param_t::TYPE_GRPDEF;
+							fixup.target.p.grpdef = GRPDEF.get(from1based(target_datum));
+						}
+					break;
+					case 2: // EXTDEF
+						{
+							if (!EXTDEF.exists(from1based(target_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: EXTDEF not found");
+								return false;
+							}
+							fixup.target.type = fixup_t::param_t::TYPE_SYMBOL;
+							fixup.target.p.symbol = EXTDEF.get(from1based(target_datum));
+						}
+						break;
+					default:
+						lenv.log.log(LNKLOG_ERROR,"FIXUPP: Unknown targettype code %u",targettype);
+						return false;
+				}
+
+				switch (frametype) {
+					case 0: // SEGDEF
+						{
+							if (!SEGDEF.exists(from1based(frame_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: SEGDEF not found");
+								return false;
+							}
+							fixup.frame.type = fixup_t::param_t::TYPE_SEGDEF;
+							fixup.frame.p.segdef = SEGDEF.get(from1based(frame_datum));
+						}
+						break;
+					case 1: // GRPDEF
+						{
+							if (!GRPDEF.exists(from1based(frame_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: GRPDEF not found");
+								return false;
+							}
+							fixup.frame.type = fixup_t::param_t::TYPE_GRPDEF;
+							fixup.frame.p.grpdef = GRPDEF.get(from1based(frame_datum));
+						}
+					break;
+					case 2: // EXTDEF
+						{
+							if (!EXTDEF.exists(from1based(frame_datum))) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: EXTDEF not found");
+								return false;
+							}
+							fixup.frame.type = fixup_t::param_t::TYPE_SYMBOL;
+							fixup.frame.p.symbol = EXTDEF.get(from1based(frame_datum));
+						}
+						break;
+					case 4: // Segment index of last LEDATA/LIDATA
+						{
+							if (!lenv.segments.exists(fr.insegment)) {
+								lenv.log.log(LNKLOG_ERROR,"FIXUPP: LEDATA fragment has no segment");
+								return false;
+							}
+							fixup.frame.type = fixup_t::param_t::TYPE_SEGDEF;
+							fixup.frame.p.segdef = fr.insegment;
+						}
+						break;
+					case 5: // same as target
+						fixup.frame = fixup.target;
+						break;
+					default:
+						lenv.log.log(LNKLOG_ERROR,"FIXUPP: Unknown frametype code %u",frametype);
+						return false;
+				}
+
+				switch ((fb >> 10u) & 0xFu) {
+					case 0: fixup.how = fixup_how_offset8; break;
+					case 1: fixup.how = fixup_how_offset16; break;
+					case 2: fixup.how = fixup_how_segbase16; break;
+					case 3: fixup.how = fixup_how_far1616; break;
+					case 4: fixup.how = fixup_how_offset8hi; break;
+					case 5: fixup.how = fixup_how_offset16; break;
+					case 9: fixup.how = fixup_how_offset32; break;
+					case 11:fixup.how = fixup_how_far1632; break;
+					case 13:fixup.how = fixup_how_offset32; break;
+					default:
+						lenv.log.log(LNKLOG_ERROR,"FIXUPP: Unknown location code %u",(fb >> 10u) & 0xFu);
+						return false;
+				}
+			}
+			else {
+				// THREAD
+				// Not supported
+				lenv.log.log(LNKLOG_ERROR,"FIXUPP: THREAD records not supported");
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool OMF_reader::read_rec_GRPDEF(linkenv &lenv,OMF_record &rec) {
 		/* allocate a new group */
 		const group_ref_t newgrpref = lenv.groups.allocate();
@@ -1535,6 +1759,12 @@ namespace DOSLIBLinker {
 			else if (rec.type == 0x9A/*GRPDEF*/) {
 				if (!read_rec_GRPDEF(lenv,rec)) {
 					lenv.log.log(LNKLOG_ERROR,"Error reading GRPDEF");
+					return false;
+				}
+			}
+			else if (rec.type == 0x9C/*FIXUPP*/ || rec.type == 0x9D/*FIXUPP32*/) {
+				if (!read_rec_FIXUPP(lenv,rec)) {
+					lenv.log.log(LNKLOG_ERROR,"Error reading FIXUPP");
 					return false;
 				}
 			}
@@ -1762,7 +1992,7 @@ int main(int argc,char **argv) {
 		if (fr.org_offset != DOSLIBLinker::segment_offset_undef)
 			fprintf(stderr," org_offset=0x%lx",(unsigned long)fr.org_offset);
 		if (fr.segmentoffset != DOSLIBLinker::segment_offset_undef)
-			fprintf(stderr," segmentoffset=0x%lx",(unsigned long)fr.org_offset);
+			fprintf(stderr," segmentoffset=0x%lx",(unsigned long)fr.segmentoffset);
 		if (fr.fragmentsize != DOSLIBLinker::segment_size_undef)
 			fprintf(stderr," fragsize=0x%lx",(unsigned long)fr.fragmentsize);
 		if (fr.alignment != DOSLIBLinker::alignment_undef)
@@ -1801,6 +2031,117 @@ int main(int argc,char **argv) {
 			}
 			if (col != 0) fprintf(stderr,"\n");
 		}
+	}
+
+	fprintf(stderr,"Fixups:\n");
+	for (auto fi=lenv.fixups.ref.begin();fi!=lenv.fixups.ref.end();fi++) {
+		const auto &fixup = *fi;
+
+		fprintf(stderr,"  [%lu] ",
+			(unsigned long)(fi - lenv.fixups.ref.begin()));
+		fprintf(stderr,"frag=%lu at=%lx ",
+			(unsigned long)fixup.apply_to,
+			(unsigned long)fixup.apply_at);
+
+		const auto &fr = lenv.fragments.get(fixup.apply_to);
+
+		fprintf(stderr,"segment[%lu]'%s' ",
+			(unsigned long)(fr.insegment),
+			(fr.insegment != DOSLIBLinker::segment_list_t::undef) ? lenv.strings.get(lenv.segments.get(fr.insegment).segmentname).c_str() : "");
+
+		if (fixup.target_displacement != 0)
+			fprintf(stderr,"tgdisp=%lx ",(unsigned long)fixup.target_displacement);
+		if (fixup.flags & DOSLIBLinker::fixup_flag_self_relative)
+			fprintf(stderr,"selfrel ");
+		fprintf(stderr,"\n");
+		fprintf(stderr,"    ");
+		switch (fixup.how) {
+			case DOSLIBLinker::fixup_how_offset8:
+				fprintf(stderr,"OFFSET8 ");
+				break;
+			case DOSLIBLinker::fixup_how_offset8hi:
+				fprintf(stderr,"OFFSET8HI ");
+				break;
+			case DOSLIBLinker::fixup_how_offset16:
+				fprintf(stderr,"OFFSET16 ");
+				break;
+			case DOSLIBLinker::fixup_how_segbase16:
+				fprintf(stderr,"SEGBASE16 ");
+				break;
+			case DOSLIBLinker::fixup_how_far1616:
+				fprintf(stderr,"FAR1616 ");
+				break;
+			case DOSLIBLinker::fixup_how_offset32:
+				fprintf(stderr,"OFFSET32 ");
+				break;
+			case DOSLIBLinker::fixup_how_far1632:
+				fprintf(stderr,"FAR1632 ");
+				break;
+			default:
+				fprintf(stderr,"?? ");
+				break;
+		}
+		fprintf(stderr,"frame=");
+		switch (fixup.frame.type) {
+			case DOSLIBLinker::fixup_t::param_t::TYPE_NONE:
+				fprintf(stderr,"none ");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SEGDEF:
+				fprintf(stderr,"segdef:");
+				fprintf(stderr,"segment[%lu]'%s' ",
+					(unsigned long)(fixup.frame.p.segdef),
+					(fixup.frame.p.segdef != DOSLIBLinker::segment_list_t::undef) ? lenv.strings.get(lenv.segments.get(fixup.frame.p.segdef).segmentname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_GRPDEF:
+				fprintf(stderr,"grpdef:");
+				fprintf(stderr,"group[%lu]'%s' ",
+					(unsigned long)(fixup.frame.p.grpdef),
+					(fixup.frame.p.grpdef != DOSLIBLinker::group_list_t::undef) ? lenv.strings.get(lenv.groups.get(fixup.frame.p.grpdef).groupname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SYMBOL:
+				fprintf(stderr,"symbol:");
+				fprintf(stderr,"sym[%lu]'%s' ",
+					(unsigned long)(fixup.frame.p.symbol),
+					(fixup.frame.p.symbol != DOSLIBLinker::symbol_list_t::undef) ? lenv.strings.get(lenv.symbols.get(fixup.frame.p.symbol).symbolname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SEGMENTFRAME:
+				fprintf(stderr,"segframe:%04lx",(unsigned long)fixup.frame.p.segmentframe);
+				break;
+			default:
+				fprintf(stderr,"?? ");
+				break;
+		}
+		fprintf(stderr,"target=");
+		switch (fixup.target.type) {
+			case DOSLIBLinker::fixup_t::param_t::TYPE_NONE:
+				fprintf(stderr,"none ");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SEGDEF:
+				fprintf(stderr,"segdef:");
+				fprintf(stderr,"segment[%lu]'%s' ",
+					(unsigned long)(fixup.target.p.segdef),
+					(fixup.target.p.segdef != DOSLIBLinker::segment_list_t::undef) ? lenv.strings.get(lenv.segments.get(fixup.target.p.segdef).segmentname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_GRPDEF:
+				fprintf(stderr,"grpdef:");
+				fprintf(stderr,"group[%lu]'%s' ",
+					(unsigned long)(fixup.target.p.grpdef),
+					(fixup.target.p.grpdef != DOSLIBLinker::group_list_t::undef) ? lenv.strings.get(lenv.groups.get(fixup.target.p.grpdef).groupname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SYMBOL:
+				fprintf(stderr,"symbol:");
+				fprintf(stderr,"sym[%lu]'%s' ",
+					(unsigned long)(fixup.target.p.symbol),
+					(fixup.target.p.symbol != DOSLIBLinker::symbol_list_t::undef) ? lenv.strings.get(lenv.symbols.get(fixup.target.p.symbol).symbolname).c_str() : "");
+				break;
+			case DOSLIBLinker::fixup_t::param_t::TYPE_SEGMENTFRAME:
+				fprintf(stderr,"segframe:%04lx",(unsigned long)fixup.target.p.segmentframe);
+				break;
+			default:
+				fprintf(stderr,"?? ");
+				break;
+		}
+		fprintf(stderr,"\n");
 	}
 
 	fprintf(stderr,"Symbols:\n");
