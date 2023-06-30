@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdexcept>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
