@@ -9,6 +9,11 @@
  *
  *   - The Window procedure must be exported at link time. Windows 3.0 demands it.
  *
+ *   - If you want your code to run in Windows 3.0, everything must be MOVEABLE. Your code and
+ *     data segments must be MOVEABLE. If you intend to load resources, the resources must be
+ *     MOVEABLE. The constraints of real mode and fitting everything into 640KB or less require
+ *     it.
+ *
  *   - If you want to keep your sanity, never mark your data segment (DGROUP) as discardable.
  *     You can make your code discardable because the mechanisms of calling your code by Windows
  *     including the MakeProcInstance()-generated wrapper for your windows proc will pull your
@@ -82,7 +87,6 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			BeginPaint(hwnd,&ps);
 			TextOut(ps.hdc,0,0,HelloWorldText,strlen(HelloWorldText));
 #if TARGET_WINDOWS >= 20
-			/* NTS: Windows 3.0 real mode cannot load our icon for some reason */
 			if (AppIcon != NULL) DrawIcon(ps.hdc,5,20,AppIcon);
 #endif
 			EndPaint(hwnd,&ps);
@@ -109,7 +113,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	myInstance = hInstance;
 
 #if TARGET_WINDOWS >= 20
-	/* FIXME: Windows 2.x/3.0 Real Mode: Why are we unable to load our own Application Icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 #endif
 

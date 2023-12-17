@@ -2,5 +2,5 @@
 //
 #include "resource.h"
 
-IDI_APPICON             ICON    DISCARDABLE     "hello.ico"
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
 
