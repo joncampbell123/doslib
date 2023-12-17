@@ -9,12 +9,11 @@
  *
  *   - The Window procedure must be exported at link time. Windows 3.0 demands it.
  *
- *   - The Window procedure must be PASCAL FAR __loadds if you want this code to work properly
- *     under Windows 3.0. If you only support Windows 3.1 and later, you can remove __loadds,
- *     though it's probably wiser to keep it.
- *
- *   - Testing so far shows that this program for whatever reason, either fails to load it's
- *     resources or simply hangs when Windows 3.0 is started in "real mode".
+ *   - If you want to keep your sanity, never mark your data segment (DGROUP) as discardable.
+ *     You can make your code discardable because the mechanisms of calling your code by Windows
+ *     including the MakeProcInstance()-generated wrapper for your windows proc will pull your
+ *     code segment back in on demand. There is no documented way to pull your data segment back
+ *     in if discarded. Notice all the programs in Windows 2.0/3.0 do the same thing.
  */
 /* FIXME: This code crashes when multiple instances are involved. Especially the win386 build. */
 
@@ -28,19 +27,15 @@
 
 #include <windows/apihelp.h>
 
-HWND		hwndMain;
-const char*	WndProcClass = "HELLOWINDOWS";
-const char*	HelloWorldText = "Hello world!";
-HINSTANCE	myInstance;
-#if TARGET_WINDOWS >= 30
-HICON		AppIcon;
+HWND near			hwndMain;
+const char near			WndProcClass[] = "HELLOWINDOWS";
+const char near			HelloWorldText[] = "Hello world!";
+HINSTANCE near			myInstance;
+#if TARGET_WINDOWS >= 20
+HICON near			AppIcon;
 #endif
 
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-FARPROC WndProc_MPI;
-#endif
-
-WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		return 0; /* Success */
 	}
@@ -86,8 +81,9 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 			TextOut(ps.hdc,0,0,HelloWorldText,strlen(HelloWorldText));
-#if TARGET_WINDOWS >= 30
-			DrawIcon(ps.hdc,5,20,AppIcon);
+#if TARGET_WINDOWS >= 20
+			/* NTS: Windows 3.0 real mode cannot load our icon for some reason */
+			if (AppIcon != NULL) DrawIcon(ps.hdc,5,20,AppIcon);
 #endif
 			EndPaint(hwnd,&ps);
 		}
@@ -112,22 +108,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	myInstance = hInstance;
 
-#if TARGET_MSDOS == 16 && TARGET_WINDOWS < 31 /* Windows 3.0 or older (any version capable of real-mode) */
-    /* our data segment is discardable.
-     * in Windows 3.0 real mode that means our data segment can disappear out from under us.
-     * unfortunately I don't know how to call the data segment back in.
-     * so we have to compensate by locking our data segment in place. */
-    LockData();
-#endif
-
-#if TARGET_WINDOWS >= 30
-	/* FIXME: Windows 3.0 Real Mode: Why are we unable to load our own Application Icon? */
+#if TARGET_WINDOWS >= 20
+	/* FIXME: Windows 2.x/3.0 Real Mode: Why are we unable to load our own Application Icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
-	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
-#endif
-
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
 #endif
 
 	/* NTS: In the Windows 3.1 environment all handles are global. Registering a class window twice won't work.
@@ -139,9 +122,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-		wnd.lpfnWndProc = (WNDPROC)WndProc_MPI;
+		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
 #else
-		wnd.lpfnWndProc = WndProc;
+		wnd.lpfnWndProc = (WNDPROC)WndProc;
 #endif
 		wnd.cbClsExtra = 0;
 		wnd.cbWndExtra = 0;
@@ -149,7 +132,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #if TARGET_WINDOWS >= 30
 		wnd.hIcon = AppIcon;
 #else
-        wnd.hIcon = NULL;
+		wnd.hIcon = NULL;
 #endif
 		wnd.hCursor = NULL;
 		wnd.hbrBackground = NULL;
@@ -182,19 +165,19 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 #if TARGET_MSDOS == 16
-    /* Win16 only:
-     * If we are the owner (the first instance that registered the window class),
-     * then we must reside in memory until we are the last instance resident.
-     * If we do not do this, then if multiple instances are open and the user closes US
-     * before closing the others, the others will crash (having pulled the code segment
-     * behind the window class out from the other processes). */
+	/* Win16 only:
+	 * If we are the owner (the first instance that registered the window class),
+	 * then we must reside in memory until we are the last instance resident.
+	 * If we do not do this, then if multiple instances are open and the user closes US
+	 * before closing the others, the others will crash (having pulled the code segment
+	 * behind the window class out from the other processes). */
 	if (!hPrevInstance) {
-        while (GetModuleUsage(hInstance) > 1) {
-            PeekMessage(&msg,NULL,0,0,PM_REMOVE);
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+		while (GetModuleUsage(hInstance) > 1) {
+			PeekMessage(&msg,NULL,0,0,PM_REMOVE);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
 #endif
 
 	return msg.wParam;
