@@ -15,6 +15,8 @@ if [ -z "$WATCOM" ]; then
     fi
     if [ -d "$HOME/src/open-watcom-v2/rel/binl" ]; then
         export WATCOM=$HOME/src/open-watcom-v2/rel
+    #elif [ -d "/usr/src/open-watcom-v2-upstream/rel/binl" ]; then
+    #    export WATCOM=/usr/src/open-watcom-v2-upstream/rel
     elif [ -d "/usr/src/open-watcom-v2/rel/binl" ]; then
         export WATCOM=/usr/src/open-watcom-v2/rel
     fi
