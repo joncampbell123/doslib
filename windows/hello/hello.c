@@ -147,6 +147,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 	}
+	else {
+#if defined(WIN386)
+		/* FIXME: Win386 builds will CRASH if multiple instances try to run this way.
+		 *        Somehow, creating a window with a class registered by another Win386 application
+		 *        causes Windows to hang. */
+		if (MessageBox(NULL,"Win386 builds may crash if you run multiple instances. Continue?","",MB_YESNO|MB_ICONEXCLAMATION|MB_DEFBUTTON2) == IDNO)
+			return 1;
+#endif
+	}
 
 	hwndMain = CreateWindow(WndProcClass,"Hello!",
 		WS_OVERLAPPEDWINDOW,

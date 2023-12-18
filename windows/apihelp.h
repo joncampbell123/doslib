@@ -3,7 +3,7 @@
 /* advice: whether the target Windows version needs MakeProcInstance */
 /* 32-bit windows: No (except Win386 Windows 3.0)
  * 16-bit windows: No (except Windows 3.0) */
-# if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
+# if TARGET_MSDOS == 16
 #  if !defined(TARGET_OS2) && TARGET_WINDOWS <= 30
 #   define WIN16_NEEDS_MAKEPROCINSTANCE 1
 #  endif
