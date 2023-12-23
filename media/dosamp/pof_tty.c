@@ -32,6 +32,10 @@
 #ifndef LINUX
 #include <dos.h>
 #endif
+#ifndef LINUX
+#define strcasecmp strcmpi
+#define strncasecmp strnicmp
+#endif
 
 #ifndef LINUX
 #include <hw/dos/dos.h>
