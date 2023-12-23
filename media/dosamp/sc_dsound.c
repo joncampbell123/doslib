@@ -449,6 +449,8 @@ static int dsound_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned in
 static int dsound_get_card_detail(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
     char *w;
 
+    (void)sc;
+
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 

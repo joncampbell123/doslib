@@ -82,6 +82,8 @@ struct dosamp_time_source               dosamp_time_source_qpc = {
 int dosamp_time_source_qpc_available(const dosamp_time_source_t clk) {
     HMODULE kernel32 = GetModuleHandle("KERNEL32.DLL");
 
+    (void)clk;
+
     if (kernel32 == NULL) return 0;
 
     __QueryPerformanceFrequency = (BOOL (WINAPI *)(LARGE_INTEGER *))GetProcAddress(kernel32,"QueryPerformanceFrequency");

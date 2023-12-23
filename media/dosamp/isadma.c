@@ -70,6 +70,9 @@ uint32_t soundcard_isa_dma_recommended_buffer_size(soundcard_t sc,uint32_t limit
     unsigned int sz = sizeof(uint32_t);
     uint32_t p = 0;
 
+    (void)limit;
+    (void)sc;
+
     if (soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_recommended_buffer_size,&p,&sz,0) < 0)
         return 0;
 
