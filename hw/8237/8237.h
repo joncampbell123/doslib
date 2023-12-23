@@ -148,6 +148,7 @@ extern unsigned char d8237_page_ioport_map_at[8];
 #endif
 
 static inline unsigned char d8237_ioport(unsigned char ch,unsigned char reg) {
+    (void)ch;
 #ifdef TARGET_PC98
 /* 0x01-0x1F odd ports */
     return 0x01+(reg<<1);
