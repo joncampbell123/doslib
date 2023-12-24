@@ -1104,25 +1104,36 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
         int stacksp = -1;
         unsigned int i;
 
-        /* apparently the menu structure is something with a common struct, except one field
-         * is missing if MF_POPUP is in the flags field. Each popup menu enters into a deeper level,
-         * until MF_END to leave the popup and resume the popup menu above it.
+        /* Same as Windows 3.x but some fields are shorter, and submenus are not supported.
+	 *
+	 * So you can have:
+	 *
+	 * POPUP ITEM
+	 *   NORMAL ITEM
+	 *   etc
+	 * (end of menu)
+	 * POPUP ITEM
+	 *   NORMAL ITEM
+	 *   etc
+	 * (end of menu)
+	 * etc
+	 *
+	 * But not:
+	 *
+	 * POPUP ITEM
+	 *   NORMAL ITEM
+	 *   POPUP ITEM
+	 *     NORMAL ITEM
+	 *   (end of menu)
+	 * (end of menu)
+	 * POPUP ITEM
+	 *   NORMAL ITEM
+	 *   POPUP ITEM
+	 *     NORMAL ITEM
+	 *   (end of menu)
+	 * (end of menu)
          *
-         * POPUP ITEM
-         *   NORMAL ITEM
-         *   NORMAL ITEM
-         *   NORMAL ITEM
-         *   POPUP ITEM
-         *     NORMAL ITEM
-         *     NORMAL ITEM MF_END
-         *   NORMAL ITEM
-         *   POPUP ITEM
-         *     NORMAL ITEM MF_END
-         *   NORMAL ITEM MF_END
-         * (end of menu)
-         *
-         * FIXME: So does that mean the last item has MF_END regardless whether a popup or normal item? MSDN docs don't say.
-         *        The examples given only cover when a normal item is last. */
+         * This restriction is also enforced at runtime using CreateMenu/ChangeMenu/etc */
         printf("                    Windows 1.x/2.x menu:\n");
 
         while ((data+2+1) <= fence) { /* enough for menu item + NUL char */
@@ -1191,10 +1202,14 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
             printf("\n");
 
             if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
-                if ((++stacksp) >= MAX_DEPTH) {
+                stacksp++;
+                if (stacksp >= MAX_DEPTH) {
                     /* TOO DEEP! */
                     printf("! Menu is too deep!\n");
                     break;
+                }
+                else if (stacksp > 0) {
+                    printf("! Warning: Sub-menus not supported before Windows 3.0\n");
                 }
 
                 assert(stacksp >= 0);
