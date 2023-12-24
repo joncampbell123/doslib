@@ -52,7 +52,9 @@ const char near		str_time[] = "time";
 HINSTANCE near		myInstance;
 HMENU near		SysMenu;
 HICON near		AppIcon;
+#if (WINVER >= 0x300)
 HMENU near		OwnerDrawMenu;
+#endif
 HMENU near		AppMenu,BmpMenu;
 HMENU near		FileMenu,HelpMenu;
 int near		SysMenuInitCount = 0;
@@ -459,10 +461,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
+#if (WINVER >= 0x300)
 	if (!AppendMenu(FileMenu,MF_POPUP|MF_ENABLED,(UINT)BmpMenu,"&Bitmap menu items")) {
 		return 1;
 	}
+#endif
 
+#if (WINVER >= 0x300)
+	/* MF_OWNERDRAW did not exist until Windows 3.0 */
 	OwnerDrawMenu = CreatePopupMenu();
 
 	if (!AppendMenu(OwnerDrawMenu,MF_STRING|MF_ENABLED|MF_OWNERDRAW,IDC_FILE_OD1,(LPCSTR)1)) {
@@ -480,6 +486,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (!AppendMenu(FileMenu,MF_SEPARATOR,0,"")) {
 		return 1;
 	}
+#endif
 
 	if (!AppendMenu(FileMenu,MF_STRING|MF_ENABLED,IDC_FILE_QUIT,"&Quit")) {
 		return 1;
@@ -497,6 +504,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (!AppendMenu(AppMenu,MF_POPUP|MF_STRING|MF_ENABLED,(UINT)FileMenu,"&File")) {
 		return 1;
 	}
+
+#if (WINVER < 0x300)
+	/* Windows 2.x and lower do not appear to support submenus within menus i.e. File -> Font Size -> 24, 48, 72.
+	 * Notice the built-in Windows applications in Windows 1.x and Windows 2.x only support the top menu bar, and
+	 * one menu each, but no submenus from those menus. */
+	if (!AppendMenu(AppMenu,MF_POPUP|MF_ENABLED,(UINT)BmpMenu,"&Bitmap menu items")) {
+		return 1;
+	}
+#endif
 
 	if (!AppendMenu(AppMenu,MF_POPUP|MF_STRING|MF_ENABLED,(UINT)HelpMenu,"&Help")) {
 		return 1;
