@@ -63,7 +63,7 @@ HBITMAP near		BmpChecked,BmpUnchecked;
 
 #if (WINVER < 0x30A)
 // Open Watcom sprintf() cannot print %u integers properly in real mode
-static void intToStr(char *d,unsigned int dmax,int x) {
+static void near intToStr(char *d,unsigned int dmax,int x) {
 	if (dmax > 1) {
 		if (x < 0) {
 			*d++ = '-';
@@ -94,35 +94,35 @@ static void intToStr(char *d,unsigned int dmax,int x) {
 	}
 }
 #else
-static void intToStr(char *d,unsigned int dmax,int x) {
+static void near intToStr(char *d,unsigned int dmax,int x) {
 	snprintf(d,dmax,"%d",x);
 }
 #endif
 
 #if (WINVER < 0x300)
 /* AppendMenu() did not exist until Windows 3.0, this is a polyfill */
-static BOOL AppendMenu(HMENU hMenu,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+static BOOL near AppendMenu(HMENU hMenu,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
 	/* Microsoft's Windows 3.1 SDK barely documents this function at all, because you're "supposed" to use the newer functions.
 	 * Also back in the Windows 1.x and 2.x SDK days Microsoft declared the functions in their headers without parameter names. */
 	return ChangeMenu(hMenu,0/*position not used*/,lpNewItem,idNewItem,MF_APPEND | fuFlags);
 }
 
-static BOOL ModifyMenu(HMENU hMenu,UINT idItem,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+static BOOL near ModifyMenu(HMENU hMenu,UINT idItem,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
 	/* Microsoft's Windows 3.1 SDK has forgotten about MF_CHANGE and does not mention it */
 	return ChangeMenu(hMenu,idItem,lpNewItem,idNewItem,MF_CHANGE | fuFlags);
 }
 
-static HMENU CreatePopupMenu(void) {
+static HMENU near CreatePopupMenu(void) {
 	return CreateMenu(); // shitty guess
 }
 
-static BOOL SetMenuItemBitmaps(HMENU hMenu,UINT idItem,UINT fuFlags,HBITMAP hbmUnchecked,HBITMAP hbmChecked) {
+static BOOL near SetMenuItemBitmaps(HMENU hMenu,UINT idItem,UINT fuFlags,HBITMAP hbmUnchecked,HBITMAP hbmChecked) {
 	/* no known substitute */
 	return TRUE;
 }
 #endif
 
-void AskFileOpen() {
+void near AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
 	OPENFILENAME f;
 	char filename[129];
@@ -150,7 +150,7 @@ void AskFileOpen() {
 #endif
 }
 
-void AskFileSave() {
+void near AskFileSave() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
 	OPENFILENAME f;
 	char filename[129];

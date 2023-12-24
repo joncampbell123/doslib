@@ -55,7 +55,7 @@ HINSTANCE near		myInstance;
 HICON near		AppIcon;
 HMENU near		AppMenu;
 
-void AskFileOpen() {
+void near AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
 	OPENFILENAME f;
 	char filename[129];
@@ -83,7 +83,7 @@ void AskFileOpen() {
 #endif
 }
 
-void AskFileSave() {
+void near AskFileSave() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
 	OPENFILENAME f;
 	char filename[129];
