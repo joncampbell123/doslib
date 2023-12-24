@@ -539,6 +539,14 @@ struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31 { // as defined by Windows 
 #define exe_ne_header_MF_END                        0x0080
 #define exe_ne_header_MF_OWNERDRAW                  0x0100
 
+// In typical Microsoft documentation style, the MSDN 1992 documentation of an RT_ACCELERATOR resource
+// conveniently forgot to document that bit 0 defines whether wEvent is a VK_* scan code or ASCII code.
+// Notice in most cases that bit is set, but not always. Microsoft Visual C++ 1.5 App Studio reveals
+// for example that the mystery cases with bit 0 == 0 in NOTEPAD.EXE are ASCII codes, therefore it is
+// not VK_CANCEL but CTRL+C (but without signalling that CTRL is ever held down), not VK_KANJI but
+// CTRL+Z, and so on. Sheesh.
+
+#define exe_ne_header_ACCELERATOR_FLAGS_VIRTUAL_KEY             0x01U	// wEvent is a VK scan code
 #define exe_ne_header_ACCELERATOR_FLAGS_NOHILITE_TOPLEVEL       0x02U   // top-level menu item not hilighted when accelerator used
 #define exe_ne_header_ACCELERATOR_FLAGS_SHIFT                   0x04U   // need SHIFT key down to activate
 #define exe_ne_header_ACCELERATOR_FLAGS_CONTROL                 0x08U   // need CTRL key down to activate

@@ -811,6 +811,12 @@ void dump_ne_res_RT_ACCELERATOR(const unsigned char *data,const size_t len) {
 
         printf("                    entry:\n");
         printf("                        fFlags:             0x%02x",ent->fFlags);
+
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_VIRTUAL_KEY)
+            printf(" VKEY");
+        else
+            printf(" ASCII");
+
         if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_NOHILITE_TOPLEVEL)
             printf(" NOHILIGHT_TOPLEVEL");
         if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_SHIFT)
@@ -824,64 +830,74 @@ void dump_ne_res_RT_ACCELERATOR(const unsigned char *data,const size_t len) {
         printf("\n");
 
         printf("                        wEvent:             0x%04x (VK_KEY or ASCII)",ent->wEvent);
-        if ((ent->wEvent >= 'A' && ent->wEvent <= 'Z') || /* only 'A'-'Z' are defined as ASCII */
-            (ent->wEvent >= '0' && ent->wEvent <= '9')) { /* only '0'-'9' are defined as ASCII */
-            printf(" '%c'-key",toupper((char)ent->wEvent));
+        // Ahahaha notice Microsoft never documented bit 0 which is actually very important to determine
+        // if wEvent is ASCII or a VK scan code. Pfff...
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_VIRTUAL_KEY) {
+            if ((ent->wEvent >= 'A' && ent->wEvent <= 'Z') || /* only 'A'-'Z' are defined as ASCII */
+                (ent->wEvent >= '0' && ent->wEvent <= '9')) { /* only '0'-'9' are defined as ASCII */
+                printf(" '%c'-key",toupper((char)ent->wEvent));
+            }
+            else if (ent->wEvent == 0x01)
+                printf(" VK_LBUTTON");
+            else if (ent->wEvent == 0x02)
+                printf(" VK_RBUTTON");
+            else if (ent->wEvent == 0x03)
+                printf(" VK_CANCEL");
+            else if (ent->wEvent == 0x04)
+                printf(" VK_MBUTTON");
+            else if (ent->wEvent == 0x05)
+                printf(" VK_XBUTTON1");
+            else if (ent->wEvent == 0x06)
+                printf(" VK_XBUTTON2");
+            else if (ent->wEvent == 0x08)
+                printf(" VK_BACK");
+            else if (ent->wEvent == 0x09)
+                printf(" VK_TAB");
+            else if (ent->wEvent == 0x0C)
+                printf(" VK_CLEAR");
+            else if (ent->wEvent == 0x0D)
+                printf(" VK_RETURN");
+            else if (ent->wEvent == 0x10)
+                printf(" VK_SHIFT");
+            else if (ent->wEvent == 0x11)
+                printf(" VK_CONTROL");
+            else if (ent->wEvent == 0x12)
+                printf(" VK_MENU");
+            else if (ent->wEvent == 0x13)
+                printf(" VK_PAUSE");
+            else if (ent->wEvent == 0x14)
+                printf(" VK_CAPITAL");
+            else if (ent->wEvent == 0x15)
+                printf(" VK_KANA/VK_HANGEUL");
+            else if (ent->wEvent == 0x16)
+                printf(" VK_IME_ON");
+            else if (ent->wEvent == 0x17)
+                printf(" VK_JUNJA");
+            else if (ent->wEvent == 0x18)
+                printf(" VK_FINAL");
+            else if (ent->wEvent == 0x19)
+                printf(" VK_HANJA");
+            else if (ent->wEvent == 0x1A)
+                printf(" VK_KANJI");
+            else if (ent->wEvent == 0x1B)
+                printf(" VK_ESCAPE");
+            else if (ent->wEvent == 0x20)
+                printf(" VK_SPACE");
+            else if (ent->wEvent == 0x2D)
+                printf(" VK_INSERT");
+            else if (ent->wEvent == 0x2E)
+                printf(" VK_DELETE");
+            else if (ent->wEvent == 0x2F)
+                printf(" VK_HELP");
+            else if (ent->wEvent >= 0x70 && ent->wEvent <= 0x87) /* F1-F24 */
+                printf(" VK_F%u",(unsigned int)(ent->wEvent + 1 - 0x70));
         }
-        else if (ent->wEvent == 0x01)
-            printf(" VK_LBUTTON");
-        else if (ent->wEvent == 0x02)
-            printf(" VK_RBUTTON");
-        else if (ent->wEvent == 0x03)
-            printf(" VK_CANCEL");
-        else if (ent->wEvent == 0x04)
-            printf(" VK_MBUTTON");
-        else if (ent->wEvent == 0x05)
-            printf(" VK_XBUTTON1");
-        else if (ent->wEvent == 0x06)
-            printf(" VK_XBUTTON2");
-        else if (ent->wEvent == 0x08)
-            printf(" VK_BACK");
-        else if (ent->wEvent == 0x09)
-            printf(" VK_TAB");
-        else if (ent->wEvent == 0x0C)
-            printf(" VK_CLEAR");
-        else if (ent->wEvent == 0x0D)
-            printf(" VK_RETURN");
-        else if (ent->wEvent == 0x10)
-            printf(" VK_SHIFT");
-        else if (ent->wEvent == 0x11)
-            printf(" VK_CONTROL");
-        else if (ent->wEvent == 0x12)
-            printf(" VK_MENU");
-        else if (ent->wEvent == 0x13)
-            printf(" VK_PAUSE");
-        else if (ent->wEvent == 0x14)
-            printf(" VK_CAPITAL");
-        else if (ent->wEvent == 0x15)
-            printf(" VK_KANA/VK_HANGEUL");
-        else if (ent->wEvent == 0x16)
-            printf(" VK_IME_ON");
-        else if (ent->wEvent == 0x17)
-            printf(" VK_JUNJA");
-        else if (ent->wEvent == 0x18)
-            printf(" VK_FINAL");
-        else if (ent->wEvent == 0x19)
-            printf(" VK_HANJA");
-        else if (ent->wEvent == 0x1A)
-            printf(" VK_KANJI");
-        else if (ent->wEvent == 0x1B)
-            printf(" VK_ESCAPE");
-        else if (ent->wEvent == 0x20)
-            printf(" VK_SPACE");
-        else if (ent->wEvent == 0x2D)
-            printf(" VK_INSERT");
-        else if (ent->wEvent == 0x2E)
-            printf(" VK_DELETE");
-        else if (ent->wEvent == 0x2F)
-            printf(" VK_HELP");
-        else if (ent->wEvent >= 0x70 && ent->wEvent <= 0x87) /* F1-F24 */
-            printf(" VK_F%u",(unsigned int)(ent->wEvent + 1 - 0x70));
+        else {
+            if (ent->wEvent >= 0x01 && ent->wEvent <= 0x1A)
+                printf(" CTRL+%c",(char)(ent->wEvent+'A'-1));
+            else if (ent->wEvent >= 0x20 && ent->wEvent <= 0x7F)
+                printf(" '%c'",(char)ent->wEvent);
+        }
         printf("\n");
 
         printf("                        wId:                0x%04x\n",ent->wId);
