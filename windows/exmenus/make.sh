@@ -8,6 +8,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 #mv -vn HELLO.RC hello.rc
 #mv -vn HELLO.ICO hello.ico
 
+win20=1 # Windows 2.0
 win30=1 # Windows 3.0
 win31=1 # Windows 3.1
 winnt=1 # Windows NT

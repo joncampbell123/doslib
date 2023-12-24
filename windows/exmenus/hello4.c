@@ -29,6 +29,7 @@
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
 # include <commdlg.h>
 #endif
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -42,19 +43,82 @@
 #define MoveTo(a,b,c) MoveToEx(a,b,c,NULL)
 #endif
 
-HWND		hwndMain;
-const char*	WndProcClass = "HELLOWINDOWS";
-const char*	HelloWorldText = "Hello world! I can mess with the System Menu too!";
-const char*	openSaveFilter = "Text\0*.txt\0Executable\0*.exe\0Other\0*.*\0";
-HINSTANCE	myInstance;
-HMENU		SysMenu;
-HICON		AppIcon;
-HMENU		OwnerDrawMenu;
-HMENU		AppMenu,BmpMenu;
-HMENU		FileMenu,HelpMenu;
-int		SysMenuInitCount = 0;
-BOOL		AllowWindowMove = TRUE;
-HBITMAP		BmpChecked,BmpUnchecked;
+HWND near		hwndMain;
+const char near		WndProcClass[] = "HELLOWINDOWS";
+const char near		HelloWorldText[] = "Hello world! I can mess with the System Menu too!";
+const char near		openSaveFilter[] = "Text\0*.txt\0Executable\0*.exe\0Other\0*.*\0";
+const char near		str_times[] = "times";
+const char near		str_time[] = "time";
+HINSTANCE near		myInstance;
+HMENU near		SysMenu;
+HICON near		AppIcon;
+HMENU near		OwnerDrawMenu;
+HMENU near		AppMenu,BmpMenu;
+HMENU near		FileMenu,HelpMenu;
+int near		SysMenuInitCount = 0;
+BOOL near		AllowWindowMove = TRUE;
+HBITMAP near		BmpChecked,BmpUnchecked;
+
+#if (WINVER < 0x30A)
+// Open Watcom sprintf() cannot print %u integers properly in real mode
+static void intToStr(char *d,unsigned int dmax,int x) {
+	if (dmax > 1) {
+		if (x < 0) {
+			*d++ = '-';
+			dmax--;
+			x = -x;
+		}
+	}
+
+	if (x != 0) {
+		unsigned int tmpsi=0;
+		char tmps[16];
+
+		while (x != 0) {
+			tmps[tmpsi++] = (char)(((unsigned int)x % 10u) + '0');
+			x = (int)((unsigned int)x / 10u);
+		}
+		if (tmpsi == 0) tmps[tmpsi++] = '0';
+
+		while (dmax > 1 && tmpsi > 0) {
+			*d++ = tmps[--tmpsi];
+			dmax--;
+		}
+	}
+
+	if (dmax > 0) {
+		*d++ = 0;
+		dmax--;
+	}
+}
+#else
+static void intToStr(char *d,unsigned int dmax,int x) {
+	snprintf(d,dmax,"%d",x);
+}
+#endif
+
+#if (WINVER < 0x300)
+/* AppendMenu() did not exist until Windows 3.0, this is a polyfill */
+static BOOL AppendMenu(HMENU hMenu,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+	/* Microsoft's Windows 3.1 SDK barely documents this function at all, because you're "supposed" to use the newer functions.
+	 * Also back in the Windows 1.x and 2.x SDK days Microsoft declared the functions in their headers without parameter names. */
+	return ChangeMenu(hMenu,0/*position not used*/,lpNewItem,idNewItem,MF_APPEND | fuFlags);
+}
+
+static BOOL ModifyMenu(HMENU hMenu,UINT idItem,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+	/* Microsoft's Windows 3.1 SDK has forgotten about MF_CHANGE and does not mention it */
+	return ChangeMenu(hMenu,idItem,lpNewItem,idNewItem,MF_CHANGE | fuFlags);
+}
+
+static HMENU CreatePopupMenu(void) {
+	return CreateMenu(); // shitty guess
+}
+
+static BOOL SetMenuItemBitmaps(HMENU hMenu,UINT idItem,UINT fuFlags,HBITMAP hbmUnchecked,HBITMAP hbmChecked) {
+	/* no known substitute */
+	return TRUE;
+}
+#endif
 
 void AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
@@ -115,7 +179,7 @@ void AskFileSave() {
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 FARPROC HelpAboutProc_MPI;
 #endif
-DialogProcType HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+DialogProcType_NoLoadDS HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_INITDIALOG) {
 		SetFocus(GetDlgItem(hwnd,IDOK));
 		return 1; /* Success */
@@ -136,10 +200,7 @@ DialogProcType HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam)
 	return 0;
 }
 
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-FARPROC WndProc_MPI;
-#endif
-WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		return 0; /* Success */
 	}
@@ -245,10 +306,17 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	 * of our window is being display and use that to count the number of times it has been accessed */
 	else if (message == WM_INITMENUPOPUP) { /* when a menu is first accessed */
 		if ((HMENU)wparam == SysMenu) {
-			char tmp[64];
-			SysMenuInitCount++;
-			sprintf(tmp,"This menu called %d %s",SysMenuInitCount,SysMenuInitCount > 1 ? "times" : "time");
-			ModifyMenu(SysMenu,IDC_SYS_COUNTER,MF_BYCOMMAND|MF_STRING|MF_DISABLED,IDC_SYS_COUNTER,tmp);
+			{
+				char *tmp = malloc(128);
+				char *tmp2 = malloc(24);
+				if (tmp && tmp2) {
+					intToStr(tmp2,sizeof(tmp2),++SysMenuInitCount); // Open Watcom sprintf() does not work properly with %u in real mode
+					sprintf(tmp,"This menu called %s %s",tmp2,SysMenuInitCount > 1 ? str_times : str_time);
+					ModifyMenu(SysMenu,IDC_SYS_COUNTER,MF_BYCOMMAND|MF_STRING|MF_DISABLED,IDC_SYS_COUNTER,tmp);
+				}
+				if (tmp2) free(tmp2);
+				if (tmp) free(tmp);
+			}
 
 			/* we also want our AllowWindowMove status to be reflected in the System Menu */
 			EnableMenuItem(SysMenu,SC_MOVE,MF_BYCOMMAND|
@@ -434,12 +502,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
-	/* FIXME: Windows 3.0 Real Mode: Why can't we load our own app icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
-	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
 	HelpAboutProc_MPI = MakeProcInstance((FARPROC)HelpAboutProc,hInstance);
 #endif
 
@@ -452,7 +517,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-		wnd.lpfnWndProc = (WNDPROC)WndProc_MPI;
+		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
 #else
 		wnd.lpfnWndProc = WndProc;
 #endif
@@ -501,6 +566,22 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+#if TARGET_MSDOS == 16
+	/* Win16 only:
+	 * If we are the owner (the first instance that registered the window class),
+	 * then we must reside in memory until we are the last instance resident.
+	 * If we do not do this, then if multiple instances are open and the user closes US
+	 * before closing the others, the others will crash (having pulled the code segment
+	 * behind the window class out from the other processes). */
+	if (!hPrevInstance) {
+		while (GetModuleUsage(hInstance) > 1) {
+			PeekMessage(&msg,NULL,0,0,PM_REMOVE);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+#endif
 
 	/* NTS: Do not DestroyMenu(). Windows will do that for us on destruction of the window.
 	 *      If we do, Win16 systems will act funny, ESPECIALLY Windows 3.0 */

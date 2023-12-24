@@ -38,13 +38,13 @@
 
 #include <windows/apihelp.h>
 
-HWND		hwndMain;
-const char*	WndProcClass = "HELLOWINDOWS";
-const char*	HelloWorldText = "Hello world!";
-const char*	openSaveFilter = "Text\0*.txt\0Executable\0*.exe\0Other\0*.*\0";
-HINSTANCE	myInstance;
-HICON		AppIcon;
-HMENU		AppMenu;
+HWND near		hwndMain;
+const char near		WndProcClass[] = "HELLOWINDOWS";
+const char near		HelloWorldText[] = "Hello world!";
+const char near		openSaveFilter[] = "Text\0*.txt\0Executable\0*.exe\0Other\0*.*\0";
+HINSTANCE near		myInstance;
+HICON near		AppIcon;
+HMENU near		AppMenu;
 
 void AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
@@ -105,7 +105,7 @@ void AskFileSave() {
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 FARPROC HelpAboutProc_MPI;
 #endif
-DialogProcType HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+DialogProcType_NoLoadDS HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_INITDIALOG) {
 		SetFocus(GetDlgItem(hwnd,IDOK));
 		return 1; /* Success */
@@ -126,10 +126,7 @@ DialogProcType HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam)
 	return 0;
 }
 
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-FARPROC WndProc_MPI;
-#endif
-WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		return 0; /* Success */
 	}
@@ -175,7 +172,7 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 			TextOut(ps.hdc,0,0,HelloWorldText,strlen(HelloWorldText));
-			DrawIcon(ps.hdc,5,20,AppIcon);
+			if (AppIcon) DrawIcon(ps.hdc,5,20,AppIcon);
 			EndPaint(hwnd,&ps);
 		}
 
@@ -209,6 +206,15 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 	return 0;
 }
+
+#if (WINVER < 0x300)
+/* AppendMenu() did not exist until Windows 3.0, this is a polyfill */
+static BOOL AppendMenu(HMENU hMenu,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+	/* Microsoft's Windows 3.1 SDK barely documents this function at all, because you're "supposed" to use the newer functions.
+	 * Also back in the Windows 1.x and 2.x SDK days Microsoft declared the functions in their headers without parameter names. */
+	return ChangeMenu(hMenu,0/*position not used*/,lpNewItem,idNewItem,MF_APPEND | fuFlags);
+}
+#endif
 
 /* NOTES:
  *   For Win16, programmers generally use WINAPI WinMain(...) but WINAPI is defined in such a way
@@ -265,12 +271,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
-	/* FIXME: Windows 3.0 Real Mode: Why can't we load our own app icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
-	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
 	HelpAboutProc_MPI = MakeProcInstance((FARPROC)HelpAboutProc,hInstance);
 #endif
 
@@ -283,7 +286,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-		wnd.lpfnWndProc = (WNDPROC)WndProc_MPI;
+		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
 #else
 		wnd.lpfnWndProc = WndProc;
 #endif
@@ -321,6 +324,22 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+#if TARGET_MSDOS == 16
+	/* Win16 only:
+	 * If we are the owner (the first instance that registered the window class),
+	 * then we must reside in memory until we are the last instance resident.
+	 * If we do not do this, then if multiple instances are open and the user closes US
+	 * before closing the others, the others will crash (having pulled the code segment
+	 * behind the window class out from the other processes). */
+	if (!hPrevInstance) {
+		while (GetModuleUsage(hInstance) > 1) {
+			PeekMessage(&msg,NULL,0,0,PM_REMOVE);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+#endif
 
 	/* NTS: Do not DestroyMenu(). Windows will do that for us on destruction of the window.
 	 *      If we do, Win16 systems will act funny, ESPECIALLY Windows 3.0 */

@@ -49,7 +49,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello.obj
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 # FIXME: How do you say "greater than or equal to" in Watcom WMAKE?
 ! ifeq TARGET_WINDOWS 31
@@ -67,7 +67,7 @@ $(HELLO2_EXE): $(SUBDIR)$(HPS)hello2.obj $(HELLO2_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello2.obj
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 # FIXME: How do you say "greater than or equal to" in Watcom WMAKE?
 ! ifeq TARGET_WINDOWS 31
@@ -85,7 +85,7 @@ $(HELLO3_EXE): $(SUBDIR)$(HPS)hello3.obj $(HELLO3_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello3.obj
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 # FIXME: How do you say "greater than or equal to" in Watcom WMAKE?
 ! ifeq TARGET_WINDOWS 31
@@ -103,7 +103,7 @@ $(HELLO4_EXE): $(SUBDIR)$(HPS)hello4.obj $(HELLO4_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello4.obj
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 # FIXME: How do you say "greater than or equal to" in Watcom WMAKE?
 ! ifeq TARGET_WINDOWS 31
