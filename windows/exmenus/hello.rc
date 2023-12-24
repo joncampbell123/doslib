@@ -21,7 +21,9 @@ END
 IDD_ABOUT DIALOG DISCARDABLE MOVEABLE  0, 0, 185, 29
 STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "About this program"
+#ifndef NO_DS_SETFONT // FIXME: Watcom resource compiler only supports #ifdef. #if conditionals are always true, apparently.
 FONT 8, "MS Sans Serif"
+#endif
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,129,6,50,14
     ICON            IDI_APPICON,IDC_STATIC,4,5,18,20
