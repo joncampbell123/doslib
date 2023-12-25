@@ -1,7 +1,8 @@
 
 #include "resource.h"
 
-IDI_APPICON             ICON    DISCARDABLE MOVEABLE     "hello.ico"
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
+IDC_HELLOCURSOR         CURSOR  DISCARDABLE MOVEABLE    "hello.cur"
 
 IDM_MAINMENU MENU DISCARDABLE MOVEABLE 
 BEGIN

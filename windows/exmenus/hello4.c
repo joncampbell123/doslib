@@ -56,6 +56,7 @@ HICON near		AppIcon;
 HMENU near		OwnerDrawMenu;
 #endif
 HMENU near		AppMenu,BmpMenu;
+HCURSOR near		AppCursor;
 HMENU near		FileMenu,HelpMenu;
 int near		SysMenuInitCount = 0;
 BOOL near		AllowWindowMove = TRUE;
@@ -212,7 +213,7 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 	}
 	else if (message == WM_SETCURSOR) {
 		if (LOWORD(lparam) == HTCLIENT) {
-			SetCursor(LoadCursor(NULL,IDC_ARROW));
+			SetCursor(AppCursor);
 			return 1;
 		}
 		else {
@@ -519,6 +520,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
+	AppCursor = LoadCursor(hInstance,MAKEINTRESOURCE(IDC_HELLOCURSOR));
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 	HelpAboutProc_MPI = MakeProcInstance((FARPROC)HelpAboutProc,hInstance);

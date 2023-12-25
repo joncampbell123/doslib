@@ -45,6 +45,7 @@ const char near		openSaveFilter[] = "Text\0*.txt\0Executable\0*.exe\0Other\0*.*\
 HINSTANCE near		myInstance;
 HICON near		AppIcon;
 HMENU near		AppMenu;
+HCURSOR near		AppCursor;
 
 void near AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
@@ -136,7 +137,7 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 	}
 	else if (message == WM_SETCURSOR) {
 		if (LOWORD(lparam) == HTCLIENT) {
-			SetCursor(LoadCursor(NULL,IDC_ARROW));
+			SetCursor(AppCursor);
 			return 1;
 		}
 		else {
@@ -272,6 +273,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
+	AppCursor = LoadCursor(hInstance,MAKEINTRESOURCE(IDC_HELLOCURSOR));
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 	HelpAboutProc_MPI = MakeProcInstance((FARPROC)HelpAboutProc,hInstance);
