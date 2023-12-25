@@ -469,6 +469,17 @@ void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
         if (bmphdr->bmType != 0)
             printf("                        bmType:         0x%04X\n",bmphdr->bmType);
 
+	// NTS: Despite providing structure members to specify the icon width and height,
+	//      bits per pixel and bitplanes, the only thing Windows really pays attention
+	//      to (kind of) is the bmWidthBytes field. Icons in Windows 1.x and 2.x are
+	//      ALWAYS 1-bit monochrome 64x64 icons (Windows scales down to 32x32 for
+	//      display). It doesn't appear to pay attention to bmWidthBytes for the mask,
+	//      only the non-mask bits.
+	//
+	//      So if you were naive enough to think you could specify a 32x32 16-color icon
+	//      in this format, think again, because Windows 1.0/2.0 will misrender them as
+	//      monochrome anyway.
+
         printf("                        bmWidth:        %u\n",bmphdr->bmWidth);
         printf("                        bmHeight:       %u\n",bmphdr->bmHeight);
         printf("                        bmWidthBytes:   %u bytes\n",bmphdr->bmWidthBytes);
@@ -564,6 +575,11 @@ void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
             printf("                        rnZero:         0x%04X\n",bmphdr->rnZero);
         if (bmphdr->bmType != 0)
             printf("                        bmType:         0x%04X\n",bmphdr->bmType);
+
+	// NTS: Despite providing structure members to specify the icon width and height,
+	//      bits per pixel and bitplanes, Windows COMPLETELY IGNORES the members of
+	//      this structure. Cursors are always 32x32 monochrome 1bpp, no matter WHAT
+	//      this structure says (so WHY have a structure???).
 
         printf("                        bmWidth:        %u\n",bmphdr->bmWidth);
         printf("                        bmHeight:       %u\n",bmphdr->bmHeight);
@@ -678,6 +694,14 @@ void dump_ne_res_RT_BITMAP(const unsigned char *data,const size_t len) {
 
         if ((data+sizeof(*bmphdr)) > fence)
             return;
+
+	/* NTS: Despite the presence of fields, and such fields are even filled in,
+	 *      Windows 1.x/2.x does not pay attention to bmBitsPerPixel or bmPlanes,
+	 *      nor does it pay attention to bmWidthBytes. All that matters is
+	 *      bmWidth and bmHeight.
+	 *
+	 *      Which means color bitmaps in Windows 1.x/2.x are impossible. Noticeably,
+	 *      all cursors, icons, and bitmaps in Windows are monochrome 1bpp only.*/
 
         /* NTS: bmType == 0, always, or else this branch would not have been taken */
         printf("                        bmWidth:        %u\n",bmphdr->bmWidth);
