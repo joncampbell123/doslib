@@ -314,8 +314,8 @@ struct exe_ne_header_RTICONBITMAP {                 // RT_ICON resource in Windo
 struct exe_ne_header_RTCURSORBITMAP {               // RT_CURSOR resource in Windows 1.x/2.x (same as RT_ICON)
     uint8_t                     rnType;             // +0x00 always 0x03
     uint8_t                     rnFlags;            // +0x01 flags of some kind (unknown meaning)
-    uint16_t                    rnZero;             // +0x02 unknown field, always zero
-    int16_t                     bmType;             // +0x04 must be zero, according to MSDN docs. Windows 1.x SDK doesn't say anything about it.
+    uint16_t                    hotspotX;           // +0x02 cursor hotspot X coordinate
+    uint16_t                    hotspotY;           // +0x04 cursor hotspot Y coordinate
     int16_t                     bmWidth;            // +0x06
     int16_t                     bmHeight;           // +0x08
     int16_t                     bmWidthBytes;       // +0x0A bytes per scanline aka stride. MSDN says must be multiple of 2 because old Windows assumes WORD alignment.

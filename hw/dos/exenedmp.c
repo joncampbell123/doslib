@@ -571,16 +571,13 @@ void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
         if ((data+sizeof(*bmphdr)) > fence)
             return;
 
-        if (bmphdr->rnZero != 0)
-            printf("                        rnZero:         0x%04X\n",bmphdr->rnZero);
-        if (bmphdr->bmType != 0)
-            printf("                        bmType:         0x%04X\n",bmphdr->bmType);
 
 	// NTS: Despite providing structure members to specify the icon width and height,
 	//      bits per pixel and bitplanes, Windows COMPLETELY IGNORES the members of
 	//      this structure. Cursors are always 32x32 monochrome 1bpp, no matter WHAT
 	//      this structure says (so WHY have a structure???).
 
+        printf("                        hotspot:        %u, %u\n",bmphdr->hotspotX,bmphdr->hotspotY);
         printf("                        bmWidth:        %u\n",bmphdr->bmWidth);
         printf("                        bmHeight:       %u\n",bmphdr->bmHeight);
         printf("                        bmWidthBytes:   %u bytes\n",bmphdr->bmWidthBytes);
