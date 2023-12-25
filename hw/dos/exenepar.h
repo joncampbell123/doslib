@@ -167,7 +167,6 @@ extern struct exe_ne_header_name_entry_table *ne_name_entry_sort_by_table;
 
 unsigned int exe_ne_header_is_WINOLDBITMAP(const unsigned char *data/*at least 4 bytes*/,const size_t len);
 unsigned int exe_ne_header_is_WINOLDICON(const unsigned char *data/*at least 4 bytes*/,const size_t len);
-unsigned int exe_ne_header_is_WINOLDCURSOR(const unsigned char *data/*at least 4 bytes*/,const size_t len);
 
 unsigned int exe_ne_header_BITMAPINFOHEADER_get_palette_count(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr);
 

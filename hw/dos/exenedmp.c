@@ -555,13 +555,16 @@ void dump_ne_res_RT_GROUP_ICON(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
-void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
+void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len,unsigned int winver) {
     const unsigned char *fence = data + len;
 
     if (len < (4+4))
         return;
 
-    if (exe_ne_header_is_WINOLDCURSOR(data,len)) {
+    /* There's no way to auto detect from values because the first two are the cursor hotspot.
+     * A cursor hotspot of 3,3 could be mistaken as an old Windows 2.0 icon. We have to use
+     * the NE header's version number */
+    if (winver < 0x300) {
         const struct exe_ne_header_RTCURSORBITMAP *bmphdr =
             (const struct exe_ne_header_RTCURSORBITMAP*)data;
 
@@ -2393,7 +2396,7 @@ int main(int argc,char **argv) {
                             else if (tinfo->rtTypeID == exe_ne_header_RT_GROUP_ICON)
                                 dump_ne_res_RT_GROUP_ICON(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR)
-                                dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
+                                dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len,ne_header.minimum_windows_version);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_GROUP_CURSOR)
                                 dump_ne_res_RT_GROUP_CURSOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_STRING)

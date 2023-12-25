@@ -843,7 +843,10 @@ int main(int argc,char **argv) {
                                  * BYTE[]               cursor bitmap
                                  *
                                  */
-                                if (exe_ne_header_is_WINOLDCURSOR((const unsigned char*)tmp,docpy)) {
+                                /* There's no way to auto detect from values because the first two are the cursor hotspot.
+                                 * A cursor hotspot of 3,3 could be mistaken as an old Windows 2.0 icon. We have to use
+                                 * the NE header's version number */
+                                if (ne_header.minimum_windows_version < 0x300) {
                                     /* then it is necessary to convert, not just copy, because
                                      * the alignment rules are different:
                                      *
