@@ -6,12 +6,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 RCFLAGS_THIS = -i.. -i"../.."
 
 HELLO_EXE =  $(SUBDIR)$(HPS)hello.exe
-
-!ifeq TARGET_WINDOWS 20
-# Open Watcom cannot yet compile Windows 1.x/2.x compatible resources
-!else
 HELLO_RES =  $(SUBDIR)$(HPS)hello.res
-!endif
 
 !ifndef WIN386
 HELLDLL1_EXE =  $(SUBDIR)$(HPS)HELLDLL1.EXE
