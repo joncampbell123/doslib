@@ -55,6 +55,7 @@ HINSTANCE near		myInstance;
 HICON near		AppIcon;
 HMENU near		AppMenu;
 HCURSOR near		AppCursor;
+HBITMAP near		AppBitmap;
 
 void near AskFileOpen() {
 #if (TARGET_MSDOS == 16 && TARGET_WINDOWS >= 31) || TARGET_MSDOS == 32
@@ -183,6 +184,16 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			BeginPaint(hwnd,&ps);
 			TextOut(ps.hdc,0,0,HelloWorldText,strlen(HelloWorldText));
 			if (AppIcon) DrawIcon(ps.hdc,5,20,AppIcon);
+			if (AppBitmap) {
+				HBITMAP oldBitmap;
+				HDC blitDC;
+
+				blitDC = CreateCompatibleDC(ps.hdc);
+				oldBitmap = (HBITMAP)SelectObject(blitDC,(HGDIOBJ)AppBitmap);
+				BitBlt(ps.hdc,5,20+32+4,300,100,blitDC,0,0,SRCCOPY);
+				SelectObject(blitDC,(HGDIOBJ)oldBitmap);
+				DeleteDC(blitDC);
+			}
 			EndPaint(hwnd,&ps);
 		}
 
@@ -231,6 +242,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	AppMenu = LoadMenu(hInstance,MAKEINTRESOURCE(IDM_MAINMENU));
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 	AppCursor = LoadCursor(hInstance,MAKEINTRESOURCE(IDC_HELLOCURSOR));
+	AppBitmap = LoadBitmap(hInstance,MAKEINTRESOURCE(IDB_BLISS));
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 	HelpAboutProc_MPI = MakeProcInstance((FARPROC)HelpAboutProc,hInstance);
@@ -267,7 +279,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	hwndMain = CreateWindow(WndProcClass,"Hello!",
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
-		300,200,
+		600,240,
 		NULL,NULL,
 		hInstance,NULL);
 	if (!hwndMain) {

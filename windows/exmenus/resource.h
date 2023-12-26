@@ -19,4 +19,5 @@
 #define IDC_FILE_BMP3			116
 #define IDC_FILE_BMP4			117
 #define IDC_HELLOCURSOR                 118
+#define IDB_BLISS                       119
 #define IDC_STATIC                      -1
