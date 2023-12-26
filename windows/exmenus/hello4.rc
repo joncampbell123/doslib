@@ -2,8 +2,13 @@
 #include "resource.h"
 
 IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
+#ifndef NO_DS_SETFONT // FIXME: Watcom resource compiler only supports #ifdef. #if conditionals are always true, apparently.
 IDB_CHECKED             BITMAP  DISCARDABLE MOVEABLE    "checked.bmp"
 IDB_UNCHECKED           BITMAP  DISCARDABLE MOVEABLE    "unchecked.bmp"
+#else
+IDB_CHECKED             BITMAP  DISCARDABLE MOVEABLE    "checkedb.bmp"
+IDB_UNCHECKED           BITMAP  DISCARDABLE MOVEABLE    "uncheckeb.bmp"
+#endif
 IDC_HELLOCURSOR         CURSOR  DISCARDABLE MOVEABLE    "hello.cur"
 IDB_BLISS               BITMAP  DISCARDABLE MOVEABLE    "monoblis.bmp"
 
