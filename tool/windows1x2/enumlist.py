@@ -15,6 +15,21 @@ import struct
 # nobody ever uses? The *.BIN files use that as the offset of the
 # next NE module. Byte offset is that value << sector shift, which
 # in the Windows kernel, is always 4 (16-byte 8086 paragraph units).
+#
+# The non-resident name table is stored in the OVL file at the offset
+# specified in the offset field, which is NORMALLY a byte offset,
+# but in this case, becomes a paragraph offset into the OVL file.
+#
+# For segments, if the LOADONCALL flag is set, the offset in paragraphs
+# is the segment in the OVL file. Otherwise, the offset in paragraphs
+# is in the BIN file.
+
+# BIN file                           OVL file
+# NE header
+# Resident info
+# Non-resident name table offset --> Actual non-resident name table offset
+# Resident segments ---------------> Non-resident LOADONCALL segments
+#                                    [other non-identified data]
 
 class WinModule:
     name = None
