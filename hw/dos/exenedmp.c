@@ -30,6 +30,7 @@ static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
     fprintf(stderr," -sn        Sort names\n");
     fprintf(stderr," -so        Sort by ordinal\n");
+    fprintf(stderr," -neoff <n> Assume NE header offset\n");
 }
 
 void print_imported_name_table(const struct exe_ne_header_imported_name_table * const t) {
@@ -1685,6 +1686,7 @@ int main(int argc,char **argv) {
     struct exe_ne_header ne_header;
     uint32_t ne_header_offset;
     uint32_t file_size;
+    uint32_t spec_ne=0;
     char *a;
     int i;
 
@@ -1716,6 +1718,9 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"i")) {
                 src_file = argv[i++];
                 if (src_file == NULL) return 1;
+            }
+            else if (!strcmp(a,"neoff")) {
+                spec_ne = (uint32_t)strtoul(argv[i++],NULL,0);
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -1749,79 +1754,84 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    if (exehdr.magic != 0x5A4DU/*MZ*/) {
-        fprintf(stderr,"EXE header signature missing\n");
-        return 1;
+    if (spec_ne != 0) {
+        ne_header_offset = spec_ne;
     }
+    else {
+        if (exehdr.magic != 0x5A4DU/*MZ*/) {
+            fprintf(stderr,"EXE header signature missing\n");
+            return 1;
+        }
 
-    printf("File size:                        %lu bytes\n",
-        (unsigned long)file_size);
-    printf("MS-DOS EXE header:\n");
-    printf("    last_block_bytes:             %u bytes\n",
-        exehdr.last_block_bytes);
-    printf("    exe_file_blocks:              %u bytes\n",
-        exehdr.exe_file_blocks);
-    printf("  * exe resident size (blocks):   %lu bytes\n",
-        (unsigned long)exe_dos_header_file_resident_size(&exehdr));
-    printf("                                  ^  x  = %lu x 512 = %lu\n",
-        (unsigned long)exehdr.exe_file_blocks,
-        (unsigned long)exehdr.exe_file_blocks * 512UL);
-    if (exehdr.last_block_bytes != 0U && exehdr.exe_file_blocks != 0U) {
-        printf("                                  ^ (x -= 512) = %lu, last block not full 512 bytes\n",
-            (unsigned long)exehdr.exe_file_blocks * 512UL - 512UL);
-        printf("                                  ^ (x += %lu) = %lu, add last block bytes\n",
-            (unsigned long)exehdr.last_block_bytes,
-            ((unsigned long)exehdr.exe_file_blocks * 512UL) + (unsigned long)exehdr.last_block_bytes - 512UL);
-    }
-    printf("    number_of_relocations:        %u entries\n",
-        exehdr.number_of_relocations);
-    printf("  * size of relocation table:     %lu bytes\n",
-        (unsigned long)exehdr.number_of_relocations * 4UL);
-    printf("    header_size:                  %u paragraphs\n",
-        exehdr.header_size_paragraphs);
-    printf("  * header_size:                  %lu bytes\n",
-        (unsigned long)exe_dos_header_file_header_size(&exehdr));
-    printf("    min_additional_paragraphs:    %u paragraphs\n",
-        exehdr.min_additional_paragraphs);
-    printf("  * min_additional:               %lu bytes\n",
-        (unsigned long)exe_dos_header_bss_size(&exehdr));
-    printf("    max_additional_paragraphs:    %u paragraphs\n",
-        exehdr.max_additional_paragraphs);
-    printf("  * max_additional:               %lu bytes\n",
-        (unsigned long)exe_dos_header_bss_max_size(&exehdr));
-    printf("    init stack pointer:           base_seg+0x%04X:0x%04X\n",
-        exehdr.init_stack_segment,
-        exehdr.init_stack_pointer);
-    printf("    checksum:                     0x%04X\n",
-        exehdr.checksum);
-    printf("    init instruction pointer:     base_seg+0x%04X:0x%04X\n",
-        exehdr.init_code_segment,
-        exehdr.init_instruction_pointer);
-    printf("    relocation_table_offset:      %u bytes\n",
-        exehdr.relocation_table_offset);
-    printf("    overlay number:               %u\n",
-        exehdr.overlay_number);
+        printf("File size:                        %lu bytes\n",
+            (unsigned long)file_size);
+        printf("MS-DOS EXE header:\n");
+        printf("    last_block_bytes:             %u bytes\n",
+            exehdr.last_block_bytes);
+        printf("    exe_file_blocks:              %u bytes\n",
+            exehdr.exe_file_blocks);
+        printf("  * exe resident size (blocks):   %lu bytes\n",
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr));
+        printf("                                  ^  x  = %lu x 512 = %lu\n",
+            (unsigned long)exehdr.exe_file_blocks,
+            (unsigned long)exehdr.exe_file_blocks * 512UL);
+        if (exehdr.last_block_bytes != 0U && exehdr.exe_file_blocks != 0U) {
+            printf("                                  ^ (x -= 512) = %lu, last block not full 512 bytes\n",
+                (unsigned long)exehdr.exe_file_blocks * 512UL - 512UL);
+            printf("                                  ^ (x += %lu) = %lu, add last block bytes\n",
+                (unsigned long)exehdr.last_block_bytes,
+                ((unsigned long)exehdr.exe_file_blocks * 512UL) + (unsigned long)exehdr.last_block_bytes - 512UL);
+        }
+        printf("    number_of_relocations:        %u entries\n",
+            exehdr.number_of_relocations);
+        printf("  * size of relocation table:     %lu bytes\n",
+            (unsigned long)exehdr.number_of_relocations * 4UL);
+        printf("    header_size:                  %u paragraphs\n",
+            exehdr.header_size_paragraphs);
+        printf("  * header_size:                  %lu bytes\n",
+            (unsigned long)exe_dos_header_file_header_size(&exehdr));
+        printf("    min_additional_paragraphs:    %u paragraphs\n",
+            exehdr.min_additional_paragraphs);
+        printf("  * min_additional:               %lu bytes\n",
+            (unsigned long)exe_dos_header_bss_size(&exehdr));
+        printf("    max_additional_paragraphs:    %u paragraphs\n",
+            exehdr.max_additional_paragraphs);
+        printf("  * max_additional:               %lu bytes\n",
+            (unsigned long)exe_dos_header_bss_max_size(&exehdr));
+        printf("    init stack pointer:           base_seg+0x%04X:0x%04X\n",
+            exehdr.init_stack_segment,
+            exehdr.init_stack_pointer);
+        printf("    checksum:                     0x%04X\n",
+            exehdr.checksum);
+        printf("    init instruction pointer:     base_seg+0x%04X:0x%04X\n",
+            exehdr.init_code_segment,
+            exehdr.init_instruction_pointer);
+        printf("    relocation_table_offset:      %u bytes\n",
+            exehdr.relocation_table_offset);
+        printf("    overlay number:               %u\n",
+            exehdr.overlay_number);
 
-    if (exe_dos_header_to_layout(&exelayout,&exehdr) < 0) {
-        fprintf(stderr,"EXE layout not appropriate for Windows NE\n");
-        return 1;
-    }
+        if (exe_dos_header_to_layout(&exelayout,&exehdr) < 0) {
+            fprintf(stderr,"EXE layout not appropriate for Windows NE\n");
+            return 1;
+        }
 
-    if (!exe_header_can_contain_exe_extension(&exehdr)) {
-        fprintf(stderr,"EXE header cannot contain extension\n");
-        return 1;
-    }
+        if (!exe_header_can_contain_exe_extension(&exehdr)) {
+            fprintf(stderr,"EXE header cannot contain extension\n");
+            return 1;
+        }
 
-    /* go read the extension */
-    if (lseek(src_fd,EXE_HEADER_EXTENSION_OFFSET,SEEK_SET) != EXE_HEADER_EXTENSION_OFFSET ||
-        read(src_fd,&ne_header_offset,4) != 4) {
-        fprintf(stderr,"Cannot read extension\n");
-        return 1;
-    }
-    printf("    EXE extension (if exists) at: %lu\n",(unsigned long)ne_header_offset);
-    if ((ne_header_offset+EXE_HEADER_NE_HEADER_SIZE) >= file_size) {
-        printf("! NE header not present (offset out of range)\n");
-        return 0;
+        /* go read the extension */
+        if (lseek(src_fd,EXE_HEADER_EXTENSION_OFFSET,SEEK_SET) != EXE_HEADER_EXTENSION_OFFSET ||
+            read(src_fd,&ne_header_offset,4) != 4) {
+            fprintf(stderr,"Cannot read extension\n");
+            return 1;
+        }
+        printf("    EXE extension (if exists) at: %lu\n",(unsigned long)ne_header_offset);
+        if ((ne_header_offset+EXE_HEADER_NE_HEADER_SIZE) >= file_size) {
+            printf("! NE header not present (offset out of range)\n");
+            return 0;
+        }
     }
 
     /* go read the extended header */
