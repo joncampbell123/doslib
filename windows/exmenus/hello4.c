@@ -220,6 +220,12 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
+	else if (message == WM_MOUSEMOVE) {
+#if WINVER < 0x200 /* WM_SETCUROR doesn't exist in Windows 1.0 */
+		SetCursor(AppCursor);
+#endif
+		return 1;
+	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
 
