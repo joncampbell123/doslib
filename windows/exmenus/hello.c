@@ -154,6 +154,14 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
+	else if (message == WM_MOUSEMOVE) {
+#if WINVER < 0x200
+		SetCursor(AppCursor);
+		return 1;
+#else
+		return DefWindowProc(hwnd,message,wparam,lparam);
+#endif
+	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
 

@@ -63,7 +63,6 @@ int near		SysMenuInitCount = 0;
 BOOL near		AllowWindowMove = TRUE;
 HBITMAP near		BmpChecked,BmpUnchecked;
 
-#if (WINVER < 0x30A)
 // Open Watcom sprintf() cannot print %u integers properly in real mode
 static void near intToStr(char *d,unsigned int dmax,int x) {
 	if (dmax > 1) {
@@ -95,11 +94,11 @@ static void near intToStr(char *d,unsigned int dmax,int x) {
 		dmax--;
 	}
 }
-#else
-static void near intToStr(char *d,unsigned int dmax,int x) {
-	snprintf(d,dmax,"%d",x);
+
+static char * near strcpy_and_advance(char *d,const char *s) {
+	while (*s != 0) *d++ = *s++;
+	return d;
 }
-#endif
 
 #if (WINVER < 0x300)
 /* AppendMenu() did not exist until Windows 3.0, this is a polyfill */
@@ -324,8 +323,16 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 				char *tmp = malloc(128);
 				char *tmp2 = malloc(24);
 				if (tmp && tmp2) {
+					char *w = tmp;
+
 					intToStr(tmp2,sizeof(tmp2),++SysMenuInitCount); // Open Watcom sprintf() does not work properly with %u in real mode
-					sprintf(tmp,"This menu called %s %s",tmp2,SysMenuInitCount > 1 ? str_times : str_time);
+
+					w = strcpy_and_advance(w,"This menu called ");
+					w = strcpy_and_advance(w,tmp2);
+					*w++ = ' ';
+					w = strcpy_and_advance(w,SysMenuInitCount > 1 ? str_times : str_time);
+					*w = 0;
+
 					ModifyMenu(SysMenu,IDC_SYS_COUNTER,MF_BYCOMMAND|MF_STRING|MF_DISABLED,IDC_SYS_COUNTER,tmp);
 				}
 				if (tmp2) free(tmp2);

@@ -56,6 +56,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd library commdlg.lib
 ! endif
 !endif
+	%write tmp.cmd option map=$(HELLO_EXE).map
 	%write tmp.cmd op resource=$(HELLO_RES) name $(HELLO_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
@@ -74,6 +75,7 @@ $(HELLO2_EXE): $(SUBDIR)$(HPS)hello2.obj $(HELLO2_RES)
 	%write tmp.cmd library commdlg.lib
 ! endif
 !endif
+	%write tmp.cmd option map=$(HELLO2_EXE).map
 	%write tmp.cmd op resource=$(HELLO2_RES) name $(HELLO2_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
@@ -92,6 +94,7 @@ $(HELLO3_EXE): $(SUBDIR)$(HPS)hello3.obj $(HELLO3_RES)
 	%write tmp.cmd library commdlg.lib
 ! endif
 !endif
+	%write tmp.cmd option map=$(HELLO3_EXE).map
 	%write tmp.cmd op resource=$(HELLO3_RES) name $(HELLO3_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
@@ -110,6 +113,7 @@ $(HELLO4_EXE): $(SUBDIR)$(HPS)hello4.obj $(HELLO4_RES)
 	%write tmp.cmd library commdlg.lib
 ! endif
 !endif
+	%write tmp.cmd option map=$(HELLO4_EXE).map
 	%write tmp.cmd op resource=$(HELLO4_RES) name $(HELLO4_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
