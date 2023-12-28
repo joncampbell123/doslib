@@ -211,6 +211,7 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 		PostQuitMessage(0);
 		return 0; /* OK */
 	}
+#ifdef WM_SETCURSOR
 	else if (message == WM_SETCURSOR) {
 		if (LOWORD(lparam) == HTCLIENT) {
 			SetCursor(AppCursor);
@@ -220,8 +221,9 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
+#endif
 	else if (message == WM_MOUSEMOVE) {
-#if WINVER < 0x200 /* WM_SETCUROR doesn't exist in Windows 1.0 */
+#ifndef WM_SETCURSOR /* WM_SETCUROR doesn't exist in Windows 1.0 */
 		SetCursor(AppCursor);
 #endif
 		return 1;
@@ -271,6 +273,7 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 
 		return 0; /* Return 0 to signal we processed the message */
 	}
+#ifdef WM_MEASUREITEM
 	else if (message == WM_MEASUREITEM) {
 		if (LOWORD(wparam) == 0) { /* menu */
 			MEASUREITEMSTRUCT FAR *ms = (MEASUREITEMSTRUCT FAR*)lparam;
@@ -289,6 +292,8 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 
 		return DefWindowProc(hwnd,message,wparam,lparam);
 	}
+#endif
+#ifdef WM_DRAWITEM
 	else if (message == WM_DRAWITEM) {
 		if (LOWORD(wparam) == 0) { /* menu */
 			DRAWITEMSTRUCT FAR *ms = (DRAWITEMSTRUCT FAR*)lparam;
@@ -320,6 +325,7 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 
 		return DefWindowProc(hwnd,message,wparam,lparam);
 	}
+#endif
 	/* this example demonstrates the WM_INITMENU and WM_INITMENUPOPUP messages sent by Windows
 	 * when a menu is displayed. In this case, we respond to the message that the System Menu
 	 * of our window is being display and use that to count the number of times it has been accessed */

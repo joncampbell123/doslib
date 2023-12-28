@@ -49,6 +49,7 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		PostQuitMessage(0);
 		return 0; /* OK */
 	}
+#ifdef WM_SETCURSOR
 	else if (message == WM_SETCURSOR) {
 		if (LOWORD(lparam) == HTCLIENT) {
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
@@ -58,6 +59,7 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
+#endif
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
 
