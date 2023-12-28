@@ -33,9 +33,6 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk win32/hello.exe ::helwin32.exe
 
     mcopy -i test.dsk winnt/hello.exe ::helwinnt.exe
-
-    mcopy -i test.dsk win32s3/HELLDLD1.DLL ::helldld1.dll
-    mcopy -i test.dsk win32s3/HELLDLL1.EXE ::helldll1.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
