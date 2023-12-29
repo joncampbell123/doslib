@@ -192,6 +192,37 @@ const char *exe_pe_opthdr_data_directory_entry_to_str(unsigned int i) {
         return "?";
 }
 
+enum exe_pe_opthdr_subsystem {
+        EXE_PE_OPTHDR_SUBSYSTEM_UNKNOWN=0,
+        EXE_PE_OPTHDR_SUBSYSTEM_NATIVE=1,
+        EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_GUI=2,
+        EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_CUI=3,
+        EXE_PE_OPTHDR_SUBSYSTEM_POSIX_CUI=7,
+        EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_CE_GUI=9,
+        EXE_PE_OPTHDR_SUBSYSTEM_EFI_APPLICATION=10,
+        EXE_PE_OPTHDR_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER=11,
+        EXE_PE_OPTHDR_SUBSYSTEM_EFI_RUNTIME_DRIVER=12,
+
+        EXE_PE_OPTHDR_SUBSYSTEM__MAX
+};
+
+const char *exe_pe_opthdr_subsystem_to_str(const uint16_t s) {
+        switch (s) {
+                case EXE_PE_OPTHDR_SUBSYSTEM_UNKNOWN:           return "UNKNOWN";
+                case EXE_PE_OPTHDR_SUBSYSTEM_NATIVE:            return "NATIVE";
+                case EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_GUI:       return "WINDOWS_GUI";
+                case EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_CUI:       return "WINDOWS_CUI";
+                case EXE_PE_OPTHDR_SUBSYSTEM_POSIX_CUI:         return "POSIX_CUI";
+                case EXE_PE_OPTHDR_SUBSYSTEM_WINDOWS_CE_GUI:    return "WINDOWS_CE_GUI";
+                case EXE_PE_OPTHDR_SUBSYSTEM_EFI_APPLICATION:   return "EFI_APPLICATION";
+                case EXE_PE_OPTHDR_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: return "EFI_BOOT_SERVICE_DRIVER";
+                case EXE_PE_OPTHDR_SUBSYSTEM_EFI_RUNTIME_DRIVER: return "EFI_RUNTIME_DRIVER";
+                default:                                        break;
+        }
+
+        return "?";
+}
+
 struct exe_pe_opthdr_pe { // EXE_PE_OPTHDR_MAGIC_PE
         struct exe_pe_opthdr_pe_standard	        standard;			/* +0x00 */
 	struct exe_pe_opthdr_pe_windows			windows;			/* +0x1C (size 0x44) */
@@ -564,8 +595,9 @@ int main(int argc,char **argv) {
                     (unsigned long)WS(CheckSum));
             }
             if (EXIST(WS(Subsystem))) {
-                printf("    Subsystem:                      0x%08lx\n",
-                    (unsigned long)WS(Subsystem));
+                printf("    Subsystem:                      0x%08lx (%s)\n",
+                    (unsigned long)WS(Subsystem),
+                    exe_pe_opthdr_subsystem_to_str(WS(Subsystem)));
             }
             if (EXIST(WS(DLLCharacteristics))) {
                 printf("    DLL Characteristics:            0x%08lx\n",
