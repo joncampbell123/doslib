@@ -316,7 +316,7 @@ uint16_t exe_pe_opthdr_magic_value(struct exe_pe_optional_header_raw *h) {
 
 #pragma pack(push,1)
 struct exe_pe_section_table_entry {
-        char                                            name[8];                        /* +0x00 */
+        char                                            Name[8];                        /* +0x00 */
         uint32_t                                        VirtualSize;                    /* +0x08 */
         uint32_t                                        VirtualAddress;                 /* +0x0C */
         uint32_t                                        SizeOfRawData;                  /* +0x10 */
@@ -324,7 +324,7 @@ struct exe_pe_section_table_entry {
         uint32_t                                        PointerToRelocations;           /* +0x18 */
         uint32_t                                        PointerToLinenumbers;           /* +0x1C */
         uint16_t                                        NumberOfRelocations;            /* +0x20 */
-        uint16_t                                        NubmerOfLinenumbers;            /* +0x22 */
+        uint16_t                                        NumberOfLinenumbers;            /* +0x22 */
         uint32_t                                        Characteristics;                /* +0x24 */
 };											/* =0x28 */
 #pragma pack(pop)
@@ -506,7 +506,6 @@ int main(int argc,char **argv) {
     }
 
     pe_parser.pe_header_offset = pe_header_offset;
-    pe_parser.sections_count = pe_parser.pe_header.fileheader.NumberOfSections;
     pe_parser.opthdr_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header);
     pe_parser.sections_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header) + pe_parser.pe_header.fileheader.SizeOfOptionalHeader;
     printf("* PE header at %lu\n",(unsigned long)pe_header_offset);
@@ -905,6 +904,57 @@ int main(int argc,char **argv) {
                     (unsigned long)(ent->Size));
             }
         }
+    }
+    if (pe_parser.pe_header.fileheader.NumberOfSections > 0 && pe_parser.pe_header.fileheader.NumberOfSections <= 4096) {
+        if (lseek(src_fd,pe_parser.sections_offset,SEEK_SET) != pe_parser.sections_offset) {
+            printf("! Failed to seek to section table\n");
+            return 1;
+        }
+
+        pe_parser.sections_count = pe_parser.pe_header.fileheader.NumberOfSections;
+        pe_parser.sections = malloc(sizeof(struct exe_pe_section_table_entry) * pe_parser.sections_count);
+        if (!pe_parser.sections) {
+            printf("! Cannot allocate memory for section table\n");
+            return 1;
+        }
+
+        if ((size_t)read(src_fd,pe_parser.sections,pe_parser.sections_count * sizeof(struct exe_pe_section_table_entry)) !=
+            (pe_parser.sections_count * sizeof(struct exe_pe_section_table_entry))) {
+            printf("! Cannot read section table\n");
+            return 1;
+        }
+    }
+
+    if (pe_parser.sections != NULL && pe_parser.sections_count != 0) {
+        struct exe_pe_section_table_entry *ent;
+        unsigned int i=0;
+        char tmp[9];
+
+        printf(" == Section table ==\n"); 
+        for (i=0;i < pe_parser.sections_count;i++) {
+            ent = pe_parser.sections + i;
+
+            memcpy(tmp,ent->Name,8); tmp[8] = 0;
+            printf("    Section #%u '%s':\n",i,tmp);
+            printf("        VirtualSize:                0x%08lx\n",
+                (unsigned long)(ent->VirtualSize));
+            printf("        VirtualAddress:             0x%08lx\n",
+                (unsigned long)(ent->VirtualAddress));
+            printf("        SizeOfRawData:              0x%08lx\n",
+                (unsigned long)(ent->SizeOfRawData));
+            printf("        PointerToRawData:           0x%08lx\n",
+                (unsigned long)(ent->PointerToRawData));
+            printf("        PointerToRelocations:       0x%08lx\n",
+                (unsigned long)(ent->PointerToRelocations));
+            printf("        PointerToLinenumbers:       0x%08lx\n",
+                (unsigned long)(ent->PointerToLinenumbers));
+            printf("        NumberOfRelocations:        0x%08lx\n",
+                (unsigned long)(ent->NumberOfRelocations));
+            printf("        NumberOfLinenumbers:        0x%08lx\n",
+                (unsigned long)(ent->NumberOfLinenumbers));
+            printf("        Characteristics:            0x%08lx\n",
+                (unsigned long)(ent->Characteristics));
+	}
     }
 
     close(src_fd);
