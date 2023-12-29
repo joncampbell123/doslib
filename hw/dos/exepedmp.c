@@ -271,6 +271,20 @@ struct exe_pe_opthdr_data_directory_entry *exe_pe_opthdr_data_directory(struct e
 #undef COMMON_RETURN
 }
 
+struct pe_header_parser {
+        uint32_t                                        pe_header_offset;
+        struct exe_pe_header                            pe_header;
+        uint32_t                                        opthdr_offset;
+        uint16_t                                        opthdr_magic;
+        struct exe_pe_optional_header_raw               opthdr_raw;
+        struct exe_pe_opthdr_data_directory_entry*      datadir;
+        size_t                                          datadir_count;
+};
+
+void pe_parser_init(struct pe_header_parser *hp) {
+        memset(hp,0,sizeof(*hp));
+}
+
 static unsigned char            opt_sort_ordinal = 0;
 static unsigned char            opt_sort_names = 0;
 
@@ -287,13 +301,13 @@ static void help(void) {
 }
 
 int main(int argc,char **argv) {
-    struct exe_pe_optional_header_raw pe_opthdr_raw;
-    struct exe_pe_header pe_header;
+    struct pe_header_parser pe_parser;
     uint32_t pe_header_offset;
     uint32_t file_size;
     char *a;
     int i;
 
+    pe_parser_init(&pe_parser);
     memset(&exehdr,0,sizeof(exehdr));
 
     for (i=1;i < argc;) {
@@ -421,98 +435,115 @@ int main(int argc,char **argv) {
 
     /* go read the extended header */
     if (lseek(src_fd,pe_header_offset,SEEK_SET) != pe_header_offset ||
-        read(src_fd,&pe_header,sizeof(pe_header)) != sizeof(pe_header)) {
+        read(src_fd,&pe_parser.pe_header,sizeof(pe_parser.pe_header)) != sizeof(pe_parser.pe_header)) {
         fprintf(stderr,"Cannot read PE header\n");
         return 1;
     }
-    if (pe_header.signature != EXE_PE_SIGNATURE) {
+    if (pe_parser.pe_header.signature != EXE_PE_SIGNATURE) {
         fprintf(stderr,"Not an PE executable\n");
         return 1;
     }
 
+    pe_parser.pe_header_offset = pe_header_offset;
+    pe_parser.opthdr_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header);
     printf("* PE header at %lu\n",(unsigned long)pe_header_offset);
     printf("    Machine:                        0x%04x (%s)\n",
-        pe_header.fileheader.Machine,
-        exe_pe_fileheader_machine_to_str(pe_header.fileheader.Machine));
+        pe_parser.pe_header.fileheader.Machine,
+        exe_pe_fileheader_machine_to_str(pe_parser.pe_header.fileheader.Machine));
     printf("    NumberOfSections:               %u\n",
-        pe_header.fileheader.NumberOfSections);
+        pe_parser.pe_header.fileheader.NumberOfSections);
     printf("    TimeDateStamp:                  %lu (0x%08lx)\n",
-        (unsigned long)pe_header.fileheader.TimeDateStamp,
-        (unsigned long)pe_header.fileheader.TimeDateStamp);
+        (unsigned long)pe_parser.pe_header.fileheader.TimeDateStamp,
+        (unsigned long)pe_parser.pe_header.fileheader.TimeDateStamp);
     printf("    PointerToSymbolTable:           %lu (0x%08lx) (file offset)\n",
-        (unsigned long)pe_header.fileheader.PointerToSymbolTable,
-        (unsigned long)pe_header.fileheader.PointerToSymbolTable);
+        (unsigned long)pe_parser.pe_header.fileheader.PointerToSymbolTable,
+        (unsigned long)pe_parser.pe_header.fileheader.PointerToSymbolTable);
     printf("    NumberOfSymbols:                %lu\n",
-        (unsigned long)pe_header.fileheader.NumberOfSymbols);
+        (unsigned long)pe_parser.pe_header.fileheader.NumberOfSymbols);
     printf("    SizeOfOptionalHeader:           %lu\n",
-        (unsigned long)pe_header.fileheader.SizeOfOptionalHeader);
+        (unsigned long)pe_parser.pe_header.fileheader.SizeOfOptionalHeader);
     printf("    Characteristics:                0x%04x\n",
-        pe_header.fileheader.Characteristics);
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_RELOCS_STRIPPED)
+        pe_parser.pe_header.fileheader.Characteristics);
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_RELOCS_STRIPPED)
         printf("      - Relocations stripped\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_EXECUTABLE_IMAGE)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_EXECUTABLE_IMAGE)
         printf("      - Image is valid and executable\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LINE_NUMS_STRIPPED)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LINE_NUMS_STRIPPED)
         printf("      - Line numbers have been removed\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LOCAL_SYMS_STRIPPED)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LOCAL_SYMS_STRIPPED)
         printf("      - Local symbols have been removed\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_AGGRESSIVE_WS_TRIM)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_AGGRESSIVE_WS_TRIM)
         printf("      - Aggressively trim working set\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LARGE_ADDRESS_AWARE)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LARGE_ADDRESS_AWARE)
         printf("      - Large address aware\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_16BIT_MACHINE)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_16BIT_MACHINE)
         printf("      - 16-bit machine / Reserved\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_LO)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_LO)
         printf("      - Little endian (LSB before MSB)\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_32BIT_MACHINE)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_32BIT_MACHINE)
         printf("      - 32-bit machine\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DEBUG_STRIPPED)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DEBUG_STRIPPED)
         printf("      - Debugging information stripped from image file\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP)
         printf("      - Copy and run from swap if run from removable media\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_NET_RUN_FROM_SWAP)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_NET_RUN_FROM_SWAP)
         printf("      - Copy and run from swap if run from network media\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_SYSTEM)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_SYSTEM)
         printf("      - Image is a system file, not user program\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DLL)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DLL)
         printf("      - Image is a DLL library\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_UP_SYSTEM_ONLY)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_UP_SYSTEM_ONLY)
         printf("      - Run only on a UP machine\n");
-    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI)
+    if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI)
         printf("      - Big endian (MSB before LSB)\n");
 
     /* read the optional header */
-    if (pe_header.fileheader.SizeOfOptionalHeader >= 2 && pe_header.fileheader.SizeOfOptionalHeader <= 0x4000) {
-        uint16_t opt_magic;
+    if (pe_parser.pe_header.fileheader.SizeOfOptionalHeader >= 2 && pe_parser.pe_header.fileheader.SizeOfOptionalHeader <= 0x4000) {
+        if (lseek(src_fd,pe_parser.opthdr_offset,SEEK_SET) != pe_parser.opthdr_offset) {
+            printf("! Failed to seek to opthdr\n");
+            return 1;
+        }
 
-        pe_opthdr_raw.size = pe_header.fileheader.SizeOfOptionalHeader;
-        pe_opthdr_raw.alloc_size = 512;
-        if (pe_opthdr_raw.alloc_size < pe_opthdr_raw.size)
-                pe_opthdr_raw.alloc_size = pe_opthdr_raw.size;
-        pe_opthdr_raw.data = malloc(pe_opthdr_raw.alloc_size);
-        if (!pe_opthdr_raw.data) {
+        pe_parser.opthdr_raw.size = pe_parser.pe_header.fileheader.SizeOfOptionalHeader;
+        pe_parser.opthdr_raw.alloc_size = 512;
+        if (pe_parser.opthdr_raw.alloc_size < pe_parser.opthdr_raw.size)
+                pe_parser.opthdr_raw.alloc_size = pe_parser.opthdr_raw.size;
+        pe_parser.opthdr_raw.data = malloc(pe_parser.opthdr_raw.alloc_size);
+        if (!pe_parser.opthdr_raw.data) {
             printf("! Failed to allocate memory for optional header\n");
             return 1;
         }
-        memset(pe_opthdr_raw.data,0,pe_opthdr_raw.alloc_size);
-        if ((size_t)read(src_fd,pe_opthdr_raw.data,pe_opthdr_raw.size) != pe_opthdr_raw.size) {
+        memset(pe_parser.opthdr_raw.data,0,pe_parser.opthdr_raw.alloc_size);
+        if ((size_t)read(src_fd,pe_parser.opthdr_raw.data,pe_parser.opthdr_raw.size) != pe_parser.opthdr_raw.size) {
             printf("! Failed to read optional header\n");
             return 1;
         }
 
-        opt_magic = exe_pe_opthdr_magic_value(&pe_opthdr_raw);
+        pe_parser.opthdr_magic = exe_pe_opthdr_magic_value(&pe_parser.opthdr_raw);
+
+        if (pe_parser.opthdr_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            if (pe_parser.opthdr_raw.size >= sizeof(struct exe_pe_opthdr_pe)) {
+                struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_parser.opthdr_raw.data);
+                assert(pe_parser.opthdr_raw.alloc_size >= sizeof(*hdr));
+
+                pe_parser.datadir = (struct exe_pe_opthdr_data_directory_entry*)(pe_parser.opthdr_raw.data+sizeof(struct exe_pe_opthdr_pe));
+                pe_parser.datadir_count = (pe_parser.opthdr_raw.size-sizeof(struct exe_pe_opthdr_pe))/sizeof(struct exe_pe_opthdr_data_directory_entry);
+                if (pe_parser.datadir_count > hdr->windows.NumberOfRvaAndSizes)
+                    pe_parser.datadir_count = hdr->windows.NumberOfRvaAndSizes;
+            }
+        }
 
         printf("    Optional header magic:          0x%04x (%s)\n",
-            opt_magic,exe_ne_opthdr_magic_to_str(opt_magic));
+            pe_parser.opthdr_magic,exe_ne_opthdr_magic_to_str(pe_parser.opthdr_magic));
 
 	printf(" == Optional header, standard section ==\n");
 
 #define HS(x) hdr->standard.x
 #define WS(x) hdr->windows.x
-#define EXIST(w) ( ( (size_t)((char*)(&(w))) + sizeof(w) - (size_t)((char*)(hdr)) ) <= pe_opthdr_raw.size )
-        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
-            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
-            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
+#define EXIST(w) ( ( (size_t)((char*)(&(w))) + sizeof(w) - (size_t)((char*)(hdr)) ) <= pe_parser.opthdr_raw.size )
+        if (pe_parser.opthdr_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_parser.opthdr_raw.data);
+            assert(pe_parser.opthdr_raw.alloc_size >= sizeof(*hdr));
 
             if (EXIST(HS(MinorLinkerVersion))) {
                 printf("    Linker version:                 %u.%u\n",
@@ -547,9 +578,9 @@ int main(int argc,char **argv) {
 
         printf(" == Optional header, windows section ==\n");
 
-        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
-            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
-            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
+        if (pe_parser.opthdr_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_parser.opthdr_raw.data);
+            assert(pe_parser.opthdr_raw.alloc_size >= sizeof(*hdr));
 
             if (EXIST(WS(ImageBase))) {
                 printf("    ImageBase:                      0x%08lx (VA)\n",
@@ -632,24 +663,28 @@ int main(int argc,char **argv) {
 #undef WS
 #undef HS
 
-        printf(" == Optional header, data directory ==\n");
-        {
+        if (pe_parser.datadir != NULL) {
             struct exe_pe_opthdr_data_directory_entry *ent;
             unsigned int i=0;
 
-            while ((ent=exe_pe_opthdr_data_directory(&pe_opthdr_raw,i)) != NULL) {
+            printf(" == Optional header, data directory ==\n");
+            for (i=0;i < pe_parser.datadir_count;i++) {
                 printf("    Data directory #%u (%s):\n",i,exe_pe_opthdr_data_directory_entry_to_str(i));
-                if (i == EXE_PE_DATADIRENT_CERTIFICATE_TABLE) {
-                    printf("        File offset:                0x%08lx\n",
-                        (unsigned long)(ent->RVA));
+
+                ent = exe_pe_opthdr_data_directory(&pe_parser.opthdr_raw,i);
+                if (ent != NULL) {
+                    if (i == EXE_PE_DATADIRENT_CERTIFICATE_TABLE) {
+                        printf("        File offset:                0x%08lx\n",
+                            (unsigned long)(ent->RVA));
+                    }
+                    else {
+                        printf("        RVA:                        0x%08lx\n",
+                            (unsigned long)(ent->RVA));
+                    }
+
+                    printf("        Size:                       0x%08lx\n",
+                        (unsigned long)(ent->Size));
                 }
-                else {
-                    printf("        RVA:                        0x%08lx\n",
-                        (unsigned long)(ent->RVA));
-                }
-                printf("        Size:                       0x%08lx\n",
-                    (unsigned long)(ent->Size));
-                i++;
             }
         }
     }
