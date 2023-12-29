@@ -162,8 +162,35 @@ enum exe_pe_opthdr_data_directory_index {
         EXE_PE_DATADIRENT_DELAY_IMPORT_DESCRIPTOR=13,
         EXE_PE_DATADIRENT_COMPLUS_RUNTIME_HEADER=14,
         EXE_PE_DATADIRENT_CLR_RUNTIME_HEADER=14,
-        EXE_PE_DATADIRENT_RESERVED15=15
+        EXE_PE_DATADIRENT_RESERVED15=15,
+
+        EXE_PE_DATADIRENT__MAX
 };
+
+const char *exe_pe_opthdr_data_directory_entry_str[EXE_PE_DATADIRENT__MAX] = {
+        "Export table",                 // 0
+        "Import table",
+        "Resource table",
+        "Exception table",
+        "Certificate table",
+        "Base relocation table",        // 5
+        "Debug",
+        "Architecture",
+        "Global ptr",
+        "TLS table",
+        "Load config table",            // 10
+        "Bound import",
+        "IAT",
+        "Delay import descriptor",
+        "COM+/CLR runtime header",
+        "Reserved"                      // 15
+};
+
+const char *exe_pe_opthdr_data_directory_entry_to_str(unsigned int i) {
+        if (i < EXE_PE_DATADIRENT__MAX)
+                return exe_pe_opthdr_data_directory_entry_str[i];
+        return "?";
+}
 
 struct exe_pe_opthdr_pe { // EXE_PE_OPTHDR_MAGIC_PE
         struct exe_pe_opthdr_pe_standard	        standard;			/* +0x00 */
@@ -447,72 +474,151 @@ int main(int argc,char **argv) {
         printf("    Optional header magic:          0x%04x (%s)\n",
             opt_magic,exe_ne_opthdr_magic_to_str(opt_magic));
 
-        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
-            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
-
-            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
-
-            printf(" == Optional header, standard section ==\n");
+	printf(" == Optional header, standard section ==\n");
 
 #define HS(x) hdr->standard.x
 #define WS(x) hdr->windows.x
-            printf("    Linker version:                 %u.%u\n",
-                HS(MajorLinkerVersion),
-                HS(MinorLinkerVersion));
-            printf("    SizeOfCode:                     0x%08lx\n",
-                (unsigned long)HS(SizeOfCode));
-            printf("    SizeOfInitializedData:          0x%08lx\n",
-                (unsigned long)HS(SizeOfInitializedData));
-            printf("    SizeOfUninitializedData:        0x%08lx\n",
-                (unsigned long)HS(SizeOfUninitializedData));
-            printf("    AddressOfEntryPoint:            0x%08lx (RVA)\n",
-                (unsigned long)HS(AddressOfEntryPoint));
-            printf("    BaseOfCode:                     0x%08lx (RVA)\n",
-                (unsigned long)HS(BaseOfCode));
-            printf("    BaseOfData:                     0x%08lx (RVA)\n",
-                (unsigned long)HS(BaseOfData));
+#define EXIST(w) ( ( (size_t)((char*)(&(w))) + sizeof(w) - (size_t)((char*)(hdr)) ) <= pe_opthdr_raw.size )
+        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
+            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
 
-            printf(" == Optional header, windows section ==\n");
+            if (EXIST(HS(MinorLinkerVersion))) {
+                printf("    Linker version:                 %u.%u\n",
+                    HS(MajorLinkerVersion),
+                    HS(MinorLinkerVersion));
+            }
+            if (EXIST(HS(SizeOfCode))) {
+                printf("    SizeOfCode:                     0x%08lx\n",
+                    (unsigned long)HS(SizeOfCode));
+            }
+            if (EXIST(HS(SizeOfInitializedData))) {
+                printf("    SizeOfInitializedData:          0x%08lx\n",
+                    (unsigned long)HS(SizeOfInitializedData));
+            }
+            if (EXIST(HS(SizeOfUninitializedData))) {
+                printf("    SizeOfUninitializedData:        0x%08lx\n",
+                    (unsigned long)HS(SizeOfUninitializedData));
+            }
+            if (EXIST(HS(AddressOfEntryPoint))) {
+                printf("    AddressOfEntryPoint:            0x%08lx (RVA)\n",
+                    (unsigned long)HS(AddressOfEntryPoint));
+            }
+            if (EXIST(HS(BaseOfCode))) {
+                printf("    BaseOfCode:                     0x%08lx (RVA)\n",
+                    (unsigned long)HS(BaseOfCode));
+            }
+            if (EXIST(HS(BaseOfData))) {
+                printf("    BaseOfData:                     0x%08lx (RVA)\n",
+                    (unsigned long)HS(BaseOfData));
+            }
+	}
 
-            printf("    ImageBase:                      0x%08lx (VA)\n",
-                (unsigned long)WS(ImageBase));
-            printf("    SectionAlignment;               0x%08lx\n",
-                (unsigned long)WS(SectionAlignment));
-            printf("    FileAlignment:                  0x%08lx\n",
-                (unsigned long)WS(FileAlignment));
-            printf("    Operating System Version:       %u.%u\n",
-                WS(MajorOperatingSystemVersion),
-		WS(MinorOperatingSystemVersion));
-            printf("    Image Version:                  %u.%u\n",
-                WS(MajorImageVersion),
-		WS(MinorImageVersion));
-            printf("    Subsystem version:              %u.%u\n",
-                WS(MajorSubsystemVersion),
-		WS(MinorSubsystemVersion));
-            printf("    Win32VersionValue/Reserved:     0x%08lx\n",
-                (unsigned long)WS(Win32VersionValue));
-            printf("    SizeOfImage:                    0x%08lx\n",
-                (unsigned long)WS(SizeOfImage));
-            printf("    SizeOfHeaders:                  0x%08lx\n",
-                (unsigned long)WS(SizeOfHeaders));
-            printf("    CheckSum:                       0x%08lx\n",
-                (unsigned long)WS(CheckSum));
-            printf("    DLL Characteristics:            0x%08lx\n",
-                (unsigned long)WS(DLLCharacteristics));
-            printf("    SizeOfStackReserve:             0x%08lx\n",
-                (unsigned long)WS(SizeOfStackReserve));
-            printf("    SizeOfStackCommit:              0x%08lx\n",
-                (unsigned long)WS(SizeOfStackCommit));
-            printf("    SizeOfHeapReserve:              0x%08lx\n",
-                (unsigned long)WS(SizeOfHeapReserve));
-            printf("    SizeOfHeapCommit:               0x%08lx\n",
-                (unsigned long)WS(SizeOfHeapCommit));
-            printf("    LoaderFlags:                    0x%08lx\n",
-                (unsigned long)WS(LoaderFlags));
-            printf("    NumberOfRvaAndSizes:            %lu\n",
-                (unsigned long)WS(NumberOfRvaAndSizes));
+        printf(" == Optional header, windows section ==\n");
+
+        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
+            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
+
+            if (EXIST(WS(ImageBase))) {
+                printf("    ImageBase:                      0x%08lx (VA)\n",
+                    (unsigned long)WS(ImageBase));
+            }
+            if (EXIST(WS(SectionAlignment))) {
+                printf("    SectionAlignment;               0x%08lx\n",
+                    (unsigned long)WS(SectionAlignment));
+            }
+            if (EXIST(WS(FileAlignment))) {
+                printf("    FileAlignment:                  0x%08lx\n",
+                    (unsigned long)WS(FileAlignment));
+            }
+            if (EXIST(WS(MinorOperatingSystemVersion))) {
+                printf("    Operating System Version:       %u.%u\n",
+                    WS(MajorOperatingSystemVersion),
+                    WS(MinorOperatingSystemVersion));
+            }
+            if (EXIST(WS(MinorImageVersion))) {
+                printf("    Image Version:                  %u.%u\n",
+                    WS(MajorImageVersion),
+                    WS(MinorImageVersion));
+            }
+            if (EXIST(WS(MinorSubsystemVersion))) {
+                printf("    Subsystem version:              %u.%u\n",
+                    WS(MajorSubsystemVersion),
+                    WS(MinorSubsystemVersion));
+            }
+            if (EXIST(WS(Win32VersionValue))) {
+                printf("    Win32VersionValue/Reserved:     0x%08lx\n",
+                    (unsigned long)WS(Win32VersionValue));
+            }
+            if (EXIST(WS(SizeOfImage))) {
+                printf("    SizeOfImage:                    0x%08lx\n",
+                    (unsigned long)WS(SizeOfImage));
+            }
+            if (EXIST(WS(SizeOfHeaders))) {
+                printf("    SizeOfHeaders:                  0x%08lx\n",
+                    (unsigned long)WS(SizeOfHeaders));
+            }
+            if (EXIST(WS(CheckSum))) {
+                printf("    CheckSum:                       0x%08lx\n",
+                    (unsigned long)WS(CheckSum));
+            }
+            if (EXIST(WS(Subsystem))) {
+                printf("    Subsystem:                      0x%08lx\n",
+                    (unsigned long)WS(Subsystem));
+            }
+            if (EXIST(WS(DLLCharacteristics))) {
+                printf("    DLL Characteristics:            0x%08lx\n",
+                    (unsigned long)WS(DLLCharacteristics));
+            }
+            if (EXIST(WS(SizeOfStackReserve))) {
+                printf("    SizeOfStackReserve:             0x%08lx\n",
+                    (unsigned long)WS(SizeOfStackReserve));
+            }
+            if (EXIST(WS(SizeOfStackCommit))) {
+                printf("    SizeOfStackCommit:              0x%08lx\n",
+                    (unsigned long)WS(SizeOfStackCommit));
+            }
+            if (EXIST(WS(SizeOfHeapReserve))) {
+                printf("    SizeOfHeapReserve:              0x%08lx\n",
+                    (unsigned long)WS(SizeOfHeapReserve));
+            }
+            if (EXIST(WS(SizeOfHeapCommit))) {
+                printf("    SizeOfHeapCommit:               0x%08lx\n",
+                    (unsigned long)WS(SizeOfHeapCommit));
+            }
+            if (EXIST(WS(LoaderFlags))) {
+                printf("    LoaderFlags:                    0x%08lx\n",
+                    (unsigned long)WS(LoaderFlags));
+            }
+            if (EXIST(WS(NumberOfRvaAndSizes))) {
+                printf("    NumberOfRvaAndSizes:            %lu\n",
+                    (unsigned long)WS(NumberOfRvaAndSizes));
+            }
+        }
+#undef EXIST
 #undef WS
 #undef HS
+
+        printf(" == Optional header, data directory ==\n");
+        {
+            struct exe_pe_opthdr_data_directory_entry *ent;
+            unsigned int i=0;
+
+            while ((ent=exe_pe_opthdr_data_directory(&pe_opthdr_raw,i)) != NULL) {
+                printf("    Data directory #%u (%s):\n",i,exe_pe_opthdr_data_directory_entry_to_str(i));
+                if (i == EXE_PE_DATADIRENT_CERTIFICATE_TABLE) {
+                    printf("        File offset:                0x%08lx\n",
+                        (unsigned long)(ent->RVA));
+                }
+                else {
+                    printf("        RVA:                        0x%08lx\n",
+                        (unsigned long)(ent->RVA));
+                }
+                printf("        Size:                       0x%08lx\n",
+                    (unsigned long)(ent->Size));
+                i++;
+            }
         }
     }
 
