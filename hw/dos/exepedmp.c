@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <stddef.h>
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -61,6 +62,7 @@ struct exe_pe_header {
 struct exe_pe_optional_header_raw {
         unsigned char*                          data;
         size_t                                  size;
+        size_t                                  alloc_size;
 };
 
 const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
@@ -136,12 +138,38 @@ struct exe_pe_opthdr_pe_windows {
         uint32_t                                        LoaderFlags;                    /* +0x3C (+0x58) */
         uint32_t                                        NumberOfRvaAndSizes;            /* +0x40 (+0x5C) */
 };                                                                                      /* =0x44 (+0x60) */
-/* data directory follows */
+
+struct exe_pe_opthdr_data_directory_entry {
+	uint32_t					RVA;				/* +0x00 */
+	uint32_t					Size;				/* +0x04 */
+};											/* =0x08 */
+/* NTS: The "RVA" is a file offset if it's the directory entry index for the certificate table. */
+
+enum exe_pe_opthdr_data_directory_index {
+        EXE_PE_DATADIRENT_EXPORT_TABLE=0,
+        EXE_PE_DATADIRENT_IMPORT_TABLE=1,
+        EXE_PE_DATADIRENT_RESOURCE_TABLE=2,
+        EXE_PE_DATADIRENT_EXCEPTION_TABLE=3,
+        EXE_PE_DATADIRENT_CERTIFICATE_TABLE=4, // "RVA" is a file offset
+        EXE_PE_DATADIRENT_BASE_RELOCATION_TABLE=5,
+        EXE_PE_DATADIRENT_DEBUG=6,
+        EXE_PE_DATADIRENT_ARCHITECTURE=7,
+        EXE_PE_DATADIRENT_GLOBAL_PTR=8, // RVA to store in global ptr register, size must be zero
+        EXE_PE_DATADIRENT_TLS_TABLE=9,
+        EXE_PE_DATADIRENT_LOAD_CONFIG_TABLE=10,
+        EXE_PE_DATADIRENT_BOUND_IMPORT=11,
+        EXE_PE_DATADIRENT_IAT=12,
+        EXE_PE_DATADIRENT_DELAY_IMPORT_DESCRIPTOR=13,
+        EXE_PE_DATADIRENT_COMPLUS_RUNTIME_HEADER=14,
+        EXE_PE_DATADIRENT_CLR_RUNTIME_HEADER=14,
+        EXE_PE_DATADIRENT_RESERVED15=15
+};
 
 struct exe_pe_opthdr_pe { // EXE_PE_OPTHDR_MAGIC_PE
         struct exe_pe_opthdr_pe_standard	        standard;			/* +0x00 */
 	struct exe_pe_opthdr_pe_windows			windows;			/* +0x1C (size 0x44) */
 };										        /* =0x60 */
+/* data directory follows */
 #pragma pack(pop)
 
 const char *exe_ne_opthdr_magic_to_str(const uint16_t magic) {
@@ -160,6 +188,29 @@ uint16_t exe_pe_opthdr_magic_value(struct exe_pe_optional_header_raw *h) {
                 return *((uint16_t*)(h->data+0));
 
         return 0;
+}
+
+struct exe_pe_opthdr_data_directory_entry *exe_pe_opthdr_data_directory(struct exe_pe_optional_header_raw *h,size_t entry) {
+#define COMMON_RETURN(ht,dt,entry) \
+    if (h->size >= sizeof(ht)) {\
+        ht *hdr = (ht*)(h->data);\
+        if (entry < hdr->windows.NumberOfRvaAndSizes) {\
+            const size_t ofs = sizeof(ht)/*follows opthdr*/ + (entry * sizeof(dt));\
+            if ((ofs + sizeof(dt)) <= h->size)\
+                return (dt*)(h->data + ofs);\
+        }\
+    }
+
+        switch (exe_pe_opthdr_magic_value(h)) {
+                case EXE_PE_OPTHDR_MAGIC_PE:
+                        COMMON_RETURN(struct exe_pe_opthdr_pe, struct exe_pe_opthdr_data_directory_entry, entry);
+			break;
+                default:
+                        break;
+        }
+
+        return NULL;
+#undef COMMON_RETURN
 }
 
 static unsigned char            opt_sort_ordinal = 0;
@@ -377,11 +428,15 @@ int main(int argc,char **argv) {
         uint16_t opt_magic;
 
         pe_opthdr_raw.size = pe_header.fileheader.SizeOfOptionalHeader;
-        pe_opthdr_raw.data = malloc(pe_opthdr_raw.size);
+        pe_opthdr_raw.alloc_size = 512;
+        if (pe_opthdr_raw.alloc_size < pe_opthdr_raw.size)
+                pe_opthdr_raw.alloc_size = pe_opthdr_raw.size;
+        pe_opthdr_raw.data = malloc(pe_opthdr_raw.alloc_size);
         if (!pe_opthdr_raw.data) {
             printf("! Failed to allocate memory for optional header\n");
             return 1;
         }
+        memset(pe_opthdr_raw.data,0,pe_opthdr_raw.alloc_size);
         if ((size_t)read(src_fd,pe_opthdr_raw.data,pe_opthdr_raw.size) != pe_opthdr_raw.size) {
             printf("! Failed to read optional header\n");
             return 1;
@@ -391,6 +446,74 @@ int main(int argc,char **argv) {
 
         printf("    Optional header magic:          0x%04x (%s)\n",
             opt_magic,exe_ne_opthdr_magic_to_str(opt_magic));
+
+        if (opt_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+            struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_opthdr_raw.data);
+
+            assert(pe_opthdr_raw.alloc_size >= sizeof(*hdr));
+
+            printf(" == Optional header, standard section ==\n");
+
+#define HS(x) hdr->standard.x
+#define WS(x) hdr->windows.x
+            printf("    Linker version:                 %u.%u\n",
+                HS(MajorLinkerVersion),
+                HS(MinorLinkerVersion));
+            printf("    SizeOfCode:                     0x%08lx\n",
+                (unsigned long)HS(SizeOfCode));
+            printf("    SizeOfInitializedData:          0x%08lx\n",
+                (unsigned long)HS(SizeOfInitializedData));
+            printf("    SizeOfUninitializedData:        0x%08lx\n",
+                (unsigned long)HS(SizeOfUninitializedData));
+            printf("    AddressOfEntryPoint:            0x%08lx (RVA)\n",
+                (unsigned long)HS(AddressOfEntryPoint));
+            printf("    BaseOfCode:                     0x%08lx (RVA)\n",
+                (unsigned long)HS(BaseOfCode));
+            printf("    BaseOfData:                     0x%08lx (RVA)\n",
+                (unsigned long)HS(BaseOfData));
+
+            printf(" == Optional header, windows section ==\n");
+
+            printf("    ImageBase:                      0x%08lx (VA)\n",
+                (unsigned long)WS(ImageBase));
+            printf("    SectionAlignment;               0x%08lx\n",
+                (unsigned long)WS(SectionAlignment));
+            printf("    FileAlignment:                  0x%08lx\n",
+                (unsigned long)WS(FileAlignment));
+            printf("    Operating System Version:       %u.%u\n",
+                WS(MajorOperatingSystemVersion),
+		WS(MinorOperatingSystemVersion));
+            printf("    Image Version:                  %u.%u\n",
+                WS(MajorImageVersion),
+		WS(MinorImageVersion));
+            printf("    Subsystem version:              %u.%u\n",
+                WS(MajorSubsystemVersion),
+		WS(MinorSubsystemVersion));
+            printf("    Win32VersionValue/Reserved:     0x%08lx\n",
+                (unsigned long)WS(Win32VersionValue));
+            printf("    SizeOfImage:                    0x%08lx\n",
+                (unsigned long)WS(SizeOfImage));
+            printf("    SizeOfHeaders:                  0x%08lx\n",
+                (unsigned long)WS(SizeOfHeaders));
+            printf("    CheckSum:                       0x%08lx\n",
+                (unsigned long)WS(CheckSum));
+            printf("    DLL Characteristics:            0x%08lx\n",
+                (unsigned long)WS(DLLCharacteristics));
+            printf("    SizeOfStackReserve:             0x%08lx\n",
+                (unsigned long)WS(SizeOfStackReserve));
+            printf("    SizeOfStackCommit:              0x%08lx\n",
+                (unsigned long)WS(SizeOfStackCommit));
+            printf("    SizeOfHeapReserve:              0x%08lx\n",
+                (unsigned long)WS(SizeOfHeapReserve));
+            printf("    SizeOfHeapCommit:               0x%08lx\n",
+                (unsigned long)WS(SizeOfHeapCommit));
+            printf("    LoaderFlags:                    0x%08lx\n",
+                (unsigned long)WS(LoaderFlags));
+            printf("    NumberOfRvaAndSizes:            %lu\n",
+                (unsigned long)WS(NumberOfRvaAndSizes));
+#undef WS
+#undef HS
+        }
     }
 
     close(src_fd);
