@@ -100,6 +100,50 @@ const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
 #define EXE_PE_OPTHDR_MAGIC_PE				(0x010B)
 #define EXE_PE_OPTHDR_MAGIC_PEPLUS			(0x020B)
 
+#pragma pack(push,1)
+struct exe_pe_opthdr_pe_standard { // EXE_PE_OPTHDR_MAGIC_PE
+        uint16_t                                        Magic;                          /* +0x00 */
+        uint8_t                                         MajorLinkerVersion;             /* +0x02 */
+        uint8_t                                         MinorLinkerVersion;             /* +0x03 */
+        uint32_t                                        SizeOfCode;                     /* +0x04 size of code [text], sum total */
+        uint32_t                                        SizeOfInitializedData;          /* +0x08 size of initialized data, sum total */
+        uint32_t                                        SizeOfUninitializedData;        /* +0x0C size of uninitialized data [bss], sum total */
+        uint32_t                                        AddressOfEntryPoint;            /* +0x10 RVA of entry point, 0 if none (DLL) */
+        uint32_t                                        BaseOfCode;                     /* +0x14 RVA of the base of code section */
+        uint32_t                                        BaseOfData;                     /* +0x18 RVA of the base of data section */
+};                                                                                      /* =0x1C */
+
+struct exe_pe_opthdr_pe_windows {
+        uint32_t                                        ImageBase;                      /* +0x00 (+0x1C) preferred loading address */
+        uint32_t                                        SectionAlignment;               /* +0x04 (+0x20) */
+        uint32_t                                        FileAlignment;                  /* +0x08 (+0x24) */
+        uint16_t                                        MajorOperatingSystemVersion;    /* +0x0C (+0x28) */
+        uint16_t                                        MinorOperatingSystemVersion;    /* +0x0E (+0x2A) */
+        uint16_t                                        MajorImageVersion;              /* +0x10 (+0x2C) */
+        uint16_t                                        MinorImageVersion;              /* +0x12 (+0x2E) */
+        uint16_t                                        MajorSubsystemVersion;          /* +0x14 (+0x30) */
+        uint16_t                                        MinorSubsystemVersion;          /* +0x16 (+0x32) */
+        uint32_t                                        Win32VersionValue;              /* +0x18 (+0x34) Reserved, zero */
+        uint32_t                                        SizeOfImage;                    /* +0x1C (+0x38) */
+        uint32_t                                        SizeOfHeaders;                  /* +0x20 (+0x3C) */
+        uint32_t                                        CheckSum;                       /* +0x24 (+0x40) */
+        uint16_t                                        Subsystem;                      /* +0x28 (+0x44) */
+        uint16_t                                        DLLCharacteristics;             /* +0x2A (+0x46) */
+        uint32_t                                        SizeOfStackReserve;             /* +0x2C (+0x48) */
+        uint32_t                                        SizeOfStackCommit;              /* +0x30 (+0x4C) */
+        uint32_t                                        SizeOfHeapReserve;              /* +0x34 (+0x50) */
+        uint32_t                                        SizeOfHeapCommit;               /* +0x38 (+0x54) */
+        uint32_t                                        LoaderFlags;                    /* +0x3C (+0x58) */
+        uint32_t                                        NumberOfRvaAndSizes;            /* +0x40 (+0x5C) */
+};                                                                                      /* =0x44 (+0x60) */
+/* data directory follows */
+
+struct exe_pe_opthdr_pe { // EXE_PE_OPTHDR_MAGIC_PE
+        struct exe_pe_opthdr_pe_standard	        standard;			/* +0x00 */
+	struct exe_pe_opthdr_pe_windows			windows;			/* +0x1C (size 0x44) */
+};										        /* =0x60 */
+#pragma pack(pop)
+
 const char *exe_ne_opthdr_magic_to_str(const uint16_t magic) {
         switch (magic) {
                 case EXE_PE_OPTHDR_MAGIC_ROM:           return "ROM";
