@@ -57,6 +57,11 @@ struct exe_pe_header {
 /* optional header follows including section table */
 #pragma pack(pop)
 
+struct exe_pe_optional_header_raw {
+        unsigned char*                          data;
+        size_t                                  size;
+};
+
 const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
         switch (Machine) {
                 case 0x0000:    return "UNKNOWN";
@@ -82,6 +87,16 @@ const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
         return "?";
 }
 
+#define EXE_PE_OPTHDR_MAGIC_PE				(0x010B)
+#define EXE_PE_OPTHDR_MAGIC_PEPLUS			(0x020B)
+
+uint16_t exe_pe_opthdr_magic_value(struct exe_pe_optional_header_raw *h) {
+        if (h->size >= 2)
+                return *((uint16_t*)(h->data+0));
+
+        return 0;
+}
+
 static unsigned char            opt_sort_ordinal = 0;
 static unsigned char            opt_sort_names = 0;
 
@@ -98,6 +113,7 @@ static void help(void) {
 }
 
 int main(int argc,char **argv) {
+    struct exe_pe_optional_header_raw pe_opthdr_raw;
     struct exe_pe_header pe_header;
     uint32_t pe_header_offset;
     uint32_t file_size;
@@ -288,6 +304,23 @@ int main(int argc,char **argv) {
         printf("      - Run only on a UP machine\n");
     if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI)
         printf("      - Big endian (MSB before LSB)\n");
+
+    /* read the optional header */
+    if (pe_header.fileheader.SizeOfOptionalHeader >= 2 && pe_header.fileheader.SizeOfOptionalHeader <= 0x4000) {
+        pe_opthdr_raw.size = pe_header.fileheader.SizeOfOptionalHeader;
+        pe_opthdr_raw.data = malloc(pe_opthdr_raw.size);
+        if (!pe_opthdr_raw.data) {
+            printf("! Failed to allocate memory for optional header\n");
+            return 1;
+        }
+        if ((size_t)read(src_fd,pe_opthdr_raw.data,pe_opthdr_raw.size) != pe_opthdr_raw.size) {
+            printf("! Failed to read optional header\n");
+            return 1;
+        }
+
+        printf("    Optional header magic:          0x%04x\n",
+            exe_pe_opthdr_magic_value(&pe_opthdr_raw));
+    }
 
     close(src_fd);
     return 0;
