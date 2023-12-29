@@ -314,6 +314,21 @@ uint16_t exe_pe_opthdr_magic_value(struct exe_pe_optional_header_raw *h) {
         return 0;
 }
 
+#pragma pack(push,1)
+struct exe_pe_section_table_entry {
+        char                                            name[8];                        /* +0x00 */
+        uint32_t                                        VirtualSize;                    /* +0x08 */
+        uint32_t                                        VirtualAddress;                 /* +0x0C */
+        uint32_t                                        SizeOfRawData;                  /* +0x10 */
+        uint32_t                                        PointerToRawData;               /* +0x14 */
+        uint32_t                                        PointerToRelocations;           /* +0x18 */
+        uint32_t                                        PointerToLinenumbers;           /* +0x1C */
+        uint16_t                                        NumberOfRelocations;            /* +0x20 */
+        uint16_t                                        NubmerOfLinenumbers;            /* +0x22 */
+        uint32_t                                        Characteristics;                /* +0x24 */
+};											/* =0x28 */
+#pragma pack(pop)
+
 struct pe_header_parser {
         uint32_t                                        pe_header_offset;
         struct exe_pe_header                            pe_header;
@@ -322,6 +337,9 @@ struct pe_header_parser {
         struct exe_pe_optional_header_raw               opthdr_raw;
         struct exe_pe_opthdr_data_directory_entry*      datadir;
         size_t                                          datadir_count;
+        uint32_t                                        sections_offset;
+        struct exe_pe_section_table_entry*              sections;
+        size_t                                          sections_count;
 };
 
 void pe_parser_init(struct pe_header_parser *hp) {
@@ -488,7 +506,9 @@ int main(int argc,char **argv) {
     }
 
     pe_parser.pe_header_offset = pe_header_offset;
+    pe_parser.sections_count = pe_parser.pe_header.fileheader.NumberOfSections;
     pe_parser.opthdr_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header);
+    pe_parser.sections_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header) + pe_parser.pe_header.fileheader.SizeOfOptionalHeader;
     printf("* PE header at %lu\n",(unsigned long)pe_header_offset);
     printf("    Machine:                        0x%04x (%s)\n",
         pe_parser.pe_header.fileheader.Machine,
@@ -539,6 +559,9 @@ int main(int argc,char **argv) {
         printf("      - Run only on a UP machine\n");
     if (pe_parser.pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI)
         printf("      - Big endian (MSB before LSB)\n");
+
+    printf("* Optional header at %lu\n",(unsigned long)pe_parser.opthdr_offset);
+    printf("* Section table at %lu\n",(unsigned long)pe_parser.sections_offset);
 
     /* read the optional header */
     if (pe_parser.pe_header.fileheader.SizeOfOptionalHeader >= 2 && pe_parser.pe_header.fileheader.SizeOfOptionalHeader <= 0x4000) {
