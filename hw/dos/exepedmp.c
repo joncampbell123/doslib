@@ -31,6 +31,7 @@
 #define EXE_PE_HEADER_IMAGE_FILE_32BIT_MACHINE                                  0x0100
 #define EXE_PE_HEADER_IMAGE_FILE_DEBUG_STRIPPED                                 0x0200
 #define EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP                        0x0400
+#define EXE_PE_HEADER_IMAGE_FILE_NET_RUN_FROM_SWAP                              0x0800
 #define EXE_PE_HEADER_IMAGE_FILE_SYSTEM                                         0x1000
 #define EXE_PE_HEADER_IMAGE_FILE_DLL                                            0x2000
 #define EXE_PE_HEADER_IMAGE_FILE_UP_SYSTEM_ONLY                                 0x4000
@@ -95,8 +96,20 @@ const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
         return "?";
 }
 
+#define EXE_PE_OPTHDR_MAGIC_ROM                         (0x0107)
 #define EXE_PE_OPTHDR_MAGIC_PE				(0x010B)
 #define EXE_PE_OPTHDR_MAGIC_PEPLUS			(0x020B)
+
+const char *exe_ne_opthdr_magic_to_str(const uint16_t magic) {
+        switch (magic) {
+                case EXE_PE_OPTHDR_MAGIC_ROM:           return "ROM";
+                case EXE_PE_OPTHDR_MAGIC_PE:            return "PE";
+                case EXE_PE_OPTHDR_MAGIC_PEPLUS:        return "PE+";
+                default:                                break;
+        }
+
+        return "?";
+}
 
 uint16_t exe_pe_opthdr_magic_value(struct exe_pe_optional_header_raw *h) {
         if (h->size >= 2)
@@ -304,6 +317,8 @@ int main(int argc,char **argv) {
         printf("      - Debugging information stripped from image file\n");
     if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP)
         printf("      - Copy and run from swap if run from removable media\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_NET_RUN_FROM_SWAP)
+        printf("      - Copy and run from swap if run from network media\n");
     if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_SYSTEM)
         printf("      - Image is a system file, not user program\n");
     if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DLL)
@@ -315,6 +330,8 @@ int main(int argc,char **argv) {
 
     /* read the optional header */
     if (pe_header.fileheader.SizeOfOptionalHeader >= 2 && pe_header.fileheader.SizeOfOptionalHeader <= 0x4000) {
+        uint16_t opt_magic;
+
         pe_opthdr_raw.size = pe_header.fileheader.SizeOfOptionalHeader;
         pe_opthdr_raw.data = malloc(pe_opthdr_raw.size);
         if (!pe_opthdr_raw.data) {
@@ -326,8 +343,10 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        printf("    Optional header magic:          0x%04x\n",
-            exe_pe_opthdr_magic_value(&pe_opthdr_raw));
+        opt_magic = exe_pe_opthdr_magic_value(&pe_opthdr_raw);
+
+        printf("    Optional header magic:          0x%04x (%s)\n",
+            opt_magic,exe_ne_opthdr_magic_to_str(opt_magic));
     }
 
     close(src_fd);
