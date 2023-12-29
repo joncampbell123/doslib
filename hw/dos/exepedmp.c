@@ -69,18 +69,26 @@ const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
                 case 0x0162:    return "R3000";
                 case 0x0166:    return "R4000";
                 case 0x0168:    return "R10000";
+                case 0x0169:    return "WCEMIPSV2";
                 case 0x0184:    return "ALPHA";
                 case 0x01A2:    return "SH3";
+                case 0x01A3:    return "SH3DSP";
                 case 0x01A6:    return "SH4";
+                case 0x01A8:    return "SH5";
                 case 0x01C0:    return "ARM";
                 case 0x01C2:    return "THUMB";
+                case 0x01D3:    return "AM33";
                 case 0x01F0:    return "POWERPC";
+                case 0x01F1:    return "POWERPCFP";
                 case 0x0200:    return "IA64";
                 case 0x0266:    return "MIPS16";
                 case 0x0268:    return "M68K";
                 case 0x0284:    return "ALPHA64";
                 case 0x0366:    return "MIPSFPU";
                 case 0x0466:    return "MIPSFPU16";
+                case 0x0EBC:    return "EBC";
+                case 0x8664:    return "AMD64";
+                case 0x9041:    return "M32R";
                 default:        break;
         }
 
