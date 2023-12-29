@@ -19,6 +19,23 @@
 
 #define EXE_PE_SIGNATURE                                                        (0x4550U)
 
+/* Characteristics flags */
+#define EXE_PE_HEADER_IMAGE_FILE_RELOCS_STRIPPED                                0x0001
+#define EXE_PE_HEADER_IMAGE_FILE_EXECUTABLE_IMAGE                               0x0002
+#define EXE_PE_HEADER_IMAGE_FILE_LINE_NUMS_STRIPPED                             0x0004
+#define EXE_PE_HEADER_IMAGE_FILE_LOCAL_SYMS_STRIPPED                            0x0008
+#define EXE_PE_HEADER_IMAGE_FILE_AGGRESSIVE_WS_TRIM                             0x0010
+#define EXE_PE_HEADER_IMAGE_FILE_LARGE_ADDRESS_AWARE                            0x0020
+#define EXE_PE_HEADER_IMAGE_FILE_16BIT_MACHINE                                  0x0040
+#define EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_LO                              0x0080
+#define EXE_PE_HEADER_IMAGE_FILE_32BIT_MACHINE                                  0x0100
+#define EXE_PE_HEADER_IMAGE_FILE_DEBUG_STRIPPED                                 0x0200
+#define EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP                        0x0400
+#define EXE_PE_HEADER_IMAGE_FILE_SYSTEM                                         0x1000
+#define EXE_PE_HEADER_IMAGE_FILE_DLL                                            0x2000
+#define EXE_PE_HEADER_IMAGE_FILE_UP_SYSTEM_ONLY                                 0x4000
+#define EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI                              0x8000
+
 #pragma pack(push,1)
 struct exe_pe_coff_file_header {
         uint16_t                                Machine;                        /* +0x00 target machine */
@@ -44,6 +61,21 @@ const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
         switch (Machine) {
                 case 0x0000:    return "UNKNOWN";
                 case 0x014C:    return "I386";
+                case 0x0162:    return "R3000";
+                case 0x0166:    return "R4000";
+                case 0x0168:    return "R10000";
+                case 0x0184:    return "ALPHA";
+                case 0x01A2:    return "SH3";
+                case 0x01A6:    return "SH4";
+                case 0x01C0:    return "ARM";
+                case 0x01C2:    return "THUMB";
+                case 0x01F0:    return "POWERPC";
+                case 0x0200:    return "IA64";
+                case 0x0266:    return "MIPS16";
+                case 0x0268:    return "M68K";
+                case 0x0284:    return "ALPHA64";
+                case 0x0366:    return "MIPSFPU";
+                case 0x0466:    return "MIPSFPU16";
                 default:        break;
         }
 
@@ -226,6 +258,36 @@ int main(int argc,char **argv) {
         (unsigned long)pe_header.fileheader.SizeOfOptionalHeader);
     printf("    Characteristics:                0x%04x\n",
         pe_header.fileheader.Characteristics);
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_RELOCS_STRIPPED)
+        printf("      - Relocations stripped\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_EXECUTABLE_IMAGE)
+        printf("      - Image is valid and executable\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LINE_NUMS_STRIPPED)
+        printf("      - Line numbers have been removed\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LOCAL_SYMS_STRIPPED)
+        printf("      - Local symbols have been removed\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_AGGRESSIVE_WS_TRIM)
+        printf("      - Aggressively trim working set\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_LARGE_ADDRESS_AWARE)
+        printf("      - Large address aware\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_16BIT_MACHINE)
+        printf("      - 16-bit machine / Reserved\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_LO)
+        printf("      - Little endian (LSB before MSB)\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_32BIT_MACHINE)
+        printf("      - 32-bit machine\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DEBUG_STRIPPED)
+        printf("      - Debugging information stripped from image file\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP)
+        printf("      - Copy and run from swap if run from removable media\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_SYSTEM)
+        printf("      - Image is a system file, not user program\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_DLL)
+        printf("      - Image is a DLL library\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_UP_SYSTEM_ONLY)
+        printf("      - Run only on a UP machine\n");
+    if (pe_header.fileheader.Characteristics & EXE_PE_HEADER_IMAGE_FILE_BYTES_REVERSED_HI)
+        printf("      - Big endian (MSB before LSB)\n");
 
     close(src_fd);
     return 0;
