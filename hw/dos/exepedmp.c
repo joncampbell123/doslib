@@ -17,6 +17,39 @@
 #define O_BINARY (0)
 #endif
 
+#define EXE_PE_SIGNATURE                                                        (0x4550U)
+
+#pragma pack(push,1)
+struct exe_pe_coff_file_header {
+        uint16_t                                Machine;                        /* +0x00 target machine */
+        uint16_t                                NumberOfSections;               /* +0x02 number of PE sections */
+        uint32_t                                TimeDateStamp;                  /* +0x04 Time/Date timestamp */
+        uint32_t                                PointerToSymbolTable;           /* +0x08 File offset of COFF symbol table or 0 */
+        uint32_t                                NumberOfSymbols;                /* +0x0C Number of entries in symbol table */
+        uint16_t                                SizeOfOptionalHeader;           /* +0x10 Size of the optional header */
+        uint16_t                                Characteristics;                /* +0x12 Flags indicating attributes of the file */
+};                                                                              /* =0x14 */
+#pragma pack(pop)
+
+#pragma pack(push,1)
+/* This is the initial header. It does not define anything more because fields past this struct do vary */
+struct exe_pe_header {
+        uint32_t                                signature;                      /* +0x00 PE\0\0 */
+        struct exe_pe_coff_file_header          fileheader;                     /* +0x04 COFF File Header (0x14 bytes) */
+};                                                                              /* =0x18 */
+/* optional header follows including section table */
+#pragma pack(pop)
+
+const char *exe_pe_fileheader_machine_to_str(const uint16_t Machine) {
+        switch (Machine) {
+                case 0x0000:    return "UNKNOWN";
+                case 0x014C:    return "I386";
+                default:        break;
+        }
+
+        return "?";
+}
+
 static unsigned char            opt_sort_ordinal = 0;
 static unsigned char            opt_sort_names = 0;
 
@@ -33,6 +66,7 @@ static void help(void) {
 }
 
 int main(int argc,char **argv) {
+    struct exe_pe_header pe_header;
     uint32_t pe_header_offset;
     uint32_t file_size;
     char *a;
@@ -162,6 +196,36 @@ int main(int argc,char **argv) {
         return 1;
     }
     printf("    EXE extension (if exists) at: %lu\n",(unsigned long)pe_header_offset);
+
+    /* go read the extended header */
+    if (lseek(src_fd,pe_header_offset,SEEK_SET) != pe_header_offset ||
+        read(src_fd,&pe_header,sizeof(pe_header)) != sizeof(pe_header)) {
+        fprintf(stderr,"Cannot read PE header\n");
+        return 1;
+    }
+    if (pe_header.signature != EXE_PE_SIGNATURE) {
+        fprintf(stderr,"Not an PE executable\n");
+        return 1;
+    }
+
+    printf("* PE header at %lu\n",(unsigned long)pe_header_offset);
+    printf("    Machine:                        0x%04x (%s)\n",
+        pe_header.fileheader.Machine,
+        exe_pe_fileheader_machine_to_str(pe_header.fileheader.Machine));
+    printf("    NumberOfSections:               %u\n",
+        pe_header.fileheader.NumberOfSections);
+    printf("    TimeDateStamp:                  %lu (0x%08lx)\n",
+        (unsigned long)pe_header.fileheader.TimeDateStamp,
+        (unsigned long)pe_header.fileheader.TimeDateStamp);
+    printf("    PointerToSymbolTable:           %lu (0x%08lx) (file offset)\n",
+        (unsigned long)pe_header.fileheader.PointerToSymbolTable,
+        (unsigned long)pe_header.fileheader.PointerToSymbolTable);
+    printf("    NumberOfSymbols:                %lu\n",
+        (unsigned long)pe_header.fileheader.NumberOfSymbols);
+    printf("    SizeOfOptionalHeader:           %lu\n",
+        (unsigned long)pe_header.fileheader.SizeOfOptionalHeader);
+    printf("    Characteristics:                0x%04x\n",
+        pe_header.fileheader.Characteristics);
 
     close(src_fd);
     return 0;
