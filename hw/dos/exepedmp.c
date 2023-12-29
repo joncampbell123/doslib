@@ -145,6 +145,15 @@ struct exe_pe_opthdr_data_directory_entry {
 };											/* =0x08 */
 /* NTS: The "RVA" is a file offset if it's the directory entry index for the certificate table. */
 
+#define EXE_PE_OPTHDR_DLLCHARACT_DYNAMIC_BASE                           0x0040
+#define EXE_PE_OPTHDR_DLLCHARACT_FORCE_INTEGRITY                        0x0080
+#define EXE_PE_OPTHDR_DLLCHARACT_NX_COMPAT                              0x0100
+#define EXE_PE_OPTHDR_DLLCHARACT_NO_ISOLATION                           0x0200
+#define EXE_PE_OPTHDR_DLLCHARACT_NO_SEH                                 0x0400
+#define EXE_PE_OPTHDR_DLLCHARACT_NO_BIND                                0x0800
+#define EXE_PE_OPTHDR_DLLCHARACT_WDM_DRIVER                             0x2000
+#define EXE_PE_OPTHDR_DLLCHARACT_TERMINAL_SERVER_AWARE                  0x8000
+
 enum exe_pe_opthdr_data_directory_index {
         EXE_PE_DATADIRENT_EXPORT_TABLE=0,
         EXE_PE_DATADIRENT_IMPORT_TABLE=1,
@@ -633,6 +642,22 @@ int main(int argc,char **argv) {
             if (EXIST(WS(DLLCharacteristics))) {
                 printf("    DLL Characteristics:            0x%08lx\n",
                     (unsigned long)WS(DLLCharacteristics));
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_DYNAMIC_BASE)
+                    printf("        - DLL can be relocated at load time\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_FORCE_INTEGRITY)
+                    printf("        - Enforce code integrity checks\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_NX_COMPAT)
+                    printf("        - NX compatible\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_NO_ISOLATION)
+                    printf("        - Isolation aware, but do not isolate the image\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_NO_SEH)
+                    printf("        - Does not use Structured Exception Handling\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_NO_BIND)
+                    printf("        - Do not bind image\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_WDM_DRIVER)
+                    printf("        - WDM driver\n");
+                if (WS(DLLCharacteristics) & EXE_PE_OPTHDR_DLLCHARACT_TERMINAL_SERVER_AWARE)
+                    printf("        - Terminal Server aware\n");
             }
             if (EXIST(WS(SizeOfStackReserve))) {
                 printf("    SizeOfStackReserve:             0x%08lx\n",
