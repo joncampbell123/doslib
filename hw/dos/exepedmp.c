@@ -329,6 +329,53 @@ struct exe_pe_section_table_entry {
 };											/* =0x28 */
 #pragma pack(pop)
 
+#define EXE_PE_SECTFLAGS_TYPE_REG                                               0x00000000 /* not a flag, just a constant */
+#define EXE_PE_SECTFLAGS_TYPE_DSECT                                             0x00000001
+#define EXE_PE_SECTFLAGS_TYPE_NOLOAD                                            0x00000002
+#define EXE_PE_SECTFLAGS_TYPE_GROUP                                             0x00000004
+#define EXE_PE_SECTFLAGS_TYPE_NO_PAD                                            0x00000008
+#define EXE_PE_SECTFLAGS_TYPE_COPY                                              0x00000010
+#define EXE_PE_SECTFLAGS_CNT_CODE                                               0x00000020
+#define EXE_PE_SECTFLAGS_CNT_INITIALIZED_DATA                                   0x00000040
+#define EXE_PE_SECTFLAGS_CNT_UNINITIALIZED_DATA                                 0x00000080
+#define EXE_PE_SECTFLAGS_LNK_OTHER                                              0x00000100
+#define EXE_PE_SECTFLAGS_LNK_INFO                                               0x00000200
+#define EXE_PE_SECTFLAGS_TYPE_OVER                                              0x00000400
+#define EXE_PE_SECTFLAGS_LNK_REMOVE                                             0x00000800
+#define EXE_PE_SECTFLAGS_LNK_COMDAT                                             0x00001000
+#define EXE_PE_SECTFLAGS_MEM_FARDATA                                            0x00008000
+#define EXE_PE_SECTFLAGS_MEM_PURGEABLE                                          0x00020000
+#define EXE_PE_SECTFLAGS_MEM_16BIT                                              0x00020000
+#define EXE_PE_SECTFLAGS_MEM_LOCKED                                             0x00040000
+#define EXE_PE_SECTFLAGS_MEM_PRELOAD                                            0x00080000
+
+/* enumeration within SCN_ALIGN_MASK */
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_1BYTES                                       0x00100000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_2BYTES                                       0x00200000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_4BYTES                                       0x00300000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_8BYTES                                       0x00400000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_16BYTES                                      0x00500000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_32BYTES                                      0x00600000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_64BYTES                                      0x00700000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_128BYTES                                     0x00800000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_256BYTES                                     0x00900000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_512BYTES                                     0x00A00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_1024BYTES                                    0x00B00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_2048BYTES                                    0x00C00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_4096BYTES                                    0x00D00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_8192BYTES                                    0x00E00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_MASK                                         0x00F00000
+#define EXE_PE_SECTFLAGS_SCN_ALIGN_MASKSHIFT                                    20
+
+#define EXE_PE_SECTFLAGS_LNK_NRELOC_OVFL                                        0x01000000
+#define EXE_PE_SECTFLAGS_MEM_DISCARDABLE                                        0x02000000
+#define EXE_PE_SECTFLAGS_MEM_NOT_CACHED                                         0x04000000
+#define EXE_PE_SECTFLAGS_MEM_NOT_PAGED                                          0x08000000
+#define EXE_PE_SECTFLAGS_MEM_SHARED                                             0x10000000
+#define EXE_PE_SECTFLAGS_MEM_EXECUTE                                            0x20000000
+#define EXE_PE_SECTFLAGS_MEM_READ                                               0x40000000
+#define EXE_PE_SECTFLAGS_MEM_WRITE                                              0x80000000
+
 struct pe_header_parser {
         uint32_t                                        pe_header_offset;
         struct exe_pe_header                            pe_header;
@@ -954,6 +1001,64 @@ int main(int argc,char **argv) {
                 (unsigned long)(ent->NumberOfLinenumbers));
             printf("        Characteristics:            0x%08lx\n",
                 (unsigned long)(ent->Characteristics));
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_DSECT)
+                printf("        - DSECT\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_NOLOAD)
+                printf("        - NOLOAD\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_GROUP)
+                printf("        - GROUP\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_NO_PAD)
+                printf("        - Do not pad section to next boundary\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_COPY)
+                printf("        - COPY\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_CNT_CODE)
+                printf("        - Contains code\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_CNT_INITIALIZED_DATA)
+                printf("        - Initialized data\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_CNT_UNINITIALIZED_DATA)
+                printf("        - Uninitialized data\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_LNK_OTHER)
+                printf("        - OTHER\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_LNK_INFO)
+                printf("        - Section contains comments or other info\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_TYPE_OVER)
+                printf("        - TYPE_OVER\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_LNK_REMOVE)
+                printf("        - Section will not become part of the image\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_LNK_COMDAT)
+                printf("        - Section contains COMDAT data\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_FARDATA)
+                printf("        - MEM_FARDATA\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_PURGEABLE)
+                printf("        - MEM_PURGEABLE\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_16BIT)
+                printf("        - MEM_16BIT\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_LOCKED)
+                printf("        - MEM_LOCKED\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_PRELOAD)
+                printf("        - MEM_PRELOAD\n");
+            {
+                unsigned int shf = (ent->Characteristics & EXE_PE_SECTFLAGS_SCN_ALIGN_MASK) >> EXE_PE_SECTFLAGS_SCN_ALIGN_MASKSHIFT;
+                if (shf != 0) {
+                    printf("        - Align data to %u-byte boundary\n",1u << (shf-1));
+                }
+            }
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_LNK_NRELOC_OVFL)
+                printf("        - Section contains extended relocations\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_DISCARDABLE)
+                printf("        - Section can be discarded as needed\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_NOT_CACHED)
+                printf("        - Section cannot be cached\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_NOT_PAGED)
+                printf("        - Section is not pageable\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_SHARED)
+                printf("        - Section can be shared in memory\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_EXECUTE)
+                printf("        - Section can be executed as code\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_READ)
+                printf("        - Section can be read\n");
+            if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_WRITE)
+                printf("        - Section can be written to\n");
 	}
     }
 
