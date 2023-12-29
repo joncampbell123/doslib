@@ -114,7 +114,9 @@ struct exe_pe_opthdr_pe_standard { // EXE_PE_OPTHDR_MAGIC_PE
         uint32_t                                        BaseOfCode;                     /* +0x14 RVA of the base of code section */
         uint32_t                                        BaseOfData;                     /* +0x18 RVA of the base of data section */
 };                                                                                      /* =0x1C */
+#pragma pack(pop)
 
+#pragma pack(push,1)
 struct exe_pe_opthdr_pe_windows {
         uint32_t                                        ImageBase;                      /* +0x00 (+0x1C) preferred loading address */
         uint32_t                                        SectionAlignment;               /* +0x04 (+0x20) */
@@ -138,11 +140,14 @@ struct exe_pe_opthdr_pe_windows {
         uint32_t                                        LoaderFlags;                    /* +0x3C (+0x58) */
         uint32_t                                        NumberOfRvaAndSizes;            /* +0x40 (+0x5C) */
 };                                                                                      /* =0x44 (+0x60) */
+#pragma pack(pop)
 
+#pragma pack(push,1)
 struct exe_pe_opthdr_data_directory_entry {
 	uint32_t					RVA;				/* +0x00 */
 	uint32_t					Size;				/* +0x04 */
 };											/* =0x08 */
+#pragma pack(pop)
 /* NTS: The "RVA" is a file offset if it's the directory entry index for the certificate table. */
 
 #define EXE_PE_OPTHDR_DLLCHARACT_DYNAMIC_BASE                           0x0040
@@ -211,6 +216,8 @@ enum exe_pe_opthdr_subsystem {
         EXE_PE_OPTHDR_SUBSYSTEM_EFI_APPLICATION=10,
         EXE_PE_OPTHDR_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER=11,
         EXE_PE_OPTHDR_SUBSYSTEM_EFI_RUNTIME_DRIVER=12,
+        EXE_PE_OPTHDR_SUBSYSTEM_EFI_ROM=13,
+        EXE_PE_OPTHDR_SUBSYSTEM_XBOX=14,
 
         EXE_PE_OPTHDR_SUBSYSTEM__MAX
 };
@@ -226,12 +233,15 @@ const char *exe_pe_opthdr_subsystem_to_str(const uint16_t s) {
                 case EXE_PE_OPTHDR_SUBSYSTEM_EFI_APPLICATION:   return "EFI_APPLICATION";
                 case EXE_PE_OPTHDR_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: return "EFI_BOOT_SERVICE_DRIVER";
                 case EXE_PE_OPTHDR_SUBSYSTEM_EFI_RUNTIME_DRIVER: return "EFI_RUNTIME_DRIVER";
+                case EXE_PE_OPTHDR_SUBSYSTEM_EFI_ROM:           return "EFI_ROM";
+                case EXE_PE_OPTHDR_SUBSYSTEM_XBOX:              return "XBOX";
                 default:                                        break;
         }
 
         return "?";
 }
 
+#pragma pack(push,1)
 struct exe_pe_opthdr_pe { // EXE_PE_OPTHDR_MAGIC_PE
         struct exe_pe_opthdr_pe_standard	        standard;			/* +0x00 */
 	struct exe_pe_opthdr_pe_windows			windows;			/* +0x1C (size 0x44) */
