@@ -517,31 +517,39 @@ struct pe_header_vamem *pe_header_parser_vamem(struct pe_header_parser *hp) {
 }
 
 struct exe_pe_section_table_entry *pe_header_parser_section_table_lookupVA(struct pe_header_parser *hp,EXE_PE_VA va) {
-	size_t si;
+        size_t si;
 
-	if (hp->sections == NULL) return NULL;
+        if (hp->sections == NULL) return NULL;
 
-	for (si=0;si < hp->sections_count;si++) {
-		struct exe_pe_section_table_entry *ent = hp->sections + si;
+        for (si=0;si < hp->sections_count;si++) {
+                struct exe_pe_section_table_entry *ent = hp->sections + si;
+                EXE_PE_VA chksize = ent->VirtualSize;
 
-		if (va >= (hp->imagebase+ent->VirtualAddress) && va < (hp->imagebase+ent->VirtualAddress+ent->VirtualSize))
-			return ent;
-	}
+                if (chksize < ent->SizeOfRawData) chksize = ent->SizeOfRawData; /* some sections have VirtualSize == 0 like the .rsrc resource */
 
-	return NULL;
+                if (va >= (hp->imagebase+ent->VirtualAddress) && va < (hp->imagebase+ent->VirtualAddress+chksize))
+                        return ent;
+        }
+
+        return NULL;
 }
 
 struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,struct pe_header_vamem *v,EXE_PE_VA va,struct exe_pe_section_table_entry *ste) {
-	/* assume "va" is already page aligned */
-	struct pe_header_vablock *blk;
-	EXE_PE_RVA rva,rvasec;
-	off_t fileofs;
-	size_t todo;
+        /* assume "va" is already page aligned */
+        struct pe_header_vablock *blk;
+        EXE_PE_RVA rva,rvasec;
+        EXE_PE_VA chksize;
+        off_t fileofs;
+        size_t todo;
 
-	if (hp->src_fd < 0) return NULL;
-	rva = pe_header_parser_VAtoRVA(hp,va);
-	if (rva < ste->VirtualAddress || rva >= (ste->VirtualAddress+ste->VirtualSize)) return NULL;
-	rvasec = rva - ste->VirtualAddress;
+        if (hp->src_fd < 0) return NULL;
+
+        chksize = ste->VirtualSize;
+        if (chksize < ste->SizeOfRawData) chksize = ste->SizeOfRawData; /* some sections have VirtualSize == 0 like the .rsrc resource */
+
+        rva = pe_header_parser_VAtoRVA(hp,va);
+        if (rva < ste->VirtualAddress || rva >= (ste->VirtualAddress+chksize)) return NULL;
+        rvasec = rva - ste->VirtualAddress;
 
 	blk = pe_header_vamem_insert(v,va);
 	if (blk == NULL) return NULL;
@@ -1296,7 +1304,26 @@ int main(int argc,char **argv) {
                 printf("        - Section can be read\n");
             if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_WRITE)
                 printf("        - Section can be written to\n");
-	}
+        }
+    }
+
+    {
+        unsigned char tmp[256];
+        EXE_PE_VA vo;
+        size_t rd,i;
+
+        for (vo=0;vo < 0x100000;vo += 256) {
+            rd = pe_header_parser_varead(&pe_parser,vo+pe_parser.imagebase,tmp,sizeof(tmp));
+            if (rd != 0) {
+                printf("== VA 0x%llx ==\n",(unsigned long long)(vo+pe_parser.imagebase));
+                for (i=0;i < rd;i++) {
+                    if ((i&15) == 0) printf("  ");
+                    printf(" %02x",tmp[i]);
+                    if ((i&15) == 15) printf("\n");
+                }
+                if ((rd&15) == 15) printf("\n");
+            }
+        }
     }
 
     pe_parser_uninit(&pe_parser);
