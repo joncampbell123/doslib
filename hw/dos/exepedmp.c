@@ -379,7 +379,115 @@ struct exe_pe_section_table_entry {
 typedef uint64_t EXE_PE_VA; /* virtual address */
 typedef uint32_t EXE_PE_RVA; /* relative virtual address */
 
+/* hash table lookup */
+#define EXE_PE_HASHTBL_SIZE     256
+typedef uint8_t EXE_PE_HASH_T;
+
+struct pe_header_vablock { // one 4KB block of virtual address space
+	unsigned char*			MEM;
+	EXE_PE_VA			VA;
+	struct pe_header_vablock*	next;
+};
+
+struct pe_header_vamem {
+	struct pe_header_vablock*	hash[EXE_PE_HASHTBL_SIZE]; // alloc here
+	EXE_PE_VA			pagemask;
+};
+
+void pe_header_vablock_free(struct pe_header_vablock **h) {
+	if (*h) {
+		struct pe_header_vablock *n = (*h)->next;
+		if ((*h)->MEM) free((*h)->MEM);
+		(*h)->next = NULL;
+		(*h)->VA = 0;
+		free(*h);
+		*h = n;
+	}
+}
+
+void pe_header_vablock_freeall(struct pe_header_vablock **h) {
+	while (*h != NULL)
+		pe_header_vablock_free(h);
+}
+
+EXE_PE_HASH_T pe_header_parser_hashva(EXE_PE_VA v) {
+        v ^=  (v >> (EXE_PE_VA)32u) ^ (EXE_PE_VA)0xA151;
+        v ^= ~(v >> (EXE_PE_VA)16u) ^ (EXE_PE_VA)0x23B6;
+        v ^=  (v >>  (EXE_PE_VA)8u) ^ (EXE_PE_VA)0x19EA;
+        return (EXE_PE_HASH_T)v;
+}
+
+static inline size_t pe_header_vamem_pageofs(struct pe_header_vamem *v,EXE_PE_VA va) {
+	return (size_t)(va & v->pagemask); /* byte offset within page */
+}
+
+struct pe_header_vablock *pe_header_vablock_lookup(struct pe_header_vablock *h,EXE_PE_VA va) {
+	for (;h != NULL;h=h->next) {
+		if (h->VA == va)
+			return h;
+	}
+
+	return NULL;
+}
+
+struct pe_header_vablock *pe_header_vablock_insert(struct pe_header_vamem *v,struct pe_header_vablock **h,EXE_PE_VA va) {
+	/* assumes caller has already checked there is no block for page containing va, va is already masked by ~pagemask */
+	struct pe_header_vablock *nb = malloc(sizeof(struct pe_header_vablock));
+	if (nb != NULL) {
+		nb->MEM = malloc((size_t)(v->pagemask+1u));
+		if (!nb->MEM) {
+			free(nb);
+			return NULL;
+		}
+		memset(nb->MEM,0,(size_t)(v->pagemask+1u));
+		nb->VA = va;
+
+		/* insert into head of list */
+		nb->next = (*h);
+		(*h) = nb;
+		return nb;
+	}
+
+	return NULL;
+}
+
+struct pe_header_vablock *pe_header_vamem_insert(struct pe_header_vamem *v,EXE_PE_VA va) {
+	/* assumes caller has already checked there is no block for page containing va */
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	return pe_header_vablock_insert(v,&v->hash[hashi],va & (~v->pagemask));
+}
+
+struct pe_header_vablock *pe_header_vamem_lookup(struct pe_header_vamem *v,EXE_PE_VA va) {
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	return pe_header_vablock_lookup(v->hash[hashi],va & (~v->pagemask));
+}
+
+void pe_header_vamem_free(struct pe_header_vamem *v) {
+	unsigned int i;
+
+	for (i=0;i < EXE_PE_HASHTBL_SIZE;i++)
+		pe_header_vablock_freeall(&v->hash[i]);
+
+	free(v);
+}
+
+struct pe_header_vamem *pe_header_vamem_alloc(uint32_t pagesize) {
+	struct pe_header_vamem *v;
+
+	if (pagesize == 0 || (pagesize & (pagesize - 1u)) != 0) /* must be power of 2 and nonzero */
+		return NULL;
+
+	v = malloc(sizeof(*v));
+	if (v == NULL)
+		return NULL;
+
+	memset(v,0,sizeof(*v));
+	v->pagemask = pagesize - 1u;
+	return v;
+}
+
 struct pe_header_parser {
+        int                                             src_fd; /* does not own descriptor */
         uint32_t                                        pe_header_offset;
         struct exe_pe_header                            pe_header;
         uint32_t                                        opthdr_offset;
@@ -391,6 +499,8 @@ struct pe_header_parser {
         struct exe_pe_section_table_entry*              sections; /* allocated */
         size_t                                          sections_count;
         EXE_PE_VA                                       imagebase;
+        uint32_t                                        sectionalign;
+        struct pe_header_vamem*                         vmem;
 };
 
 static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
@@ -401,23 +511,118 @@ static inline EXE_PE_RVA pe_header_parser_VAtoRVA(struct pe_header_parser *hp,co
         return (EXE_PE_RVA)(addr - hp->imagebase);
 }
 
+struct pe_header_vamem *pe_header_parser_vamem(struct pe_header_parser *hp) {
+	if (!hp->vmem) hp->vmem = pe_header_vamem_alloc(hp->sectionalign);
+	return hp->vmem;
+}
+
+struct exe_pe_section_table_entry *pe_header_parser_section_table_lookupVA(struct pe_header_parser *hp,EXE_PE_VA va) {
+	size_t si;
+
+	if (hp->sections == NULL) return NULL;
+
+	for (si=0;si < hp->sections_count;si++) {
+		struct exe_pe_section_table_entry *ent = hp->sections + si;
+
+		if (va >= (hp->imagebase+ent->VirtualAddress) && va < (hp->imagebase+ent->VirtualAddress+ent->VirtualSize))
+			return ent;
+	}
+
+	return NULL;
+}
+
+struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,struct pe_header_vamem *v,EXE_PE_VA va,struct exe_pe_section_table_entry *ste) {
+	/* assume "va" is already page aligned */
+	struct pe_header_vablock *blk;
+	EXE_PE_RVA rva,rvasec;
+	off_t fileofs;
+	size_t todo;
+
+	if (hp->src_fd < 0) return NULL;
+	rva = pe_header_parser_VAtoRVA(hp,va);
+	if (rva < ste->VirtualAddress || rva >= (ste->VirtualAddress+ste->VirtualSize)) return NULL;
+	rvasec = rva - ste->VirtualAddress;
+
+	blk = pe_header_vamem_insert(v,va);
+	if (blk == NULL) return NULL;
+
+	if (rvasec < ste->SizeOfRawData && ste->PointerToRawData != 0) {
+		fileofs = (off_t)(rvasec + ste->PointerToRawData);
+		todo = ste->SizeOfRawData - rvasec;
+		if (todo > hp->sectionalign) todo = hp->sectionalign;
+		assert((v->pagemask + 1) == hp->sectionalign);
+		assert(todo != 0);
+
+		if (lseek(hp->src_fd,fileofs,SEEK_SET) == fileofs)
+			read(hp->src_fd,blk->MEM,todo);
+
+		return blk;
+	}
+
+	return NULL;
+}
+
+size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned char *buf,size_t sz) {
+	struct pe_header_vablock *blk;
+	struct pe_header_vamem *v;
+	size_t todo,pago;
+	size_t rd = 0;
+
+	if (hp == NULL || buf == NULL || sz == 0)
+		return 0;
+	if ((v=pe_header_parser_vamem(hp)) == NULL)
+		return 0;
+
+	while (sz > 0) {
+		pago = (size_t)pe_header_vamem_pageofs(v,va);
+		todo = (size_t)(v->pagemask) + (size_t)1u - pago;
+		if (todo > sz) todo = sz;
+
+		blk = pe_header_vamem_lookup(v,va);
+		if (blk == NULL) {
+			struct exe_pe_section_table_entry *ste = pe_header_parser_section_table_lookupVA(hp,va & (~v->pagemask));
+			if (!ste) break;
+
+			blk = pe_header_parser_vaload(hp,v,va & (~v->pagemask),ste);
+			if (blk == NULL) break;
+		}
+
+		assert(todo != 0);
+		assert(todo <= sz);
+		assert(blk != NULL);
+		assert(blk->MEM != NULL);
+		memcpy(buf,blk->MEM+pago,todo);
+		buf += todo;
+		va += todo;
+		sz -= todo;
+		rd += todo;
+	}
+
+	return rd;
+}
+
 void pe_parser_init(struct pe_header_parser *hp) {
-        memset(hp,0,sizeof(*hp));
+	memset(hp,0,sizeof(*hp));
+	hp->src_fd = -1;
 }
 
 void pe_parser_uninit(struct pe_header_parser *hp) {
-        if (hp->opthdr_raw.data) {
-                free(hp->opthdr_raw.data);
-                hp->opthdr_raw.alloc_size = 0;
-                hp->opthdr_raw.data = NULL;
-                hp->opthdr_raw.size = 0;
-        }
-        hp->datadir = NULL;
-        if (hp->sections) {
-                free(hp->sections);
-                hp->sections = NULL;
-        }
-        memset(hp,0,sizeof(*hp));
+	if (hp->opthdr_raw.data) {
+		free(hp->opthdr_raw.data);
+		hp->opthdr_raw.alloc_size = 0;
+		hp->opthdr_raw.data = NULL;
+		hp->opthdr_raw.size = 0;
+	}
+	hp->datadir = NULL;
+	if (hp->sections) {
+		free(hp->sections);
+		hp->sections = NULL;
+	}
+	if (hp->vmem) {
+		pe_header_vamem_free(hp->vmem);
+		hp->vmem = NULL;
+	}
+	memset(hp,0,sizeof(*hp));
 }
 
 static unsigned char            opt_sort_ordinal = 0;
@@ -579,6 +784,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    pe_parser.src_fd = src_fd;
     pe_parser.pe_header_offset = pe_header_offset;
     pe_parser.opthdr_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header);
     pe_parser.sections_offset = pe_parser.pe_header_offset + sizeof(pe_parser.pe_header) + pe_parser.pe_header.fileheader.SizeOfOptionalHeader;
@@ -768,6 +974,7 @@ int main(int argc,char **argv) {
                     (unsigned long)WS(ImageBase));
             }
             if (EXIST(WS(SectionAlignment))) {
+                pe_parser.sectionalign = WS(SectionAlignment);
                 printf("    SectionAlignment;               0x%08lx\n",
                     (unsigned long)WS(SectionAlignment));
             }
@@ -866,6 +1073,7 @@ int main(int argc,char **argv) {
                     (unsigned long long)WS(ImageBase));
             }
             if (EXIST(WS(SectionAlignment))) {
+                pe_parser.sectionalign = WS(SectionAlignment);
                 printf("    SectionAlignment;               0x%08lx\n",
                     (unsigned long)WS(SectionAlignment));
             }
