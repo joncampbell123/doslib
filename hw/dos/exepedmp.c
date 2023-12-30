@@ -1307,6 +1307,7 @@ int main(int argc,char **argv) {
         }
     }
 
+#if 0
     {
         unsigned char tmp[256];
         EXE_PE_VA vo;
@@ -1325,6 +1326,7 @@ int main(int argc,char **argv) {
             }
         }
     }
+#endif
 
     pe_parser_uninit(&pe_parser);
     close(src_fd);
