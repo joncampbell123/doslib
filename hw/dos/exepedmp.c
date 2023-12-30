@@ -381,16 +381,31 @@ struct pe_header_parser {
         struct exe_pe_header                            pe_header;
         uint32_t                                        opthdr_offset;
         uint16_t                                        opthdr_magic;
-        struct exe_pe_optional_header_raw               opthdr_raw;
-        struct exe_pe_opthdr_data_directory_entry*      datadir;
+        struct exe_pe_optional_header_raw               opthdr_raw; /* allocated */
+        struct exe_pe_opthdr_data_directory_entry*      datadir; /* points into opthdr_raw */
         size_t                                          datadir_count;
         uint32_t                                        sections_offset;
-        struct exe_pe_section_table_entry*              sections;
+        struct exe_pe_section_table_entry*              sections; /* allocated */
         size_t                                          sections_count;
 };
 
 void pe_parser_init(struct pe_header_parser *hp) {
         memset(hp,0,sizeof(*hp));
+}
+
+void pe_parser_uninit(struct pe_header_parser *hp) {
+	if (hp->opthdr_raw.data) {
+		free(hp->opthdr_raw.data);
+		hp->opthdr_raw.alloc_size = 0;
+		hp->opthdr_raw.data = NULL;
+		hp->opthdr_raw.size = 0;
+	}
+	hp->datadir = NULL;
+	if (hp->sections) {
+		free(hp->sections);
+		hp->sections = NULL;
+	}
+	memset(hp,0,sizeof(*hp));
 }
 
 static unsigned char            opt_sort_ordinal = 0;
@@ -1062,6 +1077,7 @@ int main(int argc,char **argv) {
 	}
     }
 
+    pe_parser_uninit(&pe_parser);
     close(src_fd);
     return 0;
 }
