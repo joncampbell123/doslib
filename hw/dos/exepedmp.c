@@ -376,6 +376,9 @@ struct exe_pe_section_table_entry {
 #define EXE_PE_SECTFLAGS_MEM_READ                                               0x40000000
 #define EXE_PE_SECTFLAGS_MEM_WRITE                                              0x80000000
 
+typedef uint64_t EXE_PE_VA; /* virtual address */
+typedef uint32_t EXE_PE_RVA; /* relative virtual address */
+
 struct pe_header_parser {
         uint32_t                                        pe_header_offset;
         struct exe_pe_header                            pe_header;
@@ -387,25 +390,34 @@ struct pe_header_parser {
         uint32_t                                        sections_offset;
         struct exe_pe_section_table_entry*              sections; /* allocated */
         size_t                                          sections_count;
+        EXE_PE_VA                                       imagebase;
 };
+
+static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
+        return (EXE_PE_VA)addr + hp->imagebase;
+}
+
+static inline EXE_PE_RVA pe_header_parser_VAtoRVA(struct pe_header_parser *hp,const EXE_PE_VA addr) {
+        return (EXE_PE_RVA)(addr - hp->imagebase);
+}
 
 void pe_parser_init(struct pe_header_parser *hp) {
         memset(hp,0,sizeof(*hp));
 }
 
 void pe_parser_uninit(struct pe_header_parser *hp) {
-	if (hp->opthdr_raw.data) {
-		free(hp->opthdr_raw.data);
-		hp->opthdr_raw.alloc_size = 0;
-		hp->opthdr_raw.data = NULL;
-		hp->opthdr_raw.size = 0;
-	}
-	hp->datadir = NULL;
-	if (hp->sections) {
-		free(hp->sections);
-		hp->sections = NULL;
-	}
-	memset(hp,0,sizeof(*hp));
+        if (hp->opthdr_raw.data) {
+                free(hp->opthdr_raw.data);
+                hp->opthdr_raw.alloc_size = 0;
+                hp->opthdr_raw.data = NULL;
+                hp->opthdr_raw.size = 0;
+        }
+        hp->datadir = NULL;
+        if (hp->sections) {
+                free(hp->sections);
+                hp->sections = NULL;
+        }
+        memset(hp,0,sizeof(*hp));
 }
 
 static unsigned char            opt_sort_ordinal = 0;
@@ -751,6 +763,7 @@ int main(int argc,char **argv) {
             assert(pe_parser.opthdr_raw.alloc_size >= sizeof(*hdr));
 
             if (EXIST(WS(ImageBase))) {
+                pe_parser.imagebase = WS(ImageBase);
                 printf("    ImageBase:                      0x%08lx (VA)\n",
                     (unsigned long)WS(ImageBase));
             }
@@ -848,6 +861,7 @@ int main(int argc,char **argv) {
             assert(pe_parser.opthdr_raw.alloc_size >= sizeof(*hdr));
 
             if (EXIST(WS(ImageBase))) {
+                pe_parser.imagebase = WS(ImageBase);
                 printf("    ImageBase:                      0x%016llx (VA)\n",
                     (unsigned long long)WS(ImageBase));
             }
