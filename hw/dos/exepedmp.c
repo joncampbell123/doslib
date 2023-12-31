@@ -752,7 +752,24 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 					if (entry == 0ul)
 						break;
 
-					if (entry & (uint32_t)0x80000000ul) {
+					/* NTS: Microsoft officially documents that bit 31/63 set means an ordinal.
+					 *
+					 *      Windows 95/98 system DLLs and even some of their user-space programs
+					 *      violate this rule because the RVAs in the EXE/DLL files point directly
+					 *      at the symbol rather than at an ASCII string to resolve at load time.
+					 *      This is obvious when the RVA we just read points outside the image
+					 *      that we are reading right now.
+					 *
+					 *      Obviously by having the import address tables written in this manner,
+					 *      the EXE/DLL can load faster because there is no symbol lookup to slow
+					 *      anything down.
+					 *
+					 *      It also explains why Windows 95/98 were often so insistent on restarting
+					 *      the system every time you updated some part of the system. Because if
+					 *      the DLLs directly point at each other's symbols like this, a change of
+					 *      system components will potentially break things! */
+
+					if ((entry & (uint32_t)0x80000000ul)) {
 						printf("        Ordinal %lu\n",
 							(unsigned long)(entry & (uint32_t)0x7FFFFFFFul));
 					}
@@ -760,8 +777,9 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 						EXE_PE_VA hintname_va = (EXE_PE_VA)entry+pe_parser->imagebase;
 						uint16_t hint;
 
-						Name[0] = 0;
 						pe_header_parser_varead(pe_parser,hintname_va,(unsigned char*)(&hint),2);
+
+						Name[0] = 0;
 						pe_header_parser_varead_stringz(pe_parser,hintname_va+(EXE_PE_VA)2ul,(unsigned char*)Name,256+1);
 
 						printf("        Name '%s' (hint 0x%04xu)\n",Name,hint);
