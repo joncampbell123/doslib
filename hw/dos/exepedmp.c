@@ -807,7 +807,12 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 	EXE_PE_VA edt_min_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase;
 	EXE_PE_VA edt_max_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase + (EXE_PE_VA)ddent->Size;
 	EXE_PE_VA edt_read_va = edt_min_va;
+	EXE_PE_VA exportaddr;
+	EXE_PE_VA nameaddr;
 	char *Name = NULL;
+	uint16_t ordinal;
+	unsigned int i;
+	uint32_t u32;
 
 	if (pe_header_parser_varead(pe_parser,edt_read_va,(unsigned char*)(&edt),sizeof(edt)) != sizeof(edt))
 		return;
@@ -840,6 +845,52 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 		(unsigned long)edt.NamePointerRVA);
 	printf("    OrdinalTableRVA:                0x%08lx\n",
 		(unsigned long)edt.OrdinalTableRVA);
+
+	printf("  == Exported symbols ==\n");
+
+	for (i=0;i < edt.NumberOfNamePointers;i++) { // length of name pointer and ordinal table
+		exportaddr = 0;
+		nameaddr = 0;
+
+		if (pe_header_parser_varead(pe_parser,((EXE_PE_VA)i*(EXE_PE_VA)4u) + (EXE_PE_VA)edt.NamePointerRVA + pe_parser->imagebase,(unsigned char*)(&u32),4) == 4) {
+			if (u32 != 0)
+				nameaddr = (EXE_PE_VA)u32 + pe_parser->imagebase;
+		}
+
+		/* ordinal is relative to OrdinalBase contrary to mistakes in Microsoft documentation */
+		ordinal = 0xFFFF;
+		pe_header_parser_varead(pe_parser,((EXE_PE_VA)i*(EXE_PE_VA)2u) + (EXE_PE_VA)edt.OrdinalTableRVA + pe_parser->imagebase,(unsigned char*)(&ordinal),2);
+		if (ordinal >= (uint32_t)edt.AddressTableEntries) ordinal = 0xFFFF;
+
+		if (ordinal != 0xFFFF) {
+			if (pe_header_parser_varead(pe_parser,((EXE_PE_VA)ordinal*(EXE_PE_VA)4u) + (EXE_PE_VA)edt.ExportAddressTableRVA + pe_parser->imagebase,(unsigned char*)(&u32),4) == 4) {
+				if (u32 != 0)
+					exportaddr = (EXE_PE_VA)u32 + pe_parser->imagebase;
+			}
+
+			ordinal += edt.OrdinalBase;
+		}
+
+		if (ordinal == 0xFFFF)
+			printf("    #(N/A):");
+		else
+			printf("    #%lu:",(unsigned long)ordinal);
+
+		if (nameaddr != (EXE_PE_VA)0) {
+			Name[0] = 0;
+			pe_header_parser_varead_stringz(pe_parser,nameaddr,(unsigned char*)Name,256+1);
+
+			printf(" '%s'",Name);
+		}
+		else {
+			printf(" (no name)");
+		}
+
+		if (exportaddr != (EXE_PE_VA)0)
+			printf(" 0x%llx",(unsigned long long)exportaddr);
+
+		printf("\n");
+	}
 
 	free(Name);
 }
