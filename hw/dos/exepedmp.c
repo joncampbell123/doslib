@@ -513,6 +513,22 @@ struct pe_header_import_directory_table {
 };                                                                                /* =0x14 */
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct pe_header_export_directory_table {
+        uint32_t                                        ExportFlags;                    /* +0x00 */
+        uint32_t                                        TimeDateStamp;                  /* +0x04 */
+        uint16_t                                        MajorVersion;                   /* +0x08 */
+        uint16_t                                        MinorVersion;                   /* +0x0A */
+        uint32_t                                        NameRVA;                        /* +0x0C */
+        uint32_t                                        OrdinalBase;                    /* +0x10 */
+        uint32_t                                        AddressTableEntries;            /* +0x14 */
+        uint32_t                                        NumberOfNamePointers;           /* +0x18 */
+        uint32_t                                        ExportAddressTableRVA;          /* +0x1C */
+        uint32_t                                        NamePointerRVA;                 /* +0x20 */
+        uint32_t                                        OrdinalTableRVA;                /* +0x24 */
+};                                                                                      /* =0x28 */
+#pragma pack(pop)
+
 static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
         return (EXE_PE_VA)addr + hp->imagebase;
 }
@@ -782,6 +798,48 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 			}
 		}
 	}
+
+	free(Name);
+}
+
+void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent) {
+	struct pe_header_export_directory_table edt;
+	EXE_PE_VA edt_min_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase;
+	EXE_PE_VA edt_max_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase + (EXE_PE_VA)ddent->Size;
+	EXE_PE_VA edt_read_va = edt_min_va;
+	char *Name = NULL;
+
+	if (pe_header_parser_varead(pe_parser,edt_read_va,(unsigned char*)(&edt),sizeof(edt)) != sizeof(edt))
+		return;
+
+	Name = malloc(256+1);
+
+	Name[0] = 0;
+	if (edt.NameRVA != 0)
+		pe_header_parser_varead_stringz(pe_parser,(EXE_PE_VA)edt.NameRVA+pe_parser->imagebase,(unsigned char*)Name,256+1);
+
+	printf("  == Export Directory Table Entry ==\n");
+	printf("    ExportFlags:                    0x%08lx\n",
+		(unsigned long)edt.ExportFlags);
+	printf("    TimeDateStamp:                  %lu\n",
+		(unsigned long)edt.TimeDateStamp);
+	printf("    Version:                        %u.%u\n",
+		(unsigned int)edt.MajorVersion,
+		(unsigned int)edt.MinorVersion);
+	printf("    NameRVA:                        0x%08lx '%s'\n",
+		(unsigned long)edt.NameRVA,Name);
+	printf("    OrdinalBase:                    %lu\n",
+		(unsigned long)edt.OrdinalBase);
+	printf("    AddressTableEntries:            %lu\n",
+		(unsigned long)edt.AddressTableEntries);
+	printf("    NumberOfNamePointers:           %lu\n",
+		(unsigned long)edt.NumberOfNamePointers);
+	printf("    ExportAddressTableRVA:          0x%08lx\n",
+		(unsigned long)edt.ExportAddressTableRVA);
+	printf("    NamePointerRVA:                 0x%08lx\n",
+		(unsigned long)edt.NamePointerRVA);
+	printf("    OrdinalTableRVA:                0x%08lx\n",
+		(unsigned long)edt.OrdinalTableRVA);
 
 	free(Name);
 }
@@ -1470,6 +1528,14 @@ int main(int argc,char **argv) {
         if (ddent->Size != 0 && ddent->RVA != 0) {
             printf("== Import Lookup Table ==\n");
             dump_import_table(&pe_parser,ddent);
+        }
+    }
+
+    if (pe_parser.datadir != NULL && EXE_PE_DATADIRENT_EXPORT_TABLE < pe_parser.datadir_count) {
+        struct exe_pe_opthdr_data_directory_entry *ddent = &pe_parser.datadir[EXE_PE_DATADIRENT_EXPORT_TABLE];
+        if (ddent->Size != 0 && ddent->RVA != 0) {
+            printf("== Export Lookup Table ==\n");
+            dump_export_table(&pe_parser,ddent);
         }
     }
 
