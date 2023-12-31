@@ -1218,6 +1218,10 @@ int main(int argc,char **argv) {
 
         pe_parser.opthdr_magic = exe_pe_opthdr_magic_value(&pe_parser.opthdr_raw);
 
+        /* Windows 3.1 Win32s core DLLs have a magic value of zero */
+        if (pe_parser.opthdr_magic == 0)
+            pe_parser.opthdr_magic = EXE_PE_OPTHDR_MAGIC_PE;
+
         if (pe_parser.opthdr_magic == EXE_PE_OPTHDR_MAGIC_PE) {
             if (pe_parser.opthdr_raw.size >= sizeof(struct exe_pe_opthdr_pe)) {
                 struct exe_pe_opthdr_pe *hdr = (struct exe_pe_opthdr_pe*)(pe_parser.opthdr_raw.data);
