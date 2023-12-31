@@ -503,6 +503,16 @@ struct pe_header_parser {
         struct pe_header_vamem*                         vmem;
 };
 
+#pragma pack(push,1)
+struct pe_header_import_directory_table {
+        uint32_t                                        ImportLookupTableRVA;     /* +0x00 RVA */
+        uint32_t                                        TimeDateStamp;            /* +0x04 */
+        uint32_t                                        ForwarderChain;           /* +0x08 index */
+        uint32_t                                        NameRVA;                  /* +0x0C RVA */
+        uint32_t                                        ImportAddressTableRVA;    /* +0x10 RVA */
+};                                                                                /* =0x14 */
+#pragma pack(pop)
+
 static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
         return (EXE_PE_VA)addr + hp->imagebase;
 }
@@ -640,6 +650,25 @@ size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned
 		rd += todo;
 	}
 
+	return rd;
+}
+
+size_t pe_header_parser_varead_stringz(struct pe_header_parser *hp,EXE_PE_VA va,unsigned char *buf,size_t sz) {
+	size_t rd = 0;
+
+	while (sz > 1) {
+		if (pe_header_parser_varead(hp,va,buf,1) != 1)
+			break;
+
+		if (*buf == 0)
+			break;
+
+		sz--;
+		va++;
+		buf++;
+	}
+
+	if (sz > 0) *buf = 0;
 	return rd;
 }
 
@@ -1343,6 +1372,42 @@ int main(int argc,char **argv) {
                 printf("        - Section can be read\n");
             if (ent->Characteristics & EXE_PE_SECTFLAGS_MEM_WRITE)
                 printf("        - Section can be written to\n");
+        }
+    }
+
+    if (pe_parser.datadir != NULL && EXE_PE_DATADIRENT_IMPORT_TABLE < pe_parser.datadir_count) {
+        struct exe_pe_opthdr_data_directory_entry *ddent = &pe_parser.datadir[EXE_PE_DATADIRENT_IMPORT_TABLE];
+        if (ddent->Size != 0 && ddent->RVA != 0) {
+            EXE_PE_VA idt_read_va = (EXE_PE_VA)ddent->RVA + pe_parser.imagebase;
+            struct pe_header_import_directory_table idt;
+            char *Name = malloc(256+1);
+
+            while (1) {
+                if (pe_header_parser_varead(&pe_parser,idt_read_va,(unsigned char*)(&idt),sizeof(idt)) != sizeof(idt))
+                    break;
+                idt_read_va += sizeof(idt);
+
+                if (idt.ImportLookupTableRVA == 0)
+                    break;
+
+                Name[0] = 0;
+                if (idt.NameRVA != 0)
+                    pe_header_parser_varead_stringz(&pe_parser,(EXE_PE_VA)idt.NameRVA+pe_parser.imagebase,(unsigned char*)Name,256+1);
+
+                printf("== Import Directory Table Entry ==\n");
+                printf("    ImportLookupTableRVA:           0x%08lx\n",
+                    (unsigned long)idt.ImportLookupTableRVA);
+                printf("    TimeDateStamp:                  %lu\n",
+                    (unsigned long)idt.TimeDateStamp);
+                printf("    ForwarderChain:                 0x%08lx\n",
+                    (unsigned long)idt.ForwarderChain);
+                printf("    NameRVA:                        0x%08lx '%s'\n",
+                    (unsigned long)idt.NameRVA,Name?Name:"");
+                printf("    ImportAddressTableRVA:          0x%08lx\n",
+                    (unsigned long)idt.ImportAddressTableRVA);
+            }
+
+            free(Name);
         }
     }
 
