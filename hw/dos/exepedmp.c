@@ -499,6 +499,7 @@ struct pe_header_parser {
         struct exe_pe_section_table_entry*              sections; /* allocated */
         size_t                                          sections_count;
         EXE_PE_VA                                       imagebase;
+        EXE_PE_VA                                       imagesize;
         uint32_t                                        sectionalign;
         struct pe_header_vamem*                         vmem;
 };
@@ -769,11 +770,16 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 					 *      the DLLs directly point at each other's symbols like this, a change of
 					 *      system components will potentially break things! */
 
-					if ((entry & (uint32_t)0x80000000ul)) {
+					if (entry >= (uint32_t)0x80010000ul/*No DLL/EXE would have more than 65536 ordinals, and GetProcAddress() by ordinal would break at that point*/) {
+						/* Likely a Windows 95 style symbol pre-resolved at linked time */
+						printf("        Pre-resolved symbol address 0x%08lx\n",
+							(unsigned long)entry);
+					}
+					else if ((entry & (uint32_t)0x80000000ul)) {
 						printf("        Ordinal %lu\n",
 							(unsigned long)(entry & (uint32_t)0x7FFFFFFFul));
 					}
-					else {
+					else if ((EXE_PE_VA)entry < pe_parser->imagesize) {
 						EXE_PE_VA hintname_va = (EXE_PE_VA)entry+pe_parser->imagebase;
 						uint16_t hint;
 
@@ -783,6 +789,15 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 						pe_header_parser_varead_stringz(pe_parser,hintname_va+(EXE_PE_VA)2ul,(unsigned char*)Name,256+1);
 
 						printf("        Name '%s' (hint 0x%04xu)\n",Name,hint);
+					}
+					else if (entry >= (uint32_t)0x10000000ul) {
+						/* Likely a Windows 95 style symbol pre-resolved at linked time */
+						printf("        Pre-resolved symbol address 0x%08lx\n",
+							(unsigned long)entry);
+					}
+					else {
+						printf("        Unknown RVA 0x%08lx\n",
+							(unsigned long)entry);
 					}
 
 					iat_va += 4;
@@ -1339,6 +1354,7 @@ int main(int argc,char **argv) {
                     (unsigned long)WS(Win32VersionValue));
             }
             if (EXIST(WS(SizeOfImage))) {
+                pe_parser.imagesize = WS(SizeOfImage);
                 printf("    SizeOfImage:                    0x%08lx\n",
                     (unsigned long)WS(SizeOfImage));
             }
@@ -1438,6 +1454,7 @@ int main(int argc,char **argv) {
                     (unsigned long)WS(Win32VersionValue));
             }
             if (EXIST(WS(SizeOfImage))) {
+                pe_parser.imagesize = WS(SizeOfImage);
                 printf("    SizeOfImage:                    0x%08lx\n",
                     (unsigned long)WS(SizeOfImage));
             }
