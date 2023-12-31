@@ -697,36 +697,93 @@ void pe_parser_uninit(struct pe_header_parser *hp) {
 }
 
 void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent) {
-        EXE_PE_VA idt_read_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase;
-        struct pe_header_import_directory_table idt;
-        char *Name = malloc(256+1);
+	EXE_PE_VA idt_read_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase;
+	struct pe_header_import_directory_table idt;
+	char *Name = malloc(256+1);
 
-        while (1) {
-                if (pe_header_parser_varead(pe_parser,idt_read_va,(unsigned char*)(&idt),sizeof(idt)) != sizeof(idt))
-                        break;
-                idt_read_va += sizeof(idt);
+	while (1) {
+		if (pe_header_parser_varead(pe_parser,idt_read_va,(unsigned char*)(&idt),sizeof(idt)) != sizeof(idt))
+			break;
+		idt_read_va += sizeof(idt);
 
-                if (idt.ImportLookupTableRVA == 0)
-                        break;
+		if (idt.ImportLookupTableRVA == 0)
+			break;
 
-                Name[0] = 0;
-                if (idt.NameRVA != 0)
-                        pe_header_parser_varead_stringz(pe_parser,(EXE_PE_VA)idt.NameRVA+pe_parser->imagebase,(unsigned char*)Name,256+1);
+		Name[0] = 0;
+		if (idt.NameRVA != 0)
+			pe_header_parser_varead_stringz(pe_parser,(EXE_PE_VA)idt.NameRVA+pe_parser->imagebase,(unsigned char*)Name,256+1);
 
-                printf("  == Import Directory Table Entry ==\n");
-                printf("    ImportLookupTableRVA:           0x%08lx\n",
-                                (unsigned long)idt.ImportLookupTableRVA);
-                printf("    TimeDateStamp:                  %lu\n",
-                                (unsigned long)idt.TimeDateStamp);
-                printf("    ForwarderChain:                 0x%08lx\n",
-                                (unsigned long)idt.ForwarderChain);
-                printf("    NameRVA:                        0x%08lx '%s'\n",
-                                (unsigned long)idt.NameRVA,Name?Name:"");
-                printf("    ImportAddressTableRVA:          0x%08lx\n",
-                                (unsigned long)idt.ImportAddressTableRVA);
-        }
+		printf("  == Import Directory Table Entry ==\n");
+		printf("    ImportLookupTableRVA:           0x%08lx\n",
+			(unsigned long)idt.ImportLookupTableRVA);
+		printf("    TimeDateStamp:                  %lu\n",
+			(unsigned long)idt.TimeDateStamp);
+		printf("    ForwarderChain:                 0x%08lx\n",
+			(unsigned long)idt.ForwarderChain);
+		printf("    NameRVA:                        0x%08lx '%s'\n",
+			(unsigned long)idt.NameRVA,Name?Name:"");
+		printf("    ImportAddressTableRVA:          0x%08lx\n",
+			(unsigned long)idt.ImportAddressTableRVA);
 
-        free(Name);
+		if (idt.ImportAddressTableRVA != 0) {
+			EXE_PE_VA iat_va = (EXE_PE_VA)idt.ImportAddressTableRVA + pe_parser->imagebase;
+
+			printf("      == Import Lookup Table ==\n");
+			if (pe_parser->opthdr_magic == EXE_PE_OPTHDR_MAGIC_PE) {
+				uint32_t entry;
+
+				while (pe_header_parser_varead(pe_parser,iat_va,(unsigned char*)(&entry),4) == 4) {
+					if (entry == 0ul)
+						break;
+
+					if (entry & (uint32_t)0x80000000ul) {
+						printf("        Ordinal %lu\n",
+							(unsigned long)(entry & (uint32_t)0x7FFFFFFFul));
+					}
+					else {
+						EXE_PE_VA hintname_va = (EXE_PE_VA)entry+pe_parser->imagebase;
+						uint16_t hint;
+
+						Name[0] = 0;
+						pe_header_parser_varead(pe_parser,hintname_va,(unsigned char*)(&hint),2);
+						pe_header_parser_varead_stringz(pe_parser,hintname_va+(EXE_PE_VA)2ul,(unsigned char*)Name,256+1);
+
+						printf("        Name '%s' (hint 0x%04xu)\n",Name,hint);
+					}
+
+					iat_va += 4;
+				}
+			}
+			else if (pe_parser->opthdr_magic == EXE_PE_OPTHDR_MAGIC_PEPLUS) {
+				uint64_t entry;
+
+				while (pe_header_parser_varead(pe_parser,iat_va,(unsigned char*)(&entry),8) == 8) {
+					if (entry == 0ull)
+						break;
+
+					if (entry & (uint64_t)0x8000000000000000ull) {
+						printf("        Ordinal %llu\n",
+							(unsigned long long)(entry & (uint64_t)0x7FFFFFFFFFFFFFFFul));
+					}
+					else {
+						EXE_PE_VA hintname_va = (EXE_PE_VA)entry+pe_parser->imagebase;
+						uint16_t hint;
+
+						Name[0] = 0;
+						pe_header_parser_varead(pe_parser,hintname_va,(unsigned char*)(&hint),2);
+						pe_header_parser_varead_stringz(pe_parser,hintname_va+(EXE_PE_VA)2ul,(unsigned char*)Name,256+1);
+
+						printf("        Name '%s' (hint 0x%04xu)\n",Name,hint);
+					}
+
+					iat_va += 8;
+				}
+
+			}
+		}
+	}
+
+	free(Name);
 }
 
 static unsigned char            opt_sort_ordinal = 0;
