@@ -517,21 +517,21 @@ struct pe_header_vamem *pe_header_parser_vamem(struct pe_header_parser *hp) {
 }
 
 struct exe_pe_section_table_entry *pe_header_parser_section_table_lookupVA(struct pe_header_parser *hp,EXE_PE_VA va) {
+        struct exe_pe_section_table_entry *himatch = NULL;
         size_t si;
 
-        if (hp->sections == NULL) return NULL;
-
-        for (si=0;si < hp->sections_count;si++) {
-                struct exe_pe_section_table_entry *ent = hp->sections + si;
-                EXE_PE_VA chksize = ent->VirtualSize;
-
-                if (chksize < ent->SizeOfRawData) chksize = ent->SizeOfRawData; /* some sections have VirtualSize == 0 like the .rsrc resource */
-
-                if (va >= (hp->imagebase+ent->VirtualAddress) && va < (hp->imagebase+ent->VirtualAddress+chksize))
-                        return ent;
+        /* Microsoft says that the sections must be in ascending order and adjacent, probably so that their code can search like this */
+        if (hp->sections != NULL) {
+                for (si=0;si < hp->sections_count;si++) {
+                        struct exe_pe_section_table_entry *ent = hp->sections + si;
+                        if (va >= (hp->imagebase+ent->VirtualAddress))
+                                himatch = ent;
+                        else
+                                break;
+                }
         }
 
-        return NULL;
+        return himatch;
 }
 
 struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,struct pe_header_vamem *v,EXE_PE_VA va,struct exe_pe_section_table_entry *ste) {
@@ -545,29 +545,33 @@ struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,st
         if (hp->src_fd < 0) return NULL;
 
         chksize = ste->VirtualSize;
-        if (chksize < ste->SizeOfRawData) chksize = ste->SizeOfRawData; /* some sections have VirtualSize == 0 like the .rsrc resource */
+        /* Open Watcom makes win32 binaries with .rsrc section VirtualSize == 0, Microsoft C++ does not do that */
+        if (chksize == 0) chksize = ste->SizeOfRawData;
 
         rva = pe_header_parser_VAtoRVA(hp,va);
-        if (rva < ste->VirtualAddress || rva >= (ste->VirtualAddress+chksize)) return NULL;
+        if (rva < ste->VirtualAddress) return NULL;
         rvasec = rva - ste->VirtualAddress;
+        if (rvasec >= chksize) return NULL;
 
-	blk = pe_header_vamem_insert(v,va);
-	if (blk == NULL) return NULL;
+        blk = pe_header_vamem_insert(v,va);
+        if (blk == NULL) return NULL;
 
-	if (rvasec < ste->SizeOfRawData && ste->PointerToRawData != 0) {
-		fileofs = (off_t)(rvasec + ste->PointerToRawData);
-		todo = ste->SizeOfRawData - rvasec;
-		if (todo > hp->sectionalign) todo = hp->sectionalign;
-		assert((v->pagemask + 1) == hp->sectionalign);
-		assert(todo != 0);
+        if (rvasec < chksize && ste->PointerToRawData != 0) {
+                fileofs = (off_t)(rvasec + ste->PointerToRawData);
 
-		if (lseek(hp->src_fd,fileofs,SEEK_SET) == fileofs)
-			read(hp->src_fd,blk->MEM,todo);
+                todo = chksize - rvasec;
+                if (todo > hp->sectionalign) todo = hp->sectionalign;
 
-		return blk;
-	}
+                assert((v->pagemask + 1) == hp->sectionalign);
+                assert(todo != 0);
 
-	return NULL;
+                if (lseek(hp->src_fd,fileofs,SEEK_SET) == fileofs)
+                        read(hp->src_fd,blk->MEM,todo);
+
+                return blk;
+        }
+
+        return NULL;
 }
 
 size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned char *buf,size_t sz) {
