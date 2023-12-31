@@ -669,6 +669,7 @@ void pe_parser_uninit(struct pe_header_parser *hp) {
 
 static unsigned char            opt_sort_ordinal = 0;
 static unsigned char            opt_sort_names = 0;
+static unsigned char            opt_dumpsect = 0;
 
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
@@ -680,6 +681,7 @@ static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
     fprintf(stderr," -sn        Sort names\n");
     fprintf(stderr," -so        Sort by ordinal\n");
+    fprintf(stderr," -dumpsect  Dump sections\n");
 }
 
 int main(int argc,char **argv) {
@@ -701,6 +703,9 @@ int main(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"dumpsect")) {
+                opt_dumpsect = 1;
             }
             else if (!strcmp(a,"sn")) {
                 opt_sort_names = 1;
@@ -1341,16 +1346,37 @@ int main(int argc,char **argv) {
         }
     }
 
-#if 0
-    {
+    if (opt_dumpsect && pe_parser.sections != NULL && pe_parser.sections_count != 0) {
+        struct exe_pe_section_table_entry* ent;
         unsigned char tmp[256];
+        EXE_PE_VA minv,maxv,t;
         EXE_PE_VA vo;
         size_t rd,i;
+        size_t si=0;
 
-        for (vo=0;vo < 0x100000;vo += 256) {
-            rd = pe_header_parser_varead(&pe_parser,vo+pe_parser.imagebase,tmp,sizeof(tmp));
+        ent = pe_parser.sections+(si++);
+        minv = t = (EXE_PE_VA)ent->VirtualAddress + pe_parser.imagebase;
+        if (ent->VirtualSize != 0) t += (EXE_PE_VA)ent->VirtualSize;
+        else t += (EXE_PE_VA)ent->SizeOfRawData;
+        maxv = t;
+
+        while (si < pe_parser.sections_count) {
+            ent = pe_parser.sections+(si++);
+            t = (EXE_PE_VA)ent->VirtualAddress + pe_parser.imagebase;
+            if (minv > t) minv = t;
+            if (ent->VirtualSize != 0) t += (EXE_PE_VA)ent->VirtualSize;
+            else t += (EXE_PE_VA)ent->SizeOfRawData;
+            if (maxv < t) maxv = t;
+        }
+
+        printf("== Section dump 0x%llx-0x%llx ==\n",
+            (unsigned long long)minv,
+            (unsigned long long)maxv-1ull);
+
+        for (vo=minv;vo < maxv;vo += 256) {
+            rd = pe_header_parser_varead(&pe_parser,vo,tmp,sizeof(tmp));
             if (rd != 0) {
-                printf("== VA 0x%llx ==\n",(unsigned long long)(vo+pe_parser.imagebase));
+                printf("== VA 0x%llx-0x%llx ==\n",(unsigned long long)vo,(unsigned long long)vo+(unsigned long long)rd-1ull);
                 for (i=0;i < rd;i++) {
                     if ((i&15) == 0) printf("  ");
                     printf(" %02x",tmp[i]);
@@ -1360,7 +1386,6 @@ int main(int argc,char **argv) {
             }
         }
     }
-#endif
 
     pe_parser_uninit(&pe_parser);
     close(src_fd);
