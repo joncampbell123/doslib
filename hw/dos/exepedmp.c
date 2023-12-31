@@ -811,8 +811,10 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 	EXE_PE_VA nameaddr;
 	char *Name = NULL;
 	uint16_t ordinal;
+	unsigned int ei;
 	unsigned int i;
 	uint32_t u32;
+	uint16_t u16;
 
 	if (pe_header_parser_varead(pe_parser,edt_read_va,(unsigned char*)(&edt),sizeof(edt)) != sizeof(edt))
 		return;
@@ -846,8 +848,7 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 	printf("    OrdinalTableRVA:                0x%08lx\n",
 		(unsigned long)edt.OrdinalTableRVA);
 
-	printf("  == Exported symbols ==\n");
-
+	printf("  == Exported symbols by name ==\n");
 	for (i=0;i < edt.NumberOfNamePointers;i++) { // length of name pointer and ordinal table
 		exportaddr = 0;
 		nameaddr = 0;
@@ -875,6 +876,49 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 			printf("    #(N/A):");
 		else
 			printf("    #%lu:",(unsigned long)ordinal);
+
+		if (nameaddr != (EXE_PE_VA)0) {
+			Name[0] = 0;
+			pe_header_parser_varead_stringz(pe_parser,nameaddr,(unsigned char*)Name,256+1);
+
+			printf(" '%s'",Name);
+		}
+		else {
+			printf(" (no name)");
+		}
+
+		if (exportaddr != (EXE_PE_VA)0)
+			printf(" 0x%llx",(unsigned long long)exportaddr);
+
+		printf("\n");
+	}
+
+	printf("  == Exported symbols by ordinal ==\n");
+	for (i=0;i < edt.AddressTableEntries;i++) { // length of name pointer and ordinal table
+		ordinal = i + edt.OrdinalBase;
+		exportaddr = 0;
+		nameaddr = 0;
+
+		if (pe_header_parser_varead(pe_parser,((EXE_PE_VA)i*(EXE_PE_VA)4u) + (EXE_PE_VA)edt.ExportAddressTableRVA + pe_parser->imagebase,(unsigned char*)(&u32),4) == 4) {
+			if (u32 != 0)
+				exportaddr = (EXE_PE_VA)u32 + pe_parser->imagebase;
+		}
+
+		for (ei=0;ei < edt.NumberOfNamePointers;ei++) {
+			if (pe_header_parser_varead(pe_parser,((EXE_PE_VA)ei*(EXE_PE_VA)2u) + (EXE_PE_VA)edt.OrdinalTableRVA + pe_parser->imagebase,(unsigned char*)(&u16),2) == 2) {
+				if (u16 == i)
+					break;
+			}
+		}
+
+		if (ei < edt.NumberOfNamePointers) {
+			if (pe_header_parser_varead(pe_parser,((EXE_PE_VA)ei*(EXE_PE_VA)4u) + (EXE_PE_VA)edt.NamePointerRVA + pe_parser->imagebase,(unsigned char*)(&u32),4) == 4) {
+				if (u32 != 0)
+					nameaddr = (EXE_PE_VA)u32 + pe_parser->imagebase;
+			}
+		}
+
+		printf("    #%lu:",(unsigned long)ordinal);
 
 		if (nameaddr != (EXE_PE_VA)0) {
 			Name[0] = 0;
