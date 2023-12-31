@@ -534,6 +534,36 @@ struct exe_pe_section_table_entry *pe_header_parser_section_table_lookupVA(struc
         return himatch;
 }
 
+/* clear a block (TODO: According to a LRU algorithm) to free up memory to allow for another one to be allocated */
+void pe_header_vamem_clear_lrused(struct pe_header_vamem *v) {
+	unsigned int hi;
+
+	for (hi=0;hi < EXE_PE_HASHTBL_SIZE;hi++) {
+		struct pe_header_vablock **h = &v->hash[hi];
+
+		if (*h != NULL) {
+			pe_header_vablock_free(h);
+			break;
+		}
+	}
+}
+
+struct pe_header_vablock *pe_header_vamem_insert_and_free_lrused(struct pe_header_vamem *v,EXE_PE_VA va) {
+	/* assumes caller has already checked there is no block for page containing va */
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	struct pe_header_vablock *blk;
+	unsigned int tryi=0;
+
+	for (tryi=0;tryi < 4;tryi++) {
+		if ((blk=pe_header_vablock_insert(v,&v->hash[hashi],va & (~v->pagemask))) != NULL)
+			return blk;
+
+		pe_header_vamem_clear_lrused(v);
+	}
+
+	return NULL;
+}
+
 struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,struct pe_header_vamem *v,EXE_PE_VA va,struct exe_pe_section_table_entry *ste) {
         /* assume "va" is already page aligned */
         struct pe_header_vablock *blk;
@@ -553,7 +583,7 @@ struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,st
         rvasec = rva - ste->VirtualAddress;
         if (rvasec >= chksize) return NULL;
 
-        blk = pe_header_vamem_insert(v,va);
+        blk = pe_header_vamem_insert_and_free_lrused(v,va);
         if (blk == NULL) return NULL;
 
         if (rvasec < chksize && ste->PointerToRawData != 0) {
