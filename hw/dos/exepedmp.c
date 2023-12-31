@@ -453,12 +453,12 @@ struct pe_header_vablock *pe_header_vablock_insert(struct pe_header_vamem *v,str
 
 struct pe_header_vablock *pe_header_vamem_insert(struct pe_header_vamem *v,EXE_PE_VA va) {
 	/* assumes caller has already checked there is no block for page containing va */
-	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va & (~v->pagemask));
 	return pe_header_vablock_insert(v,&v->hash[hashi],va & (~v->pagemask));
 }
 
 struct pe_header_vablock *pe_header_vamem_lookup(struct pe_header_vamem *v,EXE_PE_VA va) {
-	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va & (~v->pagemask));
 	return pe_header_vablock_lookup(v->hash[hashi],va & (~v->pagemask));
 }
 
@@ -577,7 +577,7 @@ void pe_header_vamem_clear_lrused(struct pe_header_vamem *v) {
 
 struct pe_header_vablock *pe_header_vamem_insert_and_free_lrused(struct pe_header_vamem *v,EXE_PE_VA va) {
 	/* assumes caller has already checked there is no block for page containing va */
-	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va);
+	const EXE_PE_HASH_T hashi = pe_header_parser_hashva(va & (~v->pagemask));
 	struct pe_header_vablock *blk;
 	unsigned int tryi=0;
 
