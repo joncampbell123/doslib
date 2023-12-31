@@ -625,10 +625,9 @@ struct pe_header_vablock *pe_header_parser_vaload(struct pe_header_parser *hp,st
                 if (lseek(hp->src_fd,fileofs,SEEK_SET) == fileofs)
                         read(hp->src_fd,blk->MEM,todo);
 
-                return blk;
         }
 
-        return NULL;
+        return blk;
 }
 
 size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned char *buf,size_t sz) {
@@ -647,7 +646,7 @@ size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned
 		todo = (size_t)(v->pagemask) + (size_t)1u - pago;
 		if (todo > sz) todo = sz;
 
-		blk = pe_header_vamem_lookup(v,va);
+		blk = pe_header_vamem_lookup(v,va & (~v->pagemask));
 		if (blk == NULL) {
 			struct exe_pe_section_table_entry *ste = pe_header_parser_section_table_lookupVA(hp,va & (~v->pagemask));
 			if (!ste) break;
