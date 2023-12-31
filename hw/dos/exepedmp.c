@@ -1565,7 +1565,20 @@ int main(int argc,char **argv) {
 
     if (pe_parser.sections != NULL && pe_parser.sections_count != 0) {
         struct exe_pe_section_table_entry *ent;
-        unsigned int i=0;
+        unsigned int i;
+        EXE_PE_VA va;
+
+        pe_parser.imagesize = 0;
+        for (i=0;i < pe_parser.sections_count;i++) {
+            ent = pe_parser.sections + i;
+            va = (EXE_PE_VA)(ent->VirtualAddress) + (EXE_PE_VA)(ent->VirtualSize);
+            if (pe_parser.imagesize < va) pe_parser.imagesize = va;
+        }
+    }
+
+    if (pe_parser.sections != NULL && pe_parser.sections_count != 0) {
+        struct exe_pe_section_table_entry *ent;
+        unsigned int i;
         char tmp[9];
 
         printf(" == Section table ==\n"); 
