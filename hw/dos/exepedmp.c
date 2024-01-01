@@ -819,7 +819,7 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 					 * therefore despite the capabilities of the PE format, the highest valid ordinal is
 					 * 0xFFFF (65535) and that is what this code uses to determine ordinal from Windows 95
 					 * pre-resolved VAs. Windows 95 system DLLs like GDI32.DLL and KERNEL32.DLL all use
-					 * image bases well about 0x80000000, usually 0xBFxxxxxx (right below kernel space at
+					 * image bases well above 0x80000000, usually 0xBFxxxxxx (right below kernel space at
 					 * 0xC0000000), and these RVA would otherwise be mistaken as ordinal references with
 					 * very large ordinal numbers. */
 					else if (entry < 0x80010000ul) {
