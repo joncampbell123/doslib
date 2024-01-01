@@ -1079,7 +1079,7 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 	struct pe_header_resource_directory_table rdt;
 	struct pe_header_resource_directory_entry rde;
 	EXE_PE_VA read_va = rsrcbase + read_rva;
-	unsigned long i;
+	unsigned long i,ic;
 	char *Name;
 
 	if (level > 16) {
@@ -1106,7 +1106,12 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 	drtlspc(level); printf("    NumberOfIDEntries:              0x%08lx\n",
 		(unsigned long)rdt.NumberOfIDEntries);
 
-	for (i=0;i < (unsigned long)rdt.NumberOfNameEntries+(unsigned long)rdt.NumberOfIDEntries;i++) {
+	ic = (unsigned long)rdt.NumberOfNameEntries+(unsigned long)rdt.NumberOfIDEntries;
+	if (ic > 65536ul) {
+		drtlspc(level); printf("! WARNING: Total entries is too large (corruption?)\n");
+	}
+
+	for (i=0;i < ic;i++) {
 		if (pe_header_parser_varead(pe_parser,read_va,(unsigned char*)(&rde),sizeof(rde)) != sizeof(rde))
 			return;
 		read_va += sizeof(rde);
