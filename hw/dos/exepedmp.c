@@ -1072,7 +1072,12 @@ static void drtlspc(unsigned int l) {
 	}
 }
 
-void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level) {
+struct drt_level {
+	char*		Name;
+	uint32_t	ID;
+};
+
+void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level,unsigned int levelmax,struct drt_level *dl) {
 	/* Not documented by Microsoft: "RVA" in this context really means relative to the resource section, NOT relative to image base.
 	 * Pffft, oh Microsoft! Forgetting minor details like that as usual, of course. */
 	EXE_PE_VA rsrcbase = (EXE_PE_VA)(ddent->RVA) + pe_parser->imagebase;
@@ -1080,9 +1085,8 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 	struct pe_header_resource_directory_entry rde;
 	EXE_PE_VA read_va = rsrcbase + read_rva;
 	unsigned long i,ic;
-	char *Name;
 
-	if (level > 16) {
+	if (level >= levelmax) {
 		drtlspc(level); printf("! Whoah, recursing too deep! Resource tree corruption?\n");
 		return;
 	}
@@ -1124,29 +1128,39 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 			(unsigned long)(rde.s.DataEntryRVA & 0x7FFFFFFFu));
 
 		if (rde.f.NameRVA & 0x80000000ul) {
-			Name = malloc(256+1);
+			dl[level].Name = malloc(256+1);
+			dl[level].ID = 0;
 
-			Name[0] = 0;
+			dl[level].Name[0] = 0;
 			if (rde.f.NameRVA != 0)
-				pe_header_parser_varead_lenwstring(pe_parser,(EXE_PE_VA)(rde.f.NameRVA&0x7FFFFFFFul)+rsrcbase,(unsigned char*)Name,256+1);
+				pe_header_parser_varead_lenwstring(pe_parser,(EXE_PE_VA)(rde.f.NameRVA&0x7FFFFFFFul)+rsrcbase,(unsigned char*)dl[level].Name,256+1);
 
-			printf(" '%s'",Name);
-			free(Name);
+			printf(" '%s'",dl[level].Name);
 		}
 		else {
+			dl[level].ID = rde.f.IntegerID;
 			printf(" ordinal %lu",(unsigned long)rde.f.IntegerID);
 		}
 
 		printf("\n");
 
 		if (rde.s.DataEntryRVA & 0x80000000ul) {
-			dump_resource_table_level(pe_parser,ddent,rde.s.DataEntryRVA&0x7FFFFFFFu,level+1u);
+			dump_resource_table_level(pe_parser,ddent,rde.s.DataEntryRVA&0x7FFFFFFFu,level+1u,levelmax,dl);
+		}
+
+		dl[level].ID = 0;
+		if (dl[level].Name) {
+			free(dl[level].Name);
+			dl[level].Name = NULL;
 		}
 	}
 }
 
 void dump_resource_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent) {
-	dump_resource_table_level(pe_parser,ddent,0,0);
+	struct drt_level *dl = malloc(sizeof(struct drt_level) * 16);
+	memset(dl,0,sizeof(struct drt_level) * 16);
+	dump_resource_table_level(pe_parser,ddent,0,0,16,dl);
+	free(dl);
 }
 
 static unsigned char            opt_sort_ordinal = 0;
