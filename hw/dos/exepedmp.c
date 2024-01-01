@@ -1082,6 +1082,11 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 	unsigned long i;
 	char *Name;
 
+	if (level > 16) {
+		drtlspc(level); printf("! Whoah, recursing too deep! Resource tree corruption?\n");
+		return;
+	}
+
 	assert(sizeof(rde) == 0x08);
 
 	if (pe_header_parser_varead(pe_parser,read_va,(unsigned char*)(&rdt),sizeof(rdt)) != sizeof(rdt))
