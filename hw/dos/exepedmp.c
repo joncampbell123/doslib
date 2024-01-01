@@ -392,9 +392,11 @@ struct pe_header_vablock { // one 4KB block of virtual address space
 struct pe_header_vamem {
 	struct pe_header_vablock*	hash[EXE_PE_HASHTBL_SIZE]; // alloc here
 	EXE_PE_VA			pagemask;
+	EXE_PE_VA			alloc;
+	EXE_PE_VA			alloc_limit;
 };
 
-void pe_header_vablock_free(struct pe_header_vablock **h) {
+void pe_header_vablock_free(struct pe_header_vamem *v,struct pe_header_vablock **h) {
 	if (*h) {
 		struct pe_header_vablock *n = (*h)->next;
 		if ((*h)->MEM) free((*h)->MEM);
@@ -402,12 +404,15 @@ void pe_header_vablock_free(struct pe_header_vablock **h) {
 		(*h)->VA = 0;
 		free(*h);
 		*h = n;
+
+		assert(v->alloc >= (v->pagemask+(EXE_PE_VA)1u));
+		v->alloc -= (v->pagemask+(EXE_PE_VA)1u);
 	}
 }
 
-void pe_header_vablock_freeall(struct pe_header_vablock **h) {
+void pe_header_vablock_freeall(struct pe_header_vamem *v,struct pe_header_vablock **h) {
 	while (*h != NULL)
-		pe_header_vablock_free(h);
+		pe_header_vablock_free(v,h);
 }
 
 EXE_PE_HASH_T pe_header_parser_hashva(EXE_PE_VA v) {
@@ -431,21 +436,28 @@ struct pe_header_vablock *pe_header_vablock_lookup(struct pe_header_vablock *h,E
 }
 
 struct pe_header_vablock *pe_header_vablock_insert(struct pe_header_vamem *v,struct pe_header_vablock **h,EXE_PE_VA va) {
-	/* assumes caller has already checked there is no block for page containing va, va is already masked by ~pagemask */
-	struct pe_header_vablock *nb = malloc(sizeof(struct pe_header_vablock));
-	if (nb != NULL) {
-		nb->MEM = malloc((size_t)(v->pagemask+1u));
-		if (!nb->MEM) {
-			free(nb);
-			return NULL;
-		}
-		memset(nb->MEM,0,(size_t)(v->pagemask+1u));
-		nb->VA = va;
+	/* enforce allocation limit */
+	if (v->alloc >= v->alloc_limit)
+		return NULL;
 
-		/* insert into head of list */
-		nb->next = (*h);
-		(*h) = nb;
-		return nb;
+	/* assumes caller has already checked there is no block for page containing va, va is already masked by ~pagemask */
+	{
+		struct pe_header_vablock *nb = malloc(sizeof(struct pe_header_vablock));
+		if (nb != NULL) {
+			nb->MEM = malloc((size_t)(v->pagemask+1u));
+			if (!nb->MEM) {
+				free(nb);
+				return NULL;
+			}
+			memset(nb->MEM,0,(size_t)(v->pagemask+1u));
+			v->alloc += (v->pagemask+(EXE_PE_VA)1u);
+			nb->VA = va;
+
+			/* insert into head of list */
+			nb->next = (*h);
+			(*h) = nb;
+			return nb;
+		}
 	}
 
 	return NULL;
@@ -466,8 +478,9 @@ void pe_header_vamem_free(struct pe_header_vamem *v) {
 	unsigned int i;
 
 	for (i=0;i < EXE_PE_HASHTBL_SIZE;i++)
-		pe_header_vablock_freeall(&v->hash[i]);
+		pe_header_vablock_freeall(v,&v->hash[i]);
 
+	assert(v->alloc == 0);
 	free(v);
 }
 
@@ -483,6 +496,15 @@ struct pe_header_vamem *pe_header_vamem_alloc(uint32_t pagesize) {
 
 	memset(v,0,sizeof(*v));
 	v->pagemask = pagesize - 1u;
+#if TARGET_MSDOS == 16
+#  if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
+	v->alloc_limit = (EXE_PE_VA)256u << (EXE_PE_VA)10u; // 256KB limit (should fit well within 640KB)
+#  else
+	v->alloc_limit = (EXE_PE_VA)16u << (EXE_PE_VA)10u; // 16KB limit (should fit well within 64KB)
+#  endif
+#else
+	v->alloc_limit = (EXE_PE_VA)32u << (EXE_PE_VA)20u; // 32MB limit (Linux kernel OOM killer will terminate this program if we allocate too much memory)
+#endif
 	return v;
 }
 
@@ -569,7 +591,7 @@ void pe_header_vamem_clear_lrused(struct pe_header_vamem *v) {
 		struct pe_header_vablock **h = &v->hash[hi];
 
 		if (*h != NULL) {
-			pe_header_vablock_free(h);
+			pe_header_vablock_free(v,h);
 			break;
 		}
 	}
