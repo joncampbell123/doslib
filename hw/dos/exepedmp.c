@@ -552,6 +552,30 @@ struct pe_header_export_directory_table {
 };                                                                                      /* =0x28 */
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct pe_header_resource_directory_table {
+        uint32_t                                        Characteristics;                /* +0x00 */
+        uint32_t                                        TimeDateStamp;                  /* +0x04 */
+        uint16_t                                        MajorVersion;                   /* +0x08 */
+        uint16_t                                        MinorVersion;                   /* +0x0A */
+        uint16_t                                        NumberOfNameEntries;            /* +0x0C */
+        uint16_t                                        NumberOfIDEntries;              /* +0x0E */
+};                                                                                      /* =0x10 */
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct pe_header_resource_directory_entry {
+	union {
+		uint32_t				NameRVA;			/* +0x00 */
+		uint32_t				IntegerID;			/* +0x00 */
+	} f;
+	union {
+		uint32_t				DataEntryRVA;			/* +0x04 */
+		uint32_t				SubdirectoryRVA;		/* +0x04 */
+	} s;
+};                                                                                      /* =0x08 */
+#pragma pack(pop)
+
 static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
         return (EXE_PE_VA)addr + hp->imagebase;
 }
@@ -688,6 +712,43 @@ size_t pe_header_parser_varead(struct pe_header_parser *hp,EXE_PE_VA va,unsigned
 		rd += todo;
 	}
 
+	return rd;
+}
+
+size_t pe_header_parser_varead_lenwstring(struct pe_header_parser *hp,EXE_PE_VA va,unsigned char *buf,size_t sz) {
+	uint16_t len = 0,cc;
+	size_t rd = 0;
+
+	/* uint16_t len
+	 * WCHAR str[len] */
+	pe_header_parser_varead(hp,va,(unsigned char*)(&len),2);
+	va += 2;
+
+	/* FIXME: What this code should really do is read and convert to UTF-8 */
+	/* FIXME: What about UCS-16 surrogate pairs? */
+
+	while (sz > 1) {
+		if (len == 0)
+			break;
+
+		if (pe_header_parser_varead(hp,va,(unsigned char*)(&cc),2) != 2)
+			break;
+		va += 2;
+
+		if (cc == 0)
+			break;
+
+		if (cc < 0x100)
+			*buf = (char)cc;
+		else
+			*buf = '?';
+
+		buf++;
+		len--;
+		sz--;
+	}
+
+	if (sz > 0) *buf = 0;
 	return rd;
 }
 
@@ -1002,6 +1063,80 @@ void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 	}
 
 	free(Name);
+}
+
+static void drtlspc(unsigned int l) {
+	while (l > 0) {
+		printf("    ");
+		l--;
+	}
+}
+
+void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level) {
+	/* Not documented by Microsoft: "RVA" in this context really means relative to the resource section, NOT relative to image base.
+	 * Pffft, oh Microsoft! Forgetting minor details like that as usual, of course. */
+	EXE_PE_VA rsrcbase = (EXE_PE_VA)(ddent->RVA) + pe_parser->imagebase;
+	struct pe_header_resource_directory_table rdt;
+	struct pe_header_resource_directory_entry rde;
+	EXE_PE_VA read_va = rsrcbase + read_rva;
+	unsigned long i;
+	char *Name;
+
+	assert(sizeof(rde) == 0x08);
+
+	if (pe_header_parser_varead(pe_parser,read_va,(unsigned char*)(&rdt),sizeof(rdt)) != sizeof(rdt))
+		return;
+	read_va += sizeof(rdt);
+
+	drtlspc(level); printf("  == Resource Directory Table Entry ==\n");
+	drtlspc(level); printf("    Characteristics:                0x%08lx\n",
+		(unsigned long)rdt.Characteristics);
+	drtlspc(level); printf("    TimeDateStamp:                  %lu\n",
+		(unsigned long)rdt.TimeDateStamp);
+	drtlspc(level); printf("    Version:                        %u.%u\n",
+		rdt.MajorVersion,
+		rdt.MinorVersion);
+	drtlspc(level); printf("    NumberOfNameEntries:            0x%08lx\n",
+		(unsigned long)rdt.NumberOfNameEntries);
+	drtlspc(level); printf("    NumberOfIDEntries:              0x%08lx\n",
+		(unsigned long)rdt.NumberOfIDEntries);
+
+	for (i=0;i < (unsigned long)rdt.NumberOfNameEntries+(unsigned long)rdt.NumberOfIDEntries;i++) {
+		if (pe_header_parser_varead(pe_parser,read_va,(unsigned char*)(&rde),sizeof(rde)) != sizeof(rde))
+			return;
+		read_va += sizeof(rde);
+
+		/* Oh, typical Microsoft. Documenting the resource directory entry name/ID thing but completely neglecting
+		 * to document that all name RVAs have bit 31 set. */
+
+		drtlspc(level); printf("    Resource %s at RVA 0x%08lx",
+			(rde.s.DataEntryRVA & 0x80000000ul)?"directory":"leaf",
+			(unsigned long)(rde.s.DataEntryRVA & 0x7FFFFFFFu));
+
+		if (rde.f.NameRVA & 0x80000000ul) {
+			Name = malloc(256+1);
+
+			Name[0] = 0;
+			if (rde.f.NameRVA != 0)
+				pe_header_parser_varead_lenwstring(pe_parser,(EXE_PE_VA)(rde.f.NameRVA&0x7FFFFFFFul)+rsrcbase,(unsigned char*)Name,256+1);
+
+			printf(" '%s'",Name);
+			free(Name);
+		}
+		else {
+			printf(" ordinal %lu",(unsigned long)rde.f.IntegerID);
+		}
+
+		printf("\n");
+
+		if (rde.s.DataEntryRVA & 0x80000000ul) {
+			dump_resource_table_level(pe_parser,ddent,rde.s.DataEntryRVA&0x7FFFFFFFu,level+1u);
+		}
+	}
+}
+
+void dump_resource_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent) {
+	dump_resource_table_level(pe_parser,ddent,0,0);
 }
 
 static unsigned char            opt_sort_ordinal = 0;
@@ -1715,6 +1850,14 @@ int main(int argc,char **argv) {
         if (ddent->Size != 0 && ddent->RVA != 0) {
             printf("== Export Lookup Table ==\n");
             dump_export_table(&pe_parser,ddent);
+        }
+    }
+
+    if (pe_parser.datadir != NULL && EXE_PE_DATADIRENT_RESOURCE_TABLE < pe_parser.datadir_count) {
+        struct exe_pe_opthdr_data_directory_entry *ddent = &pe_parser.datadir[EXE_PE_DATADIRENT_RESOURCE_TABLE];
+        if (ddent->Size != 0 && ddent->RVA != 0) {
+            printf("== Resources ==\n");
+            dump_resource_table(&pe_parser,ddent);
         }
     }
 
