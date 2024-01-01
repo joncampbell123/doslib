@@ -576,6 +576,15 @@ struct pe_header_resource_directory_entry {
 };                                                                                      /* =0x08 */
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct pe_header_resource_data_entry {
+        uint32_t                                        DataRVA;                        /* +0x00 */
+        uint32_t                                        Size;                           /* +0x04 */
+        uint32_t                                        Codepage;                       /* +0x08 */
+        uint32_t                                        Reserved;                       /* +0x0C */
+};                                                                                      /* =0x10 */
+#pragma pack(pop)
+
 static inline EXE_PE_VA pe_header_parser_RVAtoVA(struct pe_header_parser *hp,const EXE_PE_RVA addr) {
         return (EXE_PE_VA)addr + hp->imagebase;
 }
@@ -1077,6 +1086,82 @@ struct drt_level {
 	uint32_t	ID;
 };
 
+const char *exe_pe_resource_type_to_str(const uint32_t id) {
+	switch (id) {
+		case 0x00000001: return "RT_CURSOR";
+		case 0x00000002: return "RT_BITMAP";
+		case 0x00000003: return "RT_ICON";
+		case 0x00000004: return "RT_MENU";
+		case 0x00000005: return "RT_DIALOG";
+		case 0x00000006: return "RT_STRING";
+		case 0x00000007: return "RT_FONTDIR";
+		case 0x00000008: return "RT_FONT";
+		case 0x00000009: return "RT_ACCELERATOR";
+		case 0x0000000A: return "RT_RCDATA";
+		case 0x0000000B: return "RT_MESSAGETABLE";
+		case 0x0000000C: return "RT_GROUP_CURSOR";
+		case 0x0000000E: return "RT_GROUP_ICON";
+		case 0x00000010: return "RT_VERSION";
+		case 0x00000011: return "RT_DLGINCLUDE";
+		case 0x00000013: return "RT_PLUGPLAY";
+		case 0x00000014: return "RT_VXD";
+		case 0x00000015: return "RT_ANICURSOR";
+		case 0x00000016: return "RT_ANIICON";
+		case 0x00000017: return "RT_HTML";
+		case 0x00000018: return "RT_MANIFEST";
+		default: break;
+	};
+
+	return "?";
+}
+
+void dump_resource_table_data(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level,unsigned int levelmax,struct drt_level *dl) {
+	EXE_PE_VA rsrcbase = (EXE_PE_VA)(ddent->RVA) + pe_parser->imagebase;
+	struct pe_header_resource_data_entry rde;
+
+	memset(&rde,0,sizeof(rde));
+	pe_header_parser_varead(pe_parser,rsrcbase+read_rva,(unsigned char*)(&rde),sizeof(rde));
+
+	(void)levelmax;
+
+	drtlspc(level);
+	printf("== Resource data");
+
+	/* first level: resource type */
+	if (level > 0) {
+		if (dl[0].Name)
+			printf(" Type:'%s'",dl[0].Name);
+		else
+			printf(" Type:%s",exe_pe_resource_type_to_str(dl[0].ID));
+	}
+
+	/* second level: resource ID */
+	if (level > 1) {
+		if (dl[1].Name)
+			printf(" ID:'%s'",dl[1].Name);
+		else
+			printf(" ID:%lu",(unsigned long)(dl[1].ID));
+	}
+
+	/* third level: resource language ID */
+	if (level > 2) {
+		if (dl[2].Name)
+			printf(" LCID:'%s'",dl[2].Name);
+		else
+			printf(" LCID:%lu",(unsigned long)(dl[2].ID));
+	}
+
+	if (rde.DataRVA != 0)
+		printf(" RVA:0x%08lx",(unsigned long)rde.DataRVA);
+	if (rde.Size != 0)
+		printf(" Size:%lu",(unsigned long)rde.Size);
+	if (rde.Codepage != 0)
+		printf(" Cpg:%lu",(unsigned long)rde.Codepage);
+
+	printf(" ==");
+	printf("\n");
+}
+
 void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level,unsigned int levelmax,struct drt_level *dl) {
 	/* Not documented by Microsoft: "RVA" in this context really means relative to the resource section, NOT relative to image base.
 	 * Pffft, oh Microsoft! Forgetting minor details like that as usual, of course. */
@@ -1144,9 +1229,10 @@ void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_
 
 		printf("\n");
 
-		if (rde.s.DataEntryRVA & 0x80000000ul) {
-			dump_resource_table_level(pe_parser,ddent,rde.s.DataEntryRVA&0x7FFFFFFFu,level+1u,levelmax,dl);
-		}
+		if (rde.s.DataEntryRVA & 0x80000000ul)
+			dump_resource_table_level(pe_parser,ddent,rde.s.SubdirectoryRVA&0x7FFFFFFFu,level+1u,levelmax,dl);
+		else
+			dump_resource_table_data(pe_parser,ddent,rde.s.DataEntryRVA,level+1u,levelmax,dl);
 
 		dl[level].ID = 0;
 		if (dl[level].Name) {
