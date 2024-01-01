@@ -769,16 +769,13 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 					 *      the DLLs directly point at each other's symbols like this, a change of
 					 *      system components will potentially break things! */
 
-					if (entry >= (uint32_t)0x80010000ul/*No DLL/EXE would have more than 65536 ordinals, and GetProcAddress() by ordinal would break at that point*/) {
-						/* Likely a Windows 95 style symbol pre-resolved at linked time */
-						printf("        Pre-resolved symbol address 0x%08lx\n",
-							(unsigned long)entry);
-					}
-					else if ((entry & (uint32_t)0x80000000ul)) {
-						printf("        Ordinal %lu\n",
-							(unsigned long)(entry & (uint32_t)0x7FFFFFFFul));
-					}
-					else if ((EXE_PE_VA)entry < pe_parser->imagesize) {
+					/* NTS: Another hint that imports are pre-resolved, though not as reliable as these
+					 *      tests, is that the EXE/DLL PE header directory entry for the IAT (Import Address
+					 *      Table) is zero, meaning there is no IAT. But some DLLs like AVIFIL32.DLL violate
+					 *      this rule and they do have an IAT. */
+
+					/* If the entry is nonzero and points within our own image, it's a normal Name RVA */
+					if ((EXE_PE_VA)entry < pe_parser->imagesize) {
 						EXE_PE_VA hintname_va = (EXE_PE_VA)entry+pe_parser->imagebase;
 						uint16_t hint;
 
@@ -789,13 +786,27 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 
 						printf("        Name '%s' (hint 0x%04xu)\n",Name,hint);
 					}
-					else if (entry >= (uint32_t)0x10000000ul) {
-						/* Likely a Windows 95 style symbol pre-resolved at linked time */
+					/* If bit 31 == 0 but too large to point within our own image, it's a pre-resolved symbol address (Windows 95) */
+					else if (entry < 0x80000000ul) {
 						printf("        Pre-resolved symbol address 0x%08lx\n",
 							(unsigned long)entry);
 					}
+					/* If bit 31 == 1 and the ordinal value is less than 65536, it's an ordinal reference.
+					 * 65536 is chosen because GetProcAddress() is documented to distinguish whether it's
+					 * parameter is string or ordinal by whether the high-order word is zero (upper 16 bits),
+					 * therefore despite the capabilities of the PE format, the highest valid ordinal is
+					 * 0xFFFF (65535) and that is what this code uses to determine ordinal from Windows 95
+					 * pre-resolved VAs. Windows 95 system DLLs like GDI32.DLL and KERNEL32.DLL all use
+					 * image bases well about 0x80000000, usually 0xBFxxxxxx (right below kernel space at
+					 * 0xC0000000), and these RVA would otherwise be mistaken as ordinal references with
+					 * very large ordinal numbers. */
+					else if (entry < 0x80010000ul) {
+						printf("        Ordinal %lu\n",
+							(unsigned long)(entry & (uint32_t)0x7FFFFFFFul));
+					}
+					/* Anything else is a pre-resolved symbol address (Windows 95) */
 					else {
-						printf("        Unknown RVA 0x%08lx\n",
+						printf("        Pre-resolved symbol address 0x%08lx\n",
 							(unsigned long)entry);
 					}
 
