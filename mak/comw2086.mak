@@ -98,9 +98,9 @@ RC       = *wrc
 CC       = *wcc
 CXX      = *wpp
 LINKER   = *wcl
-WLINK_SYSTEM = windows
-WLINK_CON_SYSTEM = windows
-WLINK_DLL_SYSTEM = windows_dll
+WLINK_SYSTEM = windows2
+WLINK_CON_SYSTEM = windows2
+WLINK_DLL_SYSTEM = windows2_dll
 RCFLAGS  = -q -r -20 -bt=windows $(WATCOM_INCLUDE) -dNO_DS_SETFONT=1
 CFLAGS   = -e=2 -zq -zu -zw -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=windows $(CFLAGS_OPT) -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_WINDOWS_16_ -bg -dWINVER=$(TARGET_WINVER)
 CFLAGS386= -e=2 -zq -zu -zw -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=windows $(CFLAGS_OPT) -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_WINDOWS_16_ -bg -dWINVER=$(TARGET_WINVER)
@@ -128,8 +128,8 @@ CFLAGS386_TO_686_DLL = -e=2 -zq -zu -zw -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -
 AFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=windows -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q -D_WINDOWS_16_ -bd -dWINVER=$(TARGET_WINVER)
 NASMFLAGS_DLL = -DTARGET_MSDOS=16 -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/ -DWINVER=$(TARGET_WINVER)
 
-# macro to patch the EXE to the proper version
-WIN_NE_SETVER_BUILD = $(REL)$(HPS)tool$(HPS)chgnever.pl 2.0
+# macro to patch the EXE to the proper version (NTS: No longer needed!)
+#WIN_NE_SETVER_BUILD = $(REL)$(HPS)tool$(HPS)chgnever.pl 2.0
 
 !include "$(REL)/mak/bcommon.mak"
 !include "common.mak"
