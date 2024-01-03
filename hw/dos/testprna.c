@@ -3,12 +3,12 @@
 #include <stdio.h>
 #include <math.h>
 
-static void TESTl(const long double x) {
-	printf("0x%016llx     Lf=%Lf La=%La LA=%LA\n",(unsigned long long)*((uint64_t*)(&x)),x,x,x);
+static void TESTd(const double x) {
+	printf("0x%016llx     f=%f a=%a A=%A\n",(unsigned long long)*((uint64_t*)(&x)),x,x,x);
 }
 
-static void TESTd(const double x) {
-	printf("0x%04x%016llx f=%f a=%a A=%A\n",((uint16_t*)(&x))[4],(unsigned long long)*((uint64_t*)(&x)),x,x,x);
+static void TESTl(const long double x) {
+	printf("0x%04x%016llx Lf=%Lf La=%La LA=%LA\n",((uint16_t*)(&x))[4],(unsigned long long)*((uint64_t*)(&x)),x,x,x);
 }
 
 #define TEST(x) {\
