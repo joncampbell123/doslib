@@ -5,8 +5,9 @@ EXENERDM = linux-host/exenerdm
 EXENEEXP = linux-host/exeneexp
 EXELEDMP = linux-host/exeledmp
 EXEPEDMP = linux-host/exepedmp
+EXETESTPRNA = linux-host/testprna
 
-BIN_OUT = $(EXEHDMP) $(EXENEDMP) $(EXENERDM) $(EXENEEXP) $(EXELEDMP) $(EXEPEDMP)
+BIN_OUT = $(EXEHDMP) $(EXENEDMP) $(EXENERDM) $(EXENEEXP) $(EXELEDMP) $(EXEPEDMP) $(EXETESTPRNA)
 DOSLIB = linux-host/dos.a
 
 LIB_OUT = $(DOSLIB)
@@ -43,6 +44,9 @@ $(EXENEEXP): linux-host/exeneexp.o $(DOSLIB)
 	gcc -o $@ $^
 
 $(EXEPEDMP): linux-host/exepedmp.o $(DOSLIB)
+	gcc -o $@ $^
+
+$(EXETESTPRNA): linux-host/testprna.o
 	gcc -o $@ $^
 
 linux-host/%.o : %.c

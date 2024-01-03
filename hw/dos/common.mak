@@ -54,6 +54,7 @@ TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.$(EXEEXT)
 TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.$(EXEEXT)
 ! endif
 !endif
+TESTPRNA_EXE =$(SUBDIR)$(HPS)testprna.$(EXEEXT)
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
 
@@ -176,7 +177,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(INT16P_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(EXEPEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) $(BLAH_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(INT16_EXE) $(INT16P_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) $(EXELEDMP_EXE) $(EXEPEDMP_EXE) $(HEXSTDIN_EXE) $(HEXSTDI2_EXE) $(HEXSTDI6_EXE) $(ANSI_EXE) $(BLAH_EXE) $(TESTPRNA_EXE) .symbolic
 
 lib: $(HW_DOS_LIB) .symbolic
 
@@ -540,6 +541,30 @@ $(EXEPEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exepedm
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
 	$(WIN_NE_SETVER_BUILD) $(EXEPEDMP_EXE)
+! endif
+!endif
+
+!ifdef TESTPRNA_EXE
+$(TESTPRNA_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testprna.obj $(DOSNTAST_VDD)
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)testprna.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
+	%write tmp.cmd option map=$(TESTPRNA_EXE).map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
+!  endif
+! endif
+	%write tmp.cmd name $(TESTPRNA_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(TESTPRNA_EXE)
+	@wbind $(TESTPRNA_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(TESTPRNA_EXE)
 ! endif
 !endif
 
