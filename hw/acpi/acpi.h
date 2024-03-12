@@ -107,6 +107,8 @@ extern uint64_t                         acpi_xsdt_table_location;
 extern uint32_t                         acpi_xsdt_table_length;
 extern struct acpi_rsdt_header*         acpi_rsdt; /* RSDT or XSDT */
 
+void acpi_select_rsdt();
+void acpi_select_xsdt();
 int acpi_probe();
 void acpi_free();
 int acpi_probe_ebda();

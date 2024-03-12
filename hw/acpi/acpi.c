@@ -212,6 +212,14 @@ static void acpi_copy_rsdt(unsigned long long loc,unsigned long len) {
     }
 }
 
+void acpi_select_rsdt() {
+    acpi_copy_rsdt(acpi_rsdt_table_location,acpi_rsdt_table_length);
+}
+
+void acpi_select_xsdt() {
+    acpi_copy_rsdt(acpi_xsdt_table_location,acpi_xsdt_table_length);
+}
+
 void acpi_probe_rsdt() {
     uint32_t len = 0;
 
