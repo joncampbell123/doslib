@@ -81,7 +81,6 @@ static void acpidump_block(unsigned long long addr,unsigned long tmplen) {
 }
 
 int main(int argc,char **argv) {
-    struct acpi_rsdt_header sdth;
     acpi_memaddr_t addr;
     unsigned long i,max;
     uint32_t tmp32,tmplen;
@@ -196,10 +195,19 @@ int main(int argc,char **argv) {
 
         tmplen = 0;
         if (acpi_probe_rsdt_check(addr,tmp32,&tmplen) && tmplen != 0) {
-            acpi_memcpy_from_phys(&sdth,addr,sizeof(struct acpi_rsdt_header));
             printf("%s @ 0x%llx\n",tmp,(unsigned long long)addr);
             acpidump_block(addr,tmplen);
         }
+    }
+
+    /* assume the ACPI library has already validated the XSDT and RSDT tables */
+    if (acpi_xsdt_table_location != (uint64_t)0 && acpi_xsdt_table_length != 0) {
+        printf("XSDT @ 0x%llx\n",(unsigned long long)acpi_xsdt_table_location);
+        acpidump_block(acpi_xsdt_table_location,acpi_xsdt_table_length);
+    }
+    if (acpi_rsdt_table_location != (uint64_t)0 && acpi_rsdt_table_length != 0) {
+        printf("RSDT @ 0x%llx\n",(unsigned long long)acpi_rsdt_table_location);
+        acpidump_block(acpi_rsdt_table_location,acpi_rsdt_table_length);
     }
 
     acpi_free();
