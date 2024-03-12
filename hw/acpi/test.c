@@ -118,7 +118,7 @@ int main(int argc,char **argv) {
     memcpy(tmp,(char*)(&(acpi_rsdp->OEM_id)),6); tmp[6]=0;
     printf("ACPI OEM ID '%s', RSDT address (32-bit) 0x%08lX Length %lu\n",tmp,
         (unsigned long)(acpi_rsdp->rsdt_address),
-        (unsigned long)(acpi_rsdp->length));
+        (unsigned long)(acpi_rsdp_length));
     if (acpi_rsdp->revision != 0)
         printf("   XSDT address (64-bit) 0x%016llX\n",
             (unsigned long long)(acpi_rsdp->xsdt_address));
