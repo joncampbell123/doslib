@@ -78,7 +78,7 @@ int main(int argc,char **argv) {
     }
 
 #ifdef LINUX
-    if (!probe_dev_mem()) {
+    if (!acpi_probe_dev_mem()) {
         printf("Cannot init dev mem interface\n");
         return 1;
     }
@@ -213,7 +213,7 @@ int main(int argc,char **argv) {
 
     acpi_free();
 #ifdef LINUX
-    devmem_free();
+    acpi_devmem_free();
 #endif
     return 0;
 }

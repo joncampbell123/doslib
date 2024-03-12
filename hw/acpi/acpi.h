@@ -114,8 +114,8 @@ void acpi_memcpy_from_phys(void *dst,acpi_memaddr_t src,uint32_t len);
 int acpi_probe_rsdt_check(acpi_memaddr_t a,uint32_t expect,uint32_t *length);
 
 #ifdef LINUX
-int probe_dev_mem();
-void devmem_free();
-uint32_t devmem_readd(uint64_t m);
+int acpi_probe_dev_mem();
+void acpi_devmem_free();
+uint32_t acpi_devmem_readd(uint64_t m);
 #endif
 

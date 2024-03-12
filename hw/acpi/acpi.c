@@ -59,7 +59,7 @@ unsigned char                       acpi_probed = 0;
 
 uint32_t acpi_mem_readd(acpi_memaddr_t m) {
 #if defined(LINUX)
-    return devmem_readd(m);
+    return acpi_devmem_readd(m);
 #elif TARGET_MSDOS == 32
     /* 32-bit flat mode code does not yet have 64-bit address access, limited to 4GB */
     if ((m+3ULL) & (~0xFFFFFFFFULL))
@@ -323,29 +323,29 @@ acpi_memaddr_t acpi_rsdt_entry(unsigned long idx) {
 }
 
 #ifdef LINUX // Linux specific
-static int devmem_fd = -1;
+static int acpi_devmem_fd = -1;
 
-int probe_dev_mem() {
-	if (devmem_fd < 0)
-		devmem_fd = open("/dev/mem",O_RDONLY);
+int acpi_probe_dev_mem() {
+	if (acpi_devmem_fd < 0)
+		acpi_devmem_fd = open("/dev/mem",O_RDONLY);
 
-	return (devmem_fd >= 0) ? 1 : 0;
+	return (acpi_devmem_fd >= 0) ? 1 : 0;
 }
 
-void devmem_free() {
-	if (devmem_fd >= 0) {
-		close(devmem_fd);
-		devmem_fd = -1;
+void acpi_devmem_free() {
+	if (acpi_devmem_fd >= 0) {
+		close(acpi_devmem_fd);
+		acpi_devmem_fd = -1;
 	}
 }
 
-uint32_t devmem_readd(uint64_t m) {
+uint32_t acpi_devmem_readd(uint64_t m) {
 	uint32_t tmp = (uint32_t)(~0UL);
 
-	if (devmem_fd >= 0) {
+	if (acpi_devmem_fd >= 0) {
 		// NTS: Modern kernels may have an option enabled to filter /dev/mem access to make the Linux kernel and system RAM inaccessible
 		//      while allowing access to conventional memory, ACPI data, and PCI hardware.
-		if (lseek(devmem_fd,(off_t)m,SEEK_SET) == (off_t)m && read(devmem_fd,&tmp,4) == 4)
+		if (lseek(acpi_devmem_fd,(off_t)m,SEEK_SET) == (off_t)m && read(acpi_devmem_fd,&tmp,4) == 4)
 			return tmp;
 	}
 
