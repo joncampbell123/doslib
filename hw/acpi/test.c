@@ -12,7 +12,12 @@
  */
 
 #include <stdio.h>
+#ifdef LINUX
+#include <stdint.h>
+#else
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <dos.h>
+#endif
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -21,15 +26,18 @@
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <dos.h>
 
+#ifdef LINUX
+// NONE
+#else
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
-#include <hw/acpi/acpi.h>
 #include <hw/8254/8254.h>       /* 8254 timer */
 #include <hw/8259/8259.h>       /* 8259 PIC */
 #include <hw/flatreal/flatreal.h>
 #include <hw/dos/doswin.h>
+#endif
+#include <hw/acpi/acpi.h>
 
 static void help() {
     fprintf(stderr,"Test [options]\n");
@@ -69,6 +77,12 @@ int main(int argc,char **argv) {
         }
     }
 
+#ifdef LINUX
+    if (!probe_dev_mem()) {
+        printf("Cannot init dev mem interface\n");
+        return 1;
+    }
+#else
     if (!probe_8254()) {
         printf("Cannot init 8254 timer\n");
         return 1;
@@ -80,9 +94,10 @@ int main(int argc,char **argv) {
     cpu_probe();
     probe_dos();
     detect_windows();
-#if TARGET_MSDOS == 32
+# if TARGET_MSDOS == 32
     probe_dpmi();
     dos_ltp_probe();
+# endif
 #endif
 
 #if TARGET_MSDOS == 16
@@ -197,6 +212,9 @@ int main(int argc,char **argv) {
     }
 
     acpi_free();
+#ifdef LINUX
+    devmem_free();
+#endif
     return 0;
 }
 

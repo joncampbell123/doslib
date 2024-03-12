@@ -15,7 +15,12 @@
  * make use of the ACPI BIOS. */
 /* TODO: When can we begin to incorporate an AML interpreter? */
 #include <stdio.h>
+#ifdef LINUX
+#include <stdint.h>
+#else
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <dos.h>
+#endif
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -24,14 +29,25 @@
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <dos.h>
 
+#ifdef LINUX
+//NOTHING
+#else
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
-#include <hw/acpi/acpi.h>
 #include <hw/8254/8254.h>       /* 8254 timer */
 #include <hw/8259/8259.h>       /* 8259 PIC */
 #include <hw/flatreal/flatreal.h>
+#endif
+#include <hw/acpi/acpi.h>
+
+// Open Watcom provides min() and max(), Linux platforms do not
+#ifdef LINUX
+#ifndef min
+#define min(a,b)  (((a) < (b)) ? (a) : (b))
+#define max(a,b)  (((a) > (b)) ? (a) : (b))
+#endif
+#endif
 
 unsigned char                       acpi_use_rsdt_32 = 0;
 uint32_t                            acpi_rsdp_location = 0;
@@ -42,7 +58,9 @@ unsigned char                       acpi_probe_result = 0;
 unsigned char                       acpi_probed = 0;
 
 uint32_t acpi_mem_readd(acpi_memaddr_t m) {
-#if TARGET_MSDOS == 32
+#if defined(LINUX)
+    return devmem_readd(m);
+#elif TARGET_MSDOS == 32
     /* 32-bit flat mode code does not yet have 64-bit address access, limited to 4GB */
     if ((m+3ULL) & (~0xFFFFFFFFULL))
         return ~0UL;
@@ -58,30 +76,9 @@ uint32_t acpi_mem_readd(acpi_memaddr_t m) {
 #else
     /* 16-bit real mode code does not yet have 64-bit address access, limited to 4GB */
     if ((m+3ULL) & (~0xFFFFFFFFULL))
-        return ~0UL;
+        return (uint32_t)(~0UL);
 
     return flatrealmode_readd((uint32_t)m);
-#endif
-}
-
-void acpi_mem_writed(acpi_memaddr_t m,uint32_t d) {
-#if TARGET_MSDOS == 32
-    /* 32-bit flat mode code does not yet have 64-bit address access, limited to 4GB */
-    if ((m+3ULL) & (~0xFFFFFFFFULL))
-        return;
-
-    /* if no paging, then we can just typecast the pointer and be done with it */
-    if (!dos_ltp_info.paging)
-        *((volatile uint32_t*)((uint32_t)m)) = d;
-
-    /* TODO: DPMI physical mem mapping method? */
-    /* TODO: VCPI tricks? */
-#else
-    /* 16-bit real mode code does not yet have 64-bit address access, limited to 4GB */
-    if ((m+3ULL) & (~0xFFFFFFFFULL))
-        return;
-
-    flatrealmode_writed((uint32_t)m,d);
 #endif
 }
 
@@ -229,11 +226,7 @@ int acpi_probe_ebda() {
     uint16_t sg;
     int ret = 0;
 
-#if TARGET_MSDOS == 32
-    sg = *((uint16_t*)(0x40E));
-#else
-    sg = *((uint16_t far*)MK_FP(0x40,0x0E));
-#endif
+    sg = acpi_mem_readw(0x40E);
 
     if (sg >= 0x60 && sg < 0xA000)
         ret = acpi_probe_scan((uint32_t)sg << 4UL,((uint32_t)sg << 4UL) + 0x3FF);
@@ -244,11 +237,59 @@ int acpi_probe_ebda() {
     return 1;
 }
 
+#ifdef LINUX
+int acpi_probe_linux_efi_systab() {
+    uint64_t acpi20 = 0,acpi = 0;
+    char line[1024];
+    FILE *fp = fopen("/sys/firmware/efi/systab","r");
+    if (fp != NULL) {
+        while (!feof(fp) && !ferror(fp)) {
+            if (fgets(line,sizeof(line),fp) == NULL) break;
+            if (!strncmp(line,"ACPI20=",7)) {
+                acpi20 = (uint64_t)strtoull(line+7,NULL,0);
+            }
+            else if (!strncmp(line,"ACPI=",5)) {
+                acpi = (uint64_t)strtoull(line+5,NULL,0);
+            }
+        }
+        fclose(fp);
+    }
+
+    if (acpi20 != (uint64_t)0 && acpi20 < (uint64_t)0x100000000ull) {
+        if (acpi_probe_scan((uint32_t)acpi20,(uint32_t)acpi20+0x10000)) {
+            acpi_probe_rsdt();
+            return 1;
+        }
+    }
+
+    if (acpi != (uint64_t)0 && acpi < (uint64_t)0x100000000ull) {
+        if (acpi_probe_scan((uint32_t)acpi,(uint32_t)acpi+0x10000)) {
+            acpi_probe_rsdt();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+#endif
+
 int acpi_probe() {
     if (acpi_probed)
         return acpi_probe_result;
 
     acpi_probed=1;
+
+#ifdef LINUX
+    /* On modern hardware the RSD PTR is never in the legacy BIOS area, at least on modern Linux
+     * when booted into EFI mode. In fact EFI boot seems to turn that A0000-FFFFF region into
+     * just another region of system RAM, at least on my primary laptop.
+     *
+     * However, the Linux kernel has already located the ACPI tables at startup anyway and we
+     * can obtain that address wherever it is from /sys/firmware/efi/systab. */
+    if (acpi_probe_linux_efi_systab())
+        return (acpi_probe_result=1);
+#endif
+
     if (acpi_probe_ebda())
         return (acpi_probe_result=1);
 
@@ -276,3 +317,33 @@ acpi_memaddr_t acpi_rsdt_entry(unsigned long idx) {
     }
 }
 
+#ifdef LINUX // Linux specific
+static int devmem_fd = -1;
+
+int probe_dev_mem() {
+	if (devmem_fd < 0)
+		devmem_fd = open("/dev/mem",O_RDONLY);
+
+	return (devmem_fd >= 0) ? 1 : 0;
+}
+
+void devmem_free() {
+	if (devmem_fd >= 0) {
+		close(devmem_fd);
+		devmem_fd = -1;
+	}
+}
+
+uint32_t devmem_readd(uint64_t m) {
+	uint32_t tmp = (uint32_t)(~0UL);
+
+	if (devmem_fd >= 0) {
+		// NTS: Modern kernels may have an option enabled to filter /dev/mem access to make the Linux kernel and system RAM inaccessible
+		//      while allowing access to conventional memory, ACPI data, and PCI hardware.
+		if (lseek(devmem_fd,(off_t)m,SEEK_SET) == (off_t)m && read(devmem_fd,&tmp,4) == 4)
+			return tmp;
+	}
+
+	return tmp;
+}
+#endif

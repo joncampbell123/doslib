@@ -12,7 +12,12 @@
  *
  */
 #include <stdio.h>
+#ifdef LINUX
+#include <stdint.h>
+#else
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <dos.h>
+#endif
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -21,7 +26,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <dos.h>
 
 typedef uint64_t acpi_memaddr_t;
 
@@ -86,15 +90,11 @@ struct acpi_mcfg_entry {
 #define acpi_rsdp_descriptor acpi_rsdp_descriptor_v2
 #pragma pack(pop)
 
-#define acpi_rsdt_is_xsdt() (*((uint32_t*)(acpi_rsdt->signature)) == 0x54445358UL)
+#define acpi_rsdt_is_xsdt() (acpi_rsdt != NULL && (*((uint32_t*)(acpi_rsdt->signature)) == 0x54445358UL))
 
 /* rather than copypasta code, let's just map 32-bit reads and typecast down */
 #define acpi_mem_readw(m) ((uint16_t)acpi_mem_readd(m))
 #define acpi_mem_readb(m) ((uint8_t)acpi_mem_readd(m))
-
-/* rather than copypasta code, let's just map 32-bit writes and typecast down */
-#define acpi_mem_writew(m,d) acpi_mem_writed(m,(uint16_t)(d))
-#define acpi_mem_writeb(m,d) acpi_mem_writed(m,(uint8_t)(d))
 
 extern unsigned char                    acpi_use_rsdt_32;
 extern uint32_t                         acpi_rsdp_location;
@@ -109,8 +109,13 @@ void acpi_probe_rsdt();
 unsigned long acpi_rsdt_entries();
 uint32_t acpi_mem_readd(acpi_memaddr_t m);
 int acpi_probe_scan(uint32_t start,uint32_t end);
-void acpi_mem_writed(acpi_memaddr_t m,uint32_t d);
 acpi_memaddr_t acpi_rsdt_entry(unsigned long idx);
 void acpi_memcpy_from_phys(void *dst,acpi_memaddr_t src,uint32_t len);
 int acpi_probe_rsdt_check(acpi_memaddr_t a,uint32_t expect,uint32_t *length);
+
+#ifdef LINUX
+int probe_dev_mem();
+void devmem_free();
+uint32_t devmem_readd(uint64_t m);
+#endif
 
