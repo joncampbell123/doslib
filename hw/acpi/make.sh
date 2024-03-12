@@ -28,6 +28,19 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk dos586f/test.exe ::test586.exe
     mcopy -i test.dsk dos686f/test.exe ::test686.exe
     mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
+
+    mcopy -i test.dsk dos86c/acpidump.exe ::dump86c.exe
+    mcopy -i test.dsk dos86s/acpidump.exe ::dump86s.exe
+    mcopy -i test.dsk dos86m/acpidump.exe ::dump86m.exe
+    mcopy -i test.dsk dos86l/acpidump.exe ::dump86l.exe
+    mcopy -i test.dsk dos286c/acpidump.exe ::dump286c.exe
+    mcopy -i test.dsk dos286s/acpidump.exe ::dump286s.exe
+    mcopy -i test.dsk dos286m/acpidump.exe ::dump286m.exe
+    mcopy -i test.dsk dos286l/acpidump.exe ::dump286l.exe
+    mcopy -i test.dsk dos386f/acpidump.exe ::dump386.exe
+    mcopy -i test.dsk dos486f/acpidump.exe ::dump486.exe
+    mcopy -i test.dsk dos586f/acpidump.exe ::dump586.exe
+    mcopy -i test.dsk dos686f/acpidump.exe ::dump686.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
