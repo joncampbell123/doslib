@@ -113,45 +113,94 @@ int main(int argc,char **argv) {
         return 1;
     }
     assert(acpi_rsdp != NULL);
-    printf("ACPI %u.0 structure at 0x%05lX\n",acpi_rsdp->revision+1,(unsigned long)acpi_rsdp_location);
+    fprintf(stderr,"ACPI %u.0 structure at 0x%05lX\n",acpi_rsdp->revision+1,(unsigned long)acpi_rsdp_location);
 
     memcpy(tmp,(char*)(&(acpi_rsdp->OEM_id)),6); tmp[6]=0;
-    printf("ACPI OEM ID '%s', RSDT address (32-bit) 0x%08lX Length %lu\n",tmp,
+    fprintf(stderr,"ACPI OEM ID '%s', RSDT address (32-bit) 0x%08lX Length %lu\n",tmp,
         (unsigned long)(acpi_rsdp->rsdt_address),
         (unsigned long)(acpi_rsdp->length));
     if (acpi_rsdp->revision != 0)
-        printf("   XSDT address (64-bit) 0x%016llX\n",
+        fprintf(stderr,"   XSDT address (64-bit) 0x%016llX\n",
             (unsigned long long)(acpi_rsdp->xsdt_address));
 
-    printf("Chosen RSDT/XSDT at 0x%08llX\n",(unsigned long long)acpi_rsdt_location);
+    fprintf(stderr,"Chosen RSDT/XSDT at 0x%08llX\n",(unsigned long long)acpi_rsdt_location);
 
     if (acpi_rsdt != NULL) {
         memcpy(tmp,(void*)(acpi_rsdt->signature),4); tmp[4] = 0;
-        printf("  '%s': len=%lu rev=%u\n",tmp,(unsigned long)acpi_rsdt->length,
+        fprintf(stderr,"  '%s': len=%lu rev=%u\n",tmp,(unsigned long)acpi_rsdt->length,
             acpi_rsdt->revision);
 
         memcpy(tmp,(void*)(acpi_rsdt->OEM_id),6); tmp[6] = 0;
-        printf("  OEM id: '%s'\n",tmp);
+        fprintf(stderr,"  OEM id: '%s'\n",tmp);
 
         memcpy(tmp,(void*)(acpi_rsdt->OEM_table_id),8); tmp[8] = 0;
-        printf("  OEM table id: '%s' rev %lu\n",tmp,
+        fprintf(stderr,"  OEM table id: '%s' rev %lu\n",tmp,
             (unsigned long)acpi_rsdt->OEM_revision);
 
         memcpy(tmp,(void*)(&(acpi_rsdt->creator_id)),4); tmp[4] = 0;
-        printf("  Creator: '%s' rev %lu\n",tmp,
+        fprintf(stderr,"  Creator: '%s' rev %lu\n",tmp,
             (unsigned long)acpi_rsdt->creator_revision);
     }
 
     max = acpi_rsdt_entries();
     if (acpi_rsdt_is_xsdt()) {
-        printf("Showing XSDT, %lu entries\n",max);
+        fprintf(stderr,"Showing XSDT, %lu entries\n",max);
     }
     else {
-        printf("Showing RSDT, %lu entries\n",max);
+        fprintf(stderr,"Showing RSDT, %lu entries\n",max);
     }
 
     for (i=0;i < max;i++) {
         addr = acpi_rsdt_entry(i);
+        if (addr == 0) continue;
+
+        tmp32 = acpi_mem_readd(addr);
+        memcpy(tmp,&tmp32,4); tmp[4] = 0;
+
+        tmplen = 0;
+        if (acpi_probe_rsdt_check(addr,tmp32,&tmplen) && tmplen != 0) {
+            acpi_memcpy_from_phys(&sdth,addr,sizeof(struct acpi_rsdt_header));
+
+            printf("%s @ 0x%llx\n",tmp,(unsigned long long)addr);
+        }
+
+        /* The output here is purposefully formatted to match that of the acpica acpidump tool
+         * so that our output can then be picked apart and parsed by those tools. The purpose
+         * of this tool is to be a portable tool for older machines that can run on MS-DOS and
+         * snapshot the data, then the snapshotted data can be transferred to a newer machine
+         * with the acpica tools. Except that this program does not sort the tables in memory
+	 * address order. */
+        {
+            unsigned long p=0;
+            unsigned int c=0;
+
+            while (p < tmplen) {
+                printf("  %04lx: ",(unsigned long)p);
+                for (c=0;c < 16;c++) {
+                    if ((p+(unsigned long)c) < (unsigned long)tmplen)
+                        printf("%02x ",(unsigned int)acpi_mem_readb(addr+p+(unsigned long)c));
+                    else
+                        printf("   ");
+                }
+                printf(" ");
+                for (c=0;c < 16;c++) {
+                    if ((p+(unsigned long)c) < (unsigned long)tmplen) {
+                        uint8_t b = acpi_mem_readb(addr+p+(unsigned long)c);
+                        if (b >= 0x20 && b <= 0x7E) printf("%c",(char)b);
+                        else printf(".");
+                    }
+                    else {
+                        printf(" ");
+                    }
+                }
+                printf("\n");
+		p += 16;
+            }
+
+            printf("\n");
+        }
+
+#if 0
         printf(" [%lu] 0x%08llX ",i,(unsigned long long)addr);
         if (addr != 0ULL) {
             tmp32 = acpi_mem_readd(addr);
@@ -209,6 +258,7 @@ int main(int argc,char **argv) {
             }
         }
         printf("\n");
+#endif
     }
 
     acpi_free();
