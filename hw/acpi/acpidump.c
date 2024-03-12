@@ -123,6 +123,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"   XSDT address (64-bit) 0x%016llX\n",
             (unsigned long long)(acpi_rsdp->xsdt_address));
 
+    fprintf(stderr,"RSDT=0x%lx(len=0x%lx) XSDT=0x%llx(len=0x%0lx)\n",(unsigned long)acpi_rsdt_table_location,(unsigned long)acpi_rsdt_table_length,(unsigned long long)acpi_xsdt_table_location,(unsigned long)acpi_xsdt_table_length);
     fprintf(stderr,"Chosen RSDT/XSDT at 0x%08llX\n",(unsigned long long)acpi_rsdt_location);
 
     if (acpi_rsdt != NULL) {

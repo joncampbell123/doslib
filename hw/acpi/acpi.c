@@ -53,6 +53,10 @@ unsigned char                       acpi_use_rsdt_32 = 0;
 uint32_t                            acpi_rsdp_location = 0;
 struct acpi_rsdp_descriptor*        acpi_rsdp = NULL;
 uint32_t                            acpi_rsdt_location = 0; /* or XSDT (TODO: will become acpi_memaddr_t) */
+uint32_t                            acpi_rsdt_table_location = 0;
+uint32_t                            acpi_rsdt_table_length = 0;
+uint64_t                            acpi_xsdt_table_location = 0;
+uint32_t                            acpi_xsdt_table_length = 0;
 struct acpi_rsdt_header*            acpi_rsdt = NULL; /* RSDT or XSDT */
 unsigned char                       acpi_probe_result = 0;
 unsigned char                       acpi_probed = 0;
@@ -202,17 +206,29 @@ void acpi_probe_rsdt() {
         return;
 
     acpi_rsdt_location = 0;
+    acpi_rsdt_table_location = 0;
+    acpi_xsdt_table_location = 0;
 
     /* TODO: Remove 4GB limit when this code *CAN* reach above 4GB */
     if (acpi_rsdp->revision != 0 && acpi_rsdp->xsdt_address != 0ULL &&
         acpi_rsdp->xsdt_address < 0x100000000ULL && !acpi_use_rsdt_32) {
-        if (acpi_probe_rsdt_check(acpi_rsdp->xsdt_address,0x54445358UL,&len)) /* XSDT */
-            acpi_rsdt_location = (uint32_t)(acpi_rsdp->xsdt_address);
+        if (acpi_probe_rsdt_check(acpi_rsdp->xsdt_address,0x54445358UL,&acpi_xsdt_table_length)) { /* XSDT */
+            acpi_xsdt_table_location = (uint32_t)(acpi_rsdp->xsdt_address);
+            if (acpi_rsdt_location == 0) {
+                acpi_rsdt_location = acpi_xsdt_table_location;
+                len = acpi_xsdt_table_length;
+            }
+        }
     }
 
-    if (acpi_rsdt_location == 0 && acpi_rsdp->rsdt_address != 0UL) {
-        if (acpi_probe_rsdt_check(acpi_rsdp->rsdt_address,0x54445352UL,&len)) /* RSDT */
-            acpi_rsdt_location = (uint32_t)(acpi_rsdp->rsdt_address);
+    if (acpi_rsdp->rsdt_address != 0UL) {
+        if (acpi_probe_rsdt_check(acpi_rsdp->rsdt_address,0x54445352UL,&acpi_rsdt_table_length)) { /* RSDT */
+            acpi_rsdt_table_location = (uint32_t)(acpi_rsdp->rsdt_address);
+            if (acpi_rsdt_location == 0) {
+                acpi_rsdt_location = acpi_rsdt_table_location;
+                len = acpi_rsdt_table_length;
+            }
+        }
     }
 
     if (acpi_rsdt_location != 0ULL && len >= 36UL && len <= 32768UL) {

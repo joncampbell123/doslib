@@ -100,6 +100,10 @@ extern unsigned char                    acpi_use_rsdt_32;
 extern uint32_t                         acpi_rsdp_location;
 extern struct acpi_rsdp_descriptor*     acpi_rsdp;
 extern uint32_t                         acpi_rsdt_location;
+extern uint32_t                         acpi_rsdt_table_location;
+extern uint32_t                         acpi_rsdt_table_length;
+extern uint64_t                         acpi_xsdt_table_location;
+extern uint32_t                         acpi_xsdt_table_length;
 extern struct acpi_rsdt_header*         acpi_rsdt; /* RSDT or XSDT */
 
 int acpi_probe();
