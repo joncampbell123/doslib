@@ -98,6 +98,7 @@ struct acpi_mcfg_entry {
 
 extern unsigned char                    acpi_use_rsdt_32;
 extern uint32_t                         acpi_rsdp_location;
+extern uint32_t                         acpi_rsdp_length;
 extern struct acpi_rsdp_descriptor*     acpi_rsdp;
 extern uint32_t                         acpi_rsdt_location;
 extern uint32_t                         acpi_rsdt_table_location;

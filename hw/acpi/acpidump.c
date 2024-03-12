@@ -209,6 +209,10 @@ int main(int argc,char **argv) {
         printf("RSDT @ 0x%llx\n",(unsigned long long)acpi_rsdt_table_location);
         acpidump_block(acpi_rsdt_table_location,acpi_rsdt_table_length);
     }
+    if (acpi_rsdp_location != (uint64_t)0 && acpi_rsdp_length != 0) {
+        printf("RSD PTR @ 0x%llx\n",(unsigned long long)acpi_rsdp_location);
+        acpidump_block(acpi_rsdp_location,acpi_rsdp_length);
+    }
 
     acpi_free();
 #ifdef LINUX

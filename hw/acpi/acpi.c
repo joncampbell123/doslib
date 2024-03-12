@@ -51,6 +51,7 @@
 
 unsigned char                       acpi_use_rsdt_32 = 0;
 uint32_t                            acpi_rsdp_location = 0;
+uint32_t                            acpi_rsdp_length = 0;
 struct acpi_rsdp_descriptor*        acpi_rsdp = NULL;
 uint32_t                            acpi_rsdt_location = 0; /* or XSDT (TODO: will become acpi_memaddr_t) */
 uint32_t                            acpi_rsdt_table_location = 0;
@@ -142,6 +143,7 @@ int acpi_probe_scan(uint32_t start,uint32_t end) {
                 }
 
                 if (len >= 20) {
+                    acpi_rsdp_length = len;
                     acpi_rsdp = malloc(len);
                     if (acpi_rsdp != NULL)
                         memcpy(acpi_rsdp,buf,min(len,36));
