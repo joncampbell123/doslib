@@ -201,15 +201,28 @@ void acpi_memcpy_from_phys(void *dst,acpi_memaddr_t src,uint32_t len) {
     }
 }
 
+static void acpi_copy_rsdt(unsigned long long loc,unsigned long len) {
+    if (acpi_rsdt) {
+        free(acpi_rsdt);
+        acpi_rsdt = NULL;
+    }
+    if (loc != 0ULL && len >= 36UL && len <= 32768UL) {
+        acpi_rsdt = malloc(len);
+        if (acpi_rsdt != NULL) acpi_memcpy_from_phys((void*)acpi_rsdt,loc,len);
+    }
+}
+
 void acpi_probe_rsdt() {
     uint32_t len = 0;
 
     if (acpi_rsdt != NULL)
         return;
 
-    acpi_rsdt_location = 0;
     acpi_rsdt_table_location = 0;
     acpi_xsdt_table_location = 0;
+    acpi_rsdt_table_length = 0;
+    acpi_xsdt_table_length = 0;
+    acpi_rsdt_location = 0;
 
     /* TODO: Remove 4GB limit when this code *CAN* reach above 4GB */
     if (acpi_rsdp->revision != 0 && acpi_rsdp->xsdt_address != 0ULL &&
@@ -233,10 +246,7 @@ void acpi_probe_rsdt() {
         }
     }
 
-    if (acpi_rsdt_location != 0ULL && len >= 36UL && len <= 32768UL) {
-        acpi_rsdt = malloc(len);
-        if (acpi_rsdt != NULL) acpi_memcpy_from_phys((void*)acpi_rsdt,acpi_rsdt_location,len);
-    }
+    acpi_copy_rsdt(acpi_rsdt_location,len);
 }
 
 int acpi_probe_ebda() {
