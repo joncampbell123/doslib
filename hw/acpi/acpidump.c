@@ -44,6 +44,42 @@ static void help() {
     fprintf(stderr,"  /32      Use 32-bit RSDT\n");
 }
 
+static void acpidump_block(unsigned long long addr,unsigned long tmplen) {
+    /* The output here is purposefully formatted to match that of the acpica acpidump tool
+     * so that our output can then be picked apart and parsed by those tools. The purpose
+     * of this tool is to be a portable tool for older machines that can run on MS-DOS and
+     * snapshot the data, then the snapshotted data can be transferred to a newer machine
+     * with the acpica tools. Except that this program does not sort the tables in memory
+     * address order. */
+    unsigned long p=0;
+    unsigned int c=0;
+
+    while (p < tmplen) {
+        printf("  %04lx: ",(unsigned long)p);
+        for (c=0;c < 16;c++) {
+            if ((p+(unsigned long)c) < (unsigned long)tmplen)
+                printf("%02x ",(unsigned int)acpi_mem_readb(addr+p+(unsigned long)c));
+            else
+                printf("   ");
+        }
+        printf(" ");
+        for (c=0;c < 16;c++) {
+            if ((p+(unsigned long)c) < (unsigned long)tmplen) {
+                uint8_t b = acpi_mem_readb(addr+p+(unsigned long)c);
+                if (b >= 0x20 && b <= 0x7E) printf("%c",(char)b);
+                else printf(".");
+            }
+            else {
+                printf(" ");
+            }
+        }
+        printf("\n");
+        p += 16;
+    }
+
+    printf("\n");
+}
+
 int main(int argc,char **argv) {
     struct acpi_rsdt_header sdth;
     acpi_memaddr_t addr;
@@ -161,105 +197,9 @@ int main(int argc,char **argv) {
         tmplen = 0;
         if (acpi_probe_rsdt_check(addr,tmp32,&tmplen) && tmplen != 0) {
             acpi_memcpy_from_phys(&sdth,addr,sizeof(struct acpi_rsdt_header));
-
             printf("%s @ 0x%llx\n",tmp,(unsigned long long)addr);
+            acpidump_block(addr,tmplen);
         }
-
-        /* The output here is purposefully formatted to match that of the acpica acpidump tool
-         * so that our output can then be picked apart and parsed by those tools. The purpose
-         * of this tool is to be a portable tool for older machines that can run on MS-DOS and
-         * snapshot the data, then the snapshotted data can be transferred to a newer machine
-         * with the acpica tools. Except that this program does not sort the tables in memory
-	 * address order. */
-        {
-            unsigned long p=0;
-            unsigned int c=0;
-
-            while (p < tmplen) {
-                printf("  %04lx: ",(unsigned long)p);
-                for (c=0;c < 16;c++) {
-                    if ((p+(unsigned long)c) < (unsigned long)tmplen)
-                        printf("%02x ",(unsigned int)acpi_mem_readb(addr+p+(unsigned long)c));
-                    else
-                        printf("   ");
-                }
-                printf(" ");
-                for (c=0;c < 16;c++) {
-                    if ((p+(unsigned long)c) < (unsigned long)tmplen) {
-                        uint8_t b = acpi_mem_readb(addr+p+(unsigned long)c);
-                        if (b >= 0x20 && b <= 0x7E) printf("%c",(char)b);
-                        else printf(".");
-                    }
-                    else {
-                        printf(" ");
-                    }
-                }
-                printf("\n");
-		p += 16;
-            }
-
-            printf("\n");
-        }
-
-#if 0
-        printf(" [%lu] 0x%08llX ",i,(unsigned long long)addr);
-        if (addr != 0ULL) {
-            tmp32 = acpi_mem_readd(addr);
-            tmplen = 0;
-
-            memcpy(tmp,&tmp32,4); tmp[4] = 0;
-            if (acpi_probe_rsdt_check(addr,tmp32,&tmplen)) {
-                acpi_memcpy_from_phys(&sdth,addr,sizeof(struct acpi_rsdt_header));
-
-                printf("'%s' len=0x%lX rev=%u ",tmp,(unsigned long)tmplen,sdth.revision);
-
-                memcpy(tmp,&sdth.OEM_id,6); tmp[6] = 0;
-                printf("OEM id: '%s'\n",tmp);
-
-                memcpy(tmp,&sdth.OEM_table_id,8); tmp[8] = 0;
-                printf("OEM table id: '%s' rev %u ",tmp,sdth.OEM_revision);
-
-                memcpy(tmp,&sdth.creator_id,4); tmp[4] = 0;
-                printf("Creator id: '%s' rev %u",tmp,sdth.creator_revision);
-
-                if (!memcmp(sdth.signature,"MCFG",4)) {
-                    struct acpi_mcfg_entry entry;
-                    uint64_t o = addr + 44;
-                    unsigned int count;
-
-                    printf("\nPCI Express map:");
-                    assert(sizeof(struct acpi_mcfg_entry) == 16);
-                    count = (unsigned int)(tmplen / sizeof(struct acpi_mcfg_entry));
-                    while (count != 0) {
-                        acpi_memcpy_from_phys(&entry,o,sizeof(struct acpi_mcfg_entry));
-                        o += sizeof(struct acpi_mcfg_entry);
-
-                        /* Some bioses I test against seem to return enough for 3 but fill in only 1? */
-                        if (entry.base_address != 0ULL || entry.start_pci_bus_number != 0 || entry.end_pci_bus_number != 0) {
-                            uint64_t sz;
-
-                            if (entry.start_pci_bus_number > entry.end_pci_bus_number)
-                                entry.start_pci_bus_number = entry.end_pci_bus_number;
-
-                            sz = (((unsigned long long)(entry.end_pci_bus_number - entry.start_pci_bus_number)) + 1ULL) << 20ULL;
-                            printf("\n  @0x%08llX-0x%08llX seg=%u bus=%u-%u",
-                                (unsigned long long)entry.base_address,
-                                (unsigned long long)(entry.base_address + sz - 1ULL),
-                                (unsigned int)entry.pci_segment_group_number,
-                                (unsigned int)entry.start_pci_bus_number,
-                                (unsigned int)entry.end_pci_bus_number);
-                        }
-
-                        count--;
-                    }
-                }
-            }
-            else {
-                printf("'%s' check failed",tmp);
-            }
-        }
-        printf("\n");
-#endif
     }
 
     acpi_free();
