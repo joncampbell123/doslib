@@ -121,6 +121,18 @@ static void acpi_add_facs_from_facp(const unsigned long long addr,const unsigned
     }
 }
 
+static void acpi_add_dsdt_from_facp(const unsigned long long addr,const unsigned long len) {
+    if (len >= 44) {
+        const uint32_t dsdt = acpi_mem_readd(addr+40);/*DSDT*/
+
+        if (dsdt != (uint32_t)0 && acpi_mem_readd(dsdt) == (uint32_t)0x54445344/*DSDT*/) { /* NTS: "DSDT" does not have a checksum field! */
+            const uint32_t tmplen = acpi_mem_readd(dsdt+4);
+            if (tmplen >= 64 && tmplen <= 0x100000/*THESE TABLES ARE HUGE*/)
+                acpi_table_add((uint64_t)dsdt,(uint32_t)tmplen,(uint32_t)0x54445344/*DSDT*/);
+        }
+    }
+}
+
 int main(int argc,char **argv) {
     acpi_memaddr_t addr;
     unsigned long i,max;
@@ -233,8 +245,10 @@ int main(int argc,char **argv) {
             if (acpi_probe_rsdt_check(addr,tmp32,&tmplen) && tmplen != 0)
                 acpi_table_add((uint64_t)addr,(uint32_t)tmplen,(uint32_t)tmp32);
 
-            if (tmp32 == 0x50434146/*FACP*/)
+            if (tmp32 == 0x50434146/*FACP*/) {
                 acpi_add_facs_from_facp(addr,tmplen);
+                acpi_add_dsdt_from_facp(addr,tmplen);
+	    }
         }
     }
 
@@ -252,8 +266,10 @@ int main(int argc,char **argv) {
             if (acpi_probe_rsdt_check(addr,tmp32,&tmplen) && tmplen != 0)
                 acpi_table_add((uint64_t)addr,(uint32_t)tmplen,(uint32_t)tmp32);
 
-            if (tmp32 == 0x50434146/*FACP*/)
+            if (tmp32 == 0x50434146/*FACP*/) {
                 acpi_add_facs_from_facp(addr,tmplen);
+                acpi_add_dsdt_from_facp(addr,tmplen);
+	    }
         }
     }
 
