@@ -232,6 +232,11 @@ int acpi_probe_ebda() {
         ret = acpi_probe_scan((uint32_t)sg << 4UL,((uint32_t)sg << 4UL) + 0x3FF);
 
     if (ret == 0) ret = acpi_probe_scan(0xE0000UL,0xFFFFFUL);
+
+    /* TODO: I notice according to Linux dmesg that on modern hardware the memory map reported by the BIOS indicates where ACPI data and NVS is stored.
+     *       So perhaps past some point in the 2000s BIOSes stopped putting the ACPI tables in the legacy BIOS area. I think the way that is handled
+     *       for MS-DOS is that the INT 15h memory map function needs to be queried to determine where ACPI regions are. */
+
     if (ret == 0) return 0;
     acpi_probe_rsdt();
     return 1;
