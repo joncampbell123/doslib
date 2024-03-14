@@ -127,7 +127,7 @@ static void acpi_add_dsdt_from_facp(const unsigned long long addr,const unsigned
 
         if (dsdt != (uint32_t)0 && acpi_mem_readd(dsdt) == (uint32_t)0x54445344/*DSDT*/) { /* NTS: "DSDT" does not have a checksum field! */
             const uint32_t tmplen = acpi_mem_readd(dsdt+4);
-            if (tmplen >= 64 && tmplen <= 0x100000/*THESE TABLES ARE HUGE*/)
+            if (tmplen >= 36 && tmplen <= 0x100000/*THESE TABLES ARE HUGE*/)
                 acpi_table_add((uint64_t)dsdt,(uint32_t)tmplen,(uint32_t)0x54445344/*DSDT*/);
         }
     }
