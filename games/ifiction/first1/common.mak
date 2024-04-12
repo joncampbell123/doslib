@@ -57,6 +57,7 @@ $(IFICT_EXE): $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(HW_DOSBOXID_L
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
           del $(HW_VGA_LIB)
+          del ctmouse.exe
           del tmp.cmd
           @echo Cleaning done
 

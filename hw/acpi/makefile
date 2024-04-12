@@ -34,4 +34,5 @@ linux-host/%.o : %.c
 
 clean:
 	rm -f linux-host/test linux-host/acpidump linux-host/*.o linux-host/*.a
+	rmdir linux-host
 
