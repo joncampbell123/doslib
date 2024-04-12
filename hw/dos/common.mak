@@ -6,7 +6,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i$(SUBDIR)
 NOW_BUILDING = HW_DOS_LIB
 
 OBJS =        $(SUBDIR)$(HPS)dos.obj $(SUBDIR)$(HPS)dosxio.obj $(SUBDIR)$(HPS)dosxiow.obj $(SUBDIR)$(HPS)biosext.obj $(SUBDIR)$(HPS)himemsys.obj $(SUBDIR)$(HPS)emm.obj $(SUBDIR)$(HPS)dosbox.obj $(SUBDIR)$(HPS)biosmem.obj $(SUBDIR)$(HPS)biosmem3.obj $(SUBDIR)$(HPS)dosasm.obj $(SUBDIR)$(HPS)dosdlm16.obj $(SUBDIR)$(HPS)dosdlm32.obj $(SUBDIR)$(HPS)tgusmega.obj $(SUBDIR)$(HPS)tgussbos.obj $(SUBDIR)$(HPS)tgusumid.obj $(SUBDIR)$(HPS)dosntvdm.obj $(SUBDIR)$(HPS)doswin.obj $(SUBDIR)$(HPS)dos_lol.obj $(SUBDIR)$(HPS)dossmdrv.obj $(SUBDIR)$(HPS)dosvbox.obj $(SUBDIR)$(HPS)dosmapal.obj $(SUBDIR)$(HPS)dosflavr.obj $(SUBDIR)$(HPS)dos9xvm.obj $(SUBDIR)$(HPS)dos_nmi.obj $(SUBDIR)$(HPS)win32lrd.obj $(SUBDIR)$(HPS)win3216t.obj $(SUBDIR)$(HPS)win16vec.obj $(SUBDIR)$(HPS)dpmiexcp.obj $(SUBDIR)$(HPS)dosvcpi.obj $(SUBDIR)$(HPS)ddpmilin.obj $(SUBDIR)$(HPS)ddpmiphy.obj $(SUBDIR)$(HPS)ddpmidos.obj $(SUBDIR)$(HPS)ddpmidsc.obj $(SUBDIR)$(HPS)dpmirmcl.obj $(SUBDIR)$(HPS)dos_mcb.obj $(SUBDIR)$(HPS)dospsp.obj $(SUBDIR)$(HPS)dosdev.obj $(SUBDIR)$(HPS)dos_ltp.obj $(SUBDIR)$(HPS)dosdpmi.obj $(SUBDIR)$(HPS)dosdpfmc.obj $(SUBDIR)$(HPS)dosdpent.obj $(SUBDIR)$(HPS)dosvcpmp.obj $(SUBDIR)$(HPS)dosntmbx.obj $(SUBDIR)$(HPS)dosntwav.obj $(SUBDIR)$(HPS)doswinms.obj $(SUBDIR)$(HPS)dospwine.obj $(SUBDIR)$(HPS)dosdpmiv.obj $(SUBDIR)$(HPS)dosdpmev.obj $(SUBDIR)$(HPS)winemust.obj $(SUBDIR)$(HPS)fdosvstr.obj $(SUBDIR)$(HPS)w9xqthnk.obj $(SUBDIR)$(HPS)w16thelp.obj $(SUBDIR)$(HPS)dosntgtk.obj $(SUBDIR)$(HPS)dosntgvr.obj $(SUBDIR)$(HPS)dosntvld.obj $(SUBDIR)$(HPS)dosntvul.obj $(SUBDIR)$(HPS)dosntvin.obj $(SUBDIR)$(HPS)dosntvig.obj $(SUBDIR)$(HPS)dosntvi2.obj $(SUBDIR)$(HPS)dosw9xdv.obj $(SUBDIR)$(HPS)exeload.obj $(SUBDIR)$(HPS)execlsg.obj $(SUBDIR)$(HPS)exehdr.obj $(SUBDIR)$(HPS)exenertp.obj $(SUBDIR)$(HPS)exeneres.obj $(SUBDIR)$(HPS)exeneint.obj $(SUBDIR)$(HPS)exenesrl.obj $(SUBDIR)$(HPS)exenestb.obj $(SUBDIR)$(HPS)exenenet.obj $(SUBDIR)$(HPS)exenents.obj $(SUBDIR)$(HPS)exeneent.obj $(SUBDIR)$(HPS)exenew2x.obj $(SUBDIR)$(HPS)exenebmp.obj $(SUBDIR)$(HPS)exelest1.obj $(SUBDIR)$(HPS)exeletio.obj $(SUBDIR)$(HPS)exeleent.obj $(SUBDIR)$(HPS)exeleobt.obj $(SUBDIR)$(HPS)exeleopm.obj $(SUBDIR)$(HPS)exelefpt.obj $(SUBDIR)$(HPS)exelepar.obj $(SUBDIR)$(HPS)exelefrt.obj $(SUBDIR)$(HPS)exelevxd.obj $(SUBDIR)$(HPS)exelefxp.obj $(SUBDIR)$(HPS)exelehsz.obj $(SUBDIR)$(HPS)vectiret.obj $(SUBDIR)$(HPS)int2f.obj
@@ -244,10 +244,10 @@ $(CLSGEXM1_DLM): $(SUBDIR)$(HPS)clsgexm1.obj $(SUBDIR)$(HPS)clsgexm1.hdr.obj
 $(SUBDIR)$(HPS)clsgexm1.hdr.obj: $(SUBDIR)$(HPS)clsgexm1.hdr.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
-$(SUBDIR)$(HPS)clsgexm1.hdr.asm clsgexm1.h: clsgexm1.def
-	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum clsgexm1.h
+$(SUBDIR)$(HPS)clsgexm1.hdr.asm $(SUBDIR)$(HPS)clsgexm1.h: clsgexm1.def
+	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum $(SUBDIR)$(HPS)clsgexm1.h
 
-$(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c $(SUBDIR)$(HPS)clsgexm1.hdr.obj clsgexm1.h
+$(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c $(SUBDIR)$(HPS)clsgexm1.hdr.obj $(SUBDIR)$(HPS)clsgexm1.h
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) clsgexm1.c
 	@$(CC) @tmp.cmd
 !endif
