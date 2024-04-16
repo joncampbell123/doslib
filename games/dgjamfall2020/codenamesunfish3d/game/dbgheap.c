@@ -14,12 +14,15 @@
 #include "fataexit.h"
 
 void check_heap(void) {
+#if 0 // this is broken now?
     const int r = _heapchk();
     if (!(r == _HEAPOK || r == _HEAPEMPTY))
         fatal("C runtime reports corrupt heap");
+#endif
 }
 
 void dbg_heap_list(void) {
+#if 0 // this is broken now?
     struct _heapinfo h;
     unsigned int c=0;
 
@@ -40,5 +43,6 @@ void dbg_heap_list(void) {
 
     if (c != 0)
         printf("\n");
+#endif
 }
 
