@@ -11,6 +11,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING=patch
 
 PATCH_EXE = $(SUBDIR)$(HPS)patch.$(EXEEXT)
+NOKEYISR_COM = $(SUBDIR)$(HPS)nokeyisr.com
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -20,7 +21,10 @@ PATCH_EXE = $(SUBDIR)$(HPS)patch.$(EXEEXT)
 
 all: exe
 
-exe: $(PATCH_EXE) .symbolic
+exe: $(PATCH_EXE) $(NOKEYISR_COM) .symbolic
+
+$(NOKEYISR_COM): nokeyisr.asm
+	nasm -o $@ -f bin $(NASMFLAGS) $[@
 
 !ifdef PATCH_EXE
 $(PATCH_EXE): $(SUBDIR)$(HPS)patch.obj
