@@ -303,6 +303,7 @@ names are strings and can therefore contain characters not normally allowed in
 an identifier, and there is a type associated with it. Macros can hold
 integer, float, string, or compiler::none. none is distinct from nullptr_t
 in case of targets where a null pointer is NOT zero however unlikely that is.
+If used at runtime, compiler::none evaluates as a zero.
 
 using namespace compiler;
 
@@ -323,4 +324,35 @@ else {
 ...
 
 undef("PLATFORM");
+
+Operator override function definitions, just like C++, though not as messy.
+That includes - + * / % < > == and so on.
+
+Obviously to avoid the overhead of a function call per operator use, the
+function should be inline. Constexpr where possible. Compile time where
+possible as well!
+
+struct fraction_t {
+	uint32_t	whole = 0; /* yes, we're going to allow C11/C++11 init assignment too */
+	uint32_t	frac = 0;
+
+	inline constexpr fraction_t &operator+(const fraction_t &other) {
+		cpu::add_carry_and_check_carry( whole, other.whole, cpu::add_and_check_carry(frac,other.frac) );
+		return compiler::this_instance; /* C++ style *this is also acceptable */
+	}
+};
+
+...
+
+	fraction_t a = { whole: 1 }; /* a.whole = 1, a.frac = 0 */
+	fraction_t b = { whole: 2, frac: uint32_t(0x80000000) }; /* b.whole = 2, frac = 0x80000000 */
+
+	...
+
+	fraction_t c = a + b; /* becomes c.whole = 3, c.frac = 0x80000000 */
+
+	...
+
+	a += b; /* becomes a.whole = 3, c.frac = 0x80000000 */
+	a += b; /* becomes a.whole = 6, c.frac = 0x00000000 (frac carries over into whole) */
 
