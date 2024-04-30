@@ -124,7 +124,7 @@ void my_cimcc_read_input(char *buffer,int *size,int max_size) {
 #endif
 }
 
-int cimcc_yyrap(void) {
+int cimcc_yywrap(void) {
 	return 1; /* no more */
 }
 
@@ -179,7 +179,7 @@ int main(int argc,char **argv) {
 		}
 	}
 
-	yydebug = 1;
+	cimcc_yydebug = 1;
 
 	cimcc_read_input = my_cimcc_read_input;
 	my_cimcc_buf_rewind();

@@ -2,10 +2,10 @@
 all: cimcc
 
 cimcc.tab.c cimcc.tab.h: cimcc.lex.y
-	bison -o cimcc.tab.c --graph=cimcc.tab.graph --defines=cimcc.tab.h -v -t cimcc.lex.y
+	bison -o cimcc.tab.c --name-prefix=cimcc_yy --graph=cimcc.tab.graph --defines=cimcc.tab.h -v -t cimcc.lex.y
 
 cimcc.lex.yy.c: cimcc.lex.l cimcc.tab.h
-	flex -o cimcc.lex.yy.c -d cimcc.lex.l
+	flex -o cimcc.lex.yy.c --prefix=cimcc_yy -d cimcc.lex.l
 
 cimcc.lex.yy.o: cimcc.lex.yy.c cimcc.tab.h
 	gcc -c -o cimcc.lex.yy.o cimcc.lex.yy.c

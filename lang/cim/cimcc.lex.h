@@ -1,5 +1,5 @@
 
-extern int yydebug;
+extern int cimcc_yydebug;
 
 void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 

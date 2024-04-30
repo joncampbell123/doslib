@@ -5,10 +5,6 @@ extern int cimcc_yyparse(void);
 
 void cimcc_yyerror(const char *s);
 
-#define yyparse cimcc_yyparse
-#define yyerror cimcc_yyerror
-#define yylval cimcc_yylval
-#define yylex cimcc_yylex
 %}
 
 %union {
