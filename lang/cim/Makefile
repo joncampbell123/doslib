@@ -1,0 +1,24 @@
+
+all: cimcc
+
+cimcc.tab.c cimcc.tab.h: cimcc.lex.y
+	bison -o cimcc.tab.c --graph=cimcc.tab.graph --defines=cimcc.tab.h -v -t cimcc.lex.y
+
+cimcc.lex.yy.c: cimcc.lex.l cimcc.tab.h
+	flex -o cimcc.lex.yy.c -d cimcc.lex.l
+
+cimcc.lex.yy.o: cimcc.lex.yy.c cimcc.tab.h
+	gcc -c -o cimcc.lex.yy.o cimcc.lex.yy.c
+
+cimcc.tab.o: cimcc.tab.c cimcc.tab.h
+	gcc -c -o cimcc.tab.o cimcc.tab.c
+
+cimcc.o: cimcc.c
+	gcc -c -o cimcc.o cimcc.c
+
+cimcc: cimcc.o cimcc.lex.yy.o cimcc.tab.o
+	gcc -o cimcc cimcc.o cimcc.lex.yy.o cimcc.tab.o
+
+clean:
+	rm -fv cimcc cimcc.lex.yy.c cimcc.tab.c cimcc.tab.h cimcc.tab.graph *.o cimcc.output
+
