@@ -8,6 +8,53 @@
 
 #include "cimcc.lex.h"
 
+void cimcc_parse_int_const(char *buffer,unsigned long long *val,unsigned int *flags,int base) {
+	*flags = 0;
+	if (*buffer == '-') {
+		*flags |= CIMCC_YYFL_NEGATE | CIMCC_YYFL_SIGNED;
+		buffer++;
+	}
+
+	*val = strtoull(buffer,&buffer,base);
+
+	if (*buffer == 'l' || *buffer == 'L') {
+		*flags |= CIMCC_YYFL_LONG;
+		buffer++;
+		if (*buffer == 'l' || *buffer == 'L') {
+			*flags |= CIMCC_YYFL_LONGLONG;
+			buffer++;
+		}
+	}
+	else if (*buffer == 'u' || *buffer == 'U') {
+		*flags &= ~CIMCC_YYFL_SIGNED;
+	}
+}
+
+void cimcc_parse_float_const(char *buffer,long double *val,unsigned int *flags) {
+	unsigned int neg = 0;
+
+	*flags = CIMCC_YYFL_LONG; /* default double type */
+	if (*buffer == '-') {
+		/* do not set NEGATE, the floating point data type has a sign bit */
+		buffer++;
+		neg = 1;
+	}
+
+	*val = strtold(buffer,&buffer);
+	if (*buffer == 'd' || *buffer == 'D') {
+		/* nothing */
+		buffer++;
+	}
+	else if (*buffer == 'l' || *buffer == 'L') {
+		*flags |= CIMCC_YYFL_LONGLONG;
+		buffer++;
+	}
+	else if (*buffer == 'f' || *buffer == 'F') {
+		*flags &= ~(CIMCC_YYFL_LONGLONG|CIMCC_YYFL_LONG);
+		buffer++;
+	}
+}
+
 struct my_cimcc_buf_t {
 	char*		buf;
 	char*		read;
