@@ -12,6 +12,15 @@
 
 %}
 
+%option noinput
+
+%{
+
+void (*cimcc_read_input)(char *buffer,int *size,int max_size);
+#define YY_INPUT(buffer, size, max_size) cimcc_read_input(buffer, &(size), max_size)
+
+%}
+
 %%
 
 [ \t]                                 // ignore whitespace

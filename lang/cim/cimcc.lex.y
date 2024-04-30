@@ -35,27 +35,17 @@ one_unit
 
 statement
 	: T_SEMICOLON
-	| expression T_SEMICOLON
+	| expression_list T_SEMICOLON
+	;
+
+expression_list
+	: expression
+	| expression_list expression
 	;
 
 expression
 	: T_INTEGER
 	| T_FLOAT
-	| T_OPEN_PAREN expression T_CLOSE_PAREN
-	| unary_operator expression
-	| expression binary_operator expression
-	;
-
-unary_operator
-	: T_MINUS
-	;
-
-binary_operator
-	: T_PLUS
-	| T_MINUS
-	| T_STAR
-	| T_SLASH
-	| T_PERCENT
 	;
 
 %%
