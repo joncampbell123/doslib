@@ -1,4 +1,12 @@
 
+DECIMAL [0-9]
+HEXADECIMAL [0-9a-fA-F]
+OCTAL [0-6]
+BINARY [0-1]
+FLOATSUFFIX (f|F|d|D)
+POINTFLOATSUFFIX (f|F|u|U|l|L)
+INTSUFFIX (u|U|l|L|ll|LL)
+
 %{
 
 #include <stdio.h>
@@ -24,11 +32,12 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 %%
 
 [ \t]                                 // ignore whitespace
-[0-9]+\.[0-9]+                        { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
-0[xX][0-9a-fA-F]+                     { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; return T_INTEGER; }  // hexadecimal integer constant
-0[0-6]+                               { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // octal integer constant
-0[bB][01]+                            { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // binary integer constant
-[0-9]+                                { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; return T_INTEGER; }  // decimal integer constant
+{DECIMAL}+\.{DECIMAL}+{POINTFLOATSUFFIX}? { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
+{DECIMAL}+{FLOATSUFFIX}+                  { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
+0[xX]{HEXADECIMAL}+{INTSUFFIX}?           { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; return T_INTEGER; }  // hexadecimal integer constant
+0{OCTAL}+{INTSUFFIX}?                     { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // octal integer constant
+0[bB]{BINARY}+{INTSUFFIX}?                { yylval.intval = strtoull(yytext,NULL, 2); yylval.flags = 0; return T_INTEGER; }  // binary integer constant
+{DECIMAL}+{INTSUFFIX}?                    { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; return T_INTEGER; }  // decimal integer constant
 
 \/\/[^\n]*                            // ignore C++ style comment
 
