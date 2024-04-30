@@ -15,6 +15,7 @@ DECIMAL_CONSTANT {DECIMAL}+{INTSUFFIX}?
 OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}? 
 
 CONST_PREFIX -?
+NONCONST_PREFIX -?
 
 %{
 
@@ -25,6 +26,7 @@ CONST_PREFIX -?
 #define yywrap cimcc_yyrap
 #define yylex cimcc_yylex
 
+#include "cimcc.lex.h"
 #include "cimcc.tab.h"
 
 %}
@@ -43,10 +45,10 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 [ \t]                                                   // ignore whitespace
 {CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT}                  { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
 {CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}        { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
-{CONST_PREFIX}{HEXADECIMAL_CONSTANT}                    { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; return T_INTEGER; }  // hexadecimal integer constant
-{CONST_PREFIX}{OCTAL_CONSTANT}                          { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // octal integer constant
-{CONST_PREFIX}{BINARY_CONSTANT}                         { yylval.intval = strtoull(yytext,NULL, 2); yylval.flags = 0; return T_INTEGER; }  // binary integer constant
-{CONST_PREFIX}{DECIMAL_CONSTANT}                        { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; return T_INTEGER; }  // decimal integer constant
+{CONST_PREFIX}{HEXADECIMAL_CONSTANT}                    { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; if (*yytext == '-') yylval.flags |= CIMCC_YYFL_SIGNED; return T_INTEGER; }  // hexadecimal integer constant
+{CONST_PREFIX}{OCTAL_CONSTANT}                          { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; if (*yytext == '-') yylval.flags |= CIMCC_YYFL_SIGNED; return T_INTEGER; }  // octal integer constant
+{CONST_PREFIX}{BINARY_CONSTANT}                         { yylval.intval = strtoull(yytext,NULL, 2); yylval.flags = 0; if (*yytext == '-') yylval.flags |= CIMCC_YYFL_SIGNED; return T_INTEGER; }  // binary integer constant
+{CONST_PREFIX}{DECIMAL_CONSTANT}                        { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; if (*yytext == '-') yylval.flags |= CIMCC_YYFL_SIGNED; return T_INTEGER; }  // decimal integer constant
 
 \/\/[^\n]*                            // ignore C++ style comment
 
@@ -55,7 +57,7 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "*"                                   { return T_STAR; } // pointer deref or multiply
 "/"                                   { return T_SLASH; } // divide
 "%"                                   { return T_PERCENT; } // modulo
-"("                                   { return T_OPEN_PAREN; }
+{NONCONST_PREFIX}"("                  { yylval.flags = 0; if (*yytext == '-') yylval.flags |= CIMCC_YYFL_SIGNED; return T_OPEN_PAREN; }
 ")"                                   { return T_CLOSE_PAREN; }
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }
