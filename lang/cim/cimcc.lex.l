@@ -7,6 +7,13 @@ FLOATSUFFIX (f|F|d|D)
 POINTFLOATSUFFIX (f|F|u|U|l|L)
 INTSUFFIX (u|U|l|L|ll|LL)
 
+DECIMAL_FLOAT_CONSTANT {DECIMAL}+\.{DECIMAL}+{POINTFLOATSUFFIX}?
+DECIMAL_FLOAT_CONSTANT_BY_SUFFIX {DECIMAL}+{FLOATSUFFIX}+
+HEXADECIMAL_CONSTANT 0[xX]{HEXADECIMAL}+{INTSUFFIX}?
+BINARY_CONSTANT 0[bB]{BINARY}+{INTSUFFIX}?
+DECIMAL_CONSTANT {DECIMAL}+{INTSUFFIX}?
+OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}? 
+
 %{
 
 #include <stdio.h>
@@ -32,12 +39,12 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 %%
 
 [ \t]                                 // ignore whitespace
-{DECIMAL}+\.{DECIMAL}+{POINTFLOATSUFFIX}? { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
-{DECIMAL}+{FLOATSUFFIX}+                  { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
-0[xX]{HEXADECIMAL}+{INTSUFFIX}?           { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; return T_INTEGER; }  // hexadecimal integer constant
-0{OCTAL}+{INTSUFFIX}?                     { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // octal integer constant
-0[bB]{BINARY}+{INTSUFFIX}?                { yylval.intval = strtoull(yytext,NULL, 2); yylval.flags = 0; return T_INTEGER; }  // binary integer constant
-{DECIMAL}+{INTSUFFIX}?                    { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; return T_INTEGER; }  // decimal integer constant
+{DECIMAL_FLOAT_CONSTANT}                  { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
+{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}        { yylval.floatval = strtold(yytext,NULL); yylval.flags = 0; return T_FLOAT; }      // float constant
+{HEXADECIMAL_CONSTANT}                    { yylval.intval = strtoull(yytext,NULL,16); yylval.flags = 0; return T_INTEGER; }  // hexadecimal integer constant
+{OCTAL_CONSTANT}                          { yylval.intval = strtoull(yytext,NULL, 8); yylval.flags = 0; return T_INTEGER; }  // octal integer constant
+{BINARY_CONSTANT}                         { yylval.intval = strtoull(yytext,NULL, 2); yylval.flags = 0; return T_INTEGER; }  // binary integer constant
+{DECIMAL_CONSTANT}                        { yylval.intval = strtoull(yytext,NULL,10); yylval.flags = 0; return T_INTEGER; }  // decimal integer constant
 
 \/\/[^\n]*                            // ignore C++ style comment
 
