@@ -1,9 +1,11 @@
 %{
 
-extern int cimcc_yylex(void);
-extern int cimcc_yyparse(void);
+#include "cimcc.lex.h"
 
-void cimcc_yyerror(const char *s);
+extern int cimcc_yylex(yyscan_t *scanner);
+extern int cimcc_yyparse(yyscan_t *scanner);
+
+void cimcc_yyerror(yyscan_t *scanner,const char *s);
 
 %}
 
@@ -12,6 +14,9 @@ void cimcc_yyerror(const char *s);
 	long double		floatval;
 	unsigned int		flags;
 }
+
+%lex-param {yyscan_t *scanner}
+%parse-param {yyscan_t *scanner}
 
 %token<intval> T_INTEGER
 %token<floatval> T_FLOAT

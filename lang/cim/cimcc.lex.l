@@ -1,4 +1,6 @@
 
+%option reentrant nounput
+
 DECIMAL [0-9]
 HEXADECIMAL [0-9a-fA-F]
 OCTAL [0-6]
@@ -41,12 +43,12 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 %%
 
 [ \t]                                                   // ignore whitespace
-{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT}                  { cimcc_parse_float_const(cimcc_yytext,&cimcc_yylval.floatval,&cimcc_yylval.flags); return T_FLOAT; }   // float
-{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}        { cimcc_parse_float_const(cimcc_yytext,&cimcc_yylval.floatval,&cimcc_yylval.flags); return T_FLOAT; }   // float
-{CONST_PREFIX}{HEXADECIMAL_CONSTANT}                    { cimcc_parse_int_const(cimcc_yytext,&cimcc_yylval.intval,&cimcc_yylval.flags,16); return T_INTEGER; }  // hexadecimal int
-{CONST_PREFIX}{OCTAL_CONSTANT}                          { cimcc_parse_int_const(cimcc_yytext,&cimcc_yylval.intval,&cimcc_yylval.flags, 8); return T_INTEGER; }  // octal int
-{CONST_PREFIX}{BINARY_CONSTANT}                         { cimcc_parse_int_const(cimcc_yytext,&cimcc_yylval.intval,&cimcc_yylval.flags, 2); return T_INTEGER; }  // binary int
-{CONST_PREFIX}{DECIMAL_CONSTANT}                        { cimcc_parse_int_const(cimcc_yytext,&cimcc_yylval.intval,&cimcc_yylval.flags,10); return T_INTEGER; }  // decimal int
+{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT}                  { cimcc_parse_float_const(yytext,&cimcc_yylval.floatval,&cimcc_yylval.flags); return T_FLOAT; }   // float
+{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}        { cimcc_parse_float_const(yytext,&cimcc_yylval.floatval,&cimcc_yylval.flags); return T_FLOAT; }   // float
+{CONST_PREFIX}{HEXADECIMAL_CONSTANT}                    { cimcc_parse_int_const(yytext,&cimcc_yylval.intval,&cimcc_yylval.flags,16); return T_INTEGER; }  // hexadecimal int
+{CONST_PREFIX}{OCTAL_CONSTANT}                          { cimcc_parse_int_const(yytext,&cimcc_yylval.intval,&cimcc_yylval.flags, 8); return T_INTEGER; }  // octal int
+{CONST_PREFIX}{BINARY_CONSTANT}                         { cimcc_parse_int_const(yytext,&cimcc_yylval.intval,&cimcc_yylval.flags, 2); return T_INTEGER; }  // binary int
+{CONST_PREFIX}{DECIMAL_CONSTANT}                        { cimcc_parse_int_const(yytext,&cimcc_yylval.intval,&cimcc_yylval.flags,10); return T_INTEGER; }  // decimal int
 
 \/\/[^\n]*                            // ignore C++ style comment
 
@@ -55,7 +57,7 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "*"                                   { return T_STAR; } // pointer deref or multiply
 "/"                                   { return T_SLASH; } // divide
 "%"                                   { return T_PERCENT; } // modulo
-{NONCONST_PREFIX}"("                  { cimcc_yylval.flags = 0; if (*cimcc_yytext == '-') cimcc_yylval.flags |= CIMCC_YYFL_NEGATE; return T_OPEN_PAREN; }
+{NONCONST_PREFIX}"("                  { cimcc_yylval.flags = 0; if (*yytext == '-') cimcc_yylval.flags |= CIMCC_YYFL_NEGATE; return T_OPEN_PAREN; }
 ")"                                   { return T_CLOSE_PAREN; }
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }

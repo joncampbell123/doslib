@@ -128,7 +128,7 @@ int cimcc_yywrap(void) {
 	return 1; /* no more */
 }
 
-void cimcc_yyerror(const char *s) {
+void cimcc_yyerror(void *scanner,const char *s) {
 	fprintf(stderr,"yyerror: %s\n",s);
 //	exit(1);
 }
@@ -184,7 +184,12 @@ int main(int argc,char **argv) {
 	cimcc_read_input = my_cimcc_read_input;
 	my_cimcc_buf_rewind();
 
-	cimcc_yyparse();
+	{
+		void *lex = NULL;
+		cimcc_yylex_init(&lex);
+		cimcc_yyparse(lex);
+		cimcc_yylex_destroy(lex);
+	}
 	fprintf(stderr,"Read %u/%u\n",(unsigned int)(my_cimcc_buf.read-my_cimcc_buf.buf),(unsigned int)(my_cimcc_buf.fence-my_cimcc_buf.buf));
 
 	my_cimcc_buf_free();

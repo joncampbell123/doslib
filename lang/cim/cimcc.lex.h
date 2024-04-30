@@ -1,9 +1,14 @@
 
+/* An opaque pointer. */
+typedef void* yyscan_t;
+
 extern int cimcc_yydebug;
 
 void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 
-int cimcc_yyparse(void);
+int cimcc_yyparse(yyscan_t *scanner);
+int cimcc_yylex_init(yyscan_t* scanner);
+int cimcc_yylex_destroy(yyscan_t yyscanner);
 
 #define CIMCC_YYFL_SIGNED               (1u << 0u)
 #define CIMCC_YYFL_LONG                 (1u << 1u) /* for float, double type */
