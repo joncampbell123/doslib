@@ -1,8 +1,9 @@
 %{
 
 #include "cimcc.lex.h"
+#include "cimcc.tab.h"
 
-extern int cimcc_yylex(yyscan_t *scanner);
+extern int cimcc_yylex(YYSTYPE *,yyscan_t *scanner);
 extern int cimcc_yyparse(yyscan_t *scanner);
 
 void cimcc_yyerror(yyscan_t *scanner,const char *s);
@@ -15,6 +16,7 @@ void cimcc_yyerror(yyscan_t *scanner,const char *s);
 	unsigned int		flags;
 }
 
+%define api.pure full
 %lex-param {yyscan_t *scanner}
 %parse-param {yyscan_t *scanner}
 
