@@ -59,6 +59,10 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }
 ";"                                   { return T_SEMICOLON; }
+","                                   { return T_COMMA; }
+"&"                                   { return T_AMPERSAND; }
+"~"                                   { return T_TILDE; }
+"!"                                   { return T_EXCLAMATION; }
 .                                     { return T_UNKNOWN; }
 
 %%
