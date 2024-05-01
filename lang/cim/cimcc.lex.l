@@ -57,7 +57,7 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "*"                                   { return T_STAR; } // pointer deref or multiply
 "/"                                   { return T_SLASH; } // divide
 "%"                                   { return T_PERCENT; } // modulo
-{NONCONST_PREFIX}"("                  { yylval->flags = 0; if (*yytext == '-') yylval->flags |= CIMCC_YYFL_NEGATE; return T_OPEN_PAREN; }
+{NONCONST_PREFIX}"("                  { yylval->flags = 0; if (*yytext == '-') yylval->flags |= CIMCC_YYFL_NEGATE; else if (*yytext == '&') yylval->flags |= CIMCC_YYFL_ADDROF; return T_OPEN_PAREN; }
 ")"                                   { return T_CLOSE_PAREN; }
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }

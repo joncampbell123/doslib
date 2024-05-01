@@ -49,6 +49,7 @@ expression_list
 expression
 	: T_INTEGER
 	| T_FLOAT
+	| T_OPEN_PAREN expression_list T_CLOSE_PAREN
 	;
 
 %%
