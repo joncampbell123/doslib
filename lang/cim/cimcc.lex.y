@@ -25,7 +25,7 @@ void cimcc_yyerror(yyscan_t *scanner,const char *s);
 %token T_MINUS T_PLUS T_STAR T_SLASH T_PERCENT
 %token T_OPEN_PAREN T_CLOSE_PAREN
 %token T_OPEN_CURLY T_CLOSE_CURLY
-%token T_SEMICOLON
+%token T_SEMICOLON T_UNKNOWN
 
 %start one_unit
 

@@ -17,7 +17,7 @@ DECIMAL_CONSTANT {DECIMAL}+{INTSUFFIX}?
 OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}? 
 
 CONST_PREFIX -?
-NONCONST_PREFIX -?
+NONCONST_PREFIX (-|&)?
 
 %{
 
@@ -62,6 +62,7 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }
 ";"                                   { return T_SEMICOLON; }
+.                                     { return T_UNKNOWN; }
 
 %%
 

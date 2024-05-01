@@ -9,9 +9,10 @@
 #include "cimcc.lex.h"
 
 void cimcc_parse_int_const(char *buffer,unsigned long long *val,unsigned int *flags,int base) {
-	*flags = 0;
+	*flags = CIMCC_YYFL_SIGNED; // signed integer by default, like C/C++
+
 	if (*buffer == '-') {
-		*flags |= CIMCC_YYFL_NEGATE | CIMCC_YYFL_SIGNED;
+		*flags |= CIMCC_YYFL_NEGATE;
 		buffer++;
 	}
 
@@ -34,6 +35,7 @@ void cimcc_parse_float_const(char *buffer,long double *val,unsigned int *flags) 
 	unsigned int neg = 0;
 
 	*flags = CIMCC_YYFL_LONG; /* default double type */
+
 	if (*buffer == '-') {
 		/* do not set NEGATE, the floating point data type has a sign bit */
 		buffer++;
