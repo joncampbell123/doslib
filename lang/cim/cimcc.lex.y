@@ -37,19 +37,23 @@ one_unit
 	;
 
 statement
-	: T_SEMICOLON
-	| expression_list T_SEMICOLON
+	: expression_statement
 	;
 
-expression_list
-	: expression
-	| expression_list expression
+expression_statement
+	: T_SEMICOLON
+	| expression T_SEMICOLON
 	;
 
 expression
+	: primary_expression
+	| expression primary_expression
+	;
+
+primary_expression
 	: T_INTEGER
 	| T_FLOAT
-	| T_OPEN_PAREN expression_list T_CLOSE_PAREN
+	| T_OPEN_PAREN expression T_CLOSE_PAREN
 	;
 
 %%

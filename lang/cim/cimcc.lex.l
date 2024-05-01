@@ -16,9 +16,6 @@ BINARY_CONSTANT 0[bB]{BINARY}+{INTSUFFIX}?
 DECIMAL_CONSTANT {DECIMAL}+{INTSUFFIX}?
 OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}? 
 
-CONST_PREFIX -?
-NONCONST_PREFIX (-|&)?
-
 %{
 
 #include <stdio.h>
@@ -43,12 +40,12 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 %%
 
 [ \t]                                                   // ignore whitespace
-{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT}                  { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
-{CONST_PREFIX}{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}        { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
-{CONST_PREFIX}{HEXADECIMAL_CONSTANT}                    { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,16); return T_INTEGER; }  // hexadecimal int
-{CONST_PREFIX}{OCTAL_CONSTANT}                          { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 8); return T_INTEGER; }  // octal int
-{CONST_PREFIX}{BINARY_CONSTANT}                         { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 2); return T_INTEGER; }  // binary int
-{CONST_PREFIX}{DECIMAL_CONSTANT}                        { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,10); return T_INTEGER; }  // decimal int
+{DECIMAL_FLOAT_CONSTANT}              { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
+{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}    { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
+{HEXADECIMAL_CONSTANT}                { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,16); return T_INTEGER; }  // hexadecimal int
+{OCTAL_CONSTANT}                      { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 8); return T_INTEGER; }  // octal int
+{BINARY_CONSTANT}                     { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 2); return T_INTEGER; }  // binary int
+{DECIMAL_CONSTANT}                    { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,10); return T_INTEGER; }  // decimal int
 
 \/\/[^\n]*                            // ignore C++ style comment
 
@@ -57,7 +54,7 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 "*"                                   { return T_STAR; } // pointer deref or multiply
 "/"                                   { return T_SLASH; } // divide
 "%"                                   { return T_PERCENT; } // modulo
-{NONCONST_PREFIX}"("                  { yylval->flags = 0; if (*yytext == '-') yylval->flags |= CIMCC_YYFL_NEGATE; else if (*yytext == '&') yylval->flags |= CIMCC_YYFL_ADDROF; return T_OPEN_PAREN; }
+"("                                   { return T_OPEN_PAREN; }
 ")"                                   { return T_CLOSE_PAREN; }
 "{"                                   { return T_OPEN_CURLY; }
 "}"                                   { return T_CLOSE_CURLY; }

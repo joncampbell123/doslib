@@ -15,8 +15,6 @@ int cimcc_yylex_destroy(yyscan_t yyscanner);
 #define CIMCC_YYFL_LONGLONG             (1u << 2u) /* for float, long double type */
 #define CIMCC_YYFL_SHORT                (1u << 3u)
 #define CIMCC_YYFL_CHAR                 (1u << 4u)
-#define CIMCC_YYFL_NEGATE               (1u << 5u)
-#define CIMCC_YYFL_ADDROF               (1u << 6u) /* &var or &(expression), address of */
 
 void cimcc_parse_int_const(char *buffer,unsigned long long *val,unsigned int *flags,int base);
 void cimcc_parse_float_const(char *buffer,long double *val,unsigned int *flags);
