@@ -22,22 +22,22 @@ void cimcc_yyerror(yyscan_t *scanner,const char *s);
 %token T_SEMICOLON T_UNKNOWN T_COMMA
 %token T_AMPERSAND T_TILDE T_EXCLAMATION
 
-%start one_unit
+%start translation_unit
 
 %%
 
-one_unit
+translation_unit
 	: statement
-	| one_unit statement
+	| translation_unit statement
 	;
 
 statement
-	: expression_statement
+	: T_EOF { YYACCEPT; } /* STOP PARSING NOW, NOT AN ERROR */
+	| expression_statement
 	;
 
 expression_statement
-	: T_EOF { YYACCEPT; } /* STOP PARSING NOW, NOT AN ERROR */
-	| T_SEMICOLON
+	: T_SEMICOLON
 	| expression T_SEMICOLON
 	;
 
