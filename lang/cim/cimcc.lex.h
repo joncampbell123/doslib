@@ -10,6 +10,8 @@ int cimcc_yyparse(yyscan_t *scanner);
 int cimcc_yylex_init(yyscan_t* scanner);
 int cimcc_yylex_destroy(yyscan_t yyscanner);
 
+typedef unsigned char cimcc_yy_type;
+
 enum {
 	CIMCC_YYT_NONE=0,
 	CIMCC_YYT_INTVAL=1,
@@ -18,21 +20,34 @@ enum {
 
 /* CIMCC_YYT_INTVAL */
 #define CIMCC_YYINTVAL_FL_SIGNED			(1u << 0u)
-#define CIMCC_YYINTVAL_FL_LONG				(1u << 1u) /* for float, double type */
-#define CIMCC_YYINTVAL_FL_LONGLONG			(1u << 2u) /* for float, long double type */
-#define CIMCC_YYINTVAL_FL_SHORT				(1u << 3u)
-#define CIMCC_YYINTVAL_FL_CHAR				(1u << 4u)
-#define CIMCC_YYINTVAL_FL_BOOL				(1u << 5u)
+
+/* CIMCC_YYT_INTVAL */
+enum {
+	CIMCC_YYINTVAL_DT_UNSPEC=0,
+	CIMCC_YYINTVAL_DT_CHAR=1,
+	CIMCC_YYINTVAL_DT_SHORT=2,
+	CIMCC_YYINTVAL_DT_INT=3,
+	CIMCC_YYINTVAL_DT_LONG=4,
+	CIMCC_YYINTVAL_DT_LONGLONG=5,
+	CIMCC_YYINTVAL_DT_BOOL=6
+};
 
 /* CIMCC_YYT_FLOATVAL */
-#define CIMCC_YYFLOATVAL_FL_LONG			(1u << 0u) /* long double */
-#define CIMCC_YYFLOATVAL_FL_DOUBLE			(1u << 1u) /* double */
-#define CIMCC_YYFLOATVAL_FL_FLOAT			(1u << 2u) /* float */
-#define CIMCC_YYFLOATVAL_FL_HALF			(1u << 3u) /* half float */
+/* none defined */
+
+/* CIMCC_YYT_FLOATVAL */
+enum {
+	CIMCC_YYFLOATVAL_DT_UNSPEC=0,
+	CIMCC_YYFLOATVAL_DT_HALF=1,
+	CIMCC_YYFLOATVAL_DT_FLOAT=2,
+	CIMCC_YYFLOATVAL_DT_DOUBLE=3,
+	CIMCC_YYFLOATVAL_DT_LONGDOUBLE=4
+};
 
 typedef struct cimcc_intval_t {
-	unsigned int			type;
-	unsigned int			flags;
+	cimcc_yy_type			type;
+	unsigned char			flags; /* make short or int if more flags needed */
+	unsigned char			datatype; /* CIMCC_YYINTVAL_DT_* */
 	union {
 		unsigned long long	u; /* unsigned */
 		signed long long	s; /* signed */
@@ -40,13 +55,14 @@ typedef struct cimcc_intval_t {
 } cimcc_intval_t;
 
 typedef struct cimcc_floatval_t {
-	unsigned int			type;
-	unsigned int			flags;
+	cimcc_yy_type			type;
+	/* add flags field when it is needed */
+	unsigned char			datatype; /* CIMCC_YYFLOATVAL_DT_* */
 	long double			val;
 } cimcc_floatval_t;
 
 typedef union cimcc_yystype_t {
-	unsigned int			type;
+	cimcc_yy_type			type;
 	struct cimcc_intval_t		intval;
 	struct cimcc_floatval_t		floatval;
 } cimcc_yystype_t;

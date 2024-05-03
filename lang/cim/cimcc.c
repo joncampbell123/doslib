@@ -11,40 +11,50 @@
 void cimcc_parse_int_const(char *buffer,cimcc_yystype_t *yyt,int base) {
 	yyt->type = CIMCC_YYT_INTVAL;
 	yyt->intval.flags = CIMCC_YYINTVAL_FL_SIGNED; /* signed integer by default, like C/C++ */
+	yyt->intval.datatype = CIMCC_YYINTVAL_DT_UNSPEC; /* not specified */
 	yyt->intval.val.u = strtoull(buffer,&buffer,base);
 
-	if (*buffer == 'l' || *buffer == 'L') {
-		yyt->intval.flags |= CIMCC_YYINTVAL_FL_LONG;
-		buffer++;
-
+	while (1) {
 		if (*buffer == 'l' || *buffer == 'L') {
-			yyt->intval.flags |= CIMCC_YYINTVAL_FL_LONGLONG;
+			yyt->intval.datatype = CIMCC_YYINTVAL_DT_LONG;
+			buffer++;
+
+			if (*buffer == 'l' || *buffer == 'L') {
+				yyt->intval.datatype = CIMCC_YYINTVAL_DT_LONGLONG;
+				buffer++;
+			}
+		}
+		else if (*buffer == 'u' || *buffer == 'U') {
+			yyt->intval.flags &= ~CIMCC_YYINTVAL_FL_SIGNED;
 			buffer++;
 		}
-	}
-	else if (*buffer == 'u' || *buffer == 'U') {
-		yyt->intval.flags &= ~CIMCC_YYINTVAL_FL_SIGNED;
+		else {
+			break;
+		}
 	}
 }
 
 void cimcc_parse_float_const(char *buffer,cimcc_yystype_t *yyt) {
 	yyt->type = CIMCC_YYT_FLOATVAL;
-	yyt->floatval.flags = CIMCC_YYFLOATVAL_FL_DOUBLE; /* default double type */
+	yyt->floatval.datatype = CIMCC_YYFLOATVAL_DT_UNSPEC; /* not specified */
 	yyt->floatval.val = strtold(buffer,&buffer);
 
-	if (*buffer == 'd' || *buffer == 'D') {
-		/* nothing */
-		buffer++;
-	}
-	else if (*buffer == 'l' || *buffer == 'L') {
-		yyt->floatval.flags &= ~(CIMCC_YYFLOATVAL_FL_DOUBLE|CIMCC_YYFLOATVAL_FL_LONG|CIMCC_YYFLOATVAL_FL_FLOAT|CIMCC_YYFLOATVAL_FL_HALF);
-		yyt->floatval.flags |= CIMCC_YYFLOATVAL_FL_LONG;
-		buffer++;
-	}
-	else if (*buffer == 'f' || *buffer == 'F') {
-		yyt->floatval.flags &= ~(CIMCC_YYFLOATVAL_FL_DOUBLE|CIMCC_YYFLOATVAL_FL_LONG|CIMCC_YYFLOATVAL_FL_FLOAT|CIMCC_YYFLOATVAL_FL_HALF);
-		yyt->floatval.flags |= CIMCC_YYFLOATVAL_FL_FLOAT;
-		buffer++;
+	while (1) {
+		if (*buffer == 'd' || *buffer == 'D') {
+			yyt->floatval.datatype = CIMCC_YYFLOATVAL_DT_DOUBLE;
+			buffer++;
+		}
+		else if (*buffer == 'l' || *buffer == 'L') {
+			yyt->floatval.datatype = CIMCC_YYFLOATVAL_DT_LONGDOUBLE;
+			buffer++;
+		}
+		else if (*buffer == 'f' || *buffer == 'F') {
+			yyt->floatval.datatype = CIMCC_YYFLOATVAL_DT_FLOAT;
+			buffer++;
+		}
+		else {
+			break;
+		}
 	}
 }
 
