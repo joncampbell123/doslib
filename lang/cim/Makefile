@@ -16,7 +16,7 @@ cimcc.tab.o: cimcc.tab.c cimcc.tab.h
 cimcc.o: cimcc.c
 	gcc -c -o cimcc.o cimcc.c
 
-cimcc: cimcc.o cimcc.lex.yy.o cimcc.tab.o
+cimcc: cimcc.lex.yy.o cimcc.tab.o cimcc.o 
 	gcc -o cimcc cimcc.o cimcc.lex.yy.o cimcc.tab.o
 
 clean:

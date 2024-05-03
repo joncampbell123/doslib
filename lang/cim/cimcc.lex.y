@@ -10,18 +10,12 @@ void cimcc_yyerror(yyscan_t *scanner,const char *s);
 
 %}
 
-%union {
-	unsigned long long	intval;
-	long double		floatval;
-	unsigned int		flags;
-}
-
+%define api.value.type {union cimcc_yystype_t}
 %define api.pure full
 %lex-param {yyscan_t *scanner}
 %parse-param {yyscan_t *scanner}
 
-%token<intval> T_INTEGER
-%token<floatval> T_FLOAT
+%token T_INTEGER T_FLOAT
 %token T_MINUS T_PLUS T_STAR T_SLASH T_PERCENT
 %token T_OPEN_PAREN T_CLOSE_PAREN
 %token T_OPEN_CURLY T_CLOSE_CURLY

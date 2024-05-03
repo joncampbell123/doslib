@@ -8,40 +8,42 @@
 
 #include "cimcc.lex.h"
 
-void cimcc_parse_int_const(char *buffer,unsigned long long *val,unsigned int *flags,int base) {
-	*flags = CIMCC_YYFL_SIGNED; // signed integer by default, like C/C++
-
-	*val = strtoull(buffer,&buffer,base);
+void cimcc_parse_int_const(char *buffer,cimcc_yystype_t *yyt,int base) {
+	yyt->type = CIMCC_YYT_INTVAL;
+	yyt->intval.flags = CIMCC_YYINTVAL_FL_SIGNED; /* signed integer by default, like C/C++ */
+	yyt->intval.val.u = strtoull(buffer,&buffer,base);
 
 	if (*buffer == 'l' || *buffer == 'L') {
-		*flags |= CIMCC_YYFL_LONG;
+		yyt->intval.flags |= CIMCC_YYINTVAL_FL_LONG;
 		buffer++;
+
 		if (*buffer == 'l' || *buffer == 'L') {
-			*flags |= CIMCC_YYFL_LONGLONG;
+			yyt->intval.flags |= CIMCC_YYINTVAL_FL_LONGLONG;
 			buffer++;
 		}
 	}
 	else if (*buffer == 'u' || *buffer == 'U') {
-		*flags &= ~CIMCC_YYFL_SIGNED;
+		yyt->intval.flags &= ~CIMCC_YYINTVAL_FL_SIGNED;
 	}
 }
 
-void cimcc_parse_float_const(char *buffer,long double *val,unsigned int *flags) {
-	unsigned int neg = 0;
+void cimcc_parse_float_const(char *buffer,cimcc_yystype_t *yyt) {
+	yyt->type = CIMCC_YYT_FLOATVAL;
+	yyt->floatval.flags = CIMCC_YYFLOATVAL_FL_DOUBLE; /* default double type */
+	yyt->floatval.val = strtold(buffer,&buffer);
 
-	*flags = CIMCC_YYFL_LONG; /* default double type */
-
-	*val = strtold(buffer,&buffer);
 	if (*buffer == 'd' || *buffer == 'D') {
 		/* nothing */
 		buffer++;
 	}
 	else if (*buffer == 'l' || *buffer == 'L') {
-		*flags |= CIMCC_YYFL_LONGLONG;
+		yyt->floatval.flags &= ~(CIMCC_YYFLOATVAL_FL_DOUBLE|CIMCC_YYFLOATVAL_FL_LONG|CIMCC_YYFLOATVAL_FL_FLOAT|CIMCC_YYFLOATVAL_FL_HALF);
+		yyt->floatval.flags |= CIMCC_YYFLOATVAL_FL_LONG;
 		buffer++;
 	}
 	else if (*buffer == 'f' || *buffer == 'F') {
-		*flags &= ~(CIMCC_YYFL_LONGLONG|CIMCC_YYFL_LONG);
+		yyt->floatval.flags &= ~(CIMCC_YYFLOATVAL_FL_DOUBLE|CIMCC_YYFLOATVAL_FL_LONG|CIMCC_YYFLOATVAL_FL_FLOAT|CIMCC_YYFLOATVAL_FL_HALF);
+		yyt->floatval.flags |= CIMCC_YYFLOATVAL_FL_FLOAT;
 		buffer++;
 	}
 }

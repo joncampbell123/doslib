@@ -29,10 +29,6 @@ OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}?
 
 %{
 
-void cimcc_parse_int_const(char *buffer,unsigned long long *val,unsigned int *flags,int base);
-void cimcc_parse_float_const(char *buffer,long double *val,unsigned int *flags);
-
-void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 #define YY_INPUT(buffer, size, max_size) cimcc_read_input(buffer, &(size), max_size)
 
 %}
@@ -40,12 +36,12 @@ void (*cimcc_read_input)(char *buffer,int *size,int max_size);
 %%
 
 [ \t]                                                   // ignore whitespace
-{DECIMAL_FLOAT_CONSTANT}              { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
-{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}    { cimcc_parse_float_const(yytext,&yylval->floatval,&yylval->flags); return T_FLOAT; }   // float
-{HEXADECIMAL_CONSTANT}                { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,16); return T_INTEGER; }  // hexadecimal int
-{OCTAL_CONSTANT}                      { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 8); return T_INTEGER; }  // octal int
-{BINARY_CONSTANT}                     { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags, 2); return T_INTEGER; }  // binary int
-{DECIMAL_CONSTANT}                    { cimcc_parse_int_const(yytext,&yylval->intval,&yylval->flags,10); return T_INTEGER; }  // decimal int
+{DECIMAL_FLOAT_CONSTANT}              { cimcc_parse_float_const(yytext,yylval); return T_FLOAT; }   // float
+{DECIMAL_FLOAT_CONSTANT_BY_SUFFIX}    { cimcc_parse_float_const(yytext,yylval); return T_FLOAT; }   // float
+{HEXADECIMAL_CONSTANT}                { cimcc_parse_int_const(yytext,yylval,16); return T_INTEGER; }  // hexadecimal int
+{OCTAL_CONSTANT}                      { cimcc_parse_int_const(yytext,yylval, 8); return T_INTEGER; }  // octal int
+{BINARY_CONSTANT}                     { cimcc_parse_int_const(yytext,yylval, 2); return T_INTEGER; }  // binary int
+{DECIMAL_CONSTANT}                    { cimcc_parse_int_const(yytext,yylval,10); return T_INTEGER; }  // decimal int
 
 \/\/[^\n]*                            // ignore C++ style comment
 
