@@ -15,7 +15,7 @@ void cimcc_yyerror(yyscan_t *scanner,const char *s);
 %lex-param {yyscan_t *scanner}
 %parse-param {yyscan_t *scanner}
 
-%token T_INTEGER T_FLOAT
+%token T_INTEGER T_FLOAT T_EOF
 %token T_MINUS T_PLUS T_STAR T_SLASH T_PERCENT
 %token T_OPEN_PAREN T_CLOSE_PAREN
 %token T_OPEN_CURLY T_CLOSE_CURLY
@@ -36,7 +36,8 @@ statement
 	;
 
 expression_statement
-	: T_SEMICOLON
+	: T_EOF { YYACCEPT; } /* STOP PARSING NOW, NOT AN ERROR */
+	| T_SEMICOLON
 	| expression T_SEMICOLON
 	;
 

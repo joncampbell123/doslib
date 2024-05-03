@@ -59,6 +59,7 @@ OCTAL_CONSTANT 0{OCTAL}+{INTSUFFIX}?
 "&"                                   { return T_AMPERSAND; }
 "~"                                   { return T_TILDE; }
 "!"                                   { return T_EXCLAMATION; }
+<<EOF>>                               { return T_EOF; }
 .                                     { return T_UNKNOWN; }
 
 %%
