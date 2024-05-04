@@ -18,6 +18,8 @@ namespace CIMCC {
 
 	/////////
 
+	struct token_t;
+
 	struct context_t {
 		unsigned char*		ptr = NULL;
 		size_t			ptr_size = 0;
@@ -178,6 +180,24 @@ namespace CIMCC {
 			return pb_ctx.ptr_size;
 		}
 
+		char peekb(void) {
+			if (pb.read == pb.end) refill();
+			if (pb.read < pb.end) return *(pb.read);
+			return 0;
+		}
+
+		void skipb(void) {
+			if (pb.read == pb.end) refill();
+			if (pb.read < pb.end) pb.read++;
+		}
+
+		char getb(void) {
+			const char r = peekb();
+			skipb();
+			return r;
+		}
+
+		void refill(void);
 		bool compile(void);
 
 		private:
@@ -241,26 +261,23 @@ namespace CIMCC {
 		~token_t() { }
 	};
 
+	void compiler::refill(void) {
+		assert(pb.sanity_check());
+		pb.lazy_flush();
+		pb.refill(pb_refill,pb_ctx);
+		assert(pb.sanity_check());
+	}
+
 	bool compiler::compile(void) {
 		if (!pb.is_alloc()) {
 			if (!pb.alloc(4096))
 				return false;
 		}
 
-		assert(pb.sanity_check());
-		pb.lazy_flush();
-		pb.refill(pb_refill,pb_ctx);
-		assert(pb.sanity_check());
+		refill();
 		while (!pb.eof()) {
-			while (pb.read < pb.end) {
-				write(1,pb.read,1);
-				pb.read++;
-			}
-
-			assert(pb.sanity_check());
-			pb.lazy_flush();
-			pb.refill(pb_refill,pb_ctx);
-			assert(pb.sanity_check());
+			const char c = getb();
+			write(1,&c,1);
 		}
 
 		return true;
