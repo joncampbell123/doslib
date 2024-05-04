@@ -18,6 +18,12 @@ namespace CIMCC {
 
 	/////////
 
+	bool is_whitespace(int c) {
+		return (c == ' ' || c == '\t' || c == '\n');
+	}
+
+	/////////
+
 	struct token_t;
 
 	struct context_t {
@@ -199,6 +205,8 @@ namespace CIMCC {
 
 		void refill(void);
 		bool compile(void);
+		void whitespace(void);
+		void gtok(token_t &t);
 
 		private:
 		parse_buffer		pb;
@@ -207,6 +215,7 @@ namespace CIMCC {
 	};
 
 	enum class token_type_t {
+		eof=-1,
 		none=0,
 		intval=1,
 		floatval=2,
@@ -269,6 +278,8 @@ namespace CIMCC {
 	}
 
 	bool compiler::compile(void) {
+		token_t tok;
+
 		if (!pb.is_alloc()) {
 			if (!pb.alloc(4096))
 				return false;
@@ -276,11 +287,35 @@ namespace CIMCC {
 
 		refill();
 		while (!pb.eof()) {
-			const char c = getb();
-			write(1,&c,1);
+			gtok(/*&*/tok);
 		}
 
 		return true;
+	}
+
+	void compiler::whitespace(void) {
+		do {
+			const char c = peekb(); /* returns 0 on EOF */
+			if (is_whitespace(c)) skipb();
+			else break;
+		} while (1);
+	}
+
+	void compiler::gtok(token_t &t) {
+		char c;
+
+		whitespace();
+		if (pb.eof()) {
+			t.type = token_type_t::eof;
+			return;
+		}
+
+		while (!pb.eof()) {
+			c = peekb();
+			if (is_whitespace(c)) break;
+			skipb();
+			write(1,&c,1);
+		}
 	}
 
 }
