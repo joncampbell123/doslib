@@ -18,7 +18,28 @@ namespace CIMCC {
 
 	/////////
 
-	bool is_whitespace(int c) {
+	bool is_decimal_digit(const int c,const int base=10) {
+		return (c >= '0' && c <= ('0'+base-1));
+	}
+
+	bool is_hexadecimal_digit(const int c) {
+		return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+	}
+
+	unsigned char p_decimal_digit(const char c) { /* NTS: Use alternate function for hexadecimal */
+		return c - '0';
+	}
+
+	unsigned char p_hexadecimal_digit(const char c) {
+		if (c >= 'a' && c <= 'f')
+			return c + 10 - 'a';
+		else if (c >= 'A' && c <= 'F')
+			return c + 10 - 'A';
+
+		return c - '0';
+	}
+
+	bool is_whitespace(const int c) {
 		return (c == ' ' || c == '\t' || c == '\n');
 	}
 
@@ -207,6 +228,8 @@ namespace CIMCC {
 		bool compile(void);
 		void whitespace(void);
 		void gtok(token_t &t);
+		void decimal_constant(unsigned long long &v,unsigned char base,char first_char=0);
+		void hexadecimal_constant(unsigned long long &v,char first_char=0);
 
 		private:
 		parse_buffer		pb;
@@ -236,12 +259,27 @@ namespace CIMCC {
 			T_LONGLONG=5
 		};
 
-		unsigned char				flags = FL_SIGNED;
-		unsigned char				itype = T_UNSPEC;
+		unsigned char				flags;
+		unsigned char				itype;
 		union {
 			unsigned long long		u;
 			signed long long		v;
 		} v;
+
+		inline void init_common(void) {
+			itype = T_UNSPEC;
+			v.u = 0;
+		}
+
+		void init(void) {
+			flags = FL_SIGNED;
+			init_common();
+		}
+
+		void initu(void) {
+			flags = 0;
+			init_common();
+		}
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
@@ -254,8 +292,8 @@ namespace CIMCC {
 			T_LONGDOUBLE=4
 		};
 
-		unsigned char				ftype = T_UNSPEC;
-		long double				val = std::numeric_limits<long double>::quiet_NaN();
+		unsigned char				ftype;
+		long double				val;
 	};
 
 	struct token_t {
@@ -264,7 +302,7 @@ namespace CIMCC {
 		union token_value_t {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
-		};
+		} v;
 
 		token_t() { }
 		~token_t() { }
@@ -301,6 +339,50 @@ namespace CIMCC {
 		} while (1);
 	}
 
+	void compiler::decimal_constant(unsigned long long &v,unsigned char base,char first_char) {
+		const unsigned long long maxval = 0xFFFFFFFFFFFFFFFFULL;
+		const unsigned long long willoverflow = maxval / (unsigned long long)base;
+		char c;
+
+		if (first_char > 0)
+			v = p_decimal_digit(first_char); /* assume first_char is a digit because the caller already checked */
+		else
+			v = 0ull;
+
+		while (is_decimal_digit(c=peekb(),base)) {
+			skipb();
+			if (v <= willoverflow) {
+				v *= (unsigned long long)base;
+				v += p_decimal_digit(c);
+			}
+			else {
+				v = maxval;
+			}
+		}
+	}
+
+	void compiler::hexadecimal_constant(unsigned long long &v,char first_char) {
+		const unsigned long long maxval = 0xFFFFFFFFFFFFFFFFULL;
+		const unsigned long long willoverflow = maxval / 16ull;
+		char c;
+
+		if (first_char > 0)
+			v = p_hexadecimal_digit(first_char); /* assume first_char is a digit because the caller already checked */
+		else
+			v = 0ull;
+
+		while (is_hexadecimal_digit(c=peekb())) {
+			skipb();
+			if (v <= willoverflow) {
+				v *= 16ull;
+				v += p_hexadecimal_digit(c);
+			}
+			else {
+				v = maxval;
+			}
+		}
+	}
+
 	void compiler::gtok(token_t &t) {
 		char c;
 
@@ -310,11 +392,49 @@ namespace CIMCC {
 			return;
 		}
 
-		while (!pb.eof()) {
+		c = getb();
+		if (c == '0') {
 			c = peekb();
-			if (is_whitespace(c)) break;
-			skipb();
-			write(1,&c,1);
+			/* 0nnnn    octal
+			 * 0bnnn    binary
+			 * 0xnnn    hexadecimal
+			 * 0        zero */
+			if (c == 'b' || c == 'B') { /* 0bnnn */
+				skipb(); /* skip 'b' */
+				t.type = token_type_t::intval;
+				t.v.intval.initu();
+				decimal_constant(t.v.intval.v.u, 2);
+			}
+			else if (c == 'x' || c == 'X') { /* 0xnnnn */
+				skipb(); /* skip 'x' */
+				t.type = token_type_t::intval;
+				t.v.intval.initu();
+				hexadecimal_constant(t.v.intval.v.u);
+			}
+			else if (is_decimal_digit(c,8)) { /* 0nnnn */
+				t.type = token_type_t::intval;
+				t.v.intval.initu();
+				decimal_constant(t.v.intval.v.u, 8);
+			}
+			else { /* 0 */
+				t.type = token_type_t::intval;
+				t.v.intval.initu();
+				t.v.intval.v.u = 0;
+			}
+		}
+		else if (is_decimal_digit(c)) {
+			t.type = token_type_t::intval;
+			t.v.intval.init();
+			decimal_constant(t.v.intval.v.u, 10, c);
+		}
+		else if (c == ',') {
+			t.type = token_type_t::comma;
+		}
+		else if (c == ';') {
+			t.type = token_type_t::semicolon;
+		}
+		else {
+			t.type = token_type_t::none;
 		}
 	}
 
