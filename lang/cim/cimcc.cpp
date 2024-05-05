@@ -947,7 +947,7 @@ namespace CIMCC {
 		for (size_t i=0;i < depth;i++)
 			indent += "  ";
 
-		fprintf(stderr,"AST TREE:\n");
+		fprintf(stderr,"AST TREE: ");
 		for (;parent;parent=parent->next) {
 			const char *name;
 
