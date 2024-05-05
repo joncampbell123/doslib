@@ -203,6 +203,8 @@ namespace CIMCC {
 		coloncolon,
 		pipe,
 		pipepipe,
+		ampersand,
+		ampersandampersand,
 
 		maxval
 	};
@@ -295,6 +297,7 @@ namespace CIMCC {
 		assignmodulo,
 		ternary,
 		logical_or,
+		logical_and,
 
 		maxval
 	};
@@ -412,6 +415,7 @@ namespace CIMCC {
 		bool additive_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
+		bool logical_and_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
@@ -705,9 +709,33 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 11 */
+	bool compiler::logical_and_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (tok_bufpeek().type == token_type_t::ampersandampersand) { /* && operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [&&]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::logical_and;
+			pchnode->child = sav_p;
+			if (!NLEX(sav_p->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 12 */
 	bool compiler::logical_or_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX logical_and_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1196,6 +1224,14 @@ namespace CIMCC {
 					skipb();
 				}
 				break;
+			case '&':
+				t.type = token_type_t::ampersand;
+				skipb();
+				if (peekb() == '&') { /* && */
+					t.type = token_type_t::ampersandampersand;
+					skipb();
+				}
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -1294,6 +1330,12 @@ namespace CIMCC {
 			case token_type_t::pipepipe:
 				s = "<||>";
 				break;
+			case token_type_t::ampersand:
+				s = "<&>";
+				break;
+			case token_type_t::ampersandampersand:
+				s = "<&&>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1374,6 +1416,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::logical_or:
 					name = "logical_or";
+					break;
+				case ast_node_op_t::logical_and:
+					name = "logical_and";
 					break;
 				default:
 					name = "?";
