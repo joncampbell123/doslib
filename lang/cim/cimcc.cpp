@@ -201,6 +201,8 @@ namespace CIMCC {
 		colon,
 		question,
 		coloncolon,
+		pipe,
+		pipepipe,
 
 		maxval
 	};
@@ -292,6 +294,7 @@ namespace CIMCC {
 		assigndivide,
 		assignmodulo,
 		ternary,
+		logical_or,
 
 		maxval
 	};
@@ -407,6 +410,7 @@ namespace CIMCC {
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool logical_or_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
@@ -526,7 +530,7 @@ namespace CIMCC {
 			{
 				token_t &t = tok_bufpeek();
 				if (t.type == token_type_t::closeparen)
-					tok_bufdiscard(); /* eat the EOF or semicolon */
+					tok_bufdiscard(); /* eat it */
 				else
 					return false;
 			}
@@ -701,9 +705,33 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 12 */
+	bool compiler::logical_or_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (tok_bufpeek().type == token_type_t::pipepipe) { /* || operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [||]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::logical_or;
+			pchnode->child = sav_p;
+			if (!NLEX(sav_p->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 13 */
 	bool compiler::conditional_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX logical_or_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -724,7 +752,7 @@ namespace CIMCC {
 			{
 				token_t &t = tok_bufpeek();
 				if (t.type == token_type_t::colon)
-					tok_bufdiscard(); /* eat the EOF or semicolon */
+					tok_bufdiscard(); /* eat it */
 				else
 					return false;
 			}
@@ -1160,6 +1188,14 @@ namespace CIMCC {
 					skipb();
 				}
 				break;
+			case '|':
+				t.type = token_type_t::pipe;
+				skipb();
+				if (peekb() == '|') { /* || */
+					t.type = token_type_t::pipepipe;
+					skipb();
+				}
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -1252,6 +1288,12 @@ namespace CIMCC {
 			case token_type_t::question:
 				s = "<?>";
 				break;
+			case token_type_t::pipe:
+				s = "<|>";
+				break;
+			case token_type_t::pipepipe:
+				s = "<||>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1326,6 +1368,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assignmodulo:
 					name = "assignmodulo";
+					break;
+				case ast_node_op_t::ternary:
+					name = "ternary";
+					break;
+				case ast_node_op_t::logical_or:
+					name = "logical_or";
 					break;
 				default:
 					name = "?";
