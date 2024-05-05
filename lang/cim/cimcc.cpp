@@ -254,10 +254,11 @@ namespace CIMCC {
 
 	enum class ast_node_op_t {
 		none=0,
+		/* NTS: ordered lowest to highest by operator precedence */
+		statement,
 		constant,
-		negate,
 		comma,
-		statement
+		negate
 	};
 
 	struct ast_node_t {
@@ -265,6 +266,16 @@ namespace CIMCC {
 		struct ast_node_t*		child = NULL;
 		ast_node_op_t			op = ast_node_op_t::none;
 		struct token_t			tv;
+	};
+
+	/////////
+
+	/* enumeration of operator precedence, lowest to highest */
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] */
+	enum class expr_ooo_t {
+		none=0,
+		comma=16-15, /* 15 LTR */
+		negate=15-2 /* 2 RTL */
 	};
 
 	/////////
@@ -325,9 +336,9 @@ namespace CIMCC {
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_prep_number_proc(void);
-		bool statement(ast_node_t* &apnode);
-		bool expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
+		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
+		bool expression(ast_node_t* &pchnode,expr_ooo_t ooop=expr_ooo_t::none);
 
 		ast_node_t*		root_node = NULL;
 
@@ -424,61 +435,102 @@ namespace CIMCC {
 	void token_to_string(std::string &s,const token_t &t);
 
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
-#if 0
-		if (tok.type == token_type_t::intval || tok.type == token_type_t::floatval) {
+		tok_buf_refill();
+
+		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
+		token_t &t = tok_bufpeek();
+
+		if (t.type == token_type_t::intval || t.type == token_type_t::floatval) {
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
-			pchnode->tv = std::move(tok);
-			gtok(tok);
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
 			return true;
 		}
-#endif
+
 		return false;
 	}
 
-	bool compiler::expression(ast_node_t* &pchnode) {
-#if 0
-		if (tok.type == token_type_t::minus) { /* unary -     "-expression" */
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::negate;
-			gtok(tok);
-			return expression(tok,pchnode->child);
+	bool compiler::expression(ast_node_t* &pchnode,expr_ooo_t ooop) {
+		tok_buf_refill();
+
+		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
+		{
+			token_t &t = tok_bufpeek();
+
+			if (t.type == token_type_t::minus) { /* unary -     "-expression" */
+				if (ooop > expr_ooo_t::negate) return true;
+				tok_bufdiscard(); /* eat it */
+
+				/* [-]
+				 *  \
+				 *   +--- expression */
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::negate;
+				if (!expression(pchnode->child,expr_ooo_t::negate))
+					return false;
+			}
+			else {
+				if (!primary_expression(pchnode))
+					return false;
+			}
 		}
 
-		if (!primary_expression(tok,pchnode))
-			return false;
-#endif
-		return false;
+		/* look for operators following the primary expression */
+		{
+			token_t &t = tok_bufpeek();
+
+			if (t.type == token_type_t::comma) { /* , comma operator */
+				if (ooop > expr_ooo_t::comma) return true;
+				tok_bufdiscard(); /* eat it */
+
+				/* [,]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::comma;
+				pchnode->child = sav_p;
+				return expression(sav_p->next,expr_ooo_t::comma); /* use recursion */
+			}
+		}
+
+		return true;
 	}
 
-	bool compiler::statement(ast_node_t* &apnode) {
-#if 0
+	bool compiler::statement(ast_node_t* &rnode,ast_node_t* &apnode) {
 		if (apnode) {
 			apnode->next = new ast_node_t;
 			apnode = apnode->next;
 		}
 		else {
-			apnode = new ast_node_t;
+			rnode = apnode = new ast_node_t;
 		}
-
 		apnode->op = ast_node_op_t::statement;
 
-		/* scan until ';' */
-		while (1) {
-			if (tok_stack_empty()) tok_stack_gtok();
+		/* [statement] -> [statement] -> ...
+		 *   \                \
+		 *    +-- expression   +-- expression */
 
-		}
+		tok_buf_refill();
+		while (!tok_buf_empty()) {
+			token_t &t = tok_bufpeek();
+			if (t.type == token_type_t::semicolon || t.type == token_type_t::eof) {
+				tok_bufdiscard(); /* eat the EOF or semicolon */
+				break;
+			}
 
-		while (!(tok.type == token_type_t::semicolon || tok.type == token_type_t::eof)) {
-			if (!expression(tok,apnode->child))
+			if (!expression(apnode->child))
 				return false;
 		}
-#endif
-		return false;
+
+		return true;
 	}
 
 	bool compiler::compile(void) {
-		ast_node_t **apnode = &root_node;
+		ast_node_t *apnode = NULL,*rnode = NULL;
+		bool ok = true;
 		token_t tok;
 
 		if (!pb.is_alloc()) {
@@ -486,32 +538,26 @@ namespace CIMCC {
 				return false;
 		}
 
-		if (*apnode) {
-			while ((*apnode)->next != NULL) apnode = &((*apnode)->next);
-		}
-
 		tok_buf_clear();
 		tok_buf_refill();
 		while (!tok_buf_empty()) {
-			const token_t &t = tok_bufget();
-
-			{
-				std::string s;
-				token_to_string(s,t);
-				fprintf(stderr,"%s\n",s.c_str());
-			}
-		}
-#if 0
-		refill();
-		tok_stack_refill();
-		while (!tok_stack_empty()) {
-			if (!statement(*apnode)) {
+			if (!statement(rnode,apnode)) {
 				fprintf(stderr,"Syntax error\n");
-				return false;
+				ok = false;
+				break;
 			}
 		}
-#endif
-		return true;
+
+		if (root_node) {
+			ast_node_t *r = root_node;
+			while (r->next != NULL) r = r->next;
+			r->next = rnode;
+		}
+		else {
+			root_node = rnode;
+		}
+
+		return ok;
 	}
 
 	void compiler::whitespace(void) {
@@ -729,6 +775,44 @@ namespace CIMCC {
 		}
 	}
 
+	void dump_ast_nodes(ast_node_t *parent,const size_t depth=0) {
+		std::string s;
+		std::string indent;
+
+		for (size_t i=0;i < depth;i++)
+			indent += "  ";
+
+		fprintf(stderr,"AST TREE:\n");
+		for (;parent;parent=parent->next) {
+			const char *name;
+
+			switch (parent->op) {
+				case ast_node_op_t::none:
+					name = "none";
+					break;
+				case ast_node_op_t::constant:
+					name = "const";
+					break;
+				case ast_node_op_t::negate:
+					name = "negate";
+					break;
+				case ast_node_op_t::comma:
+					name = "comma";
+					break;
+				case ast_node_op_t::statement:
+					name = "statement";
+					break;
+				default:
+					name = "?";
+					break;
+			};
+
+			token_to_string(s,parent->tv);
+			fprintf(stderr,"  %s%s: %s\n",indent.c_str(),name,s.c_str());
+			dump_ast_nodes(parent->child,depth+1u);
+		}
+	}
+
 }
 
 ///////////////////////////////
@@ -770,6 +854,7 @@ int main(int argc,char **argv) {
 		cc.set_source_ctx(&fdctx,sizeof(fdctx));
 
 		cc.compile();
+		dump_ast_nodes(cc.root_node);
 
 		/* fdctx destructor closes file descriptor */
 	}
