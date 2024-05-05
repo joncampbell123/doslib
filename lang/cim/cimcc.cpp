@@ -198,6 +198,9 @@ namespace CIMCC {
 		starequal,
 		slashequal,
 		percentequal,
+		colon,
+		question,
+		coloncolon,
 
 		maxval
 	};
@@ -288,6 +291,7 @@ namespace CIMCC {
 		assignmultiply,
 		assigndivide,
 		assignmodulo,
+		ternary,
 
 		maxval
 	};
@@ -404,6 +408,7 @@ namespace CIMCC {
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
+		bool conditional_expression(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 
@@ -502,8 +507,6 @@ namespace CIMCC {
 	void token_to_string(std::string &s,const token_t &t);
 
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
-		tok_buf_refill();
-
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
 
@@ -534,9 +537,9 @@ namespace CIMCC {
 		return false;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
 	bool compiler::unary_expression(ast_node_t* &pchnode) {
-		tok_buf_refill();
-
+#define NLEX primary_expression
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		{
 			token_t &t = tok_bufpeek();
@@ -587,13 +590,14 @@ namespace CIMCC {
 					return unary_expression(pchnode->child);
 
 				default:
-					return primary_expression(pchnode);
+					return NLEX(pchnode);
 			}
 		}
-
+#undef NLEX
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 3 */
 	bool compiler::multiplicative_expression(ast_node_t* &pchnode) {
 #define NLEX unary_expression
 		if (!NLEX(pchnode))
@@ -651,6 +655,7 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 4 */
 	bool compiler::additive_expression(ast_node_t* &pchnode) {
 #define NLEX multiplicative_expression
 		if (!NLEX(pchnode))
@@ -696,9 +701,44 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 13 */
+	bool compiler::conditional_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		if (tok_bufpeek().type == token_type_t::question) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [?]
+			 *  \
+			 *   +-- [left expr] -> [middle expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::ternary;
+			pchnode->child = sav_p;
+			if (!expression(sav_p->next))
+				return false;
+
+			{
+				token_t &t = tok_bufpeek();
+				if (t.type == token_type_t::colon)
+					tok_bufdiscard(); /* eat the EOF or semicolon */
+				else
+					return false;
+			}
+
+			if (!conditional_expression(sav_p->next->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
 	bool compiler::assignment_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX conditional_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -789,8 +829,6 @@ namespace CIMCC {
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 15 */
 	bool compiler::expression(ast_node_t* &pchnode) {
 #define NLEX assignment_expression
-		tok_buf_refill();
-
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1110,6 +1148,18 @@ namespace CIMCC {
 				t.type = token_type_t::closeparen;
 				skipb();
 				break;
+			case '?':
+				t.type = token_type_t::question;
+				skipb();
+				break;
+			case ':':
+				t.type = token_type_t::colon;
+				skipb();
+				if (peekb() == ':') { /* :: */
+					t.type = token_type_t::coloncolon;
+					skipb();
+				}
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -1192,6 +1242,15 @@ namespace CIMCC {
 				break;
 			case token_type_t::closeparen:
 				s = "<closeparen>";
+				break;
+			case token_type_t::colon:
+				s = "<:>";
+				break;
+			case token_type_t::coloncolon:
+				s = "<::>";
+				break;
+			case token_type_t::question:
+				s = "<?>";
 				break;
 			default:
 				s = "?";
