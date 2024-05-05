@@ -390,6 +390,7 @@ namespace CIMCC {
 		void free_ast(void);
 		void whitespace(void);
 		void gtok(token_t &t);
+		void gtok_number(token_t &t);
 		void gtok_prep_number_proc(void);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
@@ -665,6 +666,127 @@ namespace CIMCC {
 		} while (1);
 	}
 
+	void compiler::gtok_number(token_t &t) {
+		gtok_prep_number_proc();
+		assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
+
+		/* do not flush, do not call getb() or flush() or lazy_flush() in this block */
+		unsigned char *start = pb.read;
+		unsigned char base = 10;
+		unsigned char suffix = 0;
+		bool is_float = false;
+
+		static constexpr unsigned S_LONG=(1u << 0u);
+		static constexpr unsigned S_LONGLONG=(1u << 1u);
+		static constexpr unsigned S_UNSIGNED=(1u << 2u);
+		static constexpr unsigned S_FLOAT=(1u << 3u);
+		static constexpr unsigned S_DOUBLE=(1u << 4u);
+
+		if (pb.read < pb.end && *pb.read == '0') {
+			pb.read++;
+
+			if (pb.read < pb.end) {
+				if (*pb.read == 'x') { /* hexadecimal */
+					pb.read++;
+					base = 16;
+					while (pb.read < pb.end && is_hexadecimal_digit(*pb.read)) pb.read++;
+				}
+				else if (*pb.read == 'b') { /* binary */
+					pb.read++;
+					base = 2;
+					while (pb.read < pb.end && is_decimal_digit(*pb.read,2)) pb.read++;
+				}
+				else if (is_decimal_digit(*pb.read,8)) { /* octal, 2nd digit (do not advance read ptr) */
+					base = 8;
+					while (pb.read < pb.end && is_decimal_digit(*pb.read,8)) pb.read++;
+				}
+				else {
+					/* it's just zero and a different token afterwards */
+				}
+			}
+		}
+		else { /* decimal */
+			while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
+		}
+
+		/* it might be a floating point constant if it has a decimal point */
+		if (pb.read < pb.end && *pb.read == '.' && base == 10) {
+			pb.read++;
+
+			while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
+			is_float = true;
+		}
+
+		/* it might be a float with exponent field */
+		if (pb.read < pb.end && (*pb.read == 'e' || *pb.read == 'E') && base == 10) {
+			pb.read++;
+
+			/* e4, e-4, e+4 */
+			if (pb.read < pb.end && (*pb.read == '-' || *pb.read == '+')) pb.read++;
+			while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
+			is_float = true;
+		}
+
+		/* check suffixes */
+		while (1) {
+			if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
+				suffix |= S_LONG;
+				pb.read++;
+
+				if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
+					suffix |= S_LONGLONG;
+					pb.read++;
+				}
+			}
+			else if (pb.read < pb.end && (*pb.read == 'u' || *pb.read == 'U')) {
+				suffix |= S_UNSIGNED;
+				pb.read++;
+			}
+			else if (pb.read < pb.end && (*pb.read == 'f' || *pb.read == 'F')) {
+				suffix |= S_FLOAT;
+				is_float = true;
+				pb.read++;
+			}
+			else if (pb.read < pb.end && (*pb.read == 'd' || *pb.read == 'D')) {
+				suffix |= S_DOUBLE;
+				is_float = true;
+				pb.read++;
+			}
+			else {
+				break;
+			}
+		}
+
+		assert(start != pb.read);
+
+		/* DONE SCANNING. Parse number */
+		if (is_float) {
+			t.type = token_type_t::floatval;
+			auto &nt = t.v.floatval;
+			nt.init();
+
+			/* strtold() should handle the decimal point and exponent for us */
+			nt.val = strtold((char*)start,NULL);
+
+			if (suffix & S_LONG) nt.ftype = token_floatval_t::T_LONGDOUBLE;
+			else if (suffix & S_DOUBLE) nt.ftype = token_floatval_t::T_DOUBLE;
+			else if (suffix & S_FLOAT) nt.ftype = token_floatval_t::T_FLOAT;
+		}
+		else {
+			t.type = token_type_t::intval;
+			auto &nt = t.v.intval;
+
+			if (suffix & S_UNSIGNED) nt.initu();
+			else nt.init();
+
+			/* strtoull() should work fine */
+			nt.v.u = strtoull((char*)start,NULL,base);
+
+			if (suffix & S_LONGLONG) nt.itype = token_intval_t::T_LONGLONG;
+			else if (suffix & S_LONG) nt.itype = token_intval_t::T_LONG;
+		}
+	}
+
 	void compiler::gtok_prep_number_proc(void) {
 		/* The buffer is 2048 to 8192 bytes,
 		 * the lazy flush is half that size.
@@ -692,124 +814,7 @@ namespace CIMCC {
 
 		c = peekb();
 		if (is_decimal_digit(c)) {
-			gtok_prep_number_proc();
-			assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
-
-			/* do not flush, do not call getb() or flush() or lazy_flush() in this block */
-			unsigned char *start = pb.read;
-			unsigned char base = 10;
-			unsigned char suffix = 0;
-			bool is_float = false;
-
-			static constexpr unsigned S_LONG=(1u << 0u);
-			static constexpr unsigned S_LONGLONG=(1u << 1u);
-			static constexpr unsigned S_UNSIGNED=(1u << 2u);
-			static constexpr unsigned S_FLOAT=(1u << 3u);
-			static constexpr unsigned S_DOUBLE=(1u << 4u);
-
-			if (pb.read < pb.end && *pb.read == '0') {
-				pb.read++;
-
-				if (pb.read < pb.end) {
-					if (*pb.read == 'x') { /* hexadecimal */
-						pb.read++;
-						base = 16;
-						while (pb.read < pb.end && is_hexadecimal_digit(*pb.read)) pb.read++;
-					}
-					else if (*pb.read == 'b') { /* binary */
-						pb.read++;
-						base = 2;
-						while (pb.read < pb.end && is_decimal_digit(*pb.read,2)) pb.read++;
-					}
-					else if (is_decimal_digit(*pb.read,8)) { /* octal, 2nd digit (do not advance read ptr) */
-						base = 8;
-						while (pb.read < pb.end && is_decimal_digit(*pb.read,8)) pb.read++;
-					}
-					else {
-						/* it's just zero and a different token afterwards */
-					}
-				}
-			}
-			else { /* decimal */
-				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
-			}
-
-			/* it might be a floating point constant if it has a decimal point */
-			if (pb.read < pb.end && *pb.read == '.' && base == 10) {
-				pb.read++;
-
-				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
-				is_float = true;
-			}
-
-			/* it might be a float with exponent field */
-			if (pb.read < pb.end && (*pb.read == 'e' || *pb.read == 'E') && base == 10) {
-				pb.read++;
-
-				/* e4, e-4, e+4 */
-				if (pb.read < pb.end && (*pb.read == '-' || *pb.read == '+')) pb.read++;
-				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
-				is_float = true;
-			}
-
-			/* check suffixes */
-			while (1) {
-				if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
-					suffix |= S_LONG;
-					pb.read++;
-
-					if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
-						suffix |= S_LONGLONG;
-						pb.read++;
-					}
-				}
-				else if (pb.read < pb.end && (*pb.read == 'u' || *pb.read == 'U')) {
-					suffix |= S_UNSIGNED;
-					pb.read++;
-				}
-				else if (pb.read < pb.end && (*pb.read == 'f' || *pb.read == 'F')) {
-					suffix |= S_FLOAT;
-					is_float = true;
-					pb.read++;
-				}
-				else if (pb.read < pb.end && (*pb.read == 'd' || *pb.read == 'D')) {
-					suffix |= S_DOUBLE;
-					is_float = true;
-					pb.read++;
-				}
-				else {
-					break;
-				}
-			}
-
-			assert(start != pb.read);
-
-			/* DONE SCANNING. Parse number */
-			if (is_float) {
-				t.type = token_type_t::floatval;
-				auto &nt = t.v.floatval;
-				nt.init();
-
-				/* strtold() should handle the decimal point and exponent for us */
-				nt.val = strtold((char*)start,NULL);
-
-				if (suffix & S_LONG) nt.ftype = token_floatval_t::T_LONGDOUBLE;
-				else if (suffix & S_DOUBLE) nt.ftype = token_floatval_t::T_DOUBLE;
-				else if (suffix & S_FLOAT) nt.ftype = token_floatval_t::T_FLOAT;
-			}
-			else {
-				t.type = token_type_t::intval;
-				auto &nt = t.v.intval;
-
-				if (suffix & S_UNSIGNED) nt.initu();
-				else nt.init();
-
-				/* strtoull() should work fine */
-				nt.v.u = strtoull((char*)start,NULL,base);
-
-				if (suffix & S_LONGLONG) nt.itype = token_intval_t::T_LONGLONG;
-				else if (suffix & S_LONG) nt.itype = token_intval_t::T_LONG;
-			}
+			gtok_number(t);
 		}
 		else if (c == ',') {
 			t.type = token_type_t::comma;
