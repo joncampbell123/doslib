@@ -558,7 +558,8 @@ namespace CIMCC {
 	}
 
 	bool compiler::additive_expression(ast_node_t* &pchnode) {
-		if (!unary_expression(pchnode))
+#define NLEX unary_expression
+		if (!NLEX(pchnode))
 			return false;
 
 		/* This is written differently, because we need it built "inside out" for addition and subtraction
@@ -576,7 +577,7 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::add;
 				pchnode->child = sav_p;
-				if (!unary_expression(sav_p->next))
+				if (!NLEX(sav_p->next))
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::minus) { /* - subtract operator */
@@ -590,24 +591,25 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::subtract;
 				pchnode->child = sav_p;
-				if (!unary_expression(sav_p->next))
+				if (!NLEX(sav_p->next))
 					return false;
 			}
 			else {
 				break;
 			}
 		}
-
+#undef NLEX
 		return true;
 	}
 
 	bool compiler::expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
 		tok_buf_refill();
 
-		if (!additive_expression(pchnode))
+		if (!NLEX(pchnode))
 			return false;
 
-		if (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
 			/* [,]
@@ -618,9 +620,10 @@ namespace CIMCC {
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::comma;
 			pchnode->child = sav_p;
-			return expression(sav_p->next); /* use recursion */
+			if (!NLEX(sav_p->next))
+				return false;
 		}
-
+#undef NLEX
 		return true;
 	}
 
