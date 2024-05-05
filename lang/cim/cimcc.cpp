@@ -319,21 +319,6 @@ namespace CIMCC {
 
 	/////////
 
-	/* enumeration of operator precedence, lowest to highest */
-	/* [https://en.cppreference.com/w/c/language/operator_precedence] */
-	enum class expr_ooo_t {
-		none=0,
-		comma=16-15,      /* 15 LTR */
-		negate=16-2,      /* 2 RTL */
-		unaryplus=16-2,   /* 2 RTL */
-		binarynot=16-2,   /* 2 RTL */
-		logicalnot=16-2,  /* 2 RTL */
-
-		maxval
-	};
-
-	/////////
-
 	struct compiler {
 		compiler() {
 		}
@@ -392,9 +377,10 @@ namespace CIMCC {
 		void gtok(token_t &t);
 		void gtok_number(token_t &t);
 		void gtok_prep_number_proc(void);
+		bool expression(ast_node_t* &pchnode);
+		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
-		bool expression(ast_node_t* &pchnode,expr_ooo_t ooop=expr_ooo_t::none);
 
 		ast_node_t*		root_node = NULL;
 
@@ -497,6 +483,7 @@ namespace CIMCC {
 		token_t &t = tok_bufpeek();
 
 		if (t.type == token_type_t::intval || t.type == token_type_t::floatval) {
+			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
 			pchnode->tv = std::move(t);
@@ -507,73 +494,77 @@ namespace CIMCC {
 		return false;
 	}
 
-	bool compiler::expression(ast_node_t* &pchnode,expr_ooo_t ooop) {
+	bool compiler::unary_expression(ast_node_t* &pchnode) {
 		tok_buf_refill();
 
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		{
 			token_t &t = tok_bufpeek();
 
-			if (t.type == token_type_t::minus) { /* unary -     "-expression" */
-				if (ooop > expr_ooo_t::negate) return true;
-				tok_bufdiscard(); /* eat it */
+			switch (t.type) {
+				case token_type_t::minus:
+					tok_bufdiscard(); /* eat it */
 
-				/* [-]
-				 *  \
-				 *   +--- expression */
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::negate;
-				if (!expression(pchnode->child,expr_ooo_t::negate))
-					return false;
-			}
-			else if (t.type == token_type_t::plus) { /* unary +     "+expression" */
-				if (ooop > expr_ooo_t::unaryplus) return true;
-				tok_bufdiscard(); /* eat it */
+					/* [-]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::negate;
+					return unary_expression(pchnode->child);
 
-				/* [+]
-				 *  \
-				 *   +--- expression */
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::unaryplus;
-				if (!expression(pchnode->child,expr_ooo_t::unaryplus))
-					return false;
-			}
-			else if (t.type == token_type_t::exclamation) { /* unary !     "!expression" */
-				if (ooop > expr_ooo_t::logicalnot) return true;
-				tok_bufdiscard(); /* eat it */
+				case token_type_t::plus:
+					tok_bufdiscard(); /* eat it */
 
-				/* [!]
-				 *  \
-				 *   +--- expression */
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::logicalnot;
-				if (!expression(pchnode->child,expr_ooo_t::logicalnot))
-					return false;
-			}
-			else if (t.type == token_type_t::tilde) { /* unary ~     "~expression" */
-				if (ooop > expr_ooo_t::binarynot) return true;
-				tok_bufdiscard(); /* eat it */
+					/* [+]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::unaryplus;
+					return unary_expression(pchnode->child);
 
-				/* [~]
-				 *  \
-				 *   +--- expression */
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::binarynot;
-				if (!expression(pchnode->child,expr_ooo_t::binarynot))
-					return false;
-			}
-			else {
-				if (!primary_expression(pchnode))
-					return false;
+				case token_type_t::exclamation:
+					tok_bufdiscard(); /* eat it */
+
+					/* [!]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::logicalnot;
+					return unary_expression(pchnode->child);
+
+				case token_type_t::tilde:
+					tok_bufdiscard(); /* eat it */
+
+					/* [~]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::binarynot;
+					return unary_expression(pchnode->child);
+
+				default:
+					return primary_expression(pchnode);
 			}
 		}
+
+		return true;
+	}
+
+	bool compiler::expression(ast_node_t* &pchnode) {
+		tok_buf_refill();
+
+		if (!unary_expression(pchnode))
+			return false;
 
 		/* look for operators following the primary expression */
 		{
 			token_t &t = tok_bufpeek();
 
 			if (t.type == token_type_t::comma) { /* , comma operator */
-				if (ooop > expr_ooo_t::comma) return true;
 				tok_bufdiscard(); /* eat it */
 
 				/* [,]
@@ -584,7 +575,7 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::comma;
 				pchnode->child = sav_p;
-				return expression(sav_p->next,expr_ooo_t::comma); /* use recursion */
+				return expression(sav_p->next); /* use recursion */
 			}
 		}
 
@@ -606,15 +597,17 @@ namespace CIMCC {
 		 *    +-- expression   +-- expression */
 
 		tok_buf_refill();
-		while (!tok_buf_empty()) {
-			token_t &t = tok_bufpeek();
-			if (t.type == token_type_t::semicolon || t.type == token_type_t::eof) {
-				tok_bufdiscard(); /* eat the EOF or semicolon */
-				break;
-			}
-
+		if (!tok_buf_empty()) {
 			if (!expression(apnode->child))
 				return false;
+
+			{
+				token_t &t = tok_bufpeek();
+				if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+					tok_bufdiscard(); /* eat the EOF or semicolon */
+				else
+					return false;
+			}
 		}
 
 		return true;
