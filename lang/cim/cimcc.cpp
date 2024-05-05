@@ -183,7 +183,8 @@ namespace CIMCC {
 		floatval,
 		comma,
 		semicolon,
-		minus
+		minus,
+		plus
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
@@ -254,11 +255,11 @@ namespace CIMCC {
 
 	enum class ast_node_op_t {
 		none=0,
-		/* NTS: ordered lowest to highest by operator precedence */
 		statement,
 		constant,
 		comma,
-		negate
+		negate,
+		unaryplus
 	};
 
 	struct ast_node_t {
@@ -274,8 +275,9 @@ namespace CIMCC {
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] */
 	enum class expr_ooo_t {
 		none=0,
-		comma=16-15, /* 15 LTR */
-		negate=15-2 /* 2 RTL */
+		comma=16-15,     /* 15 LTR */
+		negate=15-2,     /* 2 RTL */
+		unaryplus=15-2   /* 2 RTL */
 	};
 
 	/////////
@@ -468,6 +470,18 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::negate;
 				if (!expression(pchnode->child,expr_ooo_t::negate))
+					return false;
+			}
+			else if (t.type == token_type_t::plus) { /* unary +     "+expression" */
+				if (ooop > expr_ooo_t::unaryplus) return true;
+				tok_bufdiscard(); /* eat it */
+
+				/* [+]
+				 *  \
+				 *   +--- expression */
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::unaryplus;
+				if (!expression(pchnode->child,expr_ooo_t::unaryplus))
 					return false;
 			}
 			else {
@@ -726,6 +740,10 @@ namespace CIMCC {
 			t.type = token_type_t::minus;
 			skipb();
 		}
+		else if (c == '+') {
+			t.type = token_type_t::plus;
+			skipb();
+		}
 		else {
 			t.type = token_type_t::none;
 			skipb();
@@ -769,6 +787,9 @@ namespace CIMCC {
 			case token_type_t::minus:
 				s = "<minus>";
 				break;
+			case token_type_t::plus:
+				s = "<plus>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -795,6 +816,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::negate:
 					name = "negate";
+					break;
+				case ast_node_op_t::unaryplus:
+					name = "unaryplus";
 					break;
 				case ast_node_op_t::comma:
 					name = "comma";
