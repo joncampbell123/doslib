@@ -185,7 +185,10 @@ namespace CIMCC {
 		semicolon,
 		minus,
 		plus,
-		exclamation
+		exclamation,
+		tilde,
+
+		maxval
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
@@ -261,7 +264,10 @@ namespace CIMCC {
 		comma,
 		negate,
 		unaryplus,
-		logicalnot
+		logicalnot,
+		binarynot,
+
+		maxval
 	};
 
 	struct ast_node_t {
@@ -277,10 +283,13 @@ namespace CIMCC {
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] */
 	enum class expr_ooo_t {
 		none=0,
-		comma=16-15,     /* 15 LTR */
-		negate=15-2,     /* 2 RTL */
-		unaryplus=15-2,  /* 2 RTL */
-		logicalnot=15-2  /* 2 RTL */
+		comma=16-15,      /* 15 LTR */
+		negate=15-2,      /* 2 RTL */
+		unaryplus=15-2,   /* 2 RTL */
+		binarynot=15-2,   /* 2 RTL */
+		logicalnot=15-2,  /* 2 RTL */
+
+		maxval
 	};
 
 	/////////
@@ -491,12 +500,24 @@ namespace CIMCC {
 				if (ooop > expr_ooo_t::logicalnot) return true;
 				tok_bufdiscard(); /* eat it */
 
-				/* [+]
+				/* [!]
 				 *  \
 				 *   +--- expression */
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::logicalnot;
 				if (!expression(pchnode->child,expr_ooo_t::logicalnot))
+					return false;
+			}
+			else if (t.type == token_type_t::tilde) { /* unary ~     "~expression" */
+				if (ooop > expr_ooo_t::binarynot) return true;
+				tok_bufdiscard(); /* eat it */
+
+				/* [~]
+				 *  \
+				 *   +--- expression */
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::binarynot;
+				if (!expression(pchnode->child,expr_ooo_t::binarynot))
 					return false;
 			}
 			else {
@@ -763,6 +784,10 @@ namespace CIMCC {
 			t.type = token_type_t::exclamation;
 			skipb();
 		}
+		else if (c == '~') {
+			t.type = token_type_t::tilde;
+			skipb();
+		}
 		else {
 			t.type = token_type_t::none;
 			skipb();
@@ -812,6 +837,9 @@ namespace CIMCC {
 			case token_type_t::exclamation:
 				s = "<!>";
 				break;
+			case token_type_t::tilde:
+				s = "<~>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -850,6 +878,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::logicalnot:
 					name = "logicalnot";
+					break;
+				case ast_node_op_t::binarynot:
+					name = "binarynot";
 					break;
 				default:
 					name = "?";
