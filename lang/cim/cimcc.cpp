@@ -195,6 +195,9 @@ namespace CIMCC {
 		minusequal,
 		openparen,
 		closeparen,
+		starequal,
+		slashequal,
+		percentequal,
 
 		maxval
 	};
@@ -282,6 +285,9 @@ namespace CIMCC {
 		assign,
 		assignadd,
 		assignsubtract,
+		assignmultiply,
+		assigndivide,
+		assignmodulo,
 
 		maxval
 	};
@@ -690,6 +696,7 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
 	bool compiler::assignment_expression(ast_node_t* &pchnode) {
 #define NLEX additive_expression
 		if (!NLEX(pchnode))
@@ -736,10 +743,50 @@ namespace CIMCC {
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
+		else if (tok_bufpeek().type == token_type_t::starequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [*=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignmultiply;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::slashequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [/=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assigndivide;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::percentequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [%=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignmodulo;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
 #undef NLEX
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 15 */
 	bool compiler::expression(ast_node_t* &pchnode) {
 #define NLEX assignment_expression
 		tok_buf_refill();
@@ -1030,14 +1077,26 @@ namespace CIMCC {
 			case '*':
 				t.type = token_type_t::star;
 				skipb();
+				if (peekb() == '=') { /* *= */
+					t.type = token_type_t::starequal;
+					skipb();
+				}
 				break;
 			case '/':
 				t.type = token_type_t::slash;
 				skipb();
+				if (peekb() == '=') { /* /= */
+					t.type = token_type_t::slashequal;
+					skipb();
+				}
 				break;
 			case '%':
 				t.type = token_type_t::percent;
 				skipb();
+				if (peekb() == '=') { /* /= */
+					t.type = token_type_t::percentequal;
+					skipb();
+				}
 				break;
 			case '=':
 				t.type = token_type_t::equal;
@@ -1103,6 +1162,15 @@ namespace CIMCC {
 				break;
 			case token_type_t::minusequal:
 				s = "<-=>";
+				break;
+			case token_type_t::starequal:
+				s = "<*=>";
+				break;
+			case token_type_t::slashequal:
+				s = "</=>";
+				break;
+			case token_type_t::percentequal:
+				s = "<%=>";
 				break;
 			case token_type_t::exclamation:
 				s = "<!>";
@@ -1190,6 +1258,15 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assignsubtract:
 					name = "assignsubtract";
+					break;
+				case ast_node_op_t::assignmultiply:
+					name = "assignmultiply";
+					break;
+				case ast_node_op_t::assigndivide:
+					name = "assigndivide";
+					break;
+				case ast_node_op_t::assignmodulo:
+					name = "assignmodulo";
 					break;
 				default:
 					name = "?";
