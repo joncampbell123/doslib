@@ -174,68 +174,7 @@ namespace CIMCC {
 		~parse_buffer() { free(); }
 	};
 
-	struct compiler {
-		compiler() {
-		}
-
-		~compiler() {
-		}
-
-		void set_source_cb(refill_function_t f) {
-			pb_refill = f;
-		}
-
-		void set_source_ctx(void *ptr=NULL,size_t sz=0) {
-			pb_ctx.free();
-			pb_ctx.ptr_size = sz;
-			pb_ctx.ownership = false;
-			pb_ctx.ptr = (unsigned char*)ptr;
-		}
-
-		bool alloc_source_ctx(size_t sz) {
-			return pb_ctx.alloc(sz);
-		}
-
-		void free_source_ctx(void) {
-			pb_ctx.free();
-		}
-
-		unsigned char *source_ctx(void) {
-			return pb_ctx.ptr;
-		}
-
-		size_t source_ctx_size(void) const {
-			return pb_ctx.ptr_size;
-		}
-
-		char peekb(void) {
-			if (pb.read == pb.end) refill();
-			if (pb.read < pb.end) return *(pb.read);
-			return 0;
-		}
-
-		void skipb(void) {
-			if (pb.read == pb.end) refill();
-			if (pb.read < pb.end) pb.read++;
-		}
-
-		char getb(void) {
-			const char r = peekb();
-			skipb();
-			return r;
-		}
-
-		void refill(void);
-		bool compile(void);
-		void whitespace(void);
-		void gtok(token_t &t);
-		void gtok_prep_number_proc(void);
-
-		private:
-		parse_buffer		pb;
-		context_t		pb_ctx;
-		refill_function_t	pb_refill = refill_null;
-	};
+	/////////
 
 	enum class token_type_t {
 		eof=-1,
@@ -309,9 +248,170 @@ namespace CIMCC {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
 		} v;
+	};
 
-		token_t() { }
-		~token_t() { }
+	/////////
+
+	enum class ast_node_op_t {
+		none=0,
+		constant,
+		negate,
+		comma,
+		statement
+	};
+
+	struct ast_node_t {
+		struct ast_node_t*		next = NULL;
+		struct ast_node_t*		child = NULL;
+		ast_node_op_t			op = ast_node_op_t::none;
+		struct token_t			tv;
+	};
+
+	/////////
+
+	struct compiler {
+		compiler() {
+		}
+
+		~compiler() {
+		}
+
+		void set_source_cb(refill_function_t f) {
+			pb_refill = f;
+		}
+
+		void set_source_ctx(void *ptr=NULL,size_t sz=0) {
+			pb_ctx.free();
+			pb_ctx.ptr_size = sz;
+			pb_ctx.ownership = false;
+			pb_ctx.ptr = (unsigned char*)ptr;
+		}
+
+		bool alloc_source_ctx(size_t sz) {
+			return pb_ctx.alloc(sz);
+		}
+
+		void free_source_ctx(void) {
+			pb_ctx.free();
+		}
+
+		unsigned char *source_ctx(void) {
+			return pb_ctx.ptr;
+		}
+
+		size_t source_ctx_size(void) const {
+			return pb_ctx.ptr_size;
+		}
+
+		char peekb(void) {
+			if (pb.read == pb.end) refill();
+			if (pb.read < pb.end) return *(pb.read);
+			return 0;
+		}
+
+		void skipb(void) {
+			if (pb.read == pb.end) refill();
+			if (pb.read < pb.end) pb.read++;
+		}
+
+		char getb(void) {
+			const char r = peekb();
+			skipb();
+			return r;
+		}
+
+		void refill(void);
+		bool compile(void);
+		void whitespace(void);
+		void gtok(token_t &t);
+		void gtok_prep_number_proc(void);
+		bool statement(ast_node_t* &apnode);
+		bool expression(ast_node_t* &pchnode);
+		bool primary_expression(ast_node_t* &pchnode);
+
+		ast_node_t*		root_node = NULL;
+
+		static constexpr size_t tok_buf_size = 32;
+		static constexpr size_t tok_buf_threshhold = 16;
+		token_t			tok_buf[tok_buf_size];
+		size_t			tok_buf_i = 0,tok_buf_o = 0;
+		token_t			tok_empty;
+
+		void tok_buf_clear(void) {
+			tok_buf_i = tok_buf_o = 0;
+		}
+
+		bool tok_buf_empty(void) const {
+			return tok_buf_o == tok_buf_i;
+		}
+
+		size_t tok_buf_avail(void) const {
+			return tok_buf_o - tok_buf_i;
+		}
+
+		size_t tok_buf_canadd(void) const {
+			return tok_buf_size - tok_buf_o;
+		}
+
+		bool tok_buf_sanity_check(void) const {
+			return tok_buf_i <= tok_buf_o && tok_buf_i <= tok_buf_size && tok_buf_o <= tok_buf_size;
+		}
+
+		void tok_buf_flush(void) {
+			if (tok_buf_i != 0u) {
+				assert(tok_buf_sanity_check());
+				const size_t rem = tok_buf_avail();
+				assert((tok_buf_i+rem) <= tok_buf_size);
+				if (rem != 0) memmove(&tok_buf[0],&tok_buf[tok_buf_i],rem*sizeof(token_t));
+				tok_buf_o = rem;
+				tok_buf_i = 0;
+				assert(tok_buf_avail() == rem);
+				assert(tok_buf_sanity_check());
+			}
+		}
+
+		void tok_buf_lazy_flush(void) {
+			if (tok_buf_i >= tok_buf_threshhold) tok_buf_flush();
+		}
+
+		void tok_buf_refill(void) {
+			token_t t;
+
+			tok_buf_lazy_flush();
+
+			size_t todo = tok_buf_canadd();
+			while (todo-- != 0u) {
+				gtok(t);
+				if (t.type == token_type_t::eof) break;
+				tok_buf[tok_buf_o++] = std::move(t);
+			}
+
+			assert(tok_buf_sanity_check());
+		}
+
+		token_t &tok_bufpeek(const size_t p=0) {
+			if ((tok_buf_i+p) >= tok_buf_o) tok_buf_refill();
+			if ((tok_buf_i+p) < tok_buf_o) return tok_buf[tok_buf_i+p];
+			return tok_empty;
+		}
+
+		void tok_bufdiscard(size_t count=1) {
+			while (count-- != 0u) {
+				if (tok_buf_i < tok_buf_o) tok_buf_i++;
+				else break;
+			}
+		}
+
+		const token_t &tok_bufget(void) {
+			tok_buf_refill();
+			if (tok_buf_i < tok_buf_o) return tok_buf[tok_buf_i++];
+			return tok_empty;
+		}
+
+		private:
+		parse_buffer		pb;
+		context_t		pb_ctx;
+		refill_function_t	pb_refill = refill_null;
 	};
 
 	void compiler::refill(void) {
@@ -321,9 +421,64 @@ namespace CIMCC {
 		assert(pb.sanity_check());
 	}
 
-	void token_to_string(std::string &s,token_t &t);
+	void token_to_string(std::string &s,const token_t &t);
+
+	bool compiler::primary_expression(ast_node_t* &pchnode) {
+#if 0
+		if (tok.type == token_type_t::intval || tok.type == token_type_t::floatval) {
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::constant;
+			pchnode->tv = std::move(tok);
+			gtok(tok);
+			return true;
+		}
+#endif
+		return false;
+	}
+
+	bool compiler::expression(ast_node_t* &pchnode) {
+#if 0
+		if (tok.type == token_type_t::minus) { /* unary -     "-expression" */
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::negate;
+			gtok(tok);
+			return expression(tok,pchnode->child);
+		}
+
+		if (!primary_expression(tok,pchnode))
+			return false;
+#endif
+		return false;
+	}
+
+	bool compiler::statement(ast_node_t* &apnode) {
+#if 0
+		if (apnode) {
+			apnode->next = new ast_node_t;
+			apnode = apnode->next;
+		}
+		else {
+			apnode = new ast_node_t;
+		}
+
+		apnode->op = ast_node_op_t::statement;
+
+		/* scan until ';' */
+		while (1) {
+			if (tok_stack_empty()) tok_stack_gtok();
+
+		}
+
+		while (!(tok.type == token_type_t::semicolon || tok.type == token_type_t::eof)) {
+			if (!expression(tok,apnode->child))
+				return false;
+		}
+#endif
+		return false;
+	}
 
 	bool compiler::compile(void) {
+		ast_node_t **apnode = &root_node;
 		token_t tok;
 
 		if (!pb.is_alloc()) {
@@ -331,17 +486,31 @@ namespace CIMCC {
 				return false;
 		}
 
-		refill();
-		while (!pb.eof()) {
-			gtok(/*&*/tok);
+		if (*apnode) {
+			while ((*apnode)->next != NULL) apnode = &((*apnode)->next);
+		}
+
+		tok_buf_clear();
+		tok_buf_refill();
+		while (!tok_buf_empty()) {
+			const token_t &t = tok_bufget();
 
 			{
 				std::string s;
-				token_to_string(s,tok);
+				token_to_string(s,t);
 				fprintf(stderr,"%s\n",s.c_str());
 			}
 		}
-
+#if 0
+		refill();
+		tok_stack_refill();
+		while (!tok_stack_empty()) {
+			if (!statement(*apnode)) {
+				fprintf(stderr,"Syntax error\n");
+				return false;
+			}
+		}
+#endif
 		return true;
 	}
 
@@ -517,7 +686,7 @@ namespace CIMCC {
 		}
 	}
 
-	void token_to_string(std::string &s,token_t &t) {
+	void token_to_string(std::string &s,const token_t &t) {
 		char buf[64];
 
 		switch (t.type) {
