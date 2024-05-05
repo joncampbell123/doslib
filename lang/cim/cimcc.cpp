@@ -206,6 +206,9 @@ namespace CIMCC {
 		ampersand,
 		ampersandampersand,
 		caret,
+		ampersandequal,
+		caretequal,
+		pipeequal,
 
 		maxval
 	};
@@ -296,6 +299,9 @@ namespace CIMCC {
 		assignmultiply,
 		assigndivide,
 		assignmodulo,
+		assignand,
+		assignxor,
+		assignor,
 		ternary,
 		logical_or,
 		logical_and,
@@ -957,6 +963,45 @@ namespace CIMCC {
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
+		else if (tok_bufpeek().type == token_type_t::ampersandequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [&=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignand;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::caretequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [^=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignxor;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::pipeequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [|=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignor;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
 #undef NLEX
 		return true;
 	}
@@ -1290,6 +1335,10 @@ namespace CIMCC {
 			case '^':
 				t.type = token_type_t::caret;
 				skipb();
+				if (peekb() == '=') { /* ^= */
+					t.type = token_type_t::caretequal;
+					skipb();
+				}
 				break;
 			case ':':
 				t.type = token_type_t::colon;
@@ -1306,12 +1355,20 @@ namespace CIMCC {
 					t.type = token_type_t::pipepipe;
 					skipb();
 				}
+				else if (peekb() == '=') { /* |= */
+					t.type = token_type_t::pipeequal;
+					skipb();
+				}
 				break;
 			case '&':
 				t.type = token_type_t::ampersand;
 				skipb();
 				if (peekb() == '&') { /* && */
 					t.type = token_type_t::ampersandampersand;
+					skipb();
+				}
+				else if (peekb() == '=') { /* &= */
+					t.type = token_type_t::ampersandequal;
 					skipb();
 				}
 				break;
@@ -1376,6 +1433,15 @@ namespace CIMCC {
 				break;
 			case token_type_t::percentequal:
 				s = "<%=>";
+				break;
+			case token_type_t::ampersandequal:
+				s = "<&=>";
+				break;
+			case token_type_t::caretequal:
+				s = "<^=>";
+				break;
+			case token_type_t::pipeequal:
+				s = "<|=>";
 				break;
 			case token_type_t::exclamation:
 				s = "<!>";
@@ -1496,6 +1562,15 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assignmodulo:
 					name = "assignmodulo";
+					break;
+				case ast_node_op_t::assignand:
+					name = "assignand";
+					break;
+				case ast_node_op_t::assignor:
+					name = "assignor";
+					break;
+				case ast_node_op_t::assignxor:
+					name = "assignxor";
 					break;
 				case ast_node_op_t::ternary:
 					name = "ternary";
