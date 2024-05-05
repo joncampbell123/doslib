@@ -184,7 +184,8 @@ namespace CIMCC {
 		comma,
 		semicolon,
 		minus,
-		plus
+		plus,
+		exclamation
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
@@ -259,7 +260,8 @@ namespace CIMCC {
 		constant,
 		comma,
 		negate,
-		unaryplus
+		unaryplus,
+		logicalnot
 	};
 
 	struct ast_node_t {
@@ -277,7 +279,8 @@ namespace CIMCC {
 		none=0,
 		comma=16-15,     /* 15 LTR */
 		negate=15-2,     /* 2 RTL */
-		unaryplus=15-2   /* 2 RTL */
+		unaryplus=15-2,  /* 2 RTL */
+		logicalnot=15-2  /* 2 RTL */
 	};
 
 	/////////
@@ -482,6 +485,18 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::unaryplus;
 				if (!expression(pchnode->child,expr_ooo_t::unaryplus))
+					return false;
+			}
+			else if (t.type == token_type_t::exclamation) { /* unary !     "!expression" */
+				if (ooop > expr_ooo_t::logicalnot) return true;
+				tok_bufdiscard(); /* eat it */
+
+				/* [+]
+				 *  \
+				 *   +--- expression */
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::logicalnot;
+				if (!expression(pchnode->child,expr_ooo_t::logicalnot))
 					return false;
 			}
 			else {
@@ -744,6 +759,10 @@ namespace CIMCC {
 			t.type = token_type_t::plus;
 			skipb();
 		}
+		else if (c == '!') {
+			t.type = token_type_t::exclamation;
+			skipb();
+		}
 		else {
 			t.type = token_type_t::none;
 			skipb();
@@ -790,6 +809,9 @@ namespace CIMCC {
 			case token_type_t::plus:
 				s = "<plus>";
 				break;
+			case token_type_t::exclamation:
+				s = "<!>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -825,6 +847,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::statement:
 					name = "statement";
+					break;
+				case ast_node_op_t::logicalnot:
+					name = "logicalnot";
 					break;
 				default:
 					name = "?";
