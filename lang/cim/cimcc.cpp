@@ -205,6 +205,7 @@ namespace CIMCC {
 		pipepipe,
 		ampersand,
 		ampersandampersand,
+		caret,
 
 		maxval
 	};
@@ -299,6 +300,7 @@ namespace CIMCC {
 		logical_or,
 		logical_and,
 		binary_or,
+		binary_xor,
 
 		maxval
 	};
@@ -415,6 +417,7 @@ namespace CIMCC {
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
+		bool binary_xor_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
@@ -711,16 +714,40 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 9 */
+	bool compiler::binary_xor_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (tok_bufpeek().type == token_type_t::caret) { /* ^ operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [^]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::binary_xor;
+			pchnode->child = sav_p;
+			if (!NLEX(sav_p->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 10 */
 	bool compiler::binary_or_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX binary_xor_expression
 		if (!NLEX(pchnode))
 			return false;
 
 		while (tok_bufpeek().type == token_type_t::pipe) { /* | operator */
 			tok_bufdiscard(); /* eat it */
 
-			/* [&&]
+			/* [|]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
 
@@ -1234,6 +1261,10 @@ namespace CIMCC {
 				t.type = token_type_t::question;
 				skipb();
 				break;
+			case '^':
+				t.type = token_type_t::caret;
+				skipb();
+				break;
 			case ':':
 				t.type = token_type_t::colon;
 				skipb();
@@ -1362,6 +1393,9 @@ namespace CIMCC {
 			case token_type_t::ampersandampersand:
 				s = "<&&>";
 				break;
+			case token_type_t::caret:
+				s = "<^>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1448,6 +1482,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::binary_or:
 					name = "binary_or";
+					break;
+				case ast_node_op_t::binary_xor:
+					name = "binary_xor";
 					break;
 				default:
 					name = "?";
