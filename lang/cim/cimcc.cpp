@@ -324,10 +324,10 @@ namespace CIMCC {
 	enum class expr_ooo_t {
 		none=0,
 		comma=16-15,      /* 15 LTR */
-		negate=15-2,      /* 2 RTL */
-		unaryplus=15-2,   /* 2 RTL */
-		binarynot=15-2,   /* 2 RTL */
-		logicalnot=15-2,  /* 2 RTL */
+		negate=16-2,      /* 2 RTL */
+		unaryplus=16-2,   /* 2 RTL */
+		binarynot=16-2,   /* 2 RTL */
+		logicalnot=16-2,  /* 2 RTL */
 
 		maxval
 	};
