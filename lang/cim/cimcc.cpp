@@ -266,6 +266,8 @@ namespace CIMCC {
 		unaryplus,
 		logicalnot,
 		binarynot,
+		add,
+		subtract,
 
 		maxval
 	};
@@ -380,6 +382,7 @@ namespace CIMCC {
 		bool expression(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
+		bool additive_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 
 		ast_node_t*		root_node = NULL;
@@ -554,29 +557,68 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::expression(ast_node_t* &pchnode) {
-		tok_buf_refill();
-
+	bool compiler::additive_expression(ast_node_t* &pchnode) {
 		if (!unary_expression(pchnode))
 			return false;
 
-		/* look for operators following the primary expression */
-		{
-			token_t &t = tok_bufpeek();
-
-			if (t.type == token_type_t::comma) { /* , comma operator */
+		/* This is written differently, because we need it built "inside out" for addition and subtraction
+		 * to be done in the correct order, else subtraction won't work properly i.e. 5-6-3 needs to be
+		 * built as ((5-6)-3) not (5-(6-3)). */
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::plus) { /* + add operator */
 				tok_bufdiscard(); /* eat it */
 
-				/* [,]
+				/* [+]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
 
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::comma;
+				pchnode->op = ast_node_op_t::add;
 				pchnode->child = sav_p;
-				return expression(sav_p->next); /* use recursion */
+				if (!unary_expression(sav_p->next))
+					return false;
 			}
+			else if (tok_bufpeek().type == token_type_t::minus) { /* - subtract operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [-]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::subtract;
+				pchnode->child = sav_p;
+				if (!unary_expression(sav_p->next))
+					return false;
+			}
+			else {
+				break;
+			}
+		}
+
+		return true;
+	}
+
+	bool compiler::expression(ast_node_t* &pchnode) {
+		tok_buf_refill();
+
+		if (!additive_expression(pchnode))
+			return false;
+
+		if (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [,]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::comma;
+			pchnode->child = sav_p;
+			return expression(sav_p->next); /* use recursion */
 		}
 
 		return true;
@@ -930,6 +972,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::binarynot:
 					name = "binarynot";
+					break;
+				case ast_node_op_t::add:
+					name = "add";
+					break;
+				case ast_node_op_t::subtract:
+					name = "subtract";
 					break;
 				default:
 					name = "?";
