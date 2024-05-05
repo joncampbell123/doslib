@@ -275,6 +275,46 @@ namespace CIMCC {
 		struct ast_node_t*		child = NULL;
 		ast_node_op_t			op = ast_node_op_t::none;
 		struct token_t			tv;
+
+		bool unlink_child(void) {
+			if (child) {
+				struct ast_node_t *dm = child;
+				child = child->child;
+				delete dm;
+				return true;
+			}
+			return false;
+		}
+
+		bool unlink_next(void) {
+			if (next) {
+				struct ast_node_t *dm = next;
+				next = next->next;
+				delete dm;
+				return true;
+			}
+
+			return false;
+		}
+
+		void free_children(void) {
+			while (child) {
+				child->free_next();
+				unlink_child();
+			}
+		}
+
+		void free_next(void) {
+			while (next) {
+				next->free_children();
+				unlink_next();
+			}
+		}
+
+		void free_nodes(void) {
+			free_next();
+			free_children();
+		}
 	};
 
 	/////////
@@ -347,6 +387,7 @@ namespace CIMCC {
 
 		void refill(void);
 		bool compile(void);
+		void free_ast(void);
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_prep_number_proc(void);
@@ -576,6 +617,12 @@ namespace CIMCC {
 		}
 
 		return true;
+	}
+
+	void compiler::free_ast(void) {
+		root_node->free_nodes();
+		delete root_node;
+		root_node = NULL;
 	}
 
 	bool compiler::compile(void) {
@@ -935,6 +982,7 @@ int main(int argc,char **argv) {
 
 		cc.compile();
 		dump_ast_nodes(cc.root_node);
+		cc.free_ast();
 
 		/* fdctx destructor closes file descriptor */
 	}
