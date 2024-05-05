@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <string>
 #include <limits>
 #include <new>
 
@@ -315,6 +316,8 @@ namespace CIMCC {
 		assert(pb.sanity_check());
 	}
 
+	void token_to_string(std::string &s,token_t &t);
+
 	bool compiler::compile(void) {
 		token_t tok;
 
@@ -326,6 +329,12 @@ namespace CIMCC {
 		refill();
 		while (!pb.eof()) {
 			gtok(/*&*/tok);
+
+			{
+				std::string s;
+				token_to_string(s,tok);
+				fprintf(stderr,"%s\n",s.c_str());
+			}
 		}
 
 		return true;
@@ -435,6 +444,38 @@ namespace CIMCC {
 		}
 		else {
 			t.type = token_type_t::none;
+		}
+	}
+
+	void token_to_string(std::string &s,token_t &t) {
+		char buf[64];
+
+		switch (t.type) {
+			case token_type_t::eof:
+				s = "<eof>";
+				break;
+			case token_type_t::none:
+				s = "<none>";
+				break;
+			case token_type_t::intval:
+				sprintf(buf,"%llu",t.v.intval.v.u);
+				s = "<intval ";
+				s += buf;
+				sprintf(buf," f=0x%x",(unsigned int)t.v.intval.flags);
+				s += buf;
+				sprintf(buf," t=%u",(unsigned int)t.v.intval.itype);
+				s += buf;
+				s += ">";
+				break;
+			case token_type_t::comma:
+				s = "<comma>";
+				break;
+			case token_type_t::semicolon:
+				s = "<semicolon>";
+				break;
+			default:
+				s = "?";
+				break;
 		}
 	}
 
