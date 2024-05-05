@@ -191,6 +191,8 @@ namespace CIMCC {
 		slash,
 		percent,
 		equal,
+		plusequal,
+		minusequal,
 
 		maxval
 	};
@@ -276,6 +278,8 @@ namespace CIMCC {
 		divide,
 		modulo,
 		assign,
+		assignadd,
+		assignsubtract,
 
 		maxval
 	};
@@ -689,6 +693,32 @@ namespace CIMCC {
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
+		else if (tok_bufpeek().type == token_type_t::plusequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [+=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignadd;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::minusequal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [-=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignsubtract;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
 #undef NLEX
 		return true;
 	}
@@ -959,10 +989,18 @@ namespace CIMCC {
 			case '-':
 				t.type = token_type_t::minus;
 				skipb();
+				if (peekb() == '=') { /* -= */
+					t.type = token_type_t::minusequal;
+					skipb();
+				}
 				break;
 			case '+':
 				t.type = token_type_t::plus;
 				skipb();
+				if (peekb() == '=') { /* += */
+					t.type = token_type_t::plusequal;
+					skipb();
+				}
 				break;
 			case '!':
 				t.type = token_type_t::exclamation;
@@ -1034,6 +1072,12 @@ namespace CIMCC {
 				break;
 			case token_type_t::plus:
 				s = "<plus>";
+				break;
+			case token_type_t::plusequal:
+				s = "<+=>";
+				break;
+			case token_type_t::minusequal:
+				s = "<-=>";
 				break;
 			case token_type_t::exclamation:
 				s = "<!>";
@@ -1109,6 +1153,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assign:
 					name = "assign";
+					break;
+				case ast_node_op_t::assignadd:
+					name = "assignadd";
+					break;
+				case ast_node_op_t::assignsubtract:
+					name = "assignsubtract";
 					break;
 				default:
 					name = "?";
