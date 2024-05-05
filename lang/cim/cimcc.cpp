@@ -190,6 +190,7 @@ namespace CIMCC {
 		star,
 		slash,
 		percent,
+		equal,
 
 		maxval
 	};
@@ -274,6 +275,7 @@ namespace CIMCC {
 		multiply,
 		divide,
 		modulo,
+		assign,
 
 		maxval
 	};
@@ -389,6 +391,7 @@ namespace CIMCC {
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool assignment_expression(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 
@@ -666,8 +669,32 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::expression(ast_node_t* &pchnode) {
+	bool compiler::assignment_expression(ast_node_t* &pchnode) {
 #define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		/* assignment expressions are parsed right to left, therefore something like a = b = c = d
+		 * needs to be handled like a = (b = (c = d)) */
+		if (tok_bufpeek().type == token_type_t::equal) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assign;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+#undef NLEX
+		return true;
+	}
+
+	bool compiler::expression(ast_node_t* &pchnode) {
+#define NLEX assignment_expression
 		tok_buf_refill();
 
 		if (!NLEX(pchnode))
@@ -957,6 +984,10 @@ namespace CIMCC {
 				t.type = token_type_t::percent;
 				skipb();
 				break;
+			case '=':
+				t.type = token_type_t::equal;
+				skipb();
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -1075,6 +1106,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::modulo:
 					name = "modulo";
+					break;
+				case ast_node_op_t::assign:
+					name = "assign";
 					break;
 				default:
 					name = "?";
