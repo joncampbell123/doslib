@@ -240,10 +240,11 @@ namespace CIMCC {
 	enum class token_type_t {
 		eof=-1,
 		none=0,
-		intval=1,
-		floatval=2,
-		comma=3,
-		semicolon
+		intval,
+		floatval,
+		comma,
+		semicolon,
+		minus
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
@@ -506,6 +507,10 @@ namespace CIMCC {
 			t.type = token_type_t::semicolon;
 			skipb();
 		}
+		else if (c == '-') {
+			t.type = token_type_t::minus;
+			skipb();
+		}
 		else {
 			t.type = token_type_t::none;
 			skipb();
@@ -545,6 +550,9 @@ namespace CIMCC {
 				break;
 			case token_type_t::semicolon:
 				s = "<semicolon>";
+				break;
+			case token_type_t::minus:
+				s = "<minus>";
 				break;
 			default:
 				s = "?";
