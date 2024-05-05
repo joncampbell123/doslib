@@ -474,25 +474,28 @@ namespace CIMCC {
 			/* DONE SCANNING. Parse number */
 			if (is_float) {
 				t.type = token_type_t::floatval;
-				t.v.floatval.init();
+				auto &nt = t.v.floatval;
+				nt.init();
 
 				/* strtold() should handle the decimal point and exponent for us */
-				t.v.floatval.val = strtold((char*)start,NULL);
+				nt.val = strtold((char*)start,NULL);
 
-				if (suffix & S_LONG) t.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
-				else if (suffix & S_DOUBLE) t.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-				else if (suffix & S_FLOAT) t.v.floatval.ftype = token_floatval_t::T_FLOAT;
+				if (suffix & S_LONG) nt.ftype = token_floatval_t::T_LONGDOUBLE;
+				else if (suffix & S_DOUBLE) nt.ftype = token_floatval_t::T_DOUBLE;
+				else if (suffix & S_FLOAT) nt.ftype = token_floatval_t::T_FLOAT;
 			}
 			else {
 				t.type = token_type_t::intval;
-				if (suffix & S_UNSIGNED) t.v.intval.initu();
-				else t.v.intval.init();
+				auto &nt = t.v.intval;
+
+				if (suffix & S_UNSIGNED) nt.initu();
+				else nt.init();
 
 				/* strtoull() should work fine */
-				t.v.intval.v.u = strtoull((char*)start,NULL,base);
+				nt.v.u = strtoull((char*)start,NULL,base);
 
-				if (suffix & S_LONGLONG) t.v.intval.itype = token_intval_t::T_LONGLONG;
-				else if (suffix & S_LONG) t.v.intval.itype = token_intval_t::T_LONG;
+				if (suffix & S_LONGLONG) nt.itype = token_intval_t::T_LONGLONG;
+				else if (suffix & S_LONG) nt.itype = token_intval_t::T_LONG;
 			}
 		}
 		else if (c == ',') {
