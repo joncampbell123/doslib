@@ -298,6 +298,7 @@ namespace CIMCC {
 		ternary,
 		logical_or,
 		logical_and,
+		binary_or,
 
 		maxval
 	};
@@ -413,6 +414,7 @@ namespace CIMCC {
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool binary_or_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
@@ -709,9 +711,33 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 10 */
+	bool compiler::binary_or_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (tok_bufpeek().type == token_type_t::pipe) { /* | operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [&&]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::binary_or;
+			pchnode->child = sav_p;
+			if (!NLEX(sav_p->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 11 */
 	bool compiler::logical_and_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX binary_or_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1419,6 +1445,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::logical_and:
 					name = "logical_and";
+					break;
+				case ast_node_op_t::binary_or:
+					name = "binary_or";
 					break;
 				default:
 					name = "?";
