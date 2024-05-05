@@ -187,6 +187,9 @@ namespace CIMCC {
 		plus,
 		exclamation,
 		tilde,
+		star,
+		slash,
+		percent,
 
 		maxval
 	};
@@ -268,6 +271,9 @@ namespace CIMCC {
 		binarynot,
 		add,
 		subtract,
+		multiply,
+		divide,
+		modulo,
 
 		maxval
 	};
@@ -383,6 +389,7 @@ namespace CIMCC {
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 
 		ast_node_t*		root_node = NULL;
@@ -557,8 +564,65 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::additive_expression(ast_node_t* &pchnode) {
+	bool compiler::multiplicative_expression(ast_node_t* &pchnode) {
 #define NLEX unary_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		/* This is written differently, because we need it built "inside out" */
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::star) { /* * add operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [*]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::multiply;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::slash) { /* / subtract operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [/]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::divide;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::percent) { /* % subtract operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [%]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::modulo;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else {
+				break;
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
+	bool compiler::additive_expression(ast_node_t* &pchnode) {
+#define NLEX multiplicative_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -881,6 +945,18 @@ namespace CIMCC {
 				t.type = token_type_t::tilde;
 				skipb();
 				break;
+			case '*':
+				t.type = token_type_t::star;
+				skipb();
+				break;
+			case '/':
+				t.type = token_type_t::slash;
+				skipb();
+				break;
+			case '%':
+				t.type = token_type_t::percent;
+				skipb();
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -934,6 +1010,15 @@ namespace CIMCC {
 			case token_type_t::tilde:
 				s = "<~>";
 				break;
+			case token_type_t::star:
+				s = "<*>";
+				break;
+			case token_type_t::slash:
+				s = "</>";
+				break;
+			case token_type_t::percent:
+				s = "<%>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -981,6 +1066,15 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::subtract:
 					name = "subtract";
+					break;
+				case ast_node_op_t::multiply:
+					name = "multiply";
+					break;
+				case ast_node_op_t::divide:
+					name = "divide";
+					break;
+				case ast_node_op_t::modulo:
+					name = "modulo";
 					break;
 				default:
 					name = "?";
