@@ -193,6 +193,8 @@ namespace CIMCC {
 		equal,
 		plusequal,
 		minusequal,
+		openparen,
+		closeparen,
 
 		maxval
 	};
@@ -505,6 +507,21 @@ namespace CIMCC {
 			pchnode->op = ast_node_op_t::constant;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
+			return true;
+		}
+		else if (t.type == token_type_t::openparen) {
+			tok_bufdiscard();
+			if (!expression(pchnode))
+				return false;
+
+			{
+				token_t &t = tok_bufpeek();
+				if (t.type == token_type_t::closeparen)
+					tok_bufdiscard(); /* eat the EOF or semicolon */
+				else
+					return false;
+			}
+
 			return true;
 		}
 
@@ -1026,6 +1043,14 @@ namespace CIMCC {
 				t.type = token_type_t::equal;
 				skipb();
 				break;
+			case '(':
+				t.type = token_type_t::openparen;
+				skipb();
+				break;
+			case ')':
+				t.type = token_type_t::closeparen;
+				skipb();
+				break;
 			default:
 				t.type = token_type_t::none;
 				skipb();
@@ -1093,6 +1118,12 @@ namespace CIMCC {
 				break;
 			case token_type_t::percent:
 				s = "<%>";
+				break;
+			case token_type_t::openparen:
+				s = "<openparen>";
+				break;
+			case token_type_t::closeparen:
+				s = "<closeparen>";
 				break;
 			default:
 				s = "?";
