@@ -229,8 +229,7 @@ namespace CIMCC {
 		bool compile(void);
 		void whitespace(void);
 		void gtok(token_t &t);
-		void decimal_constant(unsigned long long &v,unsigned char base,char first_char=0);
-		void hexadecimal_constant(unsigned long long &v,char first_char=0);
+		void gtok_prep_number_proc(void);
 
 		private:
 		parse_buffer		pb;
@@ -295,6 +294,11 @@ namespace CIMCC {
 
 		unsigned char				ftype;
 		long double				val;
+
+		void init(void) {
+			ftype = T_UNSPEC;
+			val = std::numeric_limits<long double>::quiet_NaN();
+		}
 	};
 
 	struct token_t {
@@ -348,48 +352,20 @@ namespace CIMCC {
 		} while (1);
 	}
 
-	void compiler::decimal_constant(unsigned long long &v,unsigned char base,char first_char) {
-		const unsigned long long maxval = 0xFFFFFFFFFFFFFFFFULL;
-		const unsigned long long willoverflow = maxval / (unsigned long long)base;
-		char c;
-
-		if (first_char > 0)
-			v = p_decimal_digit(first_char); /* assume first_char is a digit because the caller already checked */
-		else
-			v = 0ull;
-
-		while (is_decimal_digit(c=peekb(),base)) {
-			skipb();
-			if (v <= willoverflow) {
-				v *= (unsigned long long)base;
-				v += p_decimal_digit(c);
-			}
-			else {
-				v = maxval;
-			}
-		}
-	}
-
-	void compiler::hexadecimal_constant(unsigned long long &v,char first_char) {
-		const unsigned long long maxval = 0xFFFFFFFFFFFFFFFFULL;
-		const unsigned long long willoverflow = maxval / 16ull;
-		char c;
-
-		if (first_char > 0)
-			v = p_hexadecimal_digit(first_char); /* assume first_char is a digit because the caller already checked */
-		else
-			v = 0ull;
-
-		while (is_hexadecimal_digit(c=peekb())) {
-			skipb();
-			if (v <= willoverflow) {
-				v *= 16ull;
-				v += p_hexadecimal_digit(c);
-			}
-			else {
-				v = maxval;
-			}
-		}
+	void compiler::gtok_prep_number_proc(void) {
+		/* The buffer is 2048 to 8192 bytes,
+		 * the lazy flush is half that size.
+		 * Flush the buffer and refill to assure
+		 * that the next 1024 bytes are in buffer,
+		 * so we can parse it with char pointers.
+		 * If your numbers are THAT long you probably
+		 * aren't actually writing numbers.
+		 * The only other way that less than 1024
+		 * could be available is if we're reading
+		 * near or at EOF.*/
+		pb.lazy_flush();
+		assert(size_t(pb.fence() - pb.read) >= (pb.buffer_size / 2u)); /* lazy_flush() did it's job? */
+		refill();
 	}
 
 	void compiler::gtok(token_t &t) {
@@ -401,49 +377,135 @@ namespace CIMCC {
 			return;
 		}
 
-		c = getb();
-		if (c == '0') {
-			c = peekb();
-			/* 0nnnn    octal
-			 * 0bnnn    binary
-			 * 0xnnn    hexadecimal
-			 * 0        zero */
-			if (c == 'b' || c == 'B') { /* 0bnnn */
-				skipb(); /* skip 'b' */
-				t.type = token_type_t::intval;
-				t.v.intval.initu();
-				decimal_constant(t.v.intval.v.u, 2);
+		c = peekb();
+		if (is_decimal_digit(c)) {
+			gtok_prep_number_proc();
+			assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
+
+			/* do not flush, do not call getb() or flush() or lazy_flush() in this block */
+			unsigned char *start = pb.read;
+			unsigned char base = 10;
+			unsigned char suffix = 0;
+			bool is_float = false;
+
+			static constexpr unsigned S_LONG=(1u << 0u);
+			static constexpr unsigned S_LONGLONG=(1u << 1u);
+			static constexpr unsigned S_UNSIGNED=(1u << 2u);
+			static constexpr unsigned S_FLOAT=(1u << 3u);
+			static constexpr unsigned S_DOUBLE=(1u << 4u);
+
+			if (pb.read < pb.end && *pb.read == '0') {
+				pb.read++;
+
+				if (pb.read < pb.end) {
+					if (*pb.read == 'x') { /* hexadecimal */
+						pb.read++;
+						base = 16;
+						while (pb.read < pb.end && is_hexadecimal_digit(*pb.read)) pb.read++;
+					}
+					else if (*pb.read == 'b') { /* binary */
+						pb.read++;
+						base = 2;
+						while (pb.read < pb.end && is_decimal_digit(*pb.read,2)) pb.read++;
+					}
+					else if (is_decimal_digit(*pb.read,8)) { /* octal, 2nd digit (do not advance read ptr) */
+						base = 8;
+						while (pb.read < pb.end && is_decimal_digit(*pb.read,8)) pb.read++;
+					}
+					else {
+						/* it's just zero and a different token afterwards */
+					}
+				}
 			}
-			else if (c == 'x' || c == 'X') { /* 0xnnnn */
-				skipb(); /* skip 'x' */
-				t.type = token_type_t::intval;
-				t.v.intval.initu();
-				hexadecimal_constant(t.v.intval.v.u);
+			else { /* decimal */
+				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
 			}
-			else if (is_decimal_digit(c,8)) { /* 0nnnn */
-				t.type = token_type_t::intval;
-				t.v.intval.initu();
-				decimal_constant(t.v.intval.v.u, 8);
+
+			/* it might be a floating point constant if it has a decimal point */
+			if (pb.read < pb.end && *pb.read == '.' && base == 10) {
+				pb.read++;
+
+				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
+				is_float = true;
 			}
-			else { /* 0 */
-				t.type = token_type_t::intval;
-				t.v.intval.initu();
-				t.v.intval.v.u = 0;
+
+			/* it might be a float with exponent field */
+			if (pb.read < pb.end && (*pb.read == 'e' || *pb.read == 'E') && base == 10) {
+				pb.read++;
+
+				/* e4, e-4, e+4 */
+				if (pb.read < pb.end && (*pb.read == '-' || *pb.read == '+')) pb.read++;
+				while (pb.read < pb.end && is_decimal_digit(*pb.read)) pb.read++;
+				is_float = true;
 			}
-		}
-		else if (is_decimal_digit(c)) {
-			t.type = token_type_t::intval;
-			t.v.intval.init();
-			decimal_constant(t.v.intval.v.u, 10, c);
+
+			/* check suffixes */
+			while (1) {
+				if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
+					suffix |= S_LONG;
+					pb.read++;
+
+					if (pb.read < pb.end && (*pb.read == 'l' || *pb.read == 'L')) {
+						suffix |= S_LONGLONG;
+						pb.read++;
+					}
+				}
+				else if (pb.read < pb.end && (*pb.read == 'u' || *pb.read == 'U')) {
+					suffix |= S_UNSIGNED;
+					pb.read++;
+				}
+				else if (pb.read < pb.end && (*pb.read == 'f' || *pb.read == 'F')) {
+					suffix |= S_FLOAT;
+					is_float = true;
+					pb.read++;
+				}
+				else if (pb.read < pb.end && (*pb.read == 'd' || *pb.read == 'D')) {
+					suffix |= S_DOUBLE;
+					is_float = true;
+					pb.read++;
+				}
+				else {
+					break;
+				}
+			}
+
+			assert(start != pb.read);
+
+			/* DONE SCANNING. Parse number */
+			if (is_float) {
+				t.type = token_type_t::floatval;
+				t.v.floatval.init();
+
+				/* strtold() should handle the decimal point and exponent for us */
+				t.v.floatval.val = strtold((char*)start,NULL);
+
+				if (suffix & S_LONG) t.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
+				else if (suffix & S_DOUBLE) t.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+				else if (suffix & S_FLOAT) t.v.floatval.ftype = token_floatval_t::T_FLOAT;
+			}
+			else {
+				t.type = token_type_t::intval;
+				if (suffix & S_UNSIGNED) t.v.intval.initu();
+				else t.v.intval.init();
+
+				/* strtoull() should work fine */
+				t.v.intval.v.u = strtoull((char*)start,NULL,base);
+
+				if (suffix & S_LONGLONG) t.v.intval.itype = token_intval_t::T_LONGLONG;
+				else if (suffix & S_LONG) t.v.intval.itype = token_intval_t::T_LONG;
+			}
 		}
 		else if (c == ',') {
 			t.type = token_type_t::comma;
+			skipb();
 		}
 		else if (c == ';') {
 			t.type = token_type_t::semicolon;
+			skipb();
 		}
 		else {
 			t.type = token_type_t::none;
+			skipb();
 		}
 	}
 
@@ -464,6 +526,14 @@ namespace CIMCC {
 				sprintf(buf," f=0x%x",(unsigned int)t.v.intval.flags);
 				s += buf;
 				sprintf(buf," t=%u",(unsigned int)t.v.intval.itype);
+				s += buf;
+				s += ">";
+				break;
+			case token_type_t::floatval:
+				sprintf(buf,"%0.20f",(double)t.v.floatval.val);
+				s = "<floatval ";
+				s += buf;
+				sprintf(buf," t=%u",(unsigned int)t.v.floatval.ftype);
 				s += buf;
 				s += ">";
 				break;
