@@ -813,36 +813,40 @@ namespace CIMCC {
 		}
 
 		c = peekb();
-		if (is_decimal_digit(c)) {
-			gtok_number(t);
-		}
-		else if (c == ',') {
-			t.type = token_type_t::comma;
-			skipb();
-		}
-		else if (c == ';') {
-			t.type = token_type_t::semicolon;
-			skipb();
-		}
-		else if (c == '-') {
-			t.type = token_type_t::minus;
-			skipb();
-		}
-		else if (c == '+') {
-			t.type = token_type_t::plus;
-			skipb();
-		}
-		else if (c == '!') {
-			t.type = token_type_t::exclamation;
-			skipb();
-		}
-		else if (c == '~') {
-			t.type = token_type_t::tilde;
-			skipb();
-		}
-		else {
-			t.type = token_type_t::none;
-			skipb();
+		switch (c) {
+			case '0': case '1': case '2': case '3':
+			case '4': case '5': case '6': case '7':
+			case '8': case '9':
+				gtok_number(t);
+				break;
+			case ',':
+				t.type = token_type_t::comma;
+				skipb();
+				break;
+			case ';':
+				t.type = token_type_t::semicolon;
+				skipb();
+				break;
+			case '-':
+				t.type = token_type_t::minus;
+				skipb();
+				break;
+			case '+':
+				t.type = token_type_t::plus;
+				skipb();
+				break;
+			case '!':
+				t.type = token_type_t::exclamation;
+				skipb();
+				break;
+			case '~':
+				t.type = token_type_t::tilde;
+				skipb();
+				break;
+			default:
+				t.type = token_type_t::none;
+				skipb();
+				break;
 		}
 	}
 
