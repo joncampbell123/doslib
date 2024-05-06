@@ -215,6 +215,10 @@ namespace CIMCC {
 		lessthan,
 		greaterthanorequal,
 		lessthanorequal,
+		leftleftangle,
+		rightrightangle,
+		leftleftangleequal,
+		rightrightangleequal,
 
 		maxval
 	};
@@ -320,6 +324,10 @@ namespace CIMCC {
 		greaterthan,
 		lessthanorequal,
 		greaterthanorequal,
+		leftshift,
+		rightshift,
+		assignleftshift,
+		assignrightshift,
 
 		maxval
 	};
@@ -433,6 +441,7 @@ namespace CIMCC {
 		void gtok_prep_number_proc(void);
 		bool expression(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
+		bool shift_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
@@ -736,9 +745,52 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 5 */
+	bool compiler::shift_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::leftleftangle) { /* << operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [<<]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::leftshift;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::rightrightangle) { /* >> operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [>>]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::rightshift;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else {
+				break;
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 6 */
 	bool compiler::relational_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX shift_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1130,6 +1182,32 @@ namespace CIMCC {
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
+		else if (tok_bufpeek().type == token_type_t::leftleftangleequal) { /* <<= operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [<<=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignleftshift;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
+		else if (tok_bufpeek().type == token_type_t::rightrightangleequal) { /* >>= operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [>>=]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::assignrightshift;
+			pchnode->child = sav_p;
+			return assignment_expression(sav_p->next);
+		}
 #undef NLEX
 		return true;
 	}
@@ -1459,17 +1537,33 @@ namespace CIMCC {
 			case '<':
 				t.type = token_type_t::lessthan;
 				skipb();
-				if (peekb() == '=') { /* == */
+				if (peekb() == '=') { /* <= */
 					t.type = token_type_t::lessthanorequal;
 					skipb();
+				}
+				else if (peekb() == '<') { /* << */
+					t.type = token_type_t::leftleftangle;
+					skipb();
+					if (peekb() == '=') { /* <<= */
+						t.type = token_type_t::leftleftangleequal;
+						skipb();
+					}
 				}
 				break;
 			case '>':
 				t.type = token_type_t::greaterthan;
 				skipb();
-				if (peekb() == '=') { /* == */
+				if (peekb() == '=') { /* >= */
 					t.type = token_type_t::greaterthanorequal;
 					skipb();
+				}
+				else if (peekb() == '>') { /* >> */
+					t.type = token_type_t::rightrightangle;
+					skipb();
+					if (peekb() == '=') { /* >>= */
+						t.type = token_type_t::rightrightangleequal;
+						skipb();
+					}
 				}
 				break;
 			case '(':
@@ -1658,6 +1752,18 @@ namespace CIMCC {
 			case token_type_t::lessthanorequal:
 				s = "<lteq>";
 				break;
+			case token_type_t::leftleftangle:
+				s = "<llab>";
+				break;
+			case token_type_t::rightrightangle:
+				s = "<rrab>";
+				break;
+			case token_type_t::leftleftangleequal:
+				s = "<llabequ>";
+				break;
+			case token_type_t::rightrightangleequal:
+				s = "<rrabequ>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1777,6 +1883,18 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::greaterthanorequal:
 					name = "greaterthanorequal";
+					break;
+				case ast_node_op_t::leftshift:
+					name = "llshift";
+					break;
+				case ast_node_op_t::rightshift:
+					name = "rrshift";
+					break;
+				case ast_node_op_t::assignleftshift:
+					name = "assignllshift";
+					break;
+				case ast_node_op_t::assignrightshift:
+					name = "assignrrshift";
 					break;
 				default:
 					name = "?";
