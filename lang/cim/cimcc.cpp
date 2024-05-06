@@ -344,6 +344,7 @@ namespace CIMCC {
 		structptraccess,
 		arraysubscript,
 		subexpression,
+		functioncall,
 
 		maxval
 	};
@@ -470,6 +471,7 @@ namespace CIMCC {
 		bool assignment_expression(ast_node_t* &pchnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
+		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 
@@ -605,6 +607,29 @@ namespace CIMCC {
 		return false;
 	}
 
+	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
+#define NLEX assignment_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+			tok_bufdiscard(); /* eat it */
+
+			/* [,]
+			 *  \
+			 *   +-- [left expr] -> [right expr] */
+
+			ast_node_t *sav_p = pchnode;
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::comma;
+			pchnode->child = sav_p;
+			if (!NLEX(sav_p->next))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	bool compiler::postfix_expression(ast_node_t* &pchnode) {
 #define NLEX primary_expression
@@ -682,6 +707,31 @@ namespace CIMCC {
 				{
 					token_t &t = tok_bufpeek();
 					if (t.type == token_type_t::rightsquarebracket)
+						tok_bufdiscard(); /* eat it */
+					else
+						return false;
+				}
+			}
+			else if (tok_bufpeek().type == token_type_t::openparen) { /* (expr) function call */
+				tok_bufdiscard(); /* eat it */
+
+				/* [functioncall]
+				 *  \
+				 *   +-- [left expr] -> [argument expression list] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::functioncall;
+				pchnode->child = sav_p;
+
+				if (tok_bufpeek().type != token_type_t::closeparen) {
+					if (!argument_expression_list(sav_p->next))
+						return false;
+				}
+
+				{
+					token_t &t = tok_bufpeek();
+					if (t.type == token_type_t::closeparen)
 						tok_bufdiscard(); /* eat it */
 					else
 						return false;
@@ -2125,6 +2175,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::subexpression:
 					name = "subexpression";
+					break;
+				case ast_node_op_t::functioncall:
+					name = "functioncall";
 					break;
 				default:
 					name = "?";
