@@ -343,6 +343,7 @@ namespace CIMCC {
 		structaccess,
 		structptraccess,
 		arraysubscript,
+		subexpression,
 
 		maxval
 	};
@@ -579,8 +580,15 @@ namespace CIMCC {
 			return true;
 		}
 		else if (t.type == token_type_t::openparen) {
-			tok_bufdiscard();
-			if (!expression(pchnode))
+			tok_bufdiscard(); /* eat it */
+
+			/* [subexpression]
+			 *  \
+			 *   +-- [expression] */
+
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::subexpression;
+			if (!expression(pchnode->child))
 				return false;
 
 			{
@@ -640,7 +648,7 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::structaccess;
 				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
+				if (!NLEX(sav_p->next)) // TODO: should be IDENTIFIER only
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::pointerarrow) { /* -> member */
@@ -654,7 +662,7 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::structptraccess;
 				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
+				if (!NLEX(sav_p->next)) // TODO: should be IDENTIFIER only
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::leftsquarebracket) { /* [expr] array subscript */
@@ -2114,6 +2122,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::arraysubscript:
 					name = "arraysubscript";
+					break;
+				case ast_node_op_t::subexpression:
+					name = "subexpression";
 					break;
 				default:
 					name = "?";
