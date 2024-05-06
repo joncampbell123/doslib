@@ -334,6 +334,8 @@ namespace CIMCC {
 		predecrement,
 		dereference,
 		addressof,
+		postincrement,
+		postdecrement,
 
 		maxval
 	};
@@ -448,6 +450,7 @@ namespace CIMCC {
 		bool expression(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
+		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
@@ -587,9 +590,49 @@ namespace CIMCC {
 		return false;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
+	bool compiler::postfix_expression(ast_node_t* &pchnode) {
+#define NLEX primary_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		/* This is written differently, because we need it built "inside out" */
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::plusplus) { /* ++ */
+				tok_bufdiscard(); /* eat it */
+
+				/* [++]
+				 *  \
+				 *   +-- [expression] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::postincrement;
+				pchnode->child = sav_p;
+			}
+			else if (tok_bufpeek().type == token_type_t::minusminus) { /* -- */
+				tok_bufdiscard(); /* eat it */
+
+				/* [--]
+				 *  \
+				 *   +-- [expression] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::postdecrement;
+				pchnode->child = sav_p;
+			}
+			else {
+				break;
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
 	bool compiler::unary_expression(ast_node_t* &pchnode) {
-#define NLEX primary_expression
+#define NLEX postfix_expression
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		{
 			token_t &t = tok_bufpeek();
@@ -699,7 +742,7 @@ namespace CIMCC {
 
 		/* This is written differently, because we need it built "inside out" */
 		while (1) {
-			if (tok_bufpeek().type == token_type_t::star) { /* * add operator */
+			if (tok_bufpeek().type == token_type_t::star) { /* * operator */
 				tok_bufdiscard(); /* eat it */
 
 				/* [*]
@@ -713,7 +756,7 @@ namespace CIMCC {
 				if (!NLEX(sav_p->next))
 					return false;
 			}
-			else if (tok_bufpeek().type == token_type_t::slash) { /* / subtract operator */
+			else if (tok_bufpeek().type == token_type_t::slash) { /* / operator */
 				tok_bufdiscard(); /* eat it */
 
 				/* [/]
@@ -727,7 +770,7 @@ namespace CIMCC {
 				if (!NLEX(sav_p->next))
 					return false;
 			}
-			else if (tok_bufpeek().type == token_type_t::percent) { /* % subtract operator */
+			else if (tok_bufpeek().type == token_type_t::percent) { /* % operator */
 				tok_bufdiscard(); /* eat it */
 
 				/* [%]
@@ -759,7 +802,7 @@ namespace CIMCC {
 		 * to be done in the correct order, else subtraction won't work properly i.e. 5-6-3 needs to be
 		 * built as ((5-6)-3) not (5-(6-3)). */
 		while (1) {
-			if (tok_bufpeek().type == token_type_t::plus) { /* + add operator */
+			if (tok_bufpeek().type == token_type_t::plus) { /* + operator */
 				tok_bufdiscard(); /* eat it */
 
 				/* [+]
@@ -773,7 +816,7 @@ namespace CIMCC {
 				if (!NLEX(sav_p->next))
 					return false;
 			}
-			else if (tok_bufpeek().type == token_type_t::minus) { /* - subtract operator */
+			else if (tok_bufpeek().type == token_type_t::minus) { /* - operator */
 				tok_bufdiscard(); /* eat it */
 
 				/* [-]
@@ -1959,6 +2002,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assignrightshift:
 					name = "assignrrshift";
+					break;
+				case ast_node_op_t::postdecrement:
+					name = "decrement--";
+					break;
+				case ast_node_op_t::postincrement:
+					name = "decrement++";
 					break;
 				case ast_node_op_t::predecrement:
 					name = "--decrement";
