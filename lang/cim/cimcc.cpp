@@ -209,6 +209,8 @@ namespace CIMCC {
 		ampersandequal,
 		caretequal,
 		pipeequal,
+		equalequal,
+		exclamationequal,
 
 		maxval
 	};
@@ -308,6 +310,8 @@ namespace CIMCC {
 		binary_or,
 		binary_xor,
 		binary_and,
+		equals,
+		notequals,
 
 		maxval
 	};
@@ -423,6 +427,7 @@ namespace CIMCC {
 		bool unary_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool equality_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
 		bool binary_xor_expression(ast_node_t* &pchnode);
 		bool binary_and_expression(ast_node_t* &pchnode);
@@ -722,9 +727,52 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 7 */
+	bool compiler::equality_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::equalequal) { /* == operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [==]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::equals;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::exclamationequal) { /* != operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [!=]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::notequals;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else {
+				break;
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 8 */
 	bool compiler::binary_and_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX equality_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1287,6 +1335,10 @@ namespace CIMCC {
 			case '!':
 				t.type = token_type_t::exclamation;
 				skipb();
+				if (peekb() == '=') { /* != */
+					t.type = token_type_t::exclamationequal;
+					skipb();
+				}
 				break;
 			case '~':
 				t.type = token_type_t::tilde;
@@ -1319,6 +1371,10 @@ namespace CIMCC {
 			case '=':
 				t.type = token_type_t::equal;
 				skipb();
+				if (peekb() == '=') { /* == */
+					t.type = token_type_t::equalequal;
+					skipb();
+				}
 				break;
 			case '(':
 				t.type = token_type_t::openparen;
@@ -1488,6 +1544,12 @@ namespace CIMCC {
 			case token_type_t::caret:
 				s = "<^>";
 				break;
+			case token_type_t::equalequal:
+				s = "<==>";
+				break;
+			case token_type_t::exclamationequal:
+				s = "<!=>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1589,6 +1651,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::binary_and:
 					name = "binary_and";
+					break;
+				case ast_node_op_t::equals:
+					name = "equals";
+					break;
+				case ast_node_op_t::notequals:
+					name = "notequals";
 					break;
 				default:
 					name = "?";
