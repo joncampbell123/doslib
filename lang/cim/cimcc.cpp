@@ -219,6 +219,8 @@ namespace CIMCC {
 		rightrightangle,
 		leftleftangleequal,
 		rightrightangleequal,
+		plusplus,
+		minusminus,
 
 		maxval
 	};
@@ -328,6 +330,8 @@ namespace CIMCC {
 		rightshift,
 		assignleftshift,
 		assignrightshift,
+		preincrement,
+		predecrement,
 
 		maxval
 	};
@@ -589,6 +593,28 @@ namespace CIMCC {
 			token_t &t = tok_bufpeek();
 
 			switch (t.type) {
+				case token_type_t::minusminus:
+					tok_bufdiscard(); /* eat it */
+
+					/* [--]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::predecrement;
+					return unary_expression(pchnode->child);
+
+				case token_type_t::plusplus:
+					tok_bufdiscard(); /* eat it */
+
+					/* [++]
+					 *  \
+					 *   +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::preincrement;
+					return unary_expression(pchnode->child);
+
 				case token_type_t::minus:
 					tok_bufdiscard(); /* eat it */
 
@@ -1481,12 +1507,20 @@ namespace CIMCC {
 					t.type = token_type_t::minusequal;
 					skipb();
 				}
+				else if (peekb() == '-') { /* -- */
+					t.type = token_type_t::minusminus;
+					skipb();
+				}
 				break;
 			case '+':
 				t.type = token_type_t::plus;
 				skipb();
 				if (peekb() == '=') { /* += */
 					t.type = token_type_t::plusequal;
+					skipb();
+				}
+				else if (peekb() == '+') { /* ++ */
+					t.type = token_type_t::plusplus;
 					skipb();
 				}
 				break;
@@ -1764,6 +1798,12 @@ namespace CIMCC {
 			case token_type_t::rightrightangleequal:
 				s = "<rrabequ>";
 				break;
+			case token_type_t::plusplus:
+				s = "<++>";
+				break;
+			case token_type_t::minusminus:
+				s = "<-->";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1895,6 +1935,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::assignrightshift:
 					name = "assignrrshift";
+					break;
+				case ast_node_op_t::predecrement:
+					name = "--decrement";
+					break;
+				case ast_node_op_t::preincrement:
+					name = "++decrement";
 					break;
 				default:
 					name = "?";
