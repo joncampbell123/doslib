@@ -609,6 +609,9 @@ namespace CIMCC {
 	}
 
 	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
+		/* [argument] -> [argument] -> ...
+		 *  \             \
+		 *   +--- [expr]   +--- [expr] */
 #define NLEX assignment_expression
 		pchnode = new ast_node_t;
 		pchnode->op = ast_node_op_t::argument;
@@ -618,10 +621,6 @@ namespace CIMCC {
 		ast_node_t *nb = pchnode;
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
-
-			/* [argument]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
 
 			nb->next = new ast_node_t; nb = nb->next;
 			nb->op = ast_node_op_t::argument;
@@ -719,7 +718,7 @@ namespace CIMCC {
 
 				/* [functioncall]
 				 *  \
-				 *   +-- [left expr] -> [argument expression list] */
+				 *   +-- [left expr] -> [argument] -> [argument] -> [argument] ... */
 
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
