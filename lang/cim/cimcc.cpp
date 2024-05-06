@@ -223,6 +223,8 @@ namespace CIMCC {
 		minusminus,
 		period,
 		pointerarrow,
+		leftsquarebracket,
+		rightsquarebracket,
 
 		maxval
 	};
@@ -340,6 +342,7 @@ namespace CIMCC {
 		postdecrement,
 		structaccess,
 		structptraccess,
+		arraysubscript,
 
 		maxval
 	};
@@ -653,6 +656,28 @@ namespace CIMCC {
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::leftsquarebracket) { /* [expr] array subscript */
+				tok_bufdiscard(); /* eat it */
+
+				/* [arraysubscript]
+				 *  \
+				 *   +-- [left expr] -> [subscript expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::arraysubscript;
+				pchnode->child = sav_p;
+				if (!expression(sav_p->next))
+					return false;
+
+				{
+					token_t &t = tok_bufpeek();
+					if (t.type == token_type_t::rightsquarebracket)
+						tok_bufdiscard(); /* eat it */
+					else
+						return false;
+				}
 			}
 			else {
 				break;
@@ -1675,6 +1700,14 @@ namespace CIMCC {
 					skipb();
 				}
 				break;
+			case '[':
+				t.type = token_type_t::leftsquarebracket;
+				skipb();
+				break;
+			case ']':
+				t.type = token_type_t::rightsquarebracket;
+				skipb();
+				break;
 			case '<':
 				t.type = token_type_t::lessthan;
 				skipb();
@@ -1917,6 +1950,12 @@ namespace CIMCC {
 			case token_type_t::pointerarrow:
 				s = "< ptr-> >";
 				break;
+			case token_type_t::leftsquarebracket:
+				s = "<lsqrbrkt>";
+				break;
+			case token_type_t::rightsquarebracket:
+				s = "<rsqrbrkt>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -2072,6 +2111,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::structptraccess:
 					name = "structptraccess";
+					break;
+				case ast_node_op_t::arraysubscript:
+					name = "arraysubscript";
 					break;
 				default:
 					name = "?";
