@@ -345,6 +345,7 @@ namespace CIMCC {
 		arraysubscript,
 		subexpression,
 		functioncall,
+		argument,
 
 		maxval
 	};
@@ -609,21 +610,22 @@ namespace CIMCC {
 
 	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
 #define NLEX assignment_expression
-		if (!NLEX(pchnode))
+		pchnode = new ast_node_t;
+		pchnode->op = ast_node_op_t::argument;
+		if (!NLEX(pchnode->child))
 			return false;
 
+		ast_node_t *nb = pchnode;
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			/* [,]
+			/* [argument]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
 
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::comma;
-			pchnode->child = sav_p;
-			if (!NLEX(sav_p->next))
+			nb->next = new ast_node_t; nb = nb->next;
+			nb->op = ast_node_op_t::argument;
+			if (!NLEX(nb->child))
 				return false;
 		}
 #undef NLEX
@@ -2178,6 +2180,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::functioncall:
 					name = "functioncall";
+					break;
+				case ast_node_op_t::argument:
+					name = "argument";
 					break;
 				default:
 					name = "?";
