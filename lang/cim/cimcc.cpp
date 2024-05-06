@@ -221,6 +221,8 @@ namespace CIMCC {
 		rightrightangleequal,
 		plusplus,
 		minusminus,
+		period,
+		pointerarrow,
 
 		maxval
 	};
@@ -336,6 +338,8 @@ namespace CIMCC {
 		addressof,
 		postincrement,
 		postdecrement,
+		structaccess,
+		structptraccess,
 
 		maxval
 	};
@@ -621,6 +625,34 @@ namespace CIMCC {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::postdecrement;
 				pchnode->child = sav_p;
+			}
+			else if (tok_bufpeek().type == token_type_t::period) { /* . member */
+				tok_bufdiscard(); /* eat it */
+
+				/* [.]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::structaccess;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::pointerarrow) { /* -> member */
+				tok_bufdiscard(); /* eat it */
+
+				/* [->]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::structptraccess;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
 			}
 			else {
 				break;
@@ -1559,6 +1591,10 @@ namespace CIMCC {
 			case '8': case '9':
 				gtok_number(t);
 				break;
+			case '.':
+				t.type = token_type_t::period;
+				skipb();
+				break;
 			case ',':
 				t.type = token_type_t::comma;
 				skipb();
@@ -1576,6 +1612,10 @@ namespace CIMCC {
 				}
 				else if (peekb() == '-') { /* -- */
 					t.type = token_type_t::minusminus;
+					skipb();
+				}
+				else if (peekb() == '>') { /* -> */
+					t.type = token_type_t::pointerarrow;
 					skipb();
 				}
 				break;
@@ -1871,6 +1911,12 @@ namespace CIMCC {
 			case token_type_t::minusminus:
 				s = "<-->";
 				break;
+			case token_type_t::period:
+				s = "<.>";
+				break;
+			case token_type_t::pointerarrow:
+				s = "< ptr-> >";
+				break;
 			default:
 				s = "?";
 				break;
@@ -2020,6 +2066,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::addressof:
 					name = "addrof";
+					break;
+				case ast_node_op_t::structaccess:
+					name = "structaccess";
+					break;
+				case ast_node_op_t::structptraccess:
+					name = "structptraccess";
 					break;
 				default:
 					name = "?";
