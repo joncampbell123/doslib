@@ -211,6 +211,10 @@ namespace CIMCC {
 		pipeequal,
 		equalequal,
 		exclamationequal,
+		greaterthan,
+		lessthan,
+		greaterthanorequal,
+		lessthanorequal,
 
 		maxval
 	};
@@ -312,6 +316,10 @@ namespace CIMCC {
 		binary_and,
 		equals,
 		notequals,
+		lessthan,
+		greaterthan,
+		lessthanorequal,
+		greaterthanorequal,
 
 		maxval
 	};
@@ -429,6 +437,7 @@ namespace CIMCC {
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
+		bool relational_expression(ast_node_t* &pchnode);
 		bool binary_xor_expression(ast_node_t* &pchnode);
 		bool binary_and_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
@@ -727,9 +736,80 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 6 */
+	bool compiler::relational_expression(ast_node_t* &pchnode) {
+#define NLEX additive_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		while (1) {
+			if (tok_bufpeek().type == token_type_t::lessthan) { /* < operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [<]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::lessthan;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::greaterthan) { /* > operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [>]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::greaterthan;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::lessthanorequal) { /* <= operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [>]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::lessthanorequal;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::greaterthanorequal) { /* >= operator */
+				tok_bufdiscard(); /* eat it */
+
+				/* [>]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::greaterthanorequal;
+				pchnode->child = sav_p;
+				if (!NLEX(sav_p->next))
+					return false;
+			}
+			else {
+				break;
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 7 */
 	bool compiler::equality_expression(ast_node_t* &pchnode) {
-#define NLEX additive_expression
+#define NLEX relational_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -1376,6 +1456,22 @@ namespace CIMCC {
 					skipb();
 				}
 				break;
+			case '<':
+				t.type = token_type_t::lessthan;
+				skipb();
+				if (peekb() == '=') { /* == */
+					t.type = token_type_t::lessthanorequal;
+					skipb();
+				}
+				break;
+			case '>':
+				t.type = token_type_t::greaterthan;
+				skipb();
+				if (peekb() == '=') { /* == */
+					t.type = token_type_t::greaterthanorequal;
+					skipb();
+				}
+				break;
 			case '(':
 				t.type = token_type_t::openparen;
 				skipb();
@@ -1550,6 +1646,18 @@ namespace CIMCC {
 			case token_type_t::exclamationequal:
 				s = "<!=>";
 				break;
+			case token_type_t::greaterthan:
+				s = "<gt>";
+				break;
+			case token_type_t::lessthan:
+				s = "<lt>";
+				break;
+			case token_type_t::greaterthanorequal:
+				s = "<gteq>";
+				break;
+			case token_type_t::lessthanorequal:
+				s = "<lteq>";
+				break;
 			default:
 				s = "?";
 				break;
@@ -1657,6 +1765,18 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::notequals:
 					name = "notequals";
+					break;
+				case ast_node_op_t::lessthan:
+					name = "lessthan";
+					break;
+				case ast_node_op_t::greaterthan:
+					name = "greaterthan";
+					break;
+				case ast_node_op_t::lessthanorequal:
+					name = "lessthanorequal";
+					break;
+				case ast_node_op_t::greaterthanorequal:
+					name = "greaterthanorequal";
 					break;
 				default:
 					name = "?";
