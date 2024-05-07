@@ -44,6 +44,14 @@ namespace CIMCC {
 		return (c == ' ' || c == '\t' || c == '\n');
 	}
 
+	bool is_identifier_first_char(const char c) {
+		return (c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+	}
+
+	bool is_identifier_char(const char c) {
+		return (c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'));
+	}
+
 	/////////
 
 	struct token_t;
@@ -225,6 +233,7 @@ namespace CIMCC {
 		pointerarrow,
 		leftsquarebracket,
 		rightsquarebracket,
+		identifier,
 
 		maxval
 	};
@@ -284,20 +293,69 @@ namespace CIMCC {
 		}
 	};
 
+	/* do not define constructor or destructor because this will be used in a union */
+	struct token_identifier_t {
+		char*					name;
+		size_t					length;
+
+		void init(void) {
+			name = NULL;
+			length = 0;
+		}
+
+		void on_post_move(void) {
+			/* this struct has already been copied, this is the old copy, clear pointers to prevent double free() */
+			name = NULL;
+			length = 0;
+		}
+
+		void on_delete(void) {
+			length = 0;
+			if (name) delete[] name;
+			name = NULL;
+		}
+	};
+
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 
 		union token_value_t {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
+			token_identifier_t	identifier;	// type == identifier
 		} v;
 
 		token_t() { }
-		~token_t() { }
+		~token_t() { common_delete(); }
 		token_t(const token_t &x) = delete;
 		token_t &operator=(const token_t &x) = delete;
-		token_t(token_t &&x) = default;
-		token_t &operator=(token_t &&x) = default;
+		token_t(token_t &&x) { common_move(x); }
+		token_t &operator=(token_t &&x) { common_move(x); return *this; }
+
+		private:
+
+		void common_delete(void) {
+			switch (type) {
+				case token_type_t::identifier:
+					v.identifier.on_delete();
+					break;
+				default:
+					break;
+			}
+		}
+
+		void common_move(token_t &x) {
+			type = x.type;
+			v = x.v;
+
+			switch (type) {
+				case token_type_t::identifier:
+					x.v.identifier.on_post_move();
+					break;
+				default:
+					break;
+			}
+		}
 	};
 
 	/////////
@@ -353,6 +411,7 @@ namespace CIMCC {
 		subexpression,
 		functioncall,
 		argument,
+		identifier,
 
 		maxval
 	};
@@ -463,6 +522,7 @@ namespace CIMCC {
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_number(token_t &t);
+		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		bool expression(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
@@ -585,6 +645,14 @@ namespace CIMCC {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+			return true;
+		}
+		else if (t.type == token_type_t::identifier) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::identifier;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 			return true;
@@ -1529,6 +1597,25 @@ namespace CIMCC {
 		} while (1);
 	}
 
+	void compiler::gtok_identifier(token_t &t) {
+		gtok_prep_number_proc();
+		assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
+
+		/* do not flush, do not call getb() or flush() or lazy_flush() in this block */
+		unsigned char *start = pb.read;
+
+		while (pb.read < pb.end && is_identifier_char(*(pb.read))) pb.read++;
+
+		assert(start != pb.read);
+
+		t.type = token_type_t::identifier;
+		t.v.identifier.length = size_t(pb.read - start);
+		assert(t.v.identifier.length != 0);
+		t.v.identifier.name = new char[t.v.identifier.length+1]; /* string + NUL */
+		memcpy(t.v.identifier.name,start,t.v.identifier.length);
+		t.v.identifier.name[t.v.identifier.length] = 0;
+	}
+
 	void compiler::gtok_number(token_t &t) {
 		gtok_prep_number_proc();
 		assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
@@ -1859,8 +1946,13 @@ namespace CIMCC {
 				}
 				break;
 			default:
-				t.type = token_type_t::none;
-				skipb();
+				if (is_identifier_first_char(c)) {
+					gtok_identifier(t);
+				}
+				else {
+					t.type = token_type_t::none;
+					skipb();
+				}
 				break;
 		}
 	}
@@ -2022,6 +2114,13 @@ namespace CIMCC {
 			case token_type_t::rightsquarebracket:
 				s = "<rsqrbrkt>";
 				break;
+			case token_type_t::identifier:
+				/* NTS: Everything is an identifier. The code handling the AST tree must make
+				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
+				s = "<identifier: \"";
+				if (t.v.identifier.name) s += std::string(t.v.identifier.name,t.v.identifier.length);
+				s += "\">";
+				break;
 			default:
 				s = "?";
 				break;
@@ -2033,9 +2132,11 @@ namespace CIMCC {
 		std::string indent;
 
 		for (size_t i=0;i < depth;i++)
-			indent += "  ";
+			indent += "..";
 
-		fprintf(stderr,"AST TREE: ");
+		if (depth == 0)
+			fprintf(stderr,"AST TREE:\n");
+
 		for (;parent;parent=parent->next) {
 			const char *name;
 
@@ -2190,13 +2291,16 @@ namespace CIMCC {
 				case ast_node_op_t::argument:
 					name = "argument";
 					break;
+				case ast_node_op_t::identifier:
+					name = "identifier";
+					break;
 				default:
 					name = "?";
 					break;
 			};
 
 			token_to_string(s,parent->tv);
-			fprintf(stderr,"  %s%s: %s\n",indent.c_str(),name,s.c_str());
+			fprintf(stderr,"..%s%s: %s\n",indent.c_str(),name,s.c_str());
 			dump_ast_nodes(parent->child,depth+1u);
 		}
 	}
