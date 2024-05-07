@@ -38,5 +38,5 @@ identifier; _identifier; _id123; _id1 + _id2 * _idmult1; a = 5; b = (a * 5) + a;
 'a', 'b', '0', '\\', '\n', '\r', '\t', '\b', '\a', '\0', '\000', '\1', '\377', '\x01', '\xAA', '\xff';
 'abcd', '\0\0\0\0', '\x10\x20\x30\x40\x50', 'this is a really long char constant';
 L'w'; u'w'; U'w'; u8'w'; L'wah!'; u'unicode'; U'Unicode too!';
-L'Unicode → and ➤ string!'; u'Boxed ■■■ in'; U'Boxed ■■■ in'; U'Emoji too 😀😄😁';
+L'Unicode → and ➤ string!'; u'Boxed ■■■ in'; U'Boxed ■■■ in'; U'Emoji too 😀😄😁'; u'Emoji too 😀😄😁';
 

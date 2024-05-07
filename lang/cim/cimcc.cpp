@@ -1700,8 +1700,20 @@ namespace CIMCC {
 				}
 
 				c = getb_with_escape(strtype);
-				if (c < 0 || c > 0xFFFFu) break;
-				tmp.push_back((uint16_t)c);
+				if (c < 0) break;
+
+				if (c >= 0x110000u) {
+					break;
+				}
+				else if (c >= 0x10000u) {
+					/* surrogate encoding */
+					c -= 0x10000u;
+					tmp.push_back((uint16_t)(0xD800u + (c >> 10u)));
+					tmp.push_back((uint16_t)(0xDC00u + (c & 0x3FFu)));
+				}
+				else {
+					tmp.push_back((uint16_t)c);
+				}
 			}
 
 			t.type = token_type_t::characterliteral;
