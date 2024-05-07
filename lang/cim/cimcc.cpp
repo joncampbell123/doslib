@@ -1731,6 +1731,8 @@ namespace CIMCC {
 				case 't': skipb(); return 0x09;
 				case 'v': skipb(); return 0x0B;
 				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': return getb_octal(3);
+				case 'u': skipb(); return getb_hex(4);
+				case 'U': skipb(); return getb_hex(8);
 				case 'x':
 					skipb();
 					switch (typ) {
