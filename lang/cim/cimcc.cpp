@@ -1766,8 +1766,50 @@ namespace CIMCC {
 				}
 
 				c = getb_with_escape(strtype);
-				if (c < 0 || c > 0xFFu) break;
-				tmp.push_back((uint8_t)c);
+				if (c < 0) break;
+
+				if (strtype == token_charstrliteral_t::strtype_t::T_UTF8) {
+					if (c >= 0x80000000u) {
+						break;
+					}
+					else if (c >= 0x4000000u) {
+						tmp.push_back((uint8_t)(((c >> 30u) & 0x01u) + 0xFC));
+						tmp.push_back((uint8_t)(((c >> 24u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+					}
+					else if (c >= 0x200000u) {
+						tmp.push_back((uint8_t)(((c >> 24u) & 0x03u) + 0xF8));
+						tmp.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+					}
+					else if (c >= 0x10000u) {
+						tmp.push_back((uint8_t)(((c >> 18u) & 0x07u) + 0xF0));
+						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+					}
+					else if (c >= 0x800u) {
+						tmp.push_back((uint8_t)(((c >> 12u) & 0x0Fu) + 0xE0));
+						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+					}
+					else if (c >= 0x80u) {
+						tmp.push_back((uint8_t)(((c >>  6u) & 0x1Fu) + 0xC0));
+						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+					}
+					else {
+						tmp.push_back((uint8_t)c);
+					}
+				}
+				else {
+					if (c > 0xFFu) break;
+					tmp.push_back((uint8_t)c);
+				}
 			}
 
 			t.type = token_type_t::characterliteral;
