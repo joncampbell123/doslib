@@ -559,6 +559,43 @@ namespace CIMCC {
 			return r;
 		}
 
+		uint32_t getb_utf8(void) {
+			uint32_t ub = (uint32_t)((unsigned char)getb());
+
+			if (ub >= 0xFE) {
+				return 0; // invalid
+			}
+			else if (ub >= 0xC0) {
+				/* (2) 110xxxxx 10xxxxxx */
+				/* (3) 1110xxxx 10xxxxxx 10xxxxxx */
+				/* (4) 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+				/* (5) 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
+				/* (6) 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
+				unsigned char c;
+				size_t len = 2;
+				{
+					uint8_t tmp = (uint8_t)ub;
+					while (tmp >= 0xE0u) { len++; tmp = (tmp << 1u) & 0xFFu; } /* 8-bit shift out top bits until value is 110xxxxxx to determine length */
+				}
+
+				ub &= (1u << (7u - len)) - 1u;
+				len--;
+
+				while (len > 0 && ((c=peekb()) & 0xC0) == 0x80) { /* 10xxxxxx */
+					ub = (ub << 6u) + (c & 0x3Fu);
+					skipb();
+					len--;
+				}
+
+				if (len > 0) return 0; // incomplete
+			}
+			else if (ub >= 0x80) {
+				return 0; // we're in the middle of a char
+			}
+
+			return ub;
+		}
+
 		void refill(void);
 		bool compile(void);
 		void free_ast(void);
@@ -1840,6 +1877,10 @@ namespace CIMCC {
 				default: return -1ll;
 			}
 		}
+
+		/* if the type is any kind of unicode (not byte), then read the char as UTF-8 and return the full code */
+		if (typ > token_charstrliteral_t::strtype_t::T_BYTE)
+			return getb_utf8();
 
 		/* unescaped */
 		return getb();
