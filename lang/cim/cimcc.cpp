@@ -326,7 +326,7 @@ namespace CIMCC {
 			T_UTF8,
 			T_UTF16,
 			T_UTF32,
-			T_WIDE
+			T_WIDE /* this is only used internally, never in an ast node */
 		};
 
 		void*					data;
