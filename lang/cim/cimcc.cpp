@@ -458,6 +458,7 @@ namespace CIMCC {
 		functioncall,
 		argument,
 		identifier,
+		strcat,
 
 		maxval
 	};
@@ -729,12 +730,35 @@ namespace CIMCC {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
 
-		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral || t.type == token_type_t::stringliteral) {
+		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
+			return true;
+		}
+		else if (t.type == token_type_t::stringliteral) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::constant;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			/* build the AST notes to ensure the string is concatenated left to right, i.e.
+			 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
+			 * strcat(strcat(strcat("c" "d") "b") "a") */
+			while (tok_bufpeek().type == token_type_t::stringliteral) {
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::strcat;
+				pchnode->child = sav_p;
+				sav_p->next = new ast_node_t;
+				sav_p->next->op = ast_node_op_t::constant;
+				sav_p->next->tv = std::move(tok_bufpeek());
+				tok_bufdiscard();
+			}
+
 			return true;
 		}
 		else if (t.type == token_type_t::identifier) {
@@ -2662,6 +2686,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::identifier:
 					name = "identifier";
+					break;
+				case ast_node_op_t::strcat:
+					name = "strcat";
 					break;
 				default:
 					name = "?";
