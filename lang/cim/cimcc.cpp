@@ -291,6 +291,13 @@ namespace CIMCC {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
 		} v;
+
+		token_t() { }
+		~token_t() { }
+		token_t(const token_t &x) = delete;
+		token_t &operator=(const token_t &x) = delete;
+		token_t(token_t &&x) = default;
+		token_t &operator=(token_t &&x) = default;
 	};
 
 	/////////
@@ -509,7 +516,7 @@ namespace CIMCC {
 				assert(tok_buf_sanity_check());
 				const size_t rem = tok_buf_avail();
 				assert((tok_buf_i+rem) <= tok_buf_size);
-				if (rem != 0) memmove(&tok_buf[0],&tok_buf[tok_buf_i],rem*sizeof(token_t));
+				for (size_t i=0;i < rem;i++) tok_buf[i] = std::move(tok_buf[i+tok_buf_i]);
 				tok_buf_o = rem;
 				tok_buf_i = 0;
 				assert(tok_buf_avail() == rem);
