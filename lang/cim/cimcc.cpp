@@ -568,7 +568,6 @@ namespace CIMCC {
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		int64_t getb_hex(unsigned int mc);
-		void gtok_char_literal(token_t &t);
 		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
 		void skip_numeric_digit_separator(void);
@@ -590,6 +589,7 @@ namespace CIMCC {
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
+		void gtok_char_literal(token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 
 		ast_node_t*		root_node = NULL;
 
@@ -1645,33 +1645,93 @@ namespace CIMCC {
 		} while (1);
 	}
 
-	void compiler::gtok_char_literal(token_t &t) {
-		token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE;
-		std::vector<uint8_t> tmp;
+	void compiler::gtok_char_literal(token_t &t,token_charstrliteral_t::strtype_t strtype) {
 		int64_t c;
 
-		while (1) {
-			if (pb.eof()) break;
-			if (peekb() == '\'') {
-				skipb();
-				break;
+		/* T_WIDE is an alias for T_UTF16, we'll add a compiler option where it can be an alias of T_UTF32 instead later on */
+		if (strtype == token_charstrliteral_t::strtype_t::T_WIDE)
+			strtype = token_charstrliteral_t::strtype_t::T_UTF16;
+
+		if (strtype == token_charstrliteral_t::strtype_t::T_UTF16) {
+			std::vector<uint16_t> tmp;
+
+			while (1) {
+				if (pb.eof()) break;
+				if (peekb() == '\'') {
+					skipb();
+					break;
+				}
+
+				c = getb_with_escape(strtype);
+				if (c < 0 || c > 0xFFFFu) break;
+				tmp.push_back((uint16_t)c);
 			}
 
-			c = getb_with_escape(strtype);
-			if (c < 0 || c > 255) break;
-			tmp.push_back((uint8_t)c);
+			t.type = token_type_t::characterliteral;
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size() * sizeof(uint16_t);
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == (tmp.size() * sizeof(uint16_t)));
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
 		}
+		else if (strtype == token_charstrliteral_t::strtype_t::T_UTF32) {
+			std::vector<uint32_t> tmp;
 
-		t.type = token_type_t::characterliteral;
-		t.v.chrstrlit.type = strtype;
-		t.v.chrstrlit.length = tmp.size();
-		if (t.v.chrstrlit.length != 0) {
-			assert(t.v.chrstrlit.length == tmp.size());
-			t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
-			memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			while (1) {
+				if (pb.eof()) break;
+				if (peekb() == '\'') {
+					skipb();
+					break;
+				}
+
+				c = getb_with_escape(strtype);
+				if (c < 0) break;
+				tmp.push_back((uint32_t)c);
+			}
+
+			t.type = token_type_t::characterliteral;
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size() * sizeof(uint32_t);
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == (tmp.size() * sizeof(uint32_t)));
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
 		}
 		else {
-			t.v.chrstrlit.data = NULL;
+			std::vector<uint8_t> tmp;
+
+			while (1) {
+				if (pb.eof()) break;
+				if (peekb() == '\'') {
+					skipb();
+					break;
+				}
+
+				c = getb_with_escape(strtype);
+				if (c < 0 || c > 0xFFu) break;
+				tmp.push_back((uint8_t)c);
+			}
+
+			t.type = token_type_t::characterliteral;
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size();
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == tmp.size());
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
 		}
 	}
 
@@ -1685,9 +1745,44 @@ namespace CIMCC {
 		while (pb.read < pb.end && is_identifier_char(*(pb.read))) pb.read++;
 
 		assert(start != pb.read);
+		const size_t identlen = size_t(pb.read - start);
+
+		/* But wait---It might not be an identifier, it might be a char or string literal with L, u, U, etc. at the start! */
+		while (pb.read < pb.end && is_whitespace(*pb.read)) pb.read++;
+
+		if (pb.read < pb.end) {
+			if (*pb.read == '\'') { /* i.e. L'W' */
+				if (identlen == 1) {
+					if (*start == 'L') {
+						pb.read++; /* eat ' */
+						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_WIDE);
+						return;
+					}
+					else if (*start == 'u') {
+						pb.read++; /* eat ' */
+						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF16);
+						return;
+					}
+					else if (*start == 'U') {
+						pb.read++; /* eat ' */
+						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF32);
+						return;
+					}
+				}
+				else if (identlen == 2) {
+					if (!memcmp(start,"u8",2)) {
+						/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
+						/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
+						pb.read++; /* eat ' */
+						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF8);
+						return;
+					}
+				}
+			}
+		}
 
 		t.type = token_type_t::identifier;
-		t.v.identifier.length = size_t(pb.read - start);
+		t.v.identifier.length = identlen;
 		assert(t.v.identifier.length != 0);
 		t.v.identifier.name = new char[t.v.identifier.length+1]; /* string + NUL */
 		memcpy(t.v.identifier.name,start,t.v.identifier.length);
@@ -2262,7 +2357,22 @@ namespace CIMCC {
 				s = "<char-literal: ";
 				snprintf(buf,sizeof(buf),"t=%u ",(unsigned int)t.v.chrstrlit.type);
 				s += buf; s += "{";
-				{
+				/* the parsing code may initially use T_WIDE but will then change it to T_UTF16 or T_UTF32 */
+				if (t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF32) {
+					uint32_t *b = (uint32_t*)t.v.chrstrlit.data;
+					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint32_t));i++) {
+						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
+						s += buf;
+					}
+				}
+				else if (t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF16) { 
+					uint16_t *b = (uint16_t*)t.v.chrstrlit.data;
+					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint16_t));i++) {
+						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
+						s += buf;
+					}
+				}
+				else {
 					unsigned char *b = (unsigned char*)t.v.chrstrlit.data;
 					for (size_t i=0;i < t.v.chrstrlit.length;i++) {
 						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
