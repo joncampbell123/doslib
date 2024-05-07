@@ -236,6 +236,7 @@ namespace CIMCC {
 		rightsquarebracket,
 		identifier,
 		characterliteral,
+		stringliteral,
 
 		maxval
 	};
@@ -359,7 +360,7 @@ namespace CIMCC {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
 			token_identifier_t	identifier;	// type == identifier
-			token_charstrliteral_t	chrstrlit;	// type == characterliteral
+			token_charstrliteral_t	chrstrlit;	// type == characterliteral, type == stringliteral
 		} v;
 
 		token_t() { }
@@ -377,6 +378,7 @@ namespace CIMCC {
 					v.identifier.on_delete();
 					break;
 				case token_type_t::characterliteral:
+				case token_type_t::stringliteral:
 					v.chrstrlit.on_delete();
 					break;
 				default:
@@ -393,6 +395,7 @@ namespace CIMCC {
 					x.v.identifier.on_post_move();
 					break;
 				case token_type_t::characterliteral:
+				case token_type_t::stringliteral:
 					x.v.chrstrlit.on_post_move();
 					break;
 				default:
@@ -626,7 +629,7 @@ namespace CIMCC {
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
-		void gtok_char_literal(token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
+		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 
 		ast_node_t*		root_node = NULL;
 
@@ -726,7 +729,7 @@ namespace CIMCC {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
 
-		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral) {
+		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral || t.type == token_type_t::stringliteral) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
@@ -1725,8 +1728,13 @@ namespace CIMCC {
 		}
 	}
 
-	void compiler::gtok_char_literal(token_t &t,token_charstrliteral_t::strtype_t strtype) {
+	void compiler::gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype) {
 		int64_t c;
+
+		if (qu == '\"')
+			t.type = token_type_t::stringliteral;
+		else
+			t.type = token_type_t::characterliteral;
 
 		/* T_WIDE is an alias for T_UTF16, we'll add a compiler option where it can be an alias of T_UTF32 instead later on */
 		if (strtype == token_charstrliteral_t::strtype_t::T_WIDE)
@@ -1737,7 +1745,7 @@ namespace CIMCC {
 
 			while (1) {
 				if (pb.eof()) break;
-				if (peekb() == '\'') {
+				if (peekb() == qu) {
 					skipb();
 					break;
 				}
@@ -1753,7 +1761,6 @@ namespace CIMCC {
 					tmp.push_back((uint16_t)c);
 			}
 
-			t.type = token_type_t::characterliteral;
 			t.v.chrstrlit.type = strtype;
 			t.v.chrstrlit.length = tmp.size() * sizeof(uint16_t);
 			if (t.v.chrstrlit.length != 0) {
@@ -1770,7 +1777,7 @@ namespace CIMCC {
 
 			while (1) {
 				if (pb.eof()) break;
-				if (peekb() == '\'') {
+				if (peekb() == qu) {
 					skipb();
 					break;
 				}
@@ -1780,7 +1787,6 @@ namespace CIMCC {
 				tmp.push_back((uint32_t)c);
 			}
 
-			t.type = token_type_t::characterliteral;
 			t.v.chrstrlit.type = strtype;
 			t.v.chrstrlit.length = tmp.size() * sizeof(uint32_t);
 			if (t.v.chrstrlit.length != 0) {
@@ -1797,7 +1803,7 @@ namespace CIMCC {
 
 			while (1) {
 				if (pb.eof()) break;
-				if (peekb() == '\'') {
+				if (peekb() == qu) {
 					skipb();
 					break;
 				}
@@ -1819,7 +1825,6 @@ namespace CIMCC {
 				}
 			}
 
-			t.type = token_type_t::characterliteral;
 			t.v.chrstrlit.type = strtype;
 			t.v.chrstrlit.length = tmp.size();
 			if (t.v.chrstrlit.length != 0) {
@@ -1849,21 +1854,18 @@ namespace CIMCC {
 		while (pb.read < pb.end && is_whitespace(*pb.read)) pb.read++;
 
 		if (pb.read < pb.end) {
-			if (*pb.read == '\'') { /* i.e. L'W' */
+			if (*pb.read == '\'' || *pb.read == '\"') { /* i.e. L'W' or L"Hello" */
 				if (identlen == 1) {
 					if (*start == 'L') {
-						pb.read++; /* eat ' */
-						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_WIDE);
+						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_WIDE);
 						return;
 					}
 					else if (*start == 'u') {
-						pb.read++; /* eat ' */
-						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF16);
+						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF16);
 						return;
 					}
 					else if (*start == 'U') {
-						pb.read++; /* eat ' */
-						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF32);
+						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF32);
 						return;
 					}
 				}
@@ -1871,8 +1873,7 @@ namespace CIMCC {
 					if (!memcmp(start,"u8",2)) {
 						/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
 						/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
-						pb.read++; /* eat ' */
-						gtok_char_literal(t,token_charstrliteral_t::strtype_t::T_UTF8);
+						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF8);
 						return;
 					}
 				}
@@ -2276,8 +2277,9 @@ namespace CIMCC {
 				}
 				break;
 			case '\'':
+			case '\"':
 				skipb();
-				gtok_char_literal(t);
+				gtok_chrstr_literal(c,t);
 				break;
 			default:
 				if (is_identifier_first_char(c)) {
@@ -2456,7 +2458,12 @@ namespace CIMCC {
 				s += "\">";
 				break;
 			case token_type_t::characterliteral:
-				s = "<char-literal: ";
+			case token_type_t::stringliteral:
+				if (t.type == token_type_t::stringliteral)
+					s = "<str-literal: ";
+				else
+					s = "<char-literal: ";
+
 				snprintf(buf,sizeof(buf),"t=%u ",(unsigned int)t.v.chrstrlit.type);
 				s += buf; s += "{";
 				/* the parsing code may initially use T_WIDE but will then change it to T_UTF16 or T_UTF32 */
