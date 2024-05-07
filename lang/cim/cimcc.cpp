@@ -1968,20 +1968,20 @@ namespace CIMCC {
 				s = "<none>";
 				break;
 			case token_type_t::intval:
-				sprintf(buf,"%llu",t.v.intval.v.u);
+				snprintf(buf,sizeof(buf),"%llu",t.v.intval.v.u);
 				s = "<intval ";
 				s += buf;
-				sprintf(buf," f=0x%x",(unsigned int)t.v.intval.flags);
+				snprintf(buf,sizeof(buf)," f=0x%x",(unsigned int)t.v.intval.flags);
 				s += buf;
-				sprintf(buf," t=%u",(unsigned int)t.v.intval.itype);
+				snprintf(buf,sizeof(buf)," t=%u",(unsigned int)t.v.intval.itype);
 				s += buf;
 				s += ">";
 				break;
 			case token_type_t::floatval:
-				sprintf(buf,"%0.20f",(double)t.v.floatval.val);
+				snprintf(buf,sizeof(buf),"%0.20f",(double)t.v.floatval.val);
 				s = "<floatval ";
 				s += buf;
-				sprintf(buf," t=%u",(unsigned int)t.v.floatval.ftype);
+				snprintf(buf,sizeof(buf)," t=%u",(unsigned int)t.v.floatval.ftype);
 				s += buf;
 				s += ">";
 				break;
