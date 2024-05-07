@@ -525,6 +525,7 @@ namespace CIMCC {
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		bool expression(ast_node_t* &pchnode);
+		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
@@ -1616,6 +1617,11 @@ namespace CIMCC {
 		t.v.identifier.name[t.v.identifier.length] = 0;
 	}
 
+	void compiler::skip_numeric_digit_separator(void) {
+		/* Skip C++14 digit separator */
+		if (peekb() == '\'') skipb();
+	}
+
 	void compiler::gtok_number(token_t &t) {
 		std::string tmp;
 
@@ -1635,16 +1641,19 @@ namespace CIMCC {
 			if (peekb() == 'x') { /* hexadecimal */
 				skipb();
 				base = 16;
-				while (is_hexadecimal_digit(c=peekb())) { tmp += c; skipb(); }
+				skip_numeric_digit_separator();
+				while (is_hexadecimal_digit(c=peekb())) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 			}
 			else if (peekb() == 'b') { /* binary */
 				skipb();
 				base = 2;
-				while (is_decimal_digit(c=peekb(),2)) { tmp += c; skipb(); }
+				skip_numeric_digit_separator();
+				while (is_decimal_digit(c=peekb(),2)) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 			}
 			else if (is_decimal_digit(peekb(),8)) { /* octal, 2nd digit (do not advance read ptr) */
 				base = 8;
-				while (is_decimal_digit(c=peekb(),8)) { tmp += c; skipb(); }
+				skip_numeric_digit_separator();
+				while (is_decimal_digit(c=peekb(),8)) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 			}
 			else {
 				/* it's just zero and a different token afterwards */
@@ -1652,13 +1661,15 @@ namespace CIMCC {
 			}
 		}
 		else { /* decimal */
-			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); }
+			skip_numeric_digit_separator();
+			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 		}
 
 		/* it might be a floating point constant if it has a decimal point */
 		if (peekb() == '.' && base == 10) {
 			skipb(); tmp += '.';
-			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); }
+			skip_numeric_digit_separator();
+			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 			is_float = true;
 		}
 
@@ -1667,7 +1678,8 @@ namespace CIMCC {
 			/* e4, e-4, e+4 */
 			tmp += c; skipb(); c=peekb();
 			if (c == '-' || c == '+') { tmp += c; skipb(); }
-			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); }
+			skip_numeric_digit_separator();
+			while (is_decimal_digit(c=peekb())) { tmp += c; skipb(); skip_numeric_digit_separator(); }
 			is_float = true;
 		}
 
