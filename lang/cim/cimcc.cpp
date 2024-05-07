@@ -1682,6 +1682,49 @@ namespace CIMCC {
 		} while (1);
 	}
 
+	void vec_encode_utf16surrogate(std::vector<uint16_t> &v,uint32_t c) {
+		/* surrogate encoding */
+		c -= 0x10000u;
+		v.push_back((uint16_t)(0xD800u + (c >> 10u)));
+		v.push_back((uint16_t)(0xDC00u + (c & 0x3FFu)));
+	}
+
+	void vec_encode_utf8(std::vector<uint8_t> &v,uint32_t c) {
+		if (c >= 0x4000000u) {
+			v.push_back((uint8_t)(((c >> 30u) & 0x01u) + 0xFC));
+			v.push_back((uint8_t)(((c >> 24u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+		}
+		else if (c >= 0x200000u) {
+			v.push_back((uint8_t)(((c >> 24u) & 0x03u) + 0xF8));
+			v.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+		}
+		else if (c >= 0x10000u) {
+			v.push_back((uint8_t)(((c >> 18u) & 0x07u) + 0xF0));
+			v.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+		}
+		else if (c >= 0x800u) {
+			v.push_back((uint8_t)(((c >> 12u) & 0x0Fu) + 0xE0));
+			v.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
+			v.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+		}
+		else if (c >= 0x80u) {
+			v.push_back((uint8_t)(((c >>  6u) & 0x1Fu) + 0xC0));
+			v.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
+		}
+		else {
+			v.push_back((uint8_t)c);
+		}
+	}
+
 	void compiler::gtok_char_literal(token_t &t,token_charstrliteral_t::strtype_t strtype) {
 		int64_t c;
 
@@ -1702,18 +1745,12 @@ namespace CIMCC {
 				c = getb_with_escape(strtype);
 				if (c < 0) break;
 
-				if (c >= 0x110000u) {
+				if (c >= 0x110000u)
 					break;
-				}
-				else if (c >= 0x10000u) {
-					/* surrogate encoding */
-					c -= 0x10000u;
-					tmp.push_back((uint16_t)(0xD800u + (c >> 10u)));
-					tmp.push_back((uint16_t)(0xDC00u + (c & 0x3FFu)));
-				}
-				else {
+				else if (c >= 0x10000u)
+					vec_encode_utf16surrogate(tmp,(uint32_t)c);
+				else
 					tmp.push_back((uint16_t)c);
-				}
 			}
 
 			t.type = token_type_t::characterliteral;
@@ -1769,42 +1806,12 @@ namespace CIMCC {
 				if (c < 0) break;
 
 				if (strtype == token_charstrliteral_t::strtype_t::T_UTF8) {
-					if (c >= 0x80000000u) {
+					/* The u8'...' constant is supposed to be a char8_t byte array of UTF-8 where
+					 * every character is within normal ASCII range. Screw that, encode it as UTF-8. */
+					if (c >= 0x80000000u)
 						break;
-					}
-					else if (c >= 0x4000000u) {
-						tmp.push_back((uint8_t)(((c >> 30u) & 0x01u) + 0xFC));
-						tmp.push_back((uint8_t)(((c >> 24u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
-					}
-					else if (c >= 0x200000u) {
-						tmp.push_back((uint8_t)(((c >> 24u) & 0x03u) + 0xF8));
-						tmp.push_back((uint8_t)(((c >> 18u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
-					}
-					else if (c >= 0x10000u) {
-						tmp.push_back((uint8_t)(((c >> 18u) & 0x07u) + 0xF0));
-						tmp.push_back((uint8_t)(((c >> 12u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
-					}
-					else if (c >= 0x800u) {
-						tmp.push_back((uint8_t)(((c >> 12u) & 0x0Fu) + 0xE0));
-						tmp.push_back((uint8_t)(((c >>  6u) & 0x3Fu) + 0x80));
-						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
-					}
-					else if (c >= 0x80u) {
-						tmp.push_back((uint8_t)(((c >>  6u) & 0x1Fu) + 0xC0));
-						tmp.push_back((uint8_t)(( c         & 0x3Fu) + 0x80));
-					}
-					else {
-						tmp.push_back((uint8_t)c);
-					}
+					else
+						vec_encode_utf8(tmp,(uint32_t)c);
 				}
 				else {
 					if (c > 0xFFu) break;
