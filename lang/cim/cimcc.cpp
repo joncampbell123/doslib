@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <vector>
 #include <string>
 #include <limits>
 #include <new>
@@ -234,6 +235,7 @@ namespace CIMCC {
 		leftsquarebracket,
 		rightsquarebracket,
 		identifier,
+		characterliteral,
 
 		maxval
 	};
@@ -316,6 +318,40 @@ namespace CIMCC {
 		}
 	};
 
+	/* do not define constructor or destructor because this will be used in a union */
+	struct token_charstrliteral_t {
+		enum class strtype_t {
+			T_UNSPEC=0,
+			T_BYTE,
+			T_UTF8,
+			T_UTF16,
+			T_UTF32,
+			T_WIDE
+		};
+
+		void*					data;
+		size_t					length; /* in bytes, even for UTF/WIDE */
+		strtype_t				type;
+
+		void init(void) {
+			data = NULL;
+			length = 0;
+			type = strtype_t::T_UNSPEC;
+		}
+
+		void on_post_move(void) {
+			/* this struct has already been copied, this is the old copy, clear pointers to prevent double free() */
+			data = NULL;
+			length = 0;
+		}
+
+		void on_delete(void) {
+			length = 0;
+			if (data) free(data);
+			data = NULL;
+		}
+	};
+
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 
@@ -323,6 +359,7 @@ namespace CIMCC {
 			token_intval_t		intval;		// type == intval
 			token_floatval_t	floatval;	// type == floatval
 			token_identifier_t	identifier;	// type == identifier
+			token_charstrliteral_t	chrstrlit;	// type == characterliteral
 		} v;
 
 		token_t() { }
@@ -339,6 +376,9 @@ namespace CIMCC {
 				case token_type_t::identifier:
 					v.identifier.on_delete();
 					break;
+				case token_type_t::characterliteral:
+					v.chrstrlit.on_delete();
+					break;
 				default:
 					break;
 			}
@@ -351,6 +391,9 @@ namespace CIMCC {
 			switch (type) {
 				case token_type_t::identifier:
 					x.v.identifier.on_post_move();
+					break;
+				case token_type_t::characterliteral:
+					x.v.chrstrlit.on_post_move();
 					break;
 				default:
 					break;
@@ -524,6 +567,9 @@ namespace CIMCC {
 		void gtok_number(token_t &t);
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
+		int64_t getb_hex(unsigned int mc);
+		void gtok_char_literal(token_t &t);
+		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
 		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
@@ -543,6 +589,7 @@ namespace CIMCC {
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
+		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 
 		ast_node_t*		root_node = NULL;
 
@@ -642,7 +689,7 @@ namespace CIMCC {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
 
-		if (t.type == token_type_t::intval || t.type == token_type_t::floatval) {
+		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::constant;
@@ -1598,6 +1645,36 @@ namespace CIMCC {
 		} while (1);
 	}
 
+	void compiler::gtok_char_literal(token_t &t) {
+		token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE;
+		std::vector<uint8_t> tmp;
+		int64_t c;
+
+		while (1) {
+			if (pb.eof()) break;
+			if (peekb() == '\'') {
+				skipb();
+				break;
+			}
+
+			c = getb_with_escape(strtype);
+			if (c < 0 || c > 255) break;
+			tmp.push_back((uint8_t)c);
+		}
+
+		t.type = token_type_t::characterliteral;
+		t.v.chrstrlit.type = strtype;
+		t.v.chrstrlit.length = tmp.size();
+		if (t.v.chrstrlit.length != 0) {
+			assert(t.v.chrstrlit.length == tmp.size());
+			t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+			memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+		}
+		else {
+			t.v.chrstrlit.data = NULL;
+		}
+	}
+
 	void compiler::gtok_identifier(token_t &t) {
 		gtok_prep_number_proc();
 		assert(pb.read < pb.end); /* wait, peekb() returned a digit we didn't getb()?? */
@@ -1620,6 +1697,55 @@ namespace CIMCC {
 	void compiler::skip_numeric_digit_separator(void) {
 		/* Skip C++14 digit separator */
 		if (peekb() == '\'') skipb();
+	}
+
+	int64_t compiler::getb_octal(unsigned int max_digits) {
+		int64_t s = 0;
+
+		for (size_t i=0;i < max_digits && is_decimal_digit(peekb(),8);i++)
+			s = (s * 8ull) + p_decimal_digit(getb());
+
+		return s;
+	}
+
+	int64_t compiler::getb_hex(unsigned int max_digits) {
+		int64_t s = 0;
+
+		for (size_t i=0;i < max_digits && is_hexadecimal_digit(peekb());i++)
+			s = (s * 16ull) + p_hexadecimal_digit(getb());
+
+		return s;
+	}
+
+	int64_t compiler::getb_with_escape(token_charstrliteral_t::strtype_t typ) {
+		if (peekb() == '\\') {
+			skipb();
+
+			switch (peekb()) {
+				case '\'': case '\"': case '?': case '\\': return getb();
+				case 'a': skipb(); return 0x07;
+				case 'b': skipb(); return 0x08;
+				case 'f': skipb(); return 0x12;
+				case 'n': skipb(); return 0x0A;
+				case 'r': skipb(); return 0x0D;
+				case 't': skipb(); return 0x09;
+				case 'v': skipb(); return 0x0B;
+				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': return getb_octal(3);
+				case 'x':
+					skipb();
+					switch (typ) {
+						case token_charstrliteral_t::strtype_t::T_BYTE: return getb_hex(2);
+						case token_charstrliteral_t::strtype_t::T_UTF16: return getb_hex(4);
+						case token_charstrliteral_t::strtype_t::T_UTF32: return getb_hex(8);
+						default: return getb_hex(256);
+					}
+					break;
+				default: return -1ll;
+			}
+		}
+
+		/* unescaped */
+		return getb();
 	}
 
 	void compiler::gtok_number(token_t &t) {
@@ -1950,6 +2076,10 @@ namespace CIMCC {
 					skipb();
 				}
 				break;
+			case '\'':
+				skipb();
+				gtok_char_literal(t);
+				break;
 			default:
 				if (is_identifier_first_char(c)) {
 					gtok_identifier(t);
@@ -2125,6 +2255,19 @@ namespace CIMCC {
 				s = "<identifier: \"";
 				if (t.v.identifier.name) s += std::string(t.v.identifier.name,t.v.identifier.length);
 				s += "\">";
+				break;
+			case token_type_t::characterliteral:
+				s = "<char-literal: ";
+				snprintf(buf,sizeof(buf),"t=%u ",(unsigned int)t.v.chrstrlit.type);
+				s += buf; s += "{";
+				{
+					unsigned char *b = (unsigned char*)t.v.chrstrlit.data;
+					for (size_t i=0;i < t.v.chrstrlit.length;i++) {
+						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
+						s += buf;
+					}
+				}
+				s += " }>";
 				break;
 			default:
 				s = "?";
