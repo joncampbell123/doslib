@@ -2489,30 +2489,87 @@ namespace CIMCC {
 					s = "<char-literal: ";
 
 				snprintf(buf,sizeof(buf),"t=%u ",(unsigned int)t.v.chrstrlit.type);
-				s += buf; s += "{";
+				s += buf;
 				/* the parsing code may initially use T_WIDE but will then change it to T_UTF16 or T_UTF32 */
 				if (t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF32) {
 					uint32_t *b = (uint32_t*)t.v.chrstrlit.data;
+
+					s += "{";
 					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint32_t));i++) {
 						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
 						s += buf;
 					}
+					s += " }";
+
+					s += " \"";
+					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint32_t));i++) {
+						if (b[i] >= 0x20) {
+							std::vector<uint8_t> tmp;
+							vec_encode_utf8(tmp,b[i]);
+							for (auto i=tmp.begin();i!=tmp.end();i++) s += (char)(*i);
+						}
+						else {
+							s += ".";
+						}
+					}
+					s += "\"";
 				}
 				else if (t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF16) { 
 					uint16_t *b = (uint16_t*)t.v.chrstrlit.data;
+
+					s += "{";
 					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint16_t));i++) {
 						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
 						s += buf;
 					}
+					s += " }";
+
+					s += " \"";
+					for (size_t i=0;i < (t.v.chrstrlit.length/sizeof(uint16_t));i++) {
+						if ((i+2) <= (t.v.chrstrlit.length/sizeof(uint16_t)) && (b[i]&0xFC00u) == 0xD800u && (b[i+1]&0xFC00u) == 0xDC00u) {
+							/* surrogage pair */
+							std::vector<uint8_t> tmp;
+							const uint32_t code = 0x10000 + ((b[i]&0x3FF) << 10u) + (b[i+1]&0x3FFu);
+							vec_encode_utf8(tmp,code);
+							for (auto i=tmp.begin();i!=tmp.end();i++) s += (char)(*i);
+							i++; // we read two, for loop increments one
+						}
+						else if (b[i] >= 0x20) {
+							std::vector<uint8_t> tmp;
+							vec_encode_utf8(tmp,b[i]);
+							for (auto i=tmp.begin();i!=tmp.end();i++) s += (char)(*i);
+						}
+						else {
+							s += ".";
+						}
+					}
+					s += "\"";
 				}
 				else {
 					unsigned char *b = (unsigned char*)t.v.chrstrlit.data;
+
+					s += "{";
 					for (size_t i=0;i < t.v.chrstrlit.length;i++) {
 						snprintf(buf,sizeof(buf)," 0x%x",b[i]);
 						s += buf;
 					}
+					s += " }";
+
+					s += " \"";
+					for (size_t i=0;i < t.v.chrstrlit.length;i++) {
+						if (b[i] >= 0x20 && b[i] <= 0x7E) {
+							s += (char)b[i];
+						}
+						else if (b[i] >= 0x80 && t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF8) {
+							s += (char)b[i];
+						}
+						else {
+							s += ".";
+						}
+					}
+					s += "\"";
 				}
-				s += " }>";
+				s += ">";
 				break;
 			default:
 				s = "?";
