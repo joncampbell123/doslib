@@ -630,7 +630,10 @@ namespace CIMCC {
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
+		void gtok_chrstr_H_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
+		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
+		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
 
 		ast_node_t*		root_node = NULL;
 
@@ -1752,6 +1755,178 @@ namespace CIMCC {
 		}
 	}
 
+	bool compiler::gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu) {
+		gtok_prep_number_proc(); /* happens to do what we need: lazy flush and refill the buffer */
+
+		unsigned char *scan = pb.read;
+
+		/* This function must be called after reading and consuming the '\n' character.
+		 * The next byte to read must be just after newline. */
+		for (auto i=identifier.begin();i!=identifier.end();i++) {
+			if (scan >= pb.end) return false;
+			if (*(scan++) != *i) return false;
+		}
+
+		/* The next char must be the single or double quote char */
+		if (scan >= pb.end) return false;
+		if (*(scan++) != qu) return false;
+
+		/* Consume the identifier and quote mark we just checked for the caller */
+		pb.read = scan;
+
+		return true;
+	}
+
+	void compiler::gtok_chrstr_H_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype) {
+		int64_t c;
+
+		/* H"<<IDENTIFIER \n
+		 * zero or more lines of string constant
+		 * IDENTIFIER" */
+
+		if (qu == '\"')
+			t.type = token_type_t::stringliteral;
+		else
+			t.type = token_type_t::characterliteral;
+
+		/* the next two chars must be "<<" */
+		if (getb() != '<') return;
+		if (getb() != '<') return;
+
+		/* and then the next chars must be an identifier, no space between << and identifier,
+		 * and only identifier valid characters. */
+		std::vector<uint8_t> identifier;
+
+		if (!is_identifier_first_char(peekb())) return;
+		identifier.push_back(getb());
+
+		while (is_identifier_char(peekb())) identifier.push_back(getb());
+
+		/* white space is allowed, but then must be followed by a newline */
+		while (peekb() != '\n' && is_whitespace(peekb())) skipb();
+
+		/* newline, or it's not valid! */
+		if (peekb() != '\n') return;
+		skipb();
+
+		/* T_WIDE is an alias for T_UTF16, we'll add a compiler option where it can be an alias of T_UTF32 instead later on */
+		if (strtype == token_charstrliteral_t::strtype_t::T_WIDE)
+			strtype = token_charstrliteral_t::strtype_t::T_UTF16;
+
+		if (strtype == token_charstrliteral_t::strtype_t::T_UTF16) {
+			std::vector<uint16_t> tmp;
+
+			while (1) {
+				if (pb.eof()) break;
+
+				c = getb_csc(strtype);
+				if (c < 0) break;
+
+				if (c == '\n') {
+					/* check ahead: are the characters after the newline
+					 * the exact identifier followed by a single or double quote? */
+					if (gtok_check_ahead_H_identifier(identifier,qu)) {
+						/* this function will have already set the read position to the end of it */
+						break;
+					}
+				}
+
+				if (c >= 0x110000u)
+					break;
+				else if (c >= 0x10000u)
+					vec_encode_utf16surrogate(tmp,(uint32_t)c);
+				else
+					tmp.push_back((uint16_t)c);
+			}
+
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size() * sizeof(uint16_t);
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == (tmp.size() * sizeof(uint16_t)));
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
+		}
+		else if (strtype == token_charstrliteral_t::strtype_t::T_UTF32) {
+			std::vector<uint32_t> tmp;
+
+			while (1) {
+				if (pb.eof()) break;
+
+				c = getb_csc(strtype);
+				if (c < 0) break;
+
+				if (c == '\n') {
+					/* check ahead: are the characters after the newline
+					 * the exact identifier followed by a single or double quote? */
+					if (gtok_check_ahead_H_identifier(identifier,qu)) {
+						/* this function will have already set the read position to the end of it */
+						break;
+					}
+				}
+
+				tmp.push_back((uint32_t)c);
+			}
+
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size() * sizeof(uint32_t);
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == (tmp.size() * sizeof(uint32_t)));
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
+		}
+		else {
+			std::vector<uint8_t> tmp;
+
+			while (1) {
+				if (pb.eof()) break;
+
+				c = getb_csc(strtype);
+				if (c < 0) break;
+
+				if (c == '\n') {
+					/* check ahead: are the characters after the newline
+					 * the exact identifier followed by a single or double quote? */
+					if (gtok_check_ahead_H_identifier(identifier,qu)) {
+						/* this function will have already set the read position to the end of it */
+						break;
+					}
+				}
+
+				if (strtype == token_charstrliteral_t::strtype_t::T_UTF8) {
+					/* The u8'...' constant is supposed to be a char8_t byte array of UTF-8 where
+					 * every character is within normal ASCII range. Screw that, encode it as UTF-8. */
+					if (c >= 0x80000000u)
+						break;
+					else
+						vec_encode_utf8(tmp,(uint32_t)c);
+				}
+				else {
+					if (c > 0xFFu) break;
+					tmp.push_back((uint8_t)c);
+				}
+			}
+
+			t.v.chrstrlit.type = strtype;
+			t.v.chrstrlit.length = tmp.size();
+			if (t.v.chrstrlit.length != 0) {
+				assert(t.v.chrstrlit.length == tmp.size());
+				t.v.chrstrlit.data = malloc(t.v.chrstrlit.length);
+				memcpy(t.v.chrstrlit.data,tmp.data(),t.v.chrstrlit.length);
+			}
+			else {
+				t.v.chrstrlit.data = NULL;
+			}
+		}
+	}
+
 	void compiler::gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype) {
 		int64_t c;
 
@@ -1883,6 +2058,7 @@ namespace CIMCC {
 			if (*pb.read == '\'' || *pb.read == '\"') { /* i.e. L'W' or L"Hello" */
 				token_charstrliteral_t::strtype_t st = token_charstrliteral_t::strtype_t::T_BYTE;
 				unsigned char *scan = start;
+				unsigned char special = 0;
 
 				if ((scan+2) <= end && !memcmp(scan,"u8",2)) {
 					/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
@@ -1903,8 +2079,29 @@ namespace CIMCC {
 					scan += 1;
 				}
 
+				/* NTS: C++23 defines a "raw string literal" R syntax which looks absolutely awful and I refuse to implement it.
+				 *
+				 * Instead, we support a cleaner way to enter whole strings with minimal escaping that already exists. It's used
+				 * by the GNU bash shell called "here documents". We support it like this with the H (for "here") prefix for our variation of it:
+				 *
+				 * string x = u8H"<<EOF
+				 * String constant without escaping of any kind.
+				 * Can contain newlines if it spans multiple lines.
+				 * It stops the instant you specify the same identifier at the start of a line that you used to start it (in this case EOF).
+				 * EOF";
+				 *
+				 * There you go. And you don't need this pattern matching on both sides crap that C++23 R syntax uses. Yechh. */
+				if ((scan+1) <= end && *scan == 'H') {
+					special = 'H';
+					scan += 1;
+				}
+
 				if (scan == end) {
-					gtok_chrstr_literal(*pb.read++,t,st);
+					if (special == 'H')
+						gtok_chrstr_H_literal(*pb.read++,t,st);
+					else
+						gtok_chrstr_literal(*pb.read++,t,st);
+
 					return;
 				}
 			}
@@ -1941,6 +2138,15 @@ namespace CIMCC {
 		return s;
 	}
 
+	int64_t compiler::getb_csc(token_charstrliteral_t::strtype_t typ) {
+		/* if the type is any kind of unicode (not byte), then read the char as UTF-8 and return the full code */
+		if (typ > token_charstrliteral_t::strtype_t::T_BYTE)
+			return getb_utf8();
+
+		/* unescaped */
+		return getb();
+	}
+
 	int64_t compiler::getb_with_escape(token_charstrliteral_t::strtype_t typ) {
 		if (peekb() == '\\') {
 			skipb();
@@ -1970,12 +2176,7 @@ namespace CIMCC {
 			}
 		}
 
-		/* if the type is any kind of unicode (not byte), then read the char as UTF-8 and return the full code */
-		if (typ > token_charstrliteral_t::strtype_t::T_BYTE)
-			return getb_utf8();
-
-		/* unescaped */
-		return getb();
+		return getb_csc(typ);
 	}
 
 	void compiler::gtok_number(token_t &t) {

@@ -42,3 +42,23 @@ L'Unicode → and ➤ string!'; u'Boxed ■■■ in'; U'Boxed ■■■ in'; U'
 "Hello world"; L"Hello world"; u8"Hello world";
 "String " "concatenation"; "Multiple " "string " "concat" "enation";
 L 'Unicode'; L "Unicode"; L      "Unicode"; u8         "Unicode";
+H"<<_EOF
+Hello
+_EOF"; H"<<TESTING123
+Hello world.
+Multiple lines.
+TESTING123"; LH"<<Fart
+One line
+Two line
+fart, should not trigger
+FART, should not trigger
+ Fart, should not trigger
+Fart, should not trigger. The next line will not either.
+Fart
+Okay, next will trigger.
+Fart";
+"Multiple" "string " H"<<CAT
+concatenation but now
+across multiple
+CAT"; " lines too";
+
