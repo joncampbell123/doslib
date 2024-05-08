@@ -42,7 +42,7 @@ namespace CIMCC {
 	}
 
 	bool is_whitespace(const int c) {
-		return (c == ' ' || c == '\t' || c == '\n');
+		return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
 	}
 
 	bool is_identifier_first_char(const char c) {
@@ -1803,6 +1803,7 @@ namespace CIMCC {
 		while (is_identifier_char(peekb())) identifier.push_back(getb());
 
 		/* white space is allowed, but then must be followed by a newline */
+		/* NTS: \r is seen as a whitespace so for DOS or Windows \r\n line breaks this will stop at the \n */
 		while (peekb() != '\n' && is_whitespace(peekb())) skipb();
 
 		/* newline, or it's not valid! */
@@ -2139,6 +2140,10 @@ namespace CIMCC {
 	}
 
 	int64_t compiler::getb_csc(token_charstrliteral_t::strtype_t typ) {
+		/* This is going to be compiled on DOS or Windows or asked to compile source code edited on DOS or Windows someday,
+		 * might as well deal with the whole \r\n vs \n line break issue here. */
+		if (peekb() == '\r') skipb(); /* eat the \r, assume \n follows */
+
 		/* if the type is any kind of unicode (not byte), then read the char as UTF-8 and return the full code */
 		if (typ > token_charstrliteral_t::strtype_t::T_BYTE)
 			return getb_utf8();
