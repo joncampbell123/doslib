@@ -1874,32 +1874,38 @@ namespace CIMCC {
 		assert(start != pb.read);
 		const size_t identlen = size_t(pb.read - start);
 
+		unsigned char *end = pb.read;
+
 		/* But wait---It might not be an identifier, it might be a char or string literal with L, u, U, etc. at the start! */
 		while (pb.read < pb.end && is_whitespace(*pb.read)) pb.read++;
 
 		if (pb.read < pb.end) {
 			if (*pb.read == '\'' || *pb.read == '\"') { /* i.e. L'W' or L"Hello" */
-				if (identlen == 1) {
-					if (*start == 'L') {
-						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_WIDE);
-						return;
-					}
-					else if (*start == 'u') {
-						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF16);
-						return;
-					}
-					else if (*start == 'U') {
-						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF32);
-						return;
-					}
+				token_charstrliteral_t::strtype_t st = token_charstrliteral_t::strtype_t::T_BYTE;
+				unsigned char *scan = start;
+
+				if ((scan+2) <= end && !memcmp(scan,"u8",2)) {
+					/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
+					/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
+					st = token_charstrliteral_t::strtype_t::T_UTF8;
+					scan += 2;
 				}
-				else if (identlen == 2) {
-					if (!memcmp(start,"u8",2)) {
-						/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
-						/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
-						gtok_chrstr_literal(*pb.read++,t,token_charstrliteral_t::strtype_t::T_UTF8);
-						return;
-					}
+				else if ((scan+1) <= end && *scan == 'L') {
+					st = token_charstrliteral_t::strtype_t::T_WIDE;
+					scan += 1;
+				}
+				else if ((scan+1) <= end && *scan == 'u') {
+					st = token_charstrliteral_t::strtype_t::T_UTF16;
+					scan += 1;
+				}
+				else if ((scan+1) <= end && *scan == 'U') {
+					st = token_charstrliteral_t::strtype_t::T_UTF32;
+					scan += 1;
+				}
+
+				if (scan == end) {
+					gtok_chrstr_literal(*pb.read++,t,st);
+					return;
 				}
 			}
 		}

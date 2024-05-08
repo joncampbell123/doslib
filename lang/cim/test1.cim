@@ -41,3 +41,4 @@ L'w'; u'w'; U'w'; u8'w'; L'wah!'; u'unicode'; U'Unicode too!';
 L'Unicode → and ➤ string!'; u'Boxed ■■■ in'; U'Boxed ■■■ in'; U'Emoji too 😀😄😁'; u'Emoji too 😀😄😁'; u8'Emoji too ■■■ 😀😄😁';
 "Hello world"; L"Hello world"; u8"Hello world";
 "String " "concatenation"; "Multiple " "string " "concat" "enation";
+L 'Unicode'; L "Unicode"; L      "Unicode"; u8         "Unicode";
