@@ -2119,12 +2119,19 @@ namespace CIMCC {
 					special = 'H';
 					scan += 1;
 
-					/* allow 'D' to specify that newlines should be encoded \r\n instead of \n */
+					/* allow 'D' to specify that newlines should be encoded \r\n instead of \n i.e. MS-DOS and Windows */
 					if ((scan+1) <= end && *scan == 'D') {
 						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
 						hflags = HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES;
 						scan += 1;
 					}
+					/* allow 'M' to specify that newlines should be encoded \r instead of \n i.e. classic Macintosh OS */
+					else if ((scan+1) <= end && *scan == 'M') {
+						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
+						hflags = HFLAG_CR_NEWLINES;
+						scan += 1;
+					}
+
 				}
 
 				if (scan == end) {

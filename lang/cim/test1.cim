@@ -65,4 +65,8 @@ HD"<<DOS
 MS-DOS and Windows line encodings too.
 CR LF encoding.
 DOS";
+HM"<<MAC
+Classic Macintosh OS style line encodings.
+CR encoding.
+MAC";
 
