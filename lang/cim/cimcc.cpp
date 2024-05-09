@@ -839,25 +839,14 @@ namespace CIMCC {
 					pchnode->child = nn;
 					tok_bufdiscard();
 
+					ast_node_t *nnb = nn;
+
 					do {
 						if (tok_bufpeek().type == token_type_t::closecurly)
 							break;
 
-						nn->next = new ast_node_t;
-						nn->next->op = ast_node_op_t::statement;
-
-						if (!expression(nn->next->child))
+						if (!statement(nn,nnb))
 							return false;
-
-						{
-							token_t &t = tok_bufpeek();
-							if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
-								tok_bufdiscard(); /* eat the EOF or semicolon */
-							else
-								return false;
-						}
-
-						nn = nn->next;
 					} while(1);
 				}
 
