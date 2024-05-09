@@ -642,6 +642,7 @@ namespace CIMCC {
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
+		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
@@ -1007,6 +1008,9 @@ namespace CIMCC {
 				if (tok_bufpeek().type != token_type_t::closeparen) {
 					if (!argument_expression_list(sav_p->next))
 						return false;
+
+					while (sav_p->next != NULL)
+						sav_p = sav_p->next;
 				}
 
 				{
@@ -1019,9 +1023,6 @@ namespace CIMCC {
 
 				/* if a { scope } follows then parse that too */
 				if (tok_bufpeek().type == token_type_t::opencurly) {
-					while (sav_p->next != NULL)
-						sav_p = sav_p->next;
-
 					if (!primary_expression(sav_p->next))
 						return false;
 				}
@@ -1733,6 +1734,25 @@ namespace CIMCC {
 		return true;
 	}
 
+	bool compiler::statement_does_not_need_semicolon(ast_node_t* apnode) {
+		/* { scope } */
+		if (apnode->op == ast_node_op_t::scope)
+			return true;
+
+		/* function() { scope }
+		 *
+		 * but not function(), that still requires semicolon */
+		if (apnode->op == ast_node_op_t::function) {
+			ast_node_t* s = apnode->child;
+			if (s && s->op == ast_node_op_t::identifier) s=s->next;
+			while (s && s->op == ast_node_op_t::argument) s=s->next;
+			if (s && s->op == ast_node_op_t::scope)
+				return true;
+		}
+
+		return false;
+	}
+
 	bool compiler::statement(ast_node_t* &rnode,ast_node_t* &apnode) {
 		/* [statement] -> [statement] -> ...
 		 *   \                \
@@ -1757,7 +1777,7 @@ namespace CIMCC {
 				if (!expression(apnode->child))
 					return false;
 
-				if (apnode->child->op == ast_node_op_t::scope) {
+				if (statement_does_not_need_semicolon(apnode->child)) {
 					/* if parsing a { scope } a semicolon is not required after the closing curly brace */
 				}
 				else {

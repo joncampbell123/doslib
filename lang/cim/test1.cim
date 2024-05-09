@@ -97,3 +97,11 @@ signed long long int func1(signed long long int x,float y) {
 	return(x*x*x + y);
 };
 
+int func1(int x,int y) {
+	return (x + y);
+}
+
+signed long long int func1(signed long long int x,float y) {
+	return(x*x*x + y);
+}
+
