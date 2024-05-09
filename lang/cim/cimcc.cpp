@@ -245,6 +245,8 @@ namespace CIMCC {
 		identifier,
 		characterliteral,
 		stringliteral,
+		opencurly,
+		closecurly,
 
 		maxval
 	};
@@ -467,6 +469,7 @@ namespace CIMCC {
 		argument,
 		identifier,
 		strcat,
+		scope,
 
 		maxval
 	};
@@ -800,6 +803,71 @@ namespace CIMCC {
 					tok_bufdiscard(); /* eat it */
 				else
 					return false;
+			}
+
+			return true;
+		}
+		else if (t.type == token_type_t::opencurly) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [scope]
+			 *  \
+			 *   +-- [expression]
+			 *
+			 * or if a semicolon is involved, it becomes
+			 *
+			 * [scope]
+			 *  \
+			 *   +-- [statement] -> [statement] ... */
+
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::scope;
+
+			if (tok_bufpeek().type == token_type_t::closecurly) {
+				/* well then it's a nothing */
+			}
+			else {
+				if (!expression(pchnode->child))
+					return false;
+
+				/* if a semicolon follows, this was a statement and it needs to be converted
+				 * to the first statement, then parse statements until closing curly brace */
+				if (tok_bufpeek().type == token_type_t::semicolon) {
+					ast_node_t *nn = new ast_node_t;
+					nn->op = ast_node_op_t::statement;
+					nn->child = pchnode->child;
+					pchnode->child = nn;
+					tok_bufdiscard();
+
+					do {
+						if (tok_bufpeek().type == token_type_t::closecurly)
+							break;
+
+						nn->next = new ast_node_t;
+						nn->next->op = ast_node_op_t::statement;
+
+						if (!expression(nn->next->child))
+							return false;
+
+						{
+							token_t &t = tok_bufpeek();
+							if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+								tok_bufdiscard(); /* eat the EOF or semicolon */
+							else
+								return false;
+						}
+
+						nn = nn->next;
+					} while(1);
+				}
+
+				{
+					token_t &t = tok_bufpeek();
+					if (t.type == token_type_t::closecurly)
+						tok_bufdiscard(); /* eat it */
+					else
+						return false;
+				}
 			}
 
 			return true;
@@ -2537,6 +2605,14 @@ namespace CIMCC {
 				t.type = token_type_t::closeparen;
 				skipb();
 				break;
+			case '{':
+				t.type = token_type_t::opencurly;
+				skipb();
+				break;
+			case '}':
+				t.type = token_type_t::closecurly;
+				skipb();
+				break;
 			case '?':
 				t.type = token_type_t::question;
 				skipb();
@@ -2682,6 +2758,12 @@ namespace CIMCC {
 				break;
 			case token_type_t::closeparen:
 				s = "<closeparen>";
+				break;
+			case token_type_t::opencurly:
+				s = "<opencurly>";
+				break;
+			case token_type_t::closecurly:
+				s = "<closecurly>";
 				break;
 			case token_type_t::colon:
 				s = "<:>";
@@ -3027,6 +3109,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::strcat:
 					name = "strcat";
+					break;
+				case ast_node_op_t::scope:
+					name = "scope";
 					break;
 				default:
 					name = "?";
