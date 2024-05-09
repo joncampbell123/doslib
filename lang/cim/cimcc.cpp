@@ -465,7 +465,7 @@ namespace CIMCC {
 		structptraccess,
 		arraysubscript,
 		subexpression,
-		functioncall,
+		function, // something(...), phase 2 will make sense to determine function definition, function declaration, or function call.
 		argument,
 		identifier,
 		strcat,
@@ -995,13 +995,13 @@ namespace CIMCC {
 			else if (tok_bufpeek().type == token_type_t::openparen) { /* (expr) function call */
 				tok_bufdiscard(); /* eat it */
 
-				/* [functioncall]
+				/* [function]
 				 *  \
 				 *   +-- [left expr] -> [argument] -> [argument] -> [argument] ... */
 
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::functioncall;
+				pchnode->op = ast_node_op_t::function;
 				pchnode->child = sav_p;
 
 				if (tok_bufpeek().type != token_type_t::closeparen) {
@@ -3118,8 +3118,8 @@ namespace CIMCC {
 				case ast_node_op_t::subexpression:
 					name = "subexpression";
 					break;
-				case ast_node_op_t::functioncall:
-					name = "functioncall";
+				case ast_node_op_t::function:
+					name = "function";
 					break;
 				case ast_node_op_t::argument:
 					name = "argument";

@@ -75,3 +75,13 @@ MAC";
 {4} {4,5,6,7} {4,5*2,a,b} { 4; } { 4, { 5, 2, 3 } } { 4; {4, 6, 3} {1, 2, 3, 4, {5,6,7,8} } }
 a b c d e f = 40;
 
+int var1 = 45;
+signed int var2 = 123;
+signed long int var3 = 456l;
+signed long long int var4 = 789ll;
+
+int func1();
+int func1(void);
+int func1(int x,char y,float f);
+signed long long int func1(signed long long x,unsigned long long y);
+
