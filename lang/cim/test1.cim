@@ -60,7 +60,7 @@ Fart";
 "Multiple" "string " H"<<CAT
 concatenation but now
 across multiple
-CAT"; " lines too";
+CAT" " lines too";
 HD"<<DOS
 MS-DOS and Windows line encodings too.
 CR LF encoding.
