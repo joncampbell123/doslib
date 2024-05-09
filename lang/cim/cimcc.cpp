@@ -614,6 +614,8 @@ namespace CIMCC {
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_number(token_t &t);
+		int64_t getb_hex_cpp23(void);
+		int64_t getb_octal_cpp23(void);
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		int64_t getb_hex(unsigned int mc);
@@ -2189,6 +2191,28 @@ namespace CIMCC {
 		return getb();
 	}
 
+	int64_t compiler::getb_hex_cpp23(void) {
+		/* caller already consumed '{' */
+		const int64_t v = getb_hex(256);
+		if (peekb() == '}') {
+			skipb();
+			return v;
+		}
+
+		return -1ll;
+	}
+
+	int64_t compiler::getb_octal_cpp23(void) {
+		/* caller already consumed '{' */
+		const int64_t v = getb_octal(256);
+		if (peekb() == '}') {
+			skipb();
+			return v;
+		}
+
+		return -1ll;
+	}
+
 	int64_t compiler::getb_with_escape(token_charstrliteral_t::strtype_t typ) {
 		if (peekb() == '\\') {
 			skipb();
@@ -2197,16 +2221,24 @@ namespace CIMCC {
 				case '\'': case '\"': case '?': case '\\': return getb();
 				case 'a': skipb(); return 0x07;
 				case 'b': skipb(); return 0x08;
-				case 'f': skipb(); return 0x12;
+				case 'f': skipb(); return 0x0C;
 				case 'n': skipb(); return 0x0A;
 				case 'r': skipb(); return 0x0D;
 				case 't': skipb(); return 0x09;
 				case 'v': skipb(); return 0x0B;
-				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': return getb_octal(3);
-				case 'u': skipb(); return getb_hex(4);
-				case 'U': skipb(); return getb_hex(8);
-				case 'x':
-					skipb();
+				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+					return getb_octal(3);
+				case 'o': skipb(); /* C++23 o{n...} */
+					if (peekb() == '{') { skipb(); /* eat '{' */ return getb_octal_cpp23(); }
+					return -1ll;;
+				case 'u': skipb();
+					if (peekb() == '{') { skipb(); /* eat '{' */ return getb_hex_cpp23(); }
+					return getb_hex(4);
+				case 'U': skipb();
+					if (peekb() == '{') { skipb(); /* eat '{' */ return getb_hex_cpp23(); }
+					return getb_hex(8);
+				case 'x': skipb();
+					if (peekb() == '{') { skipb(); /* eat '{' */ return getb_hex_cpp23(); }
 					switch (typ) {
 						case token_charstrliteral_t::strtype_t::T_BYTE: return getb_hex(2);
 						case token_charstrliteral_t::strtype_t::T_UTF16: return getb_hex(4);

@@ -69,4 +69,4 @@ HM"<<MAC
 Classic Macintosh OS style line encodings.
 CR encoding.
 MAC";
-
+'\077', '\o{77}', '\x0f', '\x{f}', '\u00A0', '\u{A0}'
