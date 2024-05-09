@@ -1703,30 +1703,39 @@ namespace CIMCC {
 	}
 
 	bool compiler::statement(ast_node_t* &rnode,ast_node_t* &apnode) {
-		if (apnode) {
-			apnode->next = new ast_node_t;
-			apnode = apnode->next;
-		}
-		else {
-			rnode = apnode = new ast_node_t;
-		}
-		apnode->op = ast_node_op_t::statement;
-
 		/* [statement] -> [statement] -> ...
 		 *   \                \
 		 *    +-- expression   +-- expression */
 
 		tok_buf_refill();
 		if (!tok_buf_empty()) {
-			if (!expression(apnode->child))
-				return false;
+			/* allow empty statements (a lone ';'), that's OK */
+			if (tok_bufpeek().type == token_type_t::semicolon) {
+				tok_bufdiscard(); /* eat the ; */
+			}
+			else {
+				if (apnode) {
+					apnode->next = new ast_node_t;
+					apnode = apnode->next;
+				}
+				else {
+					rnode = apnode = new ast_node_t;
+				}
+				apnode->op = ast_node_op_t::statement;
 
-			{
-				token_t &t = tok_bufpeek();
-				if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
-					tok_bufdiscard(); /* eat the EOF or semicolon */
-				else
+				if (!expression(apnode->child))
 					return false;
+
+				if (apnode->child->op == ast_node_op_t::scope) {
+					/* if parsing a { scope } a semicolon is not required after the closing curly brace */
+				}
+				else {
+					token_t &t = tok_bufpeek();
+					if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+						tok_bufdiscard(); /* eat the EOF or semicolon */
+					else
+						return false;
+				}
 			}
 		}
 
