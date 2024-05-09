@@ -129,3 +129,9 @@ void func1(void) {
 	return;
 }
 
+int func1(int x,int y) {
+	int z = func2(x,y,13);
+	z += func3(y,x^y);
+	return z ^ 1;
+}
+
