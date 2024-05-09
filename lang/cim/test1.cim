@@ -85,3 +85,15 @@ int func1(void);
 int func1(int x,char y,float f);
 signed long long int func1(signed long long x,unsigned long long y);
 
+int func1() {
+	return(5);
+};
+
+int func1(int x,int y) {
+	return(x*x + y);
+};
+
+signed long long int func1(signed long long int x,float y) {
+	return(x*x*x + y);
+};
+

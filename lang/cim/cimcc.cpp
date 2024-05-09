@@ -1016,6 +1016,15 @@ namespace CIMCC {
 					else
 						return false;
 				}
+
+				/* if a { scope } follows then parse that too */
+				if (tok_bufpeek().type == token_type_t::opencurly) {
+					while (sav_p->next != NULL)
+						sav_p = sav_p->next;
+
+					if (!primary_expression(sav_p->next))
+						return false;
+				}
 			}
 			else {
 				break;
