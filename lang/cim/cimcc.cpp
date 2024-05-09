@@ -783,6 +783,28 @@ namespace CIMCC {
 			pchnode->op = ast_node_op_t::identifier;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
+
+			/* Allow multiple consecutive identifiers.
+			 * We don't know at this parsing stage whether that identifier represents a variable
+			 * name, function name, typedef name, data type, etc.
+			 *
+			 * This is necessary in order for later parsing to handle a statement like:
+			 *
+			 * "signed long int variable1 = 45l;"
+			 *
+			 */
+			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
+			ast_node_t *nn = pchnode;
+			while (tok_bufpeek().type == token_type_t::identifier) {
+				token_t &st = tok_bufpeek();
+
+				nn->child = new ast_node_t;
+				nn->child->op = ast_node_op_t::identifier;
+				nn->child->tv = std::move(st);
+				tok_bufdiscard();
+				nn = nn->child;
+			}
+
 			return true;
 		}
 		else if (t.type == token_type_t::openparen) {
