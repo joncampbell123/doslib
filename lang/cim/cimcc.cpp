@@ -787,7 +787,10 @@ namespace CIMCC {
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 
-			return expression(pchnode->child);
+			if (tok_bufpeek().type == token_type_t::semicolon)
+				return true; /* return; */
+			else
+				return expression(pchnode->child); /* return expr; */
 		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);

@@ -125,3 +125,7 @@ signed long long int func1(signed long long int x,float y) {
 	return x*x*x + y;
 }
 
+void func1(void) {
+	return;
+}
+
