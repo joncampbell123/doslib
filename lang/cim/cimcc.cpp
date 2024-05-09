@@ -247,6 +247,7 @@ namespace CIMCC {
 		stringliteral,
 		opencurly,
 		closecurly,
+		r_return, /* reserved word "return" */
 
 		maxval
 	};
@@ -470,6 +471,7 @@ namespace CIMCC {
 		identifier,
 		strcat,
 		scope,
+		r_return,
 
 		maxval
 	};
@@ -777,6 +779,15 @@ namespace CIMCC {
 			}
 
 			return true;
+		}
+		else if (t.type == token_type_t::r_return) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_return;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return expression(pchnode->child);
 		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
@@ -2264,12 +2275,19 @@ namespace CIMCC {
 			}
 		}
 
-		t.type = token_type_t::identifier;
-		t.v.identifier.length = identlen;
-		assert(t.v.identifier.length != 0);
-		t.v.identifier.name = new char[t.v.identifier.length+1]; /* string + NUL */
-		memcpy(t.v.identifier.name,start,t.v.identifier.length);
-		t.v.identifier.name[t.v.identifier.length] = 0;
+		/* check for reserved words */
+		if (identlen == 6 && !memcmp(start,"return",6)) {
+			t.type = token_type_t::r_return;
+		}
+		else {
+			/* OK, it's an identifier */
+			t.type = token_type_t::identifier;
+			t.v.identifier.length = identlen;
+			assert(t.v.identifier.length != 0);
+			t.v.identifier.name = new char[t.v.identifier.length+1]; /* string + NUL */
+			memcpy(t.v.identifier.name,start,t.v.identifier.length);
+			t.v.identifier.name[t.v.identifier.length] = 0;
+		}
 	}
 
 	void compiler::skip_numeric_digit_separator(void) {
@@ -2886,6 +2904,9 @@ namespace CIMCC {
 			case token_type_t::rightsquarebracket:
 				s = "<rsqrbrkt>";
 				break;
+			case token_type_t::r_return:
+				s = "<r_return>";
+				break;
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
@@ -3161,6 +3182,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::scope:
 					name = "scope";
+					break;
+				case ast_node_op_t::r_return:
+					name = "r_return";
 					break;
 				default:
 					name = "?";
