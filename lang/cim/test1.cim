@@ -61,4 +61,8 @@ Fart";
 concatenation but now
 across multiple
 CAT"; " lines too";
+HD"<<DOS
+MS-DOS and Windows line encodings too.
+CR LF encoding.
+DOS";
 

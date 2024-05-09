@@ -55,6 +55,14 @@ namespace CIMCC {
 
 	/////////
 
+	/* H prefix flags */
+	enum {
+		HFLAG_CR_NEWLINES = (1u << 0u),
+		HFLAG_LF_NEWLINES = (1u << 1u)
+	};
+
+	/////////
+
 	struct token_t;
 
 	struct context_t {
@@ -630,7 +638,7 @@ namespace CIMCC {
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
-		void gtok_chrstr_H_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
+		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
@@ -1777,7 +1785,7 @@ namespace CIMCC {
 		return true;
 	}
 
-	void compiler::gtok_chrstr_H_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype) {
+	void compiler::gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags,token_charstrliteral_t::strtype_t strtype) {
 		int64_t c;
 
 		/* H"<<IDENTIFIER \n
@@ -1830,12 +1838,16 @@ namespace CIMCC {
 						/* this function will have already set the read position to the end of it */
 						break;
 					}
-				}
 
-				if (c >= 0x110000u)
+					if (flags & HFLAG_CR_NEWLINES)
+						tmp.push_back((uint16_t)('\r'));
+					if (flags & HFLAG_LF_NEWLINES)
+						tmp.push_back((uint16_t)('\n'));
+				}
+				else if (c >= 0x110000u)
 					break;
 				else if (c >= 0x10000u)
-					vec_encode_utf16surrogate(tmp,(uint32_t)c);
+					vec_encode_utf16surrogate(tmp,(uint16_t)c);
 				else
 					tmp.push_back((uint16_t)c);
 			}
@@ -1867,9 +1879,15 @@ namespace CIMCC {
 						/* this function will have already set the read position to the end of it */
 						break;
 					}
-				}
 
-				tmp.push_back((uint32_t)c);
+					if (flags & HFLAG_CR_NEWLINES)
+						tmp.push_back((uint16_t)('\r'));
+					if (flags & HFLAG_LF_NEWLINES)
+						tmp.push_back((uint16_t)('\n'));
+				}
+				else {
+					tmp.push_back((uint32_t)c);
+				}
 			}
 
 			t.v.chrstrlit.type = strtype;
@@ -1899,15 +1917,19 @@ namespace CIMCC {
 						/* this function will have already set the read position to the end of it */
 						break;
 					}
-				}
 
-				if (strtype == token_charstrliteral_t::strtype_t::T_UTF8) {
+					if (flags & HFLAG_CR_NEWLINES)
+						tmp.push_back((uint16_t)('\r'));
+					if (flags & HFLAG_LF_NEWLINES)
+						tmp.push_back((uint16_t)('\n'));
+				}
+				else if (strtype == token_charstrliteral_t::strtype_t::T_UTF8) {
 					/* The u8'...' constant is supposed to be a char8_t byte array of UTF-8 where
 					 * every character is within normal ASCII range. Screw that, encode it as UTF-8. */
 					if (c >= 0x80000000u)
 						break;
 					else
-						vec_encode_utf8(tmp,(uint32_t)c);
+						vec_encode_utf8(tmp,(uint8_t)c);
 				}
 				else {
 					if (c > 0xFFu) break;
@@ -2058,6 +2080,7 @@ namespace CIMCC {
 		if (pb.read < pb.end) {
 			if (*pb.read == '\'' || *pb.read == '\"') { /* i.e. L'W' or L"Hello" */
 				token_charstrliteral_t::strtype_t st = token_charstrliteral_t::strtype_t::T_BYTE;
+				unsigned char hflags = HFLAG_LF_NEWLINES; /* default 0x0a (LF) newlines */
 				unsigned char *scan = start;
 				unsigned char special = 0;
 
@@ -2095,11 +2118,18 @@ namespace CIMCC {
 				if ((scan+1) <= end && *scan == 'H') {
 					special = 'H';
 					scan += 1;
+
+					/* allow 'D' to specify that newlines should be encoded \r\n instead of \n */
+					if ((scan+1) <= end && *scan == 'D') {
+						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
+						hflags = HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES;
+						scan += 1;
+					}
 				}
 
 				if (scan == end) {
 					if (special == 'H')
-						gtok_chrstr_H_literal(*pb.read++,t,st);
+						gtok_chrstr_H_literal(*pb.read++,t,hflags,st);
 					else
 						gtok_chrstr_literal(*pb.read++,t,st);
 
