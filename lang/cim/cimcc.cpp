@@ -844,6 +844,35 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::opencurly) {
+			tok_bufdiscard(); /* eat it */
+
+			/* [scope]
+			 *  \
+			 *   +-- [expression]
+			 */
+
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::scope;
+
+			if (tok_bufpeek().type == token_type_t::closecurly) {
+				/* well then it's a nothing */
+			}
+			else {
+				if (!expression(pchnode->child))
+					return false;
+
+				{
+					token_t &t = tok_bufpeek();
+					if (t.type == token_type_t::closecurly)
+						tok_bufdiscard(); /* eat it */
+					else
+						return false;
+				}
+			}
+
+			return true;
+		}
 
 		return false;
 	}
@@ -873,56 +902,6 @@ namespace CIMCC {
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	bool compiler::postfix_expression(ast_node_t* &pchnode) {
-		if (tok_bufpeek().type == token_type_t::opencurly) {
-			tok_bufdiscard(); /* eat it */
-
-			/* [scope]
-			 *  \
-			 *   +-- [expression]
-			 */
-
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::scope;
-
-			if (tok_bufpeek().type == token_type_t::closecurly) {
-				/* well then it's a nothing */
-			}
-			else {
-				if (!expression(pchnode->child))
-					return false;
-
-				/* if a semicolon follows, this was a statement and it needs to be converted
-				 * to the first statement, then parse statements until closing curly brace */
-				if (tok_bufpeek().type == token_type_t::semicolon) {
-					ast_node_t *nn = new ast_node_t;
-					nn->op = ast_node_op_t::statement;
-					nn->child = pchnode->child;
-					pchnode->child = nn;
-					tok_bufdiscard();
-
-					ast_node_t *nnb = nn;
-
-					do {
-						if (tok_bufpeek().type == token_type_t::closecurly)
-							break;
-
-						if (!statement(nn,nnb))
-							return false;
-					} while(1);
-				}
-
-				{
-					token_t &t = tok_bufpeek();
-					if (t.type == token_type_t::closecurly)
-						tok_bufdiscard(); /* eat it */
-					else
-						return false;
-				}
-			}
-
-			return true;
-		}
-
 #define NLEX primary_expression
 		if (!NLEX(pchnode))
 			return false;
@@ -2631,6 +2610,49 @@ namespace CIMCC {
 				if (peekb() == '=') { /* /= */
 					t.type = token_type_t::slashequal;
 					skipb();
+				}
+				else if (peekb() == '/') {
+					/* C++ comment, which runs to end of line. Make no token for it. */
+					skipb();
+					while (1) {
+						if (peekb() == '\n') {
+							skipb();
+							return gtok(t); /* and use recursion to try again */
+						}
+						else if (pb.eof()) {
+							t.type = token_type_t::eof;
+							break;
+						}
+						else {
+							skipb();
+						}
+					}
+				}
+				else if (peekb() == '*') {
+					/* C comment, which runs until the same sequence in reverse */
+					skipb();
+
+					int depth = 1;
+					while (depth > 0) {
+						if (pb.eof()) {
+							t.type = token_type_t::eof;
+							break;
+						}
+
+						if (peekb() == '*') {
+							skipb();
+							if (getb() == '/') depth--;
+						}
+						else if (peekb() == '/') {
+							skipb();
+							if (getb() == '*') depth++;
+						}
+						else {
+							skipb();
+						}
+					}
+
+					return gtok(t); /* and use recursion to try again */
 				}
 				break;
 			case '%':

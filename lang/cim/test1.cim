@@ -143,3 +143,27 @@ int func1(int x,int y) {
 	return z ^ 1;
 }
 
+// C++ style comment. This should be ignored to end of line.
+// Even if another // is in the line, ignored to end of line.
+int func1(int x/*input code*/) {
+	return x;/*return here /* okay? */ */
+	/*/*/*/*This should be ignored*/ even */ if */ nested */
+}
+
+int func1(int x) {
+	int x = /* multiple line comments,
+	to describe something,
+	are perfectly fine.
+
+	Go ahead,
+
+	Blather on*/ { 4, 5, 6 };
+	return x[0];
+}
+
+int func1(float z) {
+	int x = {z,z*2,z*3.14,z*4,z*5,z*6,z*7,z*8,z*9.99}; /* C99 syntax */
+	int y = &x;
+	return x[5];
+}
+
