@@ -257,6 +257,7 @@ namespace CIMCC {
 		r_case,
 		r_default,
 		r_while,
+		r_do,
 
 		maxval
 	};
@@ -490,6 +491,7 @@ namespace CIMCC {
 		r_case,
 		r_default,
 		r_while,
+		r_do,
 		typecast,
 		scopeoperator,
 		label,
@@ -1921,6 +1923,34 @@ namespace CIMCC {
 							return false;
 					}
 				}
+				else if (tok_bufpeek().type == token_type_t::r_do) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_do;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					/* apparently do getch(); while (kbhit()); without the curly braces is perfectly fine.
+					 * means the same thing as do { getch(); } while (kbhit()); */
+					ast_node_t *n = apnode->child->child;
+					if (!statement(apnode->child->child,n))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::r_while)
+						return false;
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::openparen)
+						return false;
+					tok_bufdiscard();
+
+					if (!expression(apnode->child->child->next))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::closeparen)
+						return false;
+					tok_bufdiscard();
+				}
 				else if (tok_bufpeek().type == token_type_t::r_while) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
@@ -2613,6 +2643,9 @@ namespace CIMCC {
 		}
 		else if (identlen == 5 && !memcmp(start,"while",5)) {
 			t.type = token_type_t::r_while;
+		}
+		else if (identlen == 2 && !memcmp(start,"do",2)) {
+			t.type = token_type_t::r_do;
 		}
 		else {
 			/* OK, it's an identifier */
@@ -3309,6 +3342,9 @@ namespace CIMCC {
 			case token_type_t::r_while:
 				s = "<r_while>";
 				break;
+			case token_type_t::r_do:
+				s = "<r_do>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -3626,6 +3662,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_while:
 					name = "r_while";
+					break;
+				case ast_node_op_t::r_do:
+					name = "do";
 					break;
 				default:
 					name = "?";

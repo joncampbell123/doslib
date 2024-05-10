@@ -278,6 +278,12 @@ int func1(int x) {
 		y++;
 	}
 
+	do {
+		x = (x << 1) + 1; y += 2;
+	} while (x < 0x100);
+
+	do x = (x << 1) + 1; while (x < 0x200); /* not often used, but you can do statement without curly braces */
+
 	return y;
 }
 
