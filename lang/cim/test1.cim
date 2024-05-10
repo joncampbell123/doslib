@@ -203,3 +203,17 @@ int func1(int x) {
 	return x::y::z::a::b::c;
 }
 
+int func1(int x) {
+	if (x == 3)
+		return x*x;
+
+	return x*3;
+}
+
+int func1(int x) {
+	if (x == 3)
+		return x*x;
+	else
+		return x*3;
+}
+

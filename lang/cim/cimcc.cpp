@@ -249,6 +249,8 @@ namespace CIMCC {
 		closecurly,
 		r_return, /* reserved word "return" */
 		r_goto, /* reserved word "goto" */
+		r_if, /* reserved word "if" */
+		r_else, /* reserved word "else" */
 
 		maxval
 	};
@@ -474,6 +476,8 @@ namespace CIMCC {
 		scope,
 		r_return,
 		r_goto,
+		r_if,
+		r_else,
 		typecast,
 		scopeoperator,
 		label,
@@ -797,6 +801,44 @@ namespace CIMCC {
 				return true; /* return; */
 			else
 				return expression(pchnode->child); /* return expr; */
+		}
+		else if (t.type == token_type_t::r_if) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_if;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			if (tok_bufpeek().type != token_type_t::openparen)
+				return false;
+			tok_bufdiscard();
+
+			if (!expression(pchnode->child))
+				return false;
+
+			if (tok_bufpeek().type != token_type_t::closeparen)
+				return false;
+			tok_bufdiscard();
+
+			ast_node_t *n = pchnode->child->next;
+			if (!statement(pchnode->child->next,n))
+				return false;
+
+			if (tok_bufpeek().type == token_type_t::r_else) {
+				while (n->next) n=n->next;
+
+				n->next = new ast_node_t;
+				n->next->op = ast_node_op_t::r_else;
+				n->next->tv = std::move(tok_bufpeek());
+				tok_bufdiscard();
+				n = n->next;
+
+				ast_node_t *n2 = n->child;
+				if (!statement(n->child,n2))
+					return false;
+			}
+
+			return true;
 		}
 		else if (t.type == token_type_t::r_goto) {
 			assert(pchnode == NULL);
@@ -1827,6 +1869,10 @@ namespace CIMCC {
 				return true;
 		}
 
+		/* if (...) statement, parsing has already consumed semicolon */
+		if (apnode->op == ast_node_op_t::r_if)
+			return true;
+
 		return false;
 	}
 
@@ -2381,6 +2427,12 @@ namespace CIMCC {
 		}
 		else if (identlen == 4 && !memcmp(start,"goto",4)) {
 			t.type = token_type_t::r_goto;
+		}
+		else if (identlen == 4 && !memcmp(start,"else",4)) {
+			t.type = token_type_t::r_else;
+		}
+		else if (identlen == 2 && !memcmp(start,"if",2)) {
+			t.type = token_type_t::r_if;
 		}
 		else {
 			/* OK, it's an identifier */
@@ -3056,6 +3108,12 @@ namespace CIMCC {
 			case token_type_t::r_goto:
 				s = "<r_goto>";
 				break;
+			case token_type_t::r_else:
+				s = "<r_else>";
+				break;
+			case token_type_t::r_if:
+				s = "<r_if>";
+				break;
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
@@ -3340,6 +3398,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_goto:
 					name = "r_goto";
+					break;
+				case ast_node_op_t::r_else:
+					name = "r_else";
+					break;
+				case ast_node_op_t::r_if:
+					name = "r_if";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
