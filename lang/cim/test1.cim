@@ -192,3 +192,10 @@ int func1(float x) {
 	return (signed long int)(x); /* C++ style typecast */
 }
 
+int func1(int x) {
+	int z = 1;
+
+again:	z++;
+	goto again;
+}
+

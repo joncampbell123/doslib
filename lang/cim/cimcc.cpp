@@ -473,6 +473,7 @@ namespace CIMCC {
 		scope,
 		r_return,
 		typecast,
+		label,
 
 		maxval
 	};
@@ -1822,6 +1823,15 @@ namespace CIMCC {
 					/* does not need semicolon */
 				}
 				else {
+					if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
+						apnode->op = ast_node_op_t::label;
+						apnode->tv = std::move(tok_bufpeek(0));
+						apnode->next = new ast_node_t;
+						apnode = apnode->next;
+						apnode->op = ast_node_op_t::statement;
+						tok_bufdiscard(2);
+					}
+
 					if (!expression(apnode->child))
 						return false;
 
@@ -3223,13 +3233,13 @@ namespace CIMCC {
 					name = "decrement--";
 					break;
 				case ast_node_op_t::postincrement:
-					name = "decrement++";
+					name = "increment++";
 					break;
 				case ast_node_op_t::predecrement:
 					name = "--decrement";
 					break;
 				case ast_node_op_t::preincrement:
-					name = "++decrement";
+					name = "++increment";
 					break;
 				case ast_node_op_t::dereference:
 					name = "deref";
@@ -3269,6 +3279,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_return:
 					name = "r_return";
+					break;
+				case ast_node_op_t::label:
+					name = "label";
 					break;
 				default:
 					name = "?";
