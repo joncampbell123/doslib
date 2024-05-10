@@ -802,201 +802,6 @@ namespace CIMCC {
 
 			return true;
 		}
-		else if (t.type == token_type_t::r_return) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_return;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			if (tok_bufpeek().type == token_type_t::semicolon)
-				return true; /* return; */
-			else
-				return expression(pchnode->child); /* return expr; */
-		}
-		else if (t.type == token_type_t::r_break) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_break;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-			return (tok_bufpeek().type == token_type_t::semicolon);
-		}
-		else if (t.type == token_type_t::r_continue) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_continue;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-			return (tok_bufpeek().type == token_type_t::semicolon);
-		}
-		else if (t.type == token_type_t::r_while) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_while;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			if (tok_bufpeek().type != token_type_t::openparen)
-				return false;
-			tok_bufdiscard();
-
-			if (!expression(pchnode->child))
-				return false;
-
-			if (tok_bufpeek().type != token_type_t::closeparen)
-				return false;
-			tok_bufdiscard();
-
-			ast_node_t *n = pchnode->child->next;
-			if (!statement(pchnode->child->next,n))
-				return false;
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_switch) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_switch;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			if (tok_bufpeek().type != token_type_t::openparen)
-				return false;
-			tok_bufdiscard();
-
-			if (!expression(pchnode->child))
-				return false;
-
-			if (tok_bufpeek().type != token_type_t::closeparen)
-				return false;
-			tok_bufdiscard();
-
-			/* NTS: C apparently only requires a statement, which doesn't really make sense without { compount statement } */
-			/*      We require a compound statement. What would do do with a single statement? A default case? */
-			if (tok_bufpeek().type != token_type_t::opencurly)
-				return false;
-			tok_bufdiscard();
-
-			/* parse statements, look for case IDENTIFIER: and make those another node.
-			 * ignore statements prior to the first case based on the fact that you can
-			 * put statements before any case statement but GCC will warn about ignored
-			 * statements. */
-			ast_node_t *nl = pchnode->child,*casefirst = NULL,*casenode = NULL;
-			while (1) {
-				if (tok_bufpeek().type == token_type_t::eof)
-					return false;
-				if (tok_bufpeek().type == token_type_t::closecurly)
-					break;
-
-				if (tok_bufpeek().type == token_type_t::r_case) { /* case conditionalexpression : statement */
-					nl->next = new ast_node_t;
-					nl->next->op = ast_node_op_t::r_case;
-					nl->next->tv = std::move(tok_bufpeek());
-					tok_bufdiscard();
-					nl = nl->next;
-
-					if (!conditional_expression(nl->child))
-						return false;
-
-					if (tok_bufpeek().type != token_type_t::colon)
-						return false;
-					tok_bufdiscard();
-
-					casefirst = casenode = nl->child;
-				}
-				else if (tok_bufpeek().type == token_type_t::r_default) { /* default : statement */
-					nl->next = new ast_node_t;
-					nl->next->op = ast_node_op_t::r_case;
-					nl->next->tv = std::move(tok_bufpeek());
-					tok_bufdiscard();
-					nl = nl->next;
-
-					nl->child = new ast_node_t;
-					nl->child->op = ast_node_op_t::r_default;
-
-					if (tok_bufpeek().type != token_type_t::colon)
-						return false;
-					tok_bufdiscard();
-
-					casefirst = casenode = nl->child;
-				}
-
-				if (casefirst != NULL) {
-					if (!statement(casefirst,casenode))
-						return false;
-				}
-				else {
-					ast_node_t *stmt=NULL,*junk=NULL;
-					if (!statement(stmt,junk))
-						return false;
-
-					stmt->free_nodes();
-					delete stmt;
-					stmt = NULL;
-				}
-			}
-
-			if (tok_bufpeek().type != token_type_t::closecurly)
-				return false;
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_if) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_if;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			if (tok_bufpeek().type != token_type_t::openparen)
-				return false;
-			tok_bufdiscard();
-
-			if (!expression(pchnode->child))
-				return false;
-
-			if (tok_bufpeek().type != token_type_t::closeparen)
-				return false;
-			tok_bufdiscard();
-
-			ast_node_t *n = pchnode->child->next;
-			if (!statement(pchnode->child->next,n))
-				return false;
-
-			if (tok_bufpeek().type == token_type_t::r_else) {
-				while (n->next) n=n->next;
-
-				n->next = new ast_node_t;
-				n->next->op = ast_node_op_t::r_else;
-				n->next->tv = std::move(tok_bufpeek());
-				tok_bufdiscard();
-				n = n->next;
-
-				ast_node_t *n2 = n->child;
-				if (!statement(n->child,n2))
-					return false;
-			}
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_goto) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_goto;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			/* must be an identifier */
-			if (tok_bufpeek().type == token_type_t::identifier) {
-				pchnode->child = new ast_node_t;
-				pchnode->child->op = ast_node_op_t::identifier;
-				pchnode->child->tv = std::move(tok_bufpeek());
-				tok_bufdiscard();
-				return true;
-			}
-		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -2065,6 +1870,217 @@ namespace CIMCC {
 					}
 
 					/* does not need semicolon */
+				}
+				else if (tok_bufpeek().type == token_type_t::r_return) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_return;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::semicolon) {
+						if (!expression(apnode->child->child))
+							return false;
+					}
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_break) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_break;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_continue) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_continue;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_while) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_while;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::openparen)
+						return false;
+					tok_bufdiscard();
+
+					if (!expression(apnode->child->child))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::closeparen)
+						return false;
+					tok_bufdiscard();
+
+					ast_node_t *n = apnode->child->child->next;
+					if (!statement(apnode->child->child->next,n))
+						return false;
+				}
+				else if (tok_bufpeek().type == token_type_t::r_switch) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_switch;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::openparen)
+						return false;
+					tok_bufdiscard();
+
+					if (!expression(apnode->child->child))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::closeparen)
+						return false;
+					tok_bufdiscard();
+
+					/* NTS: C apparently only requires a statement, which doesn't really make sense without { compount statement } */
+					/*      We require a compound statementok_bufpeek(). What would do do with a single statement? A default case? */
+					if (tok_bufpeek().type != token_type_t::opencurly)
+						return false;
+					tok_bufdiscard();
+
+					/* parse statements, look for case IDENTIFIER: and make those another node.
+					 * ignore statements prior to the first case based on the fact that you can
+					 * put statements before any case statement but GCC will warn about ignored
+					 * statements. */
+					ast_node_t *nl = apnode->child->child,*casefirst = NULL,*casenode = NULL;
+					while (1) {
+						if (tok_bufpeek().type == token_type_t::eof)
+							return false;
+						if (tok_bufpeek().type == token_type_t::closecurly)
+							break;
+
+						if (tok_bufpeek().type == token_type_t::r_case) { /* case conditionalexpression : statement */
+							nl->next = new ast_node_t;
+							nl->next->op = ast_node_op_t::r_case;
+							nl->next->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							nl = nl->next;
+
+							if (!conditional_expression(nl->child))
+								return false;
+
+							if (tok_bufpeek().type != token_type_t::colon)
+								return false;
+							tok_bufdiscard();
+
+							casefirst = casenode = nl->child;
+						}
+						else if (tok_bufpeek().type == token_type_t::r_default) { /* default : statement */
+							nl->next = new ast_node_t;
+							nl->next->op = ast_node_op_t::r_case;
+							nl->next->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							nl = nl->next;
+
+							nl->child = new ast_node_t;
+							nl->child->op = ast_node_op_t::r_default;
+
+							if (tok_bufpeek().type != token_type_t::colon)
+								return false;
+							tok_bufdiscard();
+
+							casefirst = casenode = nl->child;
+						}
+
+						if (casefirst != NULL) {
+							if (!statement(casefirst,casenode))
+								return false;
+						}
+						else {
+							ast_node_t *stmt=NULL,*junk=NULL;
+							if (!statement(stmt,junk))
+								return false;
+
+							stmt->free_nodes();
+							delete stmt;
+							stmt = NULL;
+						}
+					}
+
+					if (tok_bufpeek().type != token_type_t::closecurly)
+						return false;
+					tok_bufdiscard();
+				}
+				else if (tok_bufpeek().type == token_type_t::r_if) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_if;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::openparen)
+						return false;
+					tok_bufdiscard();
+
+					if (!expression(apnode->child->child))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::closeparen)
+						return false;
+					tok_bufdiscard();
+
+					ast_node_t *n = apnode->child->child->next;
+					if (!statement(apnode->child->child->next,n))
+						return false;
+
+					if (tok_bufpeek().type == token_type_t::r_else) {
+						while (n->next) n=n->next;
+
+						n->next = new ast_node_t;
+						n->next->op = ast_node_op_t::r_else;
+						n->next->tv = std::move(tok_bufpeek());
+						tok_bufdiscard();
+						n = n->next;
+
+						ast_node_t *n2 = n->child;
+						if (!statement(n->child,n2))
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_goto) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_goto;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					/* must be an identifier */
+					if (tok_bufpeek().type != token_type_t::identifier)
+						return false;
+
+					apnode->child->child = new ast_node_t;
+					apnode->child->child->op = ast_node_op_t::identifier;
+					apnode->child->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
 				}
 				else {
 					if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
