@@ -290,6 +290,13 @@ int func1(int x) {
 	for (x=0;x < 100;) { y++; x += y; }
 	for (x=0;x < 100;x += 3) { y++; x += y; }
 
+a: b:	x += 3;
+	goto a;
+
+	switch (x) {
+		case 1: case 2: case 3: y += 5; break;
+	}
+
 	return y;
 }
 

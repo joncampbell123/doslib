@@ -2069,37 +2069,42 @@ namespace CIMCC {
 						if (tok_bufpeek().type == token_type_t::closecurly)
 							break;
 
-						if (tok_bufpeek().type == token_type_t::r_case) { /* case conditionalexpression : statement */
-							nl->next = new ast_node_t;
-							nl->next->op = ast_node_op_t::r_case;
-							nl->next->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							nl = nl->next;
+						while (1) {
+							if (tok_bufpeek().type == token_type_t::r_case) { /* case conditionalexpression : statement */
+								nl->next = new ast_node_t;
+								nl->next->op = ast_node_op_t::r_case;
+								nl->next->tv = std::move(tok_bufpeek());
+								tok_bufdiscard();
+								nl = nl->next;
 
-							if (!conditional_expression(nl->child))
-								return false;
+								if (!conditional_expression(nl->child))
+									return false;
 
-							if (tok_bufpeek().type != token_type_t::colon)
-								return false;
-							tok_bufdiscard();
+								if (tok_bufpeek().type != token_type_t::colon)
+									return false;
+								tok_bufdiscard();
 
-							casefirst = casenode = nl->child;
-						}
-						else if (tok_bufpeek().type == token_type_t::r_default) { /* default : statement */
-							nl->next = new ast_node_t;
-							nl->next->op = ast_node_op_t::r_case;
-							nl->next->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							nl = nl->next;
+								casefirst = casenode = nl->child;
+							}
+							else if (tok_bufpeek().type == token_type_t::r_default) { /* default : statement */
+								nl->next = new ast_node_t;
+								nl->next->op = ast_node_op_t::r_case;
+								nl->next->tv = std::move(tok_bufpeek());
+								tok_bufdiscard();
+								nl = nl->next;
 
-							nl->child = new ast_node_t;
-							nl->child->op = ast_node_op_t::r_default;
+								nl->child = new ast_node_t;
+								nl->child->op = ast_node_op_t::r_default;
 
-							if (tok_bufpeek().type != token_type_t::colon)
-								return false;
-							tok_bufdiscard();
+								if (tok_bufpeek().type != token_type_t::colon)
+									return false;
+								tok_bufdiscard();
 
-							casefirst = casenode = nl->child;
+								casefirst = casenode = nl->child;
+							}
+							else {
+								break;
+							}
 						}
 
 						if (casefirst != NULL) {
@@ -2174,7 +2179,7 @@ namespace CIMCC {
 					tok_bufdiscard();
 				}
 				else {
-					if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
+					while (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
 						apnode->op = ast_node_op_t::label;
 						apnode->tv = std::move(tok_bufpeek(0));
 						apnode->next = new ast_node_t;
