@@ -237,3 +237,36 @@ int func1(int x) {
 		return x*3;
 }
 
+int func1(int x) {
+	int y = x ^ 1;
+
+	switch (x) {
+		y++; /* should be ignored */
+		case 1: y ^= 3; break;
+		case 2: y ^= 2; /* fall through */
+		case 3: y ^= 4; break;
+		default: y |= 8; break;
+	}
+
+	return y;
+}
+
+int func1(int x) {
+	int y = x ^ 1;
+
+	switch (x) {
+		y++; /* should be ignored */
+		case 1: y ^= 3; break;
+		case 2: y ^= 2;
+			switch (x&3) {
+				case 1: y |= 32; break;
+				case 3: y += 48; break;
+			}
+			break;
+		case 3: y ^= 4; break;
+		default: y |= 8; break;
+	}
+
+	return y;
+}
+
