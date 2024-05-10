@@ -850,12 +850,7 @@ namespace CIMCC {
 			/* [scope]
 			 *  \
 			 *   +-- [expression]
-			 *
-			 * or if a semicolon is involved, it becomes
-			 *
-			 * [scope]
-			 *  \
-			 *   +-- [statement] -> [statement] ... */
+			 */
 
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::scope;
@@ -1037,7 +1032,8 @@ namespace CIMCC {
 
 				/* if a { scope } follows then parse that too */
 				if (tok_bufpeek().type == token_type_t::opencurly) {
-					if (!primary_expression(sav_p->next))
+					ast_node_t *n = sav_p->next;
+					if (!statement(sav_p->next,n))
 						return false;
 				}
 			}
@@ -1788,18 +1784,43 @@ namespace CIMCC {
 				}
 				apnode->op = ast_node_op_t::statement;
 
-				if (!expression(apnode->child))
-					return false;
+				/* allow { compound statements } in a { scope } */
+				if (tok_bufpeek().type == token_type_t::opencurly) {
+					tok_bufdiscard(); /* eat the { */
 
-				if (statement_does_not_need_semicolon(apnode->child)) {
-					/* if parsing a { scope } a semicolon is not required after the closing curly brace */
+					/* [scope]
+					 *  \
+					 *   +-- [statement] -> [statement] ... */
+					apnode->op = ast_node_op_t::scope;
+
+					ast_node_t *bc = NULL;
+
+					while (1) {
+						if (tok_bufpeek().type == token_type_t::closecurly) {
+							tok_bufdiscard();
+							break;
+						}
+
+						if (!statement(apnode->child,bc))
+							return false;
+					}
+
+					/* does not need semicolon */
 				}
 				else {
-					token_t &t = tok_bufpeek();
-					if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
-						tok_bufdiscard(); /* eat the EOF or semicolon */
-					else
+					if (!expression(apnode->child))
 						return false;
+
+					if (statement_does_not_need_semicolon(apnode->child)) {
+						/* if parsing a { scope } a semicolon is not required after the closing curly brace */
+					}
+					else {
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
 				}
 			}
 		}
