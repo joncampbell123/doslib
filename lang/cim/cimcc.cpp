@@ -905,6 +905,7 @@ namespace CIMCC {
 					if (!statement(stmt,junk))
 						return false;
 
+					stmt->free_nodes();
 					delete stmt;
 					stmt = NULL;
 				}

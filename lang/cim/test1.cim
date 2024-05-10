@@ -256,6 +256,7 @@ int func1(int x) {
 
 	switch (x) {
 		y++; /* should be ignored */
+		y += 2; /* should be ignored */
 		case 1: y ^= 3; break;
 		case 2: y ^= 2;
 			switch (x&3) {
