@@ -256,6 +256,7 @@ namespace CIMCC {
 		r_switch,
 		r_case,
 		r_default,
+		r_while,
 
 		maxval
 	};
@@ -488,6 +489,7 @@ namespace CIMCC {
 		r_switch,
 		r_case,
 		r_default,
+		r_while,
 		typecast,
 		scopeoperator,
 		label,
@@ -827,6 +829,30 @@ namespace CIMCC {
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 			return (tok_bufpeek().type == token_type_t::semicolon);
+		}
+		else if (t.type == token_type_t::r_while) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_while;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			if (tok_bufpeek().type != token_type_t::openparen)
+				return false;
+			tok_bufdiscard();
+
+			if (!expression(pchnode->child))
+				return false;
+
+			if (tok_bufpeek().type != token_type_t::closeparen)
+				return false;
+			tok_bufdiscard();
+
+			ast_node_t *n = pchnode->child->next;
+			if (!statement(pchnode->child->next,n))
+				return false;
+
+			return true;
 		}
 		else if (t.type == token_type_t::r_switch) {
 			assert(pchnode == NULL);
@@ -1989,7 +2015,8 @@ namespace CIMCC {
 			return true;
 
 		/* switch { ... } handling has it's own curly brace enforcement, no need for semicolon */
-		if (apnode->op == ast_node_op_t::r_switch)
+		/* so does while () { ... } */
+		if (apnode->op == ast_node_op_t::r_switch || apnode->op == ast_node_op_t::r_while)
 			return true;
 
 		return false;
@@ -2567,6 +2594,9 @@ namespace CIMCC {
 		}
 		else if (identlen == 7 && !memcmp(start,"default",7)) {
 			t.type = token_type_t::r_default;
+		}
+		else if (identlen == 5 && !memcmp(start,"while",5)) {
+			t.type = token_type_t::r_while;
 		}
 		else {
 			/* OK, it's an identifier */
@@ -3260,6 +3290,9 @@ namespace CIMCC {
 			case token_type_t::r_switch:
 				s = "<r_switch>";
 				break;
+			case token_type_t::r_while:
+				s = "<r_while>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -3574,6 +3607,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_default:
 					name = "r_default";
+					break;
+				case ast_node_op_t::r_while:
+					name = "r_while";
 					break;
 				default:
 					name = "?";
