@@ -258,6 +258,7 @@ namespace CIMCC {
 		r_default,
 		r_while,
 		r_do,
+		r_for,
 
 		maxval
 	};
@@ -492,6 +493,7 @@ namespace CIMCC {
 		r_default,
 		r_while,
 		r_do,
+		r_for,
 		typecast,
 		scopeoperator,
 		label,
@@ -1923,6 +1925,65 @@ namespace CIMCC {
 							return false;
 					}
 				}
+				else if (tok_bufpeek().type == token_type_t::r_for) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_for;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					ast_node_t *nn = apnode->child;
+
+					if (tok_bufpeek().type != token_type_t::openparen)
+						return false;
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type == token_type_t::semicolon) {
+						nn->next = new ast_node_t;
+						nn->next->op = ast_node_op_t::none;
+					}
+					else {
+						if (!expression(nn->next))
+							return false;
+					}
+					nn = nn->next;
+
+					if (tok_bufpeek().type != token_type_t::semicolon)
+						return false;
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type == token_type_t::semicolon) {
+						nn->next = new ast_node_t;
+						nn->next->op = ast_node_op_t::none;
+					}
+					else {
+						if (!expression(nn->next))
+							return false;
+					}
+					nn = nn->next;
+
+					if (tok_bufpeek().type != token_type_t::semicolon)
+						return false;
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::closeparen) {
+						nn->next = new ast_node_t;
+						nn->next->op = ast_node_op_t::none;
+					}
+					else {
+						if (!expression(nn->next))
+							return false;
+					}
+					nn = nn->next;
+
+					if (tok_bufpeek().type != token_type_t::closeparen)
+						return false;
+					tok_bufdiscard();
+
+					ast_node_t *n = nn->next;
+					if (!statement(nn->next,n))
+						return false;
+				}
 				else if (tok_bufpeek().type == token_type_t::r_do) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
@@ -2647,6 +2708,9 @@ namespace CIMCC {
 		else if (identlen == 2 && !memcmp(start,"do",2)) {
 			t.type = token_type_t::r_do;
 		}
+		else if (identlen == 3 && !memcmp(start,"for",3)) {
+			t.type = token_type_t::r_for;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3345,6 +3409,9 @@ namespace CIMCC {
 			case token_type_t::r_do:
 				s = "<r_do>";
 				break;
+			case token_type_t::r_for:
+				s = "<r_for>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -3665,6 +3732,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_do:
 					name = "do";
+					break;
+				case ast_node_op_t::r_for:
+					name = "for";
 					break;
 				default:
 					name = "?";
