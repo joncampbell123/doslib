@@ -248,6 +248,7 @@ namespace CIMCC {
 		opencurly,
 		closecurly,
 		r_return, /* reserved word "return" */
+		r_goto, /* reserved word "goto" */
 
 		maxval
 	};
@@ -472,6 +473,7 @@ namespace CIMCC {
 		strcat,
 		scope,
 		r_return,
+		r_goto,
 		typecast,
 		label,
 
@@ -793,6 +795,22 @@ namespace CIMCC {
 				return true; /* return; */
 			else
 				return expression(pchnode->child); /* return expr; */
+		}
+		else if (t.type == token_type_t::r_goto) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_goto;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			/* must be an identifier */
+			if (tok_bufpeek().type == token_type_t::identifier) {
+				pchnode->child = new ast_node_t;
+				pchnode->child->op = ast_node_op_t::identifier;
+				pchnode->child->tv = std::move(tok_bufpeek());
+				tok_bufdiscard();
+				return true;
+			}
 		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
@@ -2327,6 +2345,9 @@ namespace CIMCC {
 		if (identlen == 6 && !memcmp(start,"return",6)) {
 			t.type = token_type_t::r_return;
 		}
+		else if (identlen == 4 && !memcmp(start,"goto",4)) {
+			t.type = token_type_t::r_goto;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -2998,6 +3019,9 @@ namespace CIMCC {
 			case token_type_t::r_return:
 				s = "<r_return>";
 				break;
+			case token_type_t::r_goto:
+				s = "<r_goto>";
+				break;
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
@@ -3279,6 +3303,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_return:
 					name = "r_return";
+					break;
+				case ast_node_op_t::r_goto:
+					name = "r_goto";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
