@@ -167,3 +167,20 @@ int func1(float z) {
 	return x[5];
 }
 
+int func1(float x) {
+	return (int)x;
+}
+
+int func1(float x) {
+	return (signed long int)x+(signed long int)(~x);
+}
+
+int func1(int x) {
+	int x = (long){1*x,2*x,(long long)(3*x),4*x};
+	return (int)((float)x * 1.23);
+}
+
+int func1(int x) {
+	return (int)floatmul1(x,1.245);
+}
+

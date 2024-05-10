@@ -472,6 +472,7 @@ namespace CIMCC {
 		strcat,
 		scope,
 		r_return,
+		typecast,
 
 		maxval
 	};
@@ -840,6 +841,39 @@ namespace CIMCC {
 					tok_bufdiscard(); /* eat it */
 				else
 					return false;
+			}
+
+			/* if the expression is an identifier, it might be a data type,
+			 * and therefore a typecast, rather than a subexpression */
+			if (pchnode->child->op == ast_node_op_t::identifier) {
+				bool is_id = true;
+
+				for (ast_node_t *n=pchnode->child;n;) {
+					if (n->op == ast_node_op_t::identifier) {
+						n = n->child;
+					}
+					else {
+						is_id = false;
+						break;
+					}
+				}
+
+				if (is_id) {
+					token_t &nt = tok_bufpeek();
+
+					/* allow typecasts:
+					 *
+					 * (type)(expression)
+					 * (type){compound literal}
+					 * (type)identifier including (type)functioncall()
+					 *
+					 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
+					if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier) {
+						pchnode->op = ast_node_op_t::typecast;
+						if (!unary_expression(pchnode->child->next))
+							return false;
+					}
+				}
 			}
 
 			return true;
@@ -3214,6 +3248,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::subexpression:
 					name = "subexpression";
+					break;
+				case ast_node_op_t::typecast:
+					name = "typecast";
 					break;
 				case ast_node_op_t::function:
 					name = "function";
