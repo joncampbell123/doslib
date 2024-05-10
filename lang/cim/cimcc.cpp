@@ -251,6 +251,8 @@ namespace CIMCC {
 		r_goto, /* reserved word "goto" */
 		r_if, /* reserved word "if" */
 		r_else, /* reserved word "else" */
+		r_break,
+		r_continue,
 
 		maxval
 	};
@@ -478,6 +480,8 @@ namespace CIMCC {
 		r_goto,
 		r_if,
 		r_else,
+		r_break,
+		r_continue,
 		typecast,
 		scopeoperator,
 		label,
@@ -801,6 +805,22 @@ namespace CIMCC {
 				return true; /* return; */
 			else
 				return expression(pchnode->child); /* return expr; */
+		}
+		else if (t.type == token_type_t::r_break) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_break;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+			return (tok_bufpeek().type == token_type_t::semicolon);
+		}
+		else if (t.type == token_type_t::r_continue) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_continue;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+			return (tok_bufpeek().type == token_type_t::semicolon);
 		}
 		else if (t.type == token_type_t::r_if) {
 			assert(pchnode == NULL);
@@ -2434,6 +2454,12 @@ namespace CIMCC {
 		else if (identlen == 2 && !memcmp(start,"if",2)) {
 			t.type = token_type_t::r_if;
 		}
+		else if (identlen == 8 && !memcmp(start,"continue",8)) {
+			t.type = token_type_t::r_continue;
+		}
+		else if (identlen == 5 && !memcmp(start,"break",5)) {
+			t.type = token_type_t::r_break;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3114,6 +3140,12 @@ namespace CIMCC {
 			case token_type_t::r_if:
 				s = "<r_if>";
 				break;
+			case token_type_t::r_break:
+				s = "<r_break>";
+				break;
+			case token_type_t::r_continue:
+				s = "<r_continue>";
+				break;
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
@@ -3410,6 +3442,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::scopeoperator:
 					name = "scopeoperator";
+					break;
+				case ast_node_op_t::r_break:
+					name = "r_break";
+					break;
+				case ast_node_op_t::r_continue:
+					name = "r_continue";
 					break;
 				default:
 					name = "?";
