@@ -199,3 +199,7 @@ again:	z++;
 	goto again;
 }
 
+int func1(int x) {
+	return x::y::z::a::b::c;
+}
+

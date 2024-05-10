@@ -475,6 +475,7 @@ namespace CIMCC {
 		r_return,
 		r_goto,
 		typecast,
+		scopeoperator,
 		label,
 
 		maxval
@@ -637,6 +638,7 @@ namespace CIMCC {
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
+		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
 		bool relational_expression(ast_node_t* &pchnode);
 		bool binary_xor_expression(ast_node_t* &pchnode);
@@ -953,9 +955,41 @@ namespace CIMCC {
 		return true;
 	}
 
+	bool compiler::cpp_scope_expression(ast_node_t* &pchnode) {
+#define NLEX primary_expression
+		if (!NLEX(pchnode))
+			return false;
+
+		if (pchnode->op == ast_node_op_t::identifier) {
+			while (tok_bufpeek().type == token_type_t::coloncolon) { /* :: but only identifiers */
+				tok_bufdiscard(); /* eat it */
+
+				/* [::]
+				 *  \
+				 *   +-- [left expr] -> [right expr] */
+
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::scopeoperator;
+				pchnode->child = sav_p;
+
+				/* must be an identifier */
+				if (tok_bufpeek().type == token_type_t::identifier) {
+					if (!NLEX(sav_p->next))
+						return false;
+				}
+				else {
+					return false;
+				}
+			}
+		}
+#undef NLEX
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	bool compiler::postfix_expression(ast_node_t* &pchnode) {
-#define NLEX primary_expression
+#define NLEX cpp_scope_expression
 		if (!NLEX(pchnode))
 			return false;
 
@@ -3309,6 +3343,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::label:
 					name = "label";
+					break;
+				case ast_node_op_t::scopeoperator:
+					name = "scopeoperator";
 					break;
 				default:
 					name = "?";
