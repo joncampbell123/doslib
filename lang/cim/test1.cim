@@ -184,3 +184,11 @@ int func1(int x) {
 	return (int)floatmul1(x,1.245);
 }
 
+int func1(float x) {
+	return int(x); /* C++ style typecast */
+}
+
+int func1(float x) {
+	return (signed long int)(x); /* C++ style typecast */
+}
+
