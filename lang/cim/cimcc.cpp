@@ -844,7 +844,36 @@ namespace CIMCC {
 
 			return true;
 		}
-		else if (t.type == token_type_t::opencurly) {
+
+		return false;
+	}
+
+	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
+		/* [argument] -> [argument] -> ...
+		 *  \             \
+		 *   +--- [expr]   +--- [expr] */
+#define NLEX assignment_expression
+		pchnode = new ast_node_t;
+		pchnode->op = ast_node_op_t::argument;
+		if (!NLEX(pchnode->child))
+			return false;
+
+		ast_node_t *nb = pchnode;
+		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+			tok_bufdiscard(); /* eat it */
+
+			nb->next = new ast_node_t; nb = nb->next;
+			nb->op = ast_node_op_t::argument;
+			if (!NLEX(nb->child))
+				return false;
+		}
+#undef NLEX
+		return true;
+	}
+
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
+	bool compiler::postfix_expression(ast_node_t* &pchnode) {
+		if (tok_bufpeek().type == token_type_t::opencurly) {
 			tok_bufdiscard(); /* eat it */
 
 			/* [scope]
@@ -894,34 +923,6 @@ namespace CIMCC {
 			return true;
 		}
 
-		return false;
-	}
-
-	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
-		/* [argument] -> [argument] -> ...
-		 *  \             \
-		 *   +--- [expr]   +--- [expr] */
-#define NLEX assignment_expression
-		pchnode = new ast_node_t;
-		pchnode->op = ast_node_op_t::argument;
-		if (!NLEX(pchnode->child))
-			return false;
-
-		ast_node_t *nb = pchnode;
-		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
-			tok_bufdiscard(); /* eat it */
-
-			nb->next = new ast_node_t; nb = nb->next;
-			nb->op = ast_node_op_t::argument;
-			if (!NLEX(nb->child))
-				return false;
-		}
-#undef NLEX
-		return true;
-	}
-
-	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
-	bool compiler::postfix_expression(ast_node_t* &pchnode) {
 #define NLEX primary_expression
 		if (!NLEX(pchnode))
 			return false;
