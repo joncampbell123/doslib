@@ -217,3 +217,23 @@ int func1(int x) {
 		return x*3;
 }
 
+int func1(int x) {
+	if (x == 3)
+		return x*x;
+	else if (x == 5)
+		return x*x*2;
+	else
+		return x*3;
+}
+
+int func1(int x) {
+	if (x == 3)
+		return x*x;
+	else if (x == 5)
+		return x*x*2;
+	else if (x == 7)
+		{ x += 7; return x*x*3; }
+	else
+		return x*3;
+}
+
