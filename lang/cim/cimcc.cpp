@@ -480,6 +480,7 @@ namespace CIMCC {
 		function, // something(...), phase 2 will make sense to determine function definition, function declaration, or function call.
 		argument,
 		identifier,
+		identifier_list,
 		strcat,
 		scope,
 		r_return,
@@ -823,15 +824,22 @@ namespace CIMCC {
 			 *
 			 */
 			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-			ast_node_t *nn = pchnode;
-			while (tok_bufpeek().type == token_type_t::identifier) {
-				token_t &st = tok_bufpeek();
+			if (tok_bufpeek().type == token_type_t::identifier) {
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::identifier_list;
+				pchnode->child = sav_p;
 
-				nn->child = new ast_node_t;
-				nn->child->op = ast_node_op_t::identifier;
-				nn->child->tv = std::move(st);
-				tok_bufdiscard();
-				nn = nn->child;
+				ast_node_t *nn = sav_p;
+				while (tok_bufpeek().type == token_type_t::identifier) {
+					token_t &st = tok_bufpeek();
+
+					nn->next = new ast_node_t;
+					nn->next->op = ast_node_op_t::identifier;
+					nn->next->tv = std::move(st);
+					tok_bufdiscard();
+					nn = nn->next;
+				}
 			}
 
 			return true;
@@ -858,34 +866,20 @@ namespace CIMCC {
 
 			/* if the expression is an identifier, it might be a data type,
 			 * and therefore a typecast, rather than a subexpression */
-			if (pchnode->child->op == ast_node_op_t::identifier) {
-				bool is_id = true;
+			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::identifier_list) {
+				token_t &nt = tok_bufpeek();
 
-				for (ast_node_t *n=pchnode->child;n;) {
-					if (n->op == ast_node_op_t::identifier) {
-						n = n->child;
-					}
-					else {
-						is_id = false;
-						break;
-					}
-				}
-
-				if (is_id) {
-					token_t &nt = tok_bufpeek();
-
-					/* allow typecasts:
-					 *
-					 * (type)(expression)
-					 * (type){compound literal}
-					 * (type)identifier including (type)functioncall()
-					 *
-					 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
-					if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier) {
-						pchnode->op = ast_node_op_t::typecast;
-						if (!unary_expression(pchnode->child->next))
-							return false;
-					}
+				/* allow typecasts:
+				 *
+				 * (type)(expression)
+				 * (type){compound literal}
+				 * (type)identifier including (type)functioncall()
+				 *
+				 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
+				if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier) {
+					pchnode->op = ast_node_op_t::typecast;
+					if (!unary_expression(pchnode->child->next))
+						return false;
 				}
 			}
 
@@ -1813,7 +1807,7 @@ namespace CIMCC {
 		 * but not function(), that still requires semicolon */
 		if (apnode->op == ast_node_op_t::function) {
 			ast_node_t* s = apnode->child;
-			if (s && s->op == ast_node_op_t::identifier) s=s->next;
+			if (s && (s->op == ast_node_op_t::identifier || s->op == ast_node_op_t::identifier_list)) s=s->next;
 			while (s && s->op == ast_node_op_t::argument) s=s->next;
 			if (s && s->op == ast_node_op_t::scope)
 				return true;
@@ -3689,6 +3683,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::argument:
 					name = "argument";
+					break;
+				case ast_node_op_t::identifier_list:
+					name = "identifier_list";
 					break;
 				case ast_node_op_t::identifier:
 					name = "identifier";
