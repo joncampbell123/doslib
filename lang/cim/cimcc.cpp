@@ -655,6 +655,7 @@ namespace CIMCC {
 		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
 		void skip_numeric_digit_separator(void);
+		bool let_expression(ast_node_t* &apnode);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
@@ -1816,6 +1817,39 @@ namespace CIMCC {
 		return true;
 	}
 
+	bool compiler::let_expression(ast_node_t* &apnode) {
+		if (!postfix_expression(apnode))
+			return false;
+
+		ast_node_t *n = apnode;
+
+		while (tok_bufpeek().type == token_type_t::star ||
+			tok_bufpeek().type == token_type_t::ampersand ||
+			tok_bufpeek().type == token_type_t::ampersandampersand) {
+			if (!unary_expression(n->next))
+				return false;
+			n = n->next;
+		}
+
+		if (tok_bufpeek().type == token_type_t::semicolon) {
+			/* ok */
+		}
+		else if (tok_bufpeek().type == token_type_t::equal) {
+			tok_bufdiscard(); /* eat it */
+
+			n->next = new ast_node_t;
+			n->next->op = ast_node_op_t::assign;
+			if (!assignment_expression(n->next->child))
+				return false;
+			n = n->next;
+		}
+		else {
+			return false;
+		}
+
+		return true;
+	}
+
 	bool compiler::statement_does_not_need_semicolon(ast_node_t* apnode) {
 		/* { scope } */
 		if (apnode->op == ast_node_op_t::scope)
@@ -1945,34 +1979,8 @@ namespace CIMCC {
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
-					if (!postfix_expression(apnode->child->child))
+					if (!let_expression(apnode->child->child))
 						return false;
-
-					ast_node_t *n = apnode->child->child;
-
-					while (tok_bufpeek().type == token_type_t::star ||
-						tok_bufpeek().type == token_type_t::ampersand ||
-						tok_bufpeek().type == token_type_t::ampersandampersand) {
-						if (!unary_expression(n->next))
-							return false;
-						n = n->next;
-					}
-
-					if (tok_bufpeek().type == token_type_t::semicolon) {
-						/* ok */
-					}
-					else if (tok_bufpeek().type == token_type_t::equal) {
-						tok_bufdiscard(); /* eat it */
-
-						n->next = new ast_node_t;
-						n->next->op = ast_node_op_t::assign;
-						if (!assignment_expression(n->next->child))
-							return false;
-						n = n->next;
-					}
-					else {
-						return false;
-					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_for) {
 					assert(apnode->child == NULL);
