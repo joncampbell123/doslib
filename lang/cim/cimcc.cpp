@@ -1108,6 +1108,21 @@ namespace CIMCC {
 			token_t &t = tok_bufpeek();
 
 			switch (t.type) {
+				case token_type_t::ampersandampersand: /* '&&' in this way must be handled as '& &' */
+					tok_bufdiscard(); /* eat it */
+
+					/* [&]
+					 *  \
+					 *   +--- [&]
+					 *         \
+					 *          +--- expression */
+					assert(pchnode == NULL);
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::addressof;
+					pchnode->child = new ast_node_t;
+					pchnode->child->op = ast_node_op_t::addressof;
+					return unary_expression(pchnode->child->child);
+
 				case token_type_t::ampersand:
 					tok_bufdiscard(); /* eat it */
 
