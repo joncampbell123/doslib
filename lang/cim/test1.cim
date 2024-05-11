@@ -297,7 +297,7 @@ a: b:	x += 3;
 		case 1: case 2: case 3: y += 5; break;
 	}
 
-	a::b::c d::e::f g::h::i::j k::l;
+	a::b::c d::e::f g::h::i::j k::l(5,x::y::z);
 
 	return y;
 }
