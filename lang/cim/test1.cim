@@ -299,6 +299,19 @@ a: b:	x += 3;
 
 	a::b::c d::e::f g::h::i::j k::l(5,x::y::z);
 
+	let int x;
+	let int x = 1;
+	let signed long int x = 1;
+	let signed long int *x = 1;
+	let signed long int **x = 1;
+	let signed long int &x = 1;
+	let int * int * x = &z;
+	let int &x = z;
+	let int &&x = z;
+	let int &&&x = z + 4 + x*x;
+	let char *x;
+	let char *x = &z;
+
 	return y;
 }
 

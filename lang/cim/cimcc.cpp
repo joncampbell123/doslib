@@ -259,6 +259,7 @@ namespace CIMCC {
 		r_while,
 		r_do,
 		r_for,
+		r_let,
 
 		maxval
 	};
@@ -495,6 +496,7 @@ namespace CIMCC {
 		r_while,
 		r_do,
 		r_for,
+		r_let,
 		typecast,
 		scopeoperator,
 		label,
@@ -1936,6 +1938,42 @@ namespace CIMCC {
 							return false;
 					}
 				}
+				else if (tok_bufpeek().type == token_type_t::r_let) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_let;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					if (!postfix_expression(apnode->child->child))
+						return false;
+
+					ast_node_t *n = apnode->child->child;
+
+					while (tok_bufpeek().type == token_type_t::star ||
+						tok_bufpeek().type == token_type_t::ampersand ||
+						tok_bufpeek().type == token_type_t::ampersandampersand) {
+						if (!unary_expression(n->next))
+							return false;
+						n = n->next;
+					}
+
+					if (tok_bufpeek().type == token_type_t::semicolon) {
+						/* ok */
+					}
+					else if (tok_bufpeek().type == token_type_t::equal) {
+						tok_bufdiscard(); /* eat it */
+
+						n->next = new ast_node_t;
+						n->next->op = ast_node_op_t::assign;
+						if (!assignment_expression(n->next->child))
+							return false;
+						n = n->next;
+					}
+					else {
+						return false;
+					}
+				}
 				else if (tok_bufpeek().type == token_type_t::r_for) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
@@ -2727,6 +2765,9 @@ namespace CIMCC {
 		else if (identlen == 3 && !memcmp(start,"for",3)) {
 			t.type = token_type_t::r_for;
 		}
+		else if (identlen == 3 && !memcmp(start,"let",3)) {
+			t.type = token_type_t::r_let;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3428,6 +3469,9 @@ namespace CIMCC {
 			case token_type_t::r_for:
 				s = "<r_for>";
 				break;
+			case token_type_t::r_let:
+				s = "<r_let>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -3754,6 +3798,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_for:
 					name = "for";
+					break;
+				case ast_node_op_t::r_let:
+					name = "let";
 					break;
 				default:
 					name = "?";
