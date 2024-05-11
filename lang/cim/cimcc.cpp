@@ -814,34 +814,6 @@ namespace CIMCC {
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 
-			/* Allow multiple consecutive identifiers.
-			 * We don't know at this parsing stage whether that identifier represents a variable
-			 * name, function name, typedef name, data type, etc.
-			 *
-			 * This is necessary in order for later parsing to handle a statement like:
-			 *
-			 * "signed long int variable1 = 45l;"
-			 *
-			 */
-			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-			if (tok_bufpeek().type == token_type_t::identifier) {
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::identifier_list;
-				pchnode->child = sav_p;
-
-				ast_node_t *nn = sav_p;
-				while (tok_bufpeek().type == token_type_t::identifier) {
-					token_t &st = tok_bufpeek();
-
-					nn->next = new ast_node_t;
-					nn->next->op = ast_node_op_t::identifier;
-					nn->next->tv = std::move(st);
-					tok_bufdiscard();
-					nn = nn->next;
-				}
-			}
-
 			return true;
 		}
 		else if (t.type == token_type_t::openparen) {
@@ -978,6 +950,36 @@ namespace CIMCC {
 #define NLEX cpp_scope_expression
 		if (!NLEX(pchnode))
 			return false;
+
+		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::scopeoperator) {
+			/* Allow multiple consecutive identifiers.
+			 * We don't know at this parsing stage whether that identifier represents a variable
+			 * name, function name, typedef name, data type, etc.
+			 *
+			 * This is necessary in order for later parsing to handle a statement like:
+			 *
+			 * "signed long int variable1 = 45l;"
+			 *
+			 * We also would like to support:
+			 *
+			 * "namespaced::type anotherns::s = 45l;"
+			 *
+			 */
+			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
+			if (tok_bufpeek().type == token_type_t::identifier) {
+				ast_node_t *sav_p = pchnode;
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::identifier_list;
+				pchnode->child = sav_p;
+
+				ast_node_t *nn = sav_p;
+				while (tok_bufpeek().type == token_type_t::identifier) {
+					if (!NLEX(nn->next))
+						return false;
+					nn = nn->next;
+				}
+			}
+		}
 
 		/* This is written differently, because we need it built "inside out" */
 		while (1) {
