@@ -1899,6 +1899,15 @@ namespace CIMCC {
 				}
 				apnode->op = ast_node_op_t::statement;
 
+				while (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
+					apnode->op = ast_node_op_t::label;
+					apnode->tv = std::move(tok_bufpeek(0));
+					apnode->next = new ast_node_t;
+					apnode = apnode->next;
+					apnode->op = ast_node_op_t::statement;
+					tok_bufdiscard(2);
+				}
+
 				/* allow { compound statements } in a { scope } */
 				if (tok_bufpeek().type == token_type_t::opencurly) {
 					tok_bufdiscard(); /* eat the { */
@@ -2236,15 +2245,6 @@ namespace CIMCC {
 					tok_bufdiscard();
 				}
 				else {
-					while (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
-						apnode->op = ast_node_op_t::label;
-						apnode->tv = std::move(tok_bufpeek(0));
-						apnode->next = new ast_node_t;
-						apnode = apnode->next;
-						apnode->op = ast_node_op_t::statement;
-						tok_bufdiscard(2);
-					}
-
 					if (!expression(apnode->child))
 						return false;
 
