@@ -1864,38 +1864,30 @@ namespace CIMCC {
 		if (!identifier_list_expression(apnode))
 			return false;
 
-		ast_node_t *n = apnode;
+		ast_node_t *n = apnode,*bn = n;
+		bool bn_toplevel = true;
 
-		while (1) {
-			if (tok_bufpeek().type == token_type_t::star) {
-				tok_bufdiscard();
-				n->next = new ast_node_t;
-				n->next->op = ast_node_op_t::dereference;
-				n = n->next;
+		while (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
+			if (!unary_expression(bn->next))
+				return false;
+
+			if (bn->next->op == ast_node_op_t::dereference || bn->next->op == ast_node_op_t::addressof) {
+				if (bn->child) {
+					ast_node_t *s = bn->child;
+					while (s->next) s = s->next;
+					s->next = bn->next;
+					bn->next = NULL;
+					bn = s->next;
+				}
+				else {
+					bn->child = bn->next;
+					bn->next = NULL;
+					bn = bn->child;
+				}
+				bn_toplevel = false;
 			}
-			else if (tok_bufpeek().type == token_type_t::ampersand) {
-				tok_bufdiscard();
-				n->next = new ast_node_t;
-				n->next->op = ast_node_op_t::addressof;
-				n = n->next;
-			}
-			else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
-				tok_bufdiscard();
-				n->next = new ast_node_t;
-				n->next->op = ast_node_op_t::addressof;
-				n = n->next;
-				n->next = new ast_node_t;
-				n->next->op = ast_node_op_t::addressof;
-				n = n->next;
-			}
-			else if (tok_bufpeek().type == token_type_t::identifier) {
-				if (!identifier_list_expression(n->next))
-					return false;
-				n = n->next;
-			}
-			else {
-				break;
-			}
+
+			if (bn_toplevel) n = bn;
 		}
 
 		if (tok_bufpeek().type == token_type_t::semicolon) {
