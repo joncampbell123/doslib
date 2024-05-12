@@ -673,6 +673,7 @@ namespace CIMCC {
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
+		bool identifier_list_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
@@ -946,6 +947,48 @@ namespace CIMCC {
 		}
 #undef NLEX
 		return true;
+	}
+
+	bool compiler::identifier_list_expression(ast_node_t* &pchnode) {
+#define NLEX cpp_scope_expression
+		if (tok_bufpeek().type == token_type_t::identifier) {
+			if (!NLEX(pchnode))
+				return false;
+
+			if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::scopeoperator) {
+				/* Allow multiple consecutive identifiers.
+				 * We don't know at this parsing stage whether that identifier represents a variable
+				 * name, function name, typedef name, data type, etc.
+				 *
+				 * This is necessary in order for later parsing to handle a statement like:
+				 *
+				 * "signed long int variable1 = 45l;"
+				 *
+				 * We also would like to support:
+				 *
+				 * "namespaced::type anotherns::s = 45l;"
+				 *
+				 */
+				/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
+				if (tok_bufpeek().type == token_type_t::identifier) {
+					ast_node_t *sav_p = pchnode;
+					pchnode = new ast_node_t;
+					pchnode->op = ast_node_op_t::identifier_list;
+					pchnode->child = sav_p;
+
+					ast_node_t *nn = sav_p;
+					while (tok_bufpeek().type == token_type_t::identifier) {
+						if (!NLEX(nn->next))
+							return false;
+						nn = nn->next;
+					}
+				}
+			}
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
@@ -1818,7 +1861,7 @@ namespace CIMCC {
 	}
 
 	bool compiler::let_expression(ast_node_t* &apnode) {
-		if (!postfix_expression(apnode))
+		if (!identifier_list_expression(apnode))
 			return false;
 
 		ast_node_t *n = apnode;
