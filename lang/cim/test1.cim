@@ -326,6 +326,12 @@ a: b:	x += 3;
 	let const int *x const const *x = &z;
 	let volatile int * volatile * volatile const x = &z;
 	let const int scoped::t * const &x::y;
+	let x,y,z;
+	let int x,y,z;
+	let x = 4,y = 5,*z = 6;
+	let int x = 4,y = 5,*z = 6;
+	let const int x = 4,y = 5,*z = 6;
+	let const char * const x = 3,y = 4;
 
 	return y;
 }
