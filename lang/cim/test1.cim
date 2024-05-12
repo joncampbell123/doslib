@@ -306,6 +306,7 @@ a: b:	x += 3;
 	let signed long int **x = 1;
 	let signed long int &x = 1;
 	let int * int * x = &z;
+	let const int * const * const ** x = &z;
 	let int &x = z;
 	let int &&x = z;
 	let int &&&x = z + 4 + x*x;
