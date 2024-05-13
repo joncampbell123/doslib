@@ -308,9 +308,6 @@ a: b:	x += 3;
 	let signed long int x = 5;
 	let x = 5 + 5 * 3;
 	let int x = a * b + c;
-	let x,y;
-	let int x,y,z;
-	let signed long int x,y,z;
 	let int x = 1;
 	let signed long int x = 1;
 	let x = 5;
@@ -318,12 +315,19 @@ a: b:	x += 3;
 	let a::b x::y = 6;
 	let const int x = 2;
 	let const int scope::t x = a::b * c::d;
-/*
+	let x,y;
+	let int x,y,z;
+	let signed long int x,y,z;
+	let signed long int x = 1,y = 2,z = 3;
+	let *x = 5;
+	let int *x = 5;
+	let *x;
 	let signed long int *x = 1;
 	let signed long int **x = 1;
-	let signed long int &x = 1;
+	let int ** x = &z;
 	let int * int * x = &z;
 	let const int * const * const ** x = &z;
+	let signed long int &x = 1;
 	let int &x = z;
 	let int &&x = z;
 	let int &&&x = z + 4 + x*x;
@@ -345,7 +349,6 @@ a: b:	x += 3;
 	let int x = 4,y = 5,*z = 6;
 	let const int x = 4,y = 5,*z = 6;
 	let const char * const x = 3,y = 4;
-*/
 	return y;
 }
 

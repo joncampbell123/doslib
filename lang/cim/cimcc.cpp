@@ -676,6 +676,7 @@ namespace CIMCC {
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
+		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
 		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma=false);
 		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma=false);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
@@ -950,6 +951,48 @@ namespace CIMCC {
 		return true;
 	}
 
+	bool compiler::split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
+		/* int -> tnode (null) inode "int"
+		 * long int -> tnode list("long") inode "int"
+		 * int* -> tnode list("int") inode (null) and caller is expected to handle the * or & tokens
+		 * signed long int -> tnode list("signed","long") inode "int"
+		 * signed long int* -> tnode list("signed","long","int") inode (null) */
+#define NLEX cpp_scope_expression
+		if (tok_bufpeek().type == token_type_t::identifier) {
+			if (!NLEX(inode)) return false;
+
+			if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::star ||
+				tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
+				ast_node_t *n;
+
+				tnode = new ast_node_t;
+				tnode->op = ast_node_op_t::identifier_list;
+				tnode->child = n = inode; inode = NULL;
+
+				if (tok_bufpeek().type == token_type_t::identifier) {
+					if (!NLEX(inode)) return false;
+
+					while (tok_bufpeek().type == token_type_t::identifier) {
+						n->next = inode; inode = NULL; n = n->next;
+						if (!NLEX(inode)) return false;
+					}
+				}
+
+				if (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
+					if (inode) {
+						n->next = inode; inode = NULL; n = n->next;
+					}
+				}
+			}
+		}
+
+		/* if only a type, no identifier, inode == NULL and tnode != NULL which is OK */
+		if (tnode == NULL && inode == NULL)
+			return false;
+#undef NLEX
+		return true;
+	}
+
 	/* tnode = type node list
 	 * inode = identifier node
 	 *
@@ -971,67 +1014,61 @@ namespace CIMCC {
 	 * after any comma in a compound let */
 	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma) {
 #define NLEX cpp_scope_expression
-		if (tok_bufpeek().type == token_type_t::identifier) {
-			assert(inode == NULL);
-			if (!NLEX(inode))
-				return false;
-		}
-
 		if (!after_comma) {
 			if (tok_bufpeek().type == token_type_t::identifier) {
-				ast_node_t *n;
+				if (!split_identifiers_expression(tnode,inode))
+					return false;
+			}
+		}
 
-				tnode = new ast_node_t;
-				tnode->op = ast_node_op_t::identifier_list;
-				tnode->child = n = inode; inode = NULL;
-				if (!NLEX(inode)) return false;
+		if (inode == NULL) {
+			ast_node_t **d = &inode;
 
-				while (tok_bufpeek().type == token_type_t::identifier) {
-					n->next = inode; inode = NULL; n = n->next;
-					if (!NLEX(inode)) return false;
+			while (1) {
+				if (tok_bufpeek().type == token_type_t::star) {
+					tok_bufdiscard();
+					assert(*d == NULL);
+					(*d) = new ast_node_t;
+					(*d)->op = ast_node_op_t::dereference;
+					d = &((*d)->child);
+				}
+				else if (tok_bufpeek().type == token_type_t::ampersand) {
+					tok_bufdiscard();
+					assert(*d == NULL);
+					(*d) = new ast_node_t;
+					(*d)->op = ast_node_op_t::addressof;
+					d = &((*d)->child);
+				}
+				else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
+					tok_bufdiscard();
+
+					assert(*d == NULL);
+					(*d) = new ast_node_t;
+					(*d)->op = ast_node_op_t::addressof;
+					d = &((*d)->child);
+
+					assert(*d == NULL);
+					(*d) = new ast_node_t;
+					(*d)->op = ast_node_op_t::addressof;
+					d = &((*d)->child);
+				}
+				else if (tok_bufpeek().type == token_type_t::identifier) {
+					ast_node_t *t=NULL,*i=NULL;
+					if (!split_identifiers_expression(t,i))
+						return false;
+
+					assert(t != NULL || i != NULL);
+					if (t) { *d = t; d = &((*d)->next); }
+					if (i) { *d = i; d = &((*d)->next); }
+				}
+				else {
+					break;
 				}
 			}
 		}
 
 		if (inode == NULL)
 			return false;
-
-#if 0
-		if (tok_bufpeek().type == token_type_t::identifier) {
-
-			if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::scopeoperator) {
-				/* Allow multiple consecutive identifiers.
-				 * We don't know at this parsing stage whether that identifier represents a variable
-				 * name, function name, typedef name, data type, etc.
-				 *
-				 * This is necessary in order for later parsing to handle a statement like:
-				 *
-				 * "signed long int variable1 = 45l;"
-				 *
-				 * We also would like to support:
-				 *
-				 * "namespaced::type anotherns::s = 45l;"
-				 *
-				 */
-				/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-				if (tok_bufpeek().type == token_type_t::identifier) {
-					ast_node_t *sav_p = pchnode;
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::identifier_list;
-					pchnode->child = sav_p;
-
-					ast_node_t *nn = sav_p;
-					while (tok_bufpeek().type == token_type_t::identifier) {
-						if (!NLEX(nn->next))
-							return false;
-						nn = nn->next;
-					}
-				}
-			}
-
-			return true;
-		}
-#endif
 #undef NLEX
 		return true;
 	}
@@ -2084,7 +2121,7 @@ namespace CIMCC {
 							apnode->child->child->op = ast_node_op_t::r_let;
 							n = apnode->child->child;
 						}
-						
+
 						assert(i != NULL);
 						i->next = e; /* assignment expression, if any */
 						n->child = i;
