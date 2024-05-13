@@ -673,11 +673,11 @@ namespace CIMCC {
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
-		bool identifier_list_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
-		bool let_expression(ast_node_t* &apnode,bool after_comma=false);
+		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma=false);
+		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma=false);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
@@ -950,11 +950,54 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::identifier_list_expression(ast_node_t* &pchnode) {
+	/* tnode = type node list
+	 * inode = identifier node
+	 *
+	 * after_comma == true:
+	 *   char x -> tnode identifier_list("char") inode "x"
+	 *
+	 * after_comma == false
+	 *   x -> tnode (null) inode "x"
+	 *
+	 * tnode will never contain deref * or addrof & because those are specific to the identifier.
+	 * char *x -> tnode identifier_list("char") inode deref(x)
+	 *
+	 * signed char *x,y,**z should be handled as:
+	 *   tnode identifier_list("signed","char") inode deref("x") after_comma = false
+	 *   tnode (null) inode "y" after_comma = true
+	 *   tnode (null) inode deref(deref("z")) after_comma = true
+	 *
+	 * Use after_comma == false for first/only let declaration/definition, after_comma == true
+	 * after any comma in a compound let */
+	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma) {
 #define NLEX cpp_scope_expression
 		if (tok_bufpeek().type == token_type_t::identifier) {
-			if (!NLEX(pchnode))
+			assert(inode == NULL);
+			if (!NLEX(inode))
 				return false;
+		}
+
+		if (!after_comma) {
+			if (tok_bufpeek().type == token_type_t::identifier) {
+				ast_node_t *n;
+
+				tnode = new ast_node_t;
+				tnode->op = ast_node_op_t::identifier_list;
+				tnode->child = n = inode; inode = NULL;
+				if (!NLEX(inode)) return false;
+
+				while (tok_bufpeek().type == token_type_t::identifier) {
+					n->next = inode; inode = NULL; n = n->next;
+					if (!NLEX(inode)) return false;
+				}
+			}
+		}
+
+		if (inode == NULL)
+			return false;
+
+#if 0
+		if (tok_bufpeek().type == token_type_t::identifier) {
 
 			if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::scopeoperator) {
 				/* Allow multiple consecutive identifiers.
@@ -988,8 +1031,9 @@ namespace CIMCC {
 
 			return true;
 		}
-
-		return false;
+#endif
+#undef NLEX
+		return true;
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
@@ -1861,47 +1905,9 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::let_expression(ast_node_t* &apnode,bool after_comma) {
-		bool bn_toplevel = false;
-		ast_node_t *n,*bn;
-
-		if (!after_comma) {
-			if (!identifier_list_expression(apnode))
-				return false;
-
-			bn_toplevel = true;
-			n = apnode;
-			bn = n;
-
-			while (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
-				if (!unary_expression(bn->next))
-					return false;
-
-				if (bn->next->op == ast_node_op_t::dereference || bn->next->op == ast_node_op_t::addressof) {
-					if (bn->child) {
-						ast_node_t *s = bn->child;
-						while (s->next) s = s->next;
-						s->next = bn->next;
-						bn->next = NULL;
-						bn = s->next;
-					}
-					else {
-						bn->child = bn->next;
-						bn->next = NULL;
-						bn = bn->child;
-					}
-					bn_toplevel = false;
-				}
-
-				if (bn_toplevel) n = bn;
-			}
-		}
-		else {
-			if (!unary_expression(apnode))
-				return false;
-			n = apnode;
-			bn = n;
-		}
+	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma) {
+		if (!type_and_identifiers_expression(tnode,inode,after_comma))
+			return false;
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma) {
 			/* ok */
@@ -1909,11 +1915,10 @@ namespace CIMCC {
 		else if (tok_bufpeek().type == token_type_t::equal) {
 			tok_bufdiscard(); /* eat it */
 
-			n->next = new ast_node_t;
-			n->next->op = ast_node_op_t::assign;
-			if (!assignment_expression(n->next->child))
+			enode = new ast_node_t;
+			enode->op = ast_node_op_t::assign;
+			if (!assignment_expression(enode->child))
 				return false;
-			n = n->next;
 		}
 		else {
 			return false;
@@ -2056,82 +2061,52 @@ namespace CIMCC {
 				else if (tok_bufpeek().type == token_type_t::r_let) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
-					apnode->child->op = ast_node_op_t::r_let;
+					apnode->child->op = ast_node_op_t::r_compound_let;
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
-					if (!let_expression(apnode->child->child))
-						return false;
+					ast_node_t *n;
 
-					if (tok_bufpeek().type == token_type_t::comma) {
-						ast_node_t *n = apnode->child;
+					{
+						ast_node_t *t=NULL,*i=NULL,*e=NULL;
 
-						apnode->child = new ast_node_t;
-						apnode->child->op = ast_node_op_t::r_compound_let;
-						apnode->child->child = n;
+						if (!let_expression(t,i,e))
+							return false;
 
-						/* n points to r_let,
-						 *   r_let->child should be identifier_list
-						 *     idlist->child should be identifier -> next -> identifier ... */
-
-						/* if the expression had an identifier list as the first entry,
-						 * move the identifier list up to the compound let level and
-						 * then put the last entry (likely the name) back in it's place. */
-						if (n->child->op == ast_node_op_t::identifier_list) {
-							ast_node_t *l = n->child->child,*p = NULL;
-
-							while (l->op == ast_node_op_t::identifier && l->next != NULL) {
-								p = l;
-								l = l->next;
-							}
-
-							/* p = previous node
-							 * l = last node */
-							if (p && l) {
-								ast_node_t *sav_nc = n->child;
-
-								/* move the last identifier from the end of the ident list to the head of the let node list */
-								p->next = NULL;
-								l->next = n->child->next;
-								n->child = l;
-								/* move the ident list to the head of the compound let node list */
-								sav_nc->next = apnode->child->child;
-								apnode->child->child = sav_nc;
-
-								/* <compound let>
-								 *   <let>
-								 *     <identifier list "a" "b" "c">
-								 *     <assignment>
-								 *   <let>
-								 *     <identifier "x">
-								 *     <assignment>
-								 *
-								 * becomes
-								 *
-								 * <compound let>
-								 *   <identifier list "a" "b">
-								 *   <let>
-								 *     <identifier "c">
-								 *     <assignment>
-								 *   <let>
-								 *     <identifier "x">
-								 *     <assignment>
-								 *
-								 * Make the let nodes consistent in node structure and place the initial identifiers at the same level.
-								 */
-							}
+						if (t) {
+							apnode->child->child = t;
+							apnode->child->child->next = new ast_node_t;
+							apnode->child->child->next->op = ast_node_op_t::r_let;
+							n = apnode->child->child->next;
 						}
-
-						while (tok_bufpeek().type == token_type_t::comma) {
-							n->next = new ast_node_t;
-							n->next->op = ast_node_op_t::r_let;
-							tok_bufdiscard();
-
-							if (!let_expression(n->next->child,true))
-								return false;
-
-							n = n->next;
+						else {
+							apnode->child->child = new ast_node_t;
+							apnode->child->child->op = ast_node_op_t::r_let;
+							n = apnode->child->child;
 						}
+						
+						assert(i != NULL);
+						i->next = e; /* assignment expression, if any */
+						n->child = i;
+					}
+
+					while (tok_bufpeek().type == token_type_t::comma) {
+						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+
+						tok_bufdiscard(); /* eat comma */
+
+						if (!let_expression(t,i,e,true))
+							return false;
+
+						n->next = new ast_node_t;
+						n->next->op = ast_node_op_t::r_let;
+
+						assert(t == NULL);
+						assert(i != NULL);
+						i->next = e; /* assignment expression, if any */
+						n->next->child = i;
+
+						n = n->next;
 					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_for) {

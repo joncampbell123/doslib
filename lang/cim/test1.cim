@@ -299,9 +299,26 @@ a: b:	x += 3;
 
 	a::b::c d::e::f g::h::i::j k::l(5,x::y::z);
 
+	let x;
 	let int x;
+	let signed long int x;
+	let big fat signed long long int x;
+	let x = 5;
+	let int x = 5;
+	let signed long int x = 5;
+	let x = 5 + 5 * 3;
+	let int x = a * b + c;
+	let x,y;
+	let int x,y,z;
+	let signed long int x,y,z;
 	let int x = 1;
 	let signed long int x = 1;
+	let x = 5;
+	let x::y = 6;
+	let a::b x::y = 6;
+	let const int x = 2;
+	let const int scope::t x = a::b * c::d;
+/*
 	let signed long int *x = 1;
 	let signed long int **x = 1;
 	let signed long int &x = 1;
@@ -312,10 +329,6 @@ a: b:	x += 3;
 	let int &&&x = z + 4 + x*x;
 	let char *x;
 	let char *x = &z;
-	let x = 5;
-	let x::y = 6;
-	let a::b x::y = 6;
-	let const int x = 2;
 	let const int *x = &z;
 	let const int * const x = &z;
 	let const int **x = &z;
@@ -332,7 +345,7 @@ a: b:	x += 3;
 	let int x = 4,y = 5,*z = 6;
 	let const int x = 4,y = 5,*z = 6;
 	let const char * const x = 3,y = 4;
-
+*/
 	return y;
 }
 
