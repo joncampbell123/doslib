@@ -2145,6 +2145,14 @@ namespace CIMCC {
 
 						n = n->next;
 					}
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_for) {
 					assert(apnode->child == NULL);
@@ -2398,6 +2406,14 @@ namespace CIMCC {
 					apnode->child->child->op = ast_node_op_t::identifier;
 					apnode->child->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
 				}
 				else {
 					if (!expression(apnode->child))
