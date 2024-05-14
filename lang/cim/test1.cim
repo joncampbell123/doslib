@@ -368,3 +368,18 @@ fn func1(int x,long y);
 fn int* func1(int x,long y,float z);
 fn signed long int * const * func1(int x,long y,float z);
 
+fn func1(int x,int y) {
+	return x+y;
+}
+
+fn long func1(int x,int y) {
+	return x+y;
+}
+
+fn signed long int func1(int x,int y) {
+	return x+y;
+}
+
+fn signed long int ** func1(int *x,int **y) {
+	return *x + **y;
+}
