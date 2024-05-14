@@ -684,7 +684,7 @@ namespace CIMCC {
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
-		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode);
+		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
 
 		ast_node_t*		root_node = NULL;
@@ -1945,7 +1945,7 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode) {
+	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode) {
 #define NLEX cpp_scope_expression
 		if (tok_bufpeek().type != token_type_t::identifier)
 			return false;
@@ -1999,6 +1999,22 @@ namespace CIMCC {
 
 		if (inode == NULL)
 			return false;
+
+		if (tok_bufpeek().type == token_type_t::openparen) {
+			tok_bufdiscard();
+
+			if (tok_bufpeek().type != token_type_t::closeparen) {
+				if (!argument_expression_list(alnode))
+					return false;
+			}
+
+			if (tok_bufpeek().type == token_type_t::closeparen) {
+				tok_bufdiscard();
+			}
+			else {
+				return false;
+			}
+		}
 
 		if (tok_bufpeek().type == token_type_t::semicolon) {
 			/* ok */
@@ -2173,13 +2189,14 @@ namespace CIMCC {
 					ast_node_t **n = &(apnode->child->child);
 
 					{
-						ast_node_t *t=NULL,*i=NULL;
+						ast_node_t *t=NULL,*i=NULL,*a=NULL;
 
-						if (!fn_expression(t,i))
+						if (!fn_expression(t,i,a))
 							return false;
 
 						if (t) { *n = t; n = &((*n)->next); }
 						if (i) { *n = i; n = &((*n)->next); }
+						if (a) { *n = a; n = &((*n)->next); }
 					}
 
 					{
