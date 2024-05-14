@@ -675,6 +675,7 @@ namespace CIMCC {
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
+		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
@@ -897,6 +898,45 @@ namespace CIMCC {
 		}
 
 		return false;
+	}
+
+	bool compiler::fn_argument_expression_list(ast_node_t* &pchnode) {
+		/* [argument] -> [argument] -> ...
+		 *  \             \
+		 *   +--- [expr]   +--- [expr] */
+#define NLEX assignment_expression
+		pchnode = new ast_node_t;
+		pchnode->op = ast_node_op_t::argument;
+		{
+			ast_node_t **n = &(pchnode->child);
+			ast_node_t *t=NULL,*i=NULL,*e=NULL;
+			if (!let_expression(t,i,e))
+				return false;
+
+			if (t) { *n = t; n = &((*n)->next); }
+			if (i) { *n = i; n = &((*n)->next); }
+			if (e) { *n = e; n = &((*n)->next); }
+		}
+
+		ast_node_t *nb = pchnode;
+		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+			tok_bufdiscard(); /* eat it */
+
+			nb->next = new ast_node_t; nb = nb->next;
+			nb->op = ast_node_op_t::argument;
+			{
+				ast_node_t **n = &(nb->child);
+				ast_node_t *t=NULL,*i=NULL,*e=NULL;
+				if (!let_expression(t,i,e))
+					return false;
+
+				if (t) { *n = t; n = &((*n)->next); }
+				if (i) { *n = i; n = &((*n)->next); }
+				if (e) { *n = e; n = &((*n)->next); }
+			}
+		}
+#undef NLEX
+		return true;
 	}
 
 	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
@@ -2004,7 +2044,7 @@ namespace CIMCC {
 			tok_bufdiscard();
 
 			if (tok_bufpeek().type != token_type_t::closeparen) {
-				if (!argument_expression_list(alnode))
+				if (!fn_argument_expression_list(alnode))
 					return false;
 			}
 
@@ -2035,7 +2075,7 @@ namespace CIMCC {
 		if (!type_and_identifiers_expression(tnode,inode,after_comma))
 			return false;
 
-		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma) {
+		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
 			/* ok */
 		}
 		else if (tok_bufpeek().type == token_type_t::equal) {

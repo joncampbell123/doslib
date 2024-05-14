@@ -383,3 +383,11 @@ fn signed long int func1(int x,int y) {
 fn signed long int ** func1(int *x,int **y) {
 	return *x + **y;
 }
+
+fn signed long int func1(int &x,signed long int y) {
+	return x + y;
+}
+
+fn signed long long func1(int,long,float) {
+	return -1ll;
+}
