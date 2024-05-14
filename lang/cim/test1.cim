@@ -352,3 +352,14 @@ a: b:	x += 3;
 	return y;
 }
 
+fn func1;
+fn int func1;
+fn int* func1;
+fn int** func1;
+fn int* const func1;
+fn int* const * const * func1;
+fn int& func1;
+fn int&& func1;
+fn int& & func1;
+fn int&& & func1;
+fn int* && * & func1;

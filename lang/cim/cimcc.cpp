@@ -260,6 +260,7 @@ namespace CIMCC {
 		r_do,
 		r_for,
 		r_let,
+		r_fn,
 
 		maxval
 	};
@@ -497,6 +498,7 @@ namespace CIMCC {
 		r_do,
 		r_for,
 		r_let,
+		r_fn,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -682,6 +684,7 @@ namespace CIMCC {
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
+		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
 
 		ast_node_t*		root_node = NULL;
@@ -1942,6 +1945,71 @@ namespace CIMCC {
 		return true;
 	}
 
+	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode) {
+#define NLEX cpp_scope_expression
+		if (tok_bufpeek().type != token_type_t::identifier)
+			return false;
+
+		if (!NLEX(inode))
+			return false;
+
+		if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::star ||
+			tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
+			ast_node_t **n;
+
+			tnode = new ast_node_t;
+			tnode->op = ast_node_op_t::identifier_list;
+			tnode->child = inode; inode = NULL;
+			n = &(tnode->child->next);
+
+			while (1) {
+				if (tok_bufpeek().type == token_type_t::identifier) {
+					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
+					if (!NLEX(inode)) return false;
+				}
+				else if (tok_bufpeek().type == token_type_t::star) {
+					tok_bufdiscard();
+					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
+					*n = new ast_node_t;
+					(*n)->op = ast_node_op_t::dereference;
+					n = &((*n)->child);
+				}
+				else if (tok_bufpeek().type == token_type_t::ampersand) {
+					tok_bufdiscard();
+					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
+					*n = new ast_node_t;
+					(*n)->op = ast_node_op_t::addressof;
+					n = &((*n)->child);
+				}
+				else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
+					tok_bufdiscard();
+					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
+					*n = new ast_node_t;
+					(*n)->op = ast_node_op_t::addressof;
+					n = &((*n)->child);
+					*n = new ast_node_t;
+					(*n)->op = ast_node_op_t::addressof;
+					n = &((*n)->child);
+				}
+				else {
+					break;
+				}
+			}
+		}
+
+		if (inode == NULL)
+			return false;
+
+		if (tok_bufpeek().type == token_type_t::semicolon) {
+			/* ok */
+		}
+		else {
+			return false;
+		}
+#undef NLEX
+		return true;
+	}
+
 	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma) {
 		if (!type_and_identifiers_expression(tnode,inode,after_comma))
 			return false;
@@ -2086,6 +2154,33 @@ namespace CIMCC {
 					apnode->child->op = ast_node_op_t::r_continue;
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_fn) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_fn;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					ast_node_t **n = &(apnode->child->child);
+
+					{
+						ast_node_t *t=NULL,*i=NULL;
+
+						if (!fn_expression(t,i))
+							return false;
+
+						if (t) { *n = t; n = &((*n)->next); }
+						if (i) { *n = i; n = &((*n)->next); }
+					}
 
 					{
 						token_t &t = tok_bufpeek();
@@ -2947,6 +3042,9 @@ namespace CIMCC {
 		else if (identlen == 3 && !memcmp(start,"let",3)) {
 			t.type = token_type_t::r_let;
 		}
+		else if (identlen == 2 && !memcmp(start,"fn",2)) {
+			t.type = token_type_t::r_fn;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3651,6 +3749,9 @@ namespace CIMCC {
 			case token_type_t::r_let:
 				s = "<r_let>";
 				break;
+			case token_type_t::r_fn:
+				s = "<r_fn>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -3980,6 +4081,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_let:
 					name = "let";
+					break;
+				case ast_node_op_t::r_fn:
+					name = "fn";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
