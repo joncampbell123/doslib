@@ -478,7 +478,7 @@ namespace CIMCC {
 		structptraccess,
 		arraysubscript,
 		subexpression,
-		function, // something(...), phase 2 will make sense to determine function definition, function declaration, or function call.
+		functioncall,
 		argument,
 		identifier,
 		identifier_list,
@@ -1194,7 +1194,7 @@ namespace CIMCC {
 
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::function;
+				pchnode->op = ast_node_op_t::functioncall;
 				pchnode->child = sav_p;
 
 				if (tok_bufpeek().type != token_type_t::closeparen) {
@@ -1972,7 +1972,7 @@ namespace CIMCC {
 		/* function() { scope }
 		 *
 		 * but not function(), that still requires semicolon */
-		if (apnode->op == ast_node_op_t::function) {
+		if (apnode->op == ast_node_op_t::functioncall) {
 			ast_node_t* s = apnode->child;
 			if (s && (s->op == ast_node_op_t::identifier || s->op == ast_node_op_t::identifier_list)) s=s->next;
 			while (s && s->op == ast_node_op_t::argument) s=s->next;
@@ -3902,8 +3902,8 @@ namespace CIMCC {
 				case ast_node_op_t::typecast:
 					name = "typecast";
 					break;
-				case ast_node_op_t::function:
-					name = "function";
+				case ast_node_op_t::functioncall:
+					name = "functioncall";
 					break;
 				case ast_node_op_t::argument:
 					name = "argument";
