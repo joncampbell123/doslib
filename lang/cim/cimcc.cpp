@@ -1255,13 +1255,6 @@ namespace CIMCC {
 					else
 						return false;
 				}
-
-				/* if a { scope } follows then parse that too */
-				if (tok_bufpeek().type == token_type_t::opencurly) {
-					ast_node_t *n = sav_p->next;
-					if (!statement(sav_p->next,n))
-						return false;
-				}
 			}
 			else {
 				break;

@@ -93,51 +93,51 @@ int func1(void);
 int func1(int x,char y,float f);
 signed long long int func1(signed long long x,unsigned long long y);
 
-int func1() {
+fn int func1() {
 	return(5);
 };
 
-int func1(int x,int y) {
+fn int func1(int x,int y) {
 	return(x*x + y);
 };
 
-signed long long int func1(signed long long int x,float y) {
+fn signed long long int func1(signed long long int x,float y) {
 	return(x*x*x + y);
 };
 
-int func1(int x,int y) {
+fn int func1(int x,int y) {
 	return (x + y);
 }
 
-signed long long int func1(signed long long int x,float y) {
+fn signed long long int func1(signed long long int x,float y) {
 	return(x*x*x + y);
 }
 
-int func1() {
+fn int func1() {
 	return 5;
 };
 
-int func1(int x,int y) {
+fn int func1(int x,int y) {
 	return x*x + y;
 };
 
-signed long long int func1(signed long long int x,float y) {
+fn signed long long int func1(signed long long int x,float y) {
 	return x*x*x + y;
 };
 
-int func1(int x,int y) {
+fn int func1(int x,int y) {
 	return x + y;
 }
 
-signed long long int func1(signed long long int x,float y) {
+fn signed long long int func1(signed long long int x,float y) {
 	return x*x*x + y;
 }
 
-void func1(void) {
+fn void func1(void) {
 	return;
 }
 
-int func1(int x,int y) {
+fn int func1(int x,int y) {
 	int z = func2(x,y,13);
 	z += func3(y,x^y);
 	return z ^ 1;
@@ -145,12 +145,12 @@ int func1(int x,int y) {
 
 // C++ style comment. This should be ignored to end of line.
 // Even if another // is in the line, ignored to end of line.
-int func1(int x/*input code*/) {
+fn int func1(int x/*input code*/) {
 	return x;/*return here /* okay? */ */
 	/*/*/*/*This should be ignored*/ even */ if */ nested */
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	int x = /* multiple line comments,
 	to describe something,
 	are perfectly fine.
@@ -161,63 +161,63 @@ int func1(int x) {
 	return x[0];
 }
 
-int func1(float z) {
+fn int func1(float z) {
 	int x = {z,z*2,z*3.14,z*4,z*5,z*6,z*7,z*8,z*9.99}; /* C99 syntax */
 	int y = &x;
 	return x[5];
 }
 
-int func1(float x) {
+fn int func1(float x) {
 	return (int)x;
 }
 
-int func1(float x) {
+fn int func1(float x) {
 	return (signed long int)x+(signed long int)(~x);
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	int x = (long){1*x,2*x,(long long)(3*x),4*x};
 	return (int)((float)x * 1.23);
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	return (int)floatmul1(x,1.245);
 }
 
-int func1(float x) {
+fn int func1(float x) {
 	return int(x); /* C++ style typecast */
 }
 
-int func1(float x) {
+fn int func1(float x) {
 	return (signed long int)(x); /* C++ style typecast */
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	int z = 1;
 
 again:	z++;
 	goto again;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	return x::y::z::a::b::c;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	if (x == 3)
 		return x*x;
 
 	return x*3;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	if (x == 3)
 		return x*x;
 	else
 		return x*3;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	if (x == 3)
 		return x*x;
 	else if (x == 5)
@@ -226,7 +226,7 @@ int func1(int x) {
 		return x*3;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	if (x == 3)
 		return x*x;
 	else if (x == 5)
@@ -237,7 +237,7 @@ int func1(int x) {
 		return x*3;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	int y = x ^ 1;
 
 	switch (x) {
@@ -251,7 +251,7 @@ int func1(int x) {
 	return y;
 }
 
-int func1(int x) {
+fn int func1(int x) {
 	int y = x ^ 1;
 
 	switch (x) {
