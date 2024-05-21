@@ -2253,48 +2253,107 @@ namespace CIMCC {
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
-					ast_node_t *n;
+					if (tok_bufpeek().type == token_type_t::r_fn) {
+						tok_bufdiscard();
 
-					{
-						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						/* let fn is a way to declare function pointers */
+						ast_node_t **n = &(apnode->child->child);
 
-						if (!let_expression(t,i,e))
-							return false;
+						while (1) {
+							if (tok_bufpeek().type == token_type_t::star) {
+								tok_bufdiscard();
 
-						if (t) {
-							apnode->child->child = t;
-							apnode->child->child->next = new ast_node_t;
-							apnode->child->child->next->op = ast_node_op_t::r_let;
-							n = apnode->child->child->next;
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::dereference;
+								n = &((*n)->child);
+							}
+							else if (tok_bufpeek().type == token_type_t::ampersand) {
+								tok_bufdiscard();
+
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::addressof;
+								n = &((*n)->child);
+							}
+							else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
+								tok_bufdiscard();
+
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::addressof;
+								n = &((*n)->child);
+
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::addressof;
+								n = &((*n)->child);
+							}
+							else {
+								break;
+							}
 						}
-						else {
-							apnode->child->child = new ast_node_t;
-							apnode->child->child->op = ast_node_op_t::r_let;
-							n = apnode->child->child;
-						}
 
-						assert(i != NULL);
-						i->next = e; /* assignment expression, if any */
-						n->child = i;
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_fn;
+						n = &((*n)->child);
+
+						{
+							ast_node_t *t=NULL,*i=NULL,*a=NULL,*b=NULL;
+
+							if (!fn_expression(t,i,a,b))
+								return false;
+
+							if (t) { *n = t; n = &((*n)->next); while (*n) n = &((*n)->next); }
+							if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
+							if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
+							if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
+
+							if (b != NULL && b->op == ast_node_op_t::scope) {
+								return false;
+							}
+						}
 					}
+					else {
+						ast_node_t *n;
 
-					while (tok_bufpeek().type == token_type_t::comma) {
-						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						{
+							ast_node_t *t=NULL,*i=NULL,*e=NULL;
 
-						tok_bufdiscard(); /* eat comma */
+							if (!let_expression(t,i,e))
+								return false;
 
-						if (!let_expression(t,i,e,true))
-							return false;
+							if (t) {
+								apnode->child->child = t;
+								apnode->child->child->next = new ast_node_t;
+								apnode->child->child->next->op = ast_node_op_t::r_let;
+								n = apnode->child->child->next;
+							}
+							else {
+								apnode->child->child = new ast_node_t;
+								apnode->child->child->op = ast_node_op_t::r_let;
+								n = apnode->child->child;
+							}
 
-						n->next = new ast_node_t;
-						n->next->op = ast_node_op_t::r_let;
+							assert(i != NULL);
+							i->next = e; /* assignment expression, if any */
+							n->child = i;
+						}
 
-						assert(t == NULL);
-						assert(i != NULL);
-						i->next = e; /* assignment expression, if any */
-						n->next->child = i;
+						while (tok_bufpeek().type == token_type_t::comma) {
+							ast_node_t *t=NULL,*i=NULL,*e=NULL;
 
-						n = n->next;
+							tok_bufdiscard(); /* eat comma */
+
+							if (!let_expression(t,i,e,true))
+								return false;
+
+							n->next = new ast_node_t;
+							n->next->op = ast_node_op_t::r_let;
+
+							assert(t == NULL);
+							assert(i != NULL);
+							i->next = e; /* assignment expression, if any */
+							n->next->child = i;
+
+							n = n->next;
+						}
 					}
 
 					{

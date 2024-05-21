@@ -391,3 +391,25 @@ fn signed long int func1(int &x,signed long int y) {
 fn signed long long func1(int,long,float) {
 	return -1ll;
 }
+
+let abc;
+let int x = a * b + 5;
+let char *a,b,c;
+
+fn func1;
+let fn func1;
+fn func1();
+let fn func1();
+fn int func1(void);
+let fn int func1(void);
+fn signed long long func1(int x,float y,signed long int z);
+let fn signed long long func1(int x,float y,signed long int z);
+let fn* func1;
+let fn** func1;
+let fn*** func1;
+let fn& func1;
+let fn&& func1;
+let fn& & func1;
+let fn* & * func1;
+let fn* int func1(int x,long y);
+
