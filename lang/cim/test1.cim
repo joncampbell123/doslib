@@ -412,4 +412,7 @@ let fn&& func1;
 let fn& & func1;
 let fn* & * func1;
 let fn* int func1(int x,long y);
-
+let fn func1,func2;
+let fn* func1,func2;
+let fn** func1,func2,func3;
+let fn* int func1(int x,long y),long* func2(int x,long y,float z),signed long int * const * func3(int &x);

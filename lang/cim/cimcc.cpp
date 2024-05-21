@@ -2052,6 +2052,9 @@ namespace CIMCC {
 		if (tok_bufpeek().type == token_type_t::semicolon) {
 			/* ok */
 		}
+		else if (tok_bufpeek().type == token_type_t::comma) {
+			/* ok */
+		}
 		else if (tok_bufpeek().type == token_type_t::opencurly) {
 			ast_node_t *n = NULL;
 			if (!statement(bnode,n))
@@ -2292,18 +2295,42 @@ namespace CIMCC {
 
 						(*n) = new ast_node_t;
 						(*n)->op = ast_node_op_t::r_fn;
-						n = &((*n)->child);
 
 						{
 							ast_node_t *t=NULL,*i=NULL,*a=NULL,*b=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
 
 							if (!fn_expression(t,i,a,b))
 								return false;
 
-							if (t) { *n = t; n = &((*n)->next); while (*n) n = &((*n)->next); }
-							if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
-							if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
-							if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
+							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (a) { *sn = a; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (b) { *sn = b; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+
+							if (b != NULL && b->op == ast_node_op_t::scope) {
+								return false;
+							}
+						}
+
+						while (tok_bufpeek().type == token_type_t::comma) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::r_fn;
+
+							ast_node_t *t=NULL,*i=NULL,*a=NULL,*b=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
+
+							tok_bufdiscard(); /* eat comma */
+
+							if (!fn_expression(t,i,a,b))
+								return false;
+
+							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (a) { *sn = a; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (b) { *sn = b; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
 
 							if (b != NULL && b->op == ast_node_op_t::scope) {
 								return false;
