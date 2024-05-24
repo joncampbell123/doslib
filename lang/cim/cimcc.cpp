@@ -261,6 +261,7 @@ namespace CIMCC {
 		r_for,
 		r_let,
 		r_fn,
+		r_const,
 
 		maxval
 	};
@@ -499,6 +500,7 @@ namespace CIMCC {
 		r_for,
 		r_let,
 		r_fn,
+		r_const,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -817,6 +819,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_const) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_const;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -994,6 +1005,17 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool is_reserved_identifier(const token_type_t t) {
+		switch (t) {
+			case token_type_t::r_const:
+				return true;
+			default:
+				break;
+		}
+
+		return false;
+	}
+
 	bool compiler::split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
 		tnode = new ast_node_t;
 		tnode->op = ast_node_op_t::identifier_list;
@@ -1006,6 +1028,11 @@ namespace CIMCC {
 		 * signed long int -> tnode list("signed","long") inode "int"
 		 * signed long int* -> tnode list("signed","long","int") inode (null) */
 #define NLEX cpp_scope_expression
+		while (is_reserved_identifier(tok_bufpeek().type)) {
+			if (!NLEX(*n)) return false;
+			n = &((*n)->next);
+		}
+
 		if (tok_bufpeek().type == token_type_t::identifier) {
 			if (!NLEX(inode)) return false;
 
@@ -1053,7 +1080,7 @@ namespace CIMCC {
 	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma) {
 #define NLEX cpp_scope_expression
 		if (!after_comma) {
-			if (tok_bufpeek().type == token_type_t::identifier) {
+			if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 				if (!split_identifiers_expression(tnode,inode))
 					return false;
 			}
@@ -1090,7 +1117,7 @@ namespace CIMCC {
 					(*d)->op = ast_node_op_t::addressof;
 					d = &((*d)->child);
 				}
-				else if (tok_bufpeek().type == token_type_t::identifier) {
+				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 					ast_node_t *t=NULL,*i=NULL;
 					if (!split_identifiers_expression(t,i))
 						return false;
@@ -1974,54 +2001,56 @@ namespace CIMCC {
 	}
 
 	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode) {
+		tnode = new ast_node_t;
+		tnode->op = ast_node_op_t::identifier_list;
+
+		ast_node_t **n = &(tnode->child);
+
 #define NLEX cpp_scope_expression
-		if (tok_bufpeek().type != token_type_t::identifier)
-			return false;
+		while (is_reserved_identifier(tok_bufpeek().type)) {
+			if (!NLEX(*n)) return false;
+			n = &((*n)->next);
+		}
 
-		if (!NLEX(inode))
-			return false;
+		if (tok_bufpeek().type != token_type_t::identifier) return false;
+		if (!NLEX(inode)) return false;
 
-		if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::star ||
-			tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
-			ast_node_t **n;
-
-			tnode = new ast_node_t;
-			tnode->op = ast_node_op_t::identifier_list;
-			tnode->child = inode; inode = NULL;
-			n = &(tnode->child->next);
-
-			while (1) {
-				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
-					if (!NLEX(inode)) return false;
-				}
-				else if (tok_bufpeek().type == token_type_t::star) {
-					tok_bufdiscard();
-					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
-					*n = new ast_node_t;
-					(*n)->op = ast_node_op_t::dereference;
-					n = &((*n)->child);
-				}
-				else if (tok_bufpeek().type == token_type_t::ampersand) {
-					tok_bufdiscard();
-					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
-					*n = new ast_node_t;
-					(*n)->op = ast_node_op_t::addressof;
-					n = &((*n)->child);
-				}
-				else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
-					tok_bufdiscard();
-					if (inode) { *n = inode; inode = NULL; n = &((*n)->next); }
-					*n = new ast_node_t;
-					(*n)->op = ast_node_op_t::addressof;
-					n = &((*n)->child);
-					*n = new ast_node_t;
-					(*n)->op = ast_node_op_t::addressof;
-					n = &((*n)->child);
-				}
-				else {
-					break;
-				}
+		while (1) {
+			if (is_reserved_identifier(tok_bufpeek().type)) {
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+				if (!NLEX(*n)) return false;
+				n = &((*n)->next);
+			}
+			else if (tok_bufpeek().type == token_type_t::identifier) {
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+				if (!NLEX(inode)) return false;
+			}
+			else if (tok_bufpeek().type == token_type_t::star) {
+				tok_bufdiscard();
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+				*n = new ast_node_t;
+				(*n)->op = ast_node_op_t::dereference;
+				n = &((*n)->child);
+			}
+			else if (tok_bufpeek().type == token_type_t::ampersand) {
+				tok_bufdiscard();
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+				*n = new ast_node_t;
+				(*n)->op = ast_node_op_t::addressof;
+				n = &((*n)->child);
+			}
+			else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
+				tok_bufdiscard();
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+				(*n) = new ast_node_t;
+				(*n)->op = ast_node_op_t::addressof;
+				n = &((*n)->child);
+				(*n) = new ast_node_t;
+				(*n)->op = ast_node_op_t::addressof;
+				n = &((*n)->child);
+			}
+			else {
+				break;
 			}
 		}
 
@@ -3182,6 +3211,9 @@ namespace CIMCC {
 		else if (identlen == 2 && !memcmp(start,"fn",2)) {
 			t.type = token_type_t::r_fn;
 		}
+		else if (identlen == 5 && !memcmp(start,"const",5)) {
+			t.type = token_type_t::r_const;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3889,6 +3921,9 @@ namespace CIMCC {
 			case token_type_t::r_fn:
 				s = "<r_fn>";
 				break;
+			case token_type_t::r_const:
+				s = "<r_const>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -4221,6 +4256,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_fn:
 					name = "fn";
+					break;
+				case ast_node_op_t::r_const:
+					name = "const";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
