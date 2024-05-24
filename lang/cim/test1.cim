@@ -422,3 +422,5 @@ fn constexpr const int func1(const unsigned int x) {
 fn static constexpr const int func1(const unsigned int x) {
 	return ~x;
 }
+fn extern const int func1(const unsigned int x);
+
