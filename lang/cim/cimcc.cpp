@@ -267,6 +267,8 @@ namespace CIMCC {
 		r_extern,
 		r_auto,
 		r_signed,
+		r_unsigned,
+		r_long,
 
 		maxval
 	};
@@ -511,6 +513,8 @@ namespace CIMCC {
 		r_extern,
 		r_auto,
 		r_signed,
+		r_unsigned,
+		r_long,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -883,6 +887,24 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_unsigned) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_unsigned;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_long) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_long;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -914,7 +936,9 @@ namespace CIMCC {
 
 			/* if the expression is an identifier, it might be a data type,
 			 * and therefore a typecast, rather than a subexpression */
-			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::r_const || pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::identifier_list) {
+			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::r_const ||
+				pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::r_long ||
+				pchnode->child->op == ast_node_op_t::identifier_list) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1068,6 +1092,8 @@ namespace CIMCC {
 			case token_type_t::r_extern:
 			case token_type_t::r_auto:
 			case token_type_t::r_signed:
+			case token_type_t::r_unsigned:
+			case token_type_t::r_long:
 				return true;
 			default:
 				break;
@@ -1192,7 +1218,7 @@ namespace CIMCC {
 			}
 		}
 
-		if (inode == NULL)
+		if (tnode == NULL && inode == NULL)
 			return false;
 #undef NLEX
 		return true;
@@ -1204,7 +1230,8 @@ namespace CIMCC {
 		if (!NLEX(pchnode))
 			return false;
 
-		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::scopeoperator) {
+		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed ||
+			pchnode->op == ast_node_op_t::r_long ||pchnode->op == ast_node_op_t::scopeoperator) {
 			/* Allow multiple consecutive identifiers.
 			 * We don't know at this parsing stage whether that identifier represents a variable
 			 * name, function name, typedef name, data type, etc.
@@ -2072,8 +2099,9 @@ namespace CIMCC {
 			n = &((*n)->next);
 		}
 
-		if (tok_bufpeek().type != token_type_t::identifier) return false;
-		if (!NLEX(inode)) return false;
+		if (tok_bufpeek().type == token_type_t::identifier) {
+			if (!NLEX(inode)) return false;
+		}
 
 		while (1) {
 			if (is_reserved_identifier(tok_bufpeek().type)) {
@@ -2430,6 +2458,9 @@ namespace CIMCC {
 							if (!let_expression(t,i,e))
 								return false;
 
+							if (i == NULL)
+								return false;
+
 							if (t) {
 								apnode->child->child = t;
 								apnode->child->child->next = new ast_node_t;
@@ -2453,6 +2484,9 @@ namespace CIMCC {
 							tok_bufdiscard(); /* eat comma */
 
 							if (!let_expression(t,i,e,true))
+								return false;
+
+							if (i == NULL)
 								return false;
 
 							n->next = new ast_node_t;
@@ -3286,6 +3320,12 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"signed",6)) {
 			t.type = token_type_t::r_signed;
 		}
+		else if (identlen == 8 && !memcmp(start,"unsigned",8)) {
+			t.type = token_type_t::r_unsigned;
+		}
+		else if (identlen == 4 && !memcmp(start,"long",4)) {
+			t.type = token_type_t::r_long;
+		}
 		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
 			t.type = token_type_t::r_constexpr;
 		}
@@ -4008,6 +4048,12 @@ namespace CIMCC {
 			case token_type_t::r_signed:
 				s = "<r_signed>";
 				break;
+			case token_type_t::r_unsigned:
+				s = "<r_unsigned>";
+				break;
+			case token_type_t::r_long:
+				s = "<r_long>";
+				break;
 			case token_type_t::r_static:
 				s = "<r_static>";
 				break;
@@ -4358,6 +4404,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_signed:
 					name = "signed";
+					break;
+				case ast_node_op_t::r_unsigned:
+					name = "unsigned";
+					break;
+				case ast_node_op_t::r_long:
+					name = "long";
 					break;
 				case ast_node_op_t::r_static:
 					name = "static";
