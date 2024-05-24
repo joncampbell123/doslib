@@ -265,6 +265,7 @@ namespace CIMCC {
 		r_constexpr,
 		r_static,
 		r_extern,
+		r_auto,
 
 		maxval
 	};
@@ -507,6 +508,7 @@ namespace CIMCC {
 		r_constexpr,
 		r_static,
 		r_extern,
+		r_auto,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -861,6 +863,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_auto) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_auto;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1044,6 +1055,7 @@ namespace CIMCC {
 			case token_type_t::r_constexpr:
 			case token_type_t::r_static:
 			case token_type_t::r_extern:
+			case token_type_t::r_auto:
 				return true;
 			default:
 				break;
@@ -3256,6 +3268,9 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"extern",6)) {
 			t.type = token_type_t::r_extern;
 		}
+		else if (identlen == 6 && !memcmp(start,"auto",4)) {
+			t.type = token_type_t::r_auto;
+		}
 		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
 			t.type = token_type_t::r_constexpr;
 		}
@@ -3972,6 +3987,9 @@ namespace CIMCC {
 			case token_type_t::r_extern:
 				s = "<r_extern>";
 				break;
+			case token_type_t::r_auto:
+				s = "<r_auto>";
+				break;
 			case token_type_t::r_static:
 				s = "<r_static>";
 				break;
@@ -4316,6 +4334,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_extern:
 					name = "extern";
+					break;
+				case ast_node_op_t::r_auto:
+					name = "auto";
 					break;
 				case ast_node_op_t::r_static:
 					name = "static";
