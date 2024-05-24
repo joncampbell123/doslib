@@ -419,4 +419,6 @@ let fn* int func1(int x,long y),long* func2(int x,long y,float z),signed long in
 fn constexpr const int func1(const unsigned int x) {
 	return ~x;
 }
-
+fn static constexpr const int func1(const unsigned int x) {
+	return ~x;
+}
