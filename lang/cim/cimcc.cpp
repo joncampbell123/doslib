@@ -995,6 +995,11 @@ namespace CIMCC {
 	}
 
 	bool compiler::split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
+		tnode = new ast_node_t;
+		tnode->op = ast_node_op_t::identifier_list;
+
+		ast_node_t **n = &(tnode->child);
+
 		/* int -> tnode (null) inode "int"
 		 * long int -> tnode list("long") inode "int"
 		 * int* -> tnode list("int") inode (null) and caller is expected to handle the * or & tokens
@@ -1004,29 +1009,19 @@ namespace CIMCC {
 		if (tok_bufpeek().type == token_type_t::identifier) {
 			if (!NLEX(inode)) return false;
 
-			if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::star ||
-				tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
-				ast_node_t *n;
-
-				tnode = new ast_node_t;
-				tnode->op = ast_node_op_t::identifier_list;
-				tnode->child = n = inode; inode = NULL;
-
-				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (!NLEX(inode)) return false;
-
-					while (tok_bufpeek().type == token_type_t::identifier) {
-						n->next = inode; inode = NULL; n = n->next;
-						if (!NLEX(inode)) return false;
-					}
-				}
-
-				if (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
-					if (inode) {
-						n->next = inode; inode = NULL; n = n->next;
-					}
-				}
+			while (tok_bufpeek().type == token_type_t::identifier) {
+				(*n) = inode; inode = NULL; n = &((*n)->next);
+				if (!NLEX(inode)) return false;
 			}
+
+			if (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
+			}
+		}
+
+		if (tnode->child == NULL) {
+			delete tnode;
+			tnode = NULL;
 		}
 
 		/* if only a type, no identifier, inode == NULL and tnode != NULL which is OK */
