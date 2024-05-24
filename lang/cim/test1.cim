@@ -84,14 +84,14 @@ MAC";
 a b c d e f = 40;
 
 int var1 = 45;
-signed int var2 = 123;
-signed long int var3 = 456l;
-signed long long int var4 = 789ll;
+let signed int var2 = 123;
+let signed long int var3 = 456l;
+let signed long long int var4 = 789ll;
 
 int func1();
 int func1(void);
 int func1(int x,char y,float f);
-signed long long int func1(signed long long x,unsigned long long y);
+fn signed long long int func1(signed long long x,unsigned long long y);
 
 fn int func1() {
 	return(5);
@@ -238,7 +238,7 @@ fn int func1(int x) {
 }
 
 fn int func1(int x) {
-	int y = x ^ 1;
+	let int y = x ^ 1;
 
 	switch (x) {
 		y++; /* should be ignored */
@@ -252,7 +252,7 @@ fn int func1(int x) {
 }
 
 fn int func1(int x) {
-	int y = x ^ 1;
+	let int y = x ^ 1;
 
 	switch (x) {
 		y++; /* should be ignored */
@@ -302,7 +302,7 @@ a: b:	x += 3;
 	let x;
 	let int x;
 	let signed long int x;
-	let big fat signed long long int x;
+	let signed long long int x;
 	let x = 5;
 	let int x = 5;
 	let signed long int x = 5;

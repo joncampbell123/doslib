@@ -266,6 +266,7 @@ namespace CIMCC {
 		r_static,
 		r_extern,
 		r_auto,
+		r_signed,
 
 		maxval
 	};
@@ -509,6 +510,7 @@ namespace CIMCC {
 		r_static,
 		r_extern,
 		r_auto,
+		r_signed,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -872,6 +874,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_signed) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_signed;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -903,7 +914,7 @@ namespace CIMCC {
 
 			/* if the expression is an identifier, it might be a data type,
 			 * and therefore a typecast, rather than a subexpression */
-			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::identifier_list) {
+			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::r_const || pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::identifier_list) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1056,6 +1067,7 @@ namespace CIMCC {
 			case token_type_t::r_static:
 			case token_type_t::r_extern:
 			case token_type_t::r_auto:
+			case token_type_t::r_signed:
 				return true;
 			default:
 				break;
@@ -1192,7 +1204,7 @@ namespace CIMCC {
 		if (!NLEX(pchnode))
 			return false;
 
-		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::scopeoperator) {
+		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::scopeoperator) {
 			/* Allow multiple consecutive identifiers.
 			 * We don't know at this parsing stage whether that identifier represents a variable
 			 * name, function name, typedef name, data type, etc.
@@ -1207,14 +1219,14 @@ namespace CIMCC {
 			 *
 			 */
 			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-			if (tok_bufpeek().type == token_type_t::identifier) {
+			if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::identifier_list;
 				pchnode->child = sav_p;
 
 				ast_node_t *nn = sav_p;
-				while (tok_bufpeek().type == token_type_t::identifier) {
+				while (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 					if (!NLEX(nn->next))
 						return false;
 					nn = nn->next;
@@ -3271,6 +3283,9 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"auto",4)) {
 			t.type = token_type_t::r_auto;
 		}
+		else if (identlen == 6 && !memcmp(start,"signed",6)) {
+			t.type = token_type_t::r_signed;
+		}
 		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
 			t.type = token_type_t::r_constexpr;
 		}
@@ -3990,6 +4005,9 @@ namespace CIMCC {
 			case token_type_t::r_auto:
 				s = "<r_auto>";
 				break;
+			case token_type_t::r_signed:
+				s = "<r_signed>";
+				break;
 			case token_type_t::r_static:
 				s = "<r_static>";
 				break;
@@ -4337,6 +4355,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_auto:
 					name = "auto";
+					break;
+				case ast_node_op_t::r_signed:
+					name = "signed";
 					break;
 				case ast_node_op_t::r_static:
 					name = "static";
