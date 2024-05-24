@@ -269,6 +269,8 @@ namespace CIMCC {
 		r_signed,
 		r_unsigned,
 		r_long,
+		r_int,
+		r_float,
 
 		maxval
 	};
@@ -515,6 +517,8 @@ namespace CIMCC {
 		r_signed,
 		r_unsigned,
 		r_long,
+		r_int,
+		r_float,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -905,6 +909,24 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_int) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_int;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_float) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_float;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -938,6 +960,7 @@ namespace CIMCC {
 			 * and therefore a typecast, rather than a subexpression */
 			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::r_const ||
 				pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::r_long ||
+				pchnode->child->op == ast_node_op_t::r_int || pchnode->child->op == ast_node_op_t::r_float ||
 				pchnode->child->op == ast_node_op_t::identifier_list) {
 				token_t &nt = tok_bufpeek();
 
@@ -1094,6 +1117,8 @@ namespace CIMCC {
 			case token_type_t::r_signed:
 			case token_type_t::r_unsigned:
 			case token_type_t::r_long:
+			case token_type_t::r_int:
+			case token_type_t::r_float:
 				return true;
 			default:
 				break;
@@ -1231,7 +1256,8 @@ namespace CIMCC {
 			return false;
 
 		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed ||
-			pchnode->op == ast_node_op_t::r_long ||pchnode->op == ast_node_op_t::scopeoperator) {
+			pchnode->op == ast_node_op_t::r_long || pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float ||
+			pchnode->op == ast_node_op_t::scopeoperator) {
 			/* Allow multiple consecutive identifiers.
 			 * We don't know at this parsing stage whether that identifier represents a variable
 			 * name, function name, typedef name, data type, etc.
@@ -3320,6 +3346,12 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"signed",6)) {
 			t.type = token_type_t::r_signed;
 		}
+		else if (identlen == 3 && !memcmp(start,"int",3)) {
+			t.type = token_type_t::r_int;
+		}
+		else if (identlen == 5 && !memcmp(start,"float",5)) {
+			t.type = token_type_t::r_float;
+		}
 		else if (identlen == 8 && !memcmp(start,"unsigned",8)) {
 			t.type = token_type_t::r_unsigned;
 		}
@@ -4045,6 +4077,12 @@ namespace CIMCC {
 			case token_type_t::r_auto:
 				s = "<r_auto>";
 				break;
+			case token_type_t::r_int:
+				s = "<r_int>";
+				break;
+			case token_type_t::r_float:
+				s = "<r_float>";
+				break;
 			case token_type_t::r_signed:
 				s = "<r_signed>";
 				break;
@@ -4401,6 +4439,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_auto:
 					name = "auto";
+					break;
+				case ast_node_op_t::r_int:
+					name = "int";
+					break;
+				case ast_node_op_t::r_float:
+					name = "float";
 					break;
 				case ast_node_op_t::r_signed:
 					name = "signed";
