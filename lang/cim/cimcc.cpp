@@ -262,6 +262,7 @@ namespace CIMCC {
 		r_let,
 		r_fn,
 		r_const,
+		r_constexpr,
 
 		maxval
 	};
@@ -501,6 +502,7 @@ namespace CIMCC {
 		r_let,
 		r_fn,
 		r_const,
+		r_constexpr,
 		r_compound_let,
 		typecast,
 		scopeoperator,
@@ -828,6 +830,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_constexpr) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_constexpr;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::identifier) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1008,6 +1019,7 @@ namespace CIMCC {
 	static bool is_reserved_identifier(const token_type_t t) {
 		switch (t) {
 			case token_type_t::r_const:
+			case token_type_t::r_constexpr:
 				return true;
 			default:
 				break;
@@ -3214,6 +3226,9 @@ namespace CIMCC {
 		else if (identlen == 5 && !memcmp(start,"const",5)) {
 			t.type = token_type_t::r_const;
 		}
+		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
+			t.type = token_type_t::r_constexpr;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -3924,6 +3939,9 @@ namespace CIMCC {
 			case token_type_t::r_const:
 				s = "<r_const>";
 				break;
+			case token_type_t::r_constexpr:
+				s = "<r_constexpr>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -4259,6 +4277,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_const:
 					name = "const";
+					break;
+				case ast_node_op_t::r_constexpr:
+					name = "constexpr";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
