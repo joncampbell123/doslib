@@ -707,6 +707,7 @@ namespace CIMCC {
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
+		bool argument_expression_funccall(ast_node_t* &pchnode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
@@ -1100,10 +1101,7 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
-		/* [argument] -> [argument] -> ...
-		 *  \             \
-		 *   +--- [expr]   +--- [expr] */
+	bool compiler::argument_expression_funccall(ast_node_t* &pchnode) {
 #define NLEX assignment_expression
 		if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
 			pchnode = new ast_node_t;
@@ -1125,31 +1123,24 @@ namespace CIMCC {
 			if (!NLEX(pchnode->child))
 				return false;
 		}
+#undef NLEX
+		return true;
+	}
+
+	bool compiler::argument_expression_list(ast_node_t* &pchnode) {
+		/* [argument] -> [argument] -> ...
+		 *  \             \
+		 *   +--- [expr]   +--- [expr] */
+#define NLEX argument_expression_funccall
+		if (!NLEX(pchnode))
+			return false;
 
 		ast_node_t *nb = pchnode;
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
-				nb->next = new ast_node_t; nb = nb->next;
-				nb->op = ast_node_op_t::argument;
-				nb->child = new ast_node_t;
-				nb->child->op = ast_node_op_t::named_parameter;
-				if (!primary_expression(nb->child->child))
-					return false;
-
-				if (tok_bufpeek().type != token_type_t::colon) return false;
-				tok_bufdiscard();
-
-				if (!NLEX(nb->child->next))
-					return false;
-			}
-			else {
-				nb->next = new ast_node_t; nb = nb->next;
-				nb->op = ast_node_op_t::argument;
-				if (!NLEX(nb->child))
-					return false;
-			}
+			if (!NLEX(nb->next)) return false;
+			nb = nb->next;
 		}
 #undef NLEX
 		return true;
