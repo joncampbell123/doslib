@@ -433,3 +433,12 @@ fn const int func1(const auto x) {
 	let auto y = ~x;
 	return y + 2;
 }
+
+fn int func1(int x,...) {
+	return x;
+}
+
+fn int func1(int x,*,int y) {
+	return x + y;
+}
+

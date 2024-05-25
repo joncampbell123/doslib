@@ -274,6 +274,7 @@ namespace CIMCC {
 		r_void,
 		r_volatile,
 		r_char,
+		ellipsis,
 
 		maxval
 	};
@@ -525,9 +526,11 @@ namespace CIMCC {
 		r_void,
 		r_volatile,
 		r_char,
+		ellipsis,
 		r_compound_let,
 		typecast,
 		scopeoperator,
+		named_arg_required_boundary,
 		label,
 
 		maxval
@@ -616,9 +619,9 @@ namespace CIMCC {
 			return pb_ctx.ptr_size;
 		}
 
-		char peekb(void) {
-			if (pb.read == pb.end) refill();
-			if (pb.read < pb.end) return *(pb.read);
+		char peekb(const size_t ahead=0) {
+			if ((pb.read+ahead) >= pb.end) refill();
+			if ((pb.read+ahead) < pb.end) return *(pb.read);
 			return 0;
 		}
 
@@ -706,6 +709,7 @@ namespace CIMCC {
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
+		bool fn_argument_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode);
 		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma=false);
 		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma=false);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
@@ -951,6 +955,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::ellipsis) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::ellipsis;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_volatile) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1057,7 +1070,7 @@ namespace CIMCC {
 		{
 			ast_node_t **n = &(pchnode->child);
 			ast_node_t *t=NULL,*i=NULL,*e=NULL;
-			if (!let_expression(t,i,e))
+			if (!fn_argument_expression(t,i,e))
 				return false;
 
 			if (t) { *n = t; n = &((*n)->next); }
@@ -1074,7 +1087,7 @@ namespace CIMCC {
 			{
 				ast_node_t **n = &(nb->child);
 				ast_node_t *t=NULL,*i=NULL,*e=NULL;
-				if (!let_expression(t,i,e))
+				if (!fn_argument_expression(t,i,e))
 					return false;
 
 				if (t) { *n = t; n = &((*n)->next); }
@@ -2248,6 +2261,29 @@ namespace CIMCC {
 		}
 #undef NLEX
 		return true;
+	}
+
+	bool compiler::fn_argument_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode) {
+		/* "..." serves as a way to make variadic functions, just as in C, and is also the last argument in the function because any
+		 * amount of anything can exist past the last parameter.
+		 *
+		 * "*" serves as a way to specify that past this point, parameters must be referenced by name, not position, just as in Python */
+		if (tok_bufpeek().type == token_type_t::ellipsis) {
+			inode = new ast_node_t;
+			inode->op = ast_node_op_t::ellipsis;
+			inode->tv = std::move(tok_bufpeek(0));
+			tok_bufdiscard();
+			return true;
+		}
+		else if (tok_bufpeek().type == token_type_t::star) {
+			inode = new ast_node_t;
+			inode->op = ast_node_op_t::named_arg_required_boundary;
+			inode->tv = std::move(tok_bufpeek(0));
+			tok_bufdiscard();
+			return true;
+		}
+
+		return let_expression(tnode,inode,enode);
 	}
 
 	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma) {
@@ -3679,6 +3715,11 @@ namespace CIMCC {
 			case '.':
 				t.type = token_type_t::period;
 				skipb();
+				if (peekb(0) == '.' && peekb(1) == '.') {
+					t.type = token_type_t::ellipsis;
+					skipb();
+					skipb();
+				}
 				break;
 			case ',':
 				t.type = token_type_t::comma;
@@ -4164,6 +4205,9 @@ namespace CIMCC {
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
+			case token_type_t::ellipsis:
+				s = "<...>";
+				break;
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
@@ -4514,6 +4558,12 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_char:
 					name = "char";
+					break;
+				case ast_node_op_t::ellipsis:
+					name = "ellipsis";
+					break;
+				case ast_node_op_t::named_arg_required_boundary:
+					name = "named arg req boundary";
 					break;
 				case ast_node_op_t::r_volatile:
 					name = "volatile";
