@@ -81,9 +81,9 @@ MAC";
 	x = { 1, 2, 3 }, y = { 4, 5, 6};
 }
 
-a b c d e f = 40;
+let a b c d e f = 40;
 
-int var1 = 45;
+let int var1 = 45;
 let signed int var2 = 123;
 let signed long int var3 = 456l;
 let signed long long int var4 = 789ll;
@@ -297,7 +297,7 @@ a: b:	x += 3;
 		case 1: case 2: case 3: y += 5; break;
 	}
 
-	a::b::c d::e::f g::h::i::j k::l(5,x::y::z);
+	a::b::c d::e::f(5,x::y::z);
 
 	let x;
 	let int x;

@@ -1292,13 +1292,10 @@ namespace CIMCC {
 		if (!NLEX(pchnode))
 			return false;
 
-		if (pchnode->op == ast_node_op_t::identifier || pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed ||
-			pchnode->op == ast_node_op_t::r_long || pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float ||
-			pchnode->op == ast_node_op_t::r_void || pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile ||
-			pchnode->op == ast_node_op_t::scopeoperator) {
-			/* Allow multiple consecutive identifiers.
-			 * We don't know at this parsing stage whether that identifier represents a variable
-			 * name, function name, typedef name, data type, etc.
+		if (	pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::r_long ||
+			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
+			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator) {
+			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
 			 *
@@ -1317,7 +1314,14 @@ namespace CIMCC {
 				pchnode->child = sav_p;
 
 				ast_node_t *nn = sav_p;
-				while (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
+
+				while (is_reserved_identifier(tok_bufpeek().type)) {
+					if (!NLEX(nn->next))
+						return false;
+					nn = nn->next;
+				}
+
+				if (tok_bufpeek().type == token_type_t::identifier) {
 					if (!NLEX(nn->next))
 						return false;
 					nn = nn->next;
