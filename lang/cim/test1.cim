@@ -81,7 +81,13 @@ MAC";
 	x = { 1, 2, 3 }, y = { 4, 5, 6};
 }
 
-let a b c d e f = 40;
+let a = 40; /* a of default type */
+let a b = 40; /* b of type a */
+
+let int const a = 3;
+let const int a = 3;
+let int const a = 3, b = 5;
+let const int a = 3, b = 5;
 
 let int var1 = 45;
 let signed int var2 = 123;

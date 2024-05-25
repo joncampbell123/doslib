@@ -1184,10 +1184,13 @@ namespace CIMCC {
 		if (tok_bufpeek().type == token_type_t::identifier) {
 			if (!NLEX(inode)) return false;
 
-			while (tok_bufpeek().type == token_type_t::identifier) {
-				(*n) = inode; inode = NULL; n = &((*n)->next);
+			if (tok_bufpeek().type == token_type_t::identifier) {
+				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
 				if (!NLEX(inode)) return false;
 			}
+
+			/* sorry, no more arbitrary sequence of identifiers, you're only allowed up to two */
+			if (tok_bufpeek().type == token_type_t::identifier) return false;
 
 			if (tok_bufpeek().type == token_type_t::star || tok_bufpeek().type == token_type_t::ampersand || tok_bufpeek().type == token_type_t::ampersandampersand) {
 				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
