@@ -531,6 +531,7 @@ namespace CIMCC {
 		typecast,
 		scopeoperator,
 		named_arg_required_boundary,
+		named_parameter,
 		label,
 
 		maxval
@@ -1104,19 +1105,51 @@ namespace CIMCC {
 		 *  \             \
 		 *   +--- [expr]   +--- [expr] */
 #define NLEX assignment_expression
-		pchnode = new ast_node_t;
-		pchnode->op = ast_node_op_t::argument;
-		if (!NLEX(pchnode->child))
-			return false;
+		if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::argument;
+			pchnode->child = new ast_node_t;
+			pchnode->child->op = ast_node_op_t::named_parameter;
+			if (!primary_expression(pchnode->child->child))
+				return false;
+
+			if (tok_bufpeek().type != token_type_t::colon) return false;
+			tok_bufdiscard();
+
+			if (!NLEX(pchnode->child->next))
+				return false;
+		}
+		else {
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::argument;
+			if (!NLEX(pchnode->child))
+				return false;
+		}
 
 		ast_node_t *nb = pchnode;
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			nb->next = new ast_node_t; nb = nb->next;
-			nb->op = ast_node_op_t::argument;
-			if (!NLEX(nb->child))
-				return false;
+			if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
+				nb->next = new ast_node_t; nb = nb->next;
+				nb->op = ast_node_op_t::argument;
+				nb->child = new ast_node_t;
+				nb->child->op = ast_node_op_t::named_parameter;
+				if (!primary_expression(nb->child->child))
+					return false;
+
+				if (tok_bufpeek().type != token_type_t::colon) return false;
+				tok_bufdiscard();
+
+				if (!NLEX(nb->child->next))
+					return false;
+			}
+			else {
+				nb->next = new ast_node_t; nb = nb->next;
+				nb->op = ast_node_op_t::argument;
+				if (!NLEX(nb->child))
+					return false;
+			}
 		}
 #undef NLEX
 		return true;
@@ -4561,6 +4594,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::ellipsis:
 					name = "ellipsis";
+					break;
+				case ast_node_op_t::named_parameter:
+					name = "named param";
 					break;
 				case ast_node_op_t::named_arg_required_boundary:
 					name = "named arg req boundary";
