@@ -442,6 +442,9 @@ fn int func1(int x,*,int y,int abcxyz=0) {
 	return x + y + abcxyz;
 }
 
+fn int func2(int a) {
+	return func1(x:1,y:2*3+5,a+5*3-2/1);
+}
 fn int func2(int a,int b,int c) {
 	return func1(x:a,y:b+c,abcxyz:b*c-a);
 }
