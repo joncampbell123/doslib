@@ -2280,6 +2280,14 @@ namespace CIMCC {
 			if (!statement(bnode,n))
 				return false;
 		}
+		else if (tok_bufpeek().type == token_type_t::equal) {
+			tok_bufdiscard(); /* eat it */
+
+			bnode = new ast_node_t;
+			bnode->op = ast_node_op_t::assign;
+			if (!assignment_expression(bnode->child))
+				return false;
+		}
 		else {
 			return false;
 		}
