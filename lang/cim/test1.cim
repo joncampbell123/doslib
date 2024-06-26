@@ -422,6 +422,7 @@ let fn func1,func2;
 let fn* func1,func2;
 let fn** func1,func2,func3;
 let fn* int func1(int x,long y),long* func2(int x,long y,float z),signed long int * const * func3(int &x);
+let fn* int func1p(int x,long y) = func2;
 let fn* func1p = func2;
 let fn* func1p = func1,func2p = func2;
 fn constexpr const int func1(const unsigned int x) {

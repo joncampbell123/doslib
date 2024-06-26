@@ -716,9 +716,12 @@ namespace CIMCC {
 		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma=false);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
-		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode);
+		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
+
+		/* fn_expression() flags */
+		static constexpr unsigned int FN_EXPR_ALLOW_ASSIGN = (1u << 0u);
 
 		ast_node_t*		root_node = NULL;
 
@@ -2195,7 +2198,7 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode) {
+	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
 		tnode = new ast_node_t;
 		tnode->op = ast_node_op_t::identifier_list;
 
@@ -2280,7 +2283,7 @@ namespace CIMCC {
 			if (!statement(bnode,n))
 				return false;
 		}
-		else if (tok_bufpeek().type == token_type_t::equal) {
+		else if (tok_bufpeek().type == token_type_t::equal && (flags & FN_EXPR_ALLOW_ASSIGN)) {
 			tok_bufdiscard(); /* eat it */
 
 			bnode = new ast_node_t;
@@ -2552,7 +2555,7 @@ namespace CIMCC {
 							ast_node_t **sn = &((*n)->child);
 							n = &((*n)->next);
 
-							if (!fn_expression(t,i,a,b))
+							if (!fn_expression(t,i,a,b,FN_EXPR_ALLOW_ASSIGN))
 								return false;
 
 							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
@@ -2575,7 +2578,7 @@ namespace CIMCC {
 
 							tok_bufdiscard(); /* eat comma */
 
-							if (!fn_expression(t,i,a,b))
+							if (!fn_expression(t,i,a,b,FN_EXPR_ALLOW_ASSIGN))
 								return false;
 
 							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
