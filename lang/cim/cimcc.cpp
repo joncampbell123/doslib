@@ -4161,6 +4161,9 @@ namespace CIMCC {
 			case token_type_t::caret:
 				s = "<^>";
 				break;
+			case token_type_t::equal:
+				s = "<=>";
+				break;
 			case token_type_t::equalequal:
 				s = "<==>";
 				break;
