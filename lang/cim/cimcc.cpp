@@ -4708,9 +4708,15 @@ namespace CIMCC {
 			};
 
 			token_to_string(s,parent->tv);
-			fprintf(stderr,"..%s%s: %s [line=%d col=%d source='%s']\n",
-				indent.c_str(),name,s.c_str(),parent->tv.position.line,parent->tv.position.col,
-				toksnames_getname(toksnames,parent->tv.position.source).c_str());
+			fprintf(stderr,"..%s%s: %s",
+				indent.c_str(),name,s.c_str());
+			if (parent->tv.position.line >= 0)
+				fprintf(stderr," line=%d",parent->tv.position.line);
+			if (parent->tv.position.col >= 0)
+				fprintf(stderr," col=%d",parent->tv.position.col);
+			if (parent->tv.position.source != position_t::nosource)
+				fprintf(stderr," source='%s'",toksnames_getname(toksnames,parent->tv.position.source).c_str());
+			fprintf(stderr,"\n");
 			dump_ast_nodes(parent->child,toksnames,depth+1u);
 		}
 	}
