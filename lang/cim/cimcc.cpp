@@ -1662,8 +1662,6 @@ namespace CIMCC {
 		/* This is written differently, because we need it built "inside out" */
 		while (1) {
 			if (tok_bufpeek().type == token_type_t::star) { /* * operator */
-				tok_bufdiscard(); /* eat it */
-
 				/* [*]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
@@ -1671,13 +1669,12 @@ namespace CIMCC {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::multiply;
+				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::slash) { /* / operator */
-				tok_bufdiscard(); /* eat it */
-
 				/* [/]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
@@ -1685,13 +1682,12 @@ namespace CIMCC {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::divide;
+				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::percent) { /* % operator */
-				tok_bufdiscard(); /* eat it */
-
 				/* [%]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
@@ -1699,6 +1695,7 @@ namespace CIMCC {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::modulo;
+				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
@@ -1722,8 +1719,6 @@ namespace CIMCC {
 		 * built as ((5-6)-3) not (5-(6-3)). */
 		while (1) {
 			if (tok_bufpeek().type == token_type_t::plus) { /* + operator */
-				tok_bufdiscard(); /* eat it */
-
 				/* [+]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
@@ -1731,13 +1726,12 @@ namespace CIMCC {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::add;
+				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
 			}
 			else if (tok_bufpeek().type == token_type_t::minus) { /* - operator */
-				tok_bufdiscard(); /* eat it */
-
 				/* [-]
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
@@ -1745,6 +1739,7 @@ namespace CIMCC {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::subtract;
+				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 				pchnode->child = sav_p;
 				if (!NLEX(sav_p->next))
 					return false;
@@ -2078,8 +2073,6 @@ namespace CIMCC {
 		/* assignment expressions are parsed right to left, therefore something like a = b = c = d
 		 * needs to be handled like a = (b = (c = d)) */
 		if (tok_bufpeek().type == token_type_t::equal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2087,12 +2080,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assign;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::plusequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [+=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2100,12 +2092,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignadd;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::minusequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [-=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2113,12 +2104,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignsubtract;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::starequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [*=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2126,12 +2116,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignmultiply;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::slashequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [/=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2139,12 +2128,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assigndivide;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::percentequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [%=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2152,12 +2140,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignmodulo;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::ampersandequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [&=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2165,12 +2152,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignand;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::caretequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [^=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2178,12 +2164,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignxor;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::pipeequal) {
-			tok_bufdiscard(); /* eat it */
-
 			/* [|=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2191,12 +2176,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignor;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::leftleftangleequal) { /* <<= operator */
-			tok_bufdiscard(); /* eat it */
-
 			/* [<<=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2204,12 +2188,11 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignleftshift;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
 		else if (tok_bufpeek().type == token_type_t::rightrightangleequal) { /* >>= operator */
-			tok_bufdiscard(); /* eat it */
-
 			/* [>>=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2217,6 +2200,7 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::assignrightshift;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			return assignment_expression(sav_p->next);
 		}
@@ -2231,8 +2215,6 @@ namespace CIMCC {
 			return false;
 
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
-			tok_bufdiscard(); /* eat it */
-
 			/* [,]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
@@ -2240,6 +2222,7 @@ namespace CIMCC {
 			ast_node_t *sav_p = pchnode;
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::comma;
+			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 			pchnode->child = sav_p;
 			if (!NLEX(sav_p->next))
 				return false;
