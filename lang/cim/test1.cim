@@ -457,3 +457,19 @@ fn int func2(int a,int b,int c) {
 	return func1(x:a,y:b+c,abcxyz:b*c-a);
 }
 
+[[noreturn]] fn int doesnotreturn(void) {
+	for (;;);
+}
+
+/* include() is reserved only when used as a function call.
+
+   include()             reserved
+   scope::include        not reserved
+   structinst.include    not reserved
+   structptr->include    not reserved */
+
+include("duh");
+scope::include("duh");
+structinst.include("duh");
+structptr->include("duh");
+
