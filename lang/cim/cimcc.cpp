@@ -65,6 +65,12 @@ namespace CIMCC {
 
 	struct token_t;
 
+	struct token_source_name_t {
+		std::string		name;
+	};
+
+	typedef std::vector<token_source_name_t> token_source_name_list_t;
+
 	struct position_t {
 		static constexpr uint16_t nosource = 0xFFFFu;
 
@@ -777,7 +783,12 @@ namespace CIMCC {
 		token_t			tok_empty;
 
 		/* position tracking */
-		position_t		tok_pos;
+		position_t			tok_pos;
+		token_source_name_list_t*	tok_snamelist = NULL;
+
+		void set_source_name_list(token_source_name_list_t *l) {
+			tok_snamelist = l;
+		}
 
 		void tok_buf_clear(void) {
 			tok_buf_i = tok_buf_o = 0;
@@ -2989,6 +3000,13 @@ namespace CIMCC {
 		}
 
 		tok_buf_clear();
+		if (tok_snamelist) {
+			token_source_name_t t;
+
+			t.name = pb_ctx.source_name;
+			tok_pos.source = (*tok_snamelist).size();
+			(*tok_snamelist).push_back(std::move(t));
+		}
 		tok_pos.first_line();
 		tok_buf_refill();
 		while (!tok_buf_empty()) {
@@ -4395,7 +4413,18 @@ namespace CIMCC {
 		}
 	}
 
-	void dump_ast_nodes(ast_node_t *parent,const size_t depth=0) {
+	static const std::string empty_const_string;
+
+	const std::string &toksnames_getname(CIMCC::token_source_name_list_t *toksnames,const size_t ent) {
+		if (toksnames) {
+			if (ent < (*toksnames).size())
+				return (*toksnames)[ent].name;
+		}
+
+		return empty_const_string;
+	}
+
+	void dump_ast_nodes(ast_node_t *parent,CIMCC::token_source_name_list_t *toksnames,const size_t depth=0) {
 		std::string s;
 		std::string indent;
 
@@ -4679,8 +4708,10 @@ namespace CIMCC {
 			};
 
 			token_to_string(s,parent->tv);
-			fprintf(stderr,"..%s%s: %s [line=%d col=%d]\n",indent.c_str(),name,s.c_str(),parent->tv.position.line,parent->tv.position.col);
-			dump_ast_nodes(parent->child,depth+1u);
+			fprintf(stderr,"..%s%s: %s [line=%d col=%d source='%s']\n",
+				indent.c_str(),name,s.c_str(),parent->tv.position.line,parent->tv.position.col,
+				toksnames_getname(toksnames,parent->tv.position.source).c_str());
+			dump_ast_nodes(parent->child,toksnames,depth+1u);
 		}
 	}
 
@@ -4713,6 +4744,7 @@ int main(int argc,char **argv) {
 	}
 
 	{
+		CIMCC::token_source_name_list_t toksnames;
 		CIMCC::compiler cc;
 		src_ctx fdctx;
 
@@ -4724,9 +4756,10 @@ int main(int argc,char **argv) {
 		cc.set_source_name(argv[1]);
 		cc.set_source_cb(refill_fdio);
 		cc.set_source_ctx(&fdctx,sizeof(fdctx));
+		cc.set_source_name_list(&toksnames);
 
 		cc.compile();
-		dump_ast_nodes(cc.root_node);
+		dump_ast_nodes(cc.root_node,&toksnames);
 		cc.free_ast();
 
 		/* fdctx destructor closes file descriptor */
