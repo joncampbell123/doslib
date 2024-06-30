@@ -69,6 +69,10 @@ HM"<<MAC
 Classic Macintosh OS style line encodings.
 CR encoding.
 MAC";
+HU"<<UNIX
+Unix style encoding, which is default anyway.
+LF encoding.
+UNIX";
 '\077', '\o{77}', '\x0f', '\x{f}', '\u00A0', '\u{A0}';
 ;;;
 { 4; 3; 3,4; }; { 4; "hello"; 5 * 3 + 2; }; { 4; { 5, 3, 8*4; }; 44; }; { 4; { 1, 2; 3; 4; }; }; { 4; 6; { 2; 5; 7; { 6; { 2, 3, 4; }; }; }; };

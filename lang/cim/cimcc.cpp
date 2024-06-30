@@ -836,7 +836,7 @@ namespace CIMCC {
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 
-			/* build the AST notes to ensure the string is concatenated left to right, i.e.
+			/* build the AST nodes to ensure the string is concatenated left to right, i.e.
 			 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
 			 * strcat(strcat(strcat("c" "d") "b") "a") */
 			while (tok_bufpeek().type == token_type_t::stringliteral) {
@@ -3344,7 +3344,7 @@ namespace CIMCC {
 				unsigned char special = 0;
 
 				if ((scan+2) <= end && !memcmp(scan,"u8",2)) {
-					/* "u8 has type char and is equal to the code point as long as it's ome byte" (paraphrased) */
+					/* "u8 has type char and is equal to the code point as long as it's one byte" (paraphrased) */
 					/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
 					st = token_charstrliteral_t::strtype_t::T_UTF8;
 					scan += 2;
@@ -3390,7 +3390,12 @@ namespace CIMCC {
 						hflags = HFLAG_CR_NEWLINES;
 						scan += 1;
 					}
-
+					/* allow 'U' to specify that newlines should be encoded \n (which is default) i.e. Unix/Linux */
+					else if ((scan+1) <= end && *scan == 'U') {
+						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
+						hflags = HFLAG_LF_NEWLINES;
+						scan += 1;
+					}
 				}
 
 				if (scan == end) {
