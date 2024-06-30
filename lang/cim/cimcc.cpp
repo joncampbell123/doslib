@@ -65,7 +65,28 @@ namespace CIMCC {
 
 	struct token_t;
 
+	struct position_t {
+		static constexpr uint16_t nosource = 0xFFFFu;
+
+		void first_line(void) {
+			pchar = 0;
+			line = 1;
+			col = 1;
+		}
+
+		void next_line(void) {
+			line++;
+			col = 1;
+		}
+
+		int			line = -1;
+		int			col = -1;
+		uint16_t		source = nosource;
+		uint32_t		pchar = 0;
+	};
+
 	struct context_t {
+		std::string		source_name;
 		unsigned char*		ptr = NULL;
 		size_t			ptr_size = 0;
 		bool			ownership = false;
@@ -393,6 +414,7 @@ namespace CIMCC {
 
 	struct token_t {
 		token_type_t		type = token_type_t::none;
+		position_t		position;
 
 		union token_value_t {
 			token_intval_t		intval;		// type == intval
@@ -425,6 +447,7 @@ namespace CIMCC {
 		}
 
 		void common_move(token_t &x) {
+			position = x.position;
 			type = x.type;
 			v = x.v;
 
@@ -597,6 +620,14 @@ namespace CIMCC {
 			pb_refill = f;
 		}
 
+		void set_source_name(const char *x) {
+			pb_ctx.source_name = x;
+		}
+
+		void set_source_name(const std::string &x) {
+			pb_ctx.source_name = x;
+		}
+
 		void set_source_ctx(void *ptr=NULL,size_t sz=0) {
 			pb_ctx.free();
 			pb_ctx.ptr_size = sz;
@@ -620,27 +651,36 @@ namespace CIMCC {
 			return pb_ctx.ptr_size;
 		}
 
+		void update_pos(const uint32_t c) {
+			if ((c == 13 || c == 10) && !(tok_pos.pchar == 13 || tok_pos.pchar == 10)) tok_pos.next_line();
+			else tok_pos.col++;
+			tok_pos.pchar = c;
+		}
+
 		char peekb(const size_t ahead=0) {
 			if ((pb.read+ahead) >= pb.end) refill();
 			if ((pb.read+ahead) < pb.end) return *(pb.read);
 			return 0;
 		}
 
-		void skipb(void) {
+		static constexpr unsigned int getb_flag_noposupd = (1u << 0u);
+
+		void skipb(const unsigned int flags=0) {
 			if (pb.read == pb.end) refill();
-			if (pb.read < pb.end) pb.read++;
+			if (pb.read < pb.end) { if (!(flags & getb_flag_noposupd)) update_pos(*pb.read); pb.read++; }
 		}
 
-		char getb(void) {
+		char getb(const unsigned int flags=0) {
 			const char r = peekb();
-			skipb();
+			skipb(flags);
 			return r;
 		}
 
 		uint32_t getb_utf8(void) {
-			uint32_t ub = (uint32_t)((unsigned char)getb());
+			uint32_t ub = (uint32_t)((unsigned char)getb(getb_flag_noposupd));
 
 			if (ub >= 0xFE) {
+				update_pos(ub);
 				return 0; // invalid
 			}
 			else if (ub >= 0xC0) {
@@ -665,12 +705,17 @@ namespace CIMCC {
 					len--;
 				}
 
-				if (len > 0) return 0; // incomplete
+				if (len > 0) {
+					update_pos(ub);
+					return 0; // incomplete
+				}
 			}
 			else if (ub >= 0x80) {
+				update_pos(ub);
 				return 0; // we're in the middle of a char
 			}
 
+			update_pos(ub);
 			return ub;
 		}
 
@@ -730,6 +775,9 @@ namespace CIMCC {
 		token_t			tok_buf[tok_buf_size];
 		size_t			tok_buf_i = 0,tok_buf_o = 0;
 		token_t			tok_empty;
+
+		/* position tracking */
+		position_t		tok_pos;
 
 		void tok_buf_clear(void) {
 			tok_buf_i = tok_buf_o = 0;
@@ -1493,8 +1541,6 @@ namespace CIMCC {
 
 			switch (t.type) {
 				case token_type_t::ampersandampersand: /* '&&' in this way must be handled as '& &' */
-					tok_bufdiscard(); /* eat it */
-
 					/* [&]
 					 *  \
 					 *   +--- [&]
@@ -1505,94 +1551,87 @@ namespace CIMCC {
 					pchnode->op = ast_node_op_t::addressof;
 					pchnode->child = new ast_node_t;
 					pchnode->child->op = ast_node_op_t::addressof;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child->child);
 
 				case token_type_t::ampersand:
-					tok_bufdiscard(); /* eat it */
-
 					/* [&]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::addressof;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::star:
-					tok_bufdiscard(); /* eat it */
-
 					/* [*]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::dereference;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::minusminus:
-					tok_bufdiscard(); /* eat it */
-
 					/* [--]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::predecrement;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::plusplus:
-					tok_bufdiscard(); /* eat it */
-
 					/* [++]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::preincrement;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::minus:
-					tok_bufdiscard(); /* eat it */
-
 					/* [-]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::negate;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::plus:
-					tok_bufdiscard(); /* eat it */
-
 					/* [+]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::unaryplus;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::exclamation:
-					tok_bufdiscard(); /* eat it */
-
 					/* [!]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::logicalnot;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				case token_type_t::tilde:
-					tok_bufdiscard(); /* eat it */
-
 					/* [~]
 					 *  \
 					 *   +--- expression */
 					assert(pchnode == NULL);
 					pchnode = new ast_node_t;
 					pchnode->op = ast_node_op_t::binarynot;
+					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
 					return unary_expression(pchnode->child);
 
 				default:
@@ -2950,6 +2989,7 @@ namespace CIMCC {
 		}
 
 		tok_buf_clear();
+		tok_pos.first_line();
 		tok_buf_refill();
 		while (!tok_buf_empty()) {
 			if (!statement(rnode,apnode)) {
@@ -3399,6 +3439,7 @@ namespace CIMCC {
 				}
 
 				if (scan == end) {
+					tok_pos.col += (int)(pb.read + 1/*will advance*/ - start);
 					if (special == 'H')
 						gtok_chrstr_H_literal(*pb.read++,t,hflags,st);
 					else
@@ -3408,6 +3449,8 @@ namespace CIMCC {
 				}
 			}
 		}
+
+		tok_pos.col += (int)(pb.read - start);
 
 		/* check for reserved words */
 		if (identlen == 6 && !memcmp(start,"return",6)) {
@@ -3740,6 +3783,7 @@ namespace CIMCC {
 		char c;
 
 		whitespace();
+		t.position = tok_pos;
 		if (pb.eof()) {
 			t.type = token_type_t::eof;
 			return;
@@ -4635,7 +4679,7 @@ namespace CIMCC {
 			};
 
 			token_to_string(s,parent->tv);
-			fprintf(stderr,"..%s%s: %s\n",indent.c_str(),name,s.c_str());
+			fprintf(stderr,"..%s%s: %s [line=%d col=%d]\n",indent.c_str(),name,s.c_str(),parent->tv.position.line,parent->tv.position.col);
 			dump_ast_nodes(parent->child,depth+1u);
 		}
 	}
@@ -4677,6 +4721,7 @@ int main(int argc,char **argv) {
 			fprintf(stderr,"Failed to open file\n");
 			return 1;
 		}
+		cc.set_source_name(argv[1]);
 		cc.set_source_cb(refill_fdio);
 		cc.set_source_ctx(&fdctx,sizeof(fdctx));
 
