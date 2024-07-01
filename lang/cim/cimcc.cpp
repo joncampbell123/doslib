@@ -312,6 +312,8 @@ namespace CIMCC {
 		r_typename,
 		r_using,
 		r_namespace,
+		dblleftsquarebracket,
+		dblrightsquarebracket,
 
 		maxval
 	};
@@ -4097,10 +4099,18 @@ namespace CIMCC {
 			case '[':
 				t.type = token_type_t::leftsquarebracket;
 				skipb();
+				if (peekb() == '[') { /* [[ */
+					t.type = token_type_t::dblleftsquarebracket;
+					skipb();
+				}
 				break;
 			case ']':
 				t.type = token_type_t::rightsquarebracket;
 				skipb();
+				if (peekb() == ']') { /* ]] */
+					t.type = token_type_t::dblrightsquarebracket;
+					skipb();
+				}
 				break;
 			case '<':
 				t.type = token_type_t::lessthan;
@@ -4376,6 +4386,12 @@ namespace CIMCC {
 				break;
 			case token_type_t::rightsquarebracket:
 				s = "<rsqrbrkt>";
+				break;
+			case token_type_t::dblleftsquarebracket:
+				s = "<dbllsqrbrkt>";
+				break;
+			case token_type_t::dblrightsquarebracket:
+				s = "<dblrsqrbrkt>";
 				break;
 			case token_type_t::r_return:
 				s = "<r_return>";
