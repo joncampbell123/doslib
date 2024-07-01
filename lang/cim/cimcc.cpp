@@ -658,8 +658,11 @@ namespace CIMCC {
 		}
 
 		void update_pos(const uint32_t c) {
-			if ((c == 13 || c == 10) && !(tok_pos.pchar == 13 || tok_pos.pchar == 10)) tok_pos.next_line();
-			else tok_pos.col++;
+			if (c == '\n')
+				tok_pos.next_line();
+			else if (c != '\r')
+				tok_pos.col++;
+
 			tok_pos.pchar = c;
 		}
 
@@ -3368,6 +3371,7 @@ namespace CIMCC {
 		unsigned char *start = pb.read;
 
 		while (pb.read < pb.end && is_identifier_char(*(pb.read))) pb.read++;
+		tok_pos.col += (int)(pb.read - start);
 
 		assert(start != pb.read);
 		const size_t identlen = size_t(pb.read - start);
@@ -3375,7 +3379,10 @@ namespace CIMCC {
 		unsigned char *end = pb.read;
 
 		/* But wait---It might not be an identifier, it might be a char or string literal with L, u, U, etc. at the start! */
-		while (pb.read < pb.end && is_whitespace(*pb.read)) pb.read++;
+		while (pb.read < pb.end && is_whitespace(*pb.read)) {
+			update_pos(*(pb.read));
+			pb.read++;
+		}
 
 		if (pb.read < pb.end) {
 			if (*pb.read == '\'' || *pb.read == '\"') { /* i.e. L'W' or L"Hello" */
@@ -3388,18 +3395,22 @@ namespace CIMCC {
 					/* "u8 has type char and is equal to the code point as long as it's one byte" (paraphrased) */
 					/* Pfffffttt, ha! If u8 is limited to one byte then why even have it? */
 					st = token_charstrliteral_t::strtype_t::T_UTF8;
+					tok_pos.col += 2;
 					scan += 2;
 				}
 				else if ((scan+1) <= end && *scan == 'L') {
 					st = token_charstrliteral_t::strtype_t::T_WIDE;
+					tok_pos.col += 1;
 					scan += 1;
 				}
 				else if ((scan+1) <= end && *scan == 'u') {
 					st = token_charstrliteral_t::strtype_t::T_UTF16;
+					tok_pos.col += 1;
 					scan += 1;
 				}
 				else if ((scan+1) <= end && *scan == 'U') {
 					st = token_charstrliteral_t::strtype_t::T_UTF32;
+					tok_pos.col += 1;
 					scan += 1;
 				}
 
@@ -3416,6 +3427,7 @@ namespace CIMCC {
 				 *
 				 * There you go. And you don't need this pattern matching on both sides crap that C++23 R syntax uses. Yechh. */
 				if ((scan+1) <= end && *scan == 'H') {
+					tok_pos.col += 1;
 					special = 'H';
 					scan += 1;
 
@@ -3423,24 +3435,27 @@ namespace CIMCC {
 					if ((scan+1) <= end && *scan == 'D') {
 						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
 						hflags = HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES;
+						tok_pos.col += 1;
 						scan += 1;
 					}
 					/* allow 'M' to specify that newlines should be encoded \r instead of \n i.e. classic Macintosh OS */
 					else if ((scan+1) <= end && *scan == 'M') {
 						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
 						hflags = HFLAG_CR_NEWLINES;
+						tok_pos.col += 1;
 						scan += 1;
 					}
 					/* allow 'U' to specify that newlines should be encoded \n (which is default) i.e. Unix/Linux */
 					else if ((scan+1) <= end && *scan == 'U') {
 						hflags &= ~(HFLAG_CR_NEWLINES | HFLAG_LF_NEWLINES);
 						hflags = HFLAG_LF_NEWLINES;
+						tok_pos.col += 1;
 						scan += 1;
 					}
 				}
 
 				if (scan == end) {
-					tok_pos.col += (int)(pb.read + 1/*will advance*/ - start);
+					tok_pos.col += 1; /* pb.read++ */
 					if (special == 'H')
 						gtok_chrstr_H_literal(*pb.read++,t,hflags,st);
 					else
@@ -3450,8 +3465,6 @@ namespace CIMCC {
 				}
 			}
 		}
-
-		tok_pos.col += (int)(pb.read - start);
 
 		/* check for reserved words */
 		if (identlen == 6 && !memcmp(start,"return",6)) {
