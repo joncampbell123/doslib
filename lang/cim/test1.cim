@@ -480,5 +480,7 @@ let int include = 5;
 let size_t sz1 = sizeof(int);
 let size_t sz2 = sizeof(sz1) + sizeof(int);
 let ssize_t sz1 = sizeof(int) - sizeof(char);
-let ssize_t sz1 = (5 - sizeof(char));
+let ssize_t sz1 = 5 - sizeof(char);
+let ssize_t sz1 = (ssize_t)(5 - (size_t)sizeof(char));
+let ssize_t sz1 = ssize_t(5 - size_t(sizeof(char))); /* allow C++ style too, which at first looks like a function call, but later stages will know the "function" is a data type and therefore a typecast */
 

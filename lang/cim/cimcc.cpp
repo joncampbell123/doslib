@@ -885,6 +885,7 @@ namespace CIMCC {
 		assert(pb.sanity_check());
 	}
 
+	static bool is_reserved_identifier(const token_type_t t);
 	void token_to_string(std::string &s,const token_t &t);
 
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
@@ -1119,7 +1120,8 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::r_long ||
 				pchnode->child->op == ast_node_op_t::r_int || pchnode->child->op == ast_node_op_t::r_float ||
 				pchnode->child->op == ast_node_op_t::r_void || pchnode->child->op == ast_node_op_t::r_volatile ||
-				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list) {
+				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list ||
+				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1129,7 +1131,7 @@ namespace CIMCC {
 				 * (type)identifier including (type)functioncall()
 				 *
 				 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
-				if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier) {
+				if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier || is_reserved_identifier(nt.type)) {
 					pchnode->op = ast_node_op_t::typecast;
 					if (!unary_expression(pchnode->child->next))
 						return false;
