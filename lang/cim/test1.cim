@@ -479,4 +479,6 @@ structptr->include("duh");
 let int include = 5;
 let size_t sz1 = sizeof(int);
 let size_t sz2 = sizeof(sz1) + sizeof(int);
+let ssize_t sz1 = sizeof(int) - sizeof(char);
+let ssize_t sz1 = (5 - sizeof(char));
 

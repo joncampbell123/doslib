@@ -305,6 +305,7 @@ namespace CIMCC {
 		ellipsis,
 		r_sizeof,
 		r_size_t,
+		r_ssize_t,
 
 		maxval
 	};
@@ -568,6 +569,7 @@ namespace CIMCC {
 		label,
 		r_sizeof,
 		r_size_t,
+		r_ssize_t,
 
 		maxval
 	};
@@ -965,6 +967,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_ssize_t) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_ssize_t;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_static) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1294,6 +1305,7 @@ namespace CIMCC {
 			case token_type_t::r_char:
 			case token_type_t::r_sizeof:
 			case token_type_t::r_size_t:
+			case token_type_t::r_ssize_t:
 				return true;
 			default:
 				break;
@@ -3593,6 +3605,9 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"size_t",6)) {
 			t.type = token_type_t::r_size_t;
 		}
+		else if (identlen == 7 && !memcmp(start,"ssize_t",7)) {
+			t.type = token_type_t::r_ssize_t;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -4357,6 +4372,9 @@ namespace CIMCC {
 			case token_type_t::r_size_t:
 				s = "<r_size_t>";
 				break;
+			case token_type_t::r_ssize_t:
+				s = "<r_ssize_t>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -4760,6 +4778,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_size_t:
 					name = "size_t";
+					break;
+				case ast_node_op_t::r_ssize_t:
+					name = "ssize_t";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
