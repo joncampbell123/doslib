@@ -487,4 +487,5 @@ let size_t of1 = offsetof(somestruct,member1);
 let size_t of2 = offsetof(somestruct,member2) - offsetof(somestruct,member1);
 static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
+let typedef int x; /* <- todo: allow "typedef" without "let" */
 
