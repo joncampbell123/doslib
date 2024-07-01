@@ -290,6 +290,7 @@ namespace CIMCC {
 		r_fn,
 		r_const,
 		r_constexpr,
+		r_compileexpr,
 		r_static,
 		r_extern,
 		r_auto,
@@ -544,6 +545,7 @@ namespace CIMCC {
 		r_fn,
 		r_const,
 		r_constexpr,
+		r_compileexpr,
 		r_static,
 		r_extern,
 		r_auto,
@@ -932,6 +934,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_compileexpr) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_compileexpr;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_static) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1247,6 +1258,7 @@ namespace CIMCC {
 		switch (t) {
 			case token_type_t::r_const:
 			case token_type_t::r_constexpr:
+			case token_type_t::r_compileexpr:
 			case token_type_t::r_static:
 			case token_type_t::r_extern:
 			case token_type_t::r_auto:
@@ -3548,6 +3560,9 @@ namespace CIMCC {
 		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
 			t.type = token_type_t::r_constexpr;
 		}
+		else if (identlen == 11 && !memcmp(start,"compileexpr",11)) {
+			t.type = token_type_t::r_compileexpr;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -4303,6 +4318,9 @@ namespace CIMCC {
 			case token_type_t::r_constexpr:
 				s = "<r_constexpr>";
 				break;
+			case token_type_t::r_compileexpr:
+				s = "<r_compileexpr>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -4697,6 +4715,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_constexpr:
 					name = "constexpr";
+					break;
+				case ast_node_op_t::r_compileexpr:
+					name = "compileexpr";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
