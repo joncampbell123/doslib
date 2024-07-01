@@ -489,4 +489,5 @@ static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
 let typedef int x; /* <- todo: allow "typedef" without "let" */
 let typename XYZ x = 4;
+let using x = 4;
 
