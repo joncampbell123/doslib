@@ -303,6 +303,7 @@ namespace CIMCC {
 		r_volatile,
 		r_char,
 		ellipsis,
+		r_sizeof,
 
 		maxval
 	};
@@ -564,6 +565,7 @@ namespace CIMCC {
 		named_arg_required_boundary,
 		named_parameter,
 		label,
+		r_sizeof,
 
 		maxval
 	};
@@ -943,6 +945,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_sizeof) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_sizeof;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_static) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1270,6 +1281,7 @@ namespace CIMCC {
 			case token_type_t::r_void:
 			case token_type_t::r_volatile:
 			case token_type_t::r_char:
+			case token_type_t::r_sizeof:
 				return true;
 			default:
 				break;
@@ -3563,6 +3575,9 @@ namespace CIMCC {
 		else if (identlen == 11 && !memcmp(start,"compileexpr",11)) {
 			t.type = token_type_t::r_compileexpr;
 		}
+		else if (identlen == 6 && !memcmp(start,"sizeof",6)) {
+			t.type = token_type_t::r_sizeof;
+		}
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
@@ -4321,6 +4336,9 @@ namespace CIMCC {
 			case token_type_t::r_compileexpr:
 				s = "<r_compileexpr>";
 				break;
+			case token_type_t::r_sizeof:
+				s = "<r_sizeof>";
+				break;
 			case token_type_t::r_default:
 				s = "<r_default>";
 				break;
@@ -4718,6 +4736,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_compileexpr:
 					name = "compileexpr";
+					break;
+				case ast_node_op_t::r_sizeof:
+					name = "sizeof";
 					break;
 				case ast_node_op_t::r_compound_let:
 					name = "compound let";
