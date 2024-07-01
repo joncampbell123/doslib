@@ -311,6 +311,7 @@ namespace CIMCC {
 		r_typedef,
 		r_typename,
 		r_using,
+		r_namespace,
 
 		maxval
 	};
@@ -580,6 +581,7 @@ namespace CIMCC {
 		r_typedef,
 		r_typename,
 		r_using,
+		r_namespace,
 
 		maxval
 	};
@@ -987,6 +989,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_namespace) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_namespace;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_using) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1368,6 +1379,7 @@ namespace CIMCC {
 			case token_type_t::r_typedef:
 			case token_type_t::r_typename:
 			case token_type_t::r_using:
+			case token_type_t::r_namespace:
 				return true;
 			default:
 				break;
@@ -3661,6 +3673,9 @@ namespace CIMCC {
 		else if (identlen == 11 && !memcmp(start,"compileexpr",11)) {
 			t.type = token_type_t::r_compileexpr;
 		}
+		else if (identlen == 9 && !memcmp(start,"namespace",9)) {
+			t.type = token_type_t::r_namespace;
+		}
 		else if (identlen == 5 && !memcmp(start,"using",5)) {
 			t.type = token_type_t::r_using;
 		}
@@ -4443,6 +4458,9 @@ namespace CIMCC {
 			case token_type_t::r_compileexpr:
 				s = "<r_compileexpr>";
 				break;
+			case token_type_t::r_namespace:
+				s = "<r_namespace>";
+				break;
 			case token_type_t::r_using:
 				s = "<r_using>";
 				break;
@@ -4864,6 +4882,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_compileexpr:
 					name = "compileexpr";
+					break;
+				case ast_node_op_t::r_namespace:
+					name = "namespace";
 					break;
 				case ast_node_op_t::r_using:
 					name = "using";
