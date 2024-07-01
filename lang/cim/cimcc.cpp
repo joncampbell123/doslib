@@ -309,6 +309,7 @@ namespace CIMCC {
 		r_offsetof,
 		r_static_assert,
 		r_typedef,
+		r_typename,
 
 		maxval
 	};
@@ -576,6 +577,7 @@ namespace CIMCC {
 		r_offsetof,
 		r_static_assert,
 		r_typedef,
+		r_typename,
 
 		maxval
 	};
@@ -974,6 +976,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_typename) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_typename;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_offsetof) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1344,6 +1355,7 @@ namespace CIMCC {
 			case token_type_t::r_offsetof:
 			case token_type_t::r_static_assert:
 			case token_type_t::r_typedef:
+			case token_type_t::r_typename:
 				return true;
 			default:
 				break;
@@ -3637,6 +3649,9 @@ namespace CIMCC {
 		else if (identlen == 11 && !memcmp(start,"compileexpr",11)) {
 			t.type = token_type_t::r_compileexpr;
 		}
+		else if (identlen == 8 && !memcmp(start,"typename",8)) {
+			t.type = token_type_t::r_typename;
+		}
 		else if (identlen == 7 && !memcmp(start,"typedef",7)) {
 			t.type = token_type_t::r_typedef;
 		}
@@ -4413,6 +4428,9 @@ namespace CIMCC {
 			case token_type_t::r_compileexpr:
 				s = "<r_compileexpr>";
 				break;
+			case token_type_t::r_typename:
+				s = "<r_typename>";
+				break;
 			case token_type_t::r_typedef:
 				s = "<r_typedef>";
 				break;
@@ -4828,6 +4846,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_compileexpr:
 					name = "compileexpr";
+					break;
+				case ast_node_op_t::r_typename:
+					name = "typename";
 					break;
 				case ast_node_op_t::r_typedef:
 					name = "typedef";
