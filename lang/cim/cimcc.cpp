@@ -778,6 +778,7 @@ namespace CIMCC {
 		bool binary_and_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
 		bool assignment_expression(ast_node_t* &pchnode);
+		bool let_datatype_expression(ast_node_t* &tnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool argument_expression_list(ast_node_t* &pchnode);
@@ -1389,6 +1390,31 @@ namespace CIMCC {
 		}
 
 		return false;
+	}
+
+	bool compiler::let_datatype_expression(ast_node_t* &tnode) {
+#define NLEX cpp_scope_expression
+		tnode = new ast_node_t;
+		tnode->op = ast_node_op_t::identifier_list;
+
+		ast_node_t **n = &(tnode->child);
+
+		if (is_reserved_identifier(tok_bufpeek().type)) {
+			while (is_reserved_identifier(tok_bufpeek().type)) {
+				if (!NLEX(*n)) return false;
+				n = &((*n)->next);
+			}
+		}
+		else if (tok_bufpeek().type == token_type_t::identifier) {
+			if (!NLEX(*n)) return false;
+			n = &((*n)->next);
+		}
+		else {
+			return false;
+		}
+#undef NLEX
+		assert(tnode->child != NULL);
+		return true;
 	}
 
 	bool compiler::split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
@@ -2677,6 +2703,61 @@ namespace CIMCC {
 
 					ast_node_t **n = &(apnode->child->child);
 
+					/* first the type specification */
+					{
+						ast_node_t *t=NULL;
+
+						if (!let_datatype_expression(t)) return false;
+						assert(t != NULL);
+
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_datatype;
+						(*n)->child = t;
+						n = &((*n)->next);
+					}
+
+					/* then the first variable */
+					{
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_let;
+
+						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						ast_node_t **sn = &((*n)->child);
+						n = &((*n)->next);
+
+						if (!let_expression(t,i,e,true/*after comma FIXME remove*/))
+							return false;
+						if (i == NULL)
+							return false;
+						if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
+							return false;
+
+						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+						if (e) { *sn = e; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+					}
+
+					while (tok_bufpeek().type == token_type_t::comma) {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_let;
+
+						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						ast_node_t **sn = &((*n)->child);
+						n = &((*n)->next);
+
+						tok_bufdiscard(); /* eat comma */
+
+						if (!let_expression(t,i,e,true/*after comma FIXME remove*/))
+							return false;
+						if (i == NULL)
+							return false;
+						if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
+							return false;
+
+						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+						if (e) { *sn = e; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+					}
+
+#if 0
 					if (tok_bufpeek().type == token_type_t::r_fn) {
 						/* let fn is a way to declare function pointers */
 						tok_bufdiscard();
@@ -2795,7 +2876,7 @@ namespace CIMCC {
 							if (e) { *sn = e; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
 						}
 					}
-
+#endif
 					{
 						token_t &t = tok_bufpeek();
 						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)

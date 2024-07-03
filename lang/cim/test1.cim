@@ -85,7 +85,7 @@ UNIX";
 	x = { 1, 2, 3 }, y = { 4, 5, 6};
 }
 
-let a = 40; /* a of default type */
+let auto a = 40; /* a of default type */
 let a b = 40; /* b of type a */
 
 let int const a = 3;
@@ -309,29 +309,29 @@ a: b:	x += 3;
 
 	a::b::c d::e::f(5,x::y::z);
 
-	let x;
+	let auto x;
 	let int x;
 	let signed long int x;
 	let signed long long int x;
-	let x = 5;
+	let auto x = 5;
 	let int x = 5;
 	let signed long int x = 5;
-	let x = 5 + 5 * 3;
+	let auto x = 5 + 5 * 3;
 	let int x = a * b + c;
 	let int x = 1;
 	let signed long int x = 1;
-	let x = 5;
-	let x::y = 6;
+	let auto x = 5;
+	let x::y x = 6;
 	let a::b x::y = 6;
 	let const int x = 2;
 	let const int x = a::b * c::d;
-	let x,y;
+	let auto x,y;
 	let int x,y,z;
 	let signed long int x,y,z;
 	let signed long int x = 1,y = 2,z = 3;
-	let *x = 5;
+	let auto *x = 5;
 	let int *x = 5;
-	let *x;
+	let auto *x;
 	let signed long int *x = 1;
 	let signed long int **x = 1;
 	let int ** x = &z;
@@ -353,9 +353,9 @@ a: b:	x += 3;
 	let const int *x const const *x = &z;
 	let volatile int * volatile * volatile const x = &z;
 	let const int scoped::t * const &x::y;
-	let x,y,z;
+	let auto x,y,z;
 	let int x,y,z;
-	let x = 4,y = 5,*z = 6;
+	let auto x = 4,y = 5,*z = 6;
 	let int x = 4,y = 5,*z = 6;
 	let const int x = 4,y = 5,*z = 6;
 	let const char * const x = 3,y = 4;
@@ -402,33 +402,14 @@ fn signed long long func1(int,long,float) {
 	return -1ll;
 }
 
-let abc;
+let auto abc;
 let int x = a * b + 5;
 let char *a,b,c;
 
 fn func1;
-let fn func1;
 fn func1();
-let fn func1();
 fn int func1(void);
-let fn int func1(void);
 fn signed long long func1(int x,float y,signed long int z);
-let fn signed long long func1(int x,float y,signed long int z);
-let fn* func1;
-let fn** func1;
-let fn*** func1;
-let fn& func1;
-let fn&& func1;
-let fn& & func1;
-let fn* & * func1;
-let fn* int func1(int x,long y);
-let fn func1,func2;
-let fn* func1,func2;
-let fn** func1,func2,func3;
-let fn* int func1(int x,long y),long* func2(int x,long y,float z),signed long int * const * func3(int &x);
-let fn* int func1p(int x,long y) = func2;
-let fn* func1p = func2;
-let fn* func1p = func1,func2p = func2;
 fn constexpr const int func1(const unsigned int x) {
 	return ~x;
 }
@@ -488,4 +469,6 @@ let size_t of2 = offsetof(somestruct,member2) - offsetof(somestruct,member1);
 static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
 let typedef int x; /* <- todo: allow "typedef" without "let" */
-let using x = 4;
+let using x = 4; /* <- todo: implement "using" properly */
+let namespace x = 4; /* <- todo: implement "namespace" properly */
+
