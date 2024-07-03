@@ -786,15 +786,15 @@ namespace CIMCC {
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool argument_expression_funccall(ast_node_t* &pchnode);
+		bool type_and_identifiers_expression(ast_node_t* &inode);
+		bool let_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
+		bool fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
-		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
-		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode);
-		bool fn_argument_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
-		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
+		bool fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
 
@@ -1252,11 +1252,10 @@ namespace CIMCC {
 		pchnode->op = ast_node_op_t::argument;
 		{
 			ast_node_t **n = &(pchnode->child);
-			ast_node_t *t=NULL,*i=NULL,*e=NULL;
-			if (!fn_argument_expression(t,i,e))
+			ast_node_t *i=NULL,*e=NULL;
+			if (!fn_argument_expression(i,e))
 				return false;
 
-			if (t) { *n = t; n = &((*n)->next); }
 			if (i) { *n = i; n = &((*n)->next); }
 			if (e) { *n = e; n = &((*n)->next); }
 		}
@@ -1269,11 +1268,10 @@ namespace CIMCC {
 			nb->op = ast_node_op_t::argument;
 			{
 				ast_node_t **n = &(nb->child);
-				ast_node_t *t=NULL,*i=NULL,*e=NULL;
-				if (!fn_argument_expression(t,i,e))
+				ast_node_t *i=NULL,*e=NULL;
+				if (!fn_argument_expression(i,e))
 					return false;
 
-				if (t) { *n = t; n = &((*n)->next); }
 				if (i) { *n = i; n = &((*n)->next); }
 				if (e) { *n = e; n = &((*n)->next); }
 			}
@@ -1485,7 +1483,7 @@ namespace CIMCC {
 	 *
 	 * Use after_comma == false for first/only let declaration/definition, after_comma == true
 	 * after any comma in a compound let */
-	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
+	bool compiler::type_and_identifiers_expression(ast_node_t* &inode) {
 #define NLEX cpp_scope_expression
 		if (inode == NULL) {
 			ast_node_t **d = &inode;
@@ -1533,7 +1531,7 @@ namespace CIMCC {
 			}
 		}
 
-		if (tnode == NULL && inode == NULL)
+		if (inode == NULL)
 			return false;
 #undef NLEX
 		return true;
@@ -2382,8 +2380,8 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
-		if (!type_and_identifiers_expression(tnode,inode))
+	bool compiler::fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
+		if (!type_and_identifiers_expression(inode))
 			return false;
 
 		if (tok_bufpeek().type == token_type_t::openparen) {
@@ -2428,7 +2426,7 @@ namespace CIMCC {
 		return true;
 	}
 
-	bool compiler::fn_argument_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode) {
+	bool compiler::fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode) {
 		/* "..." serves as a way to make variadic functions, just as in C, and is also the last argument in the function because any
 		 * amount of anything can exist past the last parameter.
 		 *
@@ -2448,11 +2446,11 @@ namespace CIMCC {
 			return true;
 		}
 
-		return let_expression(tnode,inode,enode);
+		return let_expression(inode,enode);
 	}
 
-	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode) {
-		if (!type_and_identifiers_expression(tnode,inode))
+	bool compiler::let_expression(ast_node_t* &inode,ast_node_t* &enode) {
+		if (!type_and_identifiers_expression(inode))
 			return false;
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
@@ -2627,7 +2625,7 @@ namespace CIMCC {
 						n = &((*n)->next);
 					}
 
-					if (!fn_expression(t,i,a,b))
+					if (!fn_expression(i,a,b))
 						return false;
 					if (i == NULL)
 						return false;
@@ -2676,15 +2674,13 @@ namespace CIMCC {
 						(*n) = new ast_node_t;
 						(*n)->op = ast_node_op_t::r_let;
 
-						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						ast_node_t *i=NULL,*e=NULL;
 						ast_node_t **sn = &((*n)->child);
 						n = &((*n)->next);
 
-						if (!let_expression(t,i,e))
+						if (!let_expression(i,e))
 							return false;
 						if (i == NULL)
-							return false;
-						if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
 							return false;
 
 						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
@@ -2695,17 +2691,15 @@ namespace CIMCC {
 						(*n) = new ast_node_t;
 						(*n)->op = ast_node_op_t::r_let;
 
-						ast_node_t *t=NULL,*i=NULL,*e=NULL;
+						ast_node_t *i=NULL,*e=NULL;
 						ast_node_t **sn = &((*n)->child);
 						n = &((*n)->next);
 
 						tok_bufdiscard(); /* eat comma */
 
-						if (!let_expression(t,i,e))
+						if (!let_expression(i,e))
 							return false;
 						if (i == NULL)
-							return false;
-						if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
 							return false;
 
 						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
