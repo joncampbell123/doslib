@@ -789,9 +789,9 @@ namespace CIMCC {
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
+		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
+		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode);
 		bool fn_argument_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode);
-		bool type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma=false);
-		bool let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma=false);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
@@ -1485,15 +1485,8 @@ namespace CIMCC {
 	 *
 	 * Use after_comma == false for first/only let declaration/definition, after_comma == true
 	 * after any comma in a compound let */
-	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode,bool after_comma) {
+	bool compiler::type_and_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
 #define NLEX cpp_scope_expression
-		if (!after_comma) {
-			if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
-				if (!split_identifiers_expression(tnode,inode))
-					return false;
-			}
-		}
-
 		if (inode == NULL) {
 			ast_node_t **d = &inode;
 
@@ -2390,7 +2383,7 @@ namespace CIMCC {
 	}
 
 	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
-		if (!type_and_identifiers_expression(tnode,inode,true/*after comma*/))
+		if (!type_and_identifiers_expression(tnode,inode))
 			return false;
 
 		if (tok_bufpeek().type == token_type_t::openparen) {
@@ -2458,8 +2451,8 @@ namespace CIMCC {
 		return let_expression(tnode,inode,enode);
 	}
 
-	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode,bool after_comma) {
-		if (!type_and_identifiers_expression(tnode,inode,after_comma))
+	bool compiler::let_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &enode) {
+		if (!type_and_identifiers_expression(tnode,inode))
 			return false;
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
@@ -2687,7 +2680,7 @@ namespace CIMCC {
 						ast_node_t **sn = &((*n)->child);
 						n = &((*n)->next);
 
-						if (!let_expression(t,i,e,true/*after comma FIXME remove*/))
+						if (!let_expression(t,i,e))
 							return false;
 						if (i == NULL)
 							return false;
@@ -2708,7 +2701,7 @@ namespace CIMCC {
 
 						tok_bufdiscard(); /* eat comma */
 
-						if (!let_expression(t,i,e,true/*after comma FIXME remove*/))
+						if (!let_expression(t,i,e))
 							return false;
 						if (i == NULL)
 							return false;
