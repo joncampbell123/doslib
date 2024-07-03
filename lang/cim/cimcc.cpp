@@ -2396,15 +2396,6 @@ namespace CIMCC {
 		ast_node_t **n = &(tnode->child);
 
 #define NLEX cpp_scope_expression
-		while (is_reserved_identifier(tok_bufpeek().type)) {
-			if (!NLEX(*n)) return false;
-			n = &((*n)->next);
-		}
-
-		if (tok_bufpeek().type == token_type_t::identifier) {
-			if (!NLEX(inode)) return false;
-		}
-
 		while (1) {
 			if (is_reserved_identifier(tok_bufpeek().type)) {
 				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
