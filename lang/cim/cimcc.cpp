@@ -569,7 +569,8 @@ namespace CIMCC {
 		r_volatile,
 		r_char,
 		ellipsis,
-		r_compound_let,
+		i_compound_let,
+		i_datatype,
 		typecast,
 		scopeoperator,
 		named_arg_required_boundary,
@@ -1395,6 +1396,7 @@ namespace CIMCC {
 		tnode->op = ast_node_op_t::identifier_list;
 
 		ast_node_t **n = &(tnode->child);
+		int count = 0;
 
 		/* int -> tnode (null) inode "int"
 		 * long int -> tnode list("long") inode "int"
@@ -1405,14 +1407,17 @@ namespace CIMCC {
 		while (is_reserved_identifier(tok_bufpeek().type)) {
 			if (!NLEX(*n)) return false;
 			n = &((*n)->next);
+			count++;
 		}
 
 		if (tok_bufpeek().type == token_type_t::identifier) {
 			if (!NLEX(inode)) return false;
+			count++;
 
-			if (tok_bufpeek().type == token_type_t::identifier) {
+			if (count < 2 && tok_bufpeek().type == token_type_t::identifier) {
 				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
 				if (!NLEX(inode)) return false;
+				count++;
 			}
 
 			/* sorry, no more arbitrary sequence of identifiers, you're only allowed up to two */
@@ -2666,7 +2671,7 @@ namespace CIMCC {
 				else if (tok_bufpeek().type == token_type_t::r_let) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
-					apnode->child->op = ast_node_op_t::r_compound_let;
+					apnode->child->op = ast_node_op_t::i_compound_let;
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
@@ -3630,7 +3635,7 @@ namespace CIMCC {
 		else if (identlen == 6 && !memcmp(start,"extern",6)) {
 			t.type = token_type_t::r_extern;
 		}
-		else if (identlen == 6 && !memcmp(start,"auto",4)) {
+		else if (identlen == 4 && !memcmp(start,"auto",4)) {
 			t.type = token_type_t::r_auto;
 		}
 		else if (identlen == 6 && !memcmp(start,"signed",6)) {
@@ -4914,8 +4919,11 @@ namespace CIMCC {
 				case ast_node_op_t::r_ssize_t:
 					name = "ssize_t";
 					break;
-				case ast_node_op_t::r_compound_let:
+				case ast_node_op_t::i_compound_let:
 					name = "compound let";
+					break;
+				case ast_node_op_t::i_datatype:
+					name = "datatype";
 					break;
 				default:
 					name = "?";

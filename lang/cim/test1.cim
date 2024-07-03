@@ -324,7 +324,7 @@ a: b:	x += 3;
 	let x::y = 6;
 	let a::b x::y = 6;
 	let const int x = 2;
-	let const int scope::t x = a::b * c::d;
+	let const int x = a::b * c::d;
 	let x,y;
 	let int x,y,z;
 	let signed long int x,y,z;
@@ -488,6 +488,4 @@ let size_t of2 = offsetof(somestruct,member2) - offsetof(somestruct,member1);
 static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
 let typedef int x; /* <- todo: allow "typedef" without "let" */
-let typename XYZ x = 4;
 let using x = 4;
-let using namespace std x = 5;
