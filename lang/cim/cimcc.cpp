@@ -2670,11 +2670,11 @@ namespace CIMCC {
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
-					if (tok_bufpeek().type == token_type_t::r_fn) {
-						tok_bufdiscard();
+					ast_node_t **n = &(apnode->child->child);
 
+					if (tok_bufpeek().type == token_type_t::r_fn) {
 						/* let fn is a way to declare function pointers */
-						ast_node_t **n = &(apnode->child->child);
+						tok_bufdiscard();
 
 						while (1) {
 							if (tok_bufpeek().type == token_type_t::star) {
@@ -2752,54 +2752,42 @@ namespace CIMCC {
 						}
 					}
 					else {
-						ast_node_t *n;
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_let;
 
 						{
 							ast_node_t *t=NULL,*i=NULL,*e=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
 
 							if (!let_expression(t,i,e))
 								return false;
-
 							if (i == NULL)
 								return false;
 
-							if (t) {
-								apnode->child->child = t;
-								apnode->child->child->next = new ast_node_t;
-								apnode->child->child->next->op = ast_node_op_t::r_let;
-								n = apnode->child->child->next;
-							}
-							else {
-								apnode->child->child = new ast_node_t;
-								apnode->child->child->op = ast_node_op_t::r_let;
-								n = apnode->child->child;
-							}
-
-							assert(i != NULL);
-							i->next = e; /* assignment expression, if any */
-							n->child = i;
+							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (e) { *sn = e; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
 						}
 
 						while (tok_bufpeek().type == token_type_t::comma) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::r_let;
+
 							ast_node_t *t=NULL,*i=NULL,*e=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
 
 							tok_bufdiscard(); /* eat comma */
 
-							if (!let_expression(t,i,e,true))
+							if (!let_expression(t,i,e,true/*after comma*/))
 								return false;
-
 							if (i == NULL)
 								return false;
 
-							n->next = new ast_node_t;
-							n->next->op = ast_node_op_t::r_let;
-
-							assert(t == NULL);
-							assert(i != NULL);
-							i->next = e; /* assignment expression, if any */
-							n->next->child = i;
-
-							n = n->next;
+							if (t) { *sn = t; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+							if (e) { *sn = e; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
 						}
 					}
 
