@@ -331,6 +331,7 @@ a: b:	x += 3;
 	let signed long int x = 1,y = 2,z = 3;
 	let auto *x = 5;
 	let int *x = 5;
+	let int * const *x = 3;
 	let auto *x;
 	let signed long int *x = 1;
 	let signed long int **x = 1;
@@ -362,7 +363,7 @@ a: b:	x += 3;
 	return y;
 }
 
-fn func1;
+fn auto func1;
 fn int func1;
 fn int* func1;
 fn int** func1;
@@ -373,12 +374,12 @@ fn int&& func1;
 fn int& & func1;
 fn int&& & func1;
 fn int* && * & func1;
-fn func1(void);
-fn func1(int x,long y);
+fn auto func1(void);
+fn auto func1(int x,long y);
 fn int* func1(int x,long y,float z);
 fn signed long int * const * func1(int x,long y,float z);
 
-fn func1(int x,int y) {
+fn auto func1(int x,int y) {
 	return x+y;
 }
 
@@ -406,8 +407,8 @@ let auto abc;
 let int x = a * b + 5;
 let char *a,b,c;
 
-fn func1;
-fn func1();
+fn auto func1;
+fn auto func1();
 fn int func1(void);
 fn signed long long func1(int x,float y,signed long int z);
 fn constexpr const int func1(const unsigned int x) {
@@ -471,4 +472,16 @@ static_assert(sizeof(of1) == sizeof(size_t));
 let typedef int x; /* <- todo: allow "typedef" without "let" */
 let using x = 4; /* <- todo: implement "using" properly */
 let namespace x = 4; /* <- todo: implement "namespace" properly */
+
+fn int* func1(int *x) {
+	return x;
+}
+
+fn int** func1(int **x) {
+	return x;
+}
+
+fn int** func1(const int * const * const x) {
+	return x;
+}
 

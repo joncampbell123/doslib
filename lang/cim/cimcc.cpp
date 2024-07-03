@@ -2390,52 +2390,7 @@ namespace CIMCC {
 	}
 
 	bool compiler::fn_expression(ast_node_t* &tnode,ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
-		tnode = new ast_node_t;
-		tnode->op = ast_node_op_t::identifier_list;
-
-		ast_node_t **n = &(tnode->child);
-
-#define NLEX cpp_scope_expression
-		while (1) {
-			if (is_reserved_identifier(tok_bufpeek().type)) {
-				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
-				if (!NLEX(*n)) return false;
-				n = &((*n)->next);
-			}
-			else if (tok_bufpeek().type == token_type_t::identifier) {
-				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
-				if (!NLEX(inode)) return false;
-			}
-			else if (tok_bufpeek().type == token_type_t::star) {
-				tok_bufdiscard();
-				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
-				*n = new ast_node_t;
-				(*n)->op = ast_node_op_t::dereference;
-				n = &((*n)->child);
-			}
-			else if (tok_bufpeek().type == token_type_t::ampersand) {
-				tok_bufdiscard();
-				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
-				*n = new ast_node_t;
-				(*n)->op = ast_node_op_t::addressof;
-				n = &((*n)->child);
-			}
-			else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
-				tok_bufdiscard();
-				if (inode) { (*n) = inode; inode = NULL; n = &((*n)->next); }
-				(*n) = new ast_node_t;
-				(*n)->op = ast_node_op_t::addressof;
-				n = &((*n)->child);
-				(*n) = new ast_node_t;
-				(*n)->op = ast_node_op_t::addressof;
-				n = &((*n)->child);
-			}
-			else {
-				break;
-			}
-		}
-
-		if (inode == NULL)
+		if (!type_and_identifiers_expression(tnode,inode,true/*after comma*/))
 			return false;
 
 		if (tok_bufpeek().type == token_type_t::openparen) {
@@ -2666,10 +2621,26 @@ namespace CIMCC {
 					ast_node_t **n = &(apnode->child->child);
 					ast_node_t *t=NULL,*i=NULL,*a=NULL,*b=NULL;
 
+					/* first the type specification */
+					{
+						ast_node_t *t=NULL;
+
+						if (!let_datatype_expression(t)) return false;
+						assert(t != NULL);
+
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_datatype;
+						(*n)->child = t;
+						n = &((*n)->next);
+					}
+
 					if (!fn_expression(t,i,a,b))
 						return false;
+					if (i == NULL)
+						return false;
+					if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
+						return false;
 
-					if (t) { *n = t; n = &((*n)->next); while (*n) n = &((*n)->next); }
 					if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
 					if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
 					if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
