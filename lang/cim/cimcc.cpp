@@ -1261,11 +1261,15 @@ namespace CIMCC {
 		{
 			ast_node_t **n = &(pchnode->child);
 			ast_node_t *i=NULL,*e=NULL;
+
+			assert(*n == NULL);
 			if (!fn_argument_expression(i,e))
 				return false;
 
-			if (i) { *n = i; n = &((*n)->next); }
-			if (e) { *n = e; n = &((*n)->next); }
+			assert(*n == NULL);
+			if (i) { *n = i; while (*n) n = &((*n)->next); }
+			assert(*n == NULL);
+			if (e) { *n = e; while (*n) n = &((*n)->next); }
 		}
 
 		ast_node_t *nb = pchnode;
@@ -1277,11 +1281,15 @@ namespace CIMCC {
 			{
 				ast_node_t **n = &(nb->child);
 				ast_node_t *i=NULL,*e=NULL;
+
+				assert(*n == NULL);
 				if (!fn_argument_expression(i,e))
 					return false;
 
-				if (i) { *n = i; n = &((*n)->next); }
-				if (e) { *n = e; n = &((*n)->next); }
+				assert(*n == NULL);
+				if (i) { *n = i; while (*n) n = &((*n)->next); }
+				assert(*n == NULL);
+				if (e) { *n = e; while (*n) n = &((*n)->next); }
 			}
 		}
 #undef NLEX
