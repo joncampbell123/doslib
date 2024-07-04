@@ -786,17 +786,24 @@ namespace CIMCC {
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool argument_expression_funccall(ast_node_t* &pchnode);
-		bool type_and_identifiers_expression(ast_node_t* &inode);
 		bool let_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
+		unsigned int type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags=0,ast_node_t*** inode_next=NULL);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
 		bool gtok_check_ahead_H_identifier(const std::vector<uint8_t> &identifier,const char qu);
 		int64_t getb_csc(token_charstrliteral_t::strtype_t typ);
+
+		/* type and identifiers flags */
+		static constexpr unsigned int TYPE_AND_IDENT_FL_ALLOW_FN = (1u << 0u);
+
+		/* type and identifiers return value */
+		static constexpr unsigned int TYPE_AND_IDENT_RT_FOUND = (1u << 0u);
+		static constexpr unsigned int TYPE_AND_IDENT_RT_FN = (1u << 1u);
 
 		/* fn_expression() flags */
 		static constexpr unsigned int FN_EXPR_ALLOW_ASSIGN = (1u << 0u);
@@ -1483,7 +1490,9 @@ namespace CIMCC {
 	 *
 	 * Use after_comma == false for first/only let declaration/definition, after_comma == true
 	 * after any comma in a compound let */
-	bool compiler::type_and_identifiers_expression(ast_node_t* &inode) {
+	unsigned int compiler::type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags,ast_node_t*** inode_next) {
+		unsigned int retv = TYPE_AND_IDENT_RT_FOUND;
+
 #define NLEX cpp_scope_expression
 		if (inode == NULL) {
 			ast_node_t **d = &inode;
@@ -1516,6 +1525,10 @@ namespace CIMCC {
 					(*d)->op = ast_node_op_t::addressof;
 					d = &((*d)->child);
 				}
+				else if (retv & TYPE_AND_IDENT_RT_FN) {
+					/* once "fn" is encountered stop on anything other than * and & */
+					break;
+				}
 				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 					ast_node_t *t=NULL,*i=NULL;
 					if (!split_identifiers_expression(t,i))
@@ -1525,16 +1538,27 @@ namespace CIMCC {
 					if (t) { *d = t; d = &((*d)->next); }
 					if (i) { *d = i; d = &((*d)->next); }
 				}
+				else if (tok_bufpeek().type == token_type_t::r_fn && (flags & TYPE_AND_IDENT_FL_ALLOW_FN)) {
+					tok_bufdiscard();
+					assert(*d == NULL);
+					(*d) = new ast_node_t;
+					(*d)->op = ast_node_op_t::r_fn;
+					d = &((*d)->child);
+					retv |= TYPE_AND_IDENT_RT_FN;
+				}
 				else {
 					break;
 				}
 			}
+
+			if (inode_next)
+				*inode_next = d;
 		}
 
 		if (inode == NULL)
-			return false;
+			return 0;
 #undef NLEX
-		return true;
+		return retv;
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
@@ -2450,8 +2474,28 @@ namespace CIMCC {
 	}
 
 	bool compiler::let_expression(ast_node_t* &inode,ast_node_t* &enode) {
-		if (!type_and_identifiers_expression(inode))
+		ast_node_t** inode_next = &inode;
+		unsigned int tair;
+
+		if ((tair=type_and_identifiers_expression(inode,TYPE_AND_IDENT_FL_ALLOW_FN,&inode_next)) == 0)
 			return false;
+
+		if (tair & TYPE_AND_IDENT_RT_FN) {
+			/* If type and identifiers returned because it found "fn" then the ident node so far
+			 * is just the return type deref down to the "fn" node, so run fn_expression() to get
+			 * the real identifier and deref and parameter list. Do not allow a function body,
+			 * because this is a function pointer. */
+			ast_node_t *i=NULL,*a=NULL,*b=NULL;
+
+			if (!fn_expression(i,a,b))
+				return false;
+			if (i == NULL)
+				return false;
+
+			if (i) { *inode_next = i; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
+			if (a) { *inode_next = a; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
+			if (b) { *inode_next = b; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
+		}
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
 			/* ok */

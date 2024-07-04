@@ -485,3 +485,11 @@ fn int** func1(const int * const * const x) {
 	return x;
 }
 
+let int fn func1(int x,int y);
+let int x = 5,fn func1(int x,int y);
+let int x = 5,y = x + 3,fn func1(int x,int y);
+let int x = 5,y = x + 3,fn* func1(int x,int y);
+let int x = 5,y = x + 3,fn** func1(int x,int y);
+let int x = 5,y = x + 3,fn& func1(int x,int y);
+let int x = 5,y = x + 3,fn&& func1(int x,int y);
+
