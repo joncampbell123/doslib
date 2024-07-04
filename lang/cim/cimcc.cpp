@@ -1528,8 +1528,8 @@ namespace CIMCC {
 
 		ast_node_t **n = &(tnode->child);
 
-		if (is_reserved_identifier(tok_bufpeek().type)) {
-			while (is_reserved_identifier(tok_bufpeek().type)) {
+		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
 				if (!NLEX(*n)) return false;
 				n = &((*n)->next);
 			}

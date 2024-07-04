@@ -567,3 +567,10 @@ fn int func1(int param1) {
 let bool f = 1;
 let bool f = true,f2 = false;
 
+let [[ugly, test, variable]] int x = 5;
+let int [[ugly, test, variable]] x = 5;
+
+fn [[another, test(67), function(true)]] int func1(int x) { return x ^ 3; }
+
+typedef [[funnyname("clown")]] unsigned int clown_t;
+
