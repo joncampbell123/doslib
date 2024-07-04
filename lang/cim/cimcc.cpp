@@ -313,6 +313,7 @@ namespace CIMCC {
 		r_namespace,
 		dblleftsquarebracket,
 		dblrightsquarebracket,
+		r_typeof,
 
 		maxval
 	};
@@ -584,6 +585,7 @@ namespace CIMCC {
 		r_typedef,
 		r_using,
 		r_namespace,
+		r_typeof,
 
 		maxval
 	};
@@ -1135,6 +1137,24 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_typeof) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_typeof;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			if (tok_bufpeek().type != token_type_t::openparen) return false;
+			tok_bufdiscard();
+
+			if (!expression(pchnode->child))
+				return false;
+
+			if (tok_bufpeek().type != token_type_t::closeparen) return false;
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::openparen) {
 			tok_bufdiscard(); /* eat it */
 
@@ -1391,6 +1411,7 @@ namespace CIMCC {
 			case token_type_t::r_offsetof:
 			case token_type_t::r_static_assert:
 			case token_type_t::r_namespace:
+			case token_type_t::r_typeof:
 				return true;
 			default:
 				break;
@@ -3817,6 +3838,9 @@ namespace CIMCC {
 		else if (identlen == 5 && !memcmp(start,"using",5)) {
 			t.type = token_type_t::r_using;
 		}
+		else if (identlen == 6 && !memcmp(start,"typeof",6)) {
+			t.type = token_type_t::r_typeof;
+		}
 		else if (identlen == 7 && !memcmp(start,"typedef",7)) {
 			t.type = token_type_t::r_typedef;
 		}
@@ -4613,6 +4637,9 @@ namespace CIMCC {
 			case token_type_t::r_using:
 				s = "<r_using>";
 				break;
+			case token_type_t::r_typeof:
+				s = "<r_typeof>";
+				break;
 			case token_type_t::r_typedef:
 				s = "<r_typedef>";
 				break;
@@ -5034,6 +5061,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_using:
 					name = "using";
+					break;
+				case ast_node_op_t::r_typeof:
+					name = "typeof";
 					break;
 				case ast_node_op_t::r_typedef:
 					name = "typedef";

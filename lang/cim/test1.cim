@@ -544,3 +544,8 @@ using namespace;
 using namespace ns1;
 using namespace std;
 
+typedef typeof(b) c;
+
+let int b = 3;
+let typeof(b) a = 6 + b;
+
