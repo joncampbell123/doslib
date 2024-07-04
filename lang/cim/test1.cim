@@ -574,3 +574,5 @@ fn [[another, test(67), function(true)]] int func1(int x) { return x ^ 3; }
 
 typedef [[funnyname("clown")]] unsigned int clown_t;
 
+fn int func1([[register("eax"), mm("r")]] int x) { return x % 7; }
+

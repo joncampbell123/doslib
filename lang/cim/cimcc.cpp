@@ -1653,6 +1653,11 @@ namespace CIMCC {
 					/* once "fn" is encountered stop on anything other than * and & */
 					break;
 				}
+				else if (tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+					if (!primary_expression(*d)) return false;
+					d = &((*d)->next);
+					assert(*d == NULL);
+				}
 				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
 					ast_node_t *t=NULL,*i=NULL;
 					if (!split_identifiers_expression(t,i))
