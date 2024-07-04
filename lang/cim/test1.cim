@@ -550,3 +550,9 @@ typedef typeof(b) c;
 let int b = 3;
 let typeof(b) a = 6 + b;
 
+func1(param1:x);
+
+fn int func1(int param1) {
+	return x;
+}
+
