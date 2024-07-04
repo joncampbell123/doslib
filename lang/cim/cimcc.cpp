@@ -982,24 +982,6 @@ namespace CIMCC {
 
 			return true;
 		}
-		else if (t.type == token_type_t::r_namespace) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_namespace;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_using) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_using;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
 		else if (t.type == token_type_t::r_offsetof) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1408,7 +1390,6 @@ namespace CIMCC {
 			case token_type_t::r_ssize_t:
 			case token_type_t::r_offsetof:
 			case token_type_t::r_static_assert:
-			case token_type_t::r_using:
 			case token_type_t::r_namespace:
 				return true;
 			default:
@@ -2793,6 +2774,41 @@ namespace CIMCC {
 							tok_bufdiscard(); /* eat the EOF or semicolon */
 						else
 							return false;
+					}
+				}
+				else if (tok_bufpeek(0).type == token_type_t::r_using && tok_bufpeek(1).type == token_type_t::r_namespace) {
+					ast_node_t **n = &(apnode->child);
+
+					assert(*n == NULL);
+
+					(*n) = new ast_node_t;
+					(*n)->op = ast_node_op_t::r_using;
+					tok_bufdiscard(); /* eat using */
+					n = &((*n)->child);
+
+					(*n) = new ast_node_t;
+					(*n)->op = ast_node_op_t::r_namespace;
+					tok_bufdiscard(); /* eat namespace */
+					n = &((*n)->next);
+
+					if (tok_bufpeek().type == token_type_t::identifier) {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::identifier;
+						(*n)->tv = std::move(tok_bufpeek());
+						tok_bufdiscard();
+						n = &((*n)->next);
+					}
+					else {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_anonymous;
+						n = &((*n)->next);
+					}
+
+					if (tok_bufpeek().type == token_type_t::semicolon) {
+						return true;
+					}
+					else {
+						return false;
 					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_typedef) {

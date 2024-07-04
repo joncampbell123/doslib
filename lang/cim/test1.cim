@@ -469,8 +469,6 @@ let size_t of1 = offsetof(somestruct,member1);
 let size_t of2 = offsetof(somestruct,member2) - offsetof(somestruct,member1);
 static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
-let using x = 4; /* <- todo: implement "using" properly */
-let namespace x = 4; /* <- todo: implement "namespace" properly */
 
 fn int* func1(int *x) {
 	return x;
@@ -541,4 +539,8 @@ namespace something {
 	}
 
 }
+
+using namespace;
+using namespace ns1;
+using namespace std;
 
