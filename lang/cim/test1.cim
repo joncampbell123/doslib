@@ -556,3 +556,8 @@ fn int func1(int param1) {
 	return x;
 }
 
+[[attribute]];
+[[scope::attribute]];
+[[attribute, anotherone]];
+[[attribute(dumb), anotherone("bites the dust")]];
+

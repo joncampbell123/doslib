@@ -587,6 +587,7 @@ namespace CIMCC {
 		r_namespace,
 		r_typeof,
 		i_array,
+		i_attributes,
 
 		maxval
 	};
@@ -1152,6 +1153,35 @@ namespace CIMCC {
 				return false;
 
 			if (tok_bufpeek().type != token_type_t::closeparen) return false;
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::dblleftsquarebracket) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::i_attributes;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) {
+				ast_node_t **n = &(pchnode->child);
+
+				if (!assignment_expression(*n))
+					return false;
+
+				n = &((*n)->next);
+				while (tok_bufpeek().type == token_type_t::comma) {
+					tok_bufdiscard();
+
+					if (!assignment_expression(*n))
+						return false;
+
+					n = &((*n)->next);
+				}
+			}
+
+			if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) return false;
 			tok_bufdiscard();
 
 			return true;
@@ -5105,6 +5135,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::i_array:
 					name = "array";
+					break;
+				case ast_node_op_t::i_attributes:
+					name = "attributes";
 					break;
 				default:
 					name = "?";
