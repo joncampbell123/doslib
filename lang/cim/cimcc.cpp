@@ -2497,8 +2497,7 @@ namespace CIMCC {
 		if (tair & TYPE_AND_IDENT_RT_FN) {
 			/* If type and identifiers returned because it found "fn" then the ident node so far
 			 * is just the return type deref down to the "fn" node, so run fn_expression() to get
-			 * the real identifier and deref and parameter list. Do not allow a function body,
-			 * because this is a function pointer. */
+			 * the real identifier and deref and parameter list. */
 			ast_node_t *i=NULL,*a=NULL,*b=NULL;
 
 			if (!fn_expression(i,a,b,FN_EXPR_LET_EXPRESSION))
