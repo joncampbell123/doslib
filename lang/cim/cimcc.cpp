@@ -2610,7 +2610,7 @@ namespace CIMCC {
 					tok_bufdiscard();
 
 					ast_node_t **n = &(apnode->child->child);
-					ast_node_t *t=NULL,*i=NULL,*a=NULL,*b=NULL;
+					ast_node_t *i=NULL,*a=NULL,*b=NULL;
 
 					/* first the type specification */
 					{
@@ -2628,8 +2628,6 @@ namespace CIMCC {
 					if (!fn_expression(i,a,b))
 						return false;
 					if (i == NULL)
-						return false;
-					if (t != NULL) /* it's not supposed to find a type FIXME remove t param */
 						return false;
 
 					if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
