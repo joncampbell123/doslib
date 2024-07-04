@@ -571,6 +571,7 @@ namespace CIMCC {
 		ellipsis,
 		i_compound_let,
 		i_datatype,
+		i_anonymous,
 		typecast,
 		scopeoperator,
 		named_arg_required_boundary,
@@ -1578,7 +1579,7 @@ namespace CIMCC {
 			 *
 			 * We also would like to support:
 			 *
-			 * "namespaced::type anotherns::s = 45l;"
+			 * "namespaced::type = 45l;"
 			 *
 			 */
 			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
@@ -4889,6 +4890,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::i_datatype:
 					name = "datatype";
+					break;
+				case ast_node_op_t::i_anonymous:
+					name = "anonymous";
 					break;
 				default:
 					name = "?";
