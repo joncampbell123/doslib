@@ -504,3 +504,10 @@ let auto f = fn void();
 
 func1(5,70,fn int(int c) { return c ^ 3; });
 
+let int x[5];
+let int x[40*3];
+let int x[5] = 5;
+let int x[5] = {1,2,3,4,5};
+
+fn int func1(int x[6]) { return x[3]+x[1]; }
+
