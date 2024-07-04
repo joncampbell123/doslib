@@ -516,3 +516,29 @@ let auto f[6] = fn int(int x,int y) { return x+y; };
 typedef unsigned long timestamp_t;
 typedef unsigned long timestamp_t,*ptimestamp_t,fn timestamp_callback_t(void *ctx);
 
+namespace {
+
+	let unsigned int x = 5;
+
+}
+
+namespace something {
+
+	let unsigned int x = 5;
+
+	namespace somethingelse {
+
+		let unsigned long y = x + 7;
+
+	}
+
+	namespace {
+
+		fn int duh(int x,int y) {
+			return x+y;
+		}
+
+	}
+
+}
+

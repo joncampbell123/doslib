@@ -2668,6 +2668,40 @@ namespace CIMCC {
 
 					/* does not need semicolon */
 				}
+				else if (tok_bufpeek().type == token_type_t::r_namespace) {
+					ast_node_t **n = &(apnode->child);
+
+					assert(*n == NULL);
+					(*n) = new ast_node_t;
+					(*n)->op = ast_node_op_t::r_namespace;
+					(*n)->tv = std::move(tok_bufpeek());
+					tok_bufdiscard(); /* eat the namespace */
+					n = &((*n)->child);
+
+					if (tok_bufpeek().type == token_type_t::identifier) {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::identifier;
+						(*n)->tv = std::move(tok_bufpeek());
+						tok_bufdiscard();
+						n = &((*n)->next);
+					}
+					else {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_anonymous;
+						n = &((*n)->next);
+					}
+
+					if (tok_bufpeek().type == token_type_t::semicolon) {
+						return true;
+					}
+					else if (tok_bufpeek().type == token_type_t::opencurly) {
+						ast_node_t *bc = NULL;
+						return statement(*n,bc);
+					}
+					else {
+						return false;
+					}
+				}
 				else if (tok_bufpeek().type == token_type_t::r_return) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
