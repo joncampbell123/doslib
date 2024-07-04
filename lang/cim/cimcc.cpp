@@ -1167,6 +1167,28 @@ namespace CIMCC {
 			if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) {
 				ast_node_t **n = &(pchnode->child);
 
+				/* using namespace: */
+				if (tok_bufpeek(0).type == token_type_t::r_using && tok_bufpeek(1).type == token_type_t::identifier) {
+					ast_node_t **sn;
+
+					(*n) = new ast_node_t;
+					(*n)->op = ast_node_op_t::r_using;
+					(*n)->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+					sn = &((*n)->child);
+					n = &((*n)->next);
+
+					(*sn) = new ast_node_t;
+					(*sn)->op = ast_node_op_t::r_namespace;
+					sn = &((*sn)->next);
+
+					if (!cpp_scope_expression(*sn))
+						return false;
+
+					if (tok_bufpeek().type != token_type_t::colon) return false;
+					tok_bufdiscard();
+				}
+
 				if (!assignment_expression(*n))
 					return false;
 

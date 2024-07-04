@@ -560,4 +560,7 @@ fn int func1(int param1) {
 [[scope::attribute]];
 [[attribute, anotherone]];
 [[attribute(dumb), anotherone("bites the dust")]];
+[[using CC: attribute, anotherone]];
+[[using CC: attribute(true), anotherone(1)]];
+[[using CC::DD::EE: attribute, anotherone]];
 
