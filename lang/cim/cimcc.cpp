@@ -586,6 +586,7 @@ namespace CIMCC {
 		r_using,
 		r_namespace,
 		r_typeof,
+		i_array,
 
 		maxval
 	};
@@ -1210,14 +1211,24 @@ namespace CIMCC {
 			 */
 
 			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::scope;
+			pchnode->op = ast_node_op_t::i_array;
 
 			if (tok_bufpeek().type == token_type_t::closecurly) {
 				/* well then it's a nothing */
 			}
 			else {
-				if (!expression(pchnode->child))
+				if (!assignment_expression(pchnode->child))
 					return false;
+
+				ast_node_t *n = pchnode->child;
+				while (tok_bufpeek().type == token_type_t::comma) {
+					tok_bufdiscard();
+
+					if (!assignment_expression(n->next))
+						return false;
+
+					n = n->next;
+				}
 
 				{
 					token_t &t = tok_bufpeek();
@@ -5091,6 +5102,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::i_anonymous:
 					name = "anonymous";
+					break;
+				case ast_node_op_t::i_array:
+					name = "array";
 					break;
 				default:
 					name = "?";

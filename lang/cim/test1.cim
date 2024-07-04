@@ -505,6 +505,7 @@ let int x[5];
 let int x[40*3];
 let int x[5] = 5;
 let int x[5] = {1,2,3,4,5};
+let int x[5] = {a,b,c+d,(a*b)+c,e+a-b+func1()};
 
 fn int func1(int x[6]) { return x[3]+x[1]; }
 fn int func1(int x[]) { return x[3]+x[1]; }
