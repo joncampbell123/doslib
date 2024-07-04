@@ -309,7 +309,6 @@ namespace CIMCC {
 		r_offsetof,
 		r_static_assert,
 		r_typedef,
-		r_typename,
 		r_using,
 		r_namespace,
 		dblleftsquarebracket,
@@ -583,7 +582,6 @@ namespace CIMCC {
 		r_offsetof,
 		r_static_assert,
 		r_typedef,
-		r_typename,
 		r_using,
 		r_namespace,
 
@@ -988,15 +986,6 @@ namespace CIMCC {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::r_typedef;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_typename) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_typename;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 
@@ -1429,7 +1418,6 @@ namespace CIMCC {
 			case token_type_t::r_offsetof:
 			case token_type_t::r_static_assert:
 			case token_type_t::r_typedef:
-			case token_type_t::r_typename:
 			case token_type_t::r_using:
 			case token_type_t::r_namespace:
 				return true;
@@ -3720,9 +3708,6 @@ namespace CIMCC {
 		else if (identlen == 5 && !memcmp(start,"using",5)) {
 			t.type = token_type_t::r_using;
 		}
-		else if (identlen == 8 && !memcmp(start,"typename",8)) {
-			t.type = token_type_t::r_typename;
-		}
 		else if (identlen == 7 && !memcmp(start,"typedef",7)) {
 			t.type = token_type_t::r_typedef;
 		}
@@ -4519,9 +4504,6 @@ namespace CIMCC {
 			case token_type_t::r_using:
 				s = "<r_using>";
 				break;
-			case token_type_t::r_typename:
-				s = "<r_typename>";
-				break;
 			case token_type_t::r_typedef:
 				s = "<r_typedef>";
 				break;
@@ -4943,9 +4925,6 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_using:
 					name = "using";
-					break;
-				case ast_node_op_t::r_typename:
-					name = "typename";
 					break;
 				case ast_node_op_t::r_typedef:
 					name = "typedef";
