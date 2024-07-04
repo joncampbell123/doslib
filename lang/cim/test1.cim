@@ -495,4 +495,10 @@ let int x = 5,y = x + 3,fn&& func1(int x,int y);
 let int x = 5,y = x + 3,fn func1(int x,int y) = { return x+y; };
 let int* fn* func1(int *x) = { *x = 6; return x; };
 let int* fn* func1(int *x) = { *x = 6; return x; },fn* func2 = func1,fn** func3 = &func1;
+let auto f = fn void() { };
+let auto f = fn int(int x,int y) { return x+y; };
+let auto f = fn int*(int x,int y) { return x+y; };
+let auto f = fn int**(int *x,int *y) { return *x+*y; };
+let auto f = fn time_t(int x) { return time_t(x); };
+let auto f = fn void();
 

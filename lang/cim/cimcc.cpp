@@ -808,6 +808,7 @@ namespace CIMCC {
 
 		/* fn_expression() flags */
 		static constexpr unsigned int FN_EXPR_LET_EXPRESSION = (1u << 0u);
+		static constexpr unsigned int FN_EXPR_ANONYMOUS = (1u << 1u);
 
 		ast_node_t*		root_node = NULL;
 
@@ -1244,6 +1245,39 @@ namespace CIMCC {
 						return false;
 				}
 			}
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_fn) { /* anonymous function */
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_fn;
+			pchnode->tv = std::move(tok_bufpeek());
+			tok_bufdiscard();
+
+			ast_node_t **n = &(pchnode->child);
+			ast_node_t *i=NULL,*a=NULL,*b=NULL;
+
+			/* first the type specification */
+			{
+				ast_node_t *t=NULL;
+
+				if (!let_datatype_expression(t)) return false;
+				assert(t != NULL);
+
+				(*n) = new ast_node_t;
+				(*n)->op = ast_node_op_t::i_datatype;
+				(*n)->child = t;
+				n = &((*n)->next);
+			}
+
+			if (!fn_expression(i,a,b,FN_EXPR_ANONYMOUS))
+				return false;
+			if (i == NULL)
+				return false;
+
+			if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
+			if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
+			if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
 
 			return true;
 		}
@@ -2414,8 +2448,22 @@ namespace CIMCC {
 	}
 
 	bool compiler::fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
-		if (!type_and_identifiers_expression(inode))
-			return false;
+		if (flags & FN_EXPR_ANONYMOUS) {
+			ast_node_t** inode_next = &inode;
+
+			if (tok_bufpeek().type != token_type_t::openparen) {
+				if (!type_and_identifiers_expression(inode,0,&inode_next))
+					return false;
+			}
+
+			(*inode_next) = new ast_node_t;
+			(*inode_next)->op = ast_node_op_t::i_anonymous;
+			inode_next = &((*inode_next)->next);
+		}
+		else {
+			if (!type_and_identifiers_expression(inode))
+				return false;
+		}
 
 		if (tok_bufpeek().type == token_type_t::openparen) {
 			tok_bufdiscard();
