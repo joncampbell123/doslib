@@ -314,6 +314,9 @@ namespace CIMCC {
 		dblleftsquarebracket,
 		dblrightsquarebracket,
 		r_typeof,
+		r_bool,
+		r_true,
+		r_false,
 
 		maxval
 	};
@@ -588,6 +591,9 @@ namespace CIMCC {
 		r_typeof,
 		i_array,
 		i_attributes,
+		r_bool,
+		r_true,
+		r_false,
 
 		maxval
 	};
@@ -1085,6 +1091,33 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_bool) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_bool;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_true) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_true;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_false) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_false;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_float) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1235,7 +1268,9 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_int || pchnode->child->op == ast_node_op_t::r_float ||
 				pchnode->child->op == ast_node_op_t::r_void || pchnode->child->op == ast_node_op_t::r_volatile ||
 				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list ||
-				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t) {
+				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t ||
+				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_true ||
+				pchnode->child->op == ast_node_op_t::r_false) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1464,6 +1499,9 @@ namespace CIMCC {
 			case token_type_t::r_unsigned:
 			case token_type_t::r_long:
 			case token_type_t::r_int:
+			case token_type_t::r_bool:
+			case token_type_t::r_true:
+			case token_type_t::r_false:
 			case token_type_t::r_float:
 			case token_type_t::r_void:
 			case token_type_t::r_volatile:
@@ -1655,7 +1693,8 @@ namespace CIMCC {
 
 		if (	pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::r_long ||
 			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
-			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator) {
+			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
+			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_true || pchnode->op == ast_node_op_t::r_false) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -3871,6 +3910,15 @@ namespace CIMCC {
 		else if (identlen == 3 && !memcmp(start,"int",3)) {
 			t.type = token_type_t::r_int;
 		}
+		else if (identlen == 4 && !memcmp(start,"bool",4)) {
+			t.type = token_type_t::r_bool;
+		}
+		else if (identlen == 4 && !memcmp(start,"true",4)) {
+			t.type = token_type_t::r_true;
+		}
+		else if (identlen == 5 && !memcmp(start,"false",5)) {
+			t.type = token_type_t::r_false;
+		}
 		else if (identlen == 5 && !memcmp(start,"float",5)) {
 			t.type = token_type_t::r_float;
 		}
@@ -4664,6 +4712,15 @@ namespace CIMCC {
 			case token_type_t::r_int:
 				s = "<r_int>";
 				break;
+			case token_type_t::r_bool:
+				s = "<r_bool>";
+				break;
+			case token_type_t::r_true:
+				s = "<r_true>";
+				break;
+			case token_type_t::r_false:
+				s = "<r_false>";
+				break;
 			case token_type_t::r_float:
 				s = "<r_float>";
 				break;
@@ -5079,6 +5136,15 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_int:
 					name = "int";
+					break;
+				case ast_node_op_t::r_bool:
+					name = "bool";
+					break;
+				case ast_node_op_t::r_true:
+					name = "true";
+					break;
+				case ast_node_op_t::r_false:
+					name = "false";
 					break;
 				case ast_node_op_t::r_float:
 					name = "float";

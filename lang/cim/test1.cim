@@ -564,3 +564,6 @@ fn int func1(int param1) {
 [[using CC: attribute(true), anotherone(1)]];
 [[using CC::DD::EE: attribute, anotherone]];
 
+let bool f = 1;
+let bool f = true,f2 = false;
+
