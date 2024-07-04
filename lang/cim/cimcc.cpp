@@ -982,15 +982,6 @@ namespace CIMCC {
 
 			return true;
 		}
-		else if (t.type == token_type_t::r_typedef) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_typedef;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
 		else if (t.type == token_type_t::r_namespace) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1417,7 +1408,6 @@ namespace CIMCC {
 			case token_type_t::r_ssize_t:
 			case token_type_t::r_offsetof:
 			case token_type_t::r_static_assert:
-			case token_type_t::r_typedef:
 			case token_type_t::r_using:
 			case token_type_t::r_namespace:
 				return true;
@@ -2764,6 +2754,75 @@ namespace CIMCC {
 						/* if parsing a { scope } a semicolon is not required after the closing curly brace */
 					}
 					else {
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
+				else if (tok_bufpeek().type == token_type_t::r_typedef) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_typedef;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					ast_node_t **n = &(apnode->child->child);
+
+					/* first the type specification */
+					{
+						ast_node_t *t=NULL;
+
+						if (!let_datatype_expression(t)) return false;
+						assert(t != NULL);
+
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_datatype;
+						(*n)->child = t;
+						n = &((*n)->next);
+					}
+
+					/* then the first variable */
+					{
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_let;
+
+						ast_node_t *i=NULL,*e=NULL;
+						ast_node_t **sn = &((*n)->child);
+						n = &((*n)->next);
+
+						if (!let_expression(i,e))
+							return false;
+						if (i == NULL)
+							return false;
+						if (e != NULL) /* no assignment allowed */
+							return false;
+
+						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+					}
+
+					while (tok_bufpeek().type == token_type_t::comma) {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::r_let;
+
+						ast_node_t *i=NULL,*e=NULL;
+						ast_node_t **sn = &((*n)->child);
+						n = &((*n)->next);
+
+						tok_bufdiscard(); /* eat comma */
+
+						if (!let_expression(i,e))
+							return false;
+						if (i == NULL)
+							return false;
+						if (e != NULL) /* no assignment allowed */
+							return false;
+
+						if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+					}
+
+					{
 						token_t &t = tok_bufpeek();
 						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
 							tok_bufdiscard(); /* eat the EOF or semicolon */

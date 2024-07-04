@@ -469,7 +469,6 @@ let size_t of1 = offsetof(somestruct,member1);
 let size_t of2 = offsetof(somestruct,member2) - offsetof(somestruct,member1);
 static_assert(sizeof(of1) == sizeof(size_t), "oops");
 static_assert(sizeof(of1) == sizeof(size_t));
-let typedef int x; /* <- todo: allow "typedef" without "let" */
 let using x = 4; /* <- todo: implement "using" properly */
 let namespace x = 4; /* <- todo: implement "namespace" properly */
 
@@ -513,4 +512,7 @@ fn int func1(int x[6]) { return x[3]+x[1]; }
 fn int func1(int x[]) { return x[3]+x[1]; }
 
 let auto f[6] = fn int(int x,int y) { return x+y; };
+
+typedef unsigned long timestamp_t;
+typedef unsigned long timestamp_t,*ptimestamp_t,fn timestamp_callback_t(void *ctx);
 
