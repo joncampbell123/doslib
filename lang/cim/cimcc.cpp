@@ -806,7 +806,7 @@ namespace CIMCC {
 		static constexpr unsigned int TYPE_AND_IDENT_RT_FN = (1u << 1u);
 
 		/* fn_expression() flags */
-		static constexpr unsigned int FN_EXPR_ALLOW_ASSIGN = (1u << 0u);
+		static constexpr unsigned int FN_EXPR_LET_EXPRESSION = (1u << 0u);
 
 		ast_node_t*		root_node = NULL;
 
@@ -2424,24 +2424,38 @@ namespace CIMCC {
 			}
 		}
 
+		if (flags & FN_EXPR_LET_EXPRESSION) {
+			/* within let, allow fn func1(...) = { function body }
+			 * any other assignment expression is left for the calling let_expression() function to handle */
+			if (tok_bufpeek(0).type == token_type_t::equal && tok_bufpeek(1).type == token_type_t::opencurly) {
+				tok_bufdiscard(); /* eat the equals sign, leave the curly */
+
+				ast_node_t *n = NULL;
+				if (!statement(bnode,n))
+					return false;
+			}
+		}
+		else {
+			if (tok_bufpeek().type == token_type_t::opencurly) {
+				ast_node_t *n = NULL;
+				if (!statement(bnode,n))
+					return false;
+			}
+		}
+
+		/* parsing stops here if function body */
+		if (bnode != NULL)
+			return true;
+
+		/* parsing stops here if let expression */
+		if (flags & FN_EXPR_LET_EXPRESSION)
+			return true;
+
 		if (tok_bufpeek().type == token_type_t::semicolon) {
 			/* ok */
 		}
 		else if (tok_bufpeek().type == token_type_t::comma) {
 			/* ok */
-		}
-		else if (tok_bufpeek().type == token_type_t::opencurly) {
-			ast_node_t *n = NULL;
-			if (!statement(bnode,n))
-				return false;
-		}
-		else if (tok_bufpeek().type == token_type_t::equal && (flags & FN_EXPR_ALLOW_ASSIGN)) {
-			tok_bufdiscard(); /* eat it */
-
-			bnode = new ast_node_t;
-			bnode->op = ast_node_op_t::assign;
-			if (!assignment_expression(bnode->child))
-				return false;
 		}
 		else {
 			return false;
@@ -2487,7 +2501,7 @@ namespace CIMCC {
 			 * because this is a function pointer. */
 			ast_node_t *i=NULL,*a=NULL,*b=NULL;
 
-			if (!fn_expression(i,a,b))
+			if (!fn_expression(i,a,b,FN_EXPR_LET_EXPRESSION))
 				return false;
 			if (i == NULL)
 				return false;
