@@ -510,4 +510,7 @@ let int x[5] = 5;
 let int x[5] = {1,2,3,4,5};
 
 fn int func1(int x[6]) { return x[3]+x[1]; }
+fn int func1(int x[]) { return x[3]+x[1]; }
+
+let auto f[6] = fn int(int x,int y) { return x+y; };
 

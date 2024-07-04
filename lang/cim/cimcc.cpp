@@ -2567,18 +2567,18 @@ namespace CIMCC {
 			if (b) { *inode_next = b; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
 		}
 
-		/* allow [] if an array of the type is desired */
+		/* allow [expression] if an array of the type is desired */
 		if (tok_bufpeek().type == token_type_t::leftsquarebracket) {
 			tok_bufdiscard(); /* eat it */
 
-			/* [arraysubscript]
-			 *  \
-			 *   +-- [left expr] -> [subscript expr] */
-
 			ast_node_t *a = new ast_node_t;
 			a->op = ast_node_op_t::arraysubscript;
-			if (!expression(a->child))
-				return false;
+
+			/* allow [] i.e. for function parameters */
+			if (tok_bufpeek().type != token_type_t::rightsquarebracket) {
+				if (!expression(a->child))
+					return false;
+			}
 
 			{
 				token_t &t = tok_bufpeek();
