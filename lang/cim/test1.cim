@@ -584,3 +584,30 @@ fn int near func1(int x) { return x; }
 fn int far func1(int x) { return x; }
 fn int huge func1(int x) { return x; }
 
+asm ("hello");
+__asm__ (
+	"hello\n"
+	"multiple\n"
+	"lines"
+);
+__asm__ (
+	"hello\n"
+	"multiple\n"
+	"lines\n"
+	"and"
+	compiletimemacros()
+);
+__asm__ (
+	"hello\n"
+	"multiple\n"
+	"lines\n"
+	fn string() { /* conditional determined by anonymous function */
+		if (true) return "and\nconditional\n";
+		else return "compiler\nfailed\n";
+	}
+	"asm\n"
+	compiletimemacros()
+);
+
+asm volatile ("hello");
+
