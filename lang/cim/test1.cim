@@ -612,4 +612,7 @@ __asm__ (
 asm volatile ("hello");
 asm volatile ("hello":::);
 asm volatile ("hello":"=R" (retv):"x" (in1):"cc");
+asm [[lang("i386")]] ("hello");
+asm [[lang("i386")]] volatile ("hello" : "=R"(x) : "a"(y) : "cc");
+asm [[lang("i386")]] volatile ("hello" : "=R"(x), "a"(y) : : "cc");
 

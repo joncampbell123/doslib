@@ -3075,12 +3075,22 @@ namespace CIMCC {
 					 *
 					 * All asm text is parsed as strings and stored in the tree for any external assembler library to make sense of,
 					 * except the GNU variant where the final :: section is also tokens. We don't interpret the contents ourselves. */
-					if (tok_bufpeek().type == token_type_t::r_volatile) {
-						(*n) = new ast_node_t;
-						(*n)->op = ast_node_op_t::r_volatile;
-						(*n)->tv = std::move(tok_bufpeek());
-						tok_bufdiscard();
-						n = &((*n)->next);
+					while (1) {
+						if (tok_bufpeek().type == token_type_t::r_volatile) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::r_volatile;
+							(*n)->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							n = &((*n)->next);
+						}
+						else if (tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+							if (!primary_expression(*n)) return false;
+							n = &((*n)->next);
+							assert(*n == NULL);
+						}
+						else {
+							break;
+						}
 					}
 
 					if (tok_bufpeek().type == token_type_t::openparen) {
@@ -3149,6 +3159,13 @@ namespace CIMCC {
 								if (!assignment_expression(*n)) return false;
 								n = &((*n)->next);
 								assert(*n == NULL);
+							}
+							else if (tok_bufpeek().type == token_type_t::comma) {
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::comma;
+								(*n)->tv = std::move(tok_bufpeek());
+								tok_bufdiscard();
+								n = &((*n)->next);
 							}
 							else {
 								break;
