@@ -5009,6 +5009,15 @@ namespace CIMCC {
 							vec_encode_utf8(tmp,b[i]);
 							for (auto i=tmp.begin();i!=tmp.end();i++) s += (char)(*i);
 						}
+						else if (b[i] == '\r') {
+							s += "\\r";
+						}
+						else if (b[i] == '\n') {
+							s += "\\n";
+						}
+						else if (b[i] == '\t') {
+							s += "\\t";
+						}
 						else {
 							s += ".";
 						}
@@ -5040,6 +5049,15 @@ namespace CIMCC {
 							vec_encode_utf8(tmp,b[i]);
 							for (auto i=tmp.begin();i!=tmp.end();i++) s += (char)(*i);
 						}
+						else if (b[i] == '\r') {
+							s += "\\r";
+						}
+						else if (b[i] == '\n') {
+							s += "\\n";
+						}
+						else if (b[i] == '\t') {
+							s += "\\t";
+						}
 						else {
 							s += ".";
 						}
@@ -5063,6 +5081,15 @@ namespace CIMCC {
 						}
 						else if (b[i] >= 0x80 && t.v.chrstrlit.type == token_charstrliteral_t::strtype_t::T_UTF8) {
 							s += (char)b[i];
+						}
+						else if (b[i] == '\r') {
+							s += "\\r";
+						}
+						else if (b[i] == '\n') {
+							s += "\\n";
+						}
+						else if (b[i] == '\t') {
+							s += "\\t";
 						}
 						else {
 							s += ".";
