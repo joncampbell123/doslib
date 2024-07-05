@@ -3060,21 +3060,6 @@ namespace CIMCC {
 
 					ast_node_t **n = &(apnode->child->child);
 
-					/* Microsoft C++ / Watcom C++ variant:
-					 *
-					 * asm ... <end of line>
-					 * asm ... asm ... <end of line>         (multiple asm on one line)
-					 * asm { ... }
-					 *
-					 * GNU gcc variant:
-					 *
-					 * __asm__ [__volatile__] ("...")
-					 * __asm__ [__volatile__] ("..." : ... : ... : ...)
-					 *
-					 * Note that GNU gcc supports both __asm__ and asm.
-					 *
-					 * All asm text is parsed as strings and stored in the tree for any external assembler library to make sense of,
-					 * except the GNU variant where the final :: section is also tokens. We don't interpret the contents ourselves. */
 					while (1) {
 						if (tok_bufpeek().type == token_type_t::r_volatile) {
 							(*n) = new ast_node_t;
@@ -3093,93 +3078,78 @@ namespace CIMCC {
 						}
 					}
 
-					if (tok_bufpeek().type == token_type_t::openparen) {
-						tok_bufdiscard();
+					if (tok_bufpeek().type != token_type_t::openparen) return false;
+					tok_bufdiscard();
 
-						while (1) {
-							if (tok_bufpeek().type == token_type_t::closeparen) {
-								tok_bufdiscard();
-								break;
-							}
-							else if (tok_bufpeek().type == token_type_t::colon || tok_bufpeek().type == token_type_t::coloncolon) {
-								break;
-							}
-							else if (tok_bufpeek().type == token_type_t::stringliteral) {
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::constant;
-								(*n)->tv = std::move(tok_bufpeek());
-								tok_bufdiscard();
-								n = &((*n)->next);
-							}
-							/* NTS: GNU gcc __asm__ doesn't allow function call results as part of the asm. We do, because that's the only way to provide conditional parts.
-							 *      This is an extension that the GNU project will probably never support. */
-							else if (tok_bufpeek().type > token_type_t::none) {
-								if (!assignment_expression(*n)) return false;
-								n = &((*n)->next);
-								assert(*n == NULL);
-							}
-							else {
-								return false;
-							}
+					while (1) {
+						if (tok_bufpeek().type == token_type_t::closeparen) {
+							tok_bufdiscard();
+							break;
 						}
-
-						while (1) {
-							if (tok_bufpeek().type == token_type_t::colon) {
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::constant;
-								(*n)->tv = std::move(tok_bufpeek());
-								tok_bufdiscard();
-								n = &((*n)->next);
-							}
-							else if (tok_bufpeek().type == token_type_t::coloncolon) {
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::constant;
-								(*n)->tv.type = token_type_t::colon;
-								n = &((*n)->next);
-
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::constant;
-								(*n)->tv.type = token_type_t::colon;
-								n = &((*n)->next);
-
-								tok_bufdiscard();
-							}
-							else if (tok_bufpeek().type == token_type_t::stringliteral) {
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::constant;
-								(*n)->tv = std::move(tok_bufpeek());
-								tok_bufdiscard();
-								n = &((*n)->next);
-							}
-							else if (tok_bufpeek().type == token_type_t::closeparen) {
-								tok_bufdiscard();
-								break;
-							}
-							else if (tok_bufpeek().type == token_type_t::openparen) {
-								if (!assignment_expression(*n)) return false;
-								n = &((*n)->next);
-								assert(*n == NULL);
-							}
-							else if (tok_bufpeek().type == token_type_t::comma) {
-								(*n) = new ast_node_t;
-								(*n)->op = ast_node_op_t::comma;
-								(*n)->tv = std::move(tok_bufpeek());
-								tok_bufdiscard();
-								n = &((*n)->next);
-							}
-							else {
-								break;
-							}
+						else if (tok_bufpeek().type == token_type_t::colon) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::constant;
+							(*n)->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							n = &((*n)->next);
 						}
+						else if (tok_bufpeek().type == token_type_t::coloncolon) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::constant;
+							(*n)->tv.type = token_type_t::colon;
+							n = &((*n)->next);
 
-						/* the GNU variant does require a semicolon at the end */
-						{
-							token_t &t = tok_bufpeek();
-							if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
-								tok_bufdiscard(); /* eat the EOF or semicolon */
-							else
-								return false;
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::constant;
+							(*n)->tv.type = token_type_t::colon;
+							n = &((*n)->next);
+
+							tok_bufdiscard();
 						}
+						else if (tok_bufpeek().type == token_type_t::stringliteral) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::constant;
+							(*n)->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							n = &((*n)->next);
+						}
+						else if (tok_bufpeek().type == token_type_t::openparen) {
+							if (!assignment_expression(*n)) return false;
+							n = &((*n)->next);
+							assert(*n == NULL);
+						}
+						else if (tok_bufpeek().type == token_type_t::comma) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::comma;
+							(*n)->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							n = &((*n)->next);
+						}
+						else if (tok_bufpeek().type == token_type_t::semicolon) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::constant;
+							(*n)->tv = std::move(tok_bufpeek());
+							tok_bufdiscard();
+							n = &((*n)->next);
+						}
+						/* NTS: GNU gcc __asm__ doesn't allow function call results as part of the asm. We do, because that's the only way to provide conditional parts.
+						 *      This is an extension that the GNU project will probably never support. */
+						else if (tok_bufpeek().type > token_type_t::none) {
+							if (!assignment_expression(*n)) return false;
+							n = &((*n)->next);
+							assert(*n == NULL);
+						}
+						else {
+							return false;
+						}
+					}
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
 					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_let) {
