@@ -317,6 +317,9 @@ namespace CIMCC {
 		r_bool,
 		r_true,
 		r_false,
+		r_near,
+		r_far,
+		r_huge,
 
 		maxval
 	};
@@ -594,6 +597,9 @@ namespace CIMCC {
 		r_bool,
 		r_true,
 		r_false,
+		r_near,
+		r_far,
+		r_huge,
 
 		maxval
 	};
@@ -1118,6 +1124,33 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_near) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_near;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_far) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_far;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_huge) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_huge;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_float) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1270,7 +1303,8 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list ||
 				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t ||
 				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_true ||
-				pchnode->child->op == ast_node_op_t::r_false) {
+				pchnode->child->op == ast_node_op_t::r_false || pchnode->child->op == ast_node_op_t::r_near ||
+				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1502,6 +1536,9 @@ namespace CIMCC {
 			case token_type_t::r_bool:
 			case token_type_t::r_true:
 			case token_type_t::r_false:
+			case token_type_t::r_near:
+			case token_type_t::r_far:
+			case token_type_t::r_huge:
 			case token_type_t::r_float:
 			case token_type_t::r_void:
 			case token_type_t::r_volatile:
@@ -1699,7 +1736,8 @@ namespace CIMCC {
 		if (	pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::r_long ||
 			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
-			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_true || pchnode->op == ast_node_op_t::r_false) {
+			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_true || pchnode->op == ast_node_op_t::r_false ||
+			pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far || pchnode->op == ast_node_op_t::r_huge) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -3924,6 +3962,15 @@ namespace CIMCC {
 		else if (identlen == 5 && !memcmp(start,"false",5)) {
 			t.type = token_type_t::r_false;
 		}
+		else if (identlen == 4 && !memcmp(start,"near",4)) {
+			t.type = token_type_t::r_near;
+		}
+		else if (identlen == 3 && !memcmp(start,"far",3)) {
+			t.type = token_type_t::r_far;
+		}
+		else if (identlen == 4 && !memcmp(start,"huge",4)) {
+			t.type = token_type_t::r_huge;
+		}
 		else if (identlen == 5 && !memcmp(start,"float",5)) {
 			t.type = token_type_t::r_float;
 		}
@@ -4726,6 +4773,15 @@ namespace CIMCC {
 			case token_type_t::r_false:
 				s = "<r_false>";
 				break;
+			case token_type_t::r_near:
+				s = "<r_near>";
+				break;
+			case token_type_t::r_far:
+				s = "<r_far>";
+				break;
+			case token_type_t::r_huge:
+				s = "<r_huge>";
+				break;
 			case token_type_t::r_float:
 				s = "<r_float>";
 				break;
@@ -5150,6 +5206,15 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_false:
 					name = "false";
+					break;
+				case ast_node_op_t::r_near:
+					name = "near";
+					break;
+				case ast_node_op_t::r_far:
+					name = "far";
+					break;
+				case ast_node_op_t::r_huge:
+					name = "huge";
 					break;
 				case ast_node_op_t::r_float:
 					name = "float";

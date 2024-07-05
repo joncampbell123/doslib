@@ -576,3 +576,11 @@ typedef [[funnyname("clown")]] unsigned int clown_t;
 
 fn int func1([[register("eax"), mm("r")]] int x) { return x % 7; }
 
+fn near int func1(int x) { return x; }
+fn far int func1(int x) { return x; }
+fn huge int func1(int x) { return x; }
+
+fn int near func1(int x) { return x; }
+fn int far func1(int x) { return x; }
+fn int huge func1(int x) { return x; }
+
