@@ -610,4 +610,6 @@ __asm__ (
 );
 
 asm volatile ("hello");
+asm volatile ("hello":::);
+asm volatile ("hello":"=R" (retv):"x" (in1):"cc");
 

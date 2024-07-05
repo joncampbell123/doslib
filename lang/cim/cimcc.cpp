@@ -3091,6 +3091,9 @@ namespace CIMCC {
 								tok_bufdiscard();
 								break;
 							}
+							else if (tok_bufpeek().type == token_type_t::colon || tok_bufpeek().type == token_type_t::coloncolon) {
+								break;
+							}
 							else if (tok_bufpeek().type == token_type_t::stringliteral) {
 								(*n) = new ast_node_t;
 								(*n)->op = ast_node_op_t::constant;
@@ -3107,6 +3110,48 @@ namespace CIMCC {
 							}
 							else {
 								return false;
+							}
+						}
+
+						while (1) {
+							if (tok_bufpeek().type == token_type_t::colon) {
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::constant;
+								(*n)->tv = std::move(tok_bufpeek());
+								tok_bufdiscard();
+								n = &((*n)->next);
+							}
+							else if (tok_bufpeek().type == token_type_t::coloncolon) {
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::constant;
+								(*n)->tv.type = token_type_t::colon;
+								n = &((*n)->next);
+
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::constant;
+								(*n)->tv.type = token_type_t::colon;
+								n = &((*n)->next);
+
+								tok_bufdiscard();
+							}
+							else if (tok_bufpeek().type == token_type_t::stringliteral) {
+								(*n) = new ast_node_t;
+								(*n)->op = ast_node_op_t::constant;
+								(*n)->tv = std::move(tok_bufpeek());
+								tok_bufdiscard();
+								n = &((*n)->next);
+							}
+							else if (tok_bufpeek().type == token_type_t::closeparen) {
+								tok_bufdiscard();
+								break;
+							}
+							else if (tok_bufpeek().type == token_type_t::openparen) {
+								if (!assignment_expression(*n)) return false;
+								n = &((*n)->next);
+								assert(*n == NULL);
+							}
+							else {
+								break;
 							}
 						}
 
