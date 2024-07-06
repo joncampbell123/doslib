@@ -594,27 +594,25 @@ __asm__ (
 	"hello\n"
 	"multiple\n"
 	"lines\n"
-	"and"
+	"and"+
 	compiletimemacros()
 );
 __asm__ (
 	"hello\n"
 	"multiple\n"
-	"lines\n"
+	"lines\n"+
 	fn string() { /* conditional determined by anonymous function */
 		if (true) return "and\nconditional\n";
 		else return "compiler\nfailed\n";
-	}
-	"asm\n"
+	}+
+	"asm\n"+
 	compiletimemacros()
 );
 
 asm volatile ("hello");
-asm volatile ("hello":::);
-asm volatile ("hello":"=R" (retv):"x" (in1):"cc");
 asm [[lang("i386")]] ("hello");
-asm [[lang("i386")]] volatile ("hello" : "=R"(x) : "a"(y) : "cc");
-asm [[lang("i386")]] volatile ("hello" : "=R"(x), "a"(y) : : "cc");
+asm [[lang("i386")]] volatile ("hello");
+asm volatile ("hello",inval1,&outval1);
 
 asm volatile (H"<<_EOF
 mov eax,1234h

@@ -3201,68 +3201,16 @@ namespace CIMCC {
 					if (tok_bufpeek().type != token_type_t::openparen) return false;
 					tok_bufdiscard();
 
-					while (1) {
-						if (tok_bufpeek().type == token_type_t::closeparen) {
-							tok_bufdiscard();
-							break;
-						}
-						else if (tok_bufpeek().type == token_type_t::colon) {
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::constant;
-							(*n)->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							n = &((*n)->next);
-						}
-						else if (tok_bufpeek().type == token_type_t::coloncolon) {
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::constant;
-							(*n)->tv.type = token_type_t::colon;
-							n = &((*n)->next);
-
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::constant;
-							(*n)->tv.type = token_type_t::colon;
-							n = &((*n)->next);
-
-							tok_bufdiscard();
-						}
-						else if (tok_bufpeek().type == token_type_t::stringliteral) {
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::constant;
-							(*n)->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							n = &((*n)->next);
-						}
-						else if (tok_bufpeek().type == token_type_t::openparen) {
-							if (!assignment_expression(*n)) return false;
-							n = &((*n)->next);
-							assert(*n == NULL);
-						}
-						else if (tok_bufpeek().type == token_type_t::comma) {
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::comma;
-							(*n)->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							n = &((*n)->next);
-						}
-						else if (tok_bufpeek().type == token_type_t::semicolon) {
-							(*n) = new ast_node_t;
-							(*n)->op = ast_node_op_t::constant;
-							(*n)->tv = std::move(tok_bufpeek());
-							tok_bufdiscard();
-							n = &((*n)->next);
-						}
-						/* NTS: GNU gcc __asm__ doesn't allow function call results as part of the asm. We do, because that's the only way to provide conditional parts.
-						 *      This is an extension that the GNU project will probably never support. */
-						else if (tok_bufpeek().type > token_type_t::none) {
-							if (!assignment_expression(*n)) return false;
-							n = &((*n)->next);
-							assert(*n == NULL);
-						}
-						else {
+					if (tok_bufpeek().type != token_type_t::closeparen) {
+						if (!argument_expression_list(*n))
 							return false;
-						}
+
+						while ((*n) != NULL)
+							n = &((*n)->next);
 					}
+
+					if (tok_bufpeek().type != token_type_t::closeparen) return false;
+					tok_bufdiscard();
 
 					{
 						token_t &t = tok_bufpeek();
