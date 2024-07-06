@@ -653,3 +653,37 @@ struct nested_t {
 	} z, *pz;
 } nested, *pnested;
 
+union { };
+union [[something("else")]] { };
+union static const [[something("else")]] { };
+union uniony_t { };
+union static uniony_t { };
+union [[something("else")]] uniony_t { };
+union const [[something("else")]] static uniony_t { };
+union { } somevar;
+union { } somevar, *psomevar, asomevar[6], fn cbsomevar_t(int x);
+union {
+	let int x;
+	let long y = 5;
+	let string something = "else";
+	fn int method1(void) { return 5; };
+	let int fn method1(int x) = { return x+y; y = x; };
+	let int fn method2(int x) = method1;
+	let auto method3 = method1;
+};
+union nested_t {
+	let int x,y;
+	union {
+		let long a,b;
+	} z, *pz;
+} nested, *pnested;
+
+struct {
+	union {
+		struct {
+		} z;
+	} x;
+	struct {
+	} y;
+} z;
+

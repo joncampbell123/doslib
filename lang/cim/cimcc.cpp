@@ -326,6 +326,7 @@ namespace CIMCC {
 		r___asm__, // __asm__
 		r_this,
 		r_struct,
+		r_union,
 
 		maxval
 	};
@@ -609,6 +610,7 @@ namespace CIMCC {
 		r_asm,
 		r_this,
 		r_struct,
+		r_union,
 
 		maxval
 	};
@@ -2918,10 +2920,13 @@ namespace CIMCC {
 							return false;
 					}
 				}
-				else if (tok_bufpeek().type == token_type_t::r_struct) {
+				else if (tok_bufpeek().type == token_type_t::r_struct || tok_bufpeek().type == token_type_t::r_union) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
-					apnode->child->op = ast_node_op_t::r_struct;
+					if (tok_bufpeek().type == token_type_t::r_union)
+						apnode->child->op = ast_node_op_t::r_union;
+					else
+						apnode->child->op = ast_node_op_t::r_struct;
 					apnode->child->tv = std::move(tok_bufpeek());
 					tok_bufdiscard();
 
@@ -4207,6 +4212,9 @@ namespace CIMCC {
 		else if (identlen == 7 && !memcmp(start,"__asm__",7)) {
 			t.type = token_type_t::r___asm__;
 		}
+		else if (identlen == 5 && !memcmp(start,"union",5)) {
+			t.type = token_type_t::r_union;
+		}
 		else if (identlen == 6 && !memcmp(start,"struct",6)) {
 			t.type = token_type_t::r_struct;
 		}
@@ -5027,6 +5035,9 @@ namespace CIMCC {
 			case token_type_t::r_this:
 				s = "<r_this>";
 				break;
+			case token_type_t::r_union:
+				s = "<r_union>";
+				break;
 			case token_type_t::r_struct:
 				s = "<r_struct>";
 				break;
@@ -5502,6 +5513,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_this:
 					name = "this";
+					break;
+				case ast_node_op_t::r_union:
+					name = "union";
 					break;
 				case ast_node_op_t::r_struct:
 					name = "struct";
