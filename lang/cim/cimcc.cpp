@@ -325,6 +325,7 @@ namespace CIMCC {
 		r___asm, // __asm
 		r___asm__, // __asm__
 		r_this,
+		r_struct,
 
 		maxval
 	};
@@ -607,6 +608,7 @@ namespace CIMCC {
 		r_huge,
 		r_asm,
 		r_this,
+		r_struct,
 
 		maxval
 	};
@@ -2916,6 +2918,107 @@ namespace CIMCC {
 							return false;
 					}
 				}
+				else if (tok_bufpeek().type == token_type_t::r_struct) {
+					assert(apnode->child == NULL);
+					apnode->child = new ast_node_t;
+					apnode->child->op = ast_node_op_t::r_struct;
+					apnode->child->tv = std::move(tok_bufpeek());
+					tok_bufdiscard();
+
+					ast_node_t **n = &(apnode->child->child);
+
+					{
+						ast_node_t **sn = NULL;
+
+						while (1) {
+							if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+								if (sn == NULL) {
+									(*n) = new ast_node_t;
+									(*n)->op = ast_node_op_t::identifier_list;
+									sn = &((*n)->child);
+									n = &((*n)->next);
+								}
+
+								if (!primary_expression(*sn)) return false;
+								sn = &((*sn)->next);
+								assert(*sn == NULL);
+							}
+							else {
+								break;
+							}
+						}
+					}
+
+					if (tok_bufpeek().type == token_type_t::identifier) {
+						if (!cpp_scope_expression(*n)) return false;
+						n = &((*n)->next);
+						assert(*n == NULL);
+					}
+					else {
+						(*n) = new ast_node_t;
+						(*n)->op = ast_node_op_t::i_anonymous;
+						n = &((*n)->next);
+						assert(*n == NULL);
+					}
+
+					if (tok_bufpeek().type != token_type_t::opencurly) return false;
+
+					{
+						ast_node_t *bc = NULL;
+						if (!statement(*n,bc)) return false;
+						n = &((*n)->next);
+						assert(*n == NULL);
+					}
+
+					if (tok_bufpeek().type == token_type_t::identifier) {
+						/* then the first variable */
+						{
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::r_let;
+
+							ast_node_t *i=NULL,*e=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
+
+							if (!let_expression(i,e))
+								return false;
+							if (i == NULL)
+								return false;
+							if (e != NULL) /* no assignment allowed */
+								return false;
+
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+						}
+
+						while (tok_bufpeek().type == token_type_t::comma) {
+							(*n) = new ast_node_t;
+							(*n)->op = ast_node_op_t::r_let;
+
+							ast_node_t *i=NULL,*e=NULL;
+							ast_node_t **sn = &((*n)->child);
+							n = &((*n)->next);
+
+							tok_bufdiscard(); /* eat comma */
+
+							if (!let_expression(i,e))
+								return false;
+							if (i == NULL)
+								return false;
+							if (e != NULL) /* no assignment allowed */
+								return false;
+
+							if (i) { *sn = i; sn = &((*sn)->next); while (*sn) sn = &((*sn)->next); }
+						}
+					}
+
+					{
+						token_t &t = tok_bufpeek();
+						if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+							tok_bufdiscard(); /* eat the EOF or semicolon */
+						else
+							return false;
+					}
+				}
 				else if (tok_bufpeek().type == token_type_t::r_fn) {
 					assert(apnode->child == NULL);
 					apnode->child = new ast_node_t;
@@ -4104,6 +4207,9 @@ namespace CIMCC {
 		else if (identlen == 7 && !memcmp(start,"__asm__",7)) {
 			t.type = token_type_t::r___asm__;
 		}
+		else if (identlen == 6 && !memcmp(start,"struct",6)) {
+			t.type = token_type_t::r_struct;
+		}
 		else if (identlen == 5 && !memcmp(start,"float",5)) {
 			t.type = token_type_t::r_float;
 		}
@@ -4921,6 +5027,9 @@ namespace CIMCC {
 			case token_type_t::r_this:
 				s = "<r_this>";
 				break;
+			case token_type_t::r_struct:
+				s = "<r_struct>";
+				break;
 			case token_type_t::r__asm:
 				s = "<r__asm>";
 				break;
@@ -5393,6 +5502,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_this:
 					name = "this";
+					break;
+				case ast_node_op_t::r_struct:
+					name = "struct";
 					break;
 				case ast_node_op_t::r_huge:
 					name = "huge";
