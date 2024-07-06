@@ -324,6 +324,7 @@ namespace CIMCC {
 		r__asm, // _asm
 		r___asm, // __asm
 		r___asm__, // __asm__
+		r_this,
 
 		maxval
 	};
@@ -605,6 +606,7 @@ namespace CIMCC {
 		r_far,
 		r_huge,
 		r_asm,
+		r_this,
 
 		maxval
 	};
@@ -1165,6 +1167,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_this) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_this;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_void) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1555,6 +1566,7 @@ namespace CIMCC {
 			case token_type_t::r_static_assert:
 			case token_type_t::r_namespace:
 			case token_type_t::r_typeof:
+			case token_type_t::r_this:
 				return true;
 			default:
 				break;
@@ -4080,6 +4092,9 @@ namespace CIMCC {
 		else if (identlen == 3 && !memcmp(start,"asm",3)) {
 			t.type = token_type_t::r_asm;
 		}
+		else if (identlen == 4 && !memcmp(start,"this",4)) {
+			t.type = token_type_t::r_this;
+		}
 		else if (identlen == 4 && !memcmp(start,"_asm",4)) {
 			t.type = token_type_t::r__asm;
 		}
@@ -4903,6 +4918,9 @@ namespace CIMCC {
 			case token_type_t::r_asm:
 				s = "<r_asm>";
 				break;
+			case token_type_t::r_this:
+				s = "<r_this>";
+				break;
 			case token_type_t::r__asm:
 				s = "<r__asm>";
 				break;
@@ -5372,6 +5390,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_asm:
 					name = "asm";
+					break;
+				case ast_node_op_t::r_this:
+					name = "this";
 					break;
 				case ast_node_op_t::r_huge:
 					name = "huge";

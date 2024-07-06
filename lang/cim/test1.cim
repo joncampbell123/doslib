@@ -624,3 +624,7 @@ nop
 ret
 _EOF");
 
+fn int something(int x) {
+	this->someval = x;
+}
+
