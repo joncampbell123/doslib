@@ -759,6 +759,8 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	int rd,i,bufe=0;
 	uint32_t how;
 
+	(void)initial;
+
 	/* caller should be rounding! */
 	assert((up_to & 3UL) == 0UL);
 	if (up_to >= cx->buffer_size) return;
@@ -879,6 +881,8 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	uint16_t prev[6];
 	int rd,i,bufe=0;
 	uint32_t how;
+
+	(void)initial;
 
 	/* caller should be rounding! */
 	assert((up_to & 3UL) == 0UL);
@@ -3311,14 +3315,14 @@ static const struct vga_menu_item* main_menu_effects[] = {
 
 static const struct vga_menu_bar_item main_menu_bar[] = {
 	/* name                 key     scan    x       w       id */
-	{" File ",		'F',	0x21,	0,	6,	&main_menu_file}, /* ALT-F */
-	{" Playback ",		'P',	0x19,	6,	10,	&main_menu_playback}, /* ALT-P */
-	{" Device ",		'D',	0x20,	16,	8,	&main_menu_device}, /* ALT-D */
+	{" File ",		'F',	0x21,	0,	6,	main_menu_file}, /* ALT-F */
+	{" Playback ",		'P',	0x19,	6,	10,	main_menu_playback}, /* ALT-P */
+	{" Device ",		'D',	0x20,	16,	8,	main_menu_device}, /* ALT-D */
 #ifdef INCLUDE_FX
-	{" Effects ",		'E',	0x12,	24,	9,	&main_menu_effects}, /* ALT-E */
-	{" Help ",		'H',	0x23,	33,	6,	&main_menu_help}, /* ALT-H */
+	{" Effects ",		'E',	0x12,	24,	9,	main_menu_effects}, /* ALT-E */
+	{" Help ",		'H',	0x23,	33,	6,	main_menu_help}, /* ALT-H */
 #else
-	{" Help ",		'H',	0x23,	24,	6,	&main_menu_help}, /* ALT-H */
+	{" Help ",		'H',	0x23,	24,	6,	main_menu_help}, /* ALT-H */
 #endif
 	{NULL,			0,	0x00,	0,	0,	0}
 };
@@ -3463,6 +3467,8 @@ static void prompt_play_wav(unsigned char rec) {
 #else
 	struct find_t ft;
 #endif
+
+	(void)rec;
 
 	{
 		const char *rp;
@@ -5250,7 +5256,7 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.5 for DOS\n\n(C) 2008-2023 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.5 for DOS\n\n(C) 2008-2024 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
