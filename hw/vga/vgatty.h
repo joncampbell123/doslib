@@ -2,6 +2,8 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+extern unsigned char vga_break_signal;
+
 char *vga_gets(unsigned int maxlen);
 void vga_moveto(unsigned char x,unsigned char y);
 void vga_scroll_up(unsigned char lines);

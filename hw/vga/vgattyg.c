@@ -24,6 +24,8 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+unsigned char vga_break_signal = 0;
+
 int vga_getch() {
     unsigned int c;
 
