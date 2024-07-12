@@ -314,6 +314,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <signal.h>
 #include <assert.h>
 #include <unistd.h>
 #include <malloc.h>
@@ -2110,15 +2111,18 @@ static void change_alias_menu() {
 	char tmp[128];
 
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
 #if defined(TARGET_PC98)
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
-                    vga[0x0000] = 0x20;
-                    vga[0x1000] = 0x25;
-                    vga++;
-                }
+					vga[0x0000] = 0x20;
+					vga[0x1000] = 0x25;
+					vga++;
+				}
 #else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 #endif
@@ -2207,6 +2211,9 @@ static void change_param_menu() {
 	char tmp[128];
 
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
@@ -2513,6 +2520,9 @@ static void play_with_sb16_8051() {
 	if (sb_card->dsp_vmaj < 4) return; /* SB16 only */
 
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
@@ -2657,6 +2667,9 @@ static void play_with_ess() {
 	}
 
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
@@ -2810,6 +2823,9 @@ static void play_with_mixer() {
 	sb_mixer = sndsb_get_mixer_controls(sb_card,&sb_mixer_items,mixer);
 
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if (redraw || uiredraw) {
 			if (redraw) {
 #if defined(TARGET_PC98)
@@ -4559,6 +4575,18 @@ static void fx_vol_dialog() {
 }
 #endif
 
+static void sig_break(int x) {
+	(void)x;
+	if (vga_break_signal < 0xFF) vga_break_signal++;
+	signal(SIGBREAK,sig_break);
+}
+
+static void sig_int(int x) {
+	(void)x;
+	if (vga_break_signal < 0xFF) vga_break_signal++;
+	signal(SIGINT,sig_int);
+}
+
 int main(int argc,char **argv) {
 	uint32_t sb_irq_pcounter = 0;
 	int i,loop,redraw,bkgndredraw,cc;
@@ -4573,6 +4601,12 @@ int main(int argc,char **argv) {
 	VGA_ALPHA_PTR vga;
 	int autoplay = 0;
 	int sc_idx = -1;
+
+	/* There's been a long running problem of making your system unstable by
+	 * pressing CTRL+C/CTRL+BREAK while using this program. Let's fix that. */
+	signal(SIGBREAK,sig_break);
+	signal(SIGINT,sig_int);
+	break_off();
 
 	printf("Sound Blaster test program\n");
 	for (i=1;i < argc;) {
@@ -5193,6 +5227,9 @@ int main(int argc,char **argv) {
 	if (wav_file[0] != 0) open_wav();
 	if (autoplay) begin_play();
 	while (loop) {
+		if (vga_break_signal)
+			break;
+
 		if ((mitem = vga_menu_bar_keymon()) != NULL) {
 			/* act on it */
 			if (mitem == &main_menu_file_quit) {
