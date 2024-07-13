@@ -2803,6 +2803,7 @@ namespace CIMCC {
 					rnode = apnode = new ast_node_t;
 				}
 				apnode->op = ast_node_op_t::statement;
+				apnode->tv = std::move(tok_bufpeek(0));
 
 				while (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) { /* label: ... */
 					apnode->op = ast_node_op_t::label;
