@@ -56,6 +56,11 @@ FART, should not trigger
 Fart, should not trigger. The next line will not either.
 Fart
 Okay, next will trigger.
+Fart"; H"<<Fart
+Poop";
+That should not have triggered the end.
+\\\ASCII ART\\\
+The next line will.
 Fart";
 "Multiple" "string " H"<<CAT
 concatenation but now
