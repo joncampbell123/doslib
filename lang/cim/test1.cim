@@ -707,4 +707,18 @@ cc::xx::yy::zz;
 	#define("wart set",1);
 	#undef("wart hacks");
 }
+#if(#defval("runtime") == "fast") {
+	let int speed1 = 4;
+}
+else #if(#defval("runtime") == "slow") {
+	let int speed1 = 2;
+	#warning("slow runtime");
+}
+else {
+	#error("bad runtime value");
+}
+
+#if(#deftype("wart set") != int) {
+	#error("wrong type");
+}
 

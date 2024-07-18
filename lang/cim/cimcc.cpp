@@ -649,6 +649,10 @@ namespace CIMCC {
 		r_pound_define,
 		r_pound_undef,
 		r_pound_defined,
+		r_pound_defval,
+		r_pound_warning,
+		r_pound_error,
+		r_pound_deftype,
 
 		maxval
 	};
@@ -1008,6 +1012,34 @@ namespace CIMCC {
 			else if (tok_bufpeek(1).v.identifier.strcmp("defined")) {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::r_pound_defined;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("defval")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_defval;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("warning")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_warning;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("error")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_error;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("deftype")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_deftype;
 				pchnode->tv = std::move(tok_bufpeek(0));
 				tok_bufdiscard(2);
 				return true;
@@ -5505,6 +5537,18 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_pound_defined:
 					name = "r_pound_defined";
+					break;
+				case ast_node_op_t::r_pound_defval:
+					name = "r_pound_defval";
+					break;
+				case ast_node_op_t::r_pound_warning:
+					name = "r_pound_warning";
+					break;
+				case ast_node_op_t::r_pound_error:
+					name = "r_pound_error";
+					break;
+				case ast_node_op_t::r_pound_deftype:
+					name = "r_pound_deftype";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
