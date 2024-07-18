@@ -818,6 +818,7 @@ namespace CIMCC {
 		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
+		bool if_statement_parse(ast_node_t* &apnode);
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
@@ -2814,19 +2815,23 @@ namespace CIMCC {
 		apnode->tv = std::move(tok_bufpeek()); //assumed to be the "if" token!
 		tok_bufdiscard();
 
+		return if_statement_parse(apnode->child);
+	}
+
+	bool compiler::if_statement_parse(ast_node_t* &apnode) {
 		if (tok_bufpeek().type != token_type_t::openparen)
 			return false;
 		tok_bufdiscard();
 
-		if (!expression(apnode->child))
+		if (!expression(apnode))
 			return false;
 
 		if (tok_bufpeek().type != token_type_t::closeparen)
 			return false;
 		tok_bufdiscard();
 
-		ast_node_t *n = apnode->child->next;
-		if (!statement(apnode->child->next,n))
+		ast_node_t *n = apnode->next;
+		if (!statement(apnode->next,n))
 			return false;
 		assert(n->next == NULL);
 
