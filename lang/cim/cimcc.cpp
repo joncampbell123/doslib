@@ -1443,7 +1443,8 @@ namespace CIMCC {
 				 * (type)identifier including (type)functioncall()
 				 *
 				 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
-				if (nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier || is_reserved_identifier(nt.type)) {
+				if (	nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
+					nt.type == token_type_t::intval || nt.type == token_type_t::floatval || nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
 					pchnode->op = ast_node_op_t::typecast;
 					if (!unary_expression(pchnode->child->next))
 						return false;

@@ -724,4 +724,7 @@ else {
 
 let #deftype("wart set") wart_counter = 3;
 let #deftype("wart set") wart_counter = (#deftype("wart set"))wart_init;
+let #deftype("wart set") wart_counter = (#deftype("wart set"))3;
+let #deftype("wart set") wart_counter = (#deftype("wart set"))3.3;
+let #deftype("wart set") wart_counter = (#deftype("wart set"))"warts";
 
