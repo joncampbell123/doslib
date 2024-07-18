@@ -693,3 +693,18 @@ struct {
 xx::yy;
 cc::xx::yy::zz;
 
+#if(1) { func(5); }
+#if(1) { func(5); };
+#if(func1()) { func2(44,22); }
+#if(func2(5)) {
+	#define("wart");
+	#define("runtime","fast");
+	#undef("do not define");
+}
+#if(#defined("wart")) {
+	func1(3);
+	func2(7);
+	#define("wart set",1);
+	#undef("wart hacks");
+}
+

@@ -327,6 +327,7 @@ namespace CIMCC {
 		r_this,
 		r_struct,
 		r_union,
+		poundsign,
 
 		maxval
 	};
@@ -412,6 +413,15 @@ namespace CIMCC {
 			length = 0;
 			if (name) delete[] name;
 			name = NULL;
+		}
+
+		bool strcmp(const std::string &s) {
+			if ((name == NULL || length == 0) && s.empty())
+				return true;
+			else if (memcmp(name,s.c_str(),length) == 0)
+				return true;
+			else
+				return false;
 		}
 	};
 
@@ -635,6 +645,10 @@ namespace CIMCC {
 		r_this,
 		r_struct,
 		r_union,
+		r_pound_if,
+		r_pound_define,
+		r_pound_undef,
+		r_pound_defined,
 
 		maxval
 	};
@@ -975,6 +989,32 @@ namespace CIMCC {
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 			return true;
+		}
+		else if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
+			if (tok_bufpeek(1).v.identifier.strcmp("define")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_define;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("undef")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_undef;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("defined")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_defined;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
 		else if (t.type == token_type_t::stringliteral) {
 			assert(pchnode == NULL);
@@ -2881,6 +2921,23 @@ namespace CIMCC {
 					tok_bufdiscard(2);
 				}
 
+				if (tok_bufpeek(0).type == token_type_t::poundsign) {
+					if (tok_bufpeek(1).type == token_type_t::r_if) {
+						apnode->child = new ast_node_t;
+						apnode->child->op = ast_node_op_t::r_pound_if;
+						apnode->child->tv = std::move(tok_bufpeek(0));
+						tok_bufdiscard(2);
+
+						if (!if_statement_parse(apnode->child->child))
+							return false;
+
+						if (tok_bufpeek().type == token_type_t::semicolon)
+							tok_bufdiscard();
+
+						return true;
+					}
+				}
+
 				/* allow { compound statements } in a { scope } */
 				if (tok_bufpeek().type == token_type_t::opencurly) {
 					tok_bufdiscard(); /* eat the { */
@@ -4716,6 +4773,10 @@ namespace CIMCC {
 				t.type = token_type_t::question;
 				skipb();
 				break;
+			case '#':
+				t.type = token_type_t::poundsign;
+				skipb();
+				break;
 			case '^':
 				t.type = token_type_t::caret;
 				skipb();
@@ -4887,6 +4948,9 @@ namespace CIMCC {
 				break;
 			case token_type_t::caret:
 				s = "<^>";
+				break;
+			case token_type_t::poundsign:
+				s = "<#>";
 				break;
 			case token_type_t::equal:
 				s = "<=>";
@@ -5429,6 +5493,18 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_if:
 					name = "r_if";
+					break;
+				case ast_node_op_t::r_pound_if:
+					name = "r_pound_if";
+					break;
+				case ast_node_op_t::r_pound_define:
+					name = "r_pound_define";
+					break;
+				case ast_node_op_t::r_pound_undef:
+					name = "r_pound_undef";
+					break;
+				case ast_node_op_t::r_pound_defined:
+					name = "r_pound_defined";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
