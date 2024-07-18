@@ -402,6 +402,12 @@ namespace CIMCC {
 			length = 0;
 		}
 
+		void on_pre_move(void) { /* our var is about to be replaced by a new var on std::move */
+			length = 0;
+			if (name) delete[] name;
+			name = NULL;
+		}
+
 		void on_delete(void) {
 			length = 0;
 			if (name) delete[] name;
@@ -434,6 +440,12 @@ namespace CIMCC {
 			/* this struct has already been copied, this is the old copy, clear pointers to prevent double free() */
 			data = NULL;
 			length = 0;
+		}
+
+		void on_pre_move(void) { /* our var is about to be replaced by a new var on std::move */
+			length = 0;
+			if (data) free(data);
+			data = NULL;
 		}
 
 		void on_delete(void) {
@@ -478,6 +490,18 @@ namespace CIMCC {
 		}
 
 		void common_move(token_t &x) {
+			switch (type) {
+				case token_type_t::identifier:
+					v.identifier.on_pre_move();
+					break;
+				case token_type_t::characterliteral:
+				case token_type_t::stringliteral:
+					v.chrstrlit.on_pre_move();
+					break;
+				default:
+					break;
+			}
+
 			position = x.position;
 			type = x.type;
 			v = x.v;
