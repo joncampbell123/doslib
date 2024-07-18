@@ -728,3 +728,9 @@ let #deftype("wart set") wart_counter = (#deftype("wart set"))3;
 let #deftype("wart set") wart_counter = (#deftype("wart set"))3.3;
 let #deftype("wart set") wart_counter = (#deftype("wart set"))"warts";
 
+let int val1 = int(5);
+let int val1 = float(5);
+let int val1 = typeof(val1)(5);
+let int val1 = #deftype("wart set")(5);
+let int val1 = struct_type(5);
+
