@@ -1042,6 +1042,16 @@ namespace CIMCC {
 				pchnode->op = ast_node_op_t::r_pound_deftype;
 				pchnode->tv = std::move(tok_bufpeek(0));
 				tok_bufdiscard(2);
+
+				if (tok_bufpeek().type != token_type_t::openparen) return false;
+				tok_bufdiscard();
+
+				if (!expression(pchnode->child))
+					return false;
+
+				if (tok_bufpeek().type != token_type_t::closeparen) return false;
+				tok_bufdiscard();
+
 				return true;
 			}
 			else {
@@ -1422,7 +1432,8 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t ||
 				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_true ||
 				pchnode->child->op == ast_node_op_t::r_false || pchnode->child->op == ast_node_op_t::r_near ||
-				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge) {
+				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge ||
+				pchnode->child->op == ast_node_op_t::r_pound_deftype) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -1684,8 +1695,8 @@ namespace CIMCC {
 
 		ast_node_t **n = &(tnode->child);
 
-		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
-			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
+			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
 				if (!NLEX(*n)) return false;
 				n = &((*n)->next);
 			}
