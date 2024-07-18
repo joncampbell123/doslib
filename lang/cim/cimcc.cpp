@@ -3353,7 +3353,7 @@ namespace CIMCC {
 						return false;
 					tok_bufdiscard();
 
-					if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::closeparen) {
+					if (tok_bufpeek().type == token_type_t::closeparen) {
 						nn->next = new ast_node_t;
 						nn->next->op = ast_node_op_t::none;
 					}
