@@ -814,6 +814,7 @@ namespace CIMCC {
 		int64_t getb_hex(unsigned int mc);
 		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
+		bool if_statement(ast_node_t* &apnode);
 		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
@@ -2807,6 +2808,43 @@ namespace CIMCC {
 		return false;
 	}
 
+	bool compiler::if_statement(ast_node_t* &apnode) {
+		apnode = new ast_node_t;
+		apnode->op = ast_node_op_t::r_if;
+		apnode->tv = std::move(tok_bufpeek()); //assumed to be the "if" token!
+		tok_bufdiscard();
+
+		if (tok_bufpeek().type != token_type_t::openparen)
+			return false;
+		tok_bufdiscard();
+
+		if (!expression(apnode->child))
+			return false;
+
+		if (tok_bufpeek().type != token_type_t::closeparen)
+			return false;
+		tok_bufdiscard();
+
+		ast_node_t *n = apnode->child->next;
+		if (!statement(apnode->child->next,n))
+			return false;
+		assert(n->next == NULL);
+
+		if (tok_bufpeek().type == token_type_t::r_else) {
+			n->next = new ast_node_t;
+			n->next->op = ast_node_op_t::r_else;
+			n->next->tv = std::move(tok_bufpeek());
+			tok_bufdiscard();
+			n = n->next;
+
+			ast_node_t *n2 = n->child;
+			if (!statement(n->child,n2))
+				return false;
+		}
+
+		return true;
+	}
+
 	bool compiler::statement(ast_node_t* &rnode,ast_node_t* &apnode) {
 		/* [statement] -> [statement] -> ...
 		 *   \                \
@@ -3515,39 +3553,8 @@ namespace CIMCC {
 				}
 				else if (tok_bufpeek().type == token_type_t::r_if) {
 					assert(apnode->child == NULL);
-					apnode->child = new ast_node_t;
-					apnode->child->op = ast_node_op_t::r_if;
-					apnode->child->tv = std::move(tok_bufpeek());
-					tok_bufdiscard();
-
-					if (tok_bufpeek().type != token_type_t::openparen)
+					if (!if_statement(apnode->child))
 						return false;
-					tok_bufdiscard();
-
-					if (!expression(apnode->child->child))
-						return false;
-
-					if (tok_bufpeek().type != token_type_t::closeparen)
-						return false;
-					tok_bufdiscard();
-
-					ast_node_t *n = apnode->child->child->next;
-					if (!statement(apnode->child->child->next,n))
-						return false;
-
-					if (tok_bufpeek().type == token_type_t::r_else) {
-						while (n->next) n=n->next;
-
-						n->next = new ast_node_t;
-						n->next->op = ast_node_op_t::r_else;
-						n->next->tv = std::move(tok_bufpeek());
-						tok_bufdiscard();
-						n = n->next;
-
-						ast_node_t *n2 = n->child;
-						if (!statement(n->child,n2))
-							return false;
-					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_goto) {
 					assert(apnode->child == NULL);
