@@ -690,3 +690,6 @@ struct {
 	} y;
 } z;
 
+xx::yy;
+cc::xx::yy::zz;
+
