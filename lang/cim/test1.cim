@@ -764,3 +764,11 @@ fn const far #type funct(const #type x) {
 	return (const far #type)x;
 }
 
+fn #type funct(#type x) {
+	return (#type)(x + int + far);
+}
+
+fn #type funct(#type x) {
+	return (#type)(x + long + near - far);
+}
+
