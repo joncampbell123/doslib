@@ -733,4 +733,18 @@ let int val1 = float(5);
 let int val1 = typeof(val1)(5);
 let int val1 = #deftype("wart set")(5);
 let int val1 = struct_type(5);
+let #type val1 = int;
+
+fn #type funct(void) {
+	return int;
+}
+
+fn #type funct(const int x) {
+	if (x == 0)
+		return int;
+	else if (x == 1)
+		return long;
+
+	return void;
+}
 

@@ -653,6 +653,7 @@ namespace CIMCC {
 		r_pound_warning,
 		r_pound_error,
 		r_pound_deftype,
+		r_pound_type,
 
 		maxval
 	};
@@ -1033,6 +1034,13 @@ namespace CIMCC {
 			else if (tok_bufpeek(1).v.identifier.strcmp("error")) {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::r_pound_error;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("type")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_type;
 				pchnode->tv = std::move(tok_bufpeek(0));
 				tok_bufdiscard(2);
 				return true;
@@ -1433,7 +1441,7 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_true ||
 				pchnode->child->op == ast_node_op_t::r_false || pchnode->child->op == ast_node_op_t::r_near ||
 				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge ||
-				pchnode->child->op == ast_node_op_t::r_pound_deftype) {
+				pchnode->child->op == ast_node_op_t::r_pound_deftype || pchnode->child->op == ast_node_op_t::r_pound_type) {
 				token_t &nt = tok_bufpeek();
 
 				/* allow typecasts:
@@ -5561,6 +5569,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_pound_deftype:
 					name = "r_pound_deftype";
+					break;
+				case ast_node_op_t::r_pound_type:
+					name = "r_pound_type";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
