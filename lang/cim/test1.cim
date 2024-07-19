@@ -772,3 +772,6 @@ fn #type funct(#type x) {
 	return (#type)(x + long + near - far);
 }
 
+#include("other.h");
+#include("x_" + choosename());
+

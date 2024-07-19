@@ -654,6 +654,7 @@ namespace CIMCC {
 		r_pound_error,
 		r_pound_deftype,
 		r_pound_type,
+		r_pound_include,
 
 		maxval
 	};
@@ -1041,6 +1042,13 @@ namespace CIMCC {
 			else if (tok_bufpeek(1).v.identifier.strcmp("type")) {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::r_pound_type;
+				pchnode->tv = std::move(tok_bufpeek(0));
+				tok_bufdiscard(2);
+				return true;
+			}
+			else if (tok_bufpeek(1).v.identifier.strcmp("include")) {
+				pchnode = new ast_node_t;
+				pchnode->op = ast_node_op_t::r_pound_include;
 				pchnode->tv = std::move(tok_bufpeek(0));
 				tok_bufdiscard(2);
 				return true;
@@ -5573,6 +5581,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_pound_type:
 					name = "r_pound_type";
+					break;
+				case ast_node_op_t::r_pound_include:
+					name = "r_pound_include";
 					break;
 				case ast_node_op_t::label:
 					name = "label";
