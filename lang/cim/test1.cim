@@ -748,3 +748,19 @@ fn #type funct(const int x) {
 	return void;
 }
 
+fn #type funct(#type x) {
+	return x;
+}
+
+fn #type funct(#type x) {
+	return (#type)x;
+}
+
+fn const #type funct(const #type x) {
+	return (#type)x;
+}
+
+fn const far #type funct(const #type x) {
+	return (const far #type)x;
+}
+

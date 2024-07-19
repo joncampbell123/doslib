@@ -1735,7 +1735,7 @@ namespace CIMCC {
 		 * signed long int -> tnode list("signed","long") inode "int"
 		 * signed long int* -> tnode list("signed","long","int") inode (null) */
 #define NLEX cpp_scope_expression
-		while (is_reserved_identifier(tok_bufpeek().type)) {
+		while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::poundsign) {
 			if (!NLEX(*n)) return false;
 			n = &((*n)->next);
 			count++;
@@ -1834,7 +1834,7 @@ namespace CIMCC {
 					d = &((*d)->next);
 					assert(*d == NULL);
 				}
-				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
+				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::poundsign) {
 					ast_node_t *t=NULL,*i=NULL;
 					if (!split_identifiers_expression(t,i))
 						return false;
@@ -1876,7 +1876,8 @@ namespace CIMCC {
 			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
 			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_true || pchnode->op == ast_node_op_t::r_false ||
-			pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far || pchnode->op == ast_node_op_t::r_huge) {
+			pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far || pchnode->op == ast_node_op_t::r_huge ||
+			pchnode->op == ast_node_op_t::r_pound_type) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -1889,7 +1890,7 @@ namespace CIMCC {
 			 *
 			 */
 			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-			if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type)) {
+			if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::poundsign || is_reserved_identifier(tok_bufpeek().type)) {
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::identifier_list;
@@ -1897,7 +1898,7 @@ namespace CIMCC {
 
 				ast_node_t *nn = sav_p;
 
-				while (is_reserved_identifier(tok_bufpeek().type)) {
+				while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::poundsign) {
 					if (!NLEX(nn->next))
 						return false;
 					nn = nn->next;
@@ -3113,7 +3114,7 @@ namespace CIMCC {
 						ast_node_t **sn = NULL;
 
 						while (1) {
-							if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
+							if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
 								if (sn == NULL) {
 									(*n) = new ast_node_t;
 									(*n)->op = ast_node_op_t::identifier_list;
