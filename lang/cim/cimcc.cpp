@@ -860,6 +860,7 @@ namespace CIMCC {
 		bool argument_expression_funccall(ast_node_t* &pchnode);
 		bool let_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
+		void error_msg(const std::string msg,const position_t &pos);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
@@ -3730,6 +3731,19 @@ namespace CIMCC {
 		root_node = NULL;
 	}
 
+	const std::string &toksnames_getname(CIMCC::token_source_name_list_t *toksnames,const size_t ent);
+
+	void compiler::error_msg(const std::string msg,const position_t &pos) {
+		fprintf(stderr,"Error: ");
+		{
+			unsigned char count = 0;
+			if (pos.source != pos.nosource) { if (count++ != 0) fprintf(stderr,", "); fprintf(stderr,"in \"%s\"",toksnames_getname(tok_snamelist,pos.source).c_str()); }
+			if (pos.line >= 0) { if (count++ != 0) fprintf(stderr,", "); fprintf(stderr,"line %d",pos.line); }
+			if (pos.col >= 0) { if (count++ != 0) fprintf(stderr,", "); fprintf(stderr,"col %d",pos.col); }
+		}
+		fprintf(stderr,": %s\n",msg.c_str());
+	}
+
 	bool compiler::compile(void) {
 		ast_node_t *apnode = NULL,*rnode = NULL;
 		bool ok = true;
@@ -3752,7 +3766,7 @@ namespace CIMCC {
 		tok_buf_refill();
 		while (!tok_buf_empty()) {
 			if (!statement(rnode,apnode)) {
-				fprintf(stderr,"Syntax error\n");
+				error_msg("Syntax error",tok_bufpeek(0).position);
 				ok = false;
 				break;
 			}
