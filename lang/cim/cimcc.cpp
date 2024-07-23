@@ -3856,6 +3856,48 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_mod(ast_node_t* &r) { /* ast_node_op_t::modulo */
+		/* [mod]
+		 *   \- [a] -> [b] */
+		/* become */
+		/* [a % b] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::modulo);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+		ast_node_t* b = a->next;
+		if (!b) return true;
+		if (b->child) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
+				/* if either is signed, result is signed */
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					const_intval_cvt_signed(*a);
+					const_intval_cvt_signed(*b);
+					if (b->tv.v.intval.v.v == 0) return false;
+					const signed long long result = a->tv.v.intval.v.v % b->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_children(); // invalidates a and b
+				}
+				/* else, unsigned */
+				else {
+					if (b->tv.v.intval.v.u == 0) return false;
+					const unsigned long long result = a->tv.v.intval.v.u % b->tv.v.intval.v.u;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.u = result;
+					r->free_children(); // invalidates a and b
+				}
+			}
+		}
+
+		return true;
+	}
+
 	static bool reduce_sub(ast_node_t* &r) { /* ast_node_op_t::subtract */
 		/* [subtract]
 		 *   \- [a] -> [b] */
@@ -4026,6 +4068,7 @@ namespace CIMCC {
 			switch (n->op) {
 				case ast_node_op_t::multiply:		if (!reduce_mul(n)) return false; break;
 				case ast_node_op_t::divide:		if (!reduce_div(n)) return false; break;
+				case ast_node_op_t::modulo:		if (!reduce_mod(n)) return false; break;
 				case ast_node_op_t::add:		if (!reduce_add(n)) return false; break;
 				case ast_node_op_t::subtract:		if (!reduce_sub(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;

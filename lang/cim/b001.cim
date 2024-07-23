@@ -6,6 +6,8 @@ let int b = x * (4 + 2);
 let int z = (x + y) * (x - y);
 let int g1 = (((((1 + 2) + 3) + 4) + 5) + 6);
 let int g2 = 1 + 2 + 3 + 4 + 5 + 6;
+let int g3 = 15 % 4;
+let int g4 = (12 + 3) % 4;
 
 let float x = 3.3;
 let float y = 1 + 1;
