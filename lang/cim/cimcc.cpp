@@ -4105,13 +4105,15 @@ namespace CIMCC {
 					if (!reduce_lognot_intval(result,a->tv.v.intval.v.v)) return false;
 					a->tv.v.intval.flags &= ~token_intval_t::FL_SIGNED;
 					reduce_move_up_replace_single(r,a);
-					r->tv.v.intval.v.u = result;
+					r->tv.v.intval.initbool();
+					r->tv.v.intval.v.u = result ? 1 : 0;
 				}
 				else {
 					bool result;
 					if (!reduce_lognot_intval(result,a->tv.v.intval.v.u)) return false;
 					reduce_move_up_replace_single(r,a);
-					r->tv.v.intval.v.u = result;
+					r->tv.v.intval.initbool();
+					r->tv.v.intval.v.u = result ? 1 : 0;
 				}
 			}
 			else if (a->tv.type == token_type_t::floatval) {
@@ -4119,8 +4121,8 @@ namespace CIMCC {
 				if (!reduce_lognot_floatval(result,a->tv.v.floatval.val)) return false;
 				reduce_move_up_replace_single(r,a);
 				r->tv.type = token_type_t::intval;
-				r->tv.v.intval.initu();
-				r->tv.v.intval.v.u = result;
+				r->tv.v.intval.initbool();
+				r->tv.v.intval.v.u = result ? 1 : 0;
 			}
 		}
 
