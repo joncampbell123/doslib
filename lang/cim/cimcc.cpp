@@ -3800,6 +3800,42 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_neg(ast_node_t* &r) { /* ast_node_op_t::negate */
+		/* [negate]
+		 *   \- [a] */
+		/* become */
+		/*   [-a] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::negate);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+
+		if (a->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval) {
+				/* result is always signed */
+				const_intval_cvt_signed(*a);
+
+				{
+					const signed long long result = -a->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_children(); // invalidates a and b
+				}
+			}
+			else if (a->tv.type == token_type_t::floatval) {
+				const long double result = -a->tv.v.floatval.val;
+				r->op = a->op;
+				r->tv = std::move(a->tv);
+				r->tv.v.floatval.val = result;
+				r->free_children(); // invalidates a and b
+			}
+		}
+
+		return true;
+	}
+
 	static bool reduce_div(ast_node_t* &r) { /* ast_node_op_t::divide */
 		/* [div]
 		 *   \- [a] -> [b] */
@@ -4071,6 +4107,7 @@ namespace CIMCC {
 				case ast_node_op_t::modulo:		if (!reduce_mod(n)) return false; break;
 				case ast_node_op_t::add:		if (!reduce_add(n)) return false; break;
 				case ast_node_op_t::subtract:		if (!reduce_sub(n)) return false; break;
+				case ast_node_op_t::negate:		if (!reduce_neg(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
 				default: break;
 			};
@@ -5262,7 +5299,11 @@ namespace CIMCC {
 				s = "<none>";
 				break;
 			case token_type_t::intval:
-				snprintf(buf,sizeof(buf),"%llu",t.v.intval.v.u);
+				if (t.v.intval.flags & token_intval_t::FL_SIGNED)
+					snprintf(buf,sizeof(buf),"%lld",t.v.intval.v.v);
+				else
+					snprintf(buf,sizeof(buf),"%llu",t.v.intval.v.u);
+
 				s = "<intval ";
 				s += buf;
 				snprintf(buf,sizeof(buf)," f=0x%x",(unsigned int)t.v.intval.flags);
