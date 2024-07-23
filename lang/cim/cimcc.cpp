@@ -822,12 +822,14 @@ namespace CIMCC {
 		}
 
 		void refill(void);
+		bool reduce(void);
 		bool compile(void);
 		void free_ast(void);
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_number(token_t &t);
 		int64_t getb_hex_cpp23(void);
+		bool reduce(ast_node_t* &root);
 		int64_t getb_octal_cpp23(void);
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
@@ -3744,6 +3746,230 @@ namespace CIMCC {
 		fprintf(stderr,": %s\n",msg.c_str());
 	}
 
+	static void const_intval_cvt_signed(ast_node_t &r) { /* must already be intval */
+		assert(r.tv.type == token_type_t::intval);
+
+		if (!(r.tv.v.intval.flags & token_intval_t::FL_SIGNED)) {
+			r.tv.v.intval.flags |= token_intval_t::FL_SIGNED;
+		}
+	}
+
+	static bool reduce_subexpr(ast_node_t* &r) { /* ast_node_op_t::subexpression */
+		/* [subexpression]
+		 *   \- [a] */
+		/* become */
+		/*  [a] */
+		/* do not lift */
+		/* [subexpression]
+		 *   \- [a] -> [b] -> [c] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::subexpression);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->next) return true;
+
+		r->op = a->op;
+		r->tv = std::move(a->tv);
+
+		r->child = a->child;
+		a->child = NULL;
+
+		a->free_nodes();
+		delete a;
+
+		return true;
+	}
+
+	static bool reduce_div(ast_node_t* &r) { /* ast_node_op_t::divide */
+		/* [div]
+		 *   \- [a] -> [b] */
+		/* become */
+		/* [a / b] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::divide);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+		ast_node_t* b = a->next;
+		if (!b) return true;
+		if (b->child) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
+				/* if either is signed, result is signed */
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					const_intval_cvt_signed(*a);
+					const_intval_cvt_signed(*b);
+					if (b->tv.v.intval.v.v == 0) return false;
+					const signed long long result = a->tv.v.intval.v.v / b->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_nodes(); // invalidates a and b
+				}
+				/* else, unsigned */
+				else {
+					if (b->tv.v.intval.v.u == 0) return false;
+					const unsigned long long result = a->tv.v.intval.v.u / b->tv.v.intval.v.u;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.u = result;
+					r->free_nodes(); // invalidates a and b
+				}
+			}
+		}
+
+		return true;
+	}
+
+	static bool reduce_sub(ast_node_t* &r) { /* ast_node_op_t::subtract */
+		/* [subtract]
+		 *   \- [a] -> [b] */
+		/* become */
+		/*   [a - b] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::subtract);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+		ast_node_t* b = a->next;
+		if (!b) return true;
+		if (b->child) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
+				/* if either is signed, result is signed */
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					const_intval_cvt_signed(*a);
+					const_intval_cvt_signed(*b);
+					const signed long long result = a->tv.v.intval.v.v - b->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_nodes(); // invalidates a and b
+				}
+				/* else, unsigned */
+				else {
+					const unsigned long long result = a->tv.v.intval.v.u - b->tv.v.intval.v.u;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.u = result;
+					r->free_nodes(); // invalidates a and b
+				}
+			}
+		}
+
+		return true;
+	}
+
+	static bool reduce_mul(ast_node_t* &r) { /* ast_node_op_t::multiply */
+		/* [mul]
+		 *   \- [a] -> [b] */
+		/* become */
+		/*   [a * b] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::multiply);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+		ast_node_t* b = a->next;
+		if (!b) return true;
+		if (b->child) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
+				/* if either is signed, result is signed */
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					const_intval_cvt_signed(*a);
+					const_intval_cvt_signed(*b);
+					const signed long long result = a->tv.v.intval.v.v * b->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_nodes(); // invalidates a and b
+				}
+				/* else, unsigned */
+				else {
+					const unsigned long long result = a->tv.v.intval.v.u * b->tv.v.intval.v.u;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.u = result;
+					r->free_nodes(); // invalidates a and b
+				}
+			}
+		}
+
+		return true;
+	}
+
+	static bool reduce_add(ast_node_t* &r) { /* ast_node_op_t::add */
+		/* [add]
+		 *   \- [a] -> [b] */
+		/* become */
+		/*   [a + b] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::add);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+		ast_node_t* b = a->next;
+		if (!b) return true;
+		if (b->child) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
+				/* if either is signed, result is signed */
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					const_intval_cvt_signed(*a);
+					const_intval_cvt_signed(*b);
+					const signed long long result = a->tv.v.intval.v.v + b->tv.v.intval.v.v;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.v = result;
+					r->free_nodes(); // invalidates a and b
+				}
+				/* else, unsigned */
+				else {
+					const unsigned long long result = a->tv.v.intval.v.u + b->tv.v.intval.v.u;
+					r->op = a->op;
+					r->tv = std::move(a->tv);
+					r->tv.v.intval.v.u = result;
+					r->free_nodes(); // invalidates a and b
+				}
+			}
+		}
+
+		return true;
+	}
+
+	bool compiler::reduce(ast_node_t* &root) {
+		if (root == NULL)
+			return true;
+
+		for (ast_node_t *n=root;n;n=n->next) {
+			if (!reduce(n->child))
+				return false;
+
+			switch (n->op) {
+				case ast_node_op_t::multiply:		if (!reduce_mul(n)) return false; break;
+				case ast_node_op_t::divide:		if (!reduce_div(n)) return false; break;
+				case ast_node_op_t::add:		if (!reduce_add(n)) return false; break;
+				case ast_node_op_t::subtract:		if (!reduce_sub(n)) return false; break;
+				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
+				default: break;
+			};
+		}
+
+		return true;
+	}
+
+	bool compiler::reduce(void) {
+		if (!reduce(root_node))
+			return false;
+
+		return true;
+	}
+
 	bool compiler::compile(void) {
 		ast_node_t *apnode = NULL,*rnode = NULL;
 		bool ok = true;
@@ -5820,7 +6046,18 @@ int main(int argc,char **argv) {
 		cc.set_source_ctx(&fdctx,sizeof(fdctx));
 		cc.set_source_name_list(&toksnames);
 
-		cc.compile();
+		if (!cc.compile()) {
+			fprintf(stderr,"Failed to compile\n");
+			dump_ast_nodes(cc.root_node,&toksnames);
+			cc.free_ast();
+			return 1;
+		}
+		if (!cc.reduce()) {
+			fprintf(stderr,"Failed to compile+reduce\n");
+			dump_ast_nodes(cc.root_node,&toksnames);
+			cc.free_ast();
+			return 1;
+		}
 		dump_ast_nodes(cc.root_node,&toksnames);
 		cc.free_ast();
 
