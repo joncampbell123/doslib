@@ -3800,6 +3800,25 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_uplus(ast_node_t* &r) { /* ast_node_op_t::unaryplus */
+		/* [unaryplus]
+		 *   \- [a] */
+		/* become */
+		/*   [a] */
+		assert(r != NULL);
+		assert(r->op == ast_node_op_t::unaryplus);
+		ast_node_t* a = r->child;
+		if (!a) return true;
+		if (a->child) return true;
+
+		r->op = a->op;
+		r->tv = std::move(a->tv);
+
+		r->free_children(); /* invalidates a */
+
+		return true;
+	}
+
 	static bool reduce_neg(ast_node_t* &r) { /* ast_node_op_t::negate */
 		/* [negate]
 		 *   \- [a] */
@@ -3821,7 +3840,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.v = result;
-					r->free_children(); // invalidates a and b
+					r->free_children(); // invalidates a
 				}
 			}
 			else if (a->tv.type == token_type_t::floatval) {
@@ -3829,7 +3848,7 @@ namespace CIMCC {
 				r->op = a->op;
 				r->tv = std::move(a->tv);
 				r->tv.v.floatval.val = result;
-				r->free_children(); // invalidates a and b
+				r->free_children(); // invalidates a
 			}
 		}
 
@@ -4108,6 +4127,7 @@ namespace CIMCC {
 				case ast_node_op_t::add:		if (!reduce_add(n)) return false; break;
 				case ast_node_op_t::subtract:		if (!reduce_sub(n)) return false; break;
 				case ast_node_op_t::negate:		if (!reduce_neg(n)) return false; break;
+				case ast_node_op_t::unaryplus:		if (!reduce_uplus(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
 				default: break;
 			};
