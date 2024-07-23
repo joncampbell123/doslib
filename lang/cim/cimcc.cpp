@@ -342,7 +342,8 @@ namespace CIMCC {
 			T_SHORT=2,
 			T_INT=3,
 			T_LONG=4,
-			T_LONGLONG=5
+			T_LONGLONG=5,
+			T_BOOL=6
 		};
 
 		unsigned char				flags;
@@ -365,6 +366,12 @@ namespace CIMCC {
 		void initu(void) {
 			flags = 0;
 			init_common();
+		}
+
+		void initbool(void) {
+			flags = 0;
+			init_common();
+			itype = T_BOOL;
 		}
 	};
 
@@ -636,8 +643,6 @@ namespace CIMCC {
 		i_array,
 		i_attributes,
 		r_bool,
-		r_true,
-		r_false,
 		r_near,
 		r_far,
 		r_huge,
@@ -999,6 +1004,17 @@ namespace CIMCC {
 			tok_bufdiscard();
 			return true;
 		}
+		else if (t.type == token_type_t::r_true || t.type == token_type_t::r_false) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::constant;
+			pchnode->tv = std::move(t);
+			pchnode->tv.type = token_type_t::intval;
+			pchnode->tv.v.intval.initbool();
+			pchnode->tv.v.intval.v.u = (t.type == token_type_t::r_true) ? 1u : 0u;
+			tok_bufdiscard();
+			return true;
+		}
 		else if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
 			if (tok_bufpeek(1).v.identifier.strcmp("define")) {
 				pchnode = new ast_node_t;
@@ -1244,24 +1260,6 @@ namespace CIMCC {
 
 			return true;
 		}
-		else if (t.type == token_type_t::r_true) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_true;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_false) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_false;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
 		else if (t.type == token_type_t::r_near) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1449,8 +1447,7 @@ namespace CIMCC {
 				pchnode->child->op == ast_node_op_t::r_void || pchnode->child->op == ast_node_op_t::r_volatile ||
 				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list ||
 				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t ||
-				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_true ||
-				pchnode->child->op == ast_node_op_t::r_false || pchnode->child->op == ast_node_op_t::r_near ||
+				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_near ||
 				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge ||
 				pchnode->child->op == ast_node_op_t::r_pound_deftype || pchnode->child->op == ast_node_op_t::r_pound_type) {
 				token_t &nt = tok_bufpeek();
@@ -1683,8 +1680,6 @@ namespace CIMCC {
 			case token_type_t::r_long:
 			case token_type_t::r_int:
 			case token_type_t::r_bool:
-			case token_type_t::r_true:
-			case token_type_t::r_false:
 			case token_type_t::r_near:
 			case token_type_t::r_far:
 			case token_type_t::r_huge:
@@ -1886,9 +1881,8 @@ namespace CIMCC {
 		if (	pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::r_long ||
 			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
-			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_true || pchnode->op == ast_node_op_t::r_false ||
-			pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far || pchnode->op == ast_node_op_t::r_huge ||
-			pchnode->op == ast_node_op_t::r_pound_type) {
+			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far ||
+			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -6361,12 +6355,6 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_bool:
 					name = "bool";
-					break;
-				case ast_node_op_t::r_true:
-					name = "true";
-					break;
-				case ast_node_op_t::r_false:
-					name = "false";
 					break;
 				case ast_node_op_t::r_near:
 					name = "near";

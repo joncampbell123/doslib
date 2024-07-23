@@ -34,6 +34,10 @@ let int lognot8 = !!!1;
 let int lognot9 = !!!2;
 let int lognot10 = !0.0;
 let int lognot11 = !1.0;
+let bool b1 = true;
+let bool b2 = false;
+let bool b3 = !true;
+let bool b4 = !false;
 
 let float x = 3.3;
 let float y = 1 + 1;
