@@ -57,6 +57,12 @@ let int lor2 = 0 || 1;
 let int lor3 = 0 || 2;
 let int lor4 = 1 || 1;
 let int lor5 = true || false;
+let int land1 = 0 && 0;
+let int land2 = 0 && 1;
+let int land3 = 0 && 2;
+let int land4 = 1 && 1;
+let int land5 = true && true;
+let int land6 = true && false;
 
 let float x = 3.3;
 let float y = 1 + 1;
