@@ -3825,7 +3825,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.v = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 				/* else, unsigned */
 				else {
@@ -3834,7 +3834,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.u = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 			}
 		}
@@ -3866,7 +3866,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.v = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 				/* else, unsigned */
 				else {
@@ -3874,7 +3874,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.u = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 			}
 		}
@@ -3906,7 +3906,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.v = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 				/* else, unsigned */
 				else {
@@ -3914,7 +3914,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.u = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 			}
 		}
@@ -3952,7 +3952,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.v = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 				/* else, unsigned */
 				else {
@@ -3960,7 +3960,7 @@ namespace CIMCC {
 					r->op = a->op;
 					r->tv = std::move(a->tv);
 					r->tv.v.intval.v.u = result;
-					r->free_nodes(); // invalidates a and b
+					r->free_children(); // invalidates a and b
 				}
 			}
 			else if (a->tv.type == token_type_t::floatval && b->tv.type == token_type_t::floatval) {
@@ -3968,7 +3968,7 @@ namespace CIMCC {
 				r->op = a->op;
 				r->tv = std::move(a->tv);
 				r->tv.v.floatval.val = result;
-				r->free_nodes(); // invalidates a and b
+				r->free_children(); // invalidates a and b
 			}
 		}
 

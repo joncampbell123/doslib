@@ -5,11 +5,14 @@ let int y = x * 4;
 let int b = x * (4 + 2);
 let int z = (x + y) * (x - y);
 let int g1 = (((((1 + 2) + 3) + 4) + 5) + 6);
+let int g2 = 1 + 2 + 3 + 4 + 5 + 6;
 
 let float x = 3.3;
 let float y = 1 + 1;
-let float y = 1.0 + 1;
-let float y = 1 + 1.0;
-let float y = 1.5 + 4.5;
+let float y1 = 1.0 + 1;
+let float y2 = 1 + 1.0;
+let float y3 = 1.5 + 4.5;
+let float y4 = (((((1.0 + 2.0) + 3.0) + 4.0) + 5.0) + 6.0);
+let float y5 = 1.0 + 2.0 + 3.0 + 4.0 + 5.0 + 6.0;
 
 
