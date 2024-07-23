@@ -3904,6 +3904,22 @@ namespace CIMCC {
 
 	//////////////
 
+	/* for integer types only */
+	template <typename T> static bool reduce_sub_intval(T &r,const T a,const T b) {
+		if (b == T(0)) return false;
+		r = a - b;
+		return true;
+	}
+
+	/* for float types only */
+	template <typename T> static bool reduce_sub_floatval(T &r,const T a,const T b) {
+		if (b == T(0)) return false;
+		r = a - b;
+		return true;
+	}
+
+	//////////////
+
 	/* [r]
 	 *  \- [a]
 	 *
@@ -4050,51 +4066,40 @@ namespace CIMCC {
 
 	static bool reduce_sub(ast_node_t* &r) { /* ast_node_op_t::subtract */
 		/* [subtract]
-		 *   \- [a] -> [b] */
-		/* become */
-		/*   [a - b] */
-		assert(r != NULL);
-		assert(r->op == ast_node_op_t::subtract);
-		ast_node_t* a = r->child;
-		if (!a) return true;
-		if (a->child) return true;
-		ast_node_t* b = a->next;
-		if (!b) return true;
-		if (b->child) return true;
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [a - b] */
+		reduce_check_op(r,ast_node_op_t::subtract);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
-			/* if either value is float, convert to float */
-			if (a->tv.type == token_type_t::floatval || b->tv.type == token_type_t::floatval) {
-				const_cvt_float(*a);
-				const_cvt_float(*b);
-			}
+			const_cvt_both_prep(*a,*b);
 
-			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
-				/* if either is signed, result is signed */
-				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
-					const_intval_cvt_signed(*a);
-					const_intval_cvt_signed(*b);
-					const signed long long result = a->tv.v.intval.v.v - b->tv.v.intval.v.v;
-					r->op = a->op;
-					r->tv = std::move(a->tv);
-					r->tv.v.intval.v.v = result;
-					r->free_children(); // invalidates a and b
+			if (a->tv.type == b->tv.type) {
+				if (a->tv.type == token_type_t::intval) {
+					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+						signed long long result;
+						if (!reduce_sub_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.v = result;
+					}
+					else {
+						unsigned long long result;
+						if (!reduce_sub_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.u = result;
+					}
 				}
-				/* else, unsigned */
-				else {
-					const unsigned long long result = a->tv.v.intval.v.u - b->tv.v.intval.v.u;
-					r->op = a->op;
-					r->tv = std::move(a->tv);
-					r->tv.v.intval.v.u = result;
-					r->free_children(); // invalidates a and b
+				else if (a->tv.type == token_type_t::floatval) {
+					long double result;
+					if (!reduce_sub_floatval(result,a->tv.v.floatval.val,b->tv.v.floatval.val)) return false;
+					reduce_move_up_replace_single(r,a,b);
+					r->tv.v.floatval.val = result;
 				}
-			}
-			else if (a->tv.type == token_type_t::floatval && b->tv.type == token_type_t::floatval) {
-				const long double result = a->tv.v.floatval.val - b->tv.v.floatval.val;
-				r->op = a->op;
-				r->tv = std::move(a->tv);
-				r->tv.v.floatval.val = result;
-				r->free_children(); // invalidates a and b
 			}
 		}
 
