@@ -3877,6 +3877,8 @@ namespace CIMCC {
 		return true;
 	}
 
+	//////////////
+
 	/* for integer types only */
 	template <typename T> static bool reduce_div_intval(T &r,const T a,const T b) {
 		if (b == T(0)) return false;
@@ -3890,6 +3892,17 @@ namespace CIMCC {
 		r = a / b;
 		return true;
 	}
+
+	//////////////
+
+	/* for integer types only */
+	template <typename T> static bool reduce_mod_intval(T &r,const T a,const T b) {
+		if (b == T(0)) return false;
+		r = a % b;
+		return true;
+	}
+
+	//////////////
 
 	/* [r]
 	 *  \- [a]
@@ -3996,40 +4009,38 @@ namespace CIMCC {
 	}
 
 	static bool reduce_mod(ast_node_t* &r) { /* ast_node_op_t::modulo */
-		/* [mod]
-		 *   \- [a] -> [b] */
-		/* become */
-		/* [a % b] */
-		assert(r != NULL);
-		assert(r->op == ast_node_op_t::modulo);
-		ast_node_t* a = r->child;
-		if (!a) return true;
-		if (a->child) return true;
-		ast_node_t* b = a->next;
-		if (!b) return true;
-		if (b->child) return true;
+		/* [modulo]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [a % b] */
+		reduce_check_op(r,ast_node_op_t::modulo);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
-			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
-				/* if either is signed, result is signed */
-				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
-					const_intval_cvt_signed(*a);
-					const_intval_cvt_signed(*b);
-					if (b->tv.v.intval.v.v == 0) return false;
-					const signed long long result = a->tv.v.intval.v.v % b->tv.v.intval.v.v;
-					r->op = a->op;
-					r->tv = std::move(a->tv);
-					r->tv.v.intval.v.v = result;
-					r->free_children(); // invalidates a and b
+			const_cvt_both_prep(*a,*b);
+
+			if (a->tv.type == b->tv.type) {
+				if (a->tv.type == token_type_t::intval) {
+					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+						signed long long result;
+						if (!reduce_mod_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.v = result;
+					}
+					else {
+						unsigned long long result;
+						if (!reduce_mod_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.u = result;
+					}
 				}
-				/* else, unsigned */
-				else {
-					if (b->tv.v.intval.v.u == 0) return false;
-					const unsigned long long result = a->tv.v.intval.v.u % b->tv.v.intval.v.u;
-					r->op = a->op;
-					r->tv = std::move(a->tv);
-					r->tv.v.intval.v.u = result;
-					r->free_children(); // invalidates a and b
+				else if (a->tv.type == token_type_t::floatval) {
+					/* that's what fmod() is for! */
+					return false;
 				}
 			}
 		}
