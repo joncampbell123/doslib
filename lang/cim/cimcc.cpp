@@ -3796,32 +3796,6 @@ namespace CIMCC {
 		}
 	}
 
-	static bool reduce_subexpr(ast_node_t* &r) { /* ast_node_op_t::subexpression */
-		/* [subexpression]
-		 *   \- [a] */
-		/* become */
-		/*  [a] */
-		/* do not lift */
-		/* [subexpression]
-		 *   \- [a] -> [b] -> [c] */
-		assert(r != NULL);
-		assert(r->op == ast_node_op_t::subexpression);
-		ast_node_t* a = r->child;
-		if (!a) return true;
-		if (a->next) return true;
-
-		r->op = a->op;
-		r->tv = std::move(a->tv);
-
-		r->child = a->child;
-		a->child = NULL;
-
-		a->free_nodes();
-		delete a;
-
-		return true;
-	}
-
 	//////////////
 
 	/* for integer types only */
@@ -3931,6 +3905,30 @@ namespace CIMCC {
 	}
 
 	/* [r]
+	 *  \- [a]
+	 *
+	 * become
+	 *
+	 * [a]
+	 *
+	 * [a] may have children */
+	static void reduce_move_up_replace_single_with_child(ast_node_t* &r,ast_node_t* &a) {
+		assert(r != NULL);
+		assert(a != NULL);
+		assert(a->next == NULL);
+		assert(r->child == a);
+
+		r->op = a->op;
+		r->tv = std::move(a->tv);
+		r->child = a->child; /* r->child == a until this line */
+		a->child = NULL;
+
+		a->free_nodes();
+		delete a;
+		a = NULL;
+	}
+
+	/* [r]
 	 *  \- [a] -> [b]
 	 *
 	 * become
@@ -3958,13 +3956,16 @@ namespace CIMCC {
 		assert(r->op == sop);
 	}
 
-	static bool reduce_get_one_param(ast_node_t* &r,ast_node_t* &a) {
+	static constexpr unsigned int RGP_ALLOW_CHILD = (1u << 0u);
+	static constexpr unsigned int RGP_ALLOW_NEXT = (1u << 1u);
+
+	static bool reduce_get_one_param(ast_node_t* &r,ast_node_t* &a,const unsigned int fl=0) {
 		/* assume r != NULL */
 		if (!r->child) return false;
 
 		a = r->child;
-		if (a->child) return false;
-		if (a->next) return false;
+		if (a->child && !(fl & RGP_ALLOW_CHILD)) return false;
+		if (a->next && !(fl & RGP_ALLOW_NEXT)) return false;
 
 		return true;
 	}
@@ -3980,6 +3981,31 @@ namespace CIMCC {
 		b = a->next;
 		if (b->child) return false;
 		if (b->next) return false;
+
+		return true;
+	}
+
+	static bool reduce_subexpr(ast_node_t* &r) { /* ast_node_op_t::subexpression */
+		/* [subexpression]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * [a]
+		 *
+		 * but if there are more nodes
+		 *
+		 * [subexpression]
+		 *   \- [a] -> [b] -> [c] 
+		 *
+		 * do not move up
+		 *
+		 * children in [a] are permitted */
+		reduce_check_op(r,ast_node_op_t::subexpression);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a,RGP_ALLOW_CHILD)) return true;
+		reduce_move_up_replace_single_with_child(r,a);
 
 		return true;
 	}
