@@ -42,6 +42,16 @@ let int bi1 = true;
 let int bi2 = false;
 let int bi3 = ~true;
 let int bi4 = ~false;
+let int bia1 = true + 1;
+let int bia2 = true + 2;
+let int bia3 = false + 1;
+let int bia4 = false + 2;
+let int bia5 = true + true;
+let int bia6 = true + false;
+let int bia7 = true + true + true + true;
+let int bia8 = 3 * (true + true + true + true);
+let int bia9 = 3 * true * true * true * true;
+let int bia10 = 3 * true * false;
 
 let float x = 3.3;
 let float y = 1 + 1;

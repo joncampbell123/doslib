@@ -3790,8 +3790,6 @@ namespace CIMCC {
 			const_cvt_float(b);
 		}
 
-		assert(a.tv.type == b.tv.type);
-
 		if (a.tv.type == token_type_t::intval && b.tv.type == token_type_t::intval) {
 			/* if either is not boolean, then neither is boolean */
 			if (!(a.tv.v.intval.itype == token_intval_t::T_BOOL && b.tv.v.intval.itype == token_intval_t::T_BOOL)) {
@@ -3807,6 +3805,8 @@ namespace CIMCC {
 
 			assert((a.tv.v.intval.flags&token_intval_t::FL_SIGNED) == (b.tv.v.intval.flags&token_intval_t::FL_SIGNED));
 		}
+
+		assert(a.tv.type == b.tv.type);
 	}
 
 	//////////////
@@ -3886,14 +3886,12 @@ namespace CIMCC {
 
 	/* for integer types only */
 	template <typename T> static bool reduce_sub_intval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a - b;
 		return true;
 	}
 
 	/* for float types only */
 	template <typename T> static bool reduce_sub_floatval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a - b;
 		return true;
 	}
@@ -3902,14 +3900,12 @@ namespace CIMCC {
 
 	/* for integer types only */
 	template <typename T> static bool reduce_add_intval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a + b;
 		return true;
 	}
 
 	/* for float types only */
 	template <typename T> static bool reduce_add_floatval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a + b;
 		return true;
 	}
@@ -3918,14 +3914,12 @@ namespace CIMCC {
 
 	/* for integer types only */
 	template <typename T> static bool reduce_mul_intval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a * b;
 		return true;
 	}
 
 	/* for float types only */
 	template <typename T> static bool reduce_mul_floatval(T &r,const T a,const T b) {
-		if (b == T(0)) return false;
 		r = a * b;
 		return true;
 	}
@@ -4158,6 +4152,7 @@ namespace CIMCC {
 
 		ast_node_t *a=NULL;
 		if (!reduce_get_one_param(r,a)) return true;
+		if (a->tv.type == token_type_t::intval) const_intval_cvt_from_boolean(*a); /* convert boolean to int */
 		reduce_move_up_replace_single(r,a);
 
 		return true;
@@ -4177,6 +4172,7 @@ namespace CIMCC {
 
 		if (a->op == ast_node_op_t::constant) {
 			if (a->tv.type == token_type_t::intval) {
+				const_intval_cvt_from_boolean(*a); /* convert boolean to int */
 				const_intval_cvt_signed(*a); /* result is always signed */
 
 				{
@@ -4241,6 +4237,8 @@ namespace CIMCC {
 
 			if (a->tv.type == b->tv.type) {
 				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
 						if (!reduce_div_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
@@ -4283,6 +4281,8 @@ namespace CIMCC {
 
 			if (a->tv.type == b->tv.type) {
 				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
 						if (!reduce_mod_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
@@ -4323,6 +4323,8 @@ namespace CIMCC {
 
 			if (a->tv.type == b->tv.type) {
 				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
 						if (!reduce_sub_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
@@ -4365,6 +4367,8 @@ namespace CIMCC {
 
 			if (a->tv.type == b->tv.type) {
 				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
 						if (!reduce_mul_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
@@ -4407,6 +4411,8 @@ namespace CIMCC {
 
 			if (a->tv.type == b->tv.type) {
 				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
 						if (!reduce_add_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
