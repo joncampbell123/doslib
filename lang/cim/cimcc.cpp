@@ -3822,25 +3822,6 @@ namespace CIMCC {
 		return true;
 	}
 
-	static bool reduce_uplus(ast_node_t* &r) { /* ast_node_op_t::unaryplus */
-		/* [unaryplus]
-		 *   \- [a] */
-		/* become */
-		/*   [a] */
-		assert(r != NULL);
-		assert(r->op == ast_node_op_t::unaryplus);
-		ast_node_t* a = r->child;
-		if (!a) return true;
-		if (a->child) return true;
-
-		r->op = a->op;
-		r->tv = std::move(a->tv);
-
-		r->free_children(); /* invalidates a */
-
-		return true;
-	}
-
 	//////////////
 
 	/* for integer types only */
@@ -3999,6 +3980,22 @@ namespace CIMCC {
 		b = a->next;
 		if (b->child) return false;
 		if (b->next) return false;
+
+		return true;
+	}
+
+	static bool reduce_uplus(ast_node_t* &r) { /* ast_node_op_t::unaryplus */
+		/* [unaryplus]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * [a] */
+		reduce_check_op(r,ast_node_op_t::unaryplus);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a)) return true;
+		reduce_move_up_replace_single(r,a);
 
 		return true;
 	}
