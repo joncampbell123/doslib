@@ -4002,6 +4002,35 @@ namespace CIMCC {
 	 *
 	 * become
 	 *
+	 * [v ? a : b]
+	 *
+	 * [a] and [b] may have children */
+	static void reduce_move_up_replace_single_ternary(ast_node_t* &r,ast_node_t* &a,ast_node_t* &t,ast_node_t* &f,const bool v) {
+		assert(r != NULL);
+		assert(t != NULL);
+		assert(f != NULL);
+		assert(r->child == a);
+		assert(a->next == t);
+		assert(t->next == f);
+		assert(f->next == NULL);
+
+		ast_node_t* const chose = v?t:f;
+
+		r->op = chose->op;
+		r->tv = std::move(chose->tv);
+		r->child = chose->child; /* r->child == a until this line */
+		chose->child = NULL;
+
+		a->free_children(); delete a; a = NULL;
+		t->free_children(); delete t; t = NULL;
+		f->free_children(); delete f; f = NULL;
+	}
+
+	/* [r]
+	 *  \- [a] -> [b]
+	 *
+	 * become
+	 *
 	 * [a] */
 	static void reduce_move_up_replace_single(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b) {
 		assert(r != NULL);
@@ -4063,6 +4092,19 @@ namespace CIMCC {
 	static bool reduce_get_two_params(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,const unsigned int fl=0) {
 		if (!reduce_get_param_common(/*fill in*/a,/*from*/r->child,fl | RGP_ALLOW_NEXT)) return false;
 		if (!reduce_get_param_common(/*fill in*/b,/*from*/a->next,fl)) return false;
+		return true;
+	}
+
+	/* [r]
+	 *  \- [a] -> [b] -> [c]
+	 *
+	 * a = [a]
+	 * b = [b]
+	 * c = [c] */
+	static bool reduce_get_three_params(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ast_node_t* &c,const unsigned int fl=0) {
+		if (!reduce_get_param_common(/*fill in*/a,/*from*/r->child,fl | RGP_ALLOW_NEXT)) return false;
+		if (!reduce_get_param_common(/*fill in*/b,/*from*/a->next,fl | RGP_ALLOW_NEXT)) return false;
+		if (!reduce_get_param_common(/*fill in*/c,/*from*/b->next,fl)) return false;
 		return true;
 	}
 
@@ -4243,6 +4285,40 @@ namespace CIMCC {
 			a = b;
 			b = NULL;
 			reduce_move_up_replace_single(r,a);
+		}
+
+		return true;
+	}
+
+	static bool reduce_ternary(ast_node_t* &r) { /* ast_node_op_t::ternary */
+		/* [comma]
+		 *   \- [a] -> [b] -> [c]
+		 *
+		 * become
+		 *
+		 * [a ? b : c] */
+		reduce_check_op(r,ast_node_op_t::ternary);
+
+		ast_node_t *a=NULL,*b=NULL,*c=NULL;
+		if (!reduce_get_three_params(r,a,b,c)) return true;
+
+		if (a->op == ast_node_op_t::constant) {
+			bool result;
+
+			if (a->tv.type == token_type_t::intval) {
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED)
+					result = reduce_make_boolean_intval(a->tv.v.intval.v.v);
+				else
+					result = reduce_make_boolean_intval(a->tv.v.intval.v.u);
+			}
+			else if (a->tv.type == token_type_t::floatval) {
+				result = reduce_make_boolean_floatval(a->tv.v.floatval.val);
+			}
+			else {
+				return true;
+			}
+
+			reduce_move_up_replace_single_ternary(r,a,b,c,result);
 		}
 
 		return true;
@@ -4576,6 +4652,7 @@ namespace CIMCC {
 				case ast_node_op_t::logical_or:		if (!reduce_logor(n)) return false; break;
 				case ast_node_op_t::logical_and:	if (!reduce_logand(n)) return false; break;
 				case ast_node_op_t::comma:		if (!reduce_comma(n)) return false; break;
+				case ast_node_op_t::ternary:		if (!reduce_ternary(n)) return false; break;
 				default: break;
 			};
 		}

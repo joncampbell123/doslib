@@ -63,6 +63,12 @@ let int land3 = 0 && 2;
 let int land4 = 1 && 1;
 let int land5 = true && true;
 let int land6 = true && false;
+let int tern1 = true ? 1 : -1;
+let int tern2 = false ? -1 : 1;
+let int tern3 = (11 || 40) ? 1 : -1;
+let int tern4 = (-1 + 1) ? -1 : 1;
+let int tern5 = (-1 + 2) ? 1 : -1;
+let int tern6 = (6 + 7) ? 666 : 111;
 
 let float x = 3.3;
 let float y = 1 + 1;
