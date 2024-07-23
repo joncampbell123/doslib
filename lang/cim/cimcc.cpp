@@ -3958,6 +3958,7 @@ namespace CIMCC {
 
 	static constexpr unsigned int RGP_ALLOW_CHILD = (1u << 0u);
 	static constexpr unsigned int RGP_ALLOW_NEXT = (1u << 1u);
+	static constexpr unsigned int RGP_OPTIONAL_PARAMS = (1u << 2u);
 
 	static bool reduce_get_one_param(ast_node_t* &r,ast_node_t* &a,const unsigned int fl=0) {
 		/* assume r != NULL */
@@ -3970,17 +3971,20 @@ namespace CIMCC {
 		return true;
 	}
 
-	static bool reduce_get_two_params(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b) {
+	static bool reduce_get_two_params(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,const unsigned int fl=0) {
 		/* assume r != NULL */
 		if (!r->child) return false;
 
 		a = r->child;
-		if (a->child) return false;
-		if (!a->next) return false;
+		if (a->child && !(fl & RGP_ALLOW_CHILD)) return false;
+		if (!a->next) {
+			if (fl & RGP_OPTIONAL_PARAMS) { b = NULL; return true; }
+			else return false;
+		}
 
 		b = a->next;
-		if (b->child) return false;
-		if (b->next) return false;
+		if (b->child && !(fl & RGP_ALLOW_CHILD)) return false;
+		if (b->next && !(fl & RGP_ALLOW_NEXT)) return false;
 
 		return true;
 	}
