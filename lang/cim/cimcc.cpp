@@ -3799,6 +3799,32 @@ namespace CIMCC {
 	//////////////
 
 	/* for integer types only */
+	template <typename T> static bool reduce_make_boolean_intval(const T a) {
+		return a != T(0);
+	}
+
+	/* for float types only */
+	template <typename T> static bool reduce_make_boolean_floatval(const T a) {
+		return a != T(0);
+	}
+
+	//////////////
+
+	/* for integer types only */
+	template <typename T> static bool reduce_lognot_intval(bool &r,const T a) {
+		r = !reduce_make_boolean_intval(a);
+		return true;
+	}
+
+	/* for float types only */
+	template <typename T> static bool reduce_lognot_floatval(bool &r,const T a) {
+		r = !reduce_make_boolean_floatval(a);
+		return true;
+	}
+
+	//////////////
+
+	/* for integer types only */
 	template <typename T> static bool reduce_binnot_intval(T &r,const T a) {
 		r = ~a;
 		return true;
@@ -4060,6 +4086,47 @@ namespace CIMCC {
 			else if (a->tv.type == token_type_t::floatval) {
 				/* you can't do that to a floating point value! */
 				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static bool reduce_lognot(ast_node_t* &r) { /* ast_node_op_t::logicalnot */
+		/* [binarynot]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * [!a] */
+		reduce_check_op(r,ast_node_op_t::logicalnot);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a)) return true;
+
+		if (a->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval) {
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					bool result;
+					if (!reduce_lognot_intval(result,a->tv.v.intval.v.v)) return false;
+					a->tv.v.intval.flags &= ~token_intval_t::FL_SIGNED;
+					reduce_move_up_replace_single(r,a);
+					r->tv.v.intval.v.u = result;
+				}
+				else {
+					bool result;
+					if (!reduce_lognot_intval(result,a->tv.v.intval.v.u)) return false;
+					reduce_move_up_replace_single(r,a);
+					r->tv.v.intval.v.u = result;
+				}
+			}
+			else if (a->tv.type == token_type_t::floatval) {
+				bool result;
+				if (!reduce_lognot_floatval(result,a->tv.v.floatval.val)) return false;
+				reduce_move_up_replace_single(r,a);
+				r->tv.type = token_type_t::intval;
+				r->tv.v.intval.initu();
+				r->tv.v.intval.v.u = result;
 			}
 		}
 
@@ -4369,6 +4436,7 @@ namespace CIMCC {
 				case ast_node_op_t::unaryplus:		if (!reduce_uplus(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
 				case ast_node_op_t::binarynot:		if (!reduce_binnot(n)) return false; break;
+				case ast_node_op_t::logicalnot:		if (!reduce_lognot(n)) return false; break;
 				case ast_node_op_t::comma:		if (!reduce_comma(n)) return false; break;
 				default: break;
 			};
