@@ -52,6 +52,11 @@ let int bia7 = true + true + true + true;
 let int bia8 = 3 * (true + true + true + true);
 let int bia9 = 3 * true * true * true * true;
 let int bia10 = 3 * true * false;
+let int lor1 = 0 || 0;
+let int lor2 = 0 || 1;
+let int lor3 = 0 || 2;
+let int lor4 = 1 || 1;
+let int lor5 = true || false;
 
 let float x = 3.3;
 let float y = 1 + 1;
