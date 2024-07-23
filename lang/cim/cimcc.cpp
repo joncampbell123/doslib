@@ -3841,39 +3841,17 @@ namespace CIMCC {
 		return true;
 	}
 
-	static bool reduce_neg(ast_node_t* &r) { /* ast_node_op_t::negate */
-		/* [negate]
-		 *   \- [a] */
-		/* become */
-		/*   [-a] */
-		assert(r != NULL);
-		assert(r->op == ast_node_op_t::negate);
-		ast_node_t* a = r->child;
-		if (!a) return true;
-		if (a->child) return true;
+	//////////////
 
-		if (a->op == ast_node_op_t::constant) {
-			if (a->tv.type == token_type_t::intval) {
-				/* result is always signed */
-				const_intval_cvt_signed(*a);
+	/* for integer types only */
+	template <typename T> static bool reduce_neg_intval(T &r,const T a) {
+		r = -a;
+		return true;
+	}
 
-				{
-					const signed long long result = -a->tv.v.intval.v.v;
-					r->op = a->op;
-					r->tv = std::move(a->tv);
-					r->tv.v.intval.v.v = result;
-					r->free_children(); // invalidates a
-				}
-			}
-			else if (a->tv.type == token_type_t::floatval) {
-				const long double result = -a->tv.v.floatval.val;
-				r->op = a->op;
-				r->tv = std::move(a->tv);
-				r->tv.v.floatval.val = result;
-				r->free_children(); // invalidates a
-			}
-		}
-
+	/* for float types only */
+	template <typename T> static bool reduce_neg_floatval(T &r,const T a) {
+		r = -a;
 		return true;
 	}
 
@@ -3999,6 +3977,17 @@ namespace CIMCC {
 		assert(r->op == sop);
 	}
 
+	static bool reduce_get_one_param(ast_node_t* &r,ast_node_t* &a) {
+		/* assume r != NULL */
+		if (!r->child) return false;
+
+		a = r->child;
+		if (a->child) return false;
+		if (a->next) return false;
+
+		return true;
+	}
+
 	static bool reduce_get_two_params(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b) {
 		/* assume r != NULL */
 		if (!r->child) return false;
@@ -4010,6 +3999,40 @@ namespace CIMCC {
 		b = a->next;
 		if (b->child) return false;
 		if (b->next) return false;
+
+		return true;
+	}
+
+	static bool reduce_neg(ast_node_t* &r) { /* ast_node_op_t::negate */
+		/* [negate]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * [-a] */
+		reduce_check_op(r,ast_node_op_t::negate);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a)) return true;
+
+		if (a->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval) {
+				const_intval_cvt_signed(*a); /* result is always signed */
+
+				{
+					signed long long result;
+					if (!reduce_neg_intval(result,a->tv.v.intval.v.v)) return false;
+					reduce_move_up_replace_single(r,a);
+					r->tv.v.intval.v.v = result;
+				}
+			}
+			else if (a->tv.type == token_type_t::floatval) {
+				long double result;
+				if (!reduce_neg_floatval(result,a->tv.v.floatval.val)) return false;
+				reduce_move_up_replace_single(r,a);
+				r->tv.v.floatval.val = result;
+			}
+		}
 
 		return true;
 	}

@@ -14,6 +14,7 @@ let int u1 = 1234u;
 let int u2 = -1234u;
 let int p1 = +3;
 let int p2 = +3 + +5;
+let int p3 = -p1 + 3;
 
 let float x = 3.3;
 let float y = 1 + 1;
