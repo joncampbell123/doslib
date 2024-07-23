@@ -3799,6 +3799,14 @@ namespace CIMCC {
 	//////////////
 
 	/* for integer types only */
+	template <typename T> static bool reduce_binnot_intval(T &r,const T a) {
+		r = ~a;
+		return true;
+	}
+
+	//////////////
+
+	/* for integer types only */
 	template <typename T> static bool reduce_neg_intval(T &r,const T a) {
 		r = -a;
 		return true;
@@ -4018,6 +4026,42 @@ namespace CIMCC {
 		ast_node_t *a=NULL;
 		if (!reduce_get_one_param(r,a,RGP_ALLOW_CHILD)) return true;
 		reduce_move_up_replace_single_with_child(r,a);
+
+		return true;
+	}
+
+	static bool reduce_binnot(ast_node_t* &r) { /* ast_node_op_t::binarynot */
+		/* [binarynot]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * [~a] */
+		reduce_check_op(r,ast_node_op_t::binarynot);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a)) return true;
+
+		if (a->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::intval) {
+				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+					signed long long result;
+					if (!reduce_binnot_intval(result,a->tv.v.intval.v.v)) return false;
+					reduce_move_up_replace_single(r,a);
+					r->tv.v.intval.v.v = result;
+				}
+				else {
+					unsigned long long result;
+					if (!reduce_binnot_intval(result,a->tv.v.intval.v.u)) return false;
+					reduce_move_up_replace_single(r,a);
+					r->tv.v.intval.v.u = result;
+				}
+			}
+			else if (a->tv.type == token_type_t::floatval) {
+				/* you can't do that to a floating point value! */
+				return false;
+			}
+		}
 
 		return true;
 	}
@@ -4297,6 +4341,7 @@ namespace CIMCC {
 				case ast_node_op_t::negate:		if (!reduce_neg(n)) return false; break;
 				case ast_node_op_t::unaryplus:		if (!reduce_uplus(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
+				case ast_node_op_t::binarynot:		if (!reduce_binnot(n)) return false; break;
 				default: break;
 			};
 		}

@@ -16,6 +16,10 @@ let int u2 = -1234u;
 let int p1 = +3;
 let int p2 = +3 + +5;
 let int p3 = -p1 + 3;
+let unsigned int bn1 = ~0u;
+let unsigned int bn2 = ~1u;
+let unsigned int bn3 = ~3u;
+let unsigned int bn4 = ~0xFFFFu;
 
 let float x = 3.3;
 let float y = 1 + 1;
