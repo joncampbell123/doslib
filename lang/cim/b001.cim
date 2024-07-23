@@ -1,0 +1,7 @@
+
+let int x = 3;
+let int a = (2 + (4 * 3)) - (8 / 2);
+let int y = x * 4;
+let int b = x * (4 + 2);
+let int z = (x + y) * (x - y);
+
