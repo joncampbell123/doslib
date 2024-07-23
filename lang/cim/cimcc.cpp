@@ -4116,6 +4116,33 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_comma(ast_node_t* &r) { /* ast_node_op_t::comma */
+		/* [comma]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [b] */
+		reduce_check_op(r,ast_node_op_t::comma);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			assert(r->child == a);
+			assert(a->next == b);
+			r->child = b;
+			a->next = NULL;
+			a->free_nodes();
+			delete a;
+			a = b;
+			b = NULL;
+			reduce_move_up_replace_single(r,a);
+		}
+
+		return true;
+	}
+
 	static bool reduce_div(ast_node_t* &r) { /* ast_node_op_t::divide */
 		/* [div]
 		 *   \- [a] -> [b]
@@ -4342,6 +4369,7 @@ namespace CIMCC {
 				case ast_node_op_t::unaryplus:		if (!reduce_uplus(n)) return false; break;
 				case ast_node_op_t::subexpression:	if (!reduce_subexpr(n)) return false; break;
 				case ast_node_op_t::binarynot:		if (!reduce_binnot(n)) return false; break;
+				case ast_node_op_t::comma:		if (!reduce_comma(n)) return false; break;
 				default: break;
 			};
 		}
