@@ -15,4 +15,8 @@ let float y3 = 1.5 + 4.5;
 let float y4 = (((((1.0 + 2.0) + 3.0) + 4.0) + 5.0) + 6.0);
 let float y5 = 1.0 + 2.0 + 3.0 + 4.0 + 5.0 + 6.0;
 
+let float x1 = 3.0 * 5.0;
+let float x2 = 2.0 / 1.5;
+let float x3 = 3.0 - 1.5;
+let float x4 = 2.5 + 1.5;
 

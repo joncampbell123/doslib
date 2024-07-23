@@ -3815,6 +3815,12 @@ namespace CIMCC {
 		if (b->child) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			/* if either value is float, convert to float */
+			if (a->tv.type == token_type_t::floatval || b->tv.type == token_type_t::floatval) {
+				const_cvt_float(*a);
+				const_cvt_float(*b);
+			}
+
 			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
 				/* if either is signed, result is signed */
 				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
@@ -3837,6 +3843,14 @@ namespace CIMCC {
 					r->free_children(); // invalidates a and b
 				}
 			}
+			else if (a->tv.type == token_type_t::floatval && b->tv.type == token_type_t::floatval) {
+				if (b->tv.v.floatval.val == 0) return false;
+				const long double result = a->tv.v.floatval.val / b->tv.v.floatval.val;
+				r->op = a->op;
+				r->tv = std::move(a->tv);
+				r->tv.v.floatval.val = result;
+				r->free_children(); // invalidates a and b
+			}
 		}
 
 		return true;
@@ -3857,6 +3871,12 @@ namespace CIMCC {
 		if (b->child) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			/* if either value is float, convert to float */
+			if (a->tv.type == token_type_t::floatval || b->tv.type == token_type_t::floatval) {
+				const_cvt_float(*a);
+				const_cvt_float(*b);
+			}
+
 			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
 				/* if either is signed, result is signed */
 				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
@@ -3876,6 +3896,13 @@ namespace CIMCC {
 					r->tv.v.intval.v.u = result;
 					r->free_children(); // invalidates a and b
 				}
+			}
+			else if (a->tv.type == token_type_t::floatval && b->tv.type == token_type_t::floatval) {
+				const long double result = a->tv.v.floatval.val - b->tv.v.floatval.val;
+				r->op = a->op;
+				r->tv = std::move(a->tv);
+				r->tv.v.floatval.val = result;
+				r->free_children(); // invalidates a and b
 			}
 		}
 
@@ -3897,6 +3924,12 @@ namespace CIMCC {
 		if (b->child) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			/* if either value is float, convert to float */
+			if (a->tv.type == token_type_t::floatval || b->tv.type == token_type_t::floatval) {
+				const_cvt_float(*a);
+				const_cvt_float(*b);
+			}
+
 			if (a->tv.type == token_type_t::intval && b->tv.type == token_type_t::intval) {
 				/* if either is signed, result is signed */
 				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED || b->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
@@ -3916,6 +3949,13 @@ namespace CIMCC {
 					r->tv.v.intval.v.u = result;
 					r->free_children(); // invalidates a and b
 				}
+			}
+			else if (a->tv.type == token_type_t::floatval && b->tv.type == token_type_t::floatval) {
+				const long double result = a->tv.v.floatval.val * b->tv.v.floatval.val;
+				r->op = a->op;
+				r->tv = std::move(a->tv);
+				r->tv.v.floatval.val = result;
+				r->free_children(); // invalidates a and b
 			}
 		}
 
