@@ -4009,21 +4009,21 @@ namespace CIMCC {
 		assert(r != NULL);
 		assert(t != NULL);
 		assert(f != NULL);
-		assert(r->child == a);
-		assert(a->next == t);
-		assert(t->next == f);
+		assert(r->child == a); r->child = NULL;
+		assert(a->next == t); a->next = NULL;
+		assert(t->next == f); t->next = NULL;
 		assert(f->next == NULL);
 
 		ast_node_t* const chose = v?t:f;
 
 		r->op = chose->op;
 		r->tv = std::move(chose->tv);
-		r->child = chose->child; /* r->child == a until this line */
+		r->child = chose->child;
 		chose->child = NULL;
 
-		a->free_children(); delete a; a = NULL;
-		t->free_children(); delete t; t = NULL;
-		f->free_children(); delete f; f = NULL;
+		a->free_nodes(); delete a; a = NULL;
+		t->free_nodes(); delete t; t = NULL;
+		f->free_nodes(); delete f; f = NULL;
 	}
 
 	/* [r]
@@ -4300,7 +4300,7 @@ namespace CIMCC {
 		reduce_check_op(r,ast_node_op_t::ternary);
 
 		ast_node_t *a=NULL,*b=NULL,*c=NULL;
-		if (!reduce_get_three_params(r,a,b,c)) return true;
+		if (!reduce_get_three_params(r,a,b,c,RGP_ALLOW_CHILD)) return true;
 
 		if (a->op == ast_node_op_t::constant) {
 			bool result;

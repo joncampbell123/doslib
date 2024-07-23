@@ -69,6 +69,13 @@ let int tern3 = (11 || 40) ? 1 : -1;
 let int tern4 = (-1 + 1) ? -1 : 1;
 let int tern5 = (-1 + 2) ? 1 : -1;
 let int tern6 = (6 + 7) ? 666 : 111;
+let int tern7 = func1() ? 666 : 111;
+let int tern8 = func1() ? func2() : func3();
+let int tern9 = true ? func2() : func3();
+let int tern10 = func1() ? (x + 3) : (x - 3);
+let int tern11 = true ? (x + 3) : (x - 3);
+let int tern11b= false ? (x + 3) : (x - 3);
+let int tern12 = func1() ? (3 + 3) : (4 - 3);
 
 let float x = 3.3;
 let float y = 1 + 1;
