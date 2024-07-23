@@ -20,3 +20,12 @@ let float x2 = 2.0 / 1.5;
 let float x3 = 3.0 - 1.5;
 let float x4 = 2.5 + 1.5;
 
+fn int func1(int x,int y) {
+	return x+y;
+}
+
+fn void func2(void) {
+	let int x = func1(5*(3+4),4+5+6);
+	let int y = func1((3+4+5)*x,x+x);
+}
+
