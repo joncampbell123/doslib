@@ -3773,6 +3773,14 @@ namespace CIMCC {
 		}
 	}
 
+	static void const_intval_cvt_from_boolean(ast_node_t &r) { /* must already be intval */
+		assert(r.op == ast_node_op_t::constant);
+		assert(r.tv.type == token_type_t::intval);
+
+		if (r.tv.v.intval.itype == token_intval_t::T_BOOL)
+			r.tv.v.intval.itype = token_intval_t::T_UNSPEC;
+	}
+
 	static void const_cvt_both_prep(ast_node_t &a,ast_node_t &b) {
 		assert(a.op == ast_node_op_t::constant && b.op == ast_node_op_t::constant);
 
@@ -3785,6 +3793,12 @@ namespace CIMCC {
 		assert(a.tv.type == b.tv.type);
 
 		if (a.tv.type == token_type_t::intval && b.tv.type == token_type_t::intval) {
+			/* if either is not boolean, then neither is boolean */
+			if (!(a.tv.v.intval.itype == token_intval_t::T_BOOL && b.tv.v.intval.itype == token_intval_t::T_BOOL)) {
+				const_intval_cvt_from_boolean(a);
+				const_intval_cvt_from_boolean(b);
+			}
+
 			/* if either is signed, convert to signed */
 			if ((a.tv.v.intval.flags & token_intval_t::FL_SIGNED) || (b.tv.v.intval.flags & token_intval_t::FL_SIGNED)) {
 				const_intval_cvt_signed(a);
@@ -4069,6 +4083,8 @@ namespace CIMCC {
 
 		if (a->op == ast_node_op_t::constant) {
 			if (a->tv.type == token_type_t::intval) {
+				const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+
 				if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 					signed long long result;
 					if (!reduce_binnot_intval(result,a->tv.v.intval.v.v)) return false;

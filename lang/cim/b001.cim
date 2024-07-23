@@ -38,6 +38,10 @@ let bool b1 = true;
 let bool b2 = false;
 let bool b3 = !true;
 let bool b4 = !false;
+let int bi1 = true;
+let int bi2 = false;
+let int bi3 = ~true;
+let int bi4 = ~false;
 
 let float x = 3.3;
 let float y = 1 + 1;
