@@ -5533,9 +5533,9 @@ namespace CIMCC {
 				break;
 			case token_type_t::intval:
 				if (t.v.intval.flags & token_intval_t::FL_SIGNED)
-					snprintf(buf,sizeof(buf),"%lld",t.v.intval.v.v);
+					snprintf(buf,sizeof(buf),"%lld (0x%llx)",t.v.intval.v.v,t.v.intval.v.u);
 				else
-					snprintf(buf,sizeof(buf),"%llu",t.v.intval.v.u);
+					snprintf(buf,sizeof(buf),"%llu (0x%llx)",t.v.intval.v.u,t.v.intval.v.u);
 
 				s = "<intval ";
 				s += buf;
