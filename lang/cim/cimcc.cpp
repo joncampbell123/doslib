@@ -369,9 +369,15 @@ namespace CIMCC {
 		}
 
 		void initbool(void) {
+			v.u = 0;
 			flags = 0;
-			init_common();
 			itype = T_BOOL;
+		}
+
+		void initbool(const bool b) {
+			flags = 0;
+			itype = T_BOOL;
+			v.u = b ? 1 : 0;
 		}
 	};
 
@@ -1010,8 +1016,7 @@ namespace CIMCC {
 			pchnode->op = ast_node_op_t::constant;
 			pchnode->tv = std::move(t);
 			pchnode->tv.type = token_type_t::intval;
-			pchnode->tv.v.intval.initbool();
-			pchnode->tv.v.intval.v.u = (t.type == token_type_t::r_true) ? 1u : 0u;
+			pchnode->tv.v.intval.initbool(t.type == token_type_t::r_true);
 			tok_bufdiscard();
 			return true;
 		}
@@ -4105,15 +4110,13 @@ namespace CIMCC {
 					if (!reduce_lognot_intval(result,a->tv.v.intval.v.v)) return false;
 					a->tv.v.intval.flags &= ~token_intval_t::FL_SIGNED;
 					reduce_move_up_replace_single(r,a);
-					r->tv.v.intval.initbool();
-					r->tv.v.intval.v.u = result ? 1 : 0;
+					r->tv.v.intval.initbool(result);
 				}
 				else {
 					bool result;
 					if (!reduce_lognot_intval(result,a->tv.v.intval.v.u)) return false;
 					reduce_move_up_replace_single(r,a);
-					r->tv.v.intval.initbool();
-					r->tv.v.intval.v.u = result ? 1 : 0;
+					r->tv.v.intval.initbool(result);
 				}
 			}
 			else if (a->tv.type == token_type_t::floatval) {
@@ -4121,8 +4124,7 @@ namespace CIMCC {
 				if (!reduce_lognot_floatval(result,a->tv.v.floatval.val)) return false;
 				reduce_move_up_replace_single(r,a);
 				r->tv.type = token_type_t::intval;
-				r->tv.v.intval.initbool();
-				r->tv.v.intval.v.u = result ? 1 : 0;
+				r->tv.v.intval.initbool(result);
 			}
 		}
 
