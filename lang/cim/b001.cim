@@ -10,6 +10,8 @@ let int g3 = 15 % 4;
 let int g4 = (12 + 3) % 4;
 let int n1 = -3;
 let int n2 = -(1 + 3);
+let int u1 = 1234u;
+let int u2 = -1234u;
 
 let float x = 3.3;
 let float y = 1 + 1;
