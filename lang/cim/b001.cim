@@ -124,6 +124,12 @@ let int gt2 = 1 > 1;
 let int gt3 = true > false;
 let int gt4 = true > true;
 let int gt5 = 1.0 > 0.5;
+let int gte1 = 1 >= 1;
+let int gte2 = 10 >= 1;
+let int gte3 = true >= false;
+let int gte4 = true >= true;
+let int gte5 = 1.0 >= 0.5;
+let int gte6 = 1.0 >= 2.0;
 
 let float x = 3.3;
 let float y = 1 + 1;
