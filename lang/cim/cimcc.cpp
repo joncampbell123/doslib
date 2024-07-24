@@ -3854,6 +3854,22 @@ namespace CIMCC {
 	//////////////
 
 	/* for integer types only */
+	template <typename T> static bool reduce_shl_intval(T &r,const T a,const T b) {
+		r = a << b;
+		return true;
+	}
+
+	//////////////
+
+	/* for integer types only */
+	template <typename T> static bool reduce_shr_intval(T &r,const T a,const T b) {
+		r = a >> b;
+		return true;
+	}
+
+	//////////////
+
+	/* for integer types only */
 	template <typename T> static bool reduce_binand_intval(T &r,const T a,const T b) {
 		r = a & b;
 		return true;
@@ -4443,6 +4459,90 @@ namespace CIMCC {
 			}
 
 			reduce_move_up_replace_single_ternary(r,a,b,c,result);
+		}
+
+		return true;
+	}
+
+	static bool reduce_shl(ast_node_t* &r) { /* ast_node_op_t::leftshift */
+		/* [leftshift]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [a << b] */
+		reduce_check_op(r,ast_node_op_t::leftshift);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			const_cvt_both_prep(*a,*b);
+
+			if (a->tv.type == b->tv.type) {
+				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
+					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+						signed long long result;
+						if (!reduce_shl_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.v = result;
+					}
+					else {
+						unsigned long long result;
+						if (!reduce_shl_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.u = result;
+					}
+				}
+				else if (a->tv.type == token_type_t::floatval) {
+					/* you can't do that to a floating point value! */
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	static bool reduce_shr(ast_node_t* &r) { /* ast_node_op_t::rightshift */
+		/* [rightshift]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [a >> b] */
+		reduce_check_op(r,ast_node_op_t::rightshift);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			const_cvt_both_prep(*a,*b);
+
+			if (a->tv.type == b->tv.type) {
+				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
+					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+						signed long long result;
+						if (!reduce_shr_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.v = result;
+					}
+					else {
+						unsigned long long result;
+						if (!reduce_shr_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.u = result;
+					}
+				}
+				else if (a->tv.type == token_type_t::floatval) {
+					/* you can't do that to a floating point value! */
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -5171,6 +5271,8 @@ namespace CIMCC {
 				case ast_node_op_t::binary_and:		if (!reduce_binand(n)) return false; break;
 				case ast_node_op_t::binary_or:		if (!reduce_binor(n)) return false; break;
 				case ast_node_op_t::notequals:		if (!reduce_nequ(n)) return false; break;
+				case ast_node_op_t::leftshift:		if (!reduce_shl(n)) return false; break;
+				case ast_node_op_t::rightshift:		if (!reduce_shr(n)) return false; break;
 				case ast_node_op_t::equals:		if (!reduce_equ(n)) return false; break;
 				case ast_node_op_t::lessthanorequal:	if (!reduce_lte(n)) return false; break;
 				case ast_node_op_t::greaterthanorequal:	if (!reduce_gte(n)) return false; break;
