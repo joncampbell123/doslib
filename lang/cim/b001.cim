@@ -119,6 +119,11 @@ let int lte2 = 9 <= 9;
 let int lte3 = 10 <= 0;
 let int lte4 = false <= true;
 let int lte5 = true <= true;
+let int gt1 = 1 > 0;
+let int gt2 = 1 > 1;
+let int gt3 = true > false;
+let int gt4 = true > true;
+let int gt5 = 1.0 > 0.5;
 
 let float x = 3.3;
 let float y = 1 + 1;
