@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <type_traits>
 #include <vector>
 #include <string>
 #include <limits>
@@ -3854,6 +3855,22 @@ namespace CIMCC {
 	//////////////
 
 	/* for integer types only */
+	template <typename T> static bool reduce_shl_rangecheck(const T b) {
+		const size_t max_bits = sizeof(token_intval_t::v.u) * size_t(8u) - size_t(std::is_signed<T>::value ? 1 : 0);
+		return (typename std::make_unsigned<T>::type)(b) <= max_bits;
+	}
+
+	//////////////
+
+	/* for integer types only */
+	template <typename T> static bool reduce_shr_rangecheck(const T b) {
+		const size_t max_bits = sizeof(token_intval_t::v.u) * size_t(8u) - size_t(std::is_signed<T>::value ? 1 : 0);
+		return (typename std::make_unsigned<T>::type)(b) <= max_bits;
+	}
+
+	//////////////
+
+	/* for integer types only */
 	template <typename T> static bool reduce_shl_intval(T &r,const T a,const T b) {
 		r = a << b;
 		return true;
@@ -4489,12 +4506,14 @@ namespace CIMCC {
 					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
+						if (!reduce_shl_rangecheck(b->tv.v.intval.v.v)) return true;
 						if (!reduce_shl_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
 						reduce_move_up_replace_single(r,a,b);
 						r->tv.v.intval.v.v = result;
 					}
 					else {
 						unsigned long long result;
+						if (!reduce_shl_rangecheck(b->tv.v.intval.v.v)) return true;
 						if (!reduce_shl_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
 						reduce_move_up_replace_single(r,a,b);
 						r->tv.v.intval.v.u = result;
@@ -4531,12 +4550,14 @@ namespace CIMCC {
 					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
 					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
 						signed long long result;
+						if (!reduce_shr_rangecheck(b->tv.v.intval.v.v)) return true;
 						if (!reduce_shr_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
 						reduce_move_up_replace_single(r,a,b);
 						r->tv.v.intval.v.v = result;
 					}
 					else {
 						unsigned long long result;
+						if (!reduce_shr_rangecheck(b->tv.v.intval.v.v)) return true;
 						if (!reduce_shr_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
 						reduce_move_up_replace_single(r,a,b);
 						r->tv.v.intval.v.u = result;

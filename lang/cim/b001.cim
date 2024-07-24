@@ -134,6 +134,7 @@ let int shl1 = 1 << 0;
 let int shl2 = 1 << 1;
 let int shl3 = 3 << 8;
 let int shl4 = 1 << (1 << 4);
+let int shl5 = 4 << 80; /* very large shift which is not reduced */
 let int shr1 = 1 >> 0;
 let int shr2 = 3 >> 1;
 let int shr3 = 0xFF >> 4;
@@ -143,6 +144,7 @@ let int shr6 = -4 >> 0;
 let int shr7 = -4 >> 1;
 let int shr8 = -4 >> 2;
 let int shr9 = -4 >> 3;
+let int shr10 = 4 >> 80; /* very large shift which is not reduced */
 
 let float x = 3.3;
 let float y = 1 + 1;
