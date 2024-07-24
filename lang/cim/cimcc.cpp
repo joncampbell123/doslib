@@ -1640,6 +1640,7 @@ namespace CIMCC {
 		return true;
 	}
 
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 1 */
 	bool compiler::cpp_scope_expression(ast_node_t* &pchnode) {
 #define NLEX primary_expression
 		if (!NLEX(pchnode))
@@ -1878,6 +1879,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
 	bool compiler::postfix_expression(ast_node_t* &pchnode) {
 #define NLEX cpp_scope_expression
 		if (!NLEX(pchnode))
@@ -2035,6 +2037,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 3 */
 	bool compiler::unary_expression(ast_node_t* &pchnode) {
 #define NLEX postfix_expression
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
@@ -2145,6 +2148,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 3 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 5 */
 	bool compiler::multiplicative_expression(ast_node_t* &pchnode) {
 #define NLEX unary_expression
 		if (!NLEX(pchnode))
@@ -2200,6 +2204,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 4 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 6 */
 	bool compiler::additive_expression(ast_node_t* &pchnode) {
 #define NLEX multiplicative_expression
 		if (!NLEX(pchnode))
@@ -2244,6 +2249,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 5 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 7 */
 	bool compiler::shift_expression(ast_node_t* &pchnode) {
 #define NLEX additive_expression
 		if (!NLEX(pchnode))
@@ -2287,6 +2293,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 6 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 9 */
 	bool compiler::relational_expression(ast_node_t* &pchnode) {
 #define NLEX shift_expression
 		if (!NLEX(pchnode))
@@ -2358,6 +2365,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 7 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 10 */
 	bool compiler::equality_expression(ast_node_t* &pchnode) {
 #define NLEX relational_expression
 		if (!NLEX(pchnode))
@@ -2401,6 +2409,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 8 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 11 */
 	bool compiler::binary_and_expression(ast_node_t* &pchnode) {
 #define NLEX equality_expression
 		if (!NLEX(pchnode))
@@ -2425,6 +2434,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 9 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 12 */
 	bool compiler::binary_xor_expression(ast_node_t* &pchnode) {
 #define NLEX binary_and_expression
 		if (!NLEX(pchnode))
@@ -2449,6 +2459,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 10 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 13 */
 	bool compiler::binary_or_expression(ast_node_t* &pchnode) {
 #define NLEX binary_xor_expression
 		if (!NLEX(pchnode))
@@ -2473,6 +2484,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 11 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 14 */
 	bool compiler::logical_and_expression(ast_node_t* &pchnode) {
 #define NLEX binary_or_expression
 		if (!NLEX(pchnode))
@@ -2497,6 +2509,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 12 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 15 */
 	bool compiler::logical_or_expression(ast_node_t* &pchnode) {
 #define NLEX logical_and_expression
 		if (!NLEX(pchnode))
@@ -2521,6 +2534,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 13 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
 	bool compiler::conditional_expression(ast_node_t* &pchnode) {
 #define NLEX logical_or_expression
 		if (!NLEX(pchnode))
@@ -2556,6 +2570,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
 	bool compiler::assignment_expression(ast_node_t* &pchnode) {
 #define NLEX conditional_expression
 		if (!NLEX(pchnode))
@@ -2700,6 +2715,7 @@ namespace CIMCC {
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 15 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 17 */
 	bool compiler::expression(ast_node_t* &pchnode) {
 #define NLEX assignment_expression
 		if (!NLEX(pchnode))
