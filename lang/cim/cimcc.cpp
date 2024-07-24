@@ -3863,6 +3863,10 @@ namespace CIMCC {
 
 	/* for integer types only */
 	template <typename T> static bool reduce_shr_intval(T &r,const T a,const T b) {
+		/* expected for signed int: sign bit used to fill MSB for shift so that
+		 * -4 (0xFFFC) >> 1 == -2 (0xFFFE)
+		 * signed behavior should not follow unsigned behavior
+		 * -4 (0xFFFC) >> 1 == 32766 (0x7FFE) */
 		r = a >> b;
 		return true;
 	}
