@@ -109,6 +109,10 @@ let int nequ2 = true != false;
 let int nequ3 = (1 + 1) != (2 + 2);
 let int nequ4 = 1.5 != 2.0;
 let int nequ5 = true != true;
+let int lt1 = 0 < 1;
+let int lt2 = 9 < 99;
+let int lt3 = 4 < 0;
+let int lt4 = false < true;
 
 let float x = 3.3;
 let float y = 1 + 1;
