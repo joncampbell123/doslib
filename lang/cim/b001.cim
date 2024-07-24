@@ -113,6 +113,12 @@ let int lt1 = 0 < 1;
 let int lt2 = 9 < 99;
 let int lt3 = 4 < 0;
 let int lt4 = false < true;
+let int lt5 = 4 < 4;
+let int lte1 = 0 <= 1;
+let int lte2 = 9 <= 9;
+let int lte3 = 10 <= 0;
+let int lte4 = false <= true;
+let int lte5 = true <= true;
 
 let float x = 3.3;
 let float y = 1 + 1;
