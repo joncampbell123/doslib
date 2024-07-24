@@ -93,6 +93,17 @@ let int binand2 = 3&0;
 let int binand3 = 7&1;
 let int binand4 = 7&3;
 let int binand5 = 0xFF&0x77&0x35;
+let int equ1 = 1 == 1;
+let int equ2 = 0 == 0;
+let int equ3 = (1 + 0) == (2 - 1);
+let int equ4 = 1 == true;
+let int equ5 = true == true;
+let int equ6 = false == 0;
+let int equ7 = (555 + 111) == 666;
+let int equ8 = 1.0 == 1.0;
+let int equ9 = (1.5 + 4.5) == 6.0;
+let int equ10 = 2 == 3;
+let int equ11 = 10 == true;
 
 let float x = 3.3;
 let float y = 1 + 1;
