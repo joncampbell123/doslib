@@ -3838,6 +3838,14 @@ namespace CIMCC {
 	//////////////
 
 	/* for integer types only */
+	template <typename T> static bool reduce_binxor_intval(T &r,const T a,const T b) {
+		r = a ^ b;
+		return true;
+	}
+
+	//////////////
+
+	/* for integer types only */
 	template <typename T> static bool reduce_binor_intval(T &r,const T a,const T b) {
 		r = a | b;
 		return true;
@@ -4332,6 +4340,48 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_binxor(ast_node_t* &r) { /* ast_node_op_t::binary_xor */
+		/* [binary_xor]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * [a ^ b] */
+		reduce_check_op(r,ast_node_op_t::binary_xor);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			const_cvt_both_prep(*a,*b);
+
+			if (a->tv.type == b->tv.type) {
+				if (a->tv.type == token_type_t::intval) {
+					const_intval_cvt_from_boolean(*a); /* convert boolean to int */
+					const_intval_cvt_from_boolean(*b); /* convert boolean to int */
+					if (a->tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+						signed long long result;
+						if (!reduce_binxor_intval(result,a->tv.v.intval.v.v,b->tv.v.intval.v.v)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.v = result;
+					}
+					else {
+						unsigned long long result;
+						if (!reduce_binxor_intval(result,a->tv.v.intval.v.u,b->tv.v.intval.v.u)) return false;
+						reduce_move_up_replace_single(r,a,b);
+						r->tv.v.intval.v.u = result;
+					}
+				}
+				else if (a->tv.type == token_type_t::floatval) {
+					/* you can't do that to a floating point value! */
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	static bool reduce_binor(ast_node_t* &r) { /* ast_node_op_t::binary_or */
 		/* [binary_or]
 		 *   \- [a] -> [b]
@@ -4703,6 +4753,7 @@ namespace CIMCC {
 				case ast_node_op_t::logical_and:	if (!reduce_logand(n)) return false; break;
 				case ast_node_op_t::comma:		if (!reduce_comma(n)) return false; break;
 				case ast_node_op_t::ternary:		if (!reduce_ternary(n)) return false; break;
+				case ast_node_op_t::binary_xor:		if (!reduce_binxor(n)) return false; break;
 				case ast_node_op_t::binary_or:		if (!reduce_binor(n)) return false; break;
 				default: break;
 			};
