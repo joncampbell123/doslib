@@ -88,6 +88,11 @@ let int binxor2 = 1^1;
 let int binxor3 = 1^3;
 let int binxor4 = 2^3;
 let int binxor5 = 1^2^4^8;
+let int binand1 = 1&1;
+let int binand2 = 3&0;
+let int binand3 = 7&1;
+let int binand4 = 7&3;
+let int binand5 = 0xFF&0x77&0x35;
 
 let float x = 3.3;
 let float y = 1 + 1;
