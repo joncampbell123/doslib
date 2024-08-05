@@ -5390,7 +5390,7 @@ namespace CIMCC {
 							cls |= cls_int | if_short;
 							break;
 						case ast_node_op_t::r_long:
-							cls |= cls_int | if_long;
+							cls |= if_long; /* could be "long" as in int, or "long double" */
 							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
 								cls |= if_llong;
 								chk = chk->next;
@@ -5420,9 +5420,10 @@ namespace CIMCC {
 					};
 				}
 
-				/* cleanup */
-				if ((cls & (cls_float|cls_int|if_long)) == (cls_float|cls_int|if_long)) /* long double, which is not an int */
-					cls &= ~cls_int;
+				/* "long" does not set cls_int to allow "long double".
+				 * if "long" was sspecified and neither cls_int|cls_float then assume cls_int */
+				if ((cls & (cls_int|cls_float)) == 0 && (cls & if_long))
+					cls |= cls_int;
 
 				if (cls & cls_other) {
 					/* do nothing */
