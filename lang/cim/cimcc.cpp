@@ -5533,6 +5533,54 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_fncall(ast_node_t* &r) { /* ast_node_op_t::functioncall */
+		/* [functioncall]
+		 *   \- [identifier] -> .... (args)
+		 *
+		 * become, if basic type, same as a typecast
+		 *
+		 * [ident] -> [arg] ...
+		 *
+		 * ident(arg) */
+		reduce_check_op(r,ast_node_op_t::functioncall);
+
+		ast_node_t *id=NULL,*a1=NULL,*tmp=r->child;
+
+		if (!tmp) return true;
+		id = tmp; tmp = tmp->next;
+
+		if (tmp && tmp->op == ast_node_op_t::argument) {
+			a1 = tmp->child;
+			tmp = tmp->next;
+		}
+
+		if (	id->op == ast_node_op_t::r_bool ||
+			id->op == ast_node_op_t::r_char ||
+			id->op == ast_node_op_t::r_int ||
+			id->op == ast_node_op_t::r_short ||
+			id->op == ast_node_op_t::r_long ||
+			id->op == ast_node_op_t::r_float ||
+			id->op == ast_node_op_t::r_double ||
+			id->op == ast_node_op_t::r_signed ||
+			id->op == ast_node_op_t::r_unsigned) {
+			if (a1 != NULL) {
+				if (a1->op == ast_node_op_t::constant && tmp == NULL) { /* constant and only one param */
+					/* convert the function call into a typecast and run typecast reduce */
+					r->op = ast_node_op_t::typecast;
+					assert(r->child != NULL);
+					assert(r->child == id);
+					assert(r->child->next != NULL);
+					assert(r->child->next->child == a1);
+					delete r->child->next;
+					r->child->next = a1;
+					return reduce_typecast(r);
+				}
+			}
+		}
+
+		return true;
+	}
+
 	bool compiler::reduce(ast_node_t* &root) {
 		if (root == NULL)
 			return true;
@@ -5568,6 +5616,7 @@ namespace CIMCC {
 				case ast_node_op_t::lessthan:		if (!reduce_lt(n)) return false; break;
 				case ast_node_op_t::greaterthan:	if (!reduce_gt(n)) return false; break;
 				case ast_node_op_t::typecast:		if (!reduce_typecast(n)) return false; break;
+				case ast_node_op_t::functioncall:	if (!reduce_fncall(n)) return false; break;
 				default: break;
 			};
 		}

@@ -188,4 +188,11 @@ let bool x = (bool)0;
 let bool x = (bool)3.5;
 let bool x = (bool)0.1;
 let bool x = (bool)0;
-
+let int x = int(5);
+let int x = int(5.0);
+let int x = unsigned(6.3);
+let int x = short(4.1);
+let float x = float(3);
+let double x = double(4);
+let bool x = bool(0.1);
+let bool x = bool(0);
