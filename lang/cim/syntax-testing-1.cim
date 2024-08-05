@@ -744,6 +744,12 @@ fn #type funct(const int x) {
 		return int;
 	else if (x == 1)
 		return long;
+	else if (x == 2)
+		return short;
+	else if (x == 3)
+		return float;
+	else if (x == 4)
+		return double;
 
 	return void;
 }

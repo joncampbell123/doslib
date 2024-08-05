@@ -171,3 +171,12 @@ fn void func2(void) {
 	let int y = func1((3+4+5)*x,x+x);
 }
 
+let float x = (float)4;
+let double x = (double)4;
+let int x = (int)4.2;
+let int x = (int)(double)4.2;
+let int y = (unsigned)4.4;
+let unsigned int x = (unsigned)(-1);
+let signed int x = (signed)4u;
+let int x = (volatile)4;
+

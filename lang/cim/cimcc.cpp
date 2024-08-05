@@ -298,8 +298,10 @@ namespace CIMCC {
 		r_signed,
 		r_unsigned,
 		r_long,
+		r_short,
 		r_int,
 		r_float,
+		r_double,
 		r_void,
 		r_volatile,
 		r_char,
@@ -624,8 +626,10 @@ namespace CIMCC {
 		r_signed,
 		r_unsigned,
 		r_long,
+		r_short,
 		r_int,
 		r_float,
+		r_double,
 		r_void,
 		r_volatile,
 		r_char,
@@ -1248,6 +1252,15 @@ namespace CIMCC {
 
 			return true;
 		}
+		else if (t.type == token_type_t::r_short) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_short;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
 		else if (t.type == token_type_t::r_int) {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
@@ -1297,6 +1310,15 @@ namespace CIMCC {
 			assert(pchnode == NULL);
 			pchnode = new ast_node_t;
 			pchnode->op = ast_node_op_t::r_float;
+			pchnode->tv = std::move(t);
+			tok_bufdiscard();
+
+			return true;
+		}
+		else if (t.type == token_type_t::r_double) {
+			assert(pchnode == NULL);
+			pchnode = new ast_node_t;
+			pchnode->op = ast_node_op_t::r_double;
 			pchnode->tv = std::move(t);
 			tok_bufdiscard();
 
@@ -1677,13 +1699,15 @@ namespace CIMCC {
 			case token_type_t::r_auto:
 			case token_type_t::r_signed:
 			case token_type_t::r_unsigned:
-			case token_type_t::r_long:
 			case token_type_t::r_int:
+			case token_type_t::r_long:
+			case token_type_t::r_short:
 			case token_type_t::r_bool:
 			case token_type_t::r_near:
 			case token_type_t::r_far:
 			case token_type_t::r_huge:
 			case token_type_t::r_float:
+			case token_type_t::r_double:
 			case token_type_t::r_void:
 			case token_type_t::r_volatile:
 			case token_type_t::r_char:
@@ -1883,7 +1907,8 @@ namespace CIMCC {
 			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
 			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far ||
-			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type) {
+			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type || pchnode->op == ast_node_op_t::r_short ||
+			pchnode->op == ast_node_op_t::r_double) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -3755,6 +3780,23 @@ namespace CIMCC {
 		fprintf(stderr,": %s\n",msg.c_str());
 	}
 
+	static void const_cvt_int(ast_node_t &r,const bool do_unsigned=false) {
+		if (r.op == ast_node_op_t::constant) {
+			if (r.tv.type == token_type_t::floatval) {
+				const long double v = r.tv.v.floatval.val;
+				r.tv.type = token_type_t::intval;
+				if (do_unsigned) {
+					r.tv.v.intval.initu();
+					r.tv.v.intval.v.u = (unsigned long long)v;
+				}
+				else {
+					r.tv.v.intval.init();
+					r.tv.v.intval.v.v = (signed long long)v;
+				}
+			}
+		}
+	}
+
 	static void const_cvt_float(ast_node_t &r) {
 		if (r.op == ast_node_op_t::constant) {
 			if (r.tv.type == token_type_t::intval) {
@@ -3780,6 +3822,15 @@ namespace CIMCC {
 
 		if (!(r.tv.v.intval.flags & token_intval_t::FL_SIGNED)) {
 			r.tv.v.intval.flags |= token_intval_t::FL_SIGNED;
+		}
+	}
+
+	static void const_intval_cvt_unsigned(ast_node_t &r) { /* must already be intval */
+		assert(r.op == ast_node_op_t::constant);
+		assert(r.tv.type == token_type_t::intval);
+
+		if (r.tv.v.intval.flags & token_intval_t::FL_SIGNED) {
+			r.tv.v.intval.flags &= ~token_intval_t::FL_SIGNED;
 		}
 	}
 
@@ -4127,6 +4178,17 @@ namespace CIMCC {
 		a = NULL;
 	}
 
+	static void reduce_move_b_to_a(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b) {
+		assert(r->child == a);
+		assert(a->next == b);
+		r->child = b;
+		a->next = NULL;
+		a->free_nodes();
+		delete a;
+		a = b;
+		b = NULL;
+	}
+
 	/* [r]
 	 *  \- [a]
 	 *
@@ -4430,14 +4492,7 @@ namespace CIMCC {
 		if (!reduce_get_two_params(r,a,b)) return true;
 
 		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
-			assert(r->child == a);
-			assert(a->next == b);
-			r->child = b;
-			a->next = NULL;
-			a->free_nodes();
-			delete a;
-			a = b;
-			b = NULL;
+			reduce_move_b_to_a(r,a,b);
 			reduce_move_up_replace_single(r,a);
 		}
 
@@ -5262,6 +5317,75 @@ namespace CIMCC {
 		return true;
 	}
 
+	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
+		/* [typecast]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::typecast);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (b->op == ast_node_op_t::constant) {
+			if (a->op == ast_node_op_t::identifier_list) {
+				// TODO
+			}
+			else if (a->op == ast_node_op_t::r_float) {
+				const_cvt_float(*b);
+				b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_double) {
+				const_cvt_float(*b);
+				b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_int) {
+				const_cvt_int(*b);
+				b->tv.v.intval.itype = token_intval_t::T_INT;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_short) {
+				const_cvt_int(*b);
+				b->tv.v.intval.itype = token_intval_t::T_SHORT;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_long) {
+				const_cvt_int(*b);
+				b->tv.v.intval.itype = token_intval_t::T_LONG;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_signed) {
+				const_cvt_int(*b);
+				const_intval_cvt_signed(*b);
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_unsigned) {
+				const_cvt_int(*b,/*unsigned*/true);
+				const_intval_cvt_unsigned(*b);
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (
+				a->op == ast_node_op_t::r_const || a->op == ast_node_op_t::r_constexpr ||
+				a->op == ast_node_op_t::r_compileexpr || a->op == ast_node_op_t::r_volatile) {
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+		}
+
+		return true;
+	}
+
 	bool compiler::reduce(ast_node_t* &root) {
 		if (root == NULL)
 			return true;
@@ -5296,6 +5420,7 @@ namespace CIMCC {
 				case ast_node_op_t::greaterthanorequal:	if (!reduce_gte(n)) return false; break;
 				case ast_node_op_t::lessthan:		if (!reduce_lt(n)) return false; break;
 				case ast_node_op_t::greaterthan:	if (!reduce_gt(n)) return false; break;
+				case ast_node_op_t::typecast:		if (!reduce_typecast(n)) return false; break;
 				default: break;
 			};
 		}
@@ -5904,6 +6029,9 @@ namespace CIMCC {
 		else if (identlen == 5 && !memcmp(start,"float",5)) {
 			t.type = token_type_t::r_float;
 		}
+		else if (identlen == 6 && !memcmp(start,"double",6)) {
+			t.type = token_type_t::r_double;
+		}
 		else if (identlen == 4 && !memcmp(start,"void",4)) {
 			t.type = token_type_t::r_void;
 		}
@@ -5918,6 +6046,9 @@ namespace CIMCC {
 		}
 		else if (identlen == 4 && !memcmp(start,"long",4)) {
 			t.type = token_type_t::r_long;
+		}
+		else if (identlen == 5 && !memcmp(start,"short",5)) {
+			t.type = token_type_t::r_short;
 		}
 		else if (identlen == 9 && !memcmp(start,"constexpr",9)) {
 			t.type = token_type_t::r_constexpr;
@@ -6747,6 +6878,9 @@ namespace CIMCC {
 			case token_type_t::r_float:
 				s = "<r_float>";
 				break;
+			case token_type_t::r_double:
+				s = "<r_double>";
+				break;
 			case token_type_t::r_void:
 				s = "<r_void>";
 				break;
@@ -6764,6 +6898,9 @@ namespace CIMCC {
 				break;
 			case token_type_t::r_long:
 				s = "<r_long>";
+				break;
+			case token_type_t::r_short:
+				s = "<r_short>";
 				break;
 			case token_type_t::r_static:
 				s = "<r_static>";
@@ -7244,6 +7381,9 @@ namespace CIMCC {
 				case ast_node_op_t::r_float:
 					name = "float";
 					break;
+				case ast_node_op_t::r_double:
+					name = "double";
+					break;
 				case ast_node_op_t::r_void:
 					name = "void";
 					break;
@@ -7270,6 +7410,9 @@ namespace CIMCC {
 					break;
 				case ast_node_op_t::r_long:
 					name = "long";
+					break;
+				case ast_node_op_t::r_short:
+					name = "short";
 					break;
 				case ast_node_op_t::r_static:
 					name = "static";
