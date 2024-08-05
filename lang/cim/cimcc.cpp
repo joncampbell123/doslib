@@ -5354,9 +5354,9 @@ namespace CIMCC {
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
 		static constexpr unsigned int g_volatile =    (1u << 16u);
 		static constexpr unsigned int g_static =      (1u << 17u);
-		static constexpr unsigned int g_near =        (1u << 18u);
-		static constexpr unsigned int g_far =         (1u << 19u);
-		static constexpr unsigned int g_huge =        (1u << 20u);
+		static constexpr unsigned int p_near =        (1u << 18u);
+		static constexpr unsigned int p_far =         (1u << 19u);
+		static constexpr unsigned int p_huge =        (1u << 20u);
 
 		unsigned int cls = 0;
 
@@ -5427,15 +5427,15 @@ namespace CIMCC {
 						chk = chk->next;
 						break;
 					case ast_node_op_t::r_near:
-						cls |= ilc_cls_t::g_near;
+						cls |= ilc_cls_t::p_near;
 						chk = chk->next;
 						break;
 					case ast_node_op_t::r_far:
-						cls |= ilc_cls_t::g_far;
+						cls |= ilc_cls_t::p_far;
 						chk = chk->next;
 						break;
 					case ast_node_op_t::r_huge:
-						cls |= ilc_cls_t::g_huge;
+						cls |= ilc_cls_t::p_huge;
 						chk = chk->next;
 						break;
 					default:
@@ -5472,12 +5472,12 @@ stop_parsing:
 			}
 
 			/* you can declare something near, far, or huge, but not any combination of them */
-			switch (cls & (ilc_cls_t::g_near|ilc_cls_t::g_far|ilc_cls_t::g_huge)) {
+			switch (cls & (ilc_cls_t::p_near|ilc_cls_t::p_far|ilc_cls_t::p_huge)) {
 				case 0: /* none of them */
 					break; /* OK */
-				case ilc_cls_t::g_huge:
-				case ilc_cls_t::g_near:
-				case ilc_cls_t::g_far:
+				case ilc_cls_t::p_huge:
+				case ilc_cls_t::p_near:
+				case ilc_cls_t::p_far:
 					break; /* OK */
 				default:
 					return false; /* NO! */
