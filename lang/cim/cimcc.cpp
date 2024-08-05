@@ -1908,7 +1908,8 @@ namespace CIMCC {
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
 			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far ||
 			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type || pchnode->op == ast_node_op_t::r_short ||
-			pchnode->op == ast_node_op_t::r_double || pchnode->op == ast_node_op_t::r_unsigned) {
+			pchnode->op == ast_node_op_t::r_double || pchnode->op == ast_node_op_t::r_unsigned || pchnode->op == ast_node_op_t::r_near ||
+			pchnode->op == ast_node_op_t::r_far ||pchnode->op == ast_node_op_t::r_huge) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -5353,6 +5354,9 @@ namespace CIMCC {
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
 		static constexpr unsigned int g_volatile =    (1u << 16u);
 		static constexpr unsigned int g_static =      (1u << 17u);
+		static constexpr unsigned int g_near =        (1u << 18u);
+		static constexpr unsigned int g_far =         (1u << 19u);
+		static constexpr unsigned int g_huge =        (1u << 20u);
 
 		unsigned int cls = 0;
 
@@ -5422,6 +5426,18 @@ namespace CIMCC {
 						cls |= ilc_cls_t::g_static;
 						chk = chk->next;
 						break;
+					case ast_node_op_t::r_near:
+						cls |= ilc_cls_t::g_near;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_far:
+						cls |= ilc_cls_t::g_far;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_huge:
+						cls |= ilc_cls_t::g_huge;
+						chk = chk->next;
+						break;
 					default:
 						/* anything else: stop on the token, mark it other, leave "chk" at the other token */
 						cls |= ilc_cls_t::c_other;
@@ -5448,6 +5464,18 @@ stop_parsing:
 						return false; /* you cannot declare something unsigned AND signed at the same time */
 					if ((cls & (ilc_cls_t::i_long|ilc_cls_t::i_llong)) == (ilc_cls_t::i_long|ilc_cls_t::i_llong))
 						return false; /* you cannot declare something long AND long long at the same time */
+					break; /* OK */
+				default:
+					return false; /* NO! */
+			}
+
+			/* you can declare something near, far, or huge, but not any combination of them */
+			switch (cls & (ilc_cls_t::g_near|ilc_cls_t::g_far|ilc_cls_t::g_huge)) {
+				case 0: /* none of them */
+					break; /* OK */
+				case ilc_cls_t::g_huge:
+				case ilc_cls_t::g_near:
+				case ilc_cls_t::g_far:
 					break; /* OK */
 				default:
 					return false; /* NO! */
