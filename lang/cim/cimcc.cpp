@@ -5340,17 +5340,19 @@ private:
 		static constexpr unsigned int c_int =         (1u <<  0u);
 		static constexpr unsigned int c_float =       (1u <<  1u);
 		static constexpr unsigned int c_other =       (1u <<  2u);
-public:
 		static constexpr unsigned int i_bool =        (1u <<  3u);
 		static constexpr unsigned int i_char =        (1u <<  4u);
 		static constexpr unsigned int i_int =         (1u <<  5u);
 		static constexpr unsigned int i_short =       (1u <<  6u);
 		static constexpr unsigned int i_long =        (1u <<  7u);
 		static constexpr unsigned int i_llong =       (1u <<  8u);
+public:
 		static constexpr unsigned int i_signed =      (1u <<  9u);
 		static constexpr unsigned int i_unsigned =    (1u << 10u);
+private:
 		static constexpr unsigned int f_double =      (1u << 11u);
 		static constexpr unsigned int f_float =       (1u << 12u);
+public:
 		static constexpr unsigned int g_const =       (1u << 13u);
 		static constexpr unsigned int g_constexpr =   (1u << 14u);
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
@@ -5594,18 +5596,25 @@ stop_parsing:
 				else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
 					const_cvt_float(*b);
 
-					if ((ilc.cls & (ilc_cls_t::i_long|ilc_cls_t::f_double)) == (ilc_cls_t::i_long|ilc_cls_t::f_double))
-						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
-					else if (ilc.cls & ilc_cls_t::f_double)
-						b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-					else if (ilc.cls & ilc_cls_t::f_float)
-						b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
+					switch (ilc.cls_t) {
+						case ilc_cls_t::t_t::t_float:
+							b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
+							break;
+						case ilc_cls_t::t_t::t_double:
+							b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+							break;
+						case ilc_cls_t::t_t::t_longdouble:
+							b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
+							break;
+						default:
+							break;
+					}
 
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
 				else if (ilc.cls_c == ilc_cls_t::c_t::ct_int) {
-					if (ilc.cls & ilc_cls_t::i_bool) {
+					if (ilc.cls_t == ilc_cls_t::t_t::t_bool) {
 						const_cvt_bool(*b);
 						b->tv.v.intval.itype = token_intval_t::T_BOOL;
 					}
@@ -5617,16 +5626,25 @@ stop_parsing:
 						else if (ilc.cls & ilc_cls_t::i_unsigned)
 							const_intval_cvt_unsigned(*b);
 
-						if (ilc.cls & ilc_cls_t::i_llong)
-							b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
-						else if (ilc.cls & ilc_cls_t::i_long)
-							b->tv.v.intval.itype = token_intval_t::T_LONG;
-						else if (ilc.cls & ilc_cls_t::i_int)
-							b->tv.v.intval.itype = token_intval_t::T_INT;
-						else if (ilc.cls & ilc_cls_t::i_short)
-							b->tv.v.intval.itype = token_intval_t::T_SHORT;
-						else if (ilc.cls & ilc_cls_t::i_char)
-							b->tv.v.intval.itype = token_intval_t::T_CHAR;
+						switch (ilc.cls_t) {
+							case ilc_cls_t::t_t::t_llong:
+								b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
+								break;
+							case ilc_cls_t::t_t::t_long:
+								b->tv.v.intval.itype = token_intval_t::T_LONG;
+								break;
+							case ilc_cls_t::t_t::t_int:
+								b->tv.v.intval.itype = token_intval_t::T_INT;
+								break;
+							case ilc_cls_t::t_t::t_short:
+								b->tv.v.intval.itype = token_intval_t::T_SHORT;
+								break;
+							case ilc_cls_t::t_t::t_char:
+								b->tv.v.intval.itype = token_intval_t::T_CHAR;
+								break;
+							default:
+								break;
+						}
 					}
 
 					reduce_move_b_to_a(r,a,b);
