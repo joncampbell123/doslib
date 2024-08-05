@@ -1908,7 +1908,7 @@ namespace CIMCC {
 			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
 			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far ||
 			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type || pchnode->op == ast_node_op_t::r_short ||
-			pchnode->op == ast_node_op_t::r_double) {
+			pchnode->op == ast_node_op_t::r_double || pchnode->op == ast_node_op_t::r_unsigned) {
 			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
 			 *
 			 * This is necessary in order for later parsing to handle a statement like:
@@ -5344,11 +5344,129 @@ namespace CIMCC {
 		reduce_check_op(r,ast_node_op_t::typecast);
 
 		ast_node_t *a=NULL,*b=NULL;
-		if (!reduce_get_two_params(r,a,b)) return true;
+		if (!reduce_get_two_params(r,a,b,RGP_ALLOW_CHILD)) return true;
 
 		if (b->op == ast_node_op_t::constant) {
 			if (a->op == ast_node_op_t::identifier_list) {
-				// TODO
+				// TODO: This classification code should move to a function someday
+				static constexpr unsigned int cls_int =   (1u << 0u);
+				static constexpr unsigned int cls_float = (1u << 1u);
+				static constexpr unsigned int cls_other = (1u << 2u);
+
+				static constexpr unsigned int if_bool =   (1u <<  8u);
+				static constexpr unsigned int if_char =   (1u <<  9u);
+				static constexpr unsigned int if_int =    (1u << 10u);
+				static constexpr unsigned int if_short =  (1u << 11u);
+				static constexpr unsigned int if_long =   (1u << 12u);
+				static constexpr unsigned int if_llong =  (1u << 13u);
+				static constexpr unsigned int if_signed = (1u << 14u);
+				static constexpr unsigned int if_unsigned=(1u << 15u);
+				static constexpr unsigned int ff_double = (1u << 16u);
+				static constexpr unsigned int ff_float =  (1u << 17u);
+
+				unsigned int cls = 0;
+
+				for (ast_node_t *chk = a->child;chk;chk=chk->next) {
+					switch (chk->op) {
+						case ast_node_op_t::r_float:
+							cls |= cls_float | ff_float;
+							break;
+						case ast_node_op_t::r_double:
+							cls |= cls_float | ff_double;
+							break;
+						case ast_node_op_t::r_bool:
+							cls |= cls_int | if_bool;
+							break;
+						case ast_node_op_t::r_char:
+							cls |= cls_int | if_char;
+							break;
+						case ast_node_op_t::r_int:
+							cls |= cls_int | if_int;
+							break;
+						case ast_node_op_t::r_short:
+							cls |= cls_int | if_short;
+							break;
+						case ast_node_op_t::r_long:
+							if (cls & if_long)
+								cls |= if_llong; /* long -> long long */
+							else
+								cls |= cls_int | if_long;
+							break;
+						case ast_node_op_t::r_signed:
+							cls |= cls_int | if_signed;
+							break;
+						case ast_node_op_t::r_unsigned:
+							cls |= cls_int | if_unsigned;
+							break;
+						case ast_node_op_t::r_const:
+						case ast_node_op_t::r_constexpr:
+						case ast_node_op_t::r_compileexpr:
+						case ast_node_op_t::r_volatile:
+							break; /* ignore */
+						default:
+							cls |= cls_other;
+							break;
+					};
+				}
+
+				/* cleanup */
+				if ((cls & (cls_float|cls_int|if_long)) == (cls_float|cls_int|if_long)) /* long double, which is not an int */
+					cls &= ~cls_int;
+
+				if (cls & cls_other) {
+					/* do nothing */
+				}
+				else if ((cls & (cls_float|cls_int)) == (cls_float|cls_int)) {
+					return false; /* uh, what? */
+				}
+				else if (cls & cls_float) {
+					const_cvt_float(*b);
+
+					if (cls & if_llong)
+						return false; /* no, we don't support long long double, no such thing */
+
+					if ((cls & (if_llong|ff_double)) == (if_llong|ff_double))
+						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
+					else if (cls & ff_double)
+						b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+					else if (cls & ff_float)
+						b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
+
+					reduce_move_b_to_a(r,a,b);
+					reduce_move_up_replace_single(r,a);
+				}
+				else if (cls & cls_int) {
+					if (cls & if_bool) {
+						const_cvt_bool(*b);
+						b->tv.v.intval.itype = token_intval_t::T_BOOL;
+					}
+					else {
+						if ((cls & (if_signed|if_unsigned)) == (if_signed|if_unsigned)) {
+							return false; /* uh, what? */
+						}
+
+						const_cvt_int(*b,(cls&if_unsigned)?true:false);
+
+						if (cls & if_signed)
+							const_intval_cvt_signed(*b);
+						else if (cls & if_unsigned)
+							const_intval_cvt_unsigned(*b);
+
+						if (cls & if_llong)
+							b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
+						else if (cls & if_long)
+							b->tv.v.intval.itype = token_intval_t::T_LONG;
+						else if (cls & if_int)
+							b->tv.v.intval.itype = token_intval_t::T_INT;
+						else if (cls & if_short)
+							b->tv.v.intval.itype = token_intval_t::T_SHORT;
+						else if (cls & if_char)
+							b->tv.v.intval.itype = token_intval_t::T_CHAR;
+					}
+
+					reduce_move_b_to_a(r,a,b);
+					reduce_move_up_replace_single(r,a);
+				}
 			}
 			else if (a->op == ast_node_op_t::r_float) {
 				const_cvt_float(*b);
