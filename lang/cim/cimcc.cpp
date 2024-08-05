@@ -5356,6 +5356,104 @@ namespace CIMCC {
 
 		unsigned int cls = 0;
 
+		bool parse_idlist(ast_node_t* &chk) {
+			while (chk != NULL) {
+				switch (chk->op) {
+					case ast_node_op_t::r_float:
+						cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_double:
+						cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_bool:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_char:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_int:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_short:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_long: {
+						const unsigned int p_cls = cls;
+
+						cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
+						chk = chk->next;
+
+						if (chk && chk->op == ast_node_op_t::r_long) { /* long long */
+							cls = p_cls | ilc_cls_t::i_llong;
+							chk = chk->next;
+						}
+						break; }
+					case ast_node_op_t::r_signed:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_unsigned:
+						cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_const:
+						cls |= ilc_cls_t::g_const;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_constexpr:
+						cls |= ilc_cls_t::g_constexpr;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_compileexpr:
+						cls |= ilc_cls_t::g_compileexpr;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_volatile:
+						cls |= ilc_cls_t::g_volatile;
+						chk = chk->next;
+						break;
+					case ast_node_op_t::r_static:
+						cls |= ilc_cls_t::g_static;
+						chk = chk->next;
+						break;
+					default:
+						cls |= ilc_cls_t::c_other;
+						goto stop_parsing;
+				}
+			}
+stop_parsing:
+
+			/* "long" does not set ilc_cls_t::c_int to allow "long double".
+			 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
+			if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
+				cls |= ilc_cls_t::c_int;
+
+			/* you can declare an int, a float, or an other, but not any combination of them */
+			switch (cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
+				case ilc_cls_t::c_other:
+					break; /* OK */
+				case ilc_cls_t::c_float:
+					if (cls & ilc_cls_t::i_llong)
+						return false; /* no such thing, "long long" float */
+					break; /* OK */
+				case ilc_cls_t::c_int:
+					if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
+						return false; /* you cannot declare something unsigned AND signed at the same time */
+					if ((cls & (ilc_cls_t::i_long|ilc_cls_t::i_llong)) == (ilc_cls_t::i_long|ilc_cls_t::i_llong))
+						return false; /* you cannot declare something long AND long long at the same time */
+					break; /* OK */
+				default:
+					return false; /* NO! */
+			}
+
+			return true;
+		}
 	};
 
 	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
@@ -5372,84 +5470,10 @@ namespace CIMCC {
 
 		if (b->op == ast_node_op_t::constant) {
 			if (a->op == ast_node_op_t::identifier_list) {
+				ast_node_t *chk = a->child;
 				ilc_cls_t ilc;
 
-				for (ast_node_t *chk = a->child;chk;chk=chk->next) {
-					switch (chk->op) {
-						case ast_node_op_t::r_float:
-							ilc.cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
-							break;
-						case ast_node_op_t::r_double:
-							ilc.cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
-							break;
-						case ast_node_op_t::r_bool:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
-							break;
-						case ast_node_op_t::r_char:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
-							break;
-						case ast_node_op_t::r_int:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
-							break;
-						case ast_node_op_t::r_short:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
-							break;
-						case ast_node_op_t::r_long:
-							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
-								ilc.cls |= ilc_cls_t::i_llong;
-								chk = chk->next;
-							}
-							else {
-								ilc.cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
-							}
-							break;
-						case ast_node_op_t::r_signed:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
-							break;
-						case ast_node_op_t::r_unsigned:
-							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
-							break;
-						case ast_node_op_t::r_const:
-							ilc.cls |= ilc_cls_t::g_const;
-							break;
-						case ast_node_op_t::r_constexpr:
-							ilc.cls |= ilc_cls_t::g_constexpr;
-							break;
-						case ast_node_op_t::r_compileexpr:
-							ilc.cls |= ilc_cls_t::g_compileexpr;
-							break;
-						case ast_node_op_t::r_volatile:
-							ilc.cls |= ilc_cls_t::g_volatile;
-							break;
-						case ast_node_op_t::r_static:
-							ilc.cls |= ilc_cls_t::g_static;
-							break;
-						default:
-							ilc.cls |= ilc_cls_t::c_other;
-							break;
-					};
-				}
-
-				/* "long" does not set ilc_cls_t::c_int to allow "long double".
-				 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
-				if ((ilc.cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (ilc.cls & ilc_cls_t::i_long))
-					ilc.cls |= ilc_cls_t::c_int;
-
-				/* you can declare an int, a float, or an other, but not any combination of them */
-				switch (ilc.cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
-					case ilc_cls_t::c_other:
-						break; /* OK */
-					case ilc_cls_t::c_float:
-						if (ilc.cls & ilc_cls_t::i_llong)
-							return false; /* no such thing, "long long" float */
-						break; /* OK */
-					case ilc_cls_t::c_int:
-						if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
-							return false; /* you cannot declare something unsigned AND signed at the same time */
-						break; /* OK */
-					default:
-						return false; /* NO! */
-				}
+				if (!ilc.parse_idlist(chk)) return false;
 
 				if (ilc.cls & ilc_cls_t::c_other) {
 					/* do nothing */
