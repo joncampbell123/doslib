@@ -5352,6 +5352,9 @@ namespace CIMCC {
 		static constexpr unsigned int g_constexpr =   (1u << 14u);
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
 		static constexpr unsigned int g_volatile =    (1u << 16u);
+
+		unsigned int cls = 0;
+
 	};
 
 	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
@@ -5368,112 +5371,112 @@ namespace CIMCC {
 
 		if (b->op == ast_node_op_t::constant) {
 			if (a->op == ast_node_op_t::identifier_list) {
-				unsigned int cls = 0;
+				ilc_cls_t ilc;
 
 				for (ast_node_t *chk = a->child;chk;chk=chk->next) {
 					switch (chk->op) {
 						case ast_node_op_t::r_float:
-							cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
+							ilc.cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
 							break;
 						case ast_node_op_t::r_double:
-							cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
+							ilc.cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
 							break;
 						case ast_node_op_t::r_bool:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
 							break;
 						case ast_node_op_t::r_char:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
 							break;
 						case ast_node_op_t::r_int:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
 							break;
 						case ast_node_op_t::r_short:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
 							break;
 						case ast_node_op_t::r_long:
-							cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
+							ilc.cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
 							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
-								cls |= ilc_cls_t::i_llong;
+								ilc.cls |= ilc_cls_t::i_llong;
 								chk = chk->next;
 							}
 							break;
 						case ast_node_op_t::r_signed:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
 							break;
 						case ast_node_op_t::r_unsigned:
-							cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
+							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
 							break;
 						case ast_node_op_t::r_const:
-							cls |= ilc_cls_t::g_const;
+							ilc.cls |= ilc_cls_t::g_const;
 							break;
 						case ast_node_op_t::r_constexpr:
-							cls |= ilc_cls_t::g_constexpr;
+							ilc.cls |= ilc_cls_t::g_constexpr;
 							break;
 						case ast_node_op_t::r_compileexpr:
-							cls |= ilc_cls_t::g_compileexpr;
+							ilc.cls |= ilc_cls_t::g_compileexpr;
 							break;
 						case ast_node_op_t::r_volatile:
-							cls |= ilc_cls_t::g_volatile;
+							ilc.cls |= ilc_cls_t::g_volatile;
 							break;
 						default:
-							cls |= ilc_cls_t::c_other;
+							ilc.cls |= ilc_cls_t::c_other;
 							break;
 					};
 				}
 
 				/* "long" does not set ilc_cls_t::c_int to allow "long double".
 				 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
-				if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
-					cls |= ilc_cls_t::c_int;
+				if ((ilc.cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (ilc.cls & ilc_cls_t::i_long))
+					ilc.cls |= ilc_cls_t::c_int;
 
-				if (cls & ilc_cls_t::c_other) {
+				if (ilc.cls & ilc_cls_t::c_other) {
 					/* do nothing */
 				}
-				else if ((cls & (ilc_cls_t::c_float|ilc_cls_t::c_int)) == (ilc_cls_t::c_float|ilc_cls_t::c_int)) {
+				else if ((ilc.cls & (ilc_cls_t::c_float|ilc_cls_t::c_int)) == (ilc_cls_t::c_float|ilc_cls_t::c_int)) {
 					return false; /* uh, what? */
 				}
-				else if (cls & ilc_cls_t::c_float) {
+				else if (ilc.cls & ilc_cls_t::c_float) {
 					const_cvt_float(*b);
 
-					if (cls & ilc_cls_t::i_llong)
+					if (ilc.cls & ilc_cls_t::i_llong)
 						return false; /* no, we don't support long long double, no such thing */
 
-					if ((cls & (ilc_cls_t::i_llong|ilc_cls_t::f_double)) == (ilc_cls_t::i_llong|ilc_cls_t::f_double))
+					if ((ilc.cls & (ilc_cls_t::i_llong|ilc_cls_t::f_double)) == (ilc_cls_t::i_llong|ilc_cls_t::f_double))
 						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
-					else if (cls & ilc_cls_t::f_double)
+					else if (ilc.cls & ilc_cls_t::f_double)
 						b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-					else if (cls & ilc_cls_t::f_float)
+					else if (ilc.cls & ilc_cls_t::f_float)
 						b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
 
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
-				else if (cls & ilc_cls_t::c_int) {
-					if (cls & ilc_cls_t::i_bool) {
+				else if (ilc.cls & ilc_cls_t::c_int) {
+					if (ilc.cls & ilc_cls_t::i_bool) {
 						const_cvt_bool(*b);
 						b->tv.v.intval.itype = token_intval_t::T_BOOL;
 					}
 					else {
-						if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) {
+						if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) {
 							return false; /* uh, what? */
 						}
 
-						const_cvt_int(*b,(cls&ilc_cls_t::i_unsigned)?true:false);
+						const_cvt_int(*b,(ilc.cls&ilc_cls_t::i_unsigned)?true:false);
 
-						if (cls & ilc_cls_t::i_signed)
+						if (ilc.cls & ilc_cls_t::i_signed)
 							const_intval_cvt_signed(*b);
-						else if (cls & ilc_cls_t::i_unsigned)
+						else if (ilc.cls & ilc_cls_t::i_unsigned)
 							const_intval_cvt_unsigned(*b);
 
-						if (cls & ilc_cls_t::i_llong)
+						if (ilc.cls & ilc_cls_t::i_llong)
 							b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
-						else if (cls & ilc_cls_t::i_long)
+						else if (ilc.cls & ilc_cls_t::i_long)
 							b->tv.v.intval.itype = token_intval_t::T_LONG;
-						else if (cls & ilc_cls_t::i_int)
+						else if (ilc.cls & ilc_cls_t::i_int)
 							b->tv.v.intval.itype = token_intval_t::T_INT;
-						else if (cls & ilc_cls_t::i_short)
+						else if (ilc.cls & ilc_cls_t::i_short)
 							b->tv.v.intval.itype = token_intval_t::T_SHORT;
-						else if (cls & ilc_cls_t::i_char)
+						else if (ilc.cls & ilc_cls_t::i_char)
 							b->tv.v.intval.itype = token_intval_t::T_CHAR;
 					}
 
