@@ -5576,6 +5576,77 @@ public:
 		}
 	};
 
+	static bool reduce_typecast_doit(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ast_node_t* &chk,ilc_cls_t &ilc) {
+		(void)chk;
+
+		if (ilc.cls_c == ilc_cls_t::c_t::ct_other) {
+			/* do nothing */
+		}
+		else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
+			const_cvt_float(*b);
+
+			switch (ilc.cls_t) {
+				case ilc_cls_t::t_t::t_float:
+					b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
+					break;
+				case ilc_cls_t::t_t::t_double:
+					b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+					break;
+				case ilc_cls_t::t_t::t_longdouble:
+					b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
+					break;
+				default:
+					break;
+			}
+
+			reduce_move_b_to_a(r,a,b);
+			reduce_move_up_replace_single(r,a);
+		}
+		else if (ilc.cls_c == ilc_cls_t::c_t::ct_int) {
+			if (ilc.cls_t == ilc_cls_t::t_t::t_bool) {
+				const_cvt_bool(*b);
+				b->tv.v.intval.itype = token_intval_t::T_BOOL;
+			}
+			else {
+				const_cvt_int(*b,(ilc.cls&ilc_cls_t::i_unsigned)?true:false);
+
+				if (ilc.cls & ilc_cls_t::i_signed)
+					const_intval_cvt_signed(*b);
+				else if (ilc.cls & ilc_cls_t::i_unsigned)
+					const_intval_cvt_unsigned(*b);
+
+				switch (ilc.cls_t) {
+					case ilc_cls_t::t_t::t_llong:
+						b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
+						break;
+					case ilc_cls_t::t_t::t_long:
+						b->tv.v.intval.itype = token_intval_t::T_LONG;
+						break;
+					case ilc_cls_t::t_t::t_int:
+						b->tv.v.intval.itype = token_intval_t::T_INT;
+						break;
+					case ilc_cls_t::t_t::t_short:
+						b->tv.v.intval.itype = token_intval_t::T_SHORT;
+						break;
+					case ilc_cls_t::t_t::t_char:
+						b->tv.v.intval.itype = token_intval_t::T_CHAR;
+						break;
+					default:
+						break;
+				}
+			}
+
+			reduce_move_b_to_a(r,a,b);
+			reduce_move_up_replace_single(r,a);
+		}
+		else if (ilc.cls_c == ilc_cls_t::c_t::ct_none) {
+			reduce_move_b_to_a(r,a,b);
+			reduce_move_up_replace_single(r,a);
+		}
+
+		return true;
+	}
+
 	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
 		/* [typecast]
 		 *   \- [a] -> [b]
@@ -5593,72 +5664,10 @@ public:
 				ast_node_t *chk = a->child;
 				ilc_cls_t ilc;
 
-				if (!ilc.parse_idlist(chk)) return false;
-
-				if (ilc.cls_c == ilc_cls_t::c_t::ct_other) {
-					/* do nothing */
-				}
-				else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
-					const_cvt_float(*b);
-
-					switch (ilc.cls_t) {
-						case ilc_cls_t::t_t::t_float:
-							b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
-							break;
-						case ilc_cls_t::t_t::t_double:
-							b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-							break;
-						case ilc_cls_t::t_t::t_longdouble:
-							b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
-							break;
-						default:
-							break;
-					}
-
-					reduce_move_b_to_a(r,a,b);
-					reduce_move_up_replace_single(r,a);
-				}
-				else if (ilc.cls_c == ilc_cls_t::c_t::ct_int) {
-					if (ilc.cls_t == ilc_cls_t::t_t::t_bool) {
-						const_cvt_bool(*b);
-						b->tv.v.intval.itype = token_intval_t::T_BOOL;
-					}
-					else {
-						const_cvt_int(*b,(ilc.cls&ilc_cls_t::i_unsigned)?true:false);
-
-						if (ilc.cls & ilc_cls_t::i_signed)
-							const_intval_cvt_signed(*b);
-						else if (ilc.cls & ilc_cls_t::i_unsigned)
-							const_intval_cvt_unsigned(*b);
-
-						switch (ilc.cls_t) {
-							case ilc_cls_t::t_t::t_llong:
-								b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
-								break;
-							case ilc_cls_t::t_t::t_long:
-								b->tv.v.intval.itype = token_intval_t::T_LONG;
-								break;
-							case ilc_cls_t::t_t::t_int:
-								b->tv.v.intval.itype = token_intval_t::T_INT;
-								break;
-							case ilc_cls_t::t_t::t_short:
-								b->tv.v.intval.itype = token_intval_t::T_SHORT;
-								break;
-							case ilc_cls_t::t_t::t_char:
-								b->tv.v.intval.itype = token_intval_t::T_CHAR;
-								break;
-							default:
-								break;
-						}
-					}
-
-					reduce_move_b_to_a(r,a,b);
-					reduce_move_up_replace_single(r,a);
-				}
-				else if (ilc.cls_c == ilc_cls_t::c_t::ct_none) {
-					reduce_move_b_to_a(r,a,b);
-					reduce_move_up_replace_single(r,a);
-				}
+				if (!ilc.parse_idlist(chk))
+					return false;
+				if (!reduce_typecast_doit(r,a,b,chk,ilc))
+					return false;
 			}
 			else if (a->op == ast_node_op_t::r_float) {
 				const_cvt_float(*b);
