@@ -5481,6 +5481,16 @@ stop_parsing:
 					return false; /* NO! */
 			}
 
+			/* chk must be NULL (finished scanning) unless c_other */
+			if (cls & ilc_cls_t::c_other) {
+				if (chk == NULL)
+					return false; /* BUG */
+			}
+			else {
+				if (chk != NULL)
+					return false; /* BUG */
+			}
+
 			return true;
 		}
 	};
