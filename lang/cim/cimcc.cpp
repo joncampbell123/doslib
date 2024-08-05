@@ -4159,6 +4159,23 @@ namespace CIMCC {
 
 	//////////////
 
+	static void const_cvt_bool(ast_node_t &r) {
+		if (r.op == ast_node_op_t::constant) {
+			if (r.tv.type == token_type_t::floatval) {
+				const long double v = r.tv.v.floatval.val;
+				r.tv.type = token_type_t::intval;
+				r.tv.v.intval.init();
+				r.tv.v.intval.itype = token_intval_t::T_BOOL;
+				r.tv.v.intval.v.v = reduce_make_boolean_intval(v);
+			}
+			else if (r.tv.type == token_type_t::intval) {
+				const signed long v = r.tv.v.intval.v.v;
+				r.tv.v.intval.itype = token_intval_t::T_BOOL;
+				r.tv.v.intval.v.v = reduce_make_boolean_intval(v);
+			}
+		}
+	}
+
 	/* [r]
 	 *  \- [a]
 	 *
@@ -5342,6 +5359,18 @@ namespace CIMCC {
 			else if (a->op == ast_node_op_t::r_double) {
 				const_cvt_float(*b);
 				b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_bool) {
+				const_cvt_bool(*b);
+				b->tv.v.intval.itype = token_intval_t::T_BOOL;
+				reduce_move_b_to_a(r,a,b);
+				reduce_move_up_replace_single(r,a);
+			}
+			else if (a->op == ast_node_op_t::r_char) {
+				const_cvt_int(*b);
+				b->tv.v.intval.itype = token_intval_t::T_CHAR;
 				reduce_move_b_to_a(r,a,b);
 				reduce_move_up_replace_single(r,a);
 			}

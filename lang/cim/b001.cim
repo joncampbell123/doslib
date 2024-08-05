@@ -179,4 +179,11 @@ let int y = (unsigned)4.4;
 let unsigned int x = (unsigned)(-1);
 let signed int x = (signed)4u;
 let int x = (volatile)4;
+let signed long long x = (signed long long)4u;
+let char x = (char)4.3;
+let bool x = (bool)2;
+let bool x = (bool)0;
+let bool x = (bool)3.5;
+let bool x = (bool)0.1;
+let bool x = (bool)0;
 
