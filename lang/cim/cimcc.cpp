@@ -5334,6 +5334,26 @@ namespace CIMCC {
 		return true;
 	}
 
+	struct ilc_cls_t {
+		static constexpr unsigned int c_int =         (1u <<  0u);
+		static constexpr unsigned int c_float =       (1u <<  1u);
+		static constexpr unsigned int c_other =       (1u <<  2u);
+		static constexpr unsigned int i_bool =        (1u <<  3u);
+		static constexpr unsigned int i_char =        (1u <<  4u);
+		static constexpr unsigned int i_int =         (1u <<  5u);
+		static constexpr unsigned int i_short =       (1u <<  6u);
+		static constexpr unsigned int i_long =        (1u <<  7u);
+		static constexpr unsigned int i_llong =       (1u <<  8u);
+		static constexpr unsigned int i_signed =      (1u <<  9u);
+		static constexpr unsigned int i_unsigned =    (1u << 10u);
+		static constexpr unsigned int f_double =      (1u << 11u);
+		static constexpr unsigned int f_float =       (1u << 12u);
+		static constexpr unsigned int g_const =       (1u << 13u);
+		static constexpr unsigned int g_constexpr =   (1u << 14u);
+		static constexpr unsigned int g_compileexpr = (1u << 15u);
+		static constexpr unsigned int g_volatile =    (1u << 16u);
+	};
+
 	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
 		/* [typecast]
 		 *   \- [a] -> [b]
@@ -5348,131 +5368,112 @@ namespace CIMCC {
 
 		if (b->op == ast_node_op_t::constant) {
 			if (a->op == ast_node_op_t::identifier_list) {
-				// TODO: This classification code should move to a function someday
-				static constexpr unsigned int cls_int =       (1u <<  0u);
-				static constexpr unsigned int cls_float =     (1u <<  1u);
-				static constexpr unsigned int cls_other =     (1u <<  2u);
-				static constexpr unsigned int if_bool =       (1u <<  3u);
-				static constexpr unsigned int if_char =       (1u <<  4u);
-				static constexpr unsigned int if_int =        (1u <<  5u);
-				static constexpr unsigned int if_short =      (1u <<  6u);
-				static constexpr unsigned int if_long =       (1u <<  7u);
-				static constexpr unsigned int if_llong =      (1u <<  8u);
-				static constexpr unsigned int if_signed =     (1u <<  9u);
-				static constexpr unsigned int if_unsigned =   (1u << 10u);
-				static constexpr unsigned int ff_double =     (1u << 11u);
-				static constexpr unsigned int ff_float =      (1u << 12u);
-				static constexpr unsigned int g_const =       (1u << 13u);
-				static constexpr unsigned int g_constexpr =   (1u << 14u);
-				static constexpr unsigned int g_compileexpr = (1u << 15u);
-				static constexpr unsigned int g_volatile =    (1u << 16u);
-
 				unsigned int cls = 0;
 
 				for (ast_node_t *chk = a->child;chk;chk=chk->next) {
 					switch (chk->op) {
 						case ast_node_op_t::r_float:
-							cls |= cls_float | ff_float;
+							cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
 							break;
 						case ast_node_op_t::r_double:
-							cls |= cls_float | ff_double;
+							cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
 							break;
 						case ast_node_op_t::r_bool:
-							cls |= cls_int | if_bool;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
 							break;
 						case ast_node_op_t::r_char:
-							cls |= cls_int | if_char;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
 							break;
 						case ast_node_op_t::r_int:
-							cls |= cls_int | if_int;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
 							break;
 						case ast_node_op_t::r_short:
-							cls |= cls_int | if_short;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
 							break;
 						case ast_node_op_t::r_long:
-							cls |= if_long; /* could be "long" as in int, or "long double" */
+							cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
 							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
-								cls |= if_llong;
+								cls |= ilc_cls_t::i_llong;
 								chk = chk->next;
 							}
 							break;
 						case ast_node_op_t::r_signed:
-							cls |= cls_int | if_signed;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
 							break;
 						case ast_node_op_t::r_unsigned:
-							cls |= cls_int | if_unsigned;
+							cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
 							break;
 						case ast_node_op_t::r_const:
-							cls |= g_const;
+							cls |= ilc_cls_t::g_const;
 							break;
 						case ast_node_op_t::r_constexpr:
-							cls |= g_constexpr;
+							cls |= ilc_cls_t::g_constexpr;
 							break;
 						case ast_node_op_t::r_compileexpr:
-							cls |= g_compileexpr;
+							cls |= ilc_cls_t::g_compileexpr;
 							break;
 						case ast_node_op_t::r_volatile:
-							cls |= g_volatile;
+							cls |= ilc_cls_t::g_volatile;
 							break;
 						default:
-							cls |= cls_other;
+							cls |= ilc_cls_t::c_other;
 							break;
 					};
 				}
 
-				/* "long" does not set cls_int to allow "long double".
-				 * if "long" was sspecified and neither cls_int|cls_float then assume cls_int */
-				if ((cls & (cls_int|cls_float)) == 0 && (cls & if_long))
-					cls |= cls_int;
+				/* "long" does not set ilc_cls_t::c_int to allow "long double".
+				 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
+				if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
+					cls |= ilc_cls_t::c_int;
 
-				if (cls & cls_other) {
+				if (cls & ilc_cls_t::c_other) {
 					/* do nothing */
 				}
-				else if ((cls & (cls_float|cls_int)) == (cls_float|cls_int)) {
+				else if ((cls & (ilc_cls_t::c_float|ilc_cls_t::c_int)) == (ilc_cls_t::c_float|ilc_cls_t::c_int)) {
 					return false; /* uh, what? */
 				}
-				else if (cls & cls_float) {
+				else if (cls & ilc_cls_t::c_float) {
 					const_cvt_float(*b);
 
-					if (cls & if_llong)
+					if (cls & ilc_cls_t::i_llong)
 						return false; /* no, we don't support long long double, no such thing */
 
-					if ((cls & (if_llong|ff_double)) == (if_llong|ff_double))
+					if ((cls & (ilc_cls_t::i_llong|ilc_cls_t::f_double)) == (ilc_cls_t::i_llong|ilc_cls_t::f_double))
 						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
-					else if (cls & ff_double)
+					else if (cls & ilc_cls_t::f_double)
 						b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-					else if (cls & ff_float)
+					else if (cls & ilc_cls_t::f_float)
 						b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
 
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
-				else if (cls & cls_int) {
-					if (cls & if_bool) {
+				else if (cls & ilc_cls_t::c_int) {
+					if (cls & ilc_cls_t::i_bool) {
 						const_cvt_bool(*b);
 						b->tv.v.intval.itype = token_intval_t::T_BOOL;
 					}
 					else {
-						if ((cls & (if_signed|if_unsigned)) == (if_signed|if_unsigned)) {
+						if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) {
 							return false; /* uh, what? */
 						}
 
-						const_cvt_int(*b,(cls&if_unsigned)?true:false);
+						const_cvt_int(*b,(cls&ilc_cls_t::i_unsigned)?true:false);
 
-						if (cls & if_signed)
+						if (cls & ilc_cls_t::i_signed)
 							const_intval_cvt_signed(*b);
-						else if (cls & if_unsigned)
+						else if (cls & ilc_cls_t::i_unsigned)
 							const_intval_cvt_unsigned(*b);
 
-						if (cls & if_llong)
+						if (cls & ilc_cls_t::i_llong)
 							b->tv.v.intval.itype = token_intval_t::T_LONGLONG;
-						else if (cls & if_long)
+						else if (cls & ilc_cls_t::i_long)
 							b->tv.v.intval.itype = token_intval_t::T_LONG;
-						else if (cls & if_int)
+						else if (cls & ilc_cls_t::i_int)
 							b->tv.v.intval.itype = token_intval_t::T_INT;
-						else if (cls & if_short)
+						else if (cls & ilc_cls_t::i_short)
 							b->tv.v.intval.itype = token_intval_t::T_SHORT;
-						else if (cls & if_char)
+						else if (cls & ilc_cls_t::i_char)
 							b->tv.v.intval.itype = token_intval_t::T_CHAR;
 					}
 
