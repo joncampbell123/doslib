@@ -5352,6 +5352,7 @@ namespace CIMCC {
 		static constexpr unsigned int g_constexpr =   (1u << 14u);
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
 		static constexpr unsigned int g_volatile =    (1u << 16u);
+		static constexpr unsigned int g_static =      (1u << 17u);
 
 		unsigned int cls = 0;
 
@@ -5417,6 +5418,9 @@ namespace CIMCC {
 							break;
 						case ast_node_op_t::r_volatile:
 							ilc.cls |= ilc_cls_t::g_volatile;
+							break;
+						case ast_node_op_t::r_static:
+							ilc.cls |= ilc_cls_t::g_static;
 							break;
 						default:
 							ilc.cls |= ilc_cls_t::c_other;
