@@ -5358,11 +5358,11 @@ public:
 		static constexpr unsigned int g_compileexpr = (1u << 15u);
 		static constexpr unsigned int g_volatile =    (1u << 16u);
 		static constexpr unsigned int g_static =      (1u << 17u);
+private:
 		static constexpr unsigned int p_near =        (1u << 18u);
 		static constexpr unsigned int p_far =         (1u << 19u);
 		static constexpr unsigned int p_huge =        (1u << 20u);
 
-private:
 		/* do not leave these bits set after parsing */
 		static constexpr unsigned int f_non_public =
 			c_int|c_float|c_other|
