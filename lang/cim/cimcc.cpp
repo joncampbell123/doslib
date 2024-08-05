@@ -5349,20 +5349,23 @@ namespace CIMCC {
 		if (b->op == ast_node_op_t::constant) {
 			if (a->op == ast_node_op_t::identifier_list) {
 				// TODO: This classification code should move to a function someday
-				static constexpr unsigned int cls_int =   (1u << 0u);
-				static constexpr unsigned int cls_float = (1u << 1u);
-				static constexpr unsigned int cls_other = (1u << 2u);
-
-				static constexpr unsigned int if_bool =   (1u <<  8u);
-				static constexpr unsigned int if_char =   (1u <<  9u);
-				static constexpr unsigned int if_int =    (1u << 10u);
-				static constexpr unsigned int if_short =  (1u << 11u);
-				static constexpr unsigned int if_long =   (1u << 12u);
-				static constexpr unsigned int if_llong =  (1u << 13u);
-				static constexpr unsigned int if_signed = (1u << 14u);
-				static constexpr unsigned int if_unsigned=(1u << 15u);
-				static constexpr unsigned int ff_double = (1u << 16u);
-				static constexpr unsigned int ff_float =  (1u << 17u);
+				static constexpr unsigned int cls_int =       (1u <<  0u);
+				static constexpr unsigned int cls_float =     (1u <<  1u);
+				static constexpr unsigned int cls_other =     (1u <<  2u);
+				static constexpr unsigned int if_bool =       (1u <<  3u);
+				static constexpr unsigned int if_char =       (1u <<  4u);
+				static constexpr unsigned int if_int =        (1u <<  5u);
+				static constexpr unsigned int if_short =      (1u <<  6u);
+				static constexpr unsigned int if_long =       (1u <<  7u);
+				static constexpr unsigned int if_llong =      (1u <<  8u);
+				static constexpr unsigned int if_signed =     (1u <<  9u);
+				static constexpr unsigned int if_unsigned =   (1u << 10u);
+				static constexpr unsigned int ff_double =     (1u << 11u);
+				static constexpr unsigned int ff_float =      (1u << 12u);
+				static constexpr unsigned int g_const =       (1u << 13u);
+				static constexpr unsigned int g_constexpr =   (1u << 14u);
+				static constexpr unsigned int g_compileexpr = (1u << 15u);
+				static constexpr unsigned int g_volatile =    (1u << 16u);
 
 				unsigned int cls = 0;
 
@@ -5387,10 +5390,11 @@ namespace CIMCC {
 							cls |= cls_int | if_short;
 							break;
 						case ast_node_op_t::r_long:
-							if (cls & if_long)
-								cls |= if_llong; /* long -> long long */
-							else
-								cls |= cls_int | if_long;
+							cls |= cls_int | if_long;
+							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
+								cls |= if_llong;
+								chk = chk->next;
+							}
 							break;
 						case ast_node_op_t::r_signed:
 							cls |= cls_int | if_signed;
@@ -5399,10 +5403,17 @@ namespace CIMCC {
 							cls |= cls_int | if_unsigned;
 							break;
 						case ast_node_op_t::r_const:
+							cls |= g_const;
+							break;
 						case ast_node_op_t::r_constexpr:
+							cls |= g_constexpr;
+							break;
 						case ast_node_op_t::r_compileexpr:
+							cls |= g_compileexpr;
+							break;
 						case ast_node_op_t::r_volatile:
-							break; /* ignore */
+							cls |= g_volatile;
+							break;
 						default:
 							cls |= cls_other;
 							break;
@@ -5571,6 +5582,7 @@ namespace CIMCC {
 					assert(r->child == id);
 					assert(r->child->next != NULL);
 					assert(r->child->next->child == a1);
+					/* lift a1 up one level */
 					delete r->child->next;
 					r->child->next = a1;
 					return reduce_typecast(r);
