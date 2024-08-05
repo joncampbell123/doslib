@@ -5439,14 +5439,22 @@ namespace CIMCC {
 						return false; /* NO! */
 				}
 
+				if (ilc.cls & ilc_cls_t::c_float) {
+					/* no such thing, "long long" float */
+					if (ilc.cls & ilc_cls_t::i_llong)
+						return false;
+				}
+				else if (ilc.cls & ilc_cls_t::c_int) {
+					/* you cannot declare something unsigned AND signed at the same time */
+					if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
+						return false;
+				}
+
 				if (ilc.cls & ilc_cls_t::c_other) {
 					/* do nothing */
 				}
 				else if (ilc.cls & ilc_cls_t::c_float) {
 					const_cvt_float(*b);
-
-					if (ilc.cls & ilc_cls_t::i_llong)
-						return false; /* no, we don't support long long double, no such thing */
 
 					if ((ilc.cls & (ilc_cls_t::i_llong|ilc_cls_t::f_double)) == (ilc_cls_t::i_llong|ilc_cls_t::f_double))
 						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
@@ -5464,10 +5472,6 @@ namespace CIMCC {
 						b->tv.v.intval.itype = token_intval_t::T_BOOL;
 					}
 					else {
-						if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) {
-							return false; /* uh, what? */
-						}
-
 						const_cvt_int(*b,(ilc.cls&ilc_cls_t::i_unsigned)?true:false);
 
 						if (ilc.cls & ilc_cls_t::i_signed)
