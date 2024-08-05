@@ -5432,22 +5432,17 @@ namespace CIMCC {
 				/* you can declare an int, a float, or an other, but not any combination of them */
 				switch (ilc.cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
 					case ilc_cls_t::c_other:
+						break; /* OK */
 					case ilc_cls_t::c_float:
+						if (ilc.cls & ilc_cls_t::i_llong)
+							return false; /* no such thing, "long long" float */
+						break; /* OK */
 					case ilc_cls_t::c_int:
+						if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
+							return false; /* you cannot declare something unsigned AND signed at the same time */
 						break; /* OK */
 					default:
 						return false; /* NO! */
-				}
-
-				if (ilc.cls & ilc_cls_t::c_float) {
-					/* no such thing, "long long" float */
-					if (ilc.cls & ilc_cls_t::i_llong)
-						return false;
-				}
-				else if (ilc.cls & ilc_cls_t::c_int) {
-					/* you cannot declare something unsigned AND signed at the same time */
-					if ((ilc.cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
-						return false;
 				}
 
 				if (ilc.cls & ilc_cls_t::c_other) {
