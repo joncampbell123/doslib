@@ -5358,7 +5358,46 @@ namespace CIMCC {
 		static constexpr unsigned int p_far =         (1u << 19u);
 		static constexpr unsigned int p_huge =        (1u << 20u);
 
+private:
+		/* do not leave these bits set after parsing */
+		static constexpr unsigned int f_non_public =
+			c_int|c_float|c_other|
+			i_bool|i_char|i_int|i_short|i_long|i_llong|
+			f_float|f_double|
+			p_near|p_far|p_huge;
+public:
+
+		enum class c_t {
+			ct_none=0,
+			ct_int,
+			ct_float,
+			ct_other
+		};
+
+		enum class t_t {
+			t_none=0,
+			t_bool,
+			t_char,
+			t_int,
+			t_short,
+			t_long,
+			t_llong,
+			t_float,
+			t_double,
+			t_longdouble
+		};
+
+		enum class p_t {
+			p_none=0,
+			p_near,
+			p_far,
+			p_huge
+		};
+
 		unsigned int cls = 0;
+		c_t cls_c = c_t::ct_none;
+		t_t cls_t = t_t::t_none;
+		p_t cls_p = p_t::p_none;
 
 		bool parse_idlist(ast_node_t* &chk) {
 			while (chk != NULL) {
@@ -5456,16 +5495,39 @@ stop_parsing:
 				case 0: /* none of them */
 					break; /* OK */
 				case ilc_cls_t::c_other:
+					cls_c = c_t::ct_other;
 					break; /* OK */
 				case ilc_cls_t::c_float:
 					if (cls & ilc_cls_t::i_llong)
 						return false; /* no such thing, "long long" float */
+
+					cls_c = c_t::ct_float;
+					if ((cls & (ilc_cls_t::f_double|ilc_cls_t::i_long)) == (ilc_cls_t::f_double|ilc_cls_t::i_long))
+						cls_t = t_t::t_longdouble;
+					else if (cls & ilc_cls_t::f_double)
+						cls_t = t_t::t_double;
+					else if (cls & ilc_cls_t::f_float)
+						cls_t = t_t::t_float;
 					break; /* OK */
 				case ilc_cls_t::c_int:
+					cls_c = c_t::ct_int;
 					if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
 						return false; /* you cannot declare something unsigned AND signed at the same time */
 					if ((cls & (ilc_cls_t::i_long|ilc_cls_t::i_llong)) == (ilc_cls_t::i_long|ilc_cls_t::i_llong))
 						return false; /* you cannot declare something long AND long long at the same time */
+
+					if (cls & ilc_cls_t::i_llong)
+						cls_t = t_t::t_llong;
+					else if (cls & ilc_cls_t::i_long)
+						cls_t = t_t::t_long;
+					else if (cls & ilc_cls_t::i_int)
+						cls_t = t_t::t_int;
+					else if (cls & ilc_cls_t::i_short)
+						cls_t = t_t::t_short;
+					else if (cls & ilc_cls_t::i_char)
+						cls_t = t_t::t_char;
+					else if (cls & ilc_cls_t::i_bool)
+						cls_t = t_t::t_bool;
 					break; /* OK */
 				default:
 					return false; /* NO! */
@@ -5476,8 +5538,13 @@ stop_parsing:
 				case 0: /* none of them */
 					break; /* OK */
 				case ilc_cls_t::p_huge:
+					cls_p = p_t::p_huge;
+					break; /* OK */
 				case ilc_cls_t::p_near:
+					cls_p = p_t::p_near;
+					break; /* OK */
 				case ilc_cls_t::p_far:
+					cls_p = p_t::p_far;
 					break; /* OK */
 				default:
 					return false; /* NO! */
@@ -5492,6 +5559,9 @@ stop_parsing:
 				if (chk != NULL)
 					return false; /* BUG */
 			}
+
+			/* clear some flags that others should not use */
+			cls &= ~ilc_cls_t::f_non_public;
 
 			return true;
 		}
