@@ -1445,28 +1445,21 @@ namespace CIMCC {
 					return false;
 			}
 
-			/* if the expression is an identifier, it might be a data type,
-			 * and therefore a typecast, rather than a subexpression */
-			if (pchnode->child->op == ast_node_op_t::identifier || pchnode->child->op == ast_node_op_t::r_const ||
-				pchnode->child->op == ast_node_op_t::r_signed || pchnode->child->op == ast_node_op_t::r_long ||
-				pchnode->child->op == ast_node_op_t::r_int || pchnode->child->op == ast_node_op_t::r_float ||
-				pchnode->child->op == ast_node_op_t::r_void || pchnode->child->op == ast_node_op_t::r_volatile ||
-				pchnode->child->op == ast_node_op_t::r_char || pchnode->child->op == ast_node_op_t::identifier_list ||
-				pchnode->child->op == ast_node_op_t::r_size_t || pchnode->child->op == ast_node_op_t::r_ssize_t ||
-				pchnode->child->op == ast_node_op_t::r_bool || pchnode->child->op == ast_node_op_t::r_near ||
-				pchnode->child->op == ast_node_op_t::r_far || pchnode->child->op == ast_node_op_t::r_huge ||
-				pchnode->child->op == ast_node_op_t::r_pound_deftype || pchnode->child->op == ast_node_op_t::r_pound_type) {
+			/* this might not be an expression, it might be a typecast.
+			 * it depends on what follows after the closing parenthesis.
+			 *
+			 * (type)(expression)
+			 * (type){compound literal}
+			 * (type)identifier including (type)functioncall()
+			 *
+			 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
+			{
 				token_t &nt = tok_bufpeek();
 
-				/* allow typecasts:
-				 *
-				 * (type)(expression)
-				 * (type){compound literal}
-				 * (type)identifier including (type)functioncall()
-				 *
-				 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
-				if (	nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly || nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
-					nt.type == token_type_t::intval || nt.type == token_type_t::floatval || nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
+				if (	nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly ||
+					nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
+					nt.type == token_type_t::intval || nt.type == token_type_t::floatval ||
+					nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
 					pchnode->op = ast_node_op_t::typecast;
 					if (!unary_expression(pchnode->child->next))
 						return false;
