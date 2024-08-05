@@ -5395,10 +5395,12 @@ namespace CIMCC {
 							ilc.cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
 							break;
 						case ast_node_op_t::r_long:
-							ilc.cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
 							if (chk->next && chk->next->op == ast_node_op_t::r_long) { /* long long */
 								ilc.cls |= ilc_cls_t::i_llong;
 								chk = chk->next;
+							}
+							else {
+								ilc.cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
 							}
 							break;
 						case ast_node_op_t::r_signed:
@@ -5455,7 +5457,7 @@ namespace CIMCC {
 				else if (ilc.cls & ilc_cls_t::c_float) {
 					const_cvt_float(*b);
 
-					if ((ilc.cls & (ilc_cls_t::i_llong|ilc_cls_t::f_double)) == (ilc_cls_t::i_llong|ilc_cls_t::f_double))
+					if ((ilc.cls & (ilc_cls_t::i_long|ilc_cls_t::f_double)) == (ilc_cls_t::i_long|ilc_cls_t::f_double))
 						b->tv.v.floatval.ftype = token_floatval_t::T_LONGDOUBLE;
 					else if (ilc.cls & ilc_cls_t::f_double)
 						b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
