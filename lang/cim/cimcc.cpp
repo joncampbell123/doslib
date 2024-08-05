@@ -5429,11 +5429,18 @@ namespace CIMCC {
 				if ((ilc.cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (ilc.cls & ilc_cls_t::i_long))
 					ilc.cls |= ilc_cls_t::c_int;
 
+				/* you can declare an int, a float, or an other, but not any combination of them */
+				switch (ilc.cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
+					case ilc_cls_t::c_other:
+					case ilc_cls_t::c_float:
+					case ilc_cls_t::c_int:
+						break; /* OK */
+					default:
+						return false; /* NO! */
+				}
+
 				if (ilc.cls & ilc_cls_t::c_other) {
 					/* do nothing */
-				}
-				else if ((ilc.cls & (ilc_cls_t::c_float|ilc_cls_t::c_int)) == (ilc_cls_t::c_float|ilc_cls_t::c_int)) {
-					return false; /* uh, what? */
 				}
 				else if (ilc.cls & ilc_cls_t::c_float) {
 					const_cvt_float(*b);
