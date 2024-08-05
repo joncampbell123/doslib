@@ -202,4 +202,6 @@ let bool x = bool(0.1);
 let bool x = bool(0);
 let int x = (time_t)4;
 let int x = (near time_t)4;
+let int x = (far)4;
+let int x = (volatile far)4;
 

@@ -5453,6 +5453,8 @@ stop_parsing:
 
 			/* you can declare an int, a float, or an other, but not any combination of them */
 			switch (cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
+				case 0: /* none of them */
+					break; /* OK */
 				case ilc_cls_t::c_other:
 					break; /* OK */
 				case ilc_cls_t::c_float:
@@ -5555,6 +5557,10 @@ stop_parsing:
 							b->tv.v.intval.itype = token_intval_t::T_CHAR;
 					}
 
+					reduce_move_b_to_a(r,a,b);
+					reduce_move_up_replace_single(r,a);
+				}
+				else {
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
