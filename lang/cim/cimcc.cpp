@@ -5423,6 +5423,7 @@ namespace CIMCC {
 						chk = chk->next;
 						break;
 					default:
+						/* anything else: stop on the token, mark it other, leave "chk" at the other token */
 						cls |= ilc_cls_t::c_other;
 						goto stop_parsing;
 				}
