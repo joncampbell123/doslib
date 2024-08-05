@@ -5483,8 +5483,18 @@ public:
 				default:
 					/* anything else: stop on the token, mark it other, leave "chk" at the other token */
 					cls |= ilc_cls_t::c_other;
-					return false;
+					if (idlist) return false;
 			}
+
+			return true;
+		}
+
+		bool parse_ident(ast_node_t* &chk) {
+			if (!parse_ident_node(chk,/*idlist*/false))
+				return false;
+
+			if (!parse_idlist_final())
+				return false;
 
 			return true;
 		}
@@ -5669,67 +5679,30 @@ public:
 				if (!reduce_typecast_doit(r,a,b,chk,ilc))
 					return false;
 			}
-			else if (a->op == ast_node_op_t::r_float) {
-				const_cvt_float(*b);
-				b->tv.v.floatval.ftype = token_floatval_t::T_FLOAT;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_double) {
-				const_cvt_float(*b);
-				b->tv.v.floatval.ftype = token_floatval_t::T_DOUBLE;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_bool) {
-				const_cvt_bool(*b);
-				b->tv.v.intval.itype = token_intval_t::T_BOOL;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_char) {
-				const_cvt_int(*b);
-				b->tv.v.intval.itype = token_intval_t::T_CHAR;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_int) {
-				const_cvt_int(*b);
-				b->tv.v.intval.itype = token_intval_t::T_INT;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_short) {
-				const_cvt_int(*b);
-				b->tv.v.intval.itype = token_intval_t::T_SHORT;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_long) {
-				const_cvt_int(*b);
-				b->tv.v.intval.itype = token_intval_t::T_LONG;
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_signed) {
-				const_cvt_int(*b);
-				const_intval_cvt_signed(*b);
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
-			else if (a->op == ast_node_op_t::r_unsigned) {
-				const_cvt_int(*b,/*unsigned*/true);
-				const_intval_cvt_unsigned(*b);
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
-			}
 			else if (
-				a->op == ast_node_op_t::r_const || a->op == ast_node_op_t::r_constexpr ||
-				a->op == ast_node_op_t::r_compileexpr || a->op == ast_node_op_t::r_volatile ||
-				a->op == ast_node_op_t::r_near || a->op == ast_node_op_t::r_far ||
+				a->op == ast_node_op_t::r_float ||
+				a->op == ast_node_op_t::r_double ||
+				a->op == ast_node_op_t::r_bool ||
+				a->op == ast_node_op_t::r_char ||
+				a->op == ast_node_op_t::r_int ||
+				a->op == ast_node_op_t::r_short ||
+				a->op == ast_node_op_t::r_long ||
+				a->op == ast_node_op_t::r_signed ||
+				a->op == ast_node_op_t::r_unsigned ||
+				a->op == ast_node_op_t::r_const ||
+				a->op == ast_node_op_t::r_constexpr ||
+				a->op == ast_node_op_t::r_compileexpr ||
+				a->op == ast_node_op_t::r_volatile ||
+				a->op == ast_node_op_t::r_near ||
+				a->op == ast_node_op_t::r_far ||
 				a->op == ast_node_op_t::r_huge) {
-				reduce_move_b_to_a(r,a,b);
-				reduce_move_up_replace_single(r,a);
+				ast_node_t *chk = a;
+				ilc_cls_t ilc;
+
+				if (!ilc.parse_ident(chk))
+					return false;
+				if (!reduce_typecast_doit(r,a,b,chk,ilc))
+					return false;
 			}
 		}
 
