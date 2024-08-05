@@ -5336,9 +5336,11 @@ namespace CIMCC {
 	}
 
 	struct ilc_cls_t {
+private:
 		static constexpr unsigned int c_int =         (1u <<  0u);
 		static constexpr unsigned int c_float =       (1u <<  1u);
 		static constexpr unsigned int c_other =       (1u <<  2u);
+public:
 		static constexpr unsigned int i_bool =        (1u <<  3u);
 		static constexpr unsigned int i_char =        (1u <<  4u);
 		static constexpr unsigned int i_int =         (1u <<  5u);
@@ -5586,10 +5588,10 @@ stop_parsing:
 
 				if (!ilc.parse_idlist(chk)) return false;
 
-				if (ilc.cls & ilc_cls_t::c_other) {
+				if (ilc.cls_c == ilc_cls_t::c_t::ct_other) {
 					/* do nothing */
 				}
-				else if (ilc.cls & ilc_cls_t::c_float) {
+				else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
 					const_cvt_float(*b);
 
 					if ((ilc.cls & (ilc_cls_t::i_long|ilc_cls_t::f_double)) == (ilc_cls_t::i_long|ilc_cls_t::f_double))
@@ -5602,7 +5604,7 @@ stop_parsing:
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
-				else if (ilc.cls & ilc_cls_t::c_int) {
+				else if (ilc.cls_c == ilc_cls_t::c_t::ct_int) {
 					if (ilc.cls & ilc_cls_t::i_bool) {
 						const_cvt_bool(*b);
 						b->tv.v.intval.itype = token_intval_t::T_BOOL;
@@ -5630,7 +5632,7 @@ stop_parsing:
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
-				else {
+				else if (ilc.cls_c == ilc_cls_t::c_t::ct_none) {
 					reduce_move_b_to_a(r,a,b);
 					reduce_move_up_replace_single(r,a);
 				}
@@ -5691,7 +5693,9 @@ stop_parsing:
 			}
 			else if (
 				a->op == ast_node_op_t::r_const || a->op == ast_node_op_t::r_constexpr ||
-				a->op == ast_node_op_t::r_compileexpr || a->op == ast_node_op_t::r_volatile) {
+				a->op == ast_node_op_t::r_compileexpr || a->op == ast_node_op_t::r_volatile ||
+				a->op == ast_node_op_t::r_near || a->op == ast_node_op_t::r_far ||
+				a->op == ast_node_op_t::r_huge) {
 				reduce_move_b_to_a(r,a,b);
 				reduce_move_up_replace_single(r,a);
 			}
