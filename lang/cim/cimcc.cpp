@@ -5506,6 +5506,9 @@ public:
 				cls |= ilc_cls_t::p_huge;
 				chk = chk->next;
 				break;
+			case ast_node_op_t::i_attributes:
+				chk = chk->next;
+				break;
 			default:
 				/* anything else: stop on the token, mark it other, leave "chk" at the other token */
 				cls |= ilc_cls_t::c_other;
@@ -5694,12 +5697,22 @@ public:
 			if (!ilc.parse_idlist(chk))
 				return false;
 
-			/* free all child nodes, or at least up to chk */
-			while (a->child && (chk == NULL || a->child != chk)) {
-				ast_node_t *d = a->child;
-				a->child = a->child->next;
-				d->free_children();
-				delete d;
+			/* free all child nodes, or at least up to chk, except
+			 * for i_attribute nodes which must be preserved  */
+			{
+				ast_node_t **p = &(a->child); /* node to modify ->next to remove node */
+
+				while ((*p) && (chk == NULL || (*p) != chk)) {
+					if ((*p)->op == ast_node_op_t::i_attributes) {
+						p = &((*p)->next);
+					}
+					else {
+						ast_node_t *d = (*p);
+						(*p) = (*p)->next;
+						d->free_children();
+						delete d;
+					}
+				}
 			}
 			a->op = ast_node_op_t::r_typeclsif;
 			a->tv.type = token_type_t::r_typeclsif;
