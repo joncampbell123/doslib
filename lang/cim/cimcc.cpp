@@ -5682,17 +5682,10 @@ public:
 		return true;
 	}
 
-	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
-		/* [typecast]
-		 *   \- [a] -> [b]
-		 *
-		 * become
-		 *
-		 * (a)b */
-		reduce_check_op(r,ast_node_op_t::typecast);
-
-		ast_node_t *a=NULL,*b=NULL;
-		if (!reduce_get_two_params(r,a,b,RGP_ALLOW_CHILD)) return true;
+	static bool reduce_typeid_to_typeclsif(ast_node_t* &r,ast_node_t* &a) {
+		assert(r != NULL);
+		assert(a != NULL);
+		assert(r->child == a);
 
 		/* if possible, convert to typeclsif */
 		if (a->op == ast_node_op_t::identifier_list) {
@@ -5740,22 +5733,50 @@ public:
 				return false;
 
 			if (chk == a) {
+
+				/* [r]
+				 *  \- [old a] -> ...
+				 *
+				 * to
+				 *
+				 * [r]
+				 *  \- [new a] -> ...
+				 *      \- [old a] */
+
 				ast_node_t *pa = a;
+
 				a = new ast_node_t;
 				a->tv.position = pa->tv.position;
 
 				assert(r->child == pa);
-				assert(r->child->next == b);
-				pa->next = NULL;
-				a->child = pa;
-				a->next = b;
 				r->child = a;
+				a->child = pa;
+
+				a->next = pa->next;
+				pa->next = NULL;
 			}
 
 			a->op = ast_node_op_t::r_typeclsif;
 			a->tv.type = token_type_t::r_typeclsif;
 			a->tv.v.typecls = std::move(ilc);
 		}
+
+		return true;
+	}
+
+	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
+		/* [typecast]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::typecast);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b,RGP_ALLOW_CHILD)) return true;
+
+		if (!reduce_typeid_to_typeclsif(r,a)) return false;
 
 #if 0//DEBUG
 		ast_node_t *p_a = a;
