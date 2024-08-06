@@ -331,6 +331,7 @@ namespace CIMCC {
 		r_struct,
 		r_union,
 		poundsign,
+		r_typeclsif,
 
 		maxval
 	};
@@ -511,6 +512,8 @@ private:
 		static constexpr unsigned int p_far =         (1u << 19u);
 		static constexpr unsigned int p_huge =        (1u << 20u);
 
+		static constexpr unsigned int c_valid =       (1u << 31u); /* this has been evaluated */
+
 		/* do not leave these bits set after parsing */
 		static constexpr unsigned int f_non_public =
 			c_int|c_float|c_other|
@@ -546,16 +549,19 @@ public:
 			p_huge
 		};
 
-		unsigned int cls = 0;
-		c_t cls_c = c_t::ct_none;
-		t_t cls_t = t_t::t_none;
-		p_t cls_p = p_t::p_none;
+		unsigned int cls;
+		c_t cls_c;
+		t_t cls_t;
+		p_t cls_p;
 
+		void init(void);
 		bool parse_ident_node(ast_node_t* &chk,bool idlist=false);
 		bool parse_ident(ast_node_t* &chk);
 		bool parse_idlist(ast_node_t* &chk);
 		bool parse_idlist_final(void);
 	};
+
+	typedef ilc_cls_t token_typeclsif_t;
 
 	struct token_t {
 		token_type_t		type = token_type_t::none;
@@ -566,6 +572,7 @@ public:
 			token_floatval_t	floatval;	// type == floatval
 			token_identifier_t	identifier;	// type == identifier
 			token_charstrliteral_t	chrstrlit;	// type == characterliteral, type == stringliteral
+			token_typeclsif_t	typecls;	// type == typeclsif
 		} v;
 
 		token_t() { }
@@ -747,6 +754,7 @@ public:
 		r_pound_deftype,
 		r_pound_type,
 		r_pound_include,
+		r_typeclsif,
 
 		maxval
 	};
@@ -5411,6 +5419,13 @@ public:
 		return true;
 	}
 
+	void ilc_cls_t::init(void) {
+		cls = 0;
+		cls_c = c_t::ct_none;
+		cls_t = t_t::t_none;
+		cls_p = p_t::p_none;
+	}
+
 	bool ilc_cls_t::parse_ident_node(ast_node_t* &chk,bool idlist) {
 		switch (chk->op) {
 			case ast_node_op_t::r_float:
@@ -5523,6 +5538,8 @@ public:
 	}
 
 	bool ilc_cls_t::parse_idlist_final(void) {
+		cls |= ilc_cls_t::c_valid;
+
 		/* "long" does not set ilc_cls_t::c_int to allow "long double".
 		 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
 		if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
@@ -5678,41 +5695,66 @@ public:
 		ast_node_t *a=NULL,*b=NULL;
 		if (!reduce_get_two_params(r,a,b,RGP_ALLOW_CHILD)) return true;
 
-		if (b->op == ast_node_op_t::constant) {
-			if (a->op == ast_node_op_t::identifier_list) {
-				ast_node_t *chk = a->child;
-				ilc_cls_t ilc;
+		/* if possible, convert to typeclsif */
+		if (a->op == ast_node_op_t::identifier_list) {
+			ast_node_t *chk = a->child;
+			ilc_cls_t ilc;
 
-				if (!ilc.parse_idlist(chk))
-					return false;
-				if (!reduce_typecast_const_doit(r,a,b,chk,ilc))
-					return false;
-			}
-			else if (
-				a->op == ast_node_op_t::r_float ||
-				a->op == ast_node_op_t::r_double ||
-				a->op == ast_node_op_t::r_bool ||
-				a->op == ast_node_op_t::r_char ||
-				a->op == ast_node_op_t::r_int ||
-				a->op == ast_node_op_t::r_short ||
-				a->op == ast_node_op_t::r_long ||
-				a->op == ast_node_op_t::r_signed ||
-				a->op == ast_node_op_t::r_unsigned ||
-				a->op == ast_node_op_t::r_const ||
-				a->op == ast_node_op_t::r_constexpr ||
-				a->op == ast_node_op_t::r_compileexpr ||
-				a->op == ast_node_op_t::r_volatile ||
-				a->op == ast_node_op_t::r_near ||
-				a->op == ast_node_op_t::r_far ||
-				a->op == ast_node_op_t::r_huge) {
-				ast_node_t *chk = a;
-				ilc_cls_t ilc;
+			ilc.init();
+			if (!ilc.parse_idlist(chk))
+				return false;
 
-				if (!ilc.parse_ident(chk))
-					return false;
-				if (!reduce_typecast_const_doit(r,a,b,chk,ilc))
-					return false;
+			/* free all child nodes, or at least up to chk */
+			while (a->child && (chk == NULL || a->child != chk)) {
+				ast_node_t *d = a->child;
+				a->child = a->child->next;
+				d->free_children();
+				delete d;
 			}
+			a->op = ast_node_op_t::r_typeclsif;
+			a->tv.type = token_type_t::r_typeclsif;
+			a->tv.v.typecls = std::move(ilc);
+		}
+		else if (
+			a->op == ast_node_op_t::r_float ||
+			a->op == ast_node_op_t::r_double ||
+			a->op == ast_node_op_t::r_bool ||
+			a->op == ast_node_op_t::r_char ||
+			a->op == ast_node_op_t::r_int ||
+			a->op == ast_node_op_t::r_short ||
+			a->op == ast_node_op_t::r_long ||
+			a->op == ast_node_op_t::r_signed ||
+			a->op == ast_node_op_t::r_unsigned ||
+			a->op == ast_node_op_t::r_const ||
+			a->op == ast_node_op_t::r_constexpr ||
+			a->op == ast_node_op_t::r_compileexpr ||
+			a->op == ast_node_op_t::r_volatile ||
+			a->op == ast_node_op_t::r_near ||
+			a->op == ast_node_op_t::r_far ||
+			a->op == ast_node_op_t::r_huge ||
+			a->op == ast_node_op_t::identifier) {
+			ast_node_t *chk = a;
+			ilc_cls_t ilc;
+
+			ilc.init();
+			if (!ilc.parse_ident(chk))
+				return false;
+
+			if (chk == a) {
+				ast_node_t *pa = a;
+				a = new ast_node_t;
+
+				assert(r->child == pa);
+				assert(r->child->next == b);
+				pa->next = NULL;
+				a->child = pa;
+				a->next = b;
+				r->child = a;
+			}
+
+			a->op = ast_node_op_t::r_typeclsif;
+			a->tv.type = token_type_t::r_typeclsif;
+			a->tv.v.typecls = std::move(ilc);
 		}
 
 		return true;
@@ -7305,6 +7347,47 @@ public:
 			case token_type_t::r_typedef:
 				s = "<r_typedef>";
 				break;
+			case token_type_t::r_typeclsif:
+				s = "<r_typeclsif:";
+
+				switch (t.v.typecls.cls_c) {
+					case ilc_cls_t::c_t::ct_int: s += " c=int"; break;
+					case ilc_cls_t::c_t::ct_float: s += " c=float"; break;
+					case ilc_cls_t::c_t::ct_other: s += " c=other"; break;
+					default: break;
+				}
+
+				switch (t.v.typecls.cls_t) {
+					case ilc_cls_t::t_t::t_bool: s += " t=bool"; break;
+					case ilc_cls_t::t_t::t_char: s += " t=char"; break;
+					case ilc_cls_t::t_t::t_int: s += " t=int"; break;
+					case ilc_cls_t::t_t::t_short: s += " t=short"; break;
+					case ilc_cls_t::t_t::t_long: s += " t=long"; break;
+					case ilc_cls_t::t_t::t_llong: s += " t=llong"; break;
+					case ilc_cls_t::t_t::t_float: s += " t=float"; break;
+					case ilc_cls_t::t_t::t_double: s += " t=double"; break;
+					case ilc_cls_t::t_t::t_longdouble: s += " t=longdouble"; break;
+					default: break;
+				}
+
+				switch (t.v.typecls.cls_p) {
+					case ilc_cls_t::p_t::p_near: s += " p=near"; break;
+					case ilc_cls_t::p_t::p_far: s += " p=far"; break;
+					case ilc_cls_t::p_t::p_huge: s += " p=huge"; break;
+					default: break;
+				}
+
+				snprintf(buf,sizeof(buf)," cls=0x%x",t.v.typecls.cls); s += buf;
+				if (t.v.typecls.cls & ilc_cls_t::i_signed) s += " signed";
+				if (t.v.typecls.cls & ilc_cls_t::i_unsigned) s += " unsigned";
+				if (t.v.typecls.cls & ilc_cls_t::g_const) s += " const";
+				if (t.v.typecls.cls & ilc_cls_t::g_constexpr) s += " constexpr";
+				if (t.v.typecls.cls & ilc_cls_t::g_compileexpr) s += " compileexpr";
+				if (t.v.typecls.cls & ilc_cls_t::g_volatile) s += " volatile";
+				if (t.v.typecls.cls & ilc_cls_t::g_static) s += " static";
+
+				s += ">";
+				break;
 			case token_type_t::r_sizeof:
 				s = "<r_sizeof>";
 				break;
@@ -7816,6 +7899,9 @@ public:
 					break;
 				case ast_node_op_t::r_typedef:
 					name = "typedef";
+					break;
+				case ast_node_op_t::r_typeclsif:
+					name = "typeclsif";
 					break;
 				case ast_node_op_t::r_sizeof:
 					name = "sizeof";
