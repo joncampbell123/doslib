@@ -722,6 +722,8 @@ else {
 	#error("wrong type");
 }
 
+#define("multiple",1,2,3,4);
+
 let #deftype("wart set") wart_counter = 3;
 let #deftype("wart set") wart_counter = (#deftype("wart set"))wart_init;
 let #deftype("wart set") wart_counter = (#deftype("wart set"))3;
