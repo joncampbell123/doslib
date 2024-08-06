@@ -5831,6 +5831,36 @@ public:
 		return true;
 	}
 
+	static bool reduce_r_fn(ast_node_t* &r) { /* ast_node_op_t::r_fn */
+		/* [r_fn]
+		 *   \- [datatype] -> [identifier] -> ...
+		 *
+		 * our job is to convert the datatype to a typeclsif */
+		reduce_check_op(r,ast_node_op_t::r_fn);
+
+		ast_node_t *dt=NULL,*tmp=r->child;
+
+		if (!tmp) return true;
+		dt = tmp; tmp = tmp->next;
+
+		if (dt->op == ast_node_op_t::i_datatype) {
+			if (!reduce_typeid_to_typeclsif(dt->child))
+				return false;
+		}
+
+		if (tmp && (tmp->op == ast_node_op_t::identifier || tmp->op == ast_node_op_t::i_anonymous))
+			tmp = tmp->next;
+
+		while (tmp && tmp->op == ast_node_op_t::argument) {
+			if (!reduce_typeid_to_typeclsif(tmp->child))
+				return false;
+
+			tmp = tmp->next;
+		}
+
+		return true;
+	}
+
 	static bool reduce_fncall(ast_node_t* &r) { /* ast_node_op_t::functioncall */
 		/* [functioncall]
 		 *   \- [identifier] -> .... (args)
@@ -5917,6 +5947,7 @@ public:
 				case ast_node_op_t::typecast:		if (!reduce_typecast(n)) return false; break;
 				case ast_node_op_t::functioncall:	if (!reduce_fncall(n)) return false; break;
 				case ast_node_op_t::i_compound_let:	if (!reduce_compound_let(n)) return false; break;
+				case ast_node_op_t::r_fn:		if (!reduce_r_fn(n)) return false; break;
 				default: break;
 			};
 		}
