@@ -2693,6 +2693,11 @@ public:
 		/* assignment expressions are parsed right to left, therefore something like a = b = c = d
 		 * needs to be handled like a = (b = (c = d)) */
 		if (tok_bufpeek().type == token_type_t::equal) {
+			/* one thing only, please.
+			 * this also prevents accidentally using C/C++ style syntax to declare variables i.e. int z = 5 */
+			if (pchnode->op == ast_node_op_t::identifier_list)
+				return false;
+
 			/* [=]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */

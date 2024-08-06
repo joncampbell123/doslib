@@ -148,7 +148,7 @@ fn void func1(void) {
 }
 
 fn int func1(int x,int y) {
-	int z = func2(x,y,13);
+	let int z = func2(x,y,13);
 	z += func3(y,x^y);
 	return z ^ 1;
 }
@@ -161,7 +161,7 @@ fn int func1(int x/*input code*/) {
 }
 
 fn int func1(int x) {
-	int x = /* multiple line comments,
+	let int x = /* multiple line comments,
 	to describe something,
 	are perfectly fine.
 
@@ -172,8 +172,8 @@ fn int func1(int x) {
 }
 
 fn int func1(float z) {
-	int x = {z,z*2,z*3.14,z*4,z*5,z*6,z*7,z*8,z*9.99}; /* C99 syntax */
-	int y = &x;
+	let int x = {z,z*2,z*3.14,z*4,z*5,z*6,z*7,z*8,z*9.99}; /* C99 syntax */
+	let int y = &x;
 	return x[5];
 }
 
@@ -186,7 +186,7 @@ fn int func1(float x) {
 }
 
 fn int func1(int x) {
-	int x = (long){1*x,2*x,(long long)(3*x),4*x};
+	let int x = (long){1*x,2*x,(long long)(3*x),4*x};
 	return (int)((float)x * 1.23);
 }
 
@@ -203,7 +203,7 @@ fn int func1(float x) {
 }
 
 fn int func1(int x) {
-	int z = 1;
+	let int z = 1;
 
 again:	z++;
 	goto again;
