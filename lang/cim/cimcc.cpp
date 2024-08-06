@@ -2134,6 +2134,13 @@ public:
 					else
 						return false;
 				}
+
+				/* if the child node is an identifier list, not an identifier,
+				 * then someone is trying to make a C style definition/declaration
+				 * and we're mistaking it as a function call */
+				assert(pchnode->child != NULL);
+				if (pchnode->child->op == ast_node_op_t::identifier_list)
+					return false;
 			}
 			else {
 				break;

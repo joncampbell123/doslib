@@ -103,11 +103,6 @@ let signed int var2 = 123;
 let signed long int var3 = 456l;
 let signed long long int var4 = 789ll;
 
-int func1();
-int func1(void);
-int func1(int x,char y,float f);
-fn signed long long int func1(signed long long x,unsigned long long y);
-
 fn int func1() {
 	return(5);
 };
@@ -312,7 +307,7 @@ a: b:	x += 3;
 		case 1: case 2: case 3: y += 5; break;
 	}
 
-	a::b::c d::e::f(5,x::y::z);
+	let a::b::c x = d::e::f(5,x::y::z);
 
 	let auto x;
 	let int x;
