@@ -1815,6 +1815,7 @@ public:
 #define NLEX cpp_scope_expression
 		tnode = new ast_node_t;
 		tnode->op = ast_node_op_t::identifier_list;
+		tnode->tv.position = tok_bufpeek().position;
 
 		ast_node_t **n = &(tnode->child);
 
@@ -1839,6 +1840,7 @@ public:
 	bool compiler::split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode) {
 		tnode = new ast_node_t;
 		tnode->op = ast_node_op_t::identifier_list;
+		tnode->tv.position = tok_bufpeek().position;
 
 		ast_node_t **n = &(tnode->child);
 		int count = 0;
@@ -2010,6 +2012,7 @@ public:
 				ast_node_t *sav_p = pchnode;
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::identifier_list;
+				pchnode->tv.position = sav_p->tv.position;
 				pchnode->child = sav_p;
 
 				ast_node_t *nn = sav_p;
@@ -5739,6 +5742,7 @@ public:
 			if (chk == a) {
 				ast_node_t *pa = a;
 				a = new ast_node_t;
+				a->tv.position = pa->tv.position;
 
 				assert(r->child == pa);
 				assert(r->child->next == b);
