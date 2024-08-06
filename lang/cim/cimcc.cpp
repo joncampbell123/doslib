@@ -5682,10 +5682,8 @@ public:
 		return true;
 	}
 
-	static bool reduce_typeid_to_typeclsif(ast_node_t* &r,ast_node_t* &a) {
-		assert(r != NULL);
+	static bool reduce_typeid_to_typeclsif(ast_node_t* &a) {
 		assert(a != NULL);
-		assert(r->child == a);
 
 		/* if possible, convert to typeclsif */
 		if (a->op == ast_node_op_t::identifier_list) {
@@ -5706,6 +5704,20 @@ public:
 			a->op = ast_node_op_t::r_typeclsif;
 			a->tv.type = token_type_t::r_typeclsif;
 			a->tv.v.typecls = std::move(ilc);
+		}
+
+		return true;
+	}
+
+	static bool reduce_typeid_to_typeclsif(ast_node_t* &r,ast_node_t* &a) {
+		assert(r != NULL);
+		assert(a != NULL);
+		assert(r->child == a);
+
+		/* if possible, convert to typeclsif */
+		if (a->op == ast_node_op_t::identifier_list) {
+			if (!reduce_typeid_to_typeclsif(a))
+				return false;
 		}
 		else if (
 			a->op == ast_node_op_t::r_float ||
@@ -5798,6 +5810,27 @@ public:
 		return true;
 	}
 
+	static bool reduce_compound_let(ast_node_t* &r) { /* ast_node_op_t::i_compound_let */
+		/* [compound let]
+		 *   \- [datatype] -> [let] -> ...
+		 *                     \- [identifier] -> ...
+		 *
+		 * our job is to convert the datatype to a typeclsif */
+		reduce_check_op(r,ast_node_op_t::i_compound_let);
+
+		ast_node_t *dt=NULL,*tmp=r->child;
+
+		if (!tmp) return true;
+		dt = tmp; tmp = tmp->next;
+
+		if (dt->op == ast_node_op_t::i_datatype) {
+			if (!reduce_typeid_to_typeclsif(dt->child))
+				return false;
+		}
+
+		return true;
+	}
+
 	static bool reduce_fncall(ast_node_t* &r) { /* ast_node_op_t::functioncall */
 		/* [functioncall]
 		 *   \- [identifier] -> .... (args)
@@ -5883,6 +5916,7 @@ public:
 				case ast_node_op_t::greaterthan:	if (!reduce_gt(n)) return false; break;
 				case ast_node_op_t::typecast:		if (!reduce_typecast(n)) return false; break;
 				case ast_node_op_t::functioncall:	if (!reduce_fncall(n)) return false; break;
+				case ast_node_op_t::i_compound_let:	if (!reduce_compound_let(n)) return false; break;
 				default: break;
 			};
 		}

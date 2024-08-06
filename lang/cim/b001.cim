@@ -200,12 +200,14 @@ let float x = float(3);
 let double x = double(4);
 let bool x = bool(0.1);
 let bool x = bool(0);
-let int x = (time_t)4;
-let int x = (near time_t)4;
+let time_t x = (time_t)4;
+let time_t x = (near time_t)4;
 let int x = (far)4;
 let int x = (volatile far)4;
 let int x = (long)y;
 let int x = (unsigned long long)y;
 let int x = (far)y;
 let int x = (volatile)y;
+let int x = (long)3,y = (char)4;
+let int x,y;
 
