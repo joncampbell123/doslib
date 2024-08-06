@@ -214,4 +214,10 @@ let int x = (volatile)y;
 let int x = (long)3,y = (char)4;
 let int x,y;
 let int x = int(3);
+let int x[] = {1,2,3};
+let int x[3] = {1,2,3};
+let int x[3] = (long){1,2,3};
+let int x[3] = long({1,2,3});
+let int x[3] = long({1,float(2),3});
+let int x[3] = long({1,float(y),3});
 
