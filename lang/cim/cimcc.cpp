@@ -3854,6 +3854,11 @@ public:
 						else
 							return false;
 					}
+
+					/* if it's just an identifier list it's probably gibberish or
+					 * accidental use of C/C++ syntax to declare a variable i.e. "int x" */
+					if (apnode->child && apnode->child->op == ast_node_op_t::identifier_list)
+						return false;
 				}
 			}
 		}
