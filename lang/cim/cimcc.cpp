@@ -5610,12 +5610,8 @@ public:
 		return true;
 	}
 
-	static bool reduce_typecast_const_doit(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ast_node_t* &chk,ilc_cls_t &ilc) {
-		(void)chk;
-
+	static bool reduce_typecast_const_doit(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ilc_cls_t &ilc) {
 		if (ilc.cls_c == ilc_cls_t::c_t::ct_other) {
-			if (chk == NULL) return false;
-
 			/* do nothing */
 		}
 		else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
@@ -5755,6 +5751,23 @@ public:
 			a->op = ast_node_op_t::r_typeclsif;
 			a->tv.type = token_type_t::r_typeclsif;
 			a->tv.v.typecls = std::move(ilc);
+		}
+
+#if 0//DEBUG
+		ast_node_t *p_a = a;
+		ast_node_t *p_b = b;
+
+		if (!reduce_get_two_params(r,a,b,RGP_ALLOW_CHILD)) return true;
+
+		assert(a == p_a);
+		assert(b == p_b);
+#endif
+
+		if (a->op == ast_node_op_t::r_typeclsif) {
+			if (b->op == ast_node_op_t::constant) {
+				if (!reduce_typecast_const_doit(r,a,b,a->tv.v.typecls))
+					return false;
+			}
 		}
 
 		return true;

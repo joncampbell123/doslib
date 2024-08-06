@@ -206,4 +206,5 @@ let int x = (far)4;
 let int x = (volatile far)4;
 let int x = (long)y;
 let int x = (unsigned long long)y;
+let int x = (far)y;
 
