@@ -171,6 +171,8 @@ fn void func2(void) {
 	let int y = func1((3+4+5)*x,x+x);
 }
 
+let int fn func1(int x), xy = 3, fn func2(long y);
+
 let float x = (float)4;
 let double x = (double)4;
 let int x = (int)4.2;
