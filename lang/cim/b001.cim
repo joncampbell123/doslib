@@ -204,6 +204,7 @@ let bool x = bool(0.1);
 let bool x = bool(0);
 let time_t x = (time_t)4;
 let time_t x = (near time_t)4;
+let int x = long(y);
 let int x = (far)4;
 let int x = (volatile far)4;
 let int x = (long)y;

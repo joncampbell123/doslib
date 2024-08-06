@@ -5921,19 +5921,17 @@ public:
 			id->op == ast_node_op_t::r_double ||
 			id->op == ast_node_op_t::r_signed ||
 			id->op == ast_node_op_t::r_unsigned) {
-			if (a1 != NULL) {
-				if (a1->op == ast_node_op_t::constant && tmp == NULL) { /* constant and only one param */
-					/* convert the function call into a typecast and run typecast reduce */
-					r->op = ast_node_op_t::typecast;
-					assert(r->child != NULL);
-					assert(r->child == id);
-					assert(r->child->next != NULL);
-					assert(r->child->next->child == a1);
-					/* lift a1 up one level */
-					delete r->child->next;
-					r->child->next = a1;
-					return reduce_typecast(r);
-				}
+			if (tmp == NULL) { /* constant and only one param */
+				/* convert the function call into a typecast and run typecast reduce */
+				r->op = ast_node_op_t::typecast;
+				assert(r->child != NULL);
+				assert(r->child == id);
+				assert(r->child->next != NULL);
+				assert(r->child->next->child == a1);
+				/* lift a1 up one level---DOES NOT MATTER IF a1 == NULL */
+				delete r->child->next;
+				r->child->next = a1;
+				return reduce_typecast(r);
 			}
 		}
 

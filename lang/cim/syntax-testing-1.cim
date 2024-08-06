@@ -195,6 +195,10 @@ fn int func1(int x) {
 }
 
 fn int func1(float x) {
+	return int(5); /* C++ style typecast */
+}
+
+fn int func1(float x) {
 	return int(x); /* C++ style typecast */
 }
 
