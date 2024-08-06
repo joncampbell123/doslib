@@ -481,6 +481,82 @@ namespace CIMCC {
 		}
 	};
 
+	struct ast_node_t;
+
+	struct ilc_cls_t {
+private:
+		static constexpr unsigned int c_int =         (1u <<  0u);
+		static constexpr unsigned int c_float =       (1u <<  1u);
+		static constexpr unsigned int c_other =       (1u <<  2u);
+		static constexpr unsigned int i_bool =        (1u <<  3u);
+		static constexpr unsigned int i_char =        (1u <<  4u);
+		static constexpr unsigned int i_int =         (1u <<  5u);
+		static constexpr unsigned int i_short =       (1u <<  6u);
+		static constexpr unsigned int i_long =        (1u <<  7u);
+		static constexpr unsigned int i_llong =       (1u <<  8u);
+public:
+		static constexpr unsigned int i_signed =      (1u <<  9u);
+		static constexpr unsigned int i_unsigned =    (1u << 10u);
+private:
+		static constexpr unsigned int f_double =      (1u << 11u);
+		static constexpr unsigned int f_float =       (1u << 12u);
+public:
+		static constexpr unsigned int g_const =       (1u << 13u);
+		static constexpr unsigned int g_constexpr =   (1u << 14u);
+		static constexpr unsigned int g_compileexpr = (1u << 15u);
+		static constexpr unsigned int g_volatile =    (1u << 16u);
+		static constexpr unsigned int g_static =      (1u << 17u);
+private:
+		static constexpr unsigned int p_near =        (1u << 18u);
+		static constexpr unsigned int p_far =         (1u << 19u);
+		static constexpr unsigned int p_huge =        (1u << 20u);
+
+		/* do not leave these bits set after parsing */
+		static constexpr unsigned int f_non_public =
+			c_int|c_float|c_other|
+			i_bool|i_char|i_int|i_short|i_long|i_llong|
+			f_float|f_double|
+			p_near|p_far|p_huge;
+public:
+
+		enum class c_t {
+			ct_none=0,
+			ct_int,
+			ct_float,
+			ct_other
+		};
+
+		enum class t_t {
+			t_none=0,
+			t_bool,
+			t_char,
+			t_int,
+			t_short,
+			t_long,
+			t_llong,
+			t_float,
+			t_double,
+			t_longdouble
+		};
+
+		enum class p_t {
+			p_none=0,
+			p_near,
+			p_far,
+			p_huge
+		};
+
+		unsigned int cls = 0;
+		c_t cls_c = c_t::ct_none;
+		t_t cls_t = t_t::t_none;
+		p_t cls_p = p_t::p_none;
+
+		bool parse_ident_node(ast_node_t* &chk,bool idlist=false);
+		bool parse_ident(ast_node_t* &chk);
+		bool parse_idlist(ast_node_t* &chk);
+		bool parse_idlist_final(void);
+	};
+
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 		position_t		position;
@@ -5335,261 +5411,194 @@ namespace CIMCC {
 		return true;
 	}
 
-	struct ilc_cls_t {
-private:
-		static constexpr unsigned int c_int =         (1u <<  0u);
-		static constexpr unsigned int c_float =       (1u <<  1u);
-		static constexpr unsigned int c_other =       (1u <<  2u);
-		static constexpr unsigned int i_bool =        (1u <<  3u);
-		static constexpr unsigned int i_char =        (1u <<  4u);
-		static constexpr unsigned int i_int =         (1u <<  5u);
-		static constexpr unsigned int i_short =       (1u <<  6u);
-		static constexpr unsigned int i_long =        (1u <<  7u);
-		static constexpr unsigned int i_llong =       (1u <<  8u);
-public:
-		static constexpr unsigned int i_signed =      (1u <<  9u);
-		static constexpr unsigned int i_unsigned =    (1u << 10u);
-private:
-		static constexpr unsigned int f_double =      (1u << 11u);
-		static constexpr unsigned int f_float =       (1u << 12u);
-public:
-		static constexpr unsigned int g_const =       (1u << 13u);
-		static constexpr unsigned int g_constexpr =   (1u << 14u);
-		static constexpr unsigned int g_compileexpr = (1u << 15u);
-		static constexpr unsigned int g_volatile =    (1u << 16u);
-		static constexpr unsigned int g_static =      (1u << 17u);
-private:
-		static constexpr unsigned int p_near =        (1u << 18u);
-		static constexpr unsigned int p_far =         (1u << 19u);
-		static constexpr unsigned int p_huge =        (1u << 20u);
+	bool ilc_cls_t::parse_ident_node(ast_node_t* &chk,bool idlist) {
+		switch (chk->op) {
+			case ast_node_op_t::r_float:
+				cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_double:
+				cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_bool:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_char:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_int:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_short:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_long: {
+				const unsigned int p_cls = cls;
 
-		/* do not leave these bits set after parsing */
-		static constexpr unsigned int f_non_public =
-			c_int|c_float|c_other|
-			i_bool|i_char|i_int|i_short|i_long|i_llong|
-			f_float|f_double|
-			p_near|p_far|p_huge;
-public:
+				cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
+				chk = chk->next;
 
-		enum class c_t {
-			ct_none=0,
-			ct_int,
-			ct_float,
-			ct_other
-		};
-
-		enum class t_t {
-			t_none=0,
-			t_bool,
-			t_char,
-			t_int,
-			t_short,
-			t_long,
-			t_llong,
-			t_float,
-			t_double,
-			t_longdouble
-		};
-
-		enum class p_t {
-			p_none=0,
-			p_near,
-			p_far,
-			p_huge
-		};
-
-		unsigned int cls = 0;
-		c_t cls_c = c_t::ct_none;
-		t_t cls_t = t_t::t_none;
-		p_t cls_p = p_t::p_none;
-
-		bool parse_ident_node(ast_node_t* &chk,bool idlist=false) {
-			switch (chk->op) {
-				case ast_node_op_t::r_float:
-					cls |= ilc_cls_t::c_float | ilc_cls_t::f_float;
+				if (idlist && chk && chk->op == ast_node_op_t::r_long) { /* long long */
+					cls = p_cls | ilc_cls_t::i_llong;
 					chk = chk->next;
-					break;
-				case ast_node_op_t::r_double:
-					cls |= ilc_cls_t::c_float | ilc_cls_t::f_double;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_bool:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_bool;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_char:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_char;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_int:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_int;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_short:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_short;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_long: {
-					const unsigned int p_cls = cls;
-
-					cls |= ilc_cls_t::i_long; /* could be "long" as in int, or "long double" */
-					chk = chk->next;
-
-					if (idlist && chk && chk->op == ast_node_op_t::r_long) { /* long long */
-						cls = p_cls | ilc_cls_t::i_llong;
-						chk = chk->next;
-					}
-					break; }
-				case ast_node_op_t::r_signed:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_unsigned:
-					cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_const:
-					cls |= ilc_cls_t::g_const;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_constexpr:
-					cls |= ilc_cls_t::g_constexpr;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_compileexpr:
-					cls |= ilc_cls_t::g_compileexpr;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_volatile:
-					cls |= ilc_cls_t::g_volatile;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_static:
-					cls |= ilc_cls_t::g_static;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_near:
-					cls |= ilc_cls_t::p_near;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_far:
-					cls |= ilc_cls_t::p_far;
-					chk = chk->next;
-					break;
-				case ast_node_op_t::r_huge:
-					cls |= ilc_cls_t::p_huge;
-					chk = chk->next;
-					break;
-				default:
-					/* anything else: stop on the token, mark it other, leave "chk" at the other token */
-					cls |= ilc_cls_t::c_other;
-					if (idlist) return false;
-			}
-
-			return true;
+				}
+				break; }
+			case ast_node_op_t::r_signed:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_signed;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_unsigned:
+				cls |= ilc_cls_t::c_int | ilc_cls_t::i_unsigned;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_const:
+				cls |= ilc_cls_t::g_const;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_constexpr:
+				cls |= ilc_cls_t::g_constexpr;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_compileexpr:
+				cls |= ilc_cls_t::g_compileexpr;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_volatile:
+				cls |= ilc_cls_t::g_volatile;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_static:
+				cls |= ilc_cls_t::g_static;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_near:
+				cls |= ilc_cls_t::p_near;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_far:
+				cls |= ilc_cls_t::p_far;
+				chk = chk->next;
+				break;
+			case ast_node_op_t::r_huge:
+				cls |= ilc_cls_t::p_huge;
+				chk = chk->next;
+				break;
+			default:
+				/* anything else: stop on the token, mark it other, leave "chk" at the other token */
+				cls |= ilc_cls_t::c_other;
+				if (idlist) return false;
 		}
 
-		bool parse_ident(ast_node_t* &chk) {
-			if (!parse_ident_node(chk,/*idlist*/false))
-				return false;
+		return true;
+	}
 
-			if (!parse_idlist_final())
-				return false;
+	bool ilc_cls_t::parse_ident(ast_node_t* &chk) {
+		if (!parse_ident_node(chk,/*idlist*/false))
+			return false;
 
-			return true;
+		if (!parse_idlist_final())
+			return false;
+
+		return true;
+	}
+
+	bool ilc_cls_t::parse_idlist(ast_node_t* &chk) {
+		while (chk != NULL) {
+			if (!parse_ident_node(chk,/*idlist*/true)) /* will advance chk=chk->next */
+				break;
 		}
 
-		bool parse_idlist(ast_node_t* &chk) {
-			while (chk != NULL) {
-				if (!parse_ident_node(chk,/*idlist*/true)) /* will advance chk=chk->next */
-					break;
-			}
+		if (!parse_idlist_final())
+			return false;
 
-			if (!parse_idlist_final())
-				return false;
+		if ((cls_c == c_t::ct_other) != (chk != NULL))
+			return false;
 
-			if ((cls_c == c_t::ct_other) != (chk != NULL))
-				return false;
+		return true;
+	}
 
-			return true;
+	bool ilc_cls_t::parse_idlist_final(void) {
+		/* "long" does not set ilc_cls_t::c_int to allow "long double".
+		 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
+		if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
+			cls |= ilc_cls_t::c_int;
+
+		/* you can declare an int, a float, or an other, but not any combination of them */
+		switch (cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
+			case 0: /* none of them */
+				break; /* OK */
+			case ilc_cls_t::c_other:
+				cls_c = c_t::ct_other;
+				break; /* OK */
+			case ilc_cls_t::c_float:
+				if (cls & ilc_cls_t::i_llong)
+					return false; /* no such thing, "long long" float */
+
+				cls_c = c_t::ct_float;
+				if ((cls & (ilc_cls_t::f_double|ilc_cls_t::i_long)) == (ilc_cls_t::f_double|ilc_cls_t::i_long))
+					cls_t = t_t::t_longdouble;
+				else if (cls & ilc_cls_t::f_double)
+					cls_t = t_t::t_double;
+				else if (cls & ilc_cls_t::f_float)
+					cls_t = t_t::t_float;
+				break; /* OK */
+			case ilc_cls_t::c_int:
+				cls_c = c_t::ct_int;
+				if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
+					return false; /* you cannot declare something unsigned AND signed at the same time */
+				if ((cls & (ilc_cls_t::i_long|ilc_cls_t::i_llong)) == (ilc_cls_t::i_long|ilc_cls_t::i_llong))
+					return false; /* you cannot declare something long AND long long at the same time */
+
+				if (cls & ilc_cls_t::i_llong)
+					cls_t = t_t::t_llong;
+				else if (cls & ilc_cls_t::i_long)
+					cls_t = t_t::t_long;
+				else if (cls & ilc_cls_t::i_int)
+					cls_t = t_t::t_int;
+				else if (cls & ilc_cls_t::i_short)
+					cls_t = t_t::t_short;
+				else if (cls & ilc_cls_t::i_char)
+					cls_t = t_t::t_char;
+				else if (cls & ilc_cls_t::i_bool)
+					cls_t = t_t::t_bool;
+				break; /* OK */
+			default:
+				return false; /* NO! */
 		}
 
-		bool parse_idlist_final(void) {
-			/* "long" does not set ilc_cls_t::c_int to allow "long double".
-			 * if "long" was sspecified and neither ilc_cls_t::c_int|ilc_cls_t::c_float then assume ilc_cls_t::c_int */
-			if ((cls & (ilc_cls_t::c_int|ilc_cls_t::c_float)) == 0 && (cls & ilc_cls_t::i_long))
-				cls |= ilc_cls_t::c_int;
-
-			/* you can declare an int, a float, or an other, but not any combination of them */
-			switch (cls & (ilc_cls_t::c_float|ilc_cls_t::c_int|ilc_cls_t::c_other)) {
-				case 0: /* none of them */
-					break; /* OK */
-				case ilc_cls_t::c_other:
-					cls_c = c_t::ct_other;
-					break; /* OK */
-				case ilc_cls_t::c_float:
-					if (cls & ilc_cls_t::i_llong)
-						return false; /* no such thing, "long long" float */
-
-					cls_c = c_t::ct_float;
-					if ((cls & (ilc_cls_t::f_double|ilc_cls_t::i_long)) == (ilc_cls_t::f_double|ilc_cls_t::i_long))
-						cls_t = t_t::t_longdouble;
-					else if (cls & ilc_cls_t::f_double)
-						cls_t = t_t::t_double;
-					else if (cls & ilc_cls_t::f_float)
-						cls_t = t_t::t_float;
-					break; /* OK */
-				case ilc_cls_t::c_int:
-					cls_c = c_t::ct_int;
-					if ((cls & (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned)) == (ilc_cls_t::i_signed|ilc_cls_t::i_unsigned))
-						return false; /* you cannot declare something unsigned AND signed at the same time */
-					if ((cls & (ilc_cls_t::i_long|ilc_cls_t::i_llong)) == (ilc_cls_t::i_long|ilc_cls_t::i_llong))
-						return false; /* you cannot declare something long AND long long at the same time */
-
-					if (cls & ilc_cls_t::i_llong)
-						cls_t = t_t::t_llong;
-					else if (cls & ilc_cls_t::i_long)
-						cls_t = t_t::t_long;
-					else if (cls & ilc_cls_t::i_int)
-						cls_t = t_t::t_int;
-					else if (cls & ilc_cls_t::i_short)
-						cls_t = t_t::t_short;
-					else if (cls & ilc_cls_t::i_char)
-						cls_t = t_t::t_char;
-					else if (cls & ilc_cls_t::i_bool)
-						cls_t = t_t::t_bool;
-					break; /* OK */
-				default:
-					return false; /* NO! */
-			}
-
-			/* you can declare something near, far, or huge, but not any combination of them */
-			switch (cls & (ilc_cls_t::p_near|ilc_cls_t::p_far|ilc_cls_t::p_huge)) {
-				case 0: /* none of them */
-					break; /* OK */
-				case ilc_cls_t::p_huge:
-					cls_p = p_t::p_huge;
-					break; /* OK */
-				case ilc_cls_t::p_near:
-					cls_p = p_t::p_near;
-					break; /* OK */
-				case ilc_cls_t::p_far:
-					cls_p = p_t::p_far;
-					break; /* OK */
-				default:
-					return false; /* NO! */
-			}
-
-			/* clear some flags that others should not use */
-			cls &= ~ilc_cls_t::f_non_public;
-			return true;
+		/* you can declare something near, far, or huge, but not any combination of them */
+		switch (cls & (ilc_cls_t::p_near|ilc_cls_t::p_far|ilc_cls_t::p_huge)) {
+			case 0: /* none of them */
+				break; /* OK */
+			case ilc_cls_t::p_huge:
+				cls_p = p_t::p_huge;
+				break; /* OK */
+			case ilc_cls_t::p_near:
+				cls_p = p_t::p_near;
+				break; /* OK */
+			case ilc_cls_t::p_far:
+				cls_p = p_t::p_far;
+				break; /* OK */
+			default:
+				return false; /* NO! */
 		}
-	};
 
-	static bool reduce_typecast_doit(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ast_node_t* &chk,ilc_cls_t &ilc) {
+		/* clear some flags that others should not use */
+		cls &= ~ilc_cls_t::f_non_public;
+		return true;
+	}
+
+	static bool reduce_typecast_const_doit(ast_node_t* &r,ast_node_t* &a,ast_node_t* &b,ast_node_t* &chk,ilc_cls_t &ilc) {
 		(void)chk;
 
 		if (ilc.cls_c == ilc_cls_t::c_t::ct_other) {
+			if (chk == NULL) return false;
+
 			/* do nothing */
 		}
 		else if (ilc.cls_c == ilc_cls_t::c_t::ct_float) {
@@ -5676,7 +5685,7 @@ public:
 
 				if (!ilc.parse_idlist(chk))
 					return false;
-				if (!reduce_typecast_doit(r,a,b,chk,ilc))
+				if (!reduce_typecast_const_doit(r,a,b,chk,ilc))
 					return false;
 			}
 			else if (
@@ -5701,7 +5710,7 @@ public:
 
 				if (!ilc.parse_ident(chk))
 					return false;
-				if (!reduce_typecast_doit(r,a,b,chk,ilc))
+				if (!reduce_typecast_const_doit(r,a,b,chk,ilc))
 					return false;
 			}
 		}

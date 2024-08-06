@@ -204,4 +204,6 @@ let int x = (time_t)4;
 let int x = (near time_t)4;
 let int x = (far)4;
 let int x = (volatile far)4;
+let int x = (long)y;
+let int x = (unsigned long long)y;
 
