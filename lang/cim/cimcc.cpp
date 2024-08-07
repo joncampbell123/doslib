@@ -5958,7 +5958,7 @@ public:
 				return false;
 		}
 
-		if (tmp && (tmp->op == ast_node_op_t::identifier || tmp->op == ast_node_op_t::i_anonymous))
+		if (tmp && (tmp->op == ast_node_op_t::identifier || tmp->op == ast_node_op_t::i_anonymous || tmp->op == ast_node_op_t::dereference || tmp->op == ast_node_op_t::addressof))
 			tmp = tmp->next;
 
 		while (tmp && tmp->op == ast_node_op_t::argument) {
