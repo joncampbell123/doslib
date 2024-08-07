@@ -979,6 +979,7 @@ public:
 		/* type and identifiers return value */
 		static constexpr unsigned int TYPE_AND_IDENT_RT_FOUND = (1u << 0u);
 		static constexpr unsigned int TYPE_AND_IDENT_RT_FN = (1u << 1u);
+		static constexpr unsigned int TYPE_AND_IDENT_RT_REF = (1u << 2u); /* * or & was involved */
 
 		/* fn_expression() flags */
 		static constexpr unsigned int FN_EXPR_LET_EXPRESSION = (1u << 0u);
@@ -1920,6 +1921,7 @@ public:
 					(*d) = new ast_node_t;
 					(*d)->op = ast_node_op_t::dereference;
 					d = &((*d)->child);
+					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (tok_bufpeek().type == token_type_t::ampersand) {
 					tok_bufdiscard();
@@ -1927,6 +1929,7 @@ public:
 					(*d) = new ast_node_t;
 					(*d)->op = ast_node_op_t::addressof;
 					d = &((*d)->child);
+					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
 					tok_bufdiscard();
@@ -1940,6 +1943,8 @@ public:
 					(*d) = new ast_node_t;
 					(*d)->op = ast_node_op_t::addressof;
 					d = &((*d)->child);
+
+					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (retv & TYPE_AND_IDENT_RT_FN) {
 					/* once "fn" is encountered stop on anything other than * and & */
@@ -1958,6 +1963,30 @@ public:
 					assert(t != NULL || i != NULL);
 					if (t) { *d = t; d = &((*d)->next); }
 					if (i) { *d = i; d = &((*d)->next); }
+
+					/* once * and & are involved the type identifiers allowed are restricted to a few,
+					 * like "const". C/C++ doesn't let you write int * int * x or long * int * x
+					 * and neither do we. But C/C++ does let you write int const * const * x; */
+					if (retv & TYPE_AND_IDENT_RT_REF) {
+						if (t != NULL) {
+							if (t->op == ast_node_op_t::identifier_list) {
+								bool ok = true;
+
+								for (ast_node_t* s=t->child;s;s=s->next) {
+									if (	s->op == ast_node_op_t::r_const ||
+										s->op == ast_node_op_t::r_volatile) {
+										/* OK */
+									}
+									else {
+										ok = false;
+										break;
+									}
+								}
+
+								if (!ok) break;
+							}
+						}
+					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_fn && (flags & TYPE_AND_IDENT_FL_ALLOW_FN)) {
 					tok_bufdiscard();

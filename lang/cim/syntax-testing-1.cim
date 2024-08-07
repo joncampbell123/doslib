@@ -340,7 +340,6 @@ a: b:	x += 3;
 	let signed long int *x = 1;
 	let signed long int **x = 1;
 	let int ** x = &z;
-	let int * int * x = &z;
 	let const int * const * const ** x = &z;
 	let signed long int &x = 1;
 	let int &x = z;
