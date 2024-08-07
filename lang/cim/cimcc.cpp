@@ -1986,6 +1986,13 @@ public:
 								if (!ok) break;
 							}
 						}
+						if (i != NULL) {
+							/* after * and & an identifier MUST be the name of the variable
+							 * because we do not allow additional types past that point */
+							if (i->op == ast_node_op_t::identifier) {
+								break;
+							}
+						}
 					}
 				}
 				else if (tok_bufpeek().type == token_type_t::r_fn && (flags & TYPE_AND_IDENT_FL_ALLOW_FN)) {

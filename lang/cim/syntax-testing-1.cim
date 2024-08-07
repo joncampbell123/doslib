@@ -354,7 +354,7 @@ a: b:	x += 3;
 	let const int &&x = z;
 	let const int & const &x = z;
 	let const int && const &x = z;
-	let const int *x const const *x = &z;
+	let const int * const const *x = &z;
 	let volatile int * volatile * volatile const x = &z;
 	let const int scoped::t * const &x::y;
 	let auto x,y,z;
