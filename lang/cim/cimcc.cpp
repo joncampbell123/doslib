@@ -5869,6 +5869,50 @@ public:
 		return true;
 	}
 
+	static bool reduce_addrof(ast_node_t* &r) { /* ast_node_op_t::addrof */
+		/* [dereference]
+		 *   \- ...
+		 *
+		 * can include [identifier list], [identifier], another [deref] or [ref]
+		 *
+		 * our job is to convert the datatype to a typeclsif */
+		reduce_check_op(r,ast_node_op_t::addressof);
+
+		ast_node_t *dt=NULL,*tmp=r->child;
+
+		if (!tmp) return true;
+		dt = tmp; tmp = tmp->next;
+
+		if (dt->op == ast_node_op_t::identifier_list) {
+			if (!reduce_typeid_to_typeclsif(dt))
+				return false;
+		}
+
+		return true;
+	}
+
+	static bool reduce_deref(ast_node_t* &r) { /* ast_node_op_t::dereference */
+		/* [dereference]
+		 *   \- ...
+		 *
+		 * can include [identifier list], [identifier], another [deref] or [ref]
+		 *
+		 * our job is to convert the datatype to a typeclsif */
+		reduce_check_op(r,ast_node_op_t::dereference);
+
+		ast_node_t *dt=NULL,*tmp=r->child;
+
+		if (!tmp) return true;
+		dt = tmp; tmp = tmp->next;
+
+		if (dt->op == ast_node_op_t::identifier_list) {
+			if (!reduce_typeid_to_typeclsif(dt))
+				return false;
+		}
+
+		return true;
+	}
+
 	static bool reduce_compound_let(ast_node_t* &r) { /* ast_node_op_t::i_compound_let */
 		/* [compound let]
 		 *   \- [datatype] -> [let] -> ...
@@ -6007,6 +6051,8 @@ public:
 				case ast_node_op_t::functioncall:	if (!reduce_fncall(n)) return false; break;
 				case ast_node_op_t::i_compound_let:	if (!reduce_compound_let(n)) return false; break;
 				case ast_node_op_t::r_fn:		if (!reduce_r_fn(n)) return false; break;
+				case ast_node_op_t::dereference:	if (!reduce_deref(n)) return false; break;
+				case ast_node_op_t::addressof:		if (!reduce_addrof(n)) return false; break;
 				default: break;
 			};
 		}
