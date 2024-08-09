@@ -605,15 +605,17 @@ __asm__ (
 );
 __asm__ (
 	"hello\n"
-	"multiple\n"
+	"multiple\n"+
 	"lines\n"+
 	fn string() { /* conditional determined by anonymous function */
 		if (true) return "and\nconditional\n";
 		else return "compiler\nfailed\n";
-	}+
+	}()+
 	"asm\n"+
 	compiletimemacros()
 );
+
+let wchar_t *str = L"Hello" L" World";
 
 asm volatile ("hello");
 asm [[lang("i386")]] ("hello");

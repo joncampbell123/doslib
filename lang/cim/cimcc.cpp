@@ -475,10 +475,14 @@ namespace CIMCC {
 			data = NULL;
 		}
 
-		void on_delete(void) {
+		void clear_data(void) {
 			length = 0;
 			if (data) free(data);
 			data = NULL;
+		}
+
+		void on_delete(void) {
+			clear_data();
 		}
 	};
 
@@ -6020,6 +6024,61 @@ public:
 		return true;
 	}
 
+	static bool reduce_strcat(ast_node_t* &r) { /* ast_node_op_t::strcat */
+		/* [strcat]
+		 *   \- [a] -> [b]
+		 *
+		 * become
+		 *
+		 * "a""b" => "ab" */
+		reduce_check_op(r,ast_node_op_t::strcat);
+
+		ast_node_t *a=NULL,*b=NULL;
+		if (!reduce_get_two_params(r,a,b)) return true;
+
+		if (a->op == ast_node_op_t::constant && b->op == ast_node_op_t::constant) {
+			if (a->tv.type == token_type_t::stringliteral && b->tv.type == token_type_t::stringliteral) {
+				if (a->tv.v.chrstrlit.type == b->tv.v.chrstrlit.type) { /* only matching string types */
+					const size_t sum = a->tv.v.chrstrlit.length + b->tv.v.chrstrlit.length;
+					char *ndata = NULL;
+
+					if (sum != 0) {
+						ndata = (char*)malloc(sum);
+						if (ndata == NULL) return false;
+
+						char *p = ndata;
+						if (a->tv.v.chrstrlit.length != 0) {
+							memcpy(p,a->tv.v.chrstrlit.data,a->tv.v.chrstrlit.length);
+							p += a->tv.v.chrstrlit.length;
+						}
+						if (b->tv.v.chrstrlit.length != 0) {
+							memcpy(p,b->tv.v.chrstrlit.data,b->tv.v.chrstrlit.length);
+							p += b->tv.v.chrstrlit.length;
+						}
+						assert(p == (ndata+sum));
+					}
+
+					a->tv.v.chrstrlit.clear_data();
+					b->tv.v.chrstrlit.clear_data();
+
+					a->free_children();
+					b->free_children();
+
+					r->op = ast_node_op_t::constant;
+					r->tv = std::move(a->tv);
+					r->tv.v.chrstrlit.length = sum;
+					r->tv.v.chrstrlit.data = (void*)ndata;
+					r->child = NULL;
+
+					delete a;
+					delete b;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	bool compiler::reduce(ast_node_t* &root) {
 		if (root == NULL)
 			return true;
@@ -6060,6 +6119,7 @@ public:
 				case ast_node_op_t::r_fn:		if (!reduce_r_fn(n)) return false; break;
 				case ast_node_op_t::dereference:	if (!reduce_deref(n)) return false; break;
 				case ast_node_op_t::addressof:		if (!reduce_addrof(n)) return false; break;
+				case ast_node_op_t::strcat:		if (!reduce_strcat(n)) return false; break;
 				default: break;
 			};
 		}
