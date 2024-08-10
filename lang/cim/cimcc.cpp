@@ -1414,76 +1414,33 @@ public:
 		}
 
 		if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
-			if (tok_bufpeek(1).v.identifier.strcmp("define")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_define;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("undef")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_undef;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("defined")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_defined;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("defval")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_defval;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("warning")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_warning;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("error")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_error;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("type")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_type;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
-			else if (tok_bufpeek(1).v.identifier.strcmp("include")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_include;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
-				return true;
-			}
+			if (tok_bufpeek(1).v.identifier.strcmp("define"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_define,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("undef"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_undef,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("defined"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_defined,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("defval"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_defval,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("warning"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_warning,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("error"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_error,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("type"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_type,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
+			else if (tok_bufpeek(1).v.identifier.strcmp("include"))
+				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_include,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
 			else if (tok_bufpeek(1).v.identifier.strcmp("deftype")) {
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::r_pound_deftype;
-				pchnode->tv = std::move(tok_bufpeek(0));
-				tok_bufdiscard(2);
+				pchnode = new ast_node_t(ast_node_op_t::r_pound_deftype,tok_bufpeek(0)); tok_bufdiscard(2);
 
-				if (tok_bufpeek().type != token_type_t::openparen) return false;
-				tok_bufdiscard();
+				if (tok_bufget().type != token_type_t::openparen)
+					return false;
 
 				if (!expression(pchnode->child))
 					return false;
 
-				if (tok_bufpeek().type != token_type_t::closeparen) return false;
-				tok_bufdiscard();
+				if (tok_bufget().type != token_type_t::closeparen)
+					return false;
 
 				return true;
 			}
