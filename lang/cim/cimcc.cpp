@@ -999,6 +999,7 @@ public:
 		int64_t getb_hex(unsigned int mc);
 		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
+		ast_node_t *string_literal_list(void);
 		bool if_statement(ast_node_t* &apnode);
 		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
@@ -1153,6 +1154,38 @@ public:
 	static bool is_reserved_identifier(const token_type_t t);
 	void token_to_string(std::string &s,const token_t &t);
 
+	ast_node_t *compiler::string_literal_list(void) {
+		/* string constant node if one string, [strcat] if C style string constant concatenation */
+		ast_node_t *n = ast_node_t::mk_constant(tok_bufget());
+
+		/* build the AST nodes to ensure the string is concatenated left to right, i.e.
+		 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
+		 * strcat(strcat(strcat("c" "d") "b") "a") */
+		while (tok_bufpeek().type == token_type_t::stringliteral) {
+			/* pchnode "a"
+			 *
+			 * next token "b"
+			 *
+			 * [strcat]
+			 *  \- ["a"] -> ["b"]
+			 *
+			 * also:
+			 *
+			 * [strcat]
+			 *  \- ["a"] -> ["b"]
+			 *
+			 * next token "c"
+			 *
+			 * [strcat]
+			 *  \- [strcat] -> ["c"]
+			 *      \- ["a"] -> ["b"] */
+			n->set_next(ast_node_t::mk_constant(tok_bufget()));
+			n = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/n);
+		}
+
+		return n;
+	}
+
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
@@ -1197,36 +1230,7 @@ public:
 			case token_type_t::ellipsis: pchnode = new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()); return true;
 			case token_type_t::r_volatile: pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
 			case token_type_t::identifier: pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
-
-			case token_type_t::stringliteral:
-				pchnode = ast_node_t::mk_constant(tok_bufget());
-
-				/* build the AST nodes to ensure the string is concatenated left to right, i.e.
-				 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
-				 * strcat(strcat(strcat("c" "d") "b") "a") */
-				while (tok_bufpeek().type == token_type_t::stringliteral) {
-					/* pchnode "a"
-					 *
-					 * next token "b"
-					 *
-					 * [strcat]
-					 *  \- ["a"] -> ["b"]
-					 *
-					 * also:
-					 *
-					 * [strcat]
-					 *  \- ["a"] -> ["b"]
-					 *
-					 * next token "c"
-					 *
-					 * [strcat]
-					 *  \- [strcat] -> ["c"]
-					 *      \- ["a"] -> ["b"] */
-					pchnode->set_next(ast_node_t::mk_constant(tok_bufget()));
-					pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/pchnode);
-				}
-
-				return true;
+			case token_type_t::stringliteral: pchnode = string_literal_list(); return true;
 
 			default:
 				break;
