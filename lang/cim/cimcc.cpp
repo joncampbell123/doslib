@@ -1024,6 +1024,7 @@ public:
 		bool logical_and_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
 		bool argument_expression_list(ast_node_t* &pchnode);
+		bool parse_anonymous_function(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
@@ -1298,10 +1299,10 @@ public:
 	bool compiler::parse_array_constant(ast_node_t* &pchnode) {
 		pchnode = new ast_node_t(ast_node_op_t::i_array,tok_bufget());
 
-			/* [scope]
-			 *  \
-			 *   +-- [expression]
-			 */
+		/* [scope]
+		 *  \
+		 *   +-- [expression]
+		 */
 
 		if (tok_bufpeek().type == token_type_t::closecurly) {
 			/* well then it's a nothing */
@@ -1328,6 +1329,37 @@ public:
 					return false;
 			}
 		}
+
+		return true;
+	}
+
+	bool compiler::parse_anonymous_function(ast_node_t* &pchnode) {
+		pchnode = new ast_node_t(ast_node_op_t::r_fn,tok_bufget());
+
+		ast_node_t **n = &(pchnode->child);
+		ast_node_t *i=NULL,*a=NULL,*b=NULL;
+
+		/* first the type specification */
+		{
+			ast_node_t *t=NULL;
+
+			if (!let_datatype_expression(t)) return false;
+			assert(t != NULL);
+
+			(*n) = new ast_node_t;
+			(*n)->op = ast_node_op_t::i_datatype;
+			(*n)->child = t;
+			n = &((*n)->next);
+		}
+
+		if (!fn_expression(i,a,b,FN_EXPR_ANONYMOUS))
+			return false;
+		if (i == NULL)
+			return false;
+
+		if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
+		if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
+		if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
 
 		return true;
 	}
@@ -1379,6 +1411,7 @@ public:
 			case token_type_t::dblleftsquarebracket:  return parse_attributes(pchnode);
 			case token_type_t::openparen:             return parse_subexpression(pchnode);
 			case token_type_t::opencurly:             return parse_array_constant(pchnode);
+			case token_type_t::r_fn:                  return parse_anonymous_function(pchnode);
 
 			default: break;
 		}
@@ -1460,39 +1493,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::r_fn) { /* anonymous function */
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_fn;
-			pchnode->tv = std::move(tok_bufpeek());
-			tok_bufdiscard();
-
-			ast_node_t **n = &(pchnode->child);
-			ast_node_t *i=NULL,*a=NULL,*b=NULL;
-
-			/* first the type specification */
-			{
-				ast_node_t *t=NULL;
-
-				if (!let_datatype_expression(t)) return false;
-				assert(t != NULL);
-
-				(*n) = new ast_node_t;
-				(*n)->op = ast_node_op_t::i_datatype;
-				(*n)->child = t;
-				n = &((*n)->next);
-			}
-
-			if (!fn_expression(i,a,b,FN_EXPR_ANONYMOUS))
-				return false;
-			if (i == NULL)
-				return false;
-
-			if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
-			if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
-			if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
-
-			return true;
 		}
 
 		return false;
