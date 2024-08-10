@@ -794,6 +794,36 @@ public:
 			return r;
 		}
 
+		static ast_node_t *arrange_parent_child(ast_node_t *p,ast_node_t *c) {
+			assert(p != NULL);
+			p->set_child(c);
+			return p; /* return parent */
+		}
+
+		ast_node_t *clear_next(void) {
+			ast_node_t *r = next;
+			next = NULL;
+			return r;
+		}
+
+		ast_node_t *clear_child(void) {
+			ast_node_t *r = child;
+			child = NULL;
+			return r;
+		}
+
+		void set_next(ast_node_t* const n) {
+			assert(n != NULL);
+			assert(next == NULL);
+			next = n;
+		}
+
+		void set_child(ast_node_t* const c) {
+			assert(c != NULL);
+			assert(child == NULL);
+			child = c;
+		}
+
 		bool unlink_child(void) {
 			if (child) {
 				struct ast_node_t *dm = child;
@@ -1130,6 +1160,22 @@ public:
 				pchnode = ast_node_t::mk_constant(t);
 				tok_bufdiscard();
 				return true;
+			case token_type_t::stringliteral:
+				pchnode = ast_node_t::mk_constant(t);
+				tok_bufdiscard();
+
+				/* build the AST nodes to ensure the string is concatenated left to right, i.e.
+				 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
+				 * strcat(strcat(strcat("c" "d") "b") "a") */
+				while (tok_bufpeek().type == token_type_t::stringliteral) {
+					pchnode->set_next(ast_node_t::mk_constant(tok_bufpeek()));
+					tok_bufdiscard();
+
+					pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/pchnode);
+				}
+
+				return true;
+
 			case token_type_t::r_true:
 			case token_type_t::r_false:
 				pchnode = ast_node_t::mk_bool_constant(t,t.type == token_type_t::r_true);
@@ -1216,29 +1262,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::stringliteral) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::constant;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			/* build the AST nodes to ensure the string is concatenated left to right, i.e.
-			 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
-			 * strcat(strcat(strcat("c" "d") "b") "a") */
-			while (tok_bufpeek().type == token_type_t::stringliteral) {
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::strcat;
-				pchnode->child = sav_p;
-				sav_p->next = new ast_node_t;
-				sav_p->next->op = ast_node_op_t::constant;
-				sav_p->next->tv = std::move(tok_bufpeek());
-				tok_bufdiscard();
-			}
-
-			return true;
 		}
 		else if (t.type == token_type_t::r_const) {
 			assert(pchnode == NULL);
