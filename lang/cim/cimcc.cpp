@@ -1002,6 +1002,7 @@ public:
 		ast_node_t *string_literal_list(void);
 		bool if_statement(ast_node_t* &apnode);
 		void skip_numeric_digit_separator(void);
+		bool parse_typeof(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
 		bool if_statement_parse(ast_node_t* &apnode);
@@ -1186,6 +1187,21 @@ public:
 		return n;
 	}
 
+	bool compiler::parse_typeof(ast_node_t* &pchnode) {
+		pchnode = new ast_node_t(ast_node_op_t::r_typeof,tok_bufget());
+
+		if (tok_bufget().type != token_type_t::openparen)
+			return false;
+
+		if (!expression(pchnode->child))
+			return false;
+
+		if (tok_bufget().type != token_type_t::closeparen)
+			return false;
+
+		return true;
+	}
+
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
@@ -1229,6 +1245,7 @@ public:
 			case token_type_t::r_volatile:          pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
 			case token_type_t::identifier:          pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
 			case token_type_t::stringliteral:       pchnode = string_literal_list(); return true;
+			case token_type_t::r_typeof:            return parse_typeof(pchnode);
 
 			default: break;
 		}
@@ -1310,24 +1327,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::r_typeof) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_typeof;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			if (tok_bufpeek().type != token_type_t::openparen) return false;
-			tok_bufdiscard();
-
-			if (!expression(pchnode->child))
-				return false;
-
-			if (tok_bufpeek().type != token_type_t::closeparen) return false;
-			tok_bufdiscard();
-
-			return true;
 		}
 		else if (t.type == token_type_t::dblleftsquarebracket) {
 			assert(pchnode == NULL);
