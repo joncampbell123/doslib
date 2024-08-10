@@ -769,6 +769,26 @@ public:
 		ast_node_op_t			op = ast_node_op_t::none;
 		struct token_t			tv;
 
+		ast_node_t() {
+		}
+
+		ast_node_t(const ast_node_op_t init_op) : op(init_op) {
+		}
+
+		static ast_node_t *mk_constant(token_t &t) {
+			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
+			r->tv = std::move(t);
+			return r;
+		}
+
+		static ast_node_t *mk_bool_constant(token_t &t,const bool b) {
+			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
+			r->tv = std::move(t);
+			r->tv.type = token_type_t::intval;
+			r->tv.v.intval.initbool(b);
+			return r;
+		}
+
 		bool unlink_child(void) {
 			if (child) {
 				struct ast_node_t *dm = child;
@@ -1096,25 +1116,25 @@ public:
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
 
-		if (t.type == token_type_t::intval || t.type == token_type_t::floatval || t.type == token_type_t::characterliteral) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::constant;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-			return true;
+		assert(pchnode == NULL);
+
+		switch (t.type) {
+			case token_type_t::intval:
+			case token_type_t::floatval:
+			case token_type_t::characterliteral:
+				pchnode = ast_node_t::mk_constant(t);
+				tok_bufdiscard();
+				return true;
+			case token_type_t::r_true:
+			case token_type_t::r_false:
+				pchnode = ast_node_t::mk_bool_constant(t,t.type == token_type_t::r_true);
+				tok_bufdiscard();
+				return true;
+			default:
+				break;
 		}
-		else if (t.type == token_type_t::r_true || t.type == token_type_t::r_false) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::constant;
-			pchnode->tv = std::move(t);
-			pchnode->tv.type = token_type_t::intval;
-			pchnode->tv.v.intval.initbool(t.type == token_type_t::r_true);
-			tok_bufdiscard();
-			return true;
-		}
-		else if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
+
+		if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
 			if (tok_bufpeek(1).v.identifier.strcmp("define")) {
 				pchnode = new ast_node_t;
 				pchnode->op = ast_node_op_t::r_pound_define;
