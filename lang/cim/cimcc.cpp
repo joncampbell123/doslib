@@ -1010,6 +1010,7 @@ public:
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
+		bool parse_subexpression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
@@ -1251,6 +1252,48 @@ public:
 		return true;
 	}
 
+	bool compiler::parse_subexpression(ast_node_t* &pchnode) {
+		pchnode = new ast_node_t(ast_node_op_t::subexpression,tok_bufget()); /* which should be the ( */
+
+		/* [subexpression]
+		 *  \
+		 *   +-- [expression] */
+
+		if (!expression(pchnode->child))
+			return false;
+
+		{
+			token_t &t = tok_bufpeek();
+			if (t.type == token_type_t::closeparen)
+				tok_bufdiscard(); /* eat it */
+			else
+				return false;
+		}
+
+		/* this might not be an expression, it might be a typecast.
+		 * it depends on what follows after the closing parenthesis.
+		 *
+		 * (type)(expression)
+		 * (type){compound literal}
+		 * (type)identifier including (type)functioncall()
+		 *
+		 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
+		{
+			token_t &nt = tok_bufpeek();
+
+			if (	nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly ||
+				nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
+				nt.type == token_type_t::intval || nt.type == token_type_t::floatval ||
+				nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
+				pchnode->op = ast_node_op_t::typecast;
+				if (!unary_expression(pchnode->child->next))
+					return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
@@ -1296,6 +1339,7 @@ public:
 			case token_type_t::stringliteral:         pchnode = string_literal_list(); return true;
 			case token_type_t::r_typeof:              return parse_typeof(pchnode);
 			case token_type_t::dblleftsquarebracket:  return parse_attributes(pchnode);
+			case token_type_t::openparen:             return parse_subexpression(pchnode);
 
 			default: break;
 		}
@@ -1377,49 +1421,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::openparen) {
-			tok_bufdiscard(); /* eat it */
-
-			/* [subexpression]
-			 *  \
-			 *   +-- [expression] */
-
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::subexpression;
-			if (!expression(pchnode->child))
-				return false;
-
-			{
-				token_t &t = tok_bufpeek();
-				if (t.type == token_type_t::closeparen)
-					tok_bufdiscard(); /* eat it */
-				else
-					return false;
-			}
-
-			/* this might not be an expression, it might be a typecast.
-			 * it depends on what follows after the closing parenthesis.
-			 *
-			 * (type)(expression)
-			 * (type){compound literal}
-			 * (type)identifier including (type)functioncall()
-			 *
-			 * Don't allow anything beyond that. If you want to typecast the negation of a variable you have to wrap it in parenthesis. */
-			{
-				token_t &nt = tok_bufpeek();
-
-				if (	nt.type == token_type_t::openparen || nt.type == token_type_t::opencurly ||
-					nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
-					nt.type == token_type_t::intval || nt.type == token_type_t::floatval ||
-					nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
-					pchnode->op = ast_node_op_t::typecast;
-					if (!unary_expression(pchnode->child->next))
-						return false;
-				}
-			}
-
-			return true;
 		}
 		else if (t.type == token_type_t::opencurly) {
 			tok_bufdiscard(); /* eat it */

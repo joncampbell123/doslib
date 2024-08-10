@@ -153,6 +153,8 @@ fn int func1(int x,int y) {
 	return z ^ 1;
 }
 
+let int x = 4*(4+2);
+
 // C++ style comment. This should be ignored to end of line.
 // Even if another // is in the line, ignored to end of line.
 fn int func1(int x/*input code*/) {
