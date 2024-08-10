@@ -1012,6 +1012,7 @@ public:
 		bool additive_expression(ast_node_t* &pchnode);
 		bool parse_subexpression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
+		bool parse_array_constant(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
 		bool relational_expression(ast_node_t* &pchnode);
@@ -1294,6 +1295,43 @@ public:
 		return true;
 	}
 
+	bool compiler::parse_array_constant(ast_node_t* &pchnode) {
+		pchnode = new ast_node_t(ast_node_op_t::i_array,tok_bufget());
+
+			/* [scope]
+			 *  \
+			 *   +-- [expression]
+			 */
+
+		if (tok_bufpeek().type == token_type_t::closecurly) {
+			/* well then it's a nothing */
+		}
+		else {
+			if (!assignment_expression(pchnode->child))
+				return false;
+
+			ast_node_t *n = pchnode->child;
+			while (tok_bufpeek().type == token_type_t::comma) {
+				tok_bufdiscard();
+
+				if (!assignment_expression(n->next))
+					return false;
+
+				n = n->next;
+			}
+
+			{
+				token_t &t = tok_bufpeek();
+				if (t.type == token_type_t::closecurly)
+					tok_bufdiscard(); /* eat it */
+				else
+					return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		token_t &t = tok_bufpeek();
@@ -1340,6 +1378,7 @@ public:
 			case token_type_t::r_typeof:              return parse_typeof(pchnode);
 			case token_type_t::dblleftsquarebracket:  return parse_attributes(pchnode);
 			case token_type_t::openparen:             return parse_subexpression(pchnode);
+			case token_type_t::opencurly:             return parse_array_constant(pchnode);
 
 			default: break;
 		}
@@ -1421,45 +1460,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::opencurly) {
-			tok_bufdiscard(); /* eat it */
-
-			/* [scope]
-			 *  \
-			 *   +-- [expression]
-			 */
-
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::i_array;
-
-			if (tok_bufpeek().type == token_type_t::closecurly) {
-				/* well then it's a nothing */
-			}
-			else {
-				if (!assignment_expression(pchnode->child))
-					return false;
-
-				ast_node_t *n = pchnode->child;
-				while (tok_bufpeek().type == token_type_t::comma) {
-					tok_bufdiscard();
-
-					if (!assignment_expression(n->next))
-						return false;
-
-					n = n->next;
-				}
-
-				{
-					token_t &t = tok_bufpeek();
-					if (t.type == token_type_t::closecurly)
-						tok_bufdiscard(); /* eat it */
-					else
-						return false;
-				}
-			}
-
-			return true;
 		}
 		else if (t.type == token_type_t::r_fn) { /* anonymous function */
 			pchnode = new ast_node_t;
