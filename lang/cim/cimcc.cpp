@@ -1366,11 +1366,8 @@ public:
 
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
-		token_t &t = tok_bufpeek();
-
 		assert(pchnode == NULL);
-
-		switch (t.type) {
+		switch (tok_bufpeek().type) {
 			case token_type_t::intval:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
