@@ -586,6 +586,12 @@ public:
 		token_t(token_t &&x) { common_move(x); }
 		token_t &operator=(token_t &&x) { common_move(x); return *this; }
 
+		void make_bool_val(const bool b) {
+			common_delete();
+			type = token_type_t::intval;
+			v.intval.initbool(b);
+		}
+
 		private:
 
 		void common_delete(void) {
@@ -784,8 +790,7 @@ public:
 		static ast_node_t *mk_bool_constant(token_t &t,const bool b) {
 			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
 			r->tv = std::move(t);
-			r->tv.type = token_type_t::intval;
-			r->tv.v.intval.initbool(b);
+			r->tv.make_bool_val(b);
 			return r;
 		}
 
