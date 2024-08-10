@@ -1125,7 +1125,9 @@ public:
 			}
 		}
 
-		const token_t &tok_bufget(void) {
+		token_t &tok_bufget(void) {
+			/* WARNING: Return reference is valid UNTIL the next call to this function or any other tok_buf*() function.
+			 *          If you need to keep the value past that point declare a token_t and std::move() this reference to it. */
 			tok_buf_refill();
 			if (tok_buf_i < tok_buf_o) return tok_buf[tok_buf_i++];
 			return tok_empty;
@@ -1157,20 +1159,34 @@ public:
 			case token_type_t::intval:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
-				pchnode = ast_node_t::mk_constant(t);
-				tok_bufdiscard();
+				pchnode = ast_node_t::mk_constant(tok_bufget());
 				return true;
+
 			case token_type_t::stringliteral:
-				pchnode = ast_node_t::mk_constant(t);
-				tok_bufdiscard();
+				pchnode = ast_node_t::mk_constant(tok_bufget());
 
 				/* build the AST nodes to ensure the string is concatenated left to right, i.e.
 				 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
 				 * strcat(strcat(strcat("c" "d") "b") "a") */
 				while (tok_bufpeek().type == token_type_t::stringliteral) {
-					pchnode->set_next(ast_node_t::mk_constant(tok_bufpeek()));
-					tok_bufdiscard();
-
+					/* pchnode "a"
+					 *
+					 * next token "b"
+					 *
+					 * [strcat]
+					 *  \- ["a"] -> ["b"]
+					 *
+					 * also:
+					 *
+					 * [strcat]
+					 *  \- ["a"] -> ["b"]
+					 *
+					 * next token "c"
+					 *
+					 * [strcat]
+					 *  \- [strcat] -> ["c"]
+					 *      \- ["a"] -> ["b"] */
+					pchnode->set_next(ast_node_t::mk_constant(tok_bufget()));
 					pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/pchnode);
 				}
 

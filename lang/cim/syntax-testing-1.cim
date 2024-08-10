@@ -62,7 +62,7 @@ That should not have triggered the end.
 \\\ASCII ART\\\
 The next line will.
 Fart";
-"Multiple" "string " H"<<CAT
+"Multiple " "string " H"<<CAT
 concatenation but now
 across multiple
 CAT" " lines too";
