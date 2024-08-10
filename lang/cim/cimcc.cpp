@@ -1164,12 +1164,39 @@ public:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
 				pchnode = ast_node_t::mk_constant(tok_bufget()); return true;
+
 			case token_type_t::r_true:
 			case token_type_t::r_false:
 				pchnode = ast_node_t::mk_bool_constant(tok_bufget(),t.type == token_type_t::r_true); return true;
 
-			case token_type_t::r_const:		pchnode = new ast_node_t(ast_node_op_t::r_const,tok_bufget()); return true;
-			case token_type_t::r_constexpr:		pchnode = new ast_node_t(ast_node_op_t::r_constexpr,tok_bufget()); return true;
+			case token_type_t::r_const: pchnode = new ast_node_t(ast_node_op_t::r_const, tok_bufget()); return true;
+			case token_type_t::r_constexpr: pchnode = new ast_node_t(ast_node_op_t::r_constexpr, tok_bufget()); return true;
+			case token_type_t::r_compileexpr: pchnode = new ast_node_t(ast_node_op_t::r_compileexpr, tok_bufget()); return true;
+			case token_type_t::r_sizeof: pchnode = new ast_node_t(ast_node_op_t::r_sizeof, tok_bufget()); return true;
+			case token_type_t::r_offsetof: pchnode = new ast_node_t(ast_node_op_t::r_offsetof, tok_bufget()); return true;
+			case token_type_t::r_static_assert: pchnode = new ast_node_t(ast_node_op_t::r_static_assert, tok_bufget()); return true;
+			case token_type_t::r_size_t: pchnode = new ast_node_t(ast_node_op_t::r_size_t, tok_bufget()); return true;
+			case token_type_t::r_ssize_t: pchnode = new ast_node_t(ast_node_op_t::r_ssize_t, tok_bufget()); return true;
+			case token_type_t::r_static: pchnode = new ast_node_t(ast_node_op_t::r_static, tok_bufget()); return true;
+			case token_type_t::r_extern: pchnode = new ast_node_t(ast_node_op_t::r_extern, tok_bufget()); return true;
+			case token_type_t::r_auto: pchnode = new ast_node_t(ast_node_op_t::r_auto, tok_bufget()); return true;
+			case token_type_t::r_signed: pchnode = new ast_node_t(ast_node_op_t::r_signed, tok_bufget()); return true;
+			case token_type_t::r_unsigned: pchnode = new ast_node_t(ast_node_op_t::r_unsigned, tok_bufget()); return true;
+			case token_type_t::r_long: pchnode = new ast_node_t(ast_node_op_t::r_long, tok_bufget()); return true;
+			case token_type_t::r_short: pchnode = new ast_node_t(ast_node_op_t::r_short, tok_bufget()); return true;
+			case token_type_t::r_int: pchnode = new ast_node_t(ast_node_op_t::r_int, tok_bufget()); return true;
+			case token_type_t::r_bool: pchnode = new ast_node_t(ast_node_op_t::r_bool, tok_bufget()); return true;
+			case token_type_t::r_near: pchnode = new ast_node_t(ast_node_op_t::r_near, tok_bufget()); return true;
+			case token_type_t::r_far: pchnode = new ast_node_t(ast_node_op_t::r_far, tok_bufget()); return true;
+			case token_type_t::r_huge: pchnode = new ast_node_t(ast_node_op_t::r_huge, tok_bufget()); return true;
+			case token_type_t::r_float: pchnode = new ast_node_t(ast_node_op_t::r_float, tok_bufget()); return true;
+			case token_type_t::r_double: pchnode = new ast_node_t(ast_node_op_t::r_double, tok_bufget()); return true;
+			case token_type_t::r_this: pchnode = new ast_node_t(ast_node_op_t::r_this, tok_bufget()); return true;
+			case token_type_t::r_void: pchnode = new ast_node_t(ast_node_op_t::r_void, tok_bufget()); return true;
+			case token_type_t::r_char: pchnode = new ast_node_t(ast_node_op_t::r_char, tok_bufget()); return true;
+			case token_type_t::ellipsis: pchnode = new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()); return true;
+			case token_type_t::r_volatile: pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
+			case token_type_t::identifier: pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
 
 			case token_type_t::stringliteral:
 				pchnode = ast_node_t::mk_constant(tok_bufget());
@@ -1282,240 +1309,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::r_compileexpr) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_compileexpr;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_sizeof) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_sizeof;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_offsetof) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_offsetof;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_static_assert) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_static_assert;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_size_t) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_size_t;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_ssize_t) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_ssize_t;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_static) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_static;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_extern) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_extern;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_auto) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_auto;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_signed) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_signed;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_unsigned) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_unsigned;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_long) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_long;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_short) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_short;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_int) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_int;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_bool) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_bool;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_near) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_near;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_far) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_far;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_huge) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_huge;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_float) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_float;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_double) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_double;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_this) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_this;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_void) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_void;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_char) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_char;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::ellipsis) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::ellipsis;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_volatile) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_volatile;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::identifier) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::identifier;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
 		}
 		else if (t.type == token_type_t::r_typeof) {
 			assert(pchnode == NULL);
