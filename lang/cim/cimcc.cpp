@@ -781,6 +781,10 @@ public:
 		ast_node_t(const ast_node_op_t init_op) : op(init_op) {
 		}
 
+		ast_node_t(const ast_node_op_t init_op,token_t &init_tv) : op(init_op) {
+			tv = std::move(init_tv);
+		}
+
 		static ast_node_t *mk_constant(token_t &t) {
 			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
 			r->tv = std::move(t);
@@ -1159,8 +1163,13 @@ public:
 			case token_type_t::intval:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
-				pchnode = ast_node_t::mk_constant(tok_bufget());
-				return true;
+				pchnode = ast_node_t::mk_constant(tok_bufget()); return true;
+			case token_type_t::r_true:
+			case token_type_t::r_false:
+				pchnode = ast_node_t::mk_bool_constant(tok_bufget(),t.type == token_type_t::r_true); return true;
+
+			case token_type_t::r_const:		pchnode = new ast_node_t(ast_node_op_t::r_const,tok_bufget()); return true;
+			case token_type_t::r_constexpr:		pchnode = new ast_node_t(ast_node_op_t::r_constexpr,tok_bufget()); return true;
 
 			case token_type_t::stringliteral:
 				pchnode = ast_node_t::mk_constant(tok_bufget());
@@ -1192,11 +1201,6 @@ public:
 
 				return true;
 
-			case token_type_t::r_true:
-			case token_type_t::r_false:
-				pchnode = ast_node_t::mk_bool_constant(t,t.type == token_type_t::r_true);
-				tok_bufdiscard();
-				return true;
 			default:
 				break;
 		}
@@ -1278,24 +1282,6 @@ public:
 			else {
 				return false;
 			}
-		}
-		else if (t.type == token_type_t::r_const) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_const;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
-		}
-		else if (t.type == token_type_t::r_constexpr) {
-			assert(pchnode == NULL);
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::r_constexpr;
-			pchnode->tv = std::move(t);
-			tok_bufdiscard();
-
-			return true;
 		}
 		else if (t.type == token_type_t::r_compileexpr) {
 			assert(pchnode == NULL);
