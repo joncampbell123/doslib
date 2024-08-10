@@ -1457,8 +1457,8 @@ public:
 		 *  \             \
 		 *   +--- [expr]   +--- [expr] */
 #define NLEX assignment_expression
-		pchnode = new ast_node_t;
-		pchnode->op = ast_node_op_t::argument;
+		assert(pchnode == NULL);
+		pchnode = new ast_node_t(ast_node_op_t::argument);
 		{
 			ast_node_t **n = &(pchnode->child);
 			ast_node_t *i=NULL,*e=NULL;
@@ -1477,8 +1477,8 @@ public:
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			nb->next = new ast_node_t; nb = nb->next;
-			nb->op = ast_node_op_t::argument;
+			assert(nb->next == NULL);
+			nb->next = new ast_node_t(ast_node_op_t::argument); nb = nb->next;
 			{
 				ast_node_t **n = &(nb->child);
 				ast_node_t *i=NULL,*e=NULL;
