@@ -788,6 +788,11 @@ public:
 				c = &((*c)->next);
 			}
 
+			void to_next_until_last(void) {
+				assert(c != NULL);
+				while (*c) c = &((*c)->next);
+			}
+
 			void to_child(void) {
 				assert(c != NULL);
 				c = &((*c)->child);
@@ -1503,8 +1508,8 @@ public:
 
 		ast_node_t::cursor n(pn.ref_child());
 
-		if (i) { ast_node_t::set(*n,i); while (*n) n.to_next(); }
-		if (e) { ast_node_t::set(*n,e); while (*n) n.to_next(); }
+		if (i) { ast_node_t::set(*n,i); n.to_next_until_last(); }
+		if (e) { ast_node_t::set(*n,e); n.to_next_until_last(); }
 
 		pn.to_next();
 		return true;
