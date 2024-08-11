@@ -775,6 +775,37 @@ public:
 		ast_node_op_t			op = ast_node_op_t::none;
 		struct token_t			tv;
 
+		struct cursor {
+			cursor() { }
+			cursor(ast_node_t* &n) { c = &n; }
+
+			ast_node_t* &operator* () { return *c; }
+			const ast_node_t* operator* () const { return (const ast_node_t*)(*c); }
+			ast_node_t** operator=(ast_node_t **nc) { return (c = nc); }
+
+			void to_next(void) {
+				assert(c != NULL);
+				c = &((*c)->next);
+			}
+
+			void to_child(void) {
+				assert(c != NULL);
+				c = &((*c)->child);
+			}
+
+			ast_node_t* &ref_next(void) {
+				assert(c != NULL);
+				return (*c)->next;
+			}
+
+			ast_node_t* &ref_child(void) {
+				assert(c != NULL);
+				return (*c)->child;
+			}
+
+			ast_node_t**		c = NULL;
+		};
+
 		ast_node_t() {
 		}
 
@@ -1038,13 +1069,13 @@ public:
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool parse_anonymous_function(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
-		bool fn_argument_expression_list_arg(ast_node_t** &pn);
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool argument_expression_funccall(ast_node_t* &pchnode);
 		bool let_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool statement_does_not_need_semicolon(ast_node_t* apnode);
 		void error_msg(const std::string msg,const position_t &pos);
+		bool fn_argument_expression_list_arg(ast_node_t::cursor &pn);
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
@@ -1462,7 +1493,7 @@ public:
 		return false;
 	}
 
-	bool compiler::fn_argument_expression_list_arg(ast_node_t** &pn) {
+	bool compiler::fn_argument_expression_list_arg(ast_node_t::cursor &pn) {
 		ast_node_t *i=NULL,*e=NULL;
 
 		if (!fn_argument_expression(i,e))
@@ -1470,17 +1501,17 @@ public:
 
 		ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument));
 
-		ast_node_t **n = &((*pn)->child);
+		ast_node_t::cursor n(pn.ref_child());
 
-		if (i) { ast_node_t::set(*n,i); while (*n) n = &((*n)->next); }
-		if (e) { ast_node_t::set(*n,e); while (*n) n = &((*n)->next); }
+		if (i) { ast_node_t::set(*n,i); while (*n) n.to_next(); }
+		if (e) { ast_node_t::set(*n,e); while (*n) n.to_next(); }
 
-		pn = &((*pn)->next);
+		pn.to_next();
 		return true;
 	}
 
 	bool compiler::fn_argument_expression_list(ast_node_t* &pchnode) {
-		ast_node_t **pn = &pchnode;
+		ast_node_t::cursor pn(pchnode);
 
 		/* [argument] -> [argument] -> ...
 		 *  \             \
