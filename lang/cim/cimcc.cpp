@@ -1657,6 +1657,30 @@ public:
 		return false;
 	}
 
+	static bool is_builtin_type_identifier(const token_type_t t) {
+		switch (t) {
+			case token_type_t::r_auto:
+			case token_type_t::r_signed:
+			case token_type_t::r_unsigned:
+			case token_type_t::r_int:
+			case token_type_t::r_long:
+			case token_type_t::r_short:
+			case token_type_t::r_bool:
+			case token_type_t::r_float:
+			case token_type_t::r_double:
+			case token_type_t::r_void:
+			case token_type_t::r_char:
+			case token_type_t::r_size_t:
+			case token_type_t::r_ssize_t:
+			case token_type_t::r_typeof:
+				return true;
+			default:
+				break;
+		}
+
+		return false;
+	}
+
 	bool compiler::let_datatype_expression(ast_node_t* &tnode) {
 #define NLEX cpp_scope_expression
 		ast_node_t::cursor c(tnode);
@@ -1666,7 +1690,26 @@ public:
 		c.to_child();
 
 		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
+			bool look_for_ident = true;
+
+			/* const int x            -> const int        [ r_const r_int ] leave "x"
+			 * const time_t x         -> const time_t     [ r_const identifier("time_t") ] leave "x"
+			 * const int time_t x     -> const int        [ r_const r_int ] leave "time_t" and "x" and this is a syntax error */
 			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
+				if (is_builtin_type_identifier(tok_bufpeek().type))
+					look_for_ident = false;
+				else if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
+					if (	tok_bufpeek(1).v.identifier.stringmatch("deftype") ||
+						tok_bufpeek(1).v.identifier.stringmatch("type")) {
+						look_for_ident = false;
+					}
+				}
+
+				if (!NLEX(*c)) return false;
+				c.to_next();
+			}
+
+			if (look_for_ident && tok_bufpeek().type == token_type_t::identifier) {
 				if (!NLEX(*c)) return false;
 				c.to_next();
 			}
@@ -5647,6 +5690,84 @@ public:
 		return true;
 	}
 
+	static bool reduce_deref(ast_node_t* &r) { /* ast_node_op_t::deref */
+		/* [deref]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::dereference);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a,RGP_ALLOW_CHILD|RGP_ALLOW_NEXT)) return true;
+
+		if (!reduce_typeid_to_typeclsif(r,a)) return false;
+
+		return true;
+	}
+
+	static bool reduce_addrof(ast_node_t* &r) { /* ast_node_op_t::addrof */
+		/* [deref]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::addressof);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a,RGP_ALLOW_CHILD|RGP_ALLOW_NEXT)) return true;
+
+		if (!reduce_typeid_to_typeclsif(r,a)) return false;
+
+		return true;
+	}
+
+	static bool reduce_argument(ast_node_t* &r) { /* ast_node_op_t::argument */
+		/* [argument]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::argument);
+
+		ast_node_t *a = r->child;
+
+		if (a) {
+			if (a->op == ast_node_op_t::i_attributes)
+				a = a->next;
+			else
+				return reduce_typeid_to_typeclsif(r,a);
+
+		}
+
+		if (a) {
+			if (!reduce_typeid_to_typeclsif(a)) return false;
+			a = a->next;
+		}
+
+		return true;
+	}
+
+	static bool reduce_datatype(ast_node_t* &r) { /* ast_node_op_t::i_datatype */
+		/* [datatype]
+		 *   \- [a]
+		 *
+		 * become
+		 *
+		 * (a)b */
+		reduce_check_op(r,ast_node_op_t::i_datatype);
+
+		ast_node_t *a=NULL;
+		if (!reduce_get_one_param(r,a,RGP_ALLOW_CHILD|RGP_ALLOW_NEXT)) return true;
+
+		if (!reduce_typeid_to_typeclsif(r,a)) return false;
+
+		return true;
+	}
+
 	static bool reduce_typecast(ast_node_t* &r) { /* ast_node_op_t::typecast */
 		/* [typecast]
 		 *   \- [a] -> [b]
@@ -5681,97 +5802,19 @@ public:
 		return true;
 	}
 
-	static bool reduce_addrof(ast_node_t* &r) { /* ast_node_op_t::addrof */
-		/* [dereference]
-		 *   \- ...
-		 *
-		 * can include [identifier list], [identifier], another [deref] or [ref]
-		 *
-		 * our job is to convert the datatype to a typeclsif */
-		reduce_check_op(r,ast_node_op_t::addressof);
-
-		ast_node_t *dt=NULL,*tmp=r->child;
-
-		if (!tmp) return true;
-		dt = tmp; tmp = tmp->next;
-
-		if (dt->op == ast_node_op_t::identifier_list) {
-			if (!reduce_typeid_to_typeclsif(dt))
-				return false;
-		}
-
-		return true;
-	}
-
-	static bool reduce_deref(ast_node_t* &r) { /* ast_node_op_t::dereference */
-		/* [dereference]
-		 *   \- ...
-		 *
-		 * can include [identifier list], [identifier], another [deref] or [ref]
-		 *
-		 * our job is to convert the datatype to a typeclsif */
-		reduce_check_op(r,ast_node_op_t::dereference);
-
-		ast_node_t *dt=NULL,*tmp=r->child;
-
-		if (!tmp) return true;
-		dt = tmp; tmp = tmp->next;
-
-		if (dt->op == ast_node_op_t::identifier_list) {
-			if (!reduce_typeid_to_typeclsif(dt))
-				return false;
-		}
-
-		return true;
-	}
-
 	static bool reduce_compound_let(ast_node_t* &r) { /* ast_node_op_t::i_compound_let */
 		/* [compound let]
 		 *   \- [datatype] -> [let] -> ...
-		 *                     \- [identifier] -> ...
-		 *
-		 * our job is to convert the datatype to a typeclsif */
+		 *                     \- [identifier] -> ... */
 		reduce_check_op(r,ast_node_op_t::i_compound_let);
-
-		ast_node_t *dt=NULL,*tmp=r->child;
-
-		if (!tmp) return true;
-		dt = tmp; tmp = tmp->next;
-
-		if (dt->op == ast_node_op_t::i_datatype) {
-			if (!reduce_typeid_to_typeclsif(dt->child))
-				return false;
-		}
 
 		return true;
 	}
 
 	static bool reduce_r_fn(ast_node_t* &r) { /* ast_node_op_t::r_fn */
 		/* [r_fn]
-		 *   \- [datatype] -> [identifier] -> ...
-		 *
-		 * our job is to convert the datatype to a typeclsif */
+		 *   \- [datatype] -> [identifier] -> ... */
 		reduce_check_op(r,ast_node_op_t::r_fn);
-
-		ast_node_t *dt=NULL,*tmp=r->child;
-
-		if (!tmp) return true;
-		dt = tmp; tmp = tmp->next;
-
-		if (dt->op == ast_node_op_t::i_datatype) {
-			if (!reduce_typeid_to_typeclsif(dt->child))
-				return false;
-		}
-
-		if (tmp && (tmp->op == ast_node_op_t::identifier || tmp->op == ast_node_op_t::i_anonymous || tmp->op == ast_node_op_t::dereference || tmp->op == ast_node_op_t::addressof))
-			tmp = tmp->next;
-
-		while (tmp && tmp->op == ast_node_op_t::argument) {
-			if (!reduce_typeid_to_typeclsif(tmp->child))
-				return false;
-
-			tmp = tmp->next;
-		}
 
 		return true;
 	}
@@ -5921,6 +5964,8 @@ public:
 				case ast_node_op_t::dereference:	if (!reduce_deref(n)) return false; break;
 				case ast_node_op_t::addressof:		if (!reduce_addrof(n)) return false; break;
 				case ast_node_op_t::strcat:		if (!reduce_strcat(n)) return false; break;
+				case ast_node_op_t::i_datatype:		if (!reduce_datatype(n)) return false; break;
+				case ast_node_op_t::argument:		if (!reduce_argument(n)) return false; break;
 				default: break;
 			};
 		}
