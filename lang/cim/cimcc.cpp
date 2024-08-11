@@ -1221,25 +1221,27 @@ public:
 
 		/* build the AST nodes to ensure the string is concatenated left to right, i.e.
 		 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
-		 * strcat(strcat(strcat("c" "d") "b") "a") */
+		 * strcat(strcat(strcat("c" "d") "b") "a")
+		 *
+		 * pchnode "a"
+		 *
+		 * next token "b"
+		 *
+		 * [strcat]
+		 *  \- ["a"] -> ["b"]
+		 *
+		 * also:
+		 *
+		 * [strcat]
+		 *  \- ["a"] -> ["b"]
+		 *
+		 * next token "c"
+		 *
+		 * [strcat]
+		 *  \- [strcat] -> ["c"]
+		 *      \- ["a"] -> ["b"] */
+
 		while (tok_bufpeek().type == token_type_t::stringliteral) {
-			/* pchnode "a"
-			 *
-			 * next token "b"
-			 *
-			 * [strcat]
-			 *  \- ["a"] -> ["b"]
-			 *
-			 * also:
-			 *
-			 * [strcat]
-			 *  \- ["a"] -> ["b"]
-			 *
-			 * next token "c"
-			 *
-			 * [strcat]
-			 *  \- [strcat] -> ["c"]
-			 *      \- ["a"] -> ["b"] */
 			n->set_next(ast_node_t::mk_constant(tok_bufget()));
 			n = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/n);
 		}
@@ -1266,18 +1268,14 @@ public:
 		ast_node_t::set(pchnode, new ast_node_t(ast_node_op_t::i_attributes,tok_bufget())); /* which should be the [[ */
 
 		if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) {
-			ast_node_t **n = &(pchnode->child);
+			ast_node_t::cursor n(pchnode->child);
 
 			/* using namespace: */
 			if (tok_bufpeek(0).type == token_type_t::r_using && tok_bufpeek(1).type == token_type_t::identifier) {
-				ast_node_t **sn;
-
 				ast_node_t::set(*n, new ast_node_t(ast_node_op_t::r_using,tok_bufget()));
-				sn = &((*n)->child);
-				n = &((*n)->next);
 
-				ast_node_t::set(*sn, new ast_node_t(ast_node_op_t::r_namespace));
-				sn = &((*sn)->next);
+				ast_node_t::cursor sn(n.ref_child()); n.to_next();
+				ast_node_t::set(*sn, new ast_node_t(ast_node_op_t::r_namespace)); sn.to_next();
 
 				if (!cpp_scope_expression(*sn))
 					return false;
@@ -1289,14 +1287,14 @@ public:
 			if (!assignment_expression(*n))
 				return false;
 
-			n = &((*n)->next);
+			n.to_next();
 			while (tok_bufpeek().type == token_type_t::comma) {
 				tok_bufdiscard();
 
 				if (!assignment_expression(*n))
 					return false;
 
-				n = &((*n)->next);
+				n.to_next();
 			}
 		}
 
