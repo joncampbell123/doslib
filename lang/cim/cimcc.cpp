@@ -1504,25 +1504,26 @@ public:
 	}
 
 	bool compiler::argument_expression_funccall(ast_node_t* &pchnode) {
+		ast_node_t **pn = &pchnode;
+
 #define NLEX assignment_expression
 		if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::argument;
-			pchnode->child = new ast_node_t;
-			pchnode->child->op = ast_node_op_t::named_parameter;
-			if (!primary_expression(pchnode->child->child))
+			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn = &((*pn)->child);
+			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::named_parameter));
+
+			if (!primary_expression((*pn)->child))
 				return false;
 
-			if (tok_bufpeek().type != token_type_t::colon) return false;
-			tok_bufdiscard();
+			if (tok_bufget().type != token_type_t::colon)
+				return false;
 
-			if (!NLEX(pchnode->child->next))
+			if (!NLEX((*pn)->next))
 				return false;
 		}
 		else {
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::argument;
-			if (!NLEX(pchnode->child))
+			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn = &((*pn)->child);
+
+			if (!NLEX(*pn))
 				return false;
 		}
 #undef NLEX
@@ -2529,6 +2530,8 @@ public:
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
 	bool compiler::assignment_expression(ast_node_t* &pchnode) {
+		assert(pchnode == NULL);
+
 #define NLEX conditional_expression
 		if (!NLEX(pchnode))
 			return false;
