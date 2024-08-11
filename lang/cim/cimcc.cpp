@@ -1760,34 +1760,23 @@ public:
 
 #define NLEX cpp_scope_expression
 		if (inode == NULL) {
-			ast_node_t **d = &inode;
+			ast_node_t::cursor d(inode);
 
 			while (1) {
 				if (tok_bufpeek().type == token_type_t::star) {
 					tok_bufdiscard();
-					assert(*d == NULL);
-					(*d) = new ast_node_t(ast_node_op_t::dereference);
-					d = &((*d)->child);
+					ast_node_t::set(*d, new ast_node_t(ast_node_op_t::dereference)); d.to_child();
 					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (tok_bufpeek().type == token_type_t::ampersand) {
 					tok_bufdiscard();
-					assert(*d == NULL);
-					(*d) = new ast_node_t(ast_node_op_t::addressof);
-					d = &((*d)->child);
+					ast_node_t::set(*d, new ast_node_t(ast_node_op_t::addressof)); d.to_child();
 					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (tok_bufpeek().type == token_type_t::ampersandampersand) {
 					tok_bufdiscard();
-
-					assert(*d == NULL);
-					(*d) = new ast_node_t(ast_node_op_t::addressof);
-					d = &((*d)->child);
-
-					assert(*d == NULL);
-					(*d) = new ast_node_t(ast_node_op_t::addressof);
-					d = &((*d)->child);
-
+					ast_node_t::set(*d, new ast_node_t(ast_node_op_t::addressof)); d.to_child();
+					ast_node_t::set(*d, new ast_node_t(ast_node_op_t::addressof)); d.to_child();
 					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (retv & TYPE_AND_IDENT_RT_FN) {
@@ -1796,8 +1785,7 @@ public:
 				}
 				else if (tok_bufpeek().type == token_type_t::dblleftsquarebracket) {
 					if (!primary_expression(*d)) return false;
-					d = &((*d)->next);
-					assert(*d == NULL);
+					d.to_next(); assert(*d == NULL);
 				}
 				else if (tok_bufpeek().type == token_type_t::identifier || is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::poundsign) {
 					ast_node_t *t=NULL,*i=NULL;
@@ -1805,8 +1793,8 @@ public:
 						return false;
 
 					assert(t != NULL || i != NULL);
-					if (t) { *d = t; d = &((*d)->next); }
-					if (i) { *d = i; d = &((*d)->next); }
+					if (t) { ast_node_t::set(*d,t); d.to_next(); }
+					if (i) { ast_node_t::set(*d,i); d.to_next(); }
 
 					/* once * and & are involved the type identifiers allowed are restricted to a few,
 					 * like "const". C/C++ doesn't let you write int * int * x or long * int * x
@@ -1841,9 +1829,7 @@ public:
 				}
 				else if (tok_bufpeek().type == token_type_t::r_fn && (flags & TYPE_AND_IDENT_FL_ALLOW_FN)) {
 					tok_bufdiscard();
-					assert(*d == NULL);
-					(*d) = new ast_node_t(ast_node_op_t::r_fn);
-					d = &((*d)->child);
+					ast_node_t::set(*d, new ast_node_t(ast_node_op_t::r_fn)); d.to_child();
 					retv |= TYPE_AND_IDENT_RT_FN;
 				}
 				else {
@@ -1851,8 +1837,7 @@ public:
 				}
 			}
 
-			if (inode_next)
-				*inode_next = d;
+			if (inode_next) *inode_next = d;
 		}
 
 		if (inode == NULL)
@@ -2738,7 +2723,7 @@ public:
 
 	bool compiler::fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
 		if (flags & FN_EXPR_ANONYMOUS) {
-			ast_node_t::cursor inode_next;
+			ast_node_t::cursor inode_next(inode);
 
 			if (tok_bufpeek().type != token_type_t::openparen) {
 				if (!type_and_identifiers_expression(inode,0,&inode_next))

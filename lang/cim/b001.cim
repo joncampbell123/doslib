@@ -220,4 +220,6 @@ let int x[3] = (long){1,2,3};
 let int x[3] = long({1,2,3});
 let int x[3] = long({1,float(2),3});
 let int x[3] = long({1,float(y),3});
+let int x = &y;
+let int [[attr]] x = *y;
 
