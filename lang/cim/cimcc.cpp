@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include <type_traits>
+#include <stdexcept>
 #include <vector>
 #include <string>
 #include <limits>
@@ -638,6 +639,12 @@ public:
 			}
 		}
 	};
+
+	/////////
+
+	static void check(const bool r) {
+		if (!r) throw std::runtime_error("Check failed");
+	}
 
 	/////////
 
@@ -2720,16 +2727,14 @@ public:
 			return false;
 
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
+
 			/* [,]
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
 
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::comma;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			if (!NLEX(sav_p->next))
+			pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::comma,tok_bufget()),/*child*/pchnode);
+
+			if (!NLEX(pchnode->next))
 				return false;
 		}
 #undef NLEX
@@ -2745,9 +2750,7 @@ public:
 					return false;
 			}
 
-			(*inode_next) = new ast_node_t;
-			(*inode_next)->op = ast_node_op_t::i_anonymous;
-			inode_next = &((*inode_next)->next);
+			ast_node_t::set(*inode_next, new ast_node_t(ast_node_op_t::i_anonymous));
 		}
 		else {
 			if (!type_and_identifiers_expression(inode))
@@ -2762,12 +2765,10 @@ public:
 					return false;
 			}
 
-			if (tok_bufpeek().type == token_type_t::closeparen) {
+			if (tok_bufpeek().type == token_type_t::closeparen)
 				tok_bufdiscard();
-			}
-			else {
+			else
 				return false;
-			}
 		}
 
 		if (flags & FN_EXPR_LET_EXPRESSION) {
