@@ -1091,7 +1091,7 @@ public:
 		int64_t getb_with_escape(token_charstrliteral_t::strtype_t typ);
 		bool fn_argument_expression(ast_node_t* &inode,ast_node_t* &enode);
 		bool split_identifiers_expression(ast_node_t* &tnode,ast_node_t* &inode);
-		unsigned int type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags=0,ast_node_t*** inode_next=NULL);
+		unsigned int type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags=0,ast_node_t::cursor* inode_next=NULL);
 		void gtok_chrstr_H_literal(const char qu,token_t &t,unsigned int flags=0,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		void gtok_chrstr_literal(const char qu,token_t &t,token_charstrliteral_t::strtype_t strtype = token_charstrliteral_t::strtype_t::T_BYTE);
 		bool fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags=0);
@@ -1250,14 +1250,14 @@ public:
 	bool compiler::parse_typeof(ast_node_t* &pchnode) {
 		ast_node_t::set(pchnode, new ast_node_t(ast_node_op_t::r_typeof,tok_bufget()));
 
-		if (tok_bufget().type != token_type_t::openparen)
-			return false;
+		if (tok_bufpeek().type != token_type_t::openparen) return false;
+		tok_bufdiscard();
 
 		if (!expression(pchnode->child))
 			return false;
 
-		if (tok_bufget().type != token_type_t::closeparen)
-			return false;
+		if (tok_bufpeek().type != token_type_t::closeparen) return false;
+		tok_bufdiscard();
 
 		return true;
 	}
@@ -1282,8 +1282,8 @@ public:
 				if (!cpp_scope_expression(*sn))
 					return false;
 
-				if (tok_bufget().type != token_type_t::colon)
-					return false;
+				if (tok_bufpeek().type != token_type_t::colon) return false;
+				tok_bufdiscard();
 			}
 
 			if (!assignment_expression(*n))
@@ -1300,8 +1300,8 @@ public:
 			}
 		}
 
-		if (tok_bufget().type != token_type_t::dblrightsquarebracket)
-			return false;
+		if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) return false;
+		tok_bufdiscard();
 
 		return true;
 	}
@@ -1486,14 +1486,14 @@ public:
 			else if (tok_bufpeek(1).v.identifier.stringmatch("deftype")) {
 				pchnode = new ast_node_t(ast_node_op_t::r_pound_deftype,tok_bufpeek(0)); tok_bufdiscard(2);
 
-				if (tok_bufget().type != token_type_t::openparen)
-					return false;
+				if (tok_bufpeek().type != token_type_t::openparen) return false;
+				tok_bufdiscard();
 
 				if (!expression(pchnode->child))
 					return false;
 
-				if (tok_bufget().type != token_type_t::closeparen)
-					return false;
+				if (tok_bufpeek().type != token_type_t::closeparen) return false;
+				tok_bufdiscard();
 
 				return true;
 			}
@@ -1554,8 +1554,8 @@ public:
 			if (!primary_expression((*pn)->child))
 				return false;
 
-			if (tok_bufget().type != token_type_t::colon)
-				return false;
+			if (tok_bufpeek().type != token_type_t::colon) return false;
+			tok_bufdiscard();
 
 			if (!NLEX((*pn)->next))
 				return false;
@@ -1755,7 +1755,7 @@ public:
 	 *
 	 * Use after_comma == false for first/only let declaration/definition, after_comma == true
 	 * after any comma in a compound let */
-	unsigned int compiler::type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags,ast_node_t*** inode_next) {
+	unsigned int compiler::type_and_identifiers_expression(ast_node_t* &inode,unsigned int flags,ast_node_t::cursor* inode_next) {
 		unsigned int retv = TYPE_AND_IDENT_RT_FOUND;
 
 #define NLEX cpp_scope_expression
@@ -1766,16 +1766,14 @@ public:
 				if (tok_bufpeek().type == token_type_t::star) {
 					tok_bufdiscard();
 					assert(*d == NULL);
-					(*d) = new ast_node_t;
-					(*d)->op = ast_node_op_t::dereference;
+					(*d) = new ast_node_t(ast_node_op_t::dereference);
 					d = &((*d)->child);
 					retv |= TYPE_AND_IDENT_RT_REF;
 				}
 				else if (tok_bufpeek().type == token_type_t::ampersand) {
 					tok_bufdiscard();
 					assert(*d == NULL);
-					(*d) = new ast_node_t;
-					(*d)->op = ast_node_op_t::addressof;
+					(*d) = new ast_node_t(ast_node_op_t::addressof);
 					d = &((*d)->child);
 					retv |= TYPE_AND_IDENT_RT_REF;
 				}
@@ -1783,13 +1781,11 @@ public:
 					tok_bufdiscard();
 
 					assert(*d == NULL);
-					(*d) = new ast_node_t;
-					(*d)->op = ast_node_op_t::addressof;
+					(*d) = new ast_node_t(ast_node_op_t::addressof);
 					d = &((*d)->child);
 
 					assert(*d == NULL);
-					(*d) = new ast_node_t;
-					(*d)->op = ast_node_op_t::addressof;
+					(*d) = new ast_node_t(ast_node_op_t::addressof);
 					d = &((*d)->child);
 
 					retv |= TYPE_AND_IDENT_RT_REF;
@@ -1846,8 +1842,7 @@ public:
 				else if (tok_bufpeek().type == token_type_t::r_fn && (flags & TYPE_AND_IDENT_FL_ALLOW_FN)) {
 					tok_bufdiscard();
 					assert(*d == NULL);
-					(*d) = new ast_node_t;
-					(*d)->op = ast_node_op_t::r_fn;
+					(*d) = new ast_node_t(ast_node_op_t::r_fn);
 					d = &((*d)->child);
 					retv |= TYPE_AND_IDENT_RT_FN;
 				}
@@ -2743,7 +2738,7 @@ public:
 
 	bool compiler::fn_expression(ast_node_t* &inode,ast_node_t* &alnode,ast_node_t* &bnode,unsigned int flags) {
 		if (flags & FN_EXPR_ANONYMOUS) {
-			ast_node_t** inode_next = &inode;
+			ast_node_t::cursor inode_next;
 
 			if (tok_bufpeek().type != token_type_t::openparen) {
 				if (!type_and_identifiers_expression(inode,0,&inode_next))
@@ -2835,7 +2830,7 @@ public:
 	}
 
 	bool compiler::let_expression(ast_node_t* &inode,ast_node_t* &enode) {
-		ast_node_t** inode_next = &inode;
+		ast_node_t::cursor inode_next(inode);
 		unsigned int tair;
 
 		if ((tair=type_and_identifiers_expression(inode,TYPE_AND_IDENT_FL_ALLOW_FN,&inode_next)) == 0)
@@ -2852,17 +2847,16 @@ public:
 			if (i == NULL)
 				return false;
 
-			if (i) { *inode_next = i; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
-			if (a) { *inode_next = a; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
-			if (b) { *inode_next = b; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
+			if (i) { ast_node_t::set(*inode_next,i); inode_next.to_next_until_last(); }
+			if (a) { ast_node_t::set(*inode_next,a); inode_next.to_next_until_last(); }
+			if (b) { ast_node_t::set(*inode_next,b); inode_next.to_next_until_last(); }
 		}
 
 		/* allow [expression] if an array of the type is desired */
 		if (tok_bufpeek().type == token_type_t::leftsquarebracket) {
 			tok_bufdiscard(); /* eat it */
 
-			ast_node_t *a = new ast_node_t;
-			a->op = ast_node_op_t::arraysubscript;
+			ast_node_t *a = new ast_node_t(ast_node_op_t::arraysubscript);
 
 			/* allow [] i.e. for function parameters */
 			if (tok_bufpeek().type != token_type_t::rightsquarebracket) {
@@ -2878,7 +2872,7 @@ public:
 					return false;
 			}
 
-			if (a) { *inode_next = a; inode_next = &((*inode_next)->next); while (*inode_next) inode_next = &((*inode_next)->next); }
+			if (a) { ast_node_t::set(*inode_next,a); inode_next.to_next_until_last(); }
 		}
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
@@ -2887,8 +2881,7 @@ public:
 		else if (tok_bufpeek().type == token_type_t::equal) {
 			tok_bufdiscard(); /* eat it */
 
-			enode = new ast_node_t;
-			enode->op = ast_node_op_t::assign;
+			enode = new ast_node_t(ast_node_op_t::assign);
 			if (!assignment_expression(enode->child))
 				return false;
 		}
