@@ -1350,7 +1350,10 @@ public:
 	}
 
 	bool compiler::parse_array_constant(ast_node_t* &pchnode) {
-		pchnode = new ast_node_t(ast_node_op_t::i_array,tok_bufget());
+		ast_node_t::cursor c(pchnode);
+
+		(*c) = new ast_node_t(ast_node_op_t::i_array,tok_bufget());
+		c.to_child();
 
 		/* [scope]
 		 *  \
@@ -1361,17 +1364,14 @@ public:
 			/* well then it's a nothing */
 		}
 		else {
-			if (!assignment_expression(pchnode->child))
-				return false;
+			if (!assignment_expression(*c)) return false;
+			c.to_next();
 
-			ast_node_t *n = pchnode->child;
 			while (tok_bufpeek().type == token_type_t::comma) {
 				tok_bufdiscard();
 
-				if (!assignment_expression(n->next))
-					return false;
-
-				n = n->next;
+				if (!assignment_expression(*c)) return false;
+				c.to_next();
 			}
 
 			{
