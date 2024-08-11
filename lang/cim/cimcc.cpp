@@ -1305,13 +1305,15 @@ public:
 	}
 
 	bool compiler::parse_subexpression(ast_node_t* &pchnode) {
-		pchnode = new ast_node_t(ast_node_op_t::subexpression,tok_bufget()); /* which should be the ( */
+		ast_node_t::cursor c(pchnode);
+
+		ast_node_t::set(*c, new ast_node_t(ast_node_op_t::subexpression,tok_bufget())); c.to_child(); /* which should be the ( */
 
 		/* [subexpression]
 		 *  \
 		 *   +-- [expression] */
 
-		if (!expression(pchnode->child))
+		if (!expression(*c))
 			return false;
 
 		{
@@ -1337,8 +1339,9 @@ public:
 				nt.type == token_type_t::identifier || is_reserved_identifier(nt.type) ||
 				nt.type == token_type_t::intval || nt.type == token_type_t::floatval ||
 				nt.type == token_type_t::characterliteral || nt.type == token_type_t::stringliteral) {
-				pchnode->op = ast_node_op_t::typecast;
-				if (!unary_expression(pchnode->child->next))
+				pchnode->op = ast_node_op_t::typecast; c.to_next();
+
+				if (!unary_expression(*c))
 					return false;
 			}
 		}
@@ -1573,15 +1576,16 @@ public:
 		 *  \             \
 		 *   +--- [expr]   +--- [expr] */
 #define NLEX argument_expression_funccall
-		if (!NLEX(pchnode))
-			return false;
+		ast_node_t::cursor c(pchnode);
 
-		ast_node_t *nb = pchnode;
+		if (!NLEX(*c)) return false;
+		c.to_next();
+
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			if (!NLEX(nb->next)) return false;
-			nb = nb->next;
+			if (!NLEX(*c)) return false;
+			c.to_next();
 		}
 #undef NLEX
 		return true;
@@ -1601,14 +1605,11 @@ public:
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
 
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::scopeoperator;
-				pchnode->child = sav_p;
+				pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::scopeoperator),/*child*/pchnode);
 
 				/* must be an identifier */
 				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (!NLEX(sav_p->next))
+					if (!NLEX(pchnode->child->next))
 						return false;
 				}
 				else {
