@@ -785,6 +785,18 @@ public:
 			tv = std::move(init_tv);
 		}
 
+		static void set(ast_node_t* &d,ast_node_t *s) {
+			assert(d == NULL);
+			assert(s != NULL);
+			d = s;
+		}
+
+		static void goto_next(ast_node_t* &n) {
+			assert(n != NULL);
+			assert(n->next != NULL);
+			n = n->next;
+		}
+
 		static ast_node_t *mk_constant(token_t &t) {
 			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
 			r->tv = std::move(t);
@@ -1026,6 +1038,7 @@ public:
 		bool argument_expression_list(ast_node_t* &pchnode);
 		bool parse_anonymous_function(ast_node_t* &pchnode);
 		bool multiplicative_expression(ast_node_t* &pchnode);
+		bool fn_argument_expression_list_arg(ast_node_t** &pn);
 		bool fn_argument_expression_list(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		bool argument_expression_funccall(ast_node_t* &pchnode);
@@ -1452,46 +1465,39 @@ public:
 		return false;
 	}
 
+	bool compiler::fn_argument_expression_list_arg(ast_node_t** &pn) {
+		ast_node_t *i=NULL,*e=NULL;
+
+		if (!fn_argument_expression(i,e))
+			return false;
+
+		ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument));
+
+		ast_node_t **n = &((*pn)->child);
+
+		if (i) { ast_node_t::set(*n,i); while (*n) n = &((*n)->next); }
+		if (e) { ast_node_t::set(*n,e); while (*n) n = &((*n)->next); }
+
+		pn = &((*pn)->next);
+		return true;
+	}
+
 	bool compiler::fn_argument_expression_list(ast_node_t* &pchnode) {
+		ast_node_t **pn = &pchnode;
+
 		/* [argument] -> [argument] -> ...
 		 *  \             \
 		 *   +--- [expr]   +--- [expr] */
+
 #define NLEX assignment_expression
-		assert(pchnode == NULL);
-		pchnode = new ast_node_t(ast_node_op_t::argument);
-		{
-			ast_node_t **n = &(pchnode->child);
-			ast_node_t *i=NULL,*e=NULL;
+		if (!fn_argument_expression_list_arg(pn))
+			return false;
 
-			assert(*n == NULL);
-			if (!fn_argument_expression(i,e))
-				return false;
-
-			assert(*n == NULL);
-			if (i) { *n = i; while (*n) n = &((*n)->next); }
-			assert(*n == NULL);
-			if (e) { *n = e; while (*n) n = &((*n)->next); }
-		}
-
-		ast_node_t *nb = pchnode;
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
 			tok_bufdiscard(); /* eat it */
 
-			assert(nb->next == NULL);
-			nb->next = new ast_node_t(ast_node_op_t::argument); nb = nb->next;
-			{
-				ast_node_t **n = &(nb->child);
-				ast_node_t *i=NULL,*e=NULL;
-
-				assert(*n == NULL);
-				if (!fn_argument_expression(i,e))
-					return false;
-
-				assert(*n == NULL);
-				if (i) { *n = i; while (*n) n = &((*n)->next); }
-				assert(*n == NULL);
-				if (e) { *n = e; while (*n) n = &((*n)->next); }
-			}
+			if (!fn_argument_expression_list_arg(pn))
+				return false;
 		}
 #undef NLEX
 		return true;
