@@ -1543,24 +1543,24 @@ public:
 	}
 
 	bool compiler::argument_expression_funccall(ast_node_t* &pchnode) {
-		ast_node_t **pn = &pchnode;
+		ast_node_t::cursor pn(pchnode);
 
 #define NLEX assignment_expression
 		if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
-			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn = &((*pn)->child);
+			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn.to_child();
 			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::named_parameter));
 
-			if (!primary_expression((*pn)->child))
-				return false;
+			if (!primary_expression(pn.ref_child())) return false;
+			pn.to_next();
 
 			if (tok_bufpeek().type != token_type_t::colon) return false;
 			tok_bufdiscard();
 
-			if (!NLEX((*pn)->next))
+			if (!NLEX(*pn))
 				return false;
 		}
 		else {
-			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn = &((*pn)->child);
+			ast_node_t::set(*pn, new ast_node_t(ast_node_op_t::argument)); pn.to_child();
 
 			if (!NLEX(*pn))
 				return false;
