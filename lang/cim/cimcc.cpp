@@ -1205,7 +1205,7 @@ public:
 	}
 
 	bool compiler::parse_typeof(ast_node_t* &pchnode) {
-		pchnode = new ast_node_t(ast_node_op_t::r_typeof,tok_bufget());
+		ast_node_t::set(pchnode, new ast_node_t(ast_node_op_t::r_typeof,tok_bufget()));
 
 		if (tok_bufget().type != token_type_t::openparen)
 			return false;
@@ -1220,7 +1220,7 @@ public:
 	}
 
 	bool compiler::parse_attributes(ast_node_t* &pchnode) {
-		pchnode = new ast_node_t(ast_node_op_t::i_attributes,tok_bufget()); /* which should be the [[ */
+		ast_node_t::set(pchnode, new ast_node_t(ast_node_op_t::i_attributes,tok_bufget())); /* which should be the [[ */
 
 		if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) {
 			ast_node_t **n = &(pchnode->child);
@@ -1229,22 +1229,18 @@ public:
 			if (tok_bufpeek(0).type == token_type_t::r_using && tok_bufpeek(1).type == token_type_t::identifier) {
 				ast_node_t **sn;
 
-				(*n) = new ast_node_t;
-				(*n)->op = ast_node_op_t::r_using;
-				(*n)->tv = std::move(tok_bufpeek());
-				tok_bufdiscard();
+				ast_node_t::set(*n, new ast_node_t(ast_node_op_t::r_using,tok_bufget()));
 				sn = &((*n)->child);
 				n = &((*n)->next);
 
-				(*sn) = new ast_node_t;
-				(*sn)->op = ast_node_op_t::r_namespace;
+				ast_node_t::set(*sn, new ast_node_t(ast_node_op_t::r_namespace));
 				sn = &((*sn)->next);
 
 				if (!cpp_scope_expression(*sn))
 					return false;
 
-				if (tok_bufpeek().type != token_type_t::colon) return false;
-				tok_bufdiscard();
+				if (tok_bufget().type != token_type_t::colon)
+					return false;
 			}
 
 			if (!assignment_expression(*n))
@@ -1426,6 +1422,7 @@ public:
 			default: break;
 		}
 
+		assert(pchnode == NULL);
 		if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
 			if (tok_bufpeek(1).v.identifier.stringmatch("define"))
 				{ pchnode = new ast_node_t(ast_node_op_t::r_pound_define,tok_bufpeek(0)); tok_bufdiscard(2); return true; }
