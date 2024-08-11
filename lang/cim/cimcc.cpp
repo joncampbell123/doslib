@@ -790,6 +790,11 @@ public:
 			const ast_node_t* operator* () const { return (const ast_node_t*)(*c); }
 			ast_node_t** operator=(ast_node_t **nc) { return (c = nc); }
 
+			void set_and_then_to_next(ast_node_t *s) {
+				ast_node_t::set(*c,s);
+				to_next_until_last();
+			}
+
 			void to_next(void) {
 				assert(c != NULL);
 				c = &((*c)->next);
@@ -1516,8 +1521,8 @@ public:
 
 		ast_node_t::cursor n(pn.ref_child());
 
-		if (i) { ast_node_t::set(*n,i); n.to_next_until_last(); }
-		if (e) { ast_node_t::set(*n,e); n.to_next_until_last(); }
+		if (i) n.set_and_then_to_next(i);
+		if (e) n.set_and_then_to_next(e);
 
 		pn.to_next();
 		return true;
@@ -2796,17 +2801,11 @@ public:
 		 *
 		 * "*" serves as a way to specify that past this point, parameters must be referenced by name, not position, just as in Python */
 		if (tok_bufpeek().type == token_type_t::ellipsis) {
-			inode = new ast_node_t;
-			inode->op = ast_node_op_t::ellipsis;
-			inode->tv = std::move(tok_bufpeek(0));
-			tok_bufdiscard();
+			inode = new ast_node_t(ast_node_op_t::ellipsis,tok_bufget());
 			return true;
 		}
 		else if (tok_bufpeek().type == token_type_t::star) {
-			inode = new ast_node_t;
-			inode->op = ast_node_op_t::named_arg_required_boundary;
-			inode->tv = std::move(tok_bufpeek(0));
-			tok_bufdiscard();
+			inode = new ast_node_t(ast_node_op_t::named_arg_required_boundary,tok_bufget());
 			return true;
 		}
 
@@ -2831,9 +2830,9 @@ public:
 			if (i == NULL)
 				return false;
 
-			if (i) { ast_node_t::set(*inode_next,i); inode_next.to_next_until_last(); }
-			if (a) { ast_node_t::set(*inode_next,a); inode_next.to_next_until_last(); }
-			if (b) { ast_node_t::set(*inode_next,b); inode_next.to_next_until_last(); }
+			if (i) inode_next.set_and_then_to_next(i);
+			if (a) inode_next.set_and_then_to_next(a);
+			if (b) inode_next.set_and_then_to_next(b);
 		}
 
 		/* allow [expression] if an array of the type is desired */
@@ -2848,6 +2847,8 @@ public:
 					return false;
 			}
 
+			inode_next.set_and_then_to_next(a);
+
 			{
 				token_t &t = tok_bufpeek();
 				if (t.type == token_type_t::rightsquarebracket)
@@ -2855,8 +2856,6 @@ public:
 				else
 					return false;
 			}
-
-			if (a) { ast_node_t::set(*inode_next,a); inode_next.to_next_until_last(); }
 		}
 
 		if (tok_bufpeek().type == token_type_t::semicolon || tok_bufpeek().type == token_type_t::comma || tok_bufpeek().type == token_type_t::closeparen) {
@@ -2905,41 +2904,29 @@ public:
 	}
 
 	bool compiler::if_statement(ast_node_t* &apnode) {
-		apnode = new ast_node_t;
-		apnode->op = ast_node_op_t::r_if;
-		apnode->tv = std::move(tok_bufpeek()); //assumed to be the "if" token!
-		tok_bufdiscard();
-
+		apnode = new ast_node_t(ast_node_op_t::r_if,tok_bufget());
 		return if_statement_parse(apnode->child);
 	}
 
 	bool compiler::if_statement_parse(ast_node_t* &apnode) {
-		if (tok_bufpeek().type != token_type_t::openparen)
-			return false;
+		ast_node_t::cursor c(apnode);
+		ast_node_t *n;
+
+		if (tok_bufpeek().type != token_type_t::openparen) return false;
 		tok_bufdiscard();
 
-		if (!expression(apnode))
-			return false;
+		if (!expression(*c)) return false;
+		c.to_next();
 
-		if (tok_bufpeek().type != token_type_t::closeparen)
-			return false;
+		if (tok_bufpeek().type != token_type_t::closeparen) return false;
 		tok_bufdiscard();
 
-		ast_node_t *n = apnode->next;
-		if (!statement(apnode->next,n))
-			return false;
-		assert(n->next == NULL);
+		n = *c; if (!statement(*c,n)) return false;
+		c.to_next();
 
 		if (tok_bufpeek().type == token_type_t::r_else) {
-			n->next = new ast_node_t;
-			n->next->op = ast_node_op_t::r_else;
-			n->next->tv = std::move(tok_bufpeek());
-			tok_bufdiscard();
-			n = n->next;
-
-			ast_node_t *n2 = n->child;
-			if (!statement(n->child,n2))
-				return false;
+			ast_node_t::set(*c, new ast_node_t(ast_node_op_t::r_else,tok_bufget())); c.to_child();
+			n = *c; if (!statement(*c,n)) return false;
 		}
 
 		return true;
