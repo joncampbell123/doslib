@@ -1393,32 +1393,24 @@ public:
 	}
 
 	bool compiler::parse_anonymous_function(ast_node_t* &pchnode) {
-		pchnode = new ast_node_t(ast_node_op_t::r_fn,tok_bufget());
-
-		ast_node_t **n = &(pchnode->child);
 		ast_node_t *i=NULL,*a=NULL,*b=NULL;
+		ast_node_t::cursor c(pchnode);
 
-		/* first the type specification */
-		{
-			ast_node_t *t=NULL;
+		*c = new ast_node_t(ast_node_op_t::r_fn,tok_bufget());
+		c.to_child();
 
-			if (!let_datatype_expression(t)) return false;
-			assert(t != NULL);
-
-			(*n) = new ast_node_t;
-			(*n)->op = ast_node_op_t::i_datatype;
-			(*n)->child = t;
-			n = &((*n)->next);
-		}
+		*c = new ast_node_t(ast_node_op_t::i_datatype);
+		if (!let_datatype_expression((*c)->child)) return false;
+		c.to_next();
 
 		if (!fn_expression(i,a,b,FN_EXPR_ANONYMOUS))
 			return false;
 		if (i == NULL)
 			return false;
 
-		if (i) { *n = i; n = &((*n)->next); while (*n) n = &((*n)->next); }
-		if (a) { *n = a; n = &((*n)->next); while (*n) n = &((*n)->next); }
-		if (b) { *n = b; n = &((*n)->next); while (*n) n = &((*n)->next); }
+		if (i) c.set_and_then_to_next(i);
+		if (a) c.set_and_then_to_next(a);
+		if (b) c.set_and_then_to_next(b);
 
 		return true;
 	}
