@@ -1659,21 +1659,21 @@ public:
 
 	bool compiler::let_datatype_expression(ast_node_t* &tnode) {
 #define NLEX cpp_scope_expression
-		tnode = new ast_node_t;
-		tnode->op = ast_node_op_t::identifier_list;
-		tnode->tv.position = tok_bufpeek().position;
+		ast_node_t::cursor c(tnode);
 
-		ast_node_t **n = &(tnode->child);
+		(*c) = new ast_node_t(ast_node_op_t::identifier_list);
+		(*c)->tv.position = tok_bufpeek().position;
+		c.to_child();
 
 		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
 			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
-				if (!NLEX(*n)) return false;
-				n = &((*n)->next);
+				if (!NLEX(*c)) return false;
+				c.to_next();
 			}
 		}
 		else if (tok_bufpeek().type == token_type_t::identifier) {
-			if (!NLEX(*n)) return false;
-			n = &((*n)->next);
+			if (!NLEX(*c)) return false;
+			c.to_next();
 		}
 		else {
 			return false;
