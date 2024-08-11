@@ -1057,6 +1057,7 @@ public:
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		int64_t getb_hex(unsigned int mc);
+		bool statement(ast_node_t* &rnode);
 		int64_t getb_octal(unsigned int mc);
 		bool expression(ast_node_t* &pchnode);
 		ast_node_t *string_literal_list(void);
@@ -2761,15 +2762,13 @@ public:
 			if (tok_bufpeek(0).type == token_type_t::equal && tok_bufpeek(1).type == token_type_t::opencurly) {
 				tok_bufdiscard(); /* eat the equals sign, leave the curly */
 
-				ast_node_t *n = NULL;
-				if (!statement(bnode,n))
+				if (!statement(bnode))
 					return false;
 			}
 		}
 		else {
 			if (tok_bufpeek().type == token_type_t::opencurly) {
-				ast_node_t *n = NULL;
-				if (!statement(bnode,n))
+				if (!statement(bnode))
 					return false;
 			}
 		}
@@ -2930,6 +2929,12 @@ public:
 		}
 
 		return true;
+	}
+
+	bool compiler::statement(ast_node_t* &rnode) {
+		ast_node_t* dummy = NULL;
+		(void)dummy; /* yes it's unused, shut up */
+		return statement(rnode,dummy);
 	}
 
 	bool compiler::statement(ast_node_t* &rnode,ast_node_t* &apnode) {
