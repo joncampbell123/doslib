@@ -790,33 +790,42 @@ public:
 			const ast_node_t* operator* () const { return (const ast_node_t*)(*c); }
 			ast_node_t** operator=(ast_node_t **nc) { return (c = nc); }
 
-			void set_and_then_to_next(ast_node_t *s) {
+			cursor &set_and_then_to_next(ast_node_t *s) {
 				ast_node_t::set(*c,s);
 				to_next_until_last();
+				return *this;
 			}
 
-			void to_next(void) {
+			cursor &to_next(void) {
 				assert(c != NULL);
+				assert((*c) != NULL);
 				c = &((*c)->next);
+				return *this;
 			}
 
-			void to_next_until_last(void) {
+			cursor &to_next_until_last(void) {
 				assert(c != NULL);
+				assert((*c) != NULL);
 				while (*c) c = &((*c)->next);
+				return *this;
 			}
 
-			void to_child(void) {
+			cursor &to_child(void) {
 				assert(c != NULL);
+				assert((*c) != NULL);
 				c = &((*c)->child);
+				return *this;
 			}
 
 			ast_node_t* &ref_next(void) {
 				assert(c != NULL);
+				assert((*c) != NULL);
 				return (*c)->next;
 			}
 
 			ast_node_t* &ref_child(void) {
 				assert(c != NULL);
+				assert((*c) != NULL);
 				return (*c)->child;
 			}
 
