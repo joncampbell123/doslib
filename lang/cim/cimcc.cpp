@@ -805,7 +805,6 @@ public:
 
 			cursor &to_next_until_last(void) {
 				assert(c != NULL);
-				assert((*c) != NULL);
 				while (*c) c = &((*c)->next);
 				return *this;
 			}
@@ -1059,6 +1058,7 @@ public:
 		bool expression(ast_node_t* &pchnode);
 		ast_node_t *string_literal_list(void);
 		bool if_statement(ast_node_t* &apnode);
+		bool statement(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
 		bool parse_typeof(ast_node_t* &pchnode);
 		bool parse_attributes(ast_node_t* &pchnode);
@@ -2963,6 +2963,45 @@ public:
 		return true;
 	}
 
+	bool compiler::statement(ast_node_t::cursor &nc) {
+		tok_buf_refill();
+		if (tok_buf_empty()) return true;
+
+		/* a statement of ; is fine */
+		if (tok_bufpeek().type == token_type_t::semicolon) {
+			tok_bufdiscard();
+			return true;
+		}
+
+		ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::statement));
+		(*nc)->tv.position = tok_bufpeek(0).position;
+
+		ast_node_t::cursor s_nc(nc);
+		s_nc.to_child();
+		nc.to_next();
+
+		if (!expression(*s_nc))
+			return false;
+
+		if (statement_does_not_need_semicolon(*s_nc)) {
+			/* if parsing a { scope } a semicolon is not required after the closing curly brace */
+		}
+		else {
+			token_t &t = tok_bufpeek();
+			if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
+				tok_bufdiscard(); /* eat the EOF or semicolon */
+			else
+				return false;
+		}
+
+		/* if it's just an identifier list it's probably gibberish or
+		 * accidental use of C/C++ syntax to declare a variable i.e. "int x" */
+		if ((*s_nc)->op == ast_node_op_t::identifier_list)
+			return false;
+
+		return true;
+	}
+
 	bool compiler::statement(ast_node_t* &rnode) {
 		ast_node_t* dummy = NULL;
 		(void)dummy; /* yes it's unused, shut up */
@@ -3748,9 +3787,11 @@ public:
 	}
 
 	void compiler::free_ast(void) {
-		root_node->free_nodes();
-		delete root_node;
-		root_node = NULL;
+		if (root_node) {
+			root_node->free_nodes();
+			delete root_node;
+			root_node = NULL;
+		}
 	}
 
 	const std::string &toksnames_getname(CIMCC::token_source_name_list_t *toksnames,const size_t ent);
@@ -5978,7 +6019,7 @@ public:
 	}
 
 	bool compiler::compile(void) {
-		ast_node_t *apnode = NULL,*rnode = NULL;
+		ast_node_t::cursor nc(root_node); nc.to_next_until_last();
 		bool ok = true;
 		token_t tok;
 
@@ -5987,7 +6028,6 @@ public:
 				return false;
 		}
 
-		tok_buf_clear();
 		if (tok_snamelist) {
 			token_source_name_t t;
 
@@ -5995,23 +6035,16 @@ public:
 			tok_pos.source = (*tok_snamelist).size();
 			(*tok_snamelist).push_back(std::move(t));
 		}
+
+		tok_buf_clear();
 		tok_pos.first_line();
 		tok_buf_refill();
 		while (!tok_buf_empty()) {
-			if (!statement(rnode,apnode)) {
-				error_msg("Syntax error",tok_bufpeek(0).position);
+			if (!statement(nc)) {
+				error_msg("Syntax error, parser at",tok_bufpeek(0).position);
 				ok = false;
 				break;
 			}
-		}
-
-		if (root_node) {
-			ast_node_t *r = root_node;
-			while (r->next != NULL) r = r->next;
-			r->next = rnode;
-		}
-		else {
-			root_node = rnode;
 		}
 
 		return ok;
