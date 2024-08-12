@@ -1058,24 +1058,25 @@ public:
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
-		bool parse_attributes(ast_node_t* &pchnode);
 		bool unary_expression(ast_node_t* &pchnode);
 		bool shift_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
-		bool parse_array_constant(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool binary_or_expression(ast_node_t* &pchnode);
 		bool relational_expression(ast_node_t* &pchnode);
 		bool binary_xor_expression(ast_node_t* &pchnode);
 		bool binary_and_expression(ast_node_t* &pchnode);
 		bool logical_or_expression(ast_node_t* &pchnode);
-		bool assignment_expression(ast_node_t* &pchnode);
 		bool let_datatype_expression(ast_node_t* &tnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
 		bool conditional_expression(ast_node_t* &pchnode);
+
+		bool assignment_expression(ast_node_t::cursor &nc);
+		bool assignment_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
+
 		bool multiplicative_expression(ast_node_t* &pchnode);
 		bool statement(ast_node_t* &rnode,ast_node_t* &apnode);
 		void error_msg(const std::string msg,const position_t &pos);
@@ -1233,83 +1234,6 @@ public:
 		return n;
 	}
 
-	bool compiler::parse_attributes(ast_node_t* &pchnode) {
-		ast_node_t::set(pchnode, new ast_node_t(ast_node_op_t::i_attributes,tok_bufget())); /* which should be the [[ */
-
-		if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) {
-			ast_node_t::cursor n(pchnode->child);
-
-			/* using namespace: */
-			if (tok_bufpeek(0).type == token_type_t::r_using && tok_bufpeek(1).type == token_type_t::identifier) {
-				ast_node_t::set(*n, new ast_node_t(ast_node_op_t::r_using,tok_bufget()));
-
-				ast_node_t::cursor sn(n.ref_child()); n.to_next();
-				ast_node_t::set(*sn, new ast_node_t(ast_node_op_t::r_namespace)); sn.to_next();
-
-				if (!cpp_scope_expression(*sn))
-					return false;
-
-				if (tok_bufpeek().type != token_type_t::colon) return false;
-				tok_bufdiscard();
-			}
-
-			if (!assignment_expression(*n))
-				return false;
-
-			n.to_next();
-			while (tok_bufpeek().type == token_type_t::comma) {
-				tok_bufdiscard();
-
-				if (!assignment_expression(*n))
-					return false;
-
-				n.to_next();
-			}
-		}
-
-		if (tok_bufpeek().type != token_type_t::dblrightsquarebracket) return false;
-		tok_bufdiscard();
-
-		return true;
-	}
-
-	bool compiler::parse_array_constant(ast_node_t* &pchnode) {
-		ast_node_t::cursor c(pchnode);
-
-		(*c) = new ast_node_t(ast_node_op_t::i_array,tok_bufget());
-		c.to_child();
-
-		/* [scope]
-		 *  \
-		 *   +-- [expression]
-		 */
-
-		if (tok_bufpeek().type == token_type_t::closecurly) {
-			/* well then it's a nothing */
-		}
-		else {
-			if (!assignment_expression(*c)) return false;
-			c.to_next();
-
-			while (tok_bufpeek().type == token_type_t::comma) {
-				tok_bufdiscard();
-
-				if (!assignment_expression(*c)) return false;
-				c.to_next();
-			}
-
-			{
-				token_t &t = tok_bufpeek();
-				if (t.type == token_type_t::closecurly)
-					tok_bufdiscard(); /* eat it */
-				else
-					return false;
-			}
-		}
-
-		return true;
-	}
-
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		assert(pchnode == NULL);
@@ -1350,8 +1274,6 @@ public:
 			case token_type_t::r_volatile:            pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
 			case token_type_t::identifier:            pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
 			case token_type_t::stringliteral:         pchnode = string_literal_list(); return true;
-			case token_type_t::dblleftsquarebracket:  return parse_attributes(pchnode);
-			case token_type_t::opencurly:             return parse_array_constant(pchnode);
 
 			default: break;
 		}
@@ -2114,154 +2036,39 @@ public:
 		return true;
 	}
 
+	bool compiler::assignment_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
+		return assignment_expression(cur_nc);
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
-	bool compiler::assignment_expression(ast_node_t* &pchnode) {
-		assert(pchnode == NULL);
-
+	bool compiler::assignment_expression(ast_node_t::cursor &nc) {
 #define NLEX conditional_expression
-		if (!NLEX(pchnode))
-			return false;
+		if (!NLEX(*nc)) return false;
 
-		/* assignment expressions are parsed right to left, therefore something like a = b = c = d
-		 * needs to be handled like a = (b = (c = d)) */
-		if (tok_bufpeek().type == token_type_t::equal) {
-			/* one thing only, please.
-			 * this also prevents accidentally using C/C++ style syntax to declare variables i.e. int z = 5 */
-			if (pchnode->op == ast_node_op_t::identifier_list)
-				return false;
+		/* left operator right
+		 *
+		 * [operator]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
 
-			/* [=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assign;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::plusequal) {
-			/* [+=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignadd;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::minusequal) {
-			/* [-=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignsubtract;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::starequal) {
-			/* [*=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignmultiply;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::slashequal) {
-			/* [/=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assigndivide;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::percentequal) {
-			/* [%=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignmodulo;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::ampersandequal) {
-			/* [&=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignand;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::caretequal) {
-			/* [^=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignxor;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::pipeequal) {
-			/* [|=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignor;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::leftleftangleequal) { /* <<= operator */
-			/* [<<=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignleftshift;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
-		else if (tok_bufpeek().type == token_type_t::rightrightangleequal) { /* >>= operator */
-			/* [>>=]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::assignrightshift;
-			pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-			pchnode->child = sav_p;
-			return assignment_expression(sav_p->next);
-		}
+		switch (tok_bufpeek().type) {
+			case token_type_t::equal:                return assignment_expression_common(nc,ast_node_op_t::assign);
+			case token_type_t::plusequal:            return assignment_expression_common(nc,ast_node_op_t::assignadd);
+			case token_type_t::minusequal:           return assignment_expression_common(nc,ast_node_op_t::assignsubtract);
+			case token_type_t::starequal:            return assignment_expression_common(nc,ast_node_op_t::assignmultiply);
+			case token_type_t::slashequal:           return assignment_expression_common(nc,ast_node_op_t::assigndivide);
+			case token_type_t::percentequal:         return assignment_expression_common(nc,ast_node_op_t::assignmodulo);
+			case token_type_t::ampersandequal:       return assignment_expression_common(nc,ast_node_op_t::assignand);
+			case token_type_t::caretequal:           return assignment_expression_common(nc,ast_node_op_t::assignxor);
+			case token_type_t::pipeequal:            return assignment_expression_common(nc,ast_node_op_t::assignor);
+			case token_type_t::leftleftangleequal:   return assignment_expression_common(nc,ast_node_op_t::assignleftshift);
+			case token_type_t::rightrightangleequal: return assignment_expression_common(nc,ast_node_op_t::assignrightshift);
+			default: break;
+		};
 #undef NLEX
 		return true;
 	}
@@ -2270,19 +2077,16 @@ public:
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 17 */
 	bool compiler::expression(ast_node_t::cursor &nc) {
 #define NLEX assignment_expression
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		/* [,]
 		 *  \
 		 *   +-- [left expr] -> [right expr] */
 
 		while (tok_bufpeek().type == token_type_t::comma) { /* , comma operator */
-			ast_node_t::cursor cur_nc = nc;
-			cur_nc.to_next(); /* save cursor */
-
+			ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::comma,tok_bufget())); /* make child of comma */
-
-			if (!NLEX(*cur_nc)) return false; /* read new one */
+			if (!NLEX(cur_nc)) return false; /* read new one */
 		}
 #undef NLEX
 		return true;
