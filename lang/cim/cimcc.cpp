@@ -1065,11 +1065,12 @@ public:
 		bool additive_expression(ast_node_t* &pchnode);
 		bool equality_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
-		bool binary_or_expression(ast_node_t* &pchnode);
 		bool relational_expression(ast_node_t* &pchnode);
 		bool binary_xor_expression(ast_node_t* &pchnode);
 		bool binary_and_expression(ast_node_t* &pchnode);
 		bool let_datatype_expression(ast_node_t* &tnode);
+
+		bool binary_or_expression(ast_node_t::cursor &nc);
 
 		bool logical_and_expression(ast_node_t::cursor &nc);
 
@@ -1956,24 +1957,18 @@ public:
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 10 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 13 */
-	bool compiler::binary_or_expression(ast_node_t* &pchnode) {
+	bool compiler::binary_or_expression(ast_node_t::cursor &nc) {
 #define NLEX binary_xor_expression
-		if (!NLEX(pchnode))
-			return false;
+		if (!NLEX(*nc)) return false;
+
+		/* [|]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
 
 		while (tok_bufpeek().type == token_type_t::pipe) { /* | operator */
-			tok_bufdiscard(); /* eat it */
-
-			/* [|]
-			 *  \
-			 *   +-- [left expr] -> [right expr] */
-
-			ast_node_t *sav_p = pchnode;
-			pchnode = new ast_node_t;
-			pchnode->op = ast_node_op_t::binary_or;
-			pchnode->child = sav_p;
-			if (!NLEX(sav_p->next))
-				return false;
+			ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::binary_or,tok_bufget())); /* make child of comma */
+			if (!NLEX(*cur_nc)) return false; /* read new one */
 		}
 #undef NLEX
 		return true;
@@ -1983,7 +1978,7 @@ public:
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 14 */
 	bool compiler::logical_and_expression(ast_node_t::cursor &nc) {
 #define NLEX binary_or_expression
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		/* [&&]
 		 *  \
@@ -1992,7 +1987,7 @@ public:
 		while (tok_bufpeek().type == token_type_t::ampersandampersand) { /* && operator */
 			ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::logical_and,tok_bufget())); /* make child of comma */
-			if (!NLEX(*cur_nc)) return false; /* read new one */
+			if (!NLEX(cur_nc)) return false; /* read new one */
 		}
 #undef NLEX
 		return true;
