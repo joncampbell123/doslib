@@ -1063,10 +1063,12 @@ public:
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
-		bool equality_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool relational_expression(ast_node_t* &pchnode);
 		bool let_datatype_expression(ast_node_t* &tnode);
+
+		bool equality_expression(ast_node_t::cursor &nc);
+		bool equality_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
 
 		bool binary_and_expression(ast_node_t::cursor &nc);
 
@@ -1863,46 +1865,34 @@ public:
 		return true;
 	}
 
+	bool compiler::equality_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
+		return relational_expression(*cur_nc);
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 7 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 10 */
-	bool compiler::equality_expression(ast_node_t* &pchnode) {
+	bool compiler::equality_expression(ast_node_t::cursor &nc) {
 #define NLEX relational_expression
-		if (!NLEX(pchnode))
-			return false;
+		if (!NLEX(*nc)) return false;
+
+		/* left operator right
+		 *
+		 * [operator]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
 
 		while (1) {
-			if (tok_bufpeek().type == token_type_t::equalequal) { /* == operator */
-				tok_bufdiscard(); /* eat it */
-
-				/* [==]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::equals;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else if (tok_bufpeek().type == token_type_t::exclamationequal) { /* != operator */
-				tok_bufdiscard(); /* eat it */
-
-				/* [!=]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::notequals;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else {
-				break;
+			switch (tok_bufpeek().type) {
+				case token_type_t::equalequal:         return equality_expression_common(nc,ast_node_op_t::equals);
+				case token_type_t::exclamationequal:   return equality_expression_common(nc,ast_node_op_t::notequals);
+				default:                               goto done_parsing;
 			}
 		}
+done_parsing:
+
 #undef NLEX
 		return true;
 	}
@@ -1911,7 +1901,7 @@ public:
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 11 */
 	bool compiler::binary_and_expression(ast_node_t::cursor &nc) {
 #define NLEX equality_expression
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		/* [&]
 		 *  \
@@ -1920,7 +1910,7 @@ public:
 		while (tok_bufpeek().type == token_type_t::ampersand) { /* & operator */
 			ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::binary_and,tok_bufget())); /* make child of comma */
-			if (!NLEX(*cur_nc)) return false; /* read new one */
+			if (!NLEX(cur_nc)) return false; /* read new one */
 		}
 #undef NLEX
 		return true;
@@ -2065,7 +2055,7 @@ public:
 			case token_type_t::pipeequal:            return assignment_expression_common(nc,ast_node_op_t::assignor);
 			case token_type_t::leftleftangleequal:   return assignment_expression_common(nc,ast_node_op_t::assignleftshift);
 			case token_type_t::rightrightangleequal: return assignment_expression_common(nc,ast_node_op_t::assignrightshift);
-			default: break;
+			default:                                 break;
 		};
 #undef NLEX
 		return true;
