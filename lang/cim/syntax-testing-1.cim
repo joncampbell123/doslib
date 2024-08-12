@@ -5,3 +5,4 @@ x?y:z;x+x?y+y:z+z;
 x||y;x+x||y+y;
 x&&y;x+x&&y+y;
 x|y;x+x|y+y;
+x^y;x+x^y+y;
