@@ -1865,17 +1865,19 @@ public:
 		return true;
 	}
 
+	//////////////////////////////////////
+
+#define NLEX relational_expression
 	bool compiler::equality_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
 		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
-		return relational_expression(*cur_nc);
+		return NLEX(*cur_nc);
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 7 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 10 */
 	bool compiler::equality_expression(ast_node_t::cursor &nc) {
-#define NLEX relational_expression
 		if (!NLEX(*nc)) return false;
 
 		/* left operator right
@@ -1893,9 +1895,11 @@ public:
 		}
 done_parsing:
 
-#undef NLEX
 		return true;
 	}
+#undef NLEX
+
+	//////////////////////////////////////
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 8 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 11 */
@@ -2024,6 +2028,9 @@ done_parsing:
 		return true;
 	}
 
+	//////////////////////////////////////
+
+#define NLEX conditional_expression
 	bool compiler::assignment_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
 		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
@@ -2034,7 +2041,6 @@ done_parsing:
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 14 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
 	bool compiler::assignment_expression(ast_node_t::cursor &nc) {
-#define NLEX conditional_expression
 		if (!NLEX(nc)) return false;
 
 		/* left operator right
@@ -2057,9 +2063,11 @@ done_parsing:
 			case token_type_t::rightrightangleequal: return assignment_expression_common(nc,ast_node_op_t::assignrightshift);
 			default:                                 break;
 		};
-#undef NLEX
 		return true;
 	}
+#undef NLEX
+
+	//////////////////////////////////////
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 15 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 17 */
