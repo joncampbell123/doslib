@@ -1072,7 +1072,8 @@ public:
 		bool logical_or_expression(ast_node_t* &pchnode);
 		bool let_datatype_expression(ast_node_t* &tnode);
 		bool logical_and_expression(ast_node_t* &pchnode);
-		bool conditional_expression(ast_node_t* &pchnode);
+
+		bool conditional_expression(ast_node_t::cursor &nc);
 
 		bool assignment_expression(ast_node_t::cursor &nc);
 		bool assignment_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -2028,10 +2029,31 @@ public:
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 13 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
-	bool compiler::conditional_expression(ast_node_t* &pchnode) {
+	bool compiler::conditional_expression(ast_node_t::cursor &nc) {
 #define NLEX logical_or_expression
-		if (!NLEX(pchnode))
-			return false;
+		if (!NLEX(*nc)) return false;
+
+		/* left ? middle : right
+		 *
+		 * [?]
+		 *  \
+		 *   +-- [left expr] -> [middle expr] -> [right expr] */
+
+		if (tok_bufpeek().type == token_type_t::question) {
+			tok_bufdiscard();
+
+			ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::ternary)); /* make child of comma */
+
+			if (!expression(cur_nc)) return false;
+			cur_nc.to_next();
+
+			if (tok_bufpeek().type != token_type_t::colon) return false;
+			tok_bufdiscard();
+
+			if (!conditional_expression(cur_nc)) return false;
+			cur_nc.to_next();
+		}
 #undef NLEX
 		return true;
 	}
@@ -2047,7 +2069,7 @@ public:
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 16 */
 	bool compiler::assignment_expression(ast_node_t::cursor &nc) {
 #define NLEX conditional_expression
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		/* left operator right
 		 *

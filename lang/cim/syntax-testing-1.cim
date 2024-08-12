@@ -1,4 +1,5 @@
 
 4; 4,5; 5+4; x; y;
 x=y;x+=y;x-=y;x*=y;x/=y;x%=y;x&=y;x|=y;x^=y;x<<=y;x>>=y;
+x?y:z;x+x?y+y:z+z;
 
