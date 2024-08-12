@@ -846,46 +846,34 @@ public:
 		}
 
 		static ast_node_t *mk_constant(token_t &t) {
-			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
-			r->tv = std::move(t);
-			return r;
+			return new ast_node_t(ast_node_op_t::constant, t);
 		}
 
 		static ast_node_t *mk_bool_constant(token_t &t,const bool b) {
-			ast_node_t *r = new ast_node_t(ast_node_op_t::constant);
-			r->tv = std::move(t);
+			ast_node_t *r = new ast_node_t(ast_node_op_t::constant, t);
 			r->tv.make_bool_val(b);
 			return r;
 		}
 
-		static ast_node_t *arrange_parent_child(ast_node_t *p,ast_node_t *c) {
-			assert(p != NULL);
-			p->set_child(c);
-			return p; /* return parent */
-		}
-
-		ast_node_t *clear_next(void) {
-			ast_node_t *r = next;
-			next = NULL;
-			return r;
-		}
-
-		ast_node_t *clear_child(void) {
-			ast_node_t *r = child;
-			child = NULL;
-			return r;
+		/* [parent]
+		 *
+		 * to
+		 *
+		 * [new parent]
+		 *  \- [old parent] */
+		static ast_node_t *parent_to_child_with_new_parent(ast_node_t* &cur_p,ast_node_t* const new_p) {
+			assert(cur_p != NULL);
+			assert(new_p != NULL);
+			new_p->set_child(cur_p);
+			return (cur_p = new_p);
 		}
 
 		void set_next(ast_node_t* const n) {
-			assert(n != NULL);
-			assert(next == NULL);
-			next = n;
+			set(next,n);
 		}
 
 		void set_child(ast_node_t* const c) {
-			assert(c != NULL);
-			assert(child == NULL);
-			child = c;
+			set(child,c);
 		}
 
 		bool unlink_child(void) {
@@ -1249,7 +1237,7 @@ public:
 
 		while (tok_bufpeek().type == token_type_t::stringliteral) {
 			n->set_next(ast_node_t::mk_constant(tok_bufget()));
-			n = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::strcat),/*child*/n);
+			ast_node_t::parent_to_child_with_new_parent(n,/*new parent*/new ast_node_t(ast_node_op_t::strcat));
 		}
 
 		return n;
@@ -1603,7 +1591,7 @@ public:
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
 
-				pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::scopeoperator),/*child*/pchnode);
+				ast_node_t::parent_to_child_with_new_parent(pchnode,/*new parent*/new ast_node_t(ast_node_op_t::scopeoperator));
 
 				/* must be an identifier */
 				if (tok_bufpeek().type == token_type_t::identifier) {
@@ -2752,7 +2740,7 @@ public:
 			 *  \
 			 *   +-- [left expr] -> [right expr] */
 
-			pchnode = ast_node_t::arrange_parent_child(/*parent*/new ast_node_t(ast_node_op_t::comma,tok_bufget()),/*child*/pchnode);
+			ast_node_t::parent_to_child_with_new_parent(pchnode,/*new parent*/new ast_node_t(ast_node_op_t::comma,tok_bufget()));
 
 			if (!NLEX(pchnode->next))
 				return false;
