@@ -20,3 +20,4 @@ x<<y;x+x<<y+y;x<<y<<z;a<<b<<c<<d;
 x>>y;x+x>>y+y;x>>y>>z;a>>b>>c>>d;
 x+y;x+y+z;a+b+c+d;
 x-y;x-y-z;a-b-c-d;
+x+a-b;x+a-y+b-z+c;
