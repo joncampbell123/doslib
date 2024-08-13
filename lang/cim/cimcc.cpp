@@ -1041,14 +1041,12 @@ public:
 		}
 
 		void refill(void);
-		bool reduce(void);
 		bool compile(void);
 		void free_ast(void);
 		void whitespace(void);
 		void gtok(token_t &t);
 		void gtok_number(token_t &t);
 		int64_t getb_hex_cpp23(void);
-		bool reduce(ast_node_t* &root);
 		int64_t getb_octal_cpp23(void);
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
@@ -1063,7 +1061,6 @@ public:
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
-		bool let_datatype_expression(ast_node_t* &tnode);
 
 		bool shift_expression(ast_node_t::cursor &nc);
 		bool shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -1209,42 +1206,7 @@ public:
 		assert(pb.sanity_check());
 	}
 
-	static bool is_reserved_identifier(const token_type_t t);
 	void token_to_string(std::string &s,const token_t &t);
-
-	ast_node_t *compiler::string_literal_list(void) {
-		/* string constant node if one string, [strcat] if C style string constant concatenation */
-		ast_node_t *n = ast_node_t::mk_constant(tok_bufget());
-
-		/* build the AST nodes to ensure the string is concatenated left to right, i.e.
-		 * "a" "b" "c" "d" becomes strcat(strcat(strcat("a" "b") "c") "d") not
-		 * strcat(strcat(strcat("c" "d") "b") "a")
-		 *
-		 * pchnode "a"
-		 *
-		 * next token "b"
-		 *
-		 * [strcat]
-		 *  \- ["a"] -> ["b"]
-		 *
-		 * also:
-		 *
-		 * [strcat]
-		 *  \- ["a"] -> ["b"]
-		 *
-		 * next token "c"
-		 *
-		 * [strcat]
-		 *  \- [strcat] -> ["c"]
-		 *      \- ["a"] -> ["b"] */
-
-		while (tok_bufpeek().type == token_type_t::stringliteral) {
-			n->set_next(ast_node_t::mk_constant(tok_bufget()));
-			ast_node_t::parent_to_child_with_new_parent(n,/*new parent*/new ast_node_t(ast_node_op_t::strcat));
-		}
-
-		return n;
-	}
 
 	bool compiler::primary_expression(ast_node_t* &pchnode) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
@@ -1285,7 +1247,6 @@ public:
 			case token_type_t::ellipsis:              pchnode = new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()); return true;
 			case token_type_t::r_volatile:            pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
 			case token_type_t::identifier:            pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
-			case token_type_t::stringliteral:         pchnode = string_literal_list(); return true;
 
 			default: break;
 		}
@@ -1323,161 +1284,12 @@ public:
 		return true;
 	}
 
-	static bool is_reserved_identifier(const token_type_t t) {
-		switch (t) {
-			case token_type_t::r_const:
-			case token_type_t::r_constexpr:
-			case token_type_t::r_compileexpr:
-			case token_type_t::r_static:
-			case token_type_t::r_extern:
-			case token_type_t::r_auto:
-			case token_type_t::r_signed:
-			case token_type_t::r_unsigned:
-			case token_type_t::r_int:
-			case token_type_t::r_long:
-			case token_type_t::r_short:
-			case token_type_t::r_bool:
-			case token_type_t::r_near:
-			case token_type_t::r_far:
-			case token_type_t::r_huge:
-			case token_type_t::r_float:
-			case token_type_t::r_double:
-			case token_type_t::r_void:
-			case token_type_t::r_volatile:
-			case token_type_t::r_char:
-			case token_type_t::r_sizeof:
-			case token_type_t::r_size_t:
-			case token_type_t::r_ssize_t:
-			case token_type_t::r_offsetof:
-			case token_type_t::r_static_assert:
-			case token_type_t::r_namespace:
-			case token_type_t::r_typeof:
-			case token_type_t::r_this:
-				return true;
-			default:
-				break;
-		}
-
-		return false;
-	}
-
-	static bool is_builtin_type_identifier(const token_type_t t) {
-		switch (t) {
-			case token_type_t::r_auto:
-			case token_type_t::r_signed:
-			case token_type_t::r_unsigned:
-			case token_type_t::r_int:
-			case token_type_t::r_long:
-			case token_type_t::r_short:
-			case token_type_t::r_bool:
-			case token_type_t::r_float:
-			case token_type_t::r_double:
-			case token_type_t::r_void:
-			case token_type_t::r_char:
-			case token_type_t::r_size_t:
-			case token_type_t::r_ssize_t:
-			case token_type_t::r_typeof:
-				return true;
-			default:
-				break;
-		}
-
-		return false;
-	}
-
-	bool compiler::let_datatype_expression(ast_node_t* &tnode) {
-#define NLEX cpp_scope_expression
-		ast_node_t::cursor c(tnode);
-
-		(*c) = new ast_node_t(ast_node_op_t::identifier_list);
-		(*c)->tv.position = tok_bufpeek().position;
-		c.to_child();
-
-		if (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
-			bool look_for_ident = true;
-
-			/* const int x            -> const int        [ r_const r_int ] leave "x"
-			 * const time_t x         -> const time_t     [ r_const identifier("time_t") ] leave "x"
-			 * const int time_t x     -> const int        [ r_const r_int ] leave "time_t" and "x" and this is a syntax error */
-			while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::dblleftsquarebracket || tok_bufpeek().type == token_type_t::poundsign) {
-				if (is_builtin_type_identifier(tok_bufpeek().type))
-					look_for_ident = false;
-				else if (tok_bufpeek(0).type == token_type_t::poundsign && tok_bufpeek(1).type == token_type_t::identifier) {
-					if (	tok_bufpeek(1).v.identifier.stringmatch("deftype") ||
-						tok_bufpeek(1).v.identifier.stringmatch("type")) {
-						look_for_ident = false;
-					}
-				}
-
-				if (!NLEX(*c)) return false;
-				c.to_next();
-			}
-
-			if (look_for_ident && tok_bufpeek().type == token_type_t::identifier) {
-				if (!NLEX(*c)) return false;
-				c.to_next();
-			}
-		}
-		else if (tok_bufpeek().type == token_type_t::identifier) {
-			if (!NLEX(*c)) return false;
-			c.to_next();
-		}
-		else {
-			return false;
-		}
-#undef NLEX
-		assert(tnode->child != NULL);
-		return true;
-	}
-
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
 	bool compiler::postfix_expression(ast_node_t* &pchnode) {
 #define NLEX cpp_scope_expression
 		if (!NLEX(pchnode))
 			return false;
-
-		if (	pchnode->op == ast_node_op_t::r_const || pchnode->op == ast_node_op_t::r_signed || pchnode->op == ast_node_op_t::r_long ||
-			pchnode->op == ast_node_op_t::r_int || pchnode->op == ast_node_op_t::r_float || pchnode->op == ast_node_op_t::r_void ||
-			pchnode->op == ast_node_op_t::r_char || pchnode->op == ast_node_op_t::r_volatile || pchnode->op == ast_node_op_t::scopeoperator ||
-			pchnode->op == ast_node_op_t::r_bool || pchnode->op == ast_node_op_t::r_near || pchnode->op == ast_node_op_t::r_far ||
-			pchnode->op == ast_node_op_t::r_huge || pchnode->op == ast_node_op_t::r_pound_type || pchnode->op == ast_node_op_t::r_short ||
-			pchnode->op == ast_node_op_t::r_double || pchnode->op == ast_node_op_t::r_unsigned || pchnode->op == ast_node_op_t::r_near ||
-			pchnode->op == ast_node_op_t::r_far ||pchnode->op == ast_node_op_t::r_huge) {
-			/* Allow multiple consecutive reserved identifiers. Do not allow multiple consecutive arbitrary identifiers.
-			 *
-			 * This is necessary in order for later parsing to handle a statement like:
-			 *
-			 * "signed long int variable1 = 45l;"
-			 *
-			 * We also would like to support:
-			 *
-			 * "namespaced::type = 45l;"
-			 *
-			 */
-			/* NTS: ->next is used to chain this identifier to another operand i.e. + or -, use ->child */
-			if (tok_bufpeek().type == token_type_t::identifier || tok_bufpeek().type == token_type_t::poundsign || is_reserved_identifier(tok_bufpeek().type)) {
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::identifier_list;
-				pchnode->tv.position = sav_p->tv.position;
-				pchnode->child = sav_p;
-
-				ast_node_t *nn = sav_p;
-
-				while (is_reserved_identifier(tok_bufpeek().type) || tok_bufpeek().type == token_type_t::poundsign) {
-					if (!NLEX(nn->next))
-						return false;
-					nn = nn->next;
-				}
-
-				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (!NLEX(nn->next))
-						return false;
-					nn = nn->next;
-				}
-			}
-		}
 
 		/* This is written differently, because we need it built "inside out" */
 		while (1) {
