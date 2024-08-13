@@ -1056,10 +1056,12 @@ public:
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
-		bool unary_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
+
+		bool unary_expression(ast_node_t::cursor &nc);
+		bool unary_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
 
 		bool additive_expression(ast_node_t::cursor &nc);
 		bool additive_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -1357,129 +1359,60 @@ public:
 		return true;
 	}
 
+#define NLEX postfix_expression
+	bool compiler::unary_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+		ast_node_t::set(*nc, new ast_node_t(anot,tok_bufget()));
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_child();
+		return unary_expression(cur_nc);
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 3 */
-	bool compiler::unary_expression(ast_node_t* &pchnode) {
-#define NLEX postfix_expression
-		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
-		{
-			token_t &t = tok_bufpeek();
+	bool compiler::unary_expression(ast_node_t::cursor &nc) {
 
-			switch (t.type) {
-				case token_type_t::ampersandampersand: /* '&&' in this way must be handled as '& &' */
-					/* [&]
-					 *  \
-					 *   +--- [&]
-					 *         \
-					 *          +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::addressof;
-					pchnode->child = new ast_node_t;
-					pchnode->child->op = ast_node_op_t::addressof;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child->child);
+		/* left operator right
+		 *
+		 * [operator]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
 
-				case token_type_t::ampersand:
-					/* [&]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::addressof;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
+		while (1) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::ampersandampersand: {
+					ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::addressof,tok_bufget()));
+					ast_node_t::cursor cur_nc = nc; cur_nc.to_child();
+					ast_node_t::set(*cur_nc, new ast_node_t(ast_node_op_t::addressof));
+					cur_nc.to_child();
+					return unary_expression(cur_nc); }
 
-				case token_type_t::star:
-					/* [*]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::dereference;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::minusminus:
-					/* [--]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::predecrement;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::plusplus:
-					/* [++]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::preincrement;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::minus:
-					/* [-]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::negate;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::plus:
-					/* [+]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::unaryplus;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::exclamation:
-					/* [!]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::logicalnot;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				case token_type_t::tilde:
-					/* [~]
-					 *  \
-					 *   +--- expression */
-					assert(pchnode == NULL);
-					pchnode = new ast_node_t;
-					pchnode->op = ast_node_op_t::binarynot;
-					pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-					return unary_expression(pchnode->child);
-
-				default:
-					return NLEX(pchnode);
+				case token_type_t::ampersand:              return unary_expression_common(nc,ast_node_op_t::addressof);
+				case token_type_t::star:                   return unary_expression_common(nc,ast_node_op_t::dereference);
+				case token_type_t::minusminus:             return unary_expression_common(nc,ast_node_op_t::predecrement);
+				case token_type_t::plusplus:               return unary_expression_common(nc,ast_node_op_t::preincrement);
+				case token_type_t::minus:                  return unary_expression_common(nc,ast_node_op_t::negate);
+				case token_type_t::plus:                   return unary_expression_common(nc,ast_node_op_t::unaryplus);
+				case token_type_t::exclamation:            return unary_expression_common(nc,ast_node_op_t::logicalnot);
+				case token_type_t::tilde:                  return unary_expression_common(nc,ast_node_op_t::binarynot);
+				default:                                   return NLEX(*nc);
 			}
 		}
-#undef NLEX
+
 		return true;
 	}
+#undef NLEX
 
 #define NLEX unary_expression
 	bool compiler::multiplicative_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
 		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
-		return NLEX(*cur_nc);
+		return NLEX(cur_nc);
 	}
 
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 3 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 5 */
 	bool compiler::multiplicative_expression(ast_node_t::cursor &nc) {
-		if (!NLEX(*nc))
+		if (!NLEX(nc))
 			return false;
 
 		/* left operator right

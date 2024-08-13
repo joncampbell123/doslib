@@ -24,3 +24,5 @@ x+a-b;x+a-y+b-z+c;
 x*y;x+x*y*y;x*y*z;a*b*c*d;
 x/y;x+x/y+y;x/y/z;a/b/c/d;
 x%y;x+x%y+y;x%y%z;a%b%c%d;
+&x;*y;&&x;**x;&&&x;***y;&&&&x;****y;
+--x;--y;++x;++y;-x;-y;+x;+y;!x;!y;!!x;!!y;!!!x;!!!y;~x;~y;~~x;~~y;~~~x;~~~y;
