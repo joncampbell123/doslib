@@ -1057,7 +1057,8 @@ public:
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
 		bool primary_expression(ast_node_t* &pchnode);
-		bool cpp_scope_expression(ast_node_t* &pchnode);
+
+		bool cpp_scope_expression(ast_node_t::cursor &nc);
 
 		bool postfix_expression(ast_node_t::cursor &nc);
 		bool postfix_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot,bool second);
@@ -1263,12 +1264,11 @@ public:
 	}
 
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 1 */
-	bool compiler::cpp_scope_expression(ast_node_t* &pchnode) {
+	bool compiler::cpp_scope_expression(ast_node_t::cursor &nc) {
 #define NLEX primary_expression
-		if (!NLEX(pchnode))
-			return false;
+		if (!NLEX(*nc)) return false;
 
-		if (pchnode->op == ast_node_op_t::identifier) {
+		if ((*nc)->op == ast_node_op_t::identifier) {
 			while (tok_bufpeek().type == token_type_t::coloncolon) { /* :: but only identifiers */
 				tok_bufdiscard(); /* eat it */
 
@@ -1276,11 +1276,11 @@ public:
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
 
-				ast_node_t::parent_to_child_with_new_parent(pchnode,/*new parent*/new ast_node_t(ast_node_op_t::scopeoperator));
+				ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::scopeoperator));
 
 				/* must be an identifier */
 				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (!NLEX(pchnode->child->next))
+					if (!NLEX((*nc)->child->next))
 						return false;
 				}
 				else {
@@ -1299,7 +1299,7 @@ public:
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
 
 		if (second) {
-			if (!NLEX(*cur_nc))
+			if (!NLEX(cur_nc))
 				return false;
 		}
 
@@ -1309,7 +1309,7 @@ public:
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
 	bool compiler::postfix_expression(ast_node_t::cursor &nc) {
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		while (1) {
 			switch (tok_bufpeek().type) {
