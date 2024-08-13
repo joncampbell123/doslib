@@ -1543,8 +1543,8 @@ public:
 
 		while (1) {
 			switch (tok_bufpeek().type) {
-				case token_type_t::plus:                   return additive_expression_common(nc,ast_node_op_t::add);
-				case token_type_t::minus:                  return additive_expression_common(nc,ast_node_op_t::subtract);
+				case token_type_t::plus:                   if (!additive_expression_common(nc,ast_node_op_t::add)) return false; break;
+				case token_type_t::minus:                  if (!additive_expression_common(nc,ast_node_op_t::subtract)) return false; break;
 				default:                                   goto done_parsing;
 			}
 		}
@@ -1574,8 +1574,8 @@ done_parsing:
 
 		while (1) {
 			switch (tok_bufpeek().type) {
-				case token_type_t::leftleftangle:          return shift_expression_common(nc,ast_node_op_t::leftshift);
-				case token_type_t::rightrightangle:        return shift_expression_common(nc,ast_node_op_t::rightshift);
+				case token_type_t::leftleftangle:          if (!shift_expression_common(nc,ast_node_op_t::leftshift)) return false; break;
+				case token_type_t::rightrightangle:        if (!shift_expression_common(nc,ast_node_op_t::rightshift)) return false; break;
 				default:                                   goto done_parsing;
 			}
 		}
