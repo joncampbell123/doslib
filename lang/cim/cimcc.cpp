@@ -1059,12 +1059,14 @@ public:
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
 		bool unary_expression(ast_node_t* &pchnode);
-		bool shift_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool additive_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
 		bool let_datatype_expression(ast_node_t* &tnode);
+
+		bool shift_expression(ast_node_t::cursor &nc);
+		bool shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
 
 		bool relational_expression(ast_node_t::cursor &nc);
 		bool relational_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -1751,62 +1753,50 @@ public:
 		return true;
 	}
 
-	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 5 */
-	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 7 */
-	bool compiler::shift_expression(ast_node_t* &pchnode) {
 #define NLEX additive_expression
-		if (!NLEX(pchnode))
-			return false;
-
-		while (1) {
-			if (tok_bufpeek().type == token_type_t::leftleftangle) { /* << operator */
-				tok_bufdiscard(); /* eat it */
-
-				/* [<<]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::leftshift;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else if (tok_bufpeek().type == token_type_t::rightrightangle) { /* >> operator */
-				tok_bufdiscard(); /* eat it */
-
-				/* [>>]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::rightshift;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else {
-				break;
-			}
-		}
-#undef NLEX
-		return true;
-	}
-
-#define NLEX shift_expression
-	bool compiler::relational_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+	bool compiler::shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
 		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
 		return NLEX(*cur_nc);
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 5 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 7 */
+	bool compiler::shift_expression(ast_node_t::cursor &nc) {
+		if (!NLEX(*nc))
+			return false;
+
+		/* left operator right
+		 *
+		 * [operator]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
+
+		while (1) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::leftleftangle:          return shift_expression_common(nc,ast_node_op_t::leftshift);
+				case token_type_t::rightrightangle:        return shift_expression_common(nc,ast_node_op_t::rightshift);
+				default:                                   goto done_parsing;
+			}
+		}
+done_parsing:
+		return true;
+	}
+#undef NLEX
+
+#define NLEX shift_expression
+	bool compiler::relational_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
+		return NLEX(cur_nc);
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 6 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 9 */
 	bool compiler::relational_expression(ast_node_t::cursor &nc) {
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		/* left operator right
 		 *
