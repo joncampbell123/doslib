@@ -28,3 +28,4 @@ x%y;x+x%y+y;x%y%z;a%b%c%d;
 --x;--y;++x;++y;-x;-y;+x;+y;!x;!y;!!x;!!y;!!!x;!!!y;~x;~y;~~x;~~y;~~~x;~~~y;
 x++;y++;x--;y--;x.y;x.y.z;a.b.c.d;x->y;x->y->z;a->b->c->d;a.b->c->d.e;
 a;a::b;a::b::c;a::b::c::d::e::f::g::h::i;
+4;4.5;'c';'abcd';true;false;
