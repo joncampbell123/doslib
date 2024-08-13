@@ -1059,8 +1059,10 @@ public:
 		bool unary_expression(ast_node_t* &pchnode);
 		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
-		bool additive_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
+
+		bool additive_expression(ast_node_t::cursor &nc);
+		bool additive_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
 
 		bool shift_expression(ast_node_t::cursor &nc);
 		bool shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -1520,64 +1522,49 @@ public:
 		return true;
 	}
 
-	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 4 */
-	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 6 */
-	bool compiler::additive_expression(ast_node_t* &pchnode) {
 #define NLEX multiplicative_expression
-		if (!NLEX(pchnode))
-			return false;
-
-		/* This is written differently, because we need it built "inside out" for addition and subtraction
-		 * to be done in the correct order, else subtraction won't work properly i.e. 5-6-3 needs to be
-		 * built as ((5-6)-3) not (5-(6-3)). */
-		while (1) {
-			if (tok_bufpeek().type == token_type_t::plus) { /* + operator */
-				/* [+]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::add;
-				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else if (tok_bufpeek().type == token_type_t::minus) { /* - operator */
-				/* [-]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::subtract;
-				pchnode->tv = std::move(tok_bufpeek(0)); tok_bufdiscard(); /* eat it */
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next))
-					return false;
-			}
-			else {
-				break;
-			}
-		}
-#undef NLEX
-		return true;
-	}
-
-#define NLEX additive_expression
-	bool compiler::shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+	bool compiler::additive_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
 		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
 		return NLEX(*cur_nc);
 	}
 
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 4 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 6 */
+	bool compiler::additive_expression(ast_node_t::cursor &nc) {
+		if (!NLEX(*nc)) return false;
+
+		/* left operator right
+		 *
+		 * [operator]
+		 *  \
+		 *   +-- [left expr] -> [right expr] */
+
+		while (1) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::plus:                   return additive_expression_common(nc,ast_node_op_t::add);
+				case token_type_t::minus:                  return additive_expression_common(nc,ast_node_op_t::subtract);
+				default:                                   goto done_parsing;
+			}
+		}
+done_parsing:
+		return true;
+	}
+#undef NLEX
+
+#define NLEX additive_expression
+	bool compiler::shift_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
+		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
+		return NLEX(cur_nc);
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 5 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 7 */
 	bool compiler::shift_expression(ast_node_t::cursor &nc) {
-		if (!NLEX(*nc))
-			return false;
+		if (!NLEX(nc)) return false;
 
 		/* left operator right
 		 *

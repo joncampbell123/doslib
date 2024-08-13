@@ -3,6 +3,8 @@
 x=y;x+=y;x-=y;x*=y;x/=y;x%=y;x&=y;x|=y;x^=y;x<<=y;x>>=y;
 x=y=z;a=b=c=d=e=f=g=h;a=b=c=d=e=f=g+=h;a=b=c=d=e=4;
 x?y:z;x+x?y+y:z+z;
+x?a?b:c:d?e:f;
+a?b?c?d:z:y:x;
 x||y;x+x||y+y;
 x&&y;x+x&&y+y;
 x|y;x+x|y+y;
@@ -16,4 +18,5 @@ x<=y;x+x<=y+y;
 x>=y;x+x>=y+y;
 x<<y;x+x<<y+y;
 x>>y;x+x>>y+y;
-
+x+y;
+x-y;
