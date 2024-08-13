@@ -1605,10 +1605,10 @@ done_parsing:
 
 		while (1) {
 			switch (tok_bufpeek().type) {
-				case token_type_t::lessthan:               return relational_expression_common(nc,ast_node_op_t::lessthan);
-				case token_type_t::greaterthan:            return relational_expression_common(nc,ast_node_op_t::greaterthan);
-				case token_type_t::lessthanorequal:        return relational_expression_common(nc,ast_node_op_t::lessthanorequal);
-				case token_type_t::greaterthanorequal:     return relational_expression_common(nc,ast_node_op_t::greaterthanorequal);
+				case token_type_t::lessthan:               if (!relational_expression_common(nc,ast_node_op_t::lessthan)) return false; break;
+				case token_type_t::greaterthan:            if (!relational_expression_common(nc,ast_node_op_t::greaterthan)) return false; break;
+				case token_type_t::lessthanorequal:        if (!relational_expression_common(nc,ast_node_op_t::lessthanorequal)) return false; break;
+				case token_type_t::greaterthanorequal:     if (!relational_expression_common(nc,ast_node_op_t::greaterthanorequal)) return false; break;
 				default:                                   goto done_parsing;
 			}
 		}
@@ -1640,9 +1640,9 @@ done_parsing:
 
 		while (1) {
 			switch (tok_bufpeek().type) {
-				case token_type_t::equalequal:         return equality_expression_common(nc,ast_node_op_t::equals);
-				case token_type_t::exclamationequal:   return equality_expression_common(nc,ast_node_op_t::notequals);
-				default:                               goto done_parsing;
+				case token_type_t::equalequal:             if (!equality_expression_common(nc,ast_node_op_t::equals)) return false; break;
+				case token_type_t::exclamationequal:       if (!equality_expression_common(nc,ast_node_op_t::notequals)) return false; break;
+				default:                                   goto done_parsing;
 			}
 		}
 done_parsing:
