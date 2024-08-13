@@ -1056,9 +1056,11 @@ public:
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
-		bool postfix_expression(ast_node_t* &pchnode);
 		bool primary_expression(ast_node_t* &pchnode);
 		bool cpp_scope_expression(ast_node_t* &pchnode);
+
+		bool postfix_expression(ast_node_t::cursor &nc);
+		bool postfix_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot,bool second);
 
 		bool unary_expression(ast_node_t::cursor &nc);
 		bool unary_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot);
@@ -1290,74 +1292,38 @@ public:
 		return true;
 	}
 
-	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
-	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
-	bool compiler::postfix_expression(ast_node_t* &pchnode) {
 #define NLEX cpp_scope_expression
-		if (!NLEX(pchnode))
-			return false;
+	bool compiler::postfix_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot,bool second) {
+		if ((*nc)->op == ast_node_op_t::identifier_list) return false;
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(anot,tok_bufget())); /* make child of comma */
 
-		/* This is written differently, because we need it built "inside out" */
-		while (1) {
-			if (tok_bufpeek().type == token_type_t::plusplus) { /* ++ */
-				tok_bufdiscard(); /* eat it */
-
-				/* [++]
-				 *  \
-				 *   +-- [expression] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::postincrement;
-				pchnode->child = sav_p;
-			}
-			else if (tok_bufpeek().type == token_type_t::minusminus) { /* -- */
-				tok_bufdiscard(); /* eat it */
-
-				/* [--]
-				 *  \
-				 *   +-- [expression] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::postdecrement;
-				pchnode->child = sav_p;
-			}
-			else if (tok_bufpeek().type == token_type_t::period) { /* . member */
-				tok_bufdiscard(); /* eat it */
-
-				/* [.]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::structaccess;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next)) // TODO: should be IDENTIFIER only
-					return false;
-			}
-			else if (tok_bufpeek().type == token_type_t::pointerarrow) { /* -> member */
-				tok_bufdiscard(); /* eat it */
-
-				/* [->]
-				 *  \
-				 *   +-- [left expr] -> [right expr] */
-
-				ast_node_t *sav_p = pchnode;
-				pchnode = new ast_node_t;
-				pchnode->op = ast_node_op_t::structptraccess;
-				pchnode->child = sav_p;
-				if (!NLEX(sav_p->next)) // TODO: should be IDENTIFIER only
-					return false;
-			}
-			else {
-				break;
-			}
+		if (second) {
+			if (!NLEX(*cur_nc))
+				return false;
 		}
-#undef NLEX
+
 		return true;
 	}
+
+	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
+	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
+	bool compiler::postfix_expression(ast_node_t::cursor &nc) {
+		if (!NLEX(*nc)) return false;
+
+		while (1) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::plusplus:               if (!postfix_expression_common(nc,ast_node_op_t::postincrement,false)) return false; break;
+				case token_type_t::minusminus:             if (!postfix_expression_common(nc,ast_node_op_t::postdecrement,false)) return false; break;
+				case token_type_t::period:                 if (!postfix_expression_common(nc,ast_node_op_t::structaccess,true)) return false; break;
+				case token_type_t::pointerarrow:           if (!postfix_expression_common(nc,ast_node_op_t::structptraccess,true)) return false; break;
+				default:                                   goto done_parsing;
+			}
+		}
+done_parsing:
+		return true;
+	}
+#undef NLEX
 
 #define NLEX postfix_expression
 	bool compiler::unary_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot) {
@@ -1369,13 +1335,6 @@ public:
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 3 */
 	bool compiler::unary_expression(ast_node_t::cursor &nc) {
-
-		/* left operator right
-		 *
-		 * [operator]
-		 *  \
-		 *   +-- [left expr] -> [right expr] */
-
 		while (1) {
 			switch (tok_bufpeek().type) {
 				case token_type_t::ampersandampersand: {
@@ -1393,7 +1352,7 @@ public:
 				case token_type_t::plus:                   return unary_expression_common(nc,ast_node_op_t::unaryplus);
 				case token_type_t::exclamation:            return unary_expression_common(nc,ast_node_op_t::logicalnot);
 				case token_type_t::tilde:                  return unary_expression_common(nc,ast_node_op_t::binarynot);
-				default:                                   return NLEX(*nc);
+				default:                                   return NLEX(nc);
 			}
 		}
 
