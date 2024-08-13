@@ -1,6 +1,6 @@
 
 4; 4,5; 5+4; x; y;
-x=y;x+=y;x-=y;x*=y;x/=y;x%=y;x&=y;x|=y;x^=y;x<<=y;x>>=y;
+x=y;x+=y;x-=y;x*=y;x/=y;x%=y;x&=y;x|=y;x^=y;x<<=y;x>>=y;x+=a+b+c;x+=y+=z;
 x=y=z;a=b=c=d=e=f=g=h;a=b=c=d=e=f=g+=h;a=b=c=d=e=4;
 x?y:z;x+x?y+y:z+z;
 x?a?b:c:d?e:f;
