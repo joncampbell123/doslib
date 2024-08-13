@@ -1056,7 +1056,8 @@ public:
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
-		bool primary_expression(ast_node_t* &pchnode);
+
+		bool primary_expression(ast_node_t::cursor &nc);
 
 		bool cpp_scope_expression(ast_node_t::cursor &nc);
 
@@ -1217,45 +1218,44 @@ public:
 
 	void token_to_string(std::string &s,const token_t &t);
 
-	bool compiler::primary_expression(ast_node_t* &pchnode) {
+	bool compiler::primary_expression(ast_node_t::cursor &nc) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
-		assert(pchnode == NULL);
 		switch (tok_bufpeek().type) {
 			case token_type_t::intval:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
-				pchnode = ast_node_t::mk_constant(tok_bufget()); return true;
+				ast_node_t::set(*nc, ast_node_t::mk_constant(tok_bufget())); return true;
 
-			case token_type_t::r_true:                pchnode = ast_node_t::mk_bool_constant(tok_bufget(),true); return true;
-			case token_type_t::r_false:               pchnode = ast_node_t::mk_bool_constant(tok_bufget(),false); return true;
-			case token_type_t::r_const:               pchnode = new ast_node_t(ast_node_op_t::r_const, tok_bufget()); return true;
-			case token_type_t::r_constexpr:           pchnode = new ast_node_t(ast_node_op_t::r_constexpr, tok_bufget()); return true;
-			case token_type_t::r_compileexpr:         pchnode = new ast_node_t(ast_node_op_t::r_compileexpr, tok_bufget()); return true;
-			case token_type_t::r_sizeof:              pchnode = new ast_node_t(ast_node_op_t::r_sizeof, tok_bufget()); return true;
-			case token_type_t::r_offsetof:            pchnode = new ast_node_t(ast_node_op_t::r_offsetof, tok_bufget()); return true;
-			case token_type_t::r_static_assert:       pchnode = new ast_node_t(ast_node_op_t::r_static_assert, tok_bufget()); return true;
-			case token_type_t::r_size_t:              pchnode = new ast_node_t(ast_node_op_t::r_size_t, tok_bufget()); return true;
-			case token_type_t::r_ssize_t:             pchnode = new ast_node_t(ast_node_op_t::r_ssize_t, tok_bufget()); return true;
-			case token_type_t::r_static:              pchnode = new ast_node_t(ast_node_op_t::r_static, tok_bufget()); return true;
-			case token_type_t::r_extern:              pchnode = new ast_node_t(ast_node_op_t::r_extern, tok_bufget()); return true;
-			case token_type_t::r_auto:                pchnode = new ast_node_t(ast_node_op_t::r_auto, tok_bufget()); return true;
-			case token_type_t::r_signed:              pchnode = new ast_node_t(ast_node_op_t::r_signed, tok_bufget()); return true;
-			case token_type_t::r_unsigned:            pchnode = new ast_node_t(ast_node_op_t::r_unsigned, tok_bufget()); return true;
-			case token_type_t::r_long:                pchnode = new ast_node_t(ast_node_op_t::r_long, tok_bufget()); return true;
-			case token_type_t::r_short:               pchnode = new ast_node_t(ast_node_op_t::r_short, tok_bufget()); return true;
-			case token_type_t::r_int:                 pchnode = new ast_node_t(ast_node_op_t::r_int, tok_bufget()); return true;
-			case token_type_t::r_bool:                pchnode = new ast_node_t(ast_node_op_t::r_bool, tok_bufget()); return true;
-			case token_type_t::r_near:                pchnode = new ast_node_t(ast_node_op_t::r_near, tok_bufget()); return true;
-			case token_type_t::r_far:                 pchnode = new ast_node_t(ast_node_op_t::r_far, tok_bufget()); return true;
-			case token_type_t::r_huge:                pchnode = new ast_node_t(ast_node_op_t::r_huge, tok_bufget()); return true;
-			case token_type_t::r_float:               pchnode = new ast_node_t(ast_node_op_t::r_float, tok_bufget()); return true;
-			case token_type_t::r_double:              pchnode = new ast_node_t(ast_node_op_t::r_double, tok_bufget()); return true;
-			case token_type_t::r_this:                pchnode = new ast_node_t(ast_node_op_t::r_this, tok_bufget()); return true;
-			case token_type_t::r_void:                pchnode = new ast_node_t(ast_node_op_t::r_void, tok_bufget()); return true;
-			case token_type_t::r_char:                pchnode = new ast_node_t(ast_node_op_t::r_char, tok_bufget()); return true;
-			case token_type_t::ellipsis:              pchnode = new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()); return true;
-			case token_type_t::r_volatile:            pchnode = new ast_node_t(ast_node_op_t::r_volatile, tok_bufget()); return true;
-			case token_type_t::identifier:            pchnode = new ast_node_t(ast_node_op_t::identifier, tok_bufget()); return true;
+			case token_type_t::r_true:                ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),true)); return true;
+			case token_type_t::r_false:               ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),false)); return true;
+			case token_type_t::r_const:               ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_const, tok_bufget())); return true;
+			case token_type_t::r_constexpr:           ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_constexpr, tok_bufget())); return true;
+			case token_type_t::r_compileexpr:         ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_compileexpr, tok_bufget())); return true;
+			case token_type_t::r_sizeof:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_sizeof, tok_bufget())); return true;
+			case token_type_t::r_offsetof:            ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_offsetof, tok_bufget())); return true;
+			case token_type_t::r_static_assert:       ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_static_assert, tok_bufget())); return true;
+			case token_type_t::r_size_t:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_size_t, tok_bufget())); return true;
+			case token_type_t::r_ssize_t:             ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_ssize_t, tok_bufget())); return true;
+			case token_type_t::r_static:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_static, tok_bufget())); return true;
+			case token_type_t::r_extern:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_extern, tok_bufget())); return true;
+			case token_type_t::r_auto:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_auto, tok_bufget())); return true;
+			case token_type_t::r_signed:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_signed, tok_bufget())); return true;
+			case token_type_t::r_unsigned:            ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_unsigned, tok_bufget())); return true;
+			case token_type_t::r_long:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_long, tok_bufget())); return true;
+			case token_type_t::r_short:               ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_short, tok_bufget())); return true;
+			case token_type_t::r_int:                 ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_int, tok_bufget())); return true;
+			case token_type_t::r_bool:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_bool, tok_bufget())); return true;
+			case token_type_t::r_near:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_near, tok_bufget())); return true;
+			case token_type_t::r_far:                 ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_far, tok_bufget())); return true;
+			case token_type_t::r_huge:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_huge, tok_bufget())); return true;
+			case token_type_t::r_float:               ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_float, tok_bufget())); return true;
+			case token_type_t::r_double:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_double, tok_bufget())); return true;
+			case token_type_t::r_this:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_this, tok_bufget())); return true;
+			case token_type_t::r_void:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_void, tok_bufget())); return true;
+			case token_type_t::r_char:                ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_char, tok_bufget())); return true;
+			case token_type_t::ellipsis:              ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::ellipsis, tok_bufget())); return true;
+			case token_type_t::r_volatile:            ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_volatile, tok_bufget())); return true;
+			case token_type_t::identifier:            ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::identifier, tok_bufget())); return true;
 
 			default: break;
 		}
@@ -1266,7 +1266,7 @@ public:
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 1 */
 	bool compiler::cpp_scope_expression(ast_node_t::cursor &nc) {
 #define NLEX primary_expression
-		if (!NLEX(*nc)) return false;
+		if (!NLEX(nc)) return false;
 
 		if ((*nc)->op == ast_node_op_t::identifier) {
 			while (tok_bufpeek().type == token_type_t::coloncolon) { /* :: but only identifiers */
@@ -1276,12 +1276,12 @@ public:
 				 *  \
 				 *   +-- [left expr] -> [right expr] */
 
+				ast_node_t::cursor cur_nc = nc; cur_nc.to_next();
 				ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::scopeoperator));
 
 				/* must be an identifier */
 				if (tok_bufpeek().type == token_type_t::identifier) {
-					if (!NLEX((*nc)->child->next))
-						return false;
+					if (!NLEX(cur_nc)) return false;
 				}
 				else {
 					return false;
