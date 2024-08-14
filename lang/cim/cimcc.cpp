@@ -1051,8 +1051,8 @@ public:
 		void gtok_identifier(token_t &t);
 		void gtok_prep_number_proc(void);
 		int64_t getb_hex(unsigned int mc);
+		ast_node_t *string_literals(void);
 		int64_t getb_octal(unsigned int mc);
-		ast_node_t *string_literal_list(void);
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
@@ -1218,6 +1218,29 @@ public:
 
 	void token_to_string(std::string &s,const token_t &t);
 
+	ast_node_t *compiler::string_literals(void) {
+		assert(tok_bufpeek().type == token_type_t::stringliteral);
+
+		ast_node_t *r = NULL;
+		ast_node_t::cursor nc(r);
+
+		ast_node_t::set(*nc, ast_node_t::mk_constant(tok_bufget()));
+
+		if (tok_bufpeek().type == token_type_t::stringliteral) {
+			ast_node_t::cursor c_nc = nc;
+			c_nc.to_next();
+
+			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::strcat));
+
+			while (tok_bufpeek().type == token_type_t::stringliteral) {
+				ast_node_t::set(*c_nc, ast_node_t::mk_constant(tok_bufget()));
+				c_nc.to_next();
+			}
+		}
+
+		return r;
+	}
+
 	bool compiler::primary_expression(ast_node_t::cursor &nc) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		switch (tok_bufpeek().type) {
@@ -1225,6 +1248,8 @@ public:
 			case token_type_t::floatval:
 			case token_type_t::characterliteral:
 				ast_node_t::set(*nc, ast_node_t::mk_constant(tok_bufget())); return true;
+			case token_type_t::stringliteral:
+				ast_node_t::set(*nc, string_literals()); return true;
 
 			case token_type_t::r_true:                ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),true)); return true;
 			case token_type_t::r_false:               ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),false)); return true;
