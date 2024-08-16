@@ -1056,6 +1056,7 @@ public:
 		bool statement(ast_node_t::cursor &nc);
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
+		bool subexpression(ast_node_t::cursor &nc);
 
 		bool primary_expression(ast_node_t::cursor &nc);
 
@@ -1249,6 +1250,19 @@ public:
 		return r;
 	}
 
+	bool compiler::subexpression(ast_node_t::cursor &p_nc) {
+		assert(tok_bufpeek().type == token_type_t::openparen);
+
+		ast_node_t::cursor nc = p_nc,sub_nc = nc;
+		ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::subexpression,tok_bufget())); nc.to_next(); sub_nc.to_child();
+		if (!expression(sub_nc)) return false;
+
+		if (tok_bufpeek().type != token_type_t::closeparen) return false;
+		tok_bufdiscard();
+
+		return true;
+	}
+
 	bool compiler::primary_expression(ast_node_t::cursor &nc) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		switch (tok_bufpeek().type) {
@@ -1258,7 +1272,8 @@ public:
 				ast_node_t::set(*nc, ast_node_t::mk_constant(tok_bufget())); return true;
 			case token_type_t::stringliteral:
 				ast_node_t::set(*nc, string_literals()); return true;
-
+			case token_type_t::openparen:
+				return subexpression(nc);
 			case token_type_t::r_true:                ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),true)); return true;
 			case token_type_t::r_false:               ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),false)); return true;
 			case token_type_t::r_const:               ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_const, tok_bufget())); return true;
