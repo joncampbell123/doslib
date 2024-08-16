@@ -1252,19 +1252,6 @@ public:
 		return r;
 	}
 
-	bool compiler::subexpression(ast_node_t::cursor &p_nc) {
-		assert(tok_bufpeek().type == token_type_t::openparen);
-
-		ast_node_t::cursor nc = p_nc,sub_nc = nc;
-		ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::subexpression,tok_bufget())); nc.to_next(); sub_nc.to_child();
-		if (!expression(sub_nc)) return false;
-
-		if (tok_bufpeek().type != token_type_t::closeparen) return false;
-		tok_bufdiscard();
-
-		return true;
-	}
-
 	bool compiler::primary_expression(ast_node_t::cursor &nc) {
 		/* the bufpeek/get functions return a stock empty token if we read beyond available tokens */
 		switch (tok_bufpeek().type) {
@@ -1274,8 +1261,6 @@ public:
 				ast_node_t::set(*nc, ast_node_t::mk_constant(tok_bufget())); return true;
 			case token_type_t::stringliteral:
 				ast_node_t::set(*nc, string_literals()); return true;
-			case token_type_t::openparen:
-				return subexpression(nc);
 			case token_type_t::r_true:                ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),true)); return true;
 			case token_type_t::r_false:               ast_node_t::set(*nc, ast_node_t::mk_bool_constant(tok_bufget(),false)); return true;
 			case token_type_t::r_const:               ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::r_const, tok_bufget())); return true;
@@ -1397,6 +1382,19 @@ done_parsing:
 		return unary_expression(cur_nc);
 	}
 
+	bool compiler::subexpression(ast_node_t::cursor &p_nc) {
+		assert(tok_bufpeek().type == token_type_t::openparen);
+
+		ast_node_t::cursor nc = p_nc,sub_nc = nc;
+		ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::subexpression,tok_bufget())); nc.to_next(); sub_nc.to_child();
+		if (!expression(sub_nc)) return false;
+
+		if (tok_bufpeek().type != token_type_t::closeparen) return false;
+		tok_bufdiscard();
+
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 2 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 3 */
 	bool compiler::unary_expression(ast_node_t::cursor &nc) {
@@ -1417,27 +1415,8 @@ done_parsing:
 				case token_type_t::plus:                   return unary_expression_common(nc,ast_node_op_t::unaryplus);
 				case token_type_t::exclamation:            return unary_expression_common(nc,ast_node_op_t::logicalnot);
 				case token_type_t::tilde:                  return unary_expression_common(nc,ast_node_op_t::binarynot);
-
-				default:
-					if (!NLEX(nc)) return false;
-
-					/* if it's a subexpression but there's obviously more, it's a typecast */
-					if ((*nc)->op == ast_node_op_t::subexpression) {
-						ast_node_t::cursor sub_nc = nc; sub_nc.to_child().to_next();
-						switch (tok_bufpeek().type) {
-							case token_type_t::characterliteral:
-							case token_type_t::stringliteral:
-							case token_type_t::openparen:
-							case token_type_t::floatval:
-							case token_type_t::intval:
-								(*nc)->op = ast_node_op_t::typecast;
-								return unary_expression(sub_nc);
-							default:
-								break;
-						}
-					}
-
-					return true;
+				case token_type_t::openparen:              return subexpression(nc);
+				default:                                   return NLEX(nc);
 			}
 		}
 
