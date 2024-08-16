@@ -1062,6 +1062,8 @@ public:
 
 		bool cpp_scope_expression(ast_node_t::cursor &nc);
 
+		bool array_operator(ast_node_t::cursor &nc);
+
 		bool postfix_expression(ast_node_t::cursor &nc);
 		bool postfix_expression_common(ast_node_t::cursor &nc,const ast_node_op_t anot,bool second);
 
@@ -1354,6 +1356,20 @@ public:
 		return true;
 	}
 
+	bool compiler::array_operator(ast_node_t::cursor &nc) {
+		assert(tok_bufpeek().type == token_type_t::leftsquarebracket);
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::arraysubscript,tok_bufget())); /* make child of comma */
+
+		if (!expression(cur_nc))
+			return false;
+
+		if (tok_bufpeek().type != token_type_t::rightsquarebracket) return false;
+		tok_bufdiscard();
+
+		return true;
+	}
+
 	/* [https://en.cppreference.com/w/c/language/operator_precedence] level 1 */
 	/* [https://en.cppreference.com/w/cpp/language/operator_precedence] level 2 */
 	bool compiler::postfix_expression(ast_node_t::cursor &nc) {
@@ -1365,6 +1381,7 @@ public:
 				case token_type_t::minusminus:             if (!postfix_expression_common(nc,ast_node_op_t::postdecrement,false)) return false; break;
 				case token_type_t::period:                 if (!postfix_expression_common(nc,ast_node_op_t::structaccess,true)) return false; break;
 				case token_type_t::pointerarrow:           if (!postfix_expression_common(nc,ast_node_op_t::structptraccess,true)) return false; break;
+				case token_type_t::leftsquarebracket:      if (!array_operator(nc)) return false; break;
 				default:                                   goto done_parsing;
 			}
 		}
