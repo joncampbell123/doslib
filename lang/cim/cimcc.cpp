@@ -1400,7 +1400,27 @@ done_parsing:
 				case token_type_t::plus:                   return unary_expression_common(nc,ast_node_op_t::unaryplus);
 				case token_type_t::exclamation:            return unary_expression_common(nc,ast_node_op_t::logicalnot);
 				case token_type_t::tilde:                  return unary_expression_common(nc,ast_node_op_t::binarynot);
-				default:                                   return NLEX(nc);
+
+				default:
+					if (!NLEX(nc)) return false;
+
+					/* if it's a subexpression but there's obviously more, it's a typecast */
+					if ((*nc)->op == ast_node_op_t::subexpression) {
+						ast_node_t::cursor sub_nc = nc; sub_nc.to_child(); sub_nc.to_next();
+						switch (tok_bufpeek().type) {
+							case token_type_t::characterliteral:
+							case token_type_t::stringliteral:
+							case token_type_t::openparen:
+							case token_type_t::floatval:
+							case token_type_t::intval:
+								(*nc)->op = ast_node_op_t::typecast;
+								return unary_expression(sub_nc);
+							default:
+								break;
+						}
+					}
+
+					return true;
 			}
 		}
 
