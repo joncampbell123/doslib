@@ -1406,7 +1406,7 @@ done_parsing:
 
 					/* if it's a subexpression but there's obviously more, it's a typecast */
 					if ((*nc)->op == ast_node_op_t::subexpression) {
-						ast_node_t::cursor sub_nc = nc; sub_nc.to_child(); sub_nc.to_next();
+						ast_node_t::cursor sub_nc = nc; sub_nc.to_child().to_next();
 						switch (tok_bufpeek().type) {
 							case token_type_t::characterliteral:
 							case token_type_t::stringliteral:
