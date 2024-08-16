@@ -1236,7 +1236,10 @@ public:
 			ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::strcat));
 
 			while (tok_bufpeek().type == token_type_t::stringliteral) {
-				if (tok_bufpeek().v.chrstrlit.type != stype) break; /* if the string type differs, stop */
+				if (tok_bufpeek().v.chrstrlit.type != stype) {
+					error_msg("Cannot string concat dissimilar string types",tok_bufpeek().position);
+					break; /* if the string type differs, stop */
+				}
 
 				ast_node_t::set(*c_nc, ast_node_t::mk_constant(tok_bufget()));
 				c_nc.to_next();
