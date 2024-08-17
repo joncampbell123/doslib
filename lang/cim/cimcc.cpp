@@ -1057,6 +1057,8 @@ public:
 		bool expression(ast_node_t::cursor &nc);
 		void skip_numeric_digit_separator(void);
 		bool subexpression(ast_node_t::cursor &nc);
+		bool type_deref_list(ast_node_t::cursor &p_nc);
+		bool type_list(ast_node_t::cursor &p_nc);
 		bool typecast(ast_node_t::cursor &p_nc);
 		bool next_token_is_type(void);
 
@@ -1288,7 +1290,7 @@ public:
 		return false;
 	}
 
-	bool compiler::typecast(ast_node_t::cursor &p_nc) {
+	bool compiler::type_list(ast_node_t::cursor &p_nc) {
 		ast_node_t::cursor nc = p_nc;
 		unsigned int count = 0;
 
@@ -1296,6 +1298,52 @@ public:
 			if ((count++) == 0) { ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::identifier_list)); nc.to_child(); }
 			if (!cpp_scope_expression(nc)) return false;
 			nc.to_next();
+		}
+
+		return true;
+	}
+
+	bool compiler::type_deref_list(ast_node_t::cursor &p_nc) {
+		ast_node_t::cursor nc = p_nc,sub_nc = nc; sub_nc.to_next_until_last();
+
+		while (1) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::star:
+					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::dereference, tok_bufget()));
+					sub_nc = nc; sub_nc.to_next_until_last();
+					break;
+				case token_type_t::ampersand:
+					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
+					sub_nc = nc; sub_nc.to_next_until_last();
+					break;
+				case token_type_t::ampersandampersand:
+					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
+					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
+					sub_nc = nc; sub_nc.to_next_until_last();
+					break;
+				case token_type_t::r_const:
+					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_const, tok_bufget())); sub_nc.to_next(); break;
+				case token_type_t::r_volatile:
+					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_volatile, tok_bufget())); sub_nc.to_next(); break;
+				case token_type_t::r_huge:
+					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_huge, tok_bufget())); sub_nc.to_next(); break;
+				case token_type_t::r_near:
+					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_near, tok_bufget())); sub_nc.to_next(); break;
+				case token_type_t::r_far:
+					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_far, tok_bufget())); sub_nc.to_next(); break;
+				default: goto done_parsing;
+			}
+		}
+done_parsing:
+		return true;
+	}
+
+	bool compiler::typecast(ast_node_t::cursor &nc) {
+		if (!type_list(nc)) return false;
+
+		if (*nc) {
+			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
+			if (!type_deref_list(sub_nc)) return false;
 		}
 
 		return true;
