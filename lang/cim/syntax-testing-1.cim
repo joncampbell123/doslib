@@ -34,4 +34,4 @@ a;a::b;a::b::c;a::b::c::d::e::f::g::h::i;
 (int)4; (int)(long)4;(int)(4+4);(int)4.5;(int)(long)(char)(((char)4+3)*2);(const int long signed far)3;(double)x;(long double)y;(float)z;(void)a;(int volatile)z;
 a[4];a[4][4];(a)[4];(*a)[4];a[(4*3)+3];a[3,4];
 (*a);(**a);(***a);
-(char*)a;(char*)(signed long**)a;(const char*)a;(const char**)a;(const*const)a;(const char*const volatile*)a;(const char*volatile const*)a;(char*)(int*)a;(char far*)b;(char far*const far)c;
+(char*)a;(char*)(signed long**)a;(const char*)a;(const char**)a;(const*const)a;(const char*const volatile*)a;(const char*volatile const*)a;(char*)(int*)a;(char far*)b;(char far*const far)c;(const char far*)b;(const char far*const far)c;

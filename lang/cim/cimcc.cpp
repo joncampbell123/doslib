@@ -1371,36 +1371,24 @@ public:
 		return r;
 	}
 
+	static const unsigned char type_list_ps_order[] = {
+		ilc_cls_t::STORAGE,
+		ilc_cls_t::CV,
+		ilc_cls_t::TYPE,
+		ilc_cls_t::PTYPE,
+	};
+
 	bool compiler::type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op) {
 		ast_node_t::cursor nc = p_nc;
 		ilc_cls_t ilc; ilc.init();
 
-		while (1) {
-			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
-			if (ilc.parse_builtin_type_token(ilc_cls_t::STORAGE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
-			else if (ilc.parse_builtin_type_token(ilc_cls_t::STORAGE,tok_bufpeek())) tok_bufdiscard();
-			else break;
-		}
-
-		while (1) {
-			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
-			if (ilc.parse_builtin_type_token(ilc_cls_t::CV,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
-			else if (ilc.parse_builtin_type_token(ilc_cls_t::CV,tok_bufpeek())) tok_bufdiscard();
-			else break;
-		}
-
-		while (1) {
-			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
-			if (ilc.parse_builtin_type_token(ilc_cls_t::TYPE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
-			else if (ilc.parse_builtin_type_token(ilc_cls_t::TYPE,tok_bufpeek())) tok_bufdiscard();
-			else break;
-		}
-
-		while (1) {
-			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
-			if (ilc.parse_builtin_type_token(ilc_cls_t::PTYPE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
-			else if (ilc.parse_builtin_type_token(ilc_cls_t::PTYPE,tok_bufpeek())) tok_bufdiscard();
-			else break;
+		for (size_t pi=0;pi < sizeof(type_list_ps_order)/sizeof(type_list_ps_order[0]);pi++) {
+			while (1) {
+				if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+				if (ilc.parse_builtin_type_token(type_list_ps_order[pi],tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+				else if (ilc.parse_builtin_type_token(type_list_ps_order[pi],tok_bufpeek())) tok_bufdiscard();
+				else break;
+			}
 		}
 
 		// TODO: If ilc says it didn't find any type like int, long, etc. then see if the next token
