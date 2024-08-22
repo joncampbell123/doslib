@@ -1435,7 +1435,7 @@ public:
 				case token_type_t::ampersandampersand:
 					assert((*nc)->tv.type == token_type_t::r_typeclsif);
 
-					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
+					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof));
 					(*nc)->tv.type = token_type_t::r_typeclsif;
 					(*nc)->tv.v.typecls.init();
 
