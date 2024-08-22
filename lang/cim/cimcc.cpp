@@ -561,10 +561,6 @@ public:
 		s_t cls_s;
 
 		void init(void);
-		bool parse_ident_node(ast_node_t* &chk,bool idlist=false);
-		bool parse_ident(ast_node_t* &chk);
-		bool parse_idlist(ast_node_t* &chk);
-		bool parse_idlist_final(void);
 	};
 
 	void ilc_cls_t::init(void) {
