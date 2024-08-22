@@ -500,29 +500,30 @@ private:
 		static constexpr unsigned int i_short =       (1u <<  6u);
 		static constexpr unsigned int i_long =        (1u <<  7u);
 		static constexpr unsigned int i_llong =       (1u <<  8u);
+		static constexpr unsigned int g_void =        (1u <<  9u);
 public:
-		static constexpr unsigned int i_signed =      (1u <<  9u);
-		static constexpr unsigned int i_unsigned =    (1u << 10u);
+		static constexpr unsigned int i_signed =      (1u << 10u);
+		static constexpr unsigned int i_unsigned =    (1u << 11u);
 private:
-		static constexpr unsigned int f_double =      (1u << 11u);
-		static constexpr unsigned int f_float =       (1u << 12u);
+		static constexpr unsigned int f_double =      (1u << 12u);
+		static constexpr unsigned int f_float =       (1u << 13u);
 public:
-		static constexpr unsigned int g_const =       (1u << 13u);
-		static constexpr unsigned int g_constexpr =   (1u << 14u);
-		static constexpr unsigned int g_compileexpr = (1u << 15u);
-		static constexpr unsigned int g_volatile =    (1u << 16u);
-		static constexpr unsigned int g_static =      (1u << 17u);
+		static constexpr unsigned int g_const =       (1u << 14u);
+		static constexpr unsigned int g_constexpr =   (1u << 15u);
+		static constexpr unsigned int g_compileexpr = (1u << 16u);
+		static constexpr unsigned int g_volatile =    (1u << 17u);
 private:
-		static constexpr unsigned int p_near =        (1u << 18u);
-		static constexpr unsigned int p_far =         (1u << 19u);
-		static constexpr unsigned int p_huge =        (1u << 20u);
-
-		static constexpr unsigned int c_valid =       (1u << 31u); /* this has been evaluated */
+		static constexpr unsigned int g_static =      (1u << 18u);
+		static constexpr unsigned int g_extern =      (1u << 19u);
+		static constexpr unsigned int p_near =        (1u << 19u);
+		static constexpr unsigned int p_far =         (1u << 20u);
+		static constexpr unsigned int p_huge =        (1u << 21u);
 
 		/* do not leave these bits set after parsing */
 		static constexpr unsigned int f_non_public =
 			c_int|c_float|c_other|
-			i_bool|i_char|i_int|i_short|i_long|i_llong|
+			i_bool|i_char|i_int|i_short|i_long|i_llong|g_void|
+			g_static|g_extern|
 			f_float|f_double|
 			p_near|p_far|p_huge;
 public:
@@ -531,6 +532,7 @@ public:
 			ct_none=0,
 			ct_int,
 			ct_float,
+			ct_void,
 			ct_other
 		};
 
@@ -554,10 +556,17 @@ public:
 			p_huge
 		};
 
+		enum class s_t {
+			s_none=0,
+			s_static,
+			s_extern
+		};
+
 		unsigned int cls;
 		c_t cls_c;
 		t_t cls_t;
 		p_t cls_p;
+		s_t cls_s;
 
 		void init(void);
 		bool parse_ident_node(ast_node_t* &chk,bool idlist=false);
@@ -565,6 +574,14 @@ public:
 		bool parse_idlist(ast_node_t* &chk);
 		bool parse_idlist_final(void);
 	};
+
+	void ilc_cls_t::init(void) {
+		cls = 0u;
+		cls_c = c_t::ct_none;
+		cls_t = t_t::t_none;
+		cls_p = p_t::p_none;
+		cls_s = s_t::s_none;
+	}
 
 	typedef ilc_cls_t token_typeclsif_t;
 
@@ -3466,6 +3483,7 @@ done_parsing:
 				switch (t.v.typecls.cls_c) {
 					case ilc_cls_t::c_t::ct_int: s += " c=int"; break;
 					case ilc_cls_t::c_t::ct_float: s += " c=float"; break;
+					case ilc_cls_t::c_t::ct_void: s += " c=void"; break;
 					case ilc_cls_t::c_t::ct_other: s += " c=other"; break;
 					default: break;
 				}
@@ -3490,6 +3508,12 @@ done_parsing:
 					default: break;
 				}
 
+				switch (t.v.typecls.cls_s) {
+					case ilc_cls_t::s_t::s_static: s += " s=static"; break;
+					case ilc_cls_t::s_t::s_extern: s += " s=extern"; break;
+					default: break;
+				}
+
 				snprintf(buf,sizeof(buf)," cls=0x%x",t.v.typecls.cls); s += buf;
 				if (t.v.typecls.cls & ilc_cls_t::i_signed) s += " signed";
 				if (t.v.typecls.cls & ilc_cls_t::i_unsigned) s += " unsigned";
@@ -3497,7 +3521,6 @@ done_parsing:
 				if (t.v.typecls.cls & ilc_cls_t::g_constexpr) s += " constexpr";
 				if (t.v.typecls.cls & ilc_cls_t::g_compileexpr) s += " compileexpr";
 				if (t.v.typecls.cls & ilc_cls_t::g_volatile) s += " volatile";
-				if (t.v.typecls.cls & ilc_cls_t::g_static) s += " static";
 
 				s += ">";
 				break;
