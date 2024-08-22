@@ -777,6 +777,7 @@ public:
 		r_pound_type,
 		r_pound_include,
 		r_typeclsif,
+		i_as,
 
 		maxval
 	};
@@ -1063,7 +1064,7 @@ public:
 		void skip_numeric_digit_separator(void);
 		bool subexpression(ast_node_t::cursor &nc);
 		bool type_deref_list(ast_node_t::cursor &p_nc);
-		bool type_list(ast_node_t::cursor &p_nc);
+		bool type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op);
 		bool typecast(ast_node_t::cursor &p_nc);
 		bool next_token_is_type(void);
 
@@ -1295,12 +1296,12 @@ public:
 		return false;
 	}
 
-	bool compiler::type_list(ast_node_t::cursor &p_nc) {
+	bool compiler::type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op) {
 		ast_node_t::cursor nc = p_nc;
 		unsigned int count = 0;
 
 		while (next_token_is_type()) {
-			if ((count++) == 0) { ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::identifier_list)); nc.to_child(); }
+			if ((count++) == 0) { ast_node_t::set(*nc, new ast_node_t(op)); nc.to_child(); }
 			if (!cpp_scope_expression(nc)) return false;
 			nc.to_next();
 		}
@@ -1344,7 +1345,7 @@ done_parsing:
 	}
 
 	bool compiler::typecast(ast_node_t::cursor &nc) {
-		if (!type_list(nc)) return false;
+		if (!type_list(nc,ast_node_op_t::i_as)) return false;
 
 		if (*nc) {
 			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
@@ -4050,6 +4051,9 @@ done_parsing:
 					break;
 				case ast_node_op_t::i_anonymous:
 					name = "anonymous";
+					break;
+				case ast_node_op_t::i_as:
+					name = "as";
 					break;
 				case ast_node_op_t::i_array:
 					name = "array";
