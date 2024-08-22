@@ -490,26 +490,23 @@ namespace CIMCC {
 	struct ast_node_t;
 
 	struct ilc_cls_t {
-private:
-		static constexpr unsigned int f_bool =        (1u <<  0u);
-		static constexpr unsigned int f_char =        (1u <<  1u);
-		static constexpr unsigned int f_int =         (1u <<  2u);
-		static constexpr unsigned int f_short =       (1u <<  3u);
-		static constexpr unsigned int f_long =        (1u <<  4u);
-		static constexpr unsigned int f_llong =       (1u <<  5u);
-		static constexpr unsigned int f_void =        (1u <<  6u);
 public:
-		static constexpr unsigned int f_signed =      (1u <<  7u);
-		static constexpr unsigned int f_unsigned =    (1u <<  8u);
+		static constexpr unsigned int f_signed =      (1u <<  0u);
+		static constexpr unsigned int f_unsigned =    (1u <<  1u);
+		static constexpr unsigned int f_const =       (1u <<  2u);
+		static constexpr unsigned int f_constexpr =   (1u <<  3u);
+		static constexpr unsigned int f_compileexpr = (1u <<  4u);
+		static constexpr unsigned int f_volatile =    (1u <<  5u);
 private:
-		static constexpr unsigned int f_double =      (1u <<  9u);
-		static constexpr unsigned int f_float =       (1u << 10u);
-public:
-		static constexpr unsigned int f_const =       (1u << 11u);
-		static constexpr unsigned int f_constexpr =   (1u << 12u);
-		static constexpr unsigned int f_compileexpr = (1u << 13u);
-		static constexpr unsigned int f_volatile =    (1u << 14u);
-private:
+		static constexpr unsigned int f_bool =        (1u <<  6u);
+		static constexpr unsigned int f_char =        (1u <<  7u);
+		static constexpr unsigned int f_int =         (1u <<  8u);
+		static constexpr unsigned int f_short =       (1u <<  9u);
+		static constexpr unsigned int f_long =        (1u << 10u);
+		static constexpr unsigned int f_llong =       (1u << 11u);
+		static constexpr unsigned int f_void =        (1u << 12u);
+		static constexpr unsigned int f_double =      (1u << 13u);
+		static constexpr unsigned int f_float =       (1u << 14u);
 		static constexpr unsigned int f_static =      (1u << 15u);
 		static constexpr unsigned int f_extern =      (1u << 16u);
 		static constexpr unsigned int f_near =        (1u << 17u);
