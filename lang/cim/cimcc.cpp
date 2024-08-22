@@ -518,6 +518,14 @@ private:
 			f_bool|f_char|f_int|f_short|f_long|f_llong|f_void|f_float|f_double|
 			f_static|f_extern|
 			f_near|f_far|f_huge;
+		static constexpr unsigned int f_builtin_types =
+			f_bool|f_char|f_int|f_short|f_long|f_llong|f_void|f_double|f_float;
+		static constexpr unsigned int f_signage =
+			f_signed|f_unsigned;
+		static constexpr unsigned int f_storage =
+			f_static|f_extern;
+		static constexpr unsigned int f_pointer_type =
+			f_near|f_far|f_huge;
 public:
 
 		enum class c_t {
@@ -561,6 +569,9 @@ public:
 		s_t cls_s;
 
 		void init(void);
+		bool finalize(void);
+		bool parse_builtin_type_token(const token_t &t);
+		bool parse_builtin_type_token(const token_t &t0,const token_t &t1);
 	};
 
 	void ilc_cls_t::init(void) {
@@ -569,6 +580,56 @@ public:
 		cls_t = t_t::_none;
 		cls_p = p_t::_none;
 		cls_s = s_t::_none;
+	}
+
+	bool ilc_cls_t::finalize(void) {
+/* -------------------- type ------------------- */
+		{
+			const unsigned int f = cls & f_builtin_types;
+
+			if (f == 0)                        { cls_c = c_t::_none;  cls_t = t_t::_none; }
+			else if (f == f_bool)              { cls_c = c_t::_int;   cls_t = t_t::_bool; }
+			else if (f == f_char)              { cls_c = c_t::_int;   cls_t = t_t::_char; }
+			else if (f == f_int)               { cls_c = c_t::_int;   cls_t = t_t::_int; }
+			else if (f == f_short)             { cls_c = c_t::_int;   cls_t = t_t::_short; }
+			else if (f == f_long)              { cls_c = c_t::_int;   cls_t = t_t::_long; }
+			else if (f == (f_int|f_long))      { cls_c = c_t::_int;   cls_t = t_t::_long; }
+			else if (f == f_llong)             { cls_c = c_t::_int;   cls_t = t_t::_llong; }
+			else if (f == (f_long|f_double))   { cls_c = c_t::_float; cls_t = t_t::_longdouble; }
+			else if (f == f_double)            { cls_c = c_t::_float; cls_t = t_t::_double; }
+			else if (f == f_float)             { cls_c = c_t::_float; cls_t = t_t::_float; }
+			else if (f == f_void)              { cls_c = c_t::_void;  cls_t = t_t::_none; }
+			else                               return false;
+		}
+/* -------------------- signed/unsigned -------------------- */
+		{
+			const unsigned int f = cls & f_signage;
+
+			/* you cannot declare something signed AND unsigned at the same time! */
+			if (f == (f_signed|f_unsigned)) return false;
+		}
+/* -------------------- storage ------------------- */
+		{
+			const unsigned int f = cls & f_storage;
+
+			if (f == 0)                        { cls_s = s_t::_none; }
+			else if (f == f_static)            { cls_s = s_t::_static; }
+			else if (f == f_extern)            { cls_s = s_t::_extern; }
+			else                               return false;
+		}
+/* -------------------- pointer type ------------------- */
+		{
+			const unsigned int f = cls & f_pointer_type;
+
+			if (f == 0)                        { cls_p = p_t::_none; }
+			else if (f == f_near)              { cls_p = p_t::_near; }
+			else if (f == f_far)               { cls_p = p_t::_far; }
+			else if (f == f_huge)              { cls_p = p_t::_huge; }
+			else                               return false;
+		}
+
+		cls &= ~f_non_public;
+		return true;
 	}
 
 	typedef ilc_cls_t token_typeclsif_t;
@@ -644,6 +705,42 @@ public:
 			}
 		}
 	};
+
+	bool ilc_cls_t::parse_builtin_type_token(const token_t &t0,const token_t &t1) {
+#define TC(tt1,tt2,f) if (t0.type == token_type_t::tt1 && t1.type == token_type_t::tt2) { cls |= f; return true; }
+		TC(r_long,r_long,f_llong);
+#undef TC
+		return false;
+	}
+
+	bool ilc_cls_t::parse_builtin_type_token(const token_t &t) {
+#define TC(t,f) case token_type_t::t: cls |= f; return true;
+		switch (t.type) {
+			TC(r_signed,         f_signed);
+			TC(r_unsigned,       f_unsigned);
+			TC(r_const,          f_const);
+			TC(r_constexpr,      f_constexpr);
+			TC(r_compileexpr,    f_compileexpr);
+			TC(r_volatile,       f_volatile);
+			TC(r_bool,           f_bool);
+			TC(r_char,           f_char);
+			TC(r_int,            f_int);
+			TC(r_short,          f_short);
+			TC(r_long,           f_long);
+			TC(r_void,           f_void);
+			TC(r_double,         f_double);
+			TC(r_float,          f_float);
+			TC(r_static,         f_static);
+			TC(r_extern,         f_extern);
+			TC(r_near,           f_near);
+			TC(r_far,            f_far);
+			TC(r_huge,           f_huge);
+			default:             break;
+		}
+#undef TC
+
+		return false;
+	}
 
 	/////////
 
@@ -1262,48 +1359,26 @@ public:
 		return r;
 	}
 
-	bool compiler::next_token_is_type(void) {
-		switch (tok_bufpeek().type) {
-			case token_type_t::r_far:
-			case token_type_t::r_int:
-			case token_type_t::r_bool:
-			case token_type_t::r_char:
-			case token_type_t::r_long:
-			case token_type_t::r_near:
-			case token_type_t::r_huge:
-			case token_type_t::r_void:
-			case token_type_t::r_auto:
-			case token_type_t::r_const:
-			case token_type_t::r_short:
-			case token_type_t::r_float:
-			case token_type_t::r_double:
-			case token_type_t::r_signed:
-			case token_type_t::r_size_t:
-			case token_type_t::r_extern:
-			case token_type_t::r_static:
-			case token_type_t::r_ssize_t:
-			case token_type_t::r_unsigned:
-			case token_type_t::r_volatile:
-			case token_type_t::r_constexpr:
-				if (tok_bufpeek(1).type == token_type_t::openparen) return false; /* and not a function call */
-				return true;
-			// TODO: If identifier, look up whether this parser knows the identifier names a type or a var/function
-			// TODO: If identifier is scoped, look up the entire scope
-			default:
-				break;
-		}
-
-		return false;
-	}
-
 	bool compiler::type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op) {
 		ast_node_t::cursor nc = p_nc;
-		unsigned int count = 0;
+		ilc_cls_t ilc; ilc.init();
 
-		while (next_token_is_type()) {
-			if ((count++) == 0) { ast_node_t::set(*nc, new ast_node_t(op)); nc.to_child(); }
-			if (!cpp_scope_expression(nc)) return false;
-			nc.to_next();
+		while (1) {
+			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+			if (ilc.parse_builtin_type_token(tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+			else if (ilc.parse_builtin_type_token(tok_bufpeek())) tok_bufdiscard();
+			else break;
+		}
+
+		// TODO: If ilc says it didn't find any type like int, long, etc. then see if the next token
+		//       is an identifier that is a known typedef
+
+		if (ilc.cls != 0) {
+			ast_node_t::set(*nc, new ast_node_t(op));
+			(*nc)->tv.type = token_type_t::r_typeclsif;
+			if (!ilc.finalize()) return false; /* returns false if invalid combination */
+			(*nc)->tv.v.typecls = std::move(ilc);
+			nc.to_child();
 		}
 
 		return true;
@@ -1345,10 +1420,11 @@ done_parsing:
 	}
 
 	bool compiler::typecast(ast_node_t::cursor &nc) {
-		if (!type_list(nc,ast_node_op_t::i_as)) return false;
+		if (!type_list(nc,ast_node_op_t::typecast)) return false;
 
 		if (*nc) {
 			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
+			(*sub_nc) = new ast_node_t(ast_node_op_t::i_as);
 			if (!type_deref_list(sub_nc)) return false;
 		}
 
@@ -1366,7 +1442,7 @@ done_parsing:
 			if (!typecast(chk_nc)) return false;
 
 			if (*chk_nc) { /* typecast() filled in the node */
-				ast_node_t::set(*nc, new ast_node_t(ast_node_op_t::typecast,tok)); (*nc)->set_child(*chk_nc);
+				ast_node_t::set(*nc, *chk_nc);
 			}
 			else {
 				if (!expression(chk_nc)) return false;
