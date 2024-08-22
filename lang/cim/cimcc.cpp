@@ -577,9 +577,14 @@ public:
 
 		void init(void);
 		bool finalize(void);
+		bool empty(void) const;
 		bool parse_builtin_type_token(const unsigned int parse_state,const token_t &t);
 		bool parse_builtin_type_token(const unsigned int parse_state,const token_t &t0,const token_t &t1);
 	};
+
+	bool ilc_cls_t::empty(void) const {
+		return cls == 0 && cls_c == c_t::_none && cls_t == t_t::_none && cls_p == p_t::_none && cls_s == s_t::_none;
+	}
 
 	void ilc_cls_t::init(void) {
 		cls = 0u;
@@ -1378,6 +1383,11 @@ public:
 		ilc_cls_t::PTYPE,
 	};
 
+	static const unsigned char type_deref_list_ps_order[] = {
+		ilc_cls_t::CV,
+		ilc_cls_t::PTYPE
+	};
+
 	bool compiler::type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op) {
 		ast_node_t::cursor nc = p_nc;
 		ilc_cls_t ilc; ilc.init();
@@ -1406,33 +1416,50 @@ public:
 	}
 
 	bool compiler::type_deref_list(ast_node_t::cursor &p_nc) {
-		ast_node_t::cursor nc = p_nc,sub_nc = nc; sub_nc.to_next_until_last();
+		ast_node_t::cursor nc = p_nc;
 
 		while (1) {
 			switch (tok_bufpeek().type) {
 				case token_type_t::star:
+					assert((*nc)->tv.type == token_type_t::r_typeclsif);
 					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::dereference, tok_bufget()));
-					sub_nc = nc; sub_nc.to_next_until_last();
+					(*nc)->tv.type = token_type_t::r_typeclsif;
+					(*nc)->tv.v.typecls.init();
 					break;
 				case token_type_t::ampersand:
+					assert((*nc)->tv.type == token_type_t::r_typeclsif);
 					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
-					sub_nc = nc; sub_nc.to_next_until_last();
+					(*nc)->tv.type = token_type_t::r_typeclsif;
+					(*nc)->tv.v.typecls.init();
 					break;
 				case token_type_t::ampersandampersand:
+					assert((*nc)->tv.type == token_type_t::r_typeclsif);
+
 					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
+					(*nc)->tv.type = token_type_t::r_typeclsif;
+					(*nc)->tv.v.typecls.init();
+
 					ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::addressof, tok_bufget()));
-					sub_nc = nc; sub_nc.to_next_until_last();
+					(*nc)->tv.type = token_type_t::r_typeclsif;
+					(*nc)->tv.v.typecls.init();
 					break;
 				case token_type_t::r_const:
-					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_const, tok_bufget())); sub_nc.to_next(); break;
 				case token_type_t::r_volatile:
-					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_volatile, tok_bufget())); sub_nc.to_next(); break;
 				case token_type_t::r_huge:
-					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_huge, tok_bufget())); sub_nc.to_next(); break;
 				case token_type_t::r_near:
-					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_near, tok_bufget())); sub_nc.to_next(); break;
 				case token_type_t::r_far:
-					ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::r_far, tok_bufget())); sub_nc.to_next(); break;
+					assert((*nc)->tv.type == token_type_t::r_typeclsif);
+					if (!(*nc)->tv.v.typecls.empty()) return false;
+					for (size_t pi=0;pi < sizeof(type_deref_list_ps_order)/sizeof(type_deref_list_ps_order[0]);pi++) {
+						while (1) {
+							if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+							if ((*nc)->tv.v.typecls.parse_builtin_type_token(type_deref_list_ps_order[pi],tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+							else if ((*nc)->tv.v.typecls.parse_builtin_type_token(type_deref_list_ps_order[pi],tok_bufpeek())) tok_bufdiscard();
+							else break;
+						}
+					}
+					if (!(*nc)->tv.v.typecls.finalize()) return false; /* returns false if invalid combination */
+					break;
 				default: goto done_parsing;
 			}
 		}
@@ -1446,6 +1473,8 @@ done_parsing:
 		if (*nc) {
 			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
 			(*sub_nc) = new ast_node_t(ast_node_op_t::i_as);
+			(*sub_nc)->tv.type = token_type_t::r_typeclsif;
+			(*sub_nc)->tv.v.typecls.init();
 			if (!type_deref_list(sub_nc)) return false;
 		}
 
