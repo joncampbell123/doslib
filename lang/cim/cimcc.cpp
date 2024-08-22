@@ -526,7 +526,14 @@ private:
 			f_static|f_extern;
 		static constexpr unsigned int f_pointer_type =
 			f_near|f_far|f_huge;
+
 public:
+		enum {
+			STORAGE=0,
+			CV,
+			TYPE,
+			PTYPE
+		};
 
 		enum class c_t {
 			_none=0,
@@ -570,8 +577,8 @@ public:
 
 		void init(void);
 		bool finalize(void);
-		bool parse_builtin_type_token(const token_t &t);
-		bool parse_builtin_type_token(const token_t &t0,const token_t &t1);
+		bool parse_builtin_type_token(const unsigned int parse_state,const token_t &t);
+		bool parse_builtin_type_token(const unsigned int parse_state,const token_t &t0,const token_t &t1);
 	};
 
 	void ilc_cls_t::init(void) {
@@ -706,36 +713,41 @@ public:
 		}
 	};
 
-	bool ilc_cls_t::parse_builtin_type_token(const token_t &t0,const token_t &t1) {
+	bool ilc_cls_t::parse_builtin_type_token(const unsigned int parse_state,const token_t &t0,const token_t &t1) {
 #define TC(tt1,tt2,f) if (t0.type == token_type_t::tt1 && t1.type == token_type_t::tt2) { cls |= f; return true; }
-		TC(r_long,r_long,f_llong);
+		switch (parse_state) {
+			case TYPE:
+				TC(r_long,r_long,f_llong);
+			default:
+				break;
+		}
 #undef TC
 		return false;
 	}
 
-	bool ilc_cls_t::parse_builtin_type_token(const token_t &t) {
-#define TC(t,f) case token_type_t::t: cls |= f; return true;
+	bool ilc_cls_t::parse_builtin_type_token(const unsigned int parse_state,const token_t &t) {
+#define TC(st,t,f) case token_type_t::t: if (parse_state == st) { cls |= f; return true; } break
 		switch (t.type) {
-			TC(r_signed,         f_signed);
-			TC(r_unsigned,       f_unsigned);
-			TC(r_const,          f_const);
-			TC(r_constexpr,      f_constexpr);
-			TC(r_compileexpr,    f_compileexpr);
-			TC(r_volatile,       f_volatile);
-			TC(r_bool,           f_bool);
-			TC(r_char,           f_char);
-			TC(r_int,            f_int);
-			TC(r_short,          f_short);
-			TC(r_long,           f_long);
-			TC(r_void,           f_void);
-			TC(r_double,         f_double);
-			TC(r_float,          f_float);
-			TC(r_static,         f_static);
-			TC(r_extern,         f_extern);
-			TC(r_near,           f_near);
-			TC(r_far,            f_far);
-			TC(r_huge,           f_huge);
-			default:             break;
+			TC(TYPE,      r_signed,         f_signed);
+			TC(TYPE,      r_unsigned,       f_unsigned);
+			TC(CV,        r_const,          f_const);
+			TC(CV,        r_constexpr,      f_constexpr);
+			TC(CV,        r_compileexpr,    f_compileexpr);
+			TC(CV,        r_volatile,       f_volatile);
+			TC(TYPE,      r_bool,           f_bool);
+			TC(TYPE,      r_char,           f_char);
+			TC(TYPE,      r_int,            f_int);
+			TC(TYPE,      r_short,          f_short);
+			TC(TYPE,      r_long,           f_long);
+			TC(TYPE,      r_void,           f_void);
+			TC(TYPE,      r_double,         f_double);
+			TC(TYPE,      r_float,          f_float);
+			TC(STORAGE,   r_static,         f_static);
+			TC(STORAGE,   r_extern,         f_extern);
+			TC(PTYPE,     r_near,           f_near);
+			TC(PTYPE,     r_far,            f_far);
+			TC(PTYPE,     r_huge,           f_huge);
+			default:                        break;
 		}
 #undef TC
 
@@ -1365,8 +1377,29 @@ public:
 
 		while (1) {
 			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
-			if (ilc.parse_builtin_type_token(tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
-			else if (ilc.parse_builtin_type_token(tok_bufpeek())) tok_bufdiscard();
+			if (ilc.parse_builtin_type_token(ilc_cls_t::STORAGE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+			else if (ilc.parse_builtin_type_token(ilc_cls_t::STORAGE,tok_bufpeek())) tok_bufdiscard();
+			else break;
+		}
+
+		while (1) {
+			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+			if (ilc.parse_builtin_type_token(ilc_cls_t::CV,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+			else if (ilc.parse_builtin_type_token(ilc_cls_t::CV,tok_bufpeek())) tok_bufdiscard();
+			else break;
+		}
+
+		while (1) {
+			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+			if (ilc.parse_builtin_type_token(ilc_cls_t::TYPE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+			else if (ilc.parse_builtin_type_token(ilc_cls_t::TYPE,tok_bufpeek())) tok_bufdiscard();
+			else break;
+		}
+
+		while (1) {
+			if (tok_bufpeek(1).type == token_type_t::openparen) break; /* we're looking for int, long, etc. not int(), long() */
+			if (ilc.parse_builtin_type_token(ilc_cls_t::PTYPE,tok_bufpeek(0),tok_bufpeek(1))) tok_bufdiscard(2);
+			else if (ilc.parse_builtin_type_token(ilc_cls_t::PTYPE,tok_bufpeek())) tok_bufdiscard();
 			else break;
 		}
 
