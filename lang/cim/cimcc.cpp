@@ -448,6 +448,13 @@ namespace CIMCC {
 			else
 				return false;
 		}
+
+		std::string make_string(void) const {
+			if (name != NULL && length != 0)
+				return std::string(name,length);
+			else
+				return std::string();
+		}
 	};
 
 	typedef size_t token_identifier_t;
@@ -3876,10 +3883,10 @@ done_parsing:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
 				s = "<identifier: \"";
-				if (t.v.identifier != token_identifier_none) {
-					const token_identifier_value_t &v = token_identifier_value_get(t.v.identifier);
-					if (v.name) s += std::string(v.name,v.length);
-				}
+
+				if (t.v.identifier != token_identifier_none)
+					s += token_identifier_value_get(t.v.identifier).make_string();
+
 				s += "\">";
 				break;
 			case token_type_t::characterliteral:
