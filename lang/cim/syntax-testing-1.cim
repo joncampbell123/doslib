@@ -53,3 +53,5 @@ auto x;
 size_t y;
 ssize_t z;
 static const volatile auto x;
+int func1(const size_t x,long double &y) { return x + size_t(y*2.4); }
+int func1(const size_t x,long double &y) { return x + (size_t)(y*2.4); }
