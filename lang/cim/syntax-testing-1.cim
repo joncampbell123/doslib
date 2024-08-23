@@ -35,4 +35,4 @@ a;a::b;a::b::c;a::b::c::d::e::f::g::h::i;
 a[4];a[4][4];(a)[4];(*a)[4];a[(4*3)+3];a[3,4];
 (*a);(**a);(***a);(****a);(&a);(&&a);(&&&a);(&&&&a);
 (char*)a;(char*)(signed long**)a;(const char*)a;(const char**)a;(const*const)a;(const char*const volatile*)a;(const char*volatile const*)a;(char*)(int*)a;(char far*)b;(char far*const far)c;(const char far*)b;(const char far*const far)c;(const char far &)c;(const char far &&)c;(const char far &&&)c;
-int;long;long long;double;float;long double;void;signed;unsigned;signed long long int;int*;int**;int***;int*const;int*const*const*const volatile;int,*,**;
+int x;long y;long long z;double a;float b;long double c;void d;signed e;unsigned f;signed long long int g;int*a;int**b;int***c;int*const d;int*const*const*const volatile e;int f,*g,**h;int volatile i;int x,y,z,a,b,c,&d,*e;

@@ -2088,7 +2088,10 @@ done_parsing:
 				(*sl_nc)->tv.type = token_type_t::r_typeclsif;
 				(*sl_nc)->tv.v.typecls.init();
 				if (!type_deref_list(sl_nc)) return false;
-				if (!(*sl_nc)->tv.v.typecls.empty()) sl_nc.to_next();
+				sl_nc.to_next();
+
+				if (!cpp_scope_expression(sl_nc)) return false;
+				sl_nc.to_next();
 
 				if (tok_bufpeek().type == token_type_t::semicolon) {
 					break;
