@@ -2082,7 +2082,7 @@ done_parsing:
 			while (1) {
 				(*l_nc) = new ast_node_t(ast_node_op_t::r_let);
 
-				ast_node_t::cursor sl_nc = l_nc; sl_nc.to_child(); l_nc.to_next();
+				ast_node_t::cursor sl_nc = l_nc; sl_nc.to_child();
 
 				(*sl_nc) = new ast_node_t(ast_node_op_t::i_as);
 				(*sl_nc)->tv.type = token_type_t::r_typeclsif;
@@ -2092,6 +2092,17 @@ done_parsing:
 
 				if (!cpp_scope_expression(sl_nc)) return false;
 				sl_nc.to_next();
+
+				if (tok_bufpeek().type == token_type_t::openparen) {
+					(*l_nc)->op = ast_node_op_t::r_fn;
+					tok_bufdiscard();
+
+					if (tok_bufpeek().type != token_type_t::closeparen) return false;
+					tok_bufdiscard();
+				}
+
+				l_nc.to_next();
+				count++;
 
 				if (tok_bufpeek().type == token_type_t::semicolon) {
 					break;
@@ -2103,7 +2114,6 @@ done_parsing:
 					return false;
 				}
 			}
-done_parsing:
 
 			return statement_semicolon_check(s_nc);
 		}
