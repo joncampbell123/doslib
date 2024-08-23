@@ -407,8 +407,7 @@ namespace CIMCC {
 
 	/* do not define constructor or destructor because this will be used in a union */
 	struct token_identifier_value_t {
-		char*					name = NULL;
-		size_t					length = 0;
+		std::string				name;
 
 		token_identifier_value_t() { }
 		token_identifier_value_t(const token_identifier_value_t &) = delete;
@@ -417,43 +416,19 @@ namespace CIMCC {
 		token_identifier_value_t &operator=(token_identifier_value_t &&x) { common_move(x); return *this; }
 
 		~token_identifier_value_t() {
-			length = 0;
-			if (name) delete[] name;
-			name = NULL;
+			name.clear();
 		}
 
 		void set(size_t len,const char *s) {
-			assert(name == NULL);
-			assert(length == 0);
-
-			length = len;
-			assert(length != 0);
-			name = new char[length+1]; /* string + NUL */
-			memcpy(name,s,length);
-			name[length] = 0;
+			assert(s != NULL);
+			assert(len != 0);
+			name = std::move(std::string(s,len));
 		}
 
 		token_identifier_value_t(size_t len,const char *s) { set(len,s); }
 
 		void common_move(token_identifier_value_t &x) {
-			name = x.name; x.name = NULL;
-			length = x.length; x.length = 0;
-		}
-
-		bool stringmatch(const std::string &s) const {
-			if ((name == NULL || length == 0) && s.empty())
-				return true;
-			else if (memcmp(name,s.c_str(),length) == 0)
-				return true;
-			else
-				return false;
-		}
-
-		std::string make_string(void) const {
-			if (name != NULL && length != 0)
-				return std::string(name,length);
-			else
-				return std::string();
+			name = std::move(x.name);
 		}
 	};
 
@@ -3885,7 +3860,7 @@ done_parsing:
 				s = "<identifier: \"";
 
 				if (t.v.identifier != token_identifier_none)
-					s += token_identifier_value_get(t.v.identifier).make_string();
+					s += token_identifier_value_get(t.v.identifier).name;
 
 				s += "\">";
 				break;
