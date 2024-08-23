@@ -1610,8 +1610,18 @@ done_parsing:
 
 			(*cur_nc) = new ast_node_t(ast_node_op_t::argument);
 			ast_node_t::cursor e_nc = cur_nc; cur_nc.to_next(); e_nc.to_child();
-			if (!expression(e_nc))
+			if (!assignment_expression(e_nc))
 				return false;
+
+			if (tok_bufpeek().type == token_type_t::closeparen) {
+				break;
+			}
+			else if (tok_bufpeek().type == token_type_t::comma) {
+				tok_bufdiscard();
+			}
+			else {
+				return false;
+			}
 		} while (1);
 
 		if (tok_bufpeek().type != token_type_t::closeparen) return false;
