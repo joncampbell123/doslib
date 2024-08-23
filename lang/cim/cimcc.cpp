@@ -2097,6 +2097,8 @@ done_parsing:
 					(*l_nc)->op = ast_node_op_t::r_fn;
 					tok_bufdiscard();
 
+					bool allow_named_boundary = true;
+
 					if (tok_bufpeek().type != token_type_t::closeparen) {
 						do {
 							if (tok_bufpeek().type == token_type_t::ellipsis) {
@@ -2109,10 +2111,14 @@ done_parsing:
 								break;
 							}
 							else if (tok_bufpeek().type == token_type_t::star) {
+								if (!allow_named_boundary) return false;
+
 								/* beyond this point you must name the parameter by prefixing each argument
 								 * when calling the function with the name: of the parameter. based on how
-								 * named parameters are done in Python */
+								 * named parameters are done in Python. You can only put this ONCE in the
+								 * argument list! */
 								(*sl_nc) = new ast_node_t(ast_node_op_t::named_arg_required_boundary, tok_bufget());
+								allow_named_boundary = false;
 								sl_nc.to_next();
 							}
 							else {
