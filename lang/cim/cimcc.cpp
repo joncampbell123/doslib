@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <unordered_map>
 #include <type_traits>
 #include <stdexcept>
 #include <vector>
@@ -437,34 +438,26 @@ namespace CIMCC {
 
 	/* TODO: Obviously, this can be optimized! */
 	std::vector<token_identifier_value_t> token_identifier_list;
+	std::unordered_map< std::hash<std::string>::result_type, token_identifier_t > token_identifier_list_lookup;
 
-	token_identifier_t token_identifier_value_lookup(size_t len,const char *s) {
-		for (token_identifier_t i=0;i < token_identifier_list.size();i++) {
-			if (token_identifier_list[i].name.length() == len) {
-				if (!memcmp(token_identifier_list[i].name.c_str(),s,len))
-					return i;
-			}
-		}
-
+	token_identifier_t token_identifier_value_lookup(const std::string &s) {
+		auto i = token_identifier_list_lookup.find(std::hash<std::string>()(s));
+		if (i != token_identifier_list_lookup.end()) return i->second;
 		return token_identifier_none;
 	}
 
-	token_identifier_t token_identifier_value_lookup(const std::string &s) {
-		for (token_identifier_t i=0;i < token_identifier_list.size();i++) {
-			if (token_identifier_list[i].name == s)
-				return i;
-		}
-
-		return token_identifier_none;
+	token_identifier_t token_identifier_value_lookup(size_t len,const char *s) {
+		return token_identifier_value_lookup(std::string(s,len));
 	}
 
 	token_identifier_t token_identifier_value_alloc(size_t len,const char *s) {
-		size_t id;
+		token_identifier_t id;
 
 		id = token_identifier_value_lookup(len,s);
 		if (id == token_identifier_none) {
 			id = token_identifier_list.size();
 			token_identifier_list.emplace_back(len,s);
+			token_identifier_list_lookup[std::hash<std::string>()(token_identifier_list[id].name)] = id;
 		}
 
 		return id;
