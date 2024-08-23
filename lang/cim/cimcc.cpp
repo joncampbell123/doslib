@@ -1605,6 +1605,15 @@ done_parsing:
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
 		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::functioncall,tok_bufget())); /* make child of comma */
 
+		do {
+			if (tok_bufpeek().type == token_type_t::closeparen) break;
+
+			(*cur_nc) = new ast_node_t(ast_node_op_t::argument);
+			ast_node_t::cursor e_nc = cur_nc; cur_nc.to_next(); e_nc.to_child();
+			if (!expression(e_nc))
+				return false;
+		} while (1);
+
 		if (tok_bufpeek().type != token_type_t::closeparen) return false;
 		tok_bufdiscard();
 
