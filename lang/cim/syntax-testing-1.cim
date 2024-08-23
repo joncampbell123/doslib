@@ -41,4 +41,4 @@ int x(int y); int x(signed long long int z,char x,int *y),zz(int &z,int far * co
 signed long int* x(int a,char b,float c,...); int x(int a,int b,*,int c,int d);
 {} { int x; } { int x; x = 5+x; { int y; y = x; } }
 int x(int y) { int z; z = y * 5; } int xyz(float x,int y,bool z) { int z; z = 5; { int x; x = z + 5; } }
-int x=5;int y=(x+1)*5;int z=(x+y*2+z*z)+2;
+int x=5;int y=(x+1)*5;int z=(x+y*2+z*z)+2;int x=5,y=3,z=(x+y)*3+2;
