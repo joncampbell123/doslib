@@ -719,7 +719,7 @@ public:
 	};
 
 	bool ilc_cls_t::parse_builtin_type_token(const unsigned int parse_state,const token_t &t0,const token_t &t1) {
-#define TC(tt1,tt2,f) if (t0.type == token_type_t::tt1 && t1.type == token_type_t::tt2) { cls |= f; return true; }
+#define TC(tt1,tt2,f) if (t0.type == token_type_t::tt1 && t1.type == token_type_t::tt2) { if (cls & f) return false; cls |= f; return true; }
 		switch (parse_state) {
 			case TYPE:
 				TC(r_long,r_long,f_llong);
@@ -731,7 +731,7 @@ public:
 	}
 
 	bool ilc_cls_t::parse_builtin_type_token(const unsigned int parse_state,const token_t &t) {
-#define TC(st,t,f) case token_type_t::t: if (parse_state == st) { cls |= f; return true; } break
+#define TC(st,t,f) case token_type_t::t: if (parse_state == st) { if (cls & f) return false; cls |= f; return true; } break
 		switch (t.type) {
 			TC(TYPE,      r_signed,         f_signed);
 			TC(TYPE,      r_unsigned,       f_unsigned);
