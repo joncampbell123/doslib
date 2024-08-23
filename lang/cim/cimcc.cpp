@@ -406,34 +406,41 @@ namespace CIMCC {
 	};
 
 	/* do not define constructor or destructor because this will be used in a union */
-	struct token_identifier_t {
-		char*					name;
-		size_t					length;
+	struct token_identifier_value_t {
+		char*					name = NULL;
+		size_t					length = 0;
 
-		void init(void) {
-			name = NULL;
-			length = 0;
-		}
+		token_identifier_value_t() { }
+		token_identifier_value_t(const token_identifier_value_t &) = delete;
+		token_identifier_value_t(token_identifier_value_t &&x) { common_move(x); }
+		token_identifier_value_t &operator=(const token_identifier_value_t &) = delete;
+		token_identifier_value_t &operator=(token_identifier_value_t &&x) { common_move(x); return *this; }
 
-		void on_post_move(void) {
-			/* this struct has already been copied, this is the old copy, clear pointers to prevent double free() */
-			name = NULL;
-			length = 0;
-		}
-
-		void on_pre_move(void) { /* our var is about to be replaced by a new var on std::move */
+		~token_identifier_value_t() {
 			length = 0;
 			if (name) delete[] name;
 			name = NULL;
 		}
 
-		void on_delete(void) {
-			length = 0;
-			if (name) delete[] name;
-			name = NULL;
+		void set(size_t len,const char *s) {
+			assert(name == NULL);
+			assert(length == 0);
+
+			length = len;
+			assert(length != 0);
+			name = new char[length+1]; /* string + NUL */
+			memcpy(name,s,length);
+			name[length] = 0;
 		}
 
-		bool stringmatch(const std::string &s) {
+		token_identifier_value_t(size_t len,const char *s) { set(len,s); }
+
+		void common_move(token_identifier_value_t &x) {
+			name = x.name; x.name = NULL;
+			length = x.length; x.length = 0;
+		}
+
+		bool stringmatch(const std::string &s) const {
 			if ((name == NULL || length == 0) && s.empty())
 				return true;
 			else if (memcmp(name,s.c_str(),length) == 0)
@@ -442,6 +449,22 @@ namespace CIMCC {
 				return false;
 		}
 	};
+
+	typedef size_t token_identifier_t;
+	static constexpr token_identifier_t token_identifier_none = ~size_t(0);
+
+	std::vector<token_identifier_value_t> token_identifier_list;
+
+	token_identifier_t token_identifier_value_alloc(size_t len,const char *s) {
+		const size_t id = token_identifier_list.size();
+		token_identifier_list.emplace_back(len,s);
+		return id;
+	}
+
+	token_identifier_value_t &token_identifier_value_get(const token_identifier_t x) {
+		assert(x < token_identifier_list.size());
+		return token_identifier_list[x];
+	}
 
 	/* do not define constructor or destructor because this will be used in a union */
 	struct token_charstrliteral_t {
@@ -676,9 +699,6 @@ public:
 
 		void common_delete(void) {
 			switch (type) {
-				case token_type_t::identifier:
-					v.identifier.on_delete();
-					break;
 				case token_type_t::characterliteral:
 				case token_type_t::stringliteral:
 					v.chrstrlit.on_delete();
@@ -690,9 +710,6 @@ public:
 
 		void common_move(token_t &x) {
 			switch (type) {
-				case token_type_t::identifier:
-					v.identifier.on_pre_move();
-					break;
 				case token_type_t::characterliteral:
 				case token_type_t::stringliteral:
 					v.chrstrlit.on_pre_move();
@@ -706,9 +723,6 @@ public:
 			v = x.v;
 
 			switch (type) {
-				case token_type_t::identifier:
-					x.v.identifier.on_post_move();
-					break;
 				case token_type_t::characterliteral:
 				case token_type_t::stringliteral:
 					x.v.chrstrlit.on_post_move();
@@ -2957,11 +2971,7 @@ done_parsing:
 		else {
 			/* OK, it's an identifier */
 			t.type = token_type_t::identifier;
-			t.v.identifier.length = identlen;
-			assert(t.v.identifier.length != 0);
-			t.v.identifier.name = new char[t.v.identifier.length+1]; /* string + NUL */
-			memcpy(t.v.identifier.name,start,t.v.identifier.length);
-			t.v.identifier.name[t.v.identifier.length] = 0;
+			t.v.identifier = token_identifier_value_alloc(identlen,(const char*)start);
 		}
 	}
 
@@ -3866,7 +3876,10 @@ done_parsing:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
 				s = "<identifier: \"";
-				if (t.v.identifier.name) s += std::string(t.v.identifier.name,t.v.identifier.length);
+				if (t.v.identifier != token_identifier_none) {
+					const token_identifier_value_t &v = token_identifier_value_get(t.v.identifier);
+					if (v.name) s += std::string(v.name,v.length);
+				}
 				s += "\">";
 				break;
 			case token_type_t::characterliteral:
