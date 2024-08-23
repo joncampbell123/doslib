@@ -435,11 +435,38 @@ namespace CIMCC {
 	typedef size_t token_identifier_t;
 	static constexpr token_identifier_t token_identifier_none = ~size_t(0);
 
+	/* TODO: Obviously, this can be optimized! */
 	std::vector<token_identifier_value_t> token_identifier_list;
 
+	token_identifier_t token_identifier_value_lookup(size_t len,const char *s) {
+		for (token_identifier_t i=0;i < token_identifier_list.size();i++) {
+			if (token_identifier_list[i].name.length() == len) {
+				if (!memcmp(token_identifier_list[i].name.c_str(),s,len))
+					return i;
+			}
+		}
+
+		return token_identifier_none;
+	}
+
+	token_identifier_t token_identifier_value_lookup(const std::string &s) {
+		for (token_identifier_t i=0;i < token_identifier_list.size();i++) {
+			if (token_identifier_list[i].name == s)
+				return i;
+		}
+
+		return token_identifier_none;
+	}
+
 	token_identifier_t token_identifier_value_alloc(size_t len,const char *s) {
-		const size_t id = token_identifier_list.size();
-		token_identifier_list.emplace_back(len,s);
+		size_t id;
+
+		id = token_identifier_value_lookup(len,s);
+		if (id == token_identifier_none) {
+			id = token_identifier_list.size();
+			token_identifier_list.emplace_back(len,s);
+		}
+
 		return id;
 	}
 
@@ -3857,7 +3884,9 @@ done_parsing:
 			case token_type_t::identifier:
 				/* NTS: Everything is an identifier. The code handling the AST tree must make
 				 *      sense of sizeof(), int, variable vs typedef, etc. on it's own */
-				s = "<identifier: \"";
+				s = "<identifier: #";
+				s += std::to_string(t.v.identifier);
+				s += " \"";
 
 				if (t.v.identifier != token_identifier_none)
 					s += token_identifier_value_get(t.v.identifier).name;
