@@ -607,6 +607,7 @@ public:
 			else if (f == f_long)              { cls_c = c_t::_int;   cls_t = t_t::_long; }
 			else if (f == (f_int|f_long))      { cls_c = c_t::_int;   cls_t = t_t::_long; }
 			else if (f == f_llong)             { cls_c = c_t::_int;   cls_t = t_t::_llong; }
+			else if (f == (f_int|f_llong))     { cls_c = c_t::_int;   cls_t = t_t::_llong; }
 			else if (f == (f_long|f_double))   { cls_c = c_t::_float; cls_t = t_t::_longdouble; }
 			else if (f == f_double)            { cls_c = c_t::_float; cls_t = t_t::_double; }
 			else if (f == f_float)             { cls_c = c_t::_float; cls_t = t_t::_float; }
@@ -1178,8 +1179,9 @@ public:
 		void skip_numeric_digit_separator(void);
 		bool subexpression(ast_node_t::cursor &nc);
 		bool type_deref_list(ast_node_t::cursor &p_nc);
+		bool statement_semicolon_check(ast_node_t::cursor &s_nc);
+		bool typecast(ast_node_t::cursor &p_nc,const ast_node_op_t op);
 		bool type_list(ast_node_t::cursor &p_nc,const ast_node_op_t op);
-		bool typecast(ast_node_t::cursor &p_nc);
 		bool next_token_is_type(void);
 
 		bool primary_expression(ast_node_t::cursor &nc);
@@ -1467,8 +1469,8 @@ done_parsing:
 		return true;
 	}
 
-	bool compiler::typecast(ast_node_t::cursor &nc) {
-		if (!type_list(nc,ast_node_op_t::typecast)) return false;
+	bool compiler::typecast(ast_node_t::cursor &nc,const ast_node_op_t op) {
+		if (!type_list(nc,op)) return false;
 
 		if (*nc) {
 			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
@@ -1489,7 +1491,7 @@ done_parsing:
 			ast_node_t::cursor chk_nc(chk);
 			token_t tok = std::move(tok_bufget());
 
-			if (!typecast(chk_nc)) return false;
+			if (!typecast(chk_nc,ast_node_op_t::typecast)) return false;
 
 			if (*chk_nc) { /* typecast() filled in the node */
 				ast_node_t::set(*nc, *chk_nc);
@@ -2067,16 +2069,56 @@ done_parsing:
 		s_nc.to_child();
 		nc.to_next();
 
+		/* look for "int" because it may be "int x;" or "int func1()" or something of that kind.
+		 * this also includes "static" "const" "extern" and so on. typecast() will return without
+		 * filling in *s_nc if nothing there of that type. */
+		if (!type_list(s_nc,ast_node_op_t::i_compound_let))
+			return false;
+
+		if (*s_nc) { /* filled in if types were seen */
+			ast_node_t::cursor l_nc = s_nc; l_nc.to_child();
+			unsigned int count = 0; /* function body allowed only if the first and only provided */
+
+			while (1) {
+				(*l_nc) = new ast_node_t(ast_node_op_t::r_let);
+
+				ast_node_t::cursor sl_nc = l_nc; sl_nc.to_child(); l_nc.to_next();
+
+				(*sl_nc) = new ast_node_t(ast_node_op_t::i_as);
+				(*sl_nc)->tv.type = token_type_t::r_typeclsif;
+				(*sl_nc)->tv.v.typecls.init();
+				if (!type_deref_list(sl_nc)) return false;
+				if (!(*sl_nc)->tv.v.typecls.empty()) sl_nc.to_next();
+
+				if (tok_bufpeek().type == token_type_t::semicolon) {
+					break;
+				}
+				else if (tok_bufpeek().type == token_type_t::comma) {
+					tok_bufdiscard();
+				}
+				else {
+					return false;
+				}
+			}
+done_parsing:
+
+			return statement_semicolon_check(s_nc);
+		}
+
 		if (!expression(s_nc))
 			return false;
 
+		return statement_semicolon_check(s_nc);
+	}
+
+	bool compiler::statement_semicolon_check(ast_node_t::cursor &s_nc) {
 		if (statement_does_not_need_semicolon(*s_nc)) {
 			/* if parsing a { scope } a semicolon is not required after the closing curly brace */
 		}
 		else {
 			token_t &t = tok_bufpeek();
-			if (t.type == token_type_t::semicolon || t.type == token_type_t::eof)
-				tok_bufdiscard(); /* eat the EOF or semicolon */
+			if (t.type == token_type_t::semicolon)
+				tok_bufdiscard(); /* eat the semicolon */
 			else
 				return false;
 		}
