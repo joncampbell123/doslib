@@ -2097,6 +2097,37 @@ done_parsing:
 					(*l_nc)->op = ast_node_op_t::r_fn;
 					tok_bufdiscard();
 
+					if (tok_bufpeek().type != token_type_t::closeparen) {
+						do {
+							if (!type_list(sl_nc,ast_node_op_t::argument))
+								return false;
+							if (*sl_nc == NULL) /* type required */
+								return false;
+
+							ast_node_t::cursor a_nc = sl_nc; sl_nc.to_next(); a_nc.to_child();
+
+							(*a_nc) = new ast_node_t(ast_node_op_t::i_as);
+							(*a_nc)->tv.type = token_type_t::r_typeclsif;
+							(*a_nc)->tv.v.typecls.init();
+							if (!type_deref_list(a_nc)) return false;
+							a_nc.to_next();
+
+							if (!cpp_scope_expression(a_nc)) return false;
+							a_nc.to_next();
+
+							if (tok_bufpeek().type == token_type_t::closeparen) {
+								break;
+							}
+							else if (tok_bufpeek().type == token_type_t::comma) {
+								tok_bufdiscard();
+								continue;
+							}
+							else {
+								return false;
+							}
+						} while (1);
+					}
+
 					if (tok_bufpeek().type != token_type_t::closeparen) return false;
 					tok_bufdiscard();
 				}
