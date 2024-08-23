@@ -44,4 +44,4 @@ int x(int y) { int z; z = y * 5; } int xyz(float x,int y,bool z) { int z; z = 5;
 int x=5;int y=(x+1)*5;int z=(x+y*2+z*z)+2;int x=5,y=3,z=(x+y)*3+2;
 a();b();c();(*a)();a(3);b(1,2,3,4,5);c(1,x+y,a*2+b,d(3),e("ay"));
 a(4,secondparam:4);a(f1:"yay",f2:5,f3:x+y,f4:x*x+x);a(f1:(float)4);
-int x(int y) { return 5; } int x(int x,int y,int z) { int xx = x*x+y*y+z*z;return d(xx) + 4; }
+int x(int y) { return 5; } int x(int x,int y,int z) { int xx = x*x+y*y+z*z;return d(xx) + 4; } int y(int x) { return(x*x); }
