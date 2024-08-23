@@ -2069,6 +2069,24 @@ done_parsing:
 		s_nc.to_child();
 		nc.to_next();
 
+		/* allow { scope } */
+		if (tok_bufpeek().type == token_type_t::opencurly) {
+			tok_bufdiscard();
+
+			(*s_nc) = new ast_node_t(ast_node_op_t::scope); s_nc.to_child();
+
+			while (1) {
+				if (tok_bufpeek().type == token_type_t::closecurly) {
+					tok_bufdiscard();
+					break;
+				}
+
+				if (!statement(s_nc)) return false;
+			}
+
+			return true;
+		}
+
 		/* look for "int" because it may be "int x;" or "int func1()" or something of that kind.
 		 * this also includes "static" "const" "extern" and so on. typecast() will return without
 		 * filling in *s_nc if nothing there of that type. */

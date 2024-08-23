@@ -39,3 +39,4 @@ int x;long y;long long z;double a;float b;long double c;void d;signed e;unsigned
 int x();int x(),y(),z(),*a();int*a,b,c,d();
 int x(int y); int x(signed long long int z,char x,int *y),zz(int &z,int far * const x);
 signed long int* x(int a,char b,float c,...); int x(int a,int b,*,int c,int d);
+{} { int x; } { int x; x = 5+x; { int y; y = x; } }
