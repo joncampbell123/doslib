@@ -2183,6 +2183,16 @@ done_parsing:
 					return true;
 				}
 
+				/* if an equals sign follows, the var/function has an initialized value */
+				if (tok_bufpeek().type == token_type_t::equal) {
+					tok_bufdiscard();
+
+					(*sl_nc) = new ast_node_t(ast_node_op_t::assign);
+					ast_node_t::cursor e_nc = sl_nc; sl_nc.to_next(); e_nc.to_child();
+
+					if (!expression(e_nc)) return false;
+				}
+
 				l_nc.to_next();
 				count++;
 
