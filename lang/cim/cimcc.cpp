@@ -1188,6 +1188,8 @@ public:
 
 		bool cpp_scope_expression(ast_node_t::cursor &nc);
 
+		bool functioncall_operator(ast_node_t::cursor &nc);
+
 		bool array_operator(ast_node_t::cursor &nc);
 
 		bool postfix_expression(ast_node_t::cursor &nc);
@@ -1598,6 +1600,17 @@ done_parsing:
 		return true;
 	}
 
+	bool compiler::functioncall_operator(ast_node_t::cursor &nc) {
+		assert(tok_bufpeek().type == token_type_t::openparen);
+		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
+		ast_node_t::parent_to_child_with_new_parent(*nc,/*new parent*/new ast_node_t(ast_node_op_t::functioncall,tok_bufget())); /* make child of comma */
+
+		if (tok_bufpeek().type != token_type_t::closeparen) return false;
+		tok_bufdiscard();
+
+		return true;
+	}
+
 	bool compiler::array_operator(ast_node_t::cursor &nc) {
 		assert(tok_bufpeek().type == token_type_t::leftsquarebracket);
 		ast_node_t::cursor cur_nc = nc; cur_nc.to_next(); /* save cursor */
@@ -1624,6 +1637,9 @@ done_parsing:
 				case token_type_t::period:                 if (!postfix_expression_common(nc,ast_node_op_t::structaccess,true)) return false; break;
 				case token_type_t::pointerarrow:           if (!postfix_expression_common(nc,ast_node_op_t::structptraccess,true)) return false; break;
 				case token_type_t::leftsquarebracket:      if (!array_operator(nc)) return false; break;
+				case token_type_t::openparen:
+					if ((*nc)->op == ast_node_op_t::typecast) goto done_parsing; /* you cannot function call a typecast */
+					return functioncall_operator(nc);
 				default:                                   goto done_parsing;
 			}
 		}
