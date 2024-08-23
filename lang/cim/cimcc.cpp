@@ -1405,10 +1405,7 @@ public:
 			}
 		}
 
-		// TODO: If ilc says it didn't find any type like int, long, etc. then see if the next token
-		//       is an identifier that is a known typedef
-
-		if (ilc.cls != 0) {
+		if (ilc.cls != 0 || ilc.cls_c != ilc_cls_t::c_t::_none) {
 			ast_node_t::set(*nc, new ast_node_t(op));
 			(*nc)->tv.type = token_type_t::r_typeclsif;
 			if (!ilc.finalize()) return false; /* returns false if invalid combination */
@@ -1476,7 +1473,7 @@ done_parsing:
 
 		if (*nc) {
 			ast_node_t::cursor sub_nc = nc; sub_nc.to_child();
-			(*sub_nc) = new ast_node_t(ast_node_op_t::i_as);
+			ast_node_t::set(*sub_nc, new ast_node_t(ast_node_op_t::i_as));
 			(*sub_nc)->tv.type = token_type_t::r_typeclsif;
 			(*sub_nc)->tv.v.typecls.init();
 			if (!type_deref_list(sub_nc)) return false;
@@ -1608,12 +1605,12 @@ done_parsing:
 		do {
 			if (tok_bufpeek().type == token_type_t::closeparen) break;
 
-			(*cur_nc) = new ast_node_t(ast_node_op_t::argument);
+			ast_node_t::set(*cur_nc, new ast_node_t(ast_node_op_t::argument));
 			ast_node_t::cursor e_nc = cur_nc; cur_nc.to_next(); e_nc.to_child();
 
 			/* name parameter support */
 			if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
-				(*e_nc) = new ast_node_t(ast_node_op_t::named_parameter);
+				ast_node_t::set(*e_nc, new ast_node_t(ast_node_op_t::named_parameter));
 				ast_node_t::cursor ei_nc = e_nc; ei_nc.to_child(); e_nc.to_next();
 
 				if (!cpp_scope_expression(ei_nc))
@@ -2120,7 +2117,7 @@ done_parsing:
 		if (tok_bufpeek().type == token_type_t::opencurly) {
 			tok_bufdiscard();
 
-			(*s_nc) = new ast_node_t(ast_node_op_t::scope); s_nc.to_child();
+			ast_node_t::set(*s_nc, new ast_node_t(ast_node_op_t::scope)); s_nc.to_child();
 
 			while (1) {
 				if (tok_bufpeek().type == token_type_t::closecurly) {
@@ -2137,7 +2134,7 @@ done_parsing:
 		if (tok_bufpeek().type == token_type_t::r_return) {
 			tok_bufdiscard();
 
-			(*s_nc) = new ast_node_t(ast_node_op_t::r_return); s_nc.to_child();
+			ast_node_t::set(*s_nc, new ast_node_t(ast_node_op_t::r_return)); s_nc.to_child();
 
 			if (!expression(s_nc))
 				return false;
@@ -2156,11 +2153,11 @@ done_parsing:
 			unsigned int count = 0; /* function body allowed only if the first and only provided */
 
 			while (1) {
-				(*l_nc) = new ast_node_t(ast_node_op_t::r_let);
+				ast_node_t::set(*l_nc, new ast_node_t(ast_node_op_t::r_let));
 
 				ast_node_t::cursor sl_nc = l_nc; sl_nc.to_child();
 
-				(*sl_nc) = new ast_node_t(ast_node_op_t::i_as);
+				ast_node_t::set(*sl_nc, new ast_node_t(ast_node_op_t::i_as));
 				(*sl_nc)->tv.type = token_type_t::r_typeclsif;
 				(*sl_nc)->tv.v.typecls.init();
 				if (!type_deref_list(sl_nc)) return false;
@@ -2178,7 +2175,7 @@ done_parsing:
 					if (tok_bufpeek().type != token_type_t::closeparen) {
 						do {
 							if (tok_bufpeek().type == token_type_t::ellipsis) {
-								(*sl_nc) = new ast_node_t(ast_node_op_t::argument);
+								ast_node_t::set(*sl_nc, new ast_node_t(ast_node_op_t::argument));
 								(*sl_nc)->set_child(new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()));
 								sl_nc.to_next();
 
