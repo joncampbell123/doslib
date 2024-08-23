@@ -2134,6 +2134,17 @@ done_parsing:
 			return true;
 		}
 
+		if (tok_bufpeek().type == token_type_t::r_return) {
+			tok_bufdiscard();
+
+			(*s_nc) = new ast_node_t(ast_node_op_t::r_return); s_nc.to_child();
+
+			if (!expression(s_nc))
+				return false;
+
+			return statement_semicolon_check(s_nc);
+		}
+
 		/* look for "int" because it may be "int x;" or "int func1()" or something of that kind.
 		 * this also includes "static" "const" "extern" and so on. typecast() will return without
 		 * filling in *s_nc if nothing there of that type. */
