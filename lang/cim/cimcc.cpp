@@ -2102,27 +2102,36 @@ done_parsing:
 							if (tok_bufpeek().type == token_type_t::ellipsis) {
 								(*sl_nc) = new ast_node_t(ast_node_op_t::argument);
 								(*sl_nc)->set_child(new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()));
+								sl_nc.to_next();
 
 								/* must be last param */
 								if (tok_bufpeek().type != token_type_t::closeparen) return false;
 								break;
 							}
+							else if (tok_bufpeek().type == token_type_t::star) {
+								/* beyond this point you must name the parameter by prefixing each argument
+								 * when calling the function with the name: of the parameter. based on how
+								 * named parameters are done in Python */
+								(*sl_nc) = new ast_node_t(ast_node_op_t::named_arg_required_boundary, tok_bufget());
+								sl_nc.to_next();
+							}
+							else {
+								if (!type_list(sl_nc,ast_node_op_t::argument))
+									return false;
+								if (*sl_nc == NULL) /* type required */
+									return false;
 
-							if (!type_list(sl_nc,ast_node_op_t::argument))
-								return false;
-							if (*sl_nc == NULL) /* type required */
-								return false;
+								ast_node_t::cursor a_nc = sl_nc; sl_nc.to_next(); a_nc.to_child();
 
-							ast_node_t::cursor a_nc = sl_nc; sl_nc.to_next(); a_nc.to_child();
+								(*a_nc) = new ast_node_t(ast_node_op_t::i_as);
+								(*a_nc)->tv.type = token_type_t::r_typeclsif;
+								(*a_nc)->tv.v.typecls.init();
+								if (!type_deref_list(a_nc)) return false;
+								a_nc.to_next();
 
-							(*a_nc) = new ast_node_t(ast_node_op_t::i_as);
-							(*a_nc)->tv.type = token_type_t::r_typeclsif;
-							(*a_nc)->tv.v.typecls.init();
-							if (!type_deref_list(a_nc)) return false;
-							a_nc.to_next();
-
-							if (!cpp_scope_expression(a_nc)) return false;
-							a_nc.to_next();
+								if (!cpp_scope_expression(a_nc)) return false;
+								a_nc.to_next();
+							}
 
 							if (tok_bufpeek().type == token_type_t::closeparen) {
 								break;
