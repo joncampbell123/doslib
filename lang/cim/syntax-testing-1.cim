@@ -49,4 +49,7 @@ sizeof(int);sizeof(long);sizeof(x);
 offsetof(ss,x); offsetof(ss,y);
 static_assert(1 == 1,"doh");
 1==true;0==false;
-
+auto x;
+size_t y;
+ssize_t z;
+static const volatile auto x;

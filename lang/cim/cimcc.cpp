@@ -594,6 +594,8 @@ public:
 			_extern
 		};
 
+		token_identifier_t other_id;
+		token_type_t other_t;
 		unsigned int cls;
 		c_t cls_c;
 		t_t cls_t;
@@ -608,7 +610,8 @@ public:
 	};
 
 	bool ilc_cls_t::empty(void) const {
-		return cls == 0 && cls_c == c_t::_none && cls_t == t_t::_none && cls_p == p_t::_none && cls_s == s_t::_none;
+		return cls == 0 && cls_c == c_t::_none && cls_t == t_t::_none && cls_p == p_t::_none && cls_s == s_t::_none &&
+			other_id == token_identifier_none && other_t == token_type_t::none;
 	}
 
 	void ilc_cls_t::init(void) {
@@ -617,6 +620,8 @@ public:
 		cls_t = t_t::_none;
 		cls_p = p_t::_none;
 		cls_s = s_t::_none;
+		other_t = token_type_t::none;
+		other_id = token_identifier_none;
 	}
 
 	bool ilc_cls_t::finalize(void) {
@@ -667,6 +672,16 @@ public:
 		}
 
 		cls &= ~f_non_public;
+
+		if (cls_c == c_t::_none) {
+			if (other_t != token_type_t::none || other_id != token_identifier_none)
+				cls_c = c_t::_other;
+		}
+
+		if (cls_c == c_t::_other) {
+			if (cls & (f_signed|f_unsigned)) return false;
+		}
+
 		return true;
 	}
 
@@ -1421,7 +1436,18 @@ public:
 			}
 		}
 
-		if (ilc.cls != 0 || ilc.cls_c != ilc_cls_t::c_t::_none) {
+		if (ilc.cls_c == ilc_cls_t::c_t::_none) {
+			switch (tok_bufpeek().type) {
+				case token_type_t::r_auto:
+				case token_type_t::r_size_t:
+				case token_type_t::r_ssize_t:
+					ilc.other_t = tok_bufpeek().type; tok_bufdiscard(); break;
+				default:
+					break;
+			}
+		}
+
+		if (ilc.cls != 0 || ilc.cls_c != ilc_cls_t::c_t::_none || ilc.other_t != token_type_t::none || ilc.other_id != token_identifier_none) {
 			ast_node_t::set(*nc, new ast_node_t(op));
 			(*nc)->tv.type = token_type_t::r_typeclsif;
 			if (!ilc.finalize()) return false; /* returns false if invalid combination */
@@ -3850,6 +3876,26 @@ done_parsing:
 				if (t.v.typecls.cls & ilc_cls_t::f_constexpr) s += " constexpr";
 				if (t.v.typecls.cls & ilc_cls_t::f_compileexpr) s += " compileexpr";
 				if (t.v.typecls.cls & ilc_cls_t::f_volatile) s += " volatile";
+
+				if (t.v.typecls.other_id != token_identifier_none || t.v.typecls.other_t != token_type_t::none) {
+					s += " other=";
+					switch (t.v.typecls.other_t) {
+						case token_type_t::r_auto: s += "auto"; break;
+						case token_type_t::r_size_t: s += "size_t"; break;
+						case token_type_t::r_ssize_t: s += "ssize_t"; break;
+
+						case token_type_t::identifier:
+						case token_type_t::none:
+							s += "\"";
+							s += token_identifier_value_get(t.v.typecls.other_id).name;
+							s += "\"";
+							break;
+
+						default:
+							s += "?";
+							break;
+					}
+				}
 
 				s += ">";
 				break;
