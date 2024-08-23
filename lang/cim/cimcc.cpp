@@ -1610,6 +1610,18 @@ done_parsing:
 
 			(*cur_nc) = new ast_node_t(ast_node_op_t::argument);
 			ast_node_t::cursor e_nc = cur_nc; cur_nc.to_next(); e_nc.to_child();
+
+			/* name parameter support */
+			if (tok_bufpeek(0).type == token_type_t::identifier && tok_bufpeek(1).type == token_type_t::colon) {
+				(*e_nc) = new ast_node_t(ast_node_op_t::named_parameter);
+				ast_node_t::cursor ei_nc = e_nc; ei_nc.to_child(); e_nc.to_next();
+
+				if (!cpp_scope_expression(ei_nc))
+					return false;
+
+				tok_bufdiscard();
+			}
+
 			if (!assignment_expression(e_nc))
 				return false;
 
