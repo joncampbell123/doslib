@@ -2099,6 +2099,15 @@ done_parsing:
 
 					if (tok_bufpeek().type != token_type_t::closeparen) {
 						do {
+							if (tok_bufpeek().type == token_type_t::ellipsis) {
+								(*sl_nc) = new ast_node_t(ast_node_op_t::argument);
+								(*sl_nc)->set_child(new ast_node_t(ast_node_op_t::ellipsis, tok_bufget()));
+
+								/* must be last param */
+								if (tok_bufpeek().type != token_type_t::closeparen) return false;
+								break;
+							}
+
 							if (!type_list(sl_nc,ast_node_op_t::argument))
 								return false;
 							if (*sl_nc == NULL) /* type required */

@@ -38,3 +38,4 @@ a[4];a[4][4];(a)[4];(*a)[4];a[(4*3)+3];a[3,4];
 int x;long y;long long z;double a;float b;long double c;void d;signed e;unsigned f;signed long long int g;int*a;int**b;int***c;int*const d;int*const*const*const volatile e;int f,*g,**h;int volatile i;int x,y,z,a,b,c,&d,*e;
 int x();int x(),y(),z(),*a();int*a,b,c,d();
 int x(int y); int x(signed long long int z,char x,int *y),zz(int &z,int far * const x);
+signed long int* x(int a,char b,float c,...);
