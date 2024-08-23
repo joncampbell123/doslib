@@ -2174,6 +2174,15 @@ done_parsing:
 					tok_bufdiscard();
 				}
 
+				/* allow { scope } to follow to give a function it's body but only the FIRST definition,
+				 * after which this loop must terminate. You cannot provide a function body and then define
+				 * more variables. You cannot define variables then a function with body.
+				 * C/C++ doesn't let you do that and neither will we. */
+				if (count == 0 && (*l_nc)->op == ast_node_op_t::r_fn && tok_bufpeek().type == token_type_t::opencurly) {
+					if (!statement(sl_nc)) return false;
+					return true;
+				}
+
 				l_nc.to_next();
 				count++;
 
