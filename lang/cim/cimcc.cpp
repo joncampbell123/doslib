@@ -146,6 +146,10 @@ namespace CIMCC {
 			return buffer + buffer_size;
 		}
 
+		inline size_t can_read(void) const {
+			return size_t(end - read);
+		}
+
 		inline size_t can_write(void) const {
 			return size_t(fence() - end);
 		}
@@ -194,7 +198,7 @@ namespace CIMCC {
 				if (keep > size_t(read-buffer))
 					keep = size_t(read-buffer);
 
-				size_t howmuch = size_t(end-read);
+				const size_t howmuch = can_read();
 				if (howmuch != 0 && read != (buffer + keep)) {
 					assert((buffer + keep + howmuch) <= fence());
 					assert((read + howmuch) <= fence());
