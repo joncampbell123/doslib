@@ -187,34 +187,27 @@ namespace CIMCC {
 			return read >= end;
 		}
 
-		void flush(size_t keep=0/*how much to keep prior to read ptr*/) {
+		void flush(void) {
 			if (buffer) {
 				assert(sanity_check());
 
-				/* it is hard to flush if the caller asks to keep too much */
-				if (keep > (buffer_size/4u))
-					keep = (buffer_size/4u);
-
-				if (keep > size_t(read-buffer))
-					keep = size_t(read-buffer);
-
 				const size_t howmuch = can_read();
-				if (howmuch != 0 && read != (buffer + keep)) {
-					assert((buffer + keep + howmuch) <= fence());
+				if (howmuch != 0 && buffer != read) {
+					assert((buffer + howmuch) <= fence());
 					assert((read + howmuch) <= fence());
-					assert((buffer + keep) < read); /* already checked read != (buffer + keep) */
-					memmove(buffer + keep,read,howmuch);
+					assert(buffer < read);
+					memmove(buffer,read,howmuch);
 				}
-				read = buffer + keep;
-				end = read + howmuch;
 
+				read = buffer;
+				end = read + howmuch;
 				assert(sanity_check());
 			}
 		}
 
-		void lazy_flush(size_t keep=0) {
+		void lazy_flush() {
 			if (can_write() < (buffer_size / 2u))
-				flush(keep);
+				flush();
 		}
 
 		void refill(refill_function_t f,context_t &c) {
