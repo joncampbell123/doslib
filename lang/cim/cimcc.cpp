@@ -13,6 +13,10 @@
 #include <limits>
 #include <new>
 
+#ifndef O_BINARY
+# define O_BINARY 0
+#endif
+
 namespace CIMCC {
 
 	/////////
@@ -4504,7 +4508,7 @@ int main(int argc,char **argv) {
 		CIMCC::compiler cc;
 		src_ctx fdctx;
 
-		fdctx.fd = open(argv[1],O_RDONLY);
+		fdctx.fd = open(argv[1],O_RDONLY|O_BINARY);
 		if (fdctx.fd < 0) {
 			fprintf(stderr,"Failed to open file\n");
 			return 1;
