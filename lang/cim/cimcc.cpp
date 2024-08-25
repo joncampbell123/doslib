@@ -146,6 +146,10 @@ namespace CIMCC {
 			return buffer + buffer_size;
 		}
 
+		inline size_t can_write(void) const {
+			return size_t(fence() - end);
+		}
+
 		bool alloc(size_t sz=0) {
 			/* No, we're not going to allow changing the buffer size on the fly. Free it first. */
 			if (buffer != NULL) return false;
@@ -205,14 +209,14 @@ namespace CIMCC {
 		}
 
 		void lazy_flush(size_t keep=0) {
-			if (size_t(fence() - end) < (buffer_size / 2u))
+			if (can_write() < (buffer_size / 2u))
 				flush(keep);
 		}
 
 		void refill(refill_function_t f,context_t &c) {
 			/* caller must lazy flush to make room */
 			if (f && end < fence()) {
-				int got = f(end,size_t(fence() - end),c.ptr,c.ptr_size);
+				int got = f(end,can_write(),c.ptr,c.ptr_size);
 				if (got > 0) {
 					end += size_t(got);
 					assert(sanity_check());
