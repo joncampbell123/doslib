@@ -142,10 +142,17 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 }
 
+enum test_mode_t {
+	TEST_NONE=0,
+	TEST_SFO
+};
+
 static std::vector<std::string>		main_input_files;
+static enum test_mode_t			test_mode = TEST_NONE;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
+	fprintf(stderr,"  --test <none|sfo>          Test mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -161,6 +168,17 @@ static int parse_argv(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return -1;
+			}
+			else if (!strcmp(a,"test")) {
+				a = argv[i++];
+				if (a == NULL) return -1;
+
+				if (!strcmp(a,"sfo"))
+					test_mode = TEST_SFO;
+				else if (!strcmp(a,"none"))
+					test_mode = TEST_NONE;
+				else
+					return -1;
 			}
 			else {
 				fprintf(stderr,"Unknown option '%s'\n",a);
@@ -212,9 +230,26 @@ int main(int argc,char **argv) {
 			assert(sfo->iface == CIMCC::source_file_object::IF_FD);
 		}
 
+		if (test_mode == TEST_SFO) {
+			char tmp[512];
+			ssize_t sz;
+
+			while ((sz=sfo->read(tmp,sizeof(tmp))) > 0) {
+				if (write(1/*STDOUT*/,tmp,size_t(sz)) != ssize_t(sz))
+					return -1;
+			}
+
+			if (sz < 0) {
+				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)sz);
+				return -1;
+			}
+		}
+
 		assert(sfo != NULL);
 		delete sfo;
 	}
+
+	if (test_mode == TEST_SFO) return 0;
 
 	return 0;
 }
