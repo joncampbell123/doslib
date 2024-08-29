@@ -140,11 +140,260 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	////////////////////////////////////////////////////////////////////
 
+	struct rbuf {
+		unsigned char*			base = NULL;
+		unsigned char*			data = NULL;
+		unsigned char*			end = NULL;
+		unsigned char*			fence = NULL;
+		int				err = 0;
+		bool				eof = false;
+
+		rbuf() { }
+		~rbuf() { free(); }
+
+		rbuf(const rbuf &x) = delete;
+		rbuf &operator=(const rbuf &x) = delete;
+
+		rbuf(rbuf &&x) { common_move(x); }
+		rbuf &operator=(rbuf &&x) { common_move(x); return *this; }
+
+		void common_move(rbuf &x) {
+			assert(x.sanity_check());
+			base  = x.base;  x.base = NULL;
+			data  = x.data;  x.data = NULL;
+			end   = x.end;   x.end = NULL;
+			fence = x.fence; x.fence = NULL;
+			err   = x.err;   x.err = 0;
+			eof   = x.eof;   x.eof = false;
+			assert(sanity_check());
+		}
+
+		size_t buffer_size(void) const {
+			return size_t(fence - base);
+		}
+
+		size_t data_offset(void) const {
+			return size_t(data - base);
+		}
+
+		size_t data_avail(void) const {
+			return size_t(end - data);
+		}
+
+		size_t can_write(void) const {
+			return size_t(fence - end);
+		}
+
+		bool sanity_check(void) const {
+			return (base <= data) && (data <= end) && (end <= fence);
+		}
+
+		void free(void) {
+			if (base) {
+				::free((void*)base);
+				base = data = end = fence = NULL;
+			}
+		}
+
+		unsigned char peekb(const size_t ofs=0) {
+			if ((data+ofs) < end) return data[ofs];
+			return 0;
+		}
+
+		void discardb(void) {
+			if (data < end) data++;
+		}
+
+		unsigned char getb(void) {
+			if (data < end) return *data++;
+			return 0;
+		}
+
+		bool allocate(const size_t sz=4096) {
+			if (base != NULL || sz < 64 || sz > 1024*1024)
+				return false;
+
+			if ((base=data=end=(unsigned char*)::malloc(sz)) == NULL)
+				return false;
+
+			fence = base + sz;
+			return true;
+		}
+
+		void flush(void) {
+			if (data_offset() != 0) {
+				const size_t mv = data_avail();
+
+				assert(sanity_check());
+				if (mv != 0) memmove(base,data,mv);
+				data = base;
+				end = data + mv;
+				assert(sanity_check());
+			}
+		}
+
+		void lazy_flush(void) {
+			if (data_offset() >= (buffer_size()/2))
+				flush();
+		}
+	};
+
+	static int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo) {
+		assert(buf.base != NULL);
+		assert(buf.sanity_check());
+		buf.lazy_flush();
+
+		const size_t to_rd = buf.can_write();
+		if (to_rd != size_t(0)) {
+			const ssize_t rd = sfo.read(buf.end,to_rd);
+			if (rd > 0) {
+				buf.end += rd;
+				assert(buf.sanity_check());
+			}
+			else if (rd < 0) {
+				return (buf.err=errno_return(rd));
+			}
+			else {
+				buf.eof = true;
+				return 0;
+			}
+		}
+		else if (buf.err) {
+			return buf.err;
+		}
+		else if (buf.eof) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	typedef int32_t unicode_char_t;
+	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
+	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
+
+	void utf8_to_str(char* &w,char *f,unicode_char_t c) {
+		if (c < unicode_char_t(0)) {
+			/* do nothing */
+		}
+		else if (c <= unicode_char_t(0x7Fu)) {
+			if (w < f) *w++ = (char)(c&0xFFu);
+		}
+		else if (c <= unicode_char_t(0x7FFFFFFFul)) {
+			/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+			 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+			 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+			 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+			 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+			unsigned char more = 1;
+			{
+				uint32_t tmp = uint32_t(c) >> uint32_t(11u);
+				while (tmp != 0) { more++; tmp >>= uint32_t(5u); }
+				assert(more <= 5);
+			}
+
+			const uint8_t ib = 0xFC << (5 - more);
+			if ((w+1+more) > f) return;
+			char *wr = w; w += 1+more; assert(w <= f);
+			do { wr[more] = (char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
+			assert(uint32_t(c) <= uint32_t((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
+			wr[0] = (char)(ib | (unsigned char)c);
+		}
+	}
+
+	std::string utf8_to_str(const unicode_char_t c) {
+		char tmp[64],*w=tmp;
+
+		utf8_to_str(/*&*/w,/*fence*/tmp+sizeof(tmp),c);
+		assert(w < (tmp+sizeof(tmp)));
+		*w++ = 0;
+
+		return std::string(tmp);
+	}
+
+	unicode_char_t getcnu(rbuf &buf,source_file_object &sfo) { /* non-unicode */
+		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+		if (buf.data_avail() == 0) return unicode_eof;
+		return unicode_char_t(buf.getb());
+	}
+
+	unicode_char_t getc(rbuf &buf,source_file_object &sfo) {
+		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+		if (buf.data_avail() == 0) return unicode_eof;
+
+		/* 0xxx xxxx                                                    0x00000000-0x0000007F
+		 * 110x xxxx 10xx xxxx                                          0x00000080-0x000007FF
+		 * 1110 xxxx 10xx xxxx 10xx xxxx                                0x00000800-0x0000FFFF
+		 * 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx                      0x00010000-0x001FFFFF
+		 * 1111 10xx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx            0x00200000-0x03FFFFFF
+		 * 1111 110x 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx  0x04000000-0x7FFFFFFF */
+
+		/* read UTF-8 char */
+		uint32_t v = buf.getb();
+		if (v <  0x80) return v; /* 0x00-0x7F ASCII char */
+		if (v <  0xC0) return unicode_invalid; /* 0x80-0xBF we're in the middle of a UTF-8 char */
+		if (v >= 0xFE) return unicode_invalid; /* overlong 1111 1110 or 1111 1111 */
+
+		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+		unsigned char more = 1;
+		for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
+		v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
+
+		do {
+			const unsigned char c = buf.peekb();
+			if ((c&0xC0) != 0x80) return unicode_invalid; /* must be 10xx xxxx */
+			buf.discardb(); v = (v << uint32_t(6u)) + uint32_t(c & 0x3Fu);
+		} while ((--more) != 0);
+
+		assert(v <= uint32_t(0x7FFFFFFFu));
+		return unicode_char_t(v);
+	}
+
+	////////////////////////////////////////////////////////////////////
+
+	enum class token_type_t:unsigned int {
+		none=0,					// 0
+		eof,
+
+		__MAX__
+	};
+
+	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
+		"none",					// 0
+		"eof"
+	};
+
+	static const char *token_type_t_str(const token_type_t t) {
+		return (t < token_type_t::__MAX__) ? token_type_t_strlist[size_t(t)] : "";
+	}
+
+	struct token_t {
+		token_type_t		type = token_type_t::none;
+
+		token_t() { }
+		token_t(const token_type_t t) : type(t) { }
+
+		std::string to_str(void) const {
+			std::string s = token_type_t_str(type);
+			return s;
+		}
+	};
+
+	////////////////////////////////////////////////////////////////////
+
 }
 
 enum test_mode_t {
 	TEST_NONE=0,
-	TEST_SFO
+	TEST_SFO,
+	TEST_RBF,
+	TEST_RBFGC,
+	TEST_RBFGCNU,
+	TEST_LTOK
 };
 
 static std::vector<std::string>		main_input_files;
@@ -152,7 +401,7 @@ static enum test_mode_t			test_mode = TEST_NONE;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
-	fprintf(stderr,"  --test <none|sfo>          Test mode\n");
+	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|ltok>         Test mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -175,6 +424,14 @@ static int parse_argv(int argc,char **argv) {
 
 				if (!strcmp(a,"sfo"))
 					test_mode = TEST_SFO;
+				else if (!strcmp(a,"rbf"))
+					test_mode = TEST_RBF;
+				else if (!strcmp(a,"rbfgc"))
+					test_mode = TEST_RBFGC;
+				else if (!strcmp(a,"rbfgcnu"))
+					test_mode = TEST_RBFGCNU;
+				else if (!strcmp(a,"ltok"))
+					test_mode = TEST_LTOK;
 				else if (!strcmp(a,"none"))
 					test_mode = TEST_NONE;
 				else
@@ -244,12 +501,83 @@ int main(int argc,char **argv) {
 				return -1;
 			}
 		}
+		else if (test_mode == TEST_RBF) {
+			CIMCC::rbuf rb;
+			assert(rb.allocate(128));
+
+			do {
+				int r = rbuf_sfd_refill(rb,*sfo);
+				if (r < 0) {
+					fprintf(stderr,"RBUF read err from %s, %d\n",sfo->getname(),(int)r);
+					return -1;
+				}
+				else if (r == 0/*EOF*/) {
+					break;
+				}
+
+				const size_t av = rb.data_avail();
+				if (av == 0) {
+					fprintf(stderr,"Unexpected data end?\n");
+					break;
+				}
+
+				if (write(1/*STDOUT*/,rb.data,av) != ssize_t(av)) return -1;
+				rb.data += av;
+				assert(rb.sanity_check());
+			} while (1);
+		}
+		else if (test_mode == TEST_RBFGC) {
+			CIMCC::rbuf rb;
+			assert(rb.allocate());
+
+			do {
+				CIMCC::unicode_char_t c = CIMCC::getc(rb,*sfo);
+				if (c == CIMCC::unicode_eof) {
+					assert(rb.data_avail() == 0);
+					break;
+				}
+				else if (c == CIMCC::unicode_invalid) {
+					if (write(1/*STDOUT*/,"<INVALID>",9) != 9) return -1;
+				}
+				else {
+					const std::string s = CIMCC::utf8_to_str(c);
+					if (write(1/*STDOUT*/,s.data(),s.size()) != ssize_t(s.size())) return -1;
+				}
+			} while (1);
+		}
+		else if (test_mode == TEST_RBFGCNU) {
+			CIMCC::rbuf rb;
+			assert(rb.allocate());
+
+			do {
+				CIMCC::unicode_char_t c = CIMCC::getcnu(rb,*sfo);
+				if (c == CIMCC::unicode_eof) {
+					assert(rb.data_avail() == 0);
+					break;
+				}
+				else if (c == CIMCC::unicode_invalid) {
+					abort(); /* should not happen! */
+				}
+				else {
+					assert(c >= CIMCC::unicode_char_t(0l) && c <= CIMCC::unicode_char_t(0xFFul));
+					unsigned char cc = (unsigned char)c;
+					if (write(1/*STDOUT*/,&cc,1) != ssize_t(1)) return -1;
+				}
+			} while (1);
+		}
+		else if (test_mode == TEST_LTOK) {
+#if 0
+			CIMCC::token_t tok;
+
+			while (CIMCC::lgtok(tok)) printf("Token: %s\n",tok.to_str().c_str());
+#endif
+		}
 
 		assert(sfo != NULL);
 		delete sfo;
 	}
 
-	if (test_mode == TEST_SFO) return 0;
+	if (test_mode == TEST_SFO || test_mode == TEST_LTOK || test_mode == TEST_RBF || test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU) return 0;
 
 	return 0;
 }
