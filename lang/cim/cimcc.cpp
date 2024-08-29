@@ -28,7 +28,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	//////////////////////////////////////////////////////////////////
 
-#define SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
+#define CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
 	/* no copy */ \
 	sfclass(const sfclass &) = delete; \
 	virtual sfclass &operator=(const sfclass &) = delete; \
@@ -51,7 +51,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						source_file_object(const unsigned int iface=IF_BASE);
 		virtual				~source_file_object();
 
-						SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
+						CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
 		void				common_move(source_file_object &);
 	};
 
@@ -88,7 +88,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						source_fd(const int new_fd/*takes ownership*/,const std::string &new_name);
 		virtual				~source_fd();
 
-						SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
+						CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
 		void				common_move(source_fd &x);
 
 		std::string			name;
