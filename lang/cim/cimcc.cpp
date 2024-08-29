@@ -362,6 +362,14 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		plusplus,
 		minus,
 		minusminus,				// 5
+		semicolon,
+		equal,
+		equalequal,
+		tilde,
+		ampersand,				// 10
+		ampersandampersand,
+		pipe,
+		pipepipe,
 
 		__MAX__
 	};
@@ -372,7 +380,15 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"plus",
 		"plusplus",
 		"minus",
-		"minusminus"				// 5
+		"minusminus",				// 5
+		"semicolon",
+		"equal",
+		"equalequal",
+		"tilde",
+		"ampersand",				// 10
+		"ampersandampersand",
+		"pipe",
+		"pipepipe"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -421,6 +437,24 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			case '-':
 				t.type = token_type_t::minus; buf.discardb();
 				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); }
+				break;
+			case '=':
+				t.type = token_type_t::equal; buf.discardb();
+				if (buf.peekb() == '=') { t.type = token_type_t::equalequal; buf.discardb(); }
+				break;
+			case ';':
+				t.type = token_type_t::semicolon; buf.discardb();
+				break;
+			case '~':
+				t.type = token_type_t::tilde; buf.discardb();
+				break;
+			case '&':
+				t.type = token_type_t::ampersand; buf.discardb();
+				if (buf.peekb() == '&') { t.type = token_type_t::ampersandampersand; buf.discardb(); }
+				break;
+			case '|':
+				t.type = token_type_t::pipe; buf.discardb();
+				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); }
 				break;
 			default:
 				return errno_return(ESRCH);
