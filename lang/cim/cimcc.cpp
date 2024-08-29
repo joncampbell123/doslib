@@ -358,13 +358,21 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	enum class token_type_t:unsigned int {
 		none=0,					// 0
 		eof,
+		plus,
+		plusplus,
+		minus,
+		minusminus,				// 5
 
 		__MAX__
 	};
 
 	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
 		"none",					// 0
-		"eof"
+		"eof",
+		"plus",
+		"plusplus",
+		"minus",
+		"minusminus"				// 5
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -384,6 +392,42 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	};
 
 	////////////////////////////////////////////////////////////////////
+
+	void eat_whitespace(rbuf &buf,source_file_object &sfo) {
+		do {
+			if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+			const unsigned char b = buf.peekb();
+			if (b == ' ' || b == '\n' || b == '\t') buf.discardb();
+			else break;
+		} while (1);
+	}
+
+	int lgtok(rbuf &buf,source_file_object &sfo,token_t &t) {
+		t = token_t();
+
+		eat_whitespace(buf,sfo);
+		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
+		if (buf.data_avail() == 0) {
+			t.type = token_type_t::eof;
+			if (buf.err) return buf.err;
+			else return 0;
+		}
+
+		switch (buf.peekb()) {
+			case '+':
+				t.type = token_type_t::plus; buf.discardb();
+				if (buf.peekb() == '+') { t.type = token_type_t::plusplus; buf.discardb(); }
+				break;
+			case '-':
+				t.type = token_type_t::minus; buf.discardb();
+				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); }
+				break;
+			default:
+				return errno_return(ESRCH);
+		}
+
+		return 1;
+	}
 
 }
 
@@ -566,11 +610,17 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 		else if (test_mode == TEST_LTOK) {
-#if 0
 			CIMCC::token_t tok;
+			CIMCC::rbuf rb;
+			int r;
 
-			while (CIMCC::lgtok(tok)) printf("Token: %s\n",tok.to_str().c_str());
-#endif
+			assert(rb.allocate());
+			while ((r=CIMCC::lgtok(rb,*sfo,tok)) > 0) printf("Token: %s\n",tok.to_str().c_str());
+
+			if (r < 0) {
+				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
+				return -1;
+			}
 		}
 
 		assert(sfo != NULL);
