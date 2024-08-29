@@ -370,6 +370,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		ampersandampersand,
 		pipe,
 		pipepipe,
+		caret,
 
 		__MAX__
 	};
@@ -388,7 +389,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"ampersand",				// 10
 		"ampersandampersand",
 		"pipe",
-		"pipepipe"
+		"pipepipe",
+		"caret"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -447,6 +449,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				break;
 			case '~':
 				t.type = token_type_t::tilde; buf.discardb();
+				break;
+			case '^':
+				t.type = token_type_t::caret; buf.discardb();
 				break;
 			case '&':
 				t.type = token_type_t::ampersand; buf.discardb();
