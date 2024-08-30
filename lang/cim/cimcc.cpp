@@ -466,16 +466,27 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	};
 
 	struct integer_value_t {
+		enum class type_t:unsigned char {
+			NONE=0,			// 0
+			BOOL,
+			CHAR,
+			SHORT,
+			INT,
+			LONG,			// 5
+			LONGLONG,
+
+			__MAX__
+		};
+
 		union {
 			uint64_t			u;
 			int64_t				v;
 		} v;
-		unsigned int				flags;
+		unsigned char				flags;
+		type_t					type;
 
 		static constexpr unsigned int		FL_SIGNED     = (1u << 0u);
-		static constexpr unsigned int		FL_LONG       = (1u << 1u);
-		static constexpr unsigned int		FL_LONGLONG   = (1u << 2u);
-		static constexpr unsigned int		FL_OVERFLOW   = (1u << 3u);
+		static constexpr unsigned int		FL_OVERFLOW   = (1u << 1u);
 
 		std::string to_str(void) const {
 			std::string s;
@@ -486,15 +497,26 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			else sprintf(tmp,"%llu/0x%llx",(unsigned long long)v.u,(unsigned long long)v.u);
 			s += tmp;
 
+			s += " t=\"";
+			switch (type) {
+				case type_t::NONE:       s += "none"; break;
+				case type_t::BOOL:       s += "bool"; break;
+				case type_t::CHAR:       s += "char"; break;
+				case type_t::SHORT:      s += "short"; break;
+				case type_t::INT:        s += "int"; break;
+				case type_t::LONG:       s += "long"; break;
+				case type_t::LONGLONG:   s += "longlong"; break;
+				default: break;
+			}
+			s += "\"";
+
 			if (flags & FL_SIGNED) s += " signed";
-			if (flags & FL_LONGLONG) s += " llong";
-			if (flags & FL_LONG) s += " long";
 			if (flags & FL_OVERFLOW) s += " overflow";
 
 			return s;
 		}
 
-		void init(void) { flags = FL_SIGNED; v.v=0; }
+		void init(void) { flags = FL_SIGNED; type=type_t::NONE; v.v=0; }
 	};
 
 	struct token_t {
@@ -662,13 +684,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				buf.discardb();
 			}
 			else if (c == 'l') {
-				t.v.integer.flags |= integer_value_t::FL_LONG;
+				t.v.integer.type = integer_value_t::type_t::LONG;
 				buf.discardb();
 
 				c = (unsigned char)tolower((char)buf.peekb());
 				if (c == 'l') {
-					t.v.integer.flags &= ~integer_value_t::FL_LONG;
-					t.v.integer.flags |= integer_value_t::FL_LONGLONG;
+					t.v.integer.type = integer_value_t::type_t::LONGLONG;
 					buf.discardb();
 				}
 			}
