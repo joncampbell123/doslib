@@ -200,8 +200,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return 0;
 		}
 
-		void discardb(void) {
-			if (data < end) data++;
+		void discardb(const size_t count=1) {
+			if (data < end) {
+				if ((data += count) > end)
+					data = end;
+			}
 		}
 
 		unsigned char getb(void) {
@@ -371,6 +374,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		pipe,
 		pipepipe,
 		caret,
+		integer,				// 15
 
 		__MAX__
 	};
@@ -390,12 +394,45 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"ampersandampersand",
 		"pipe",
 		"pipepipe",
-		"caret"
+		"caret",
+		"integer"				// 15
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
 		return (t < token_type_t::__MAX__) ? token_type_t_strlist[size_t(t)] : "";
 	}
+
+	struct integer_value_t {
+		union {
+			uint64_t			u;
+			int64_t				v;
+		} v;
+		unsigned int				flags;
+
+		static constexpr unsigned int		FL_SIGNED     = (1u << 0u);
+		static constexpr unsigned int		FL_LONG       = (1u << 1u);
+		static constexpr unsigned int		FL_LONGLONG   = (1u << 2u);
+		static constexpr unsigned int		FL_OVERFLOW   = (1u << 3u);
+
+		std::string to_str(void) const {
+			std::string s;
+			char tmp[192];
+
+			s += "v=";
+			if (flags & FL_SIGNED) sprintf(tmp,"%lld/0x%llx",(signed long long)v.v,(unsigned long long)v.u);
+			else sprintf(tmp,"%llu/0x%llx",(unsigned long long)v.u,(unsigned long long)v.u);
+			s += tmp;
+
+			if (flags & FL_SIGNED) s += " signed";
+			if (flags & FL_LONGLONG) s += " llong";
+			if (flags & FL_LONG) s += " long";
+			if (flags & FL_OVERFLOW) s += " overflow";
+
+			return s;
+		}
+
+		void init(void) { flags = FL_SIGNED; v.v=0; }
+	};
 
 	struct token_t {
 		token_type_t		type = token_type_t::none;
@@ -403,8 +440,21 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		token_t() { }
 		token_t(const token_type_t t) : type(t) { }
 
+		union {
+			integer_value_t		integer; /* token_type_t::integer */
+		} v;
+
 		std::string to_str(void) const {
 			std::string s = token_type_t_str(type);
+
+			switch (type) {
+				case token_type_t::integer:
+					s += "("; s += v.integer.to_str(); s += ")";
+					break;
+				default:
+					break;
+			}
+
 			return s;
 		}
 	};
@@ -418,6 +468,113 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			if (b == ' ' || b == '\n' || b == '\t') buf.discardb();
 			else break;
 		} while (1);
+	}
+
+	int cc_parsedigit(unsigned char c,const unsigned char base=10) {
+		if (c >= '0' && c <= '9')
+			return c - '0';
+		else if (c >= 'a' && c < ('a'+base-10))
+			return c + 10 - 'a';
+		else if (c >= 'A' && c < ('A'+base-10))
+			return c + 10 - 'A';
+
+		return -1;
+	}
+
+	int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
+		unsigned int base = 10;
+		int r;
+
+		/* detect numeric base from prefix */
+		r = cc_parsedigit(buf.peekb());
+		assert(r >= 0);
+		if (r == 0) {
+			const unsigned char c = (unsigned char)tolower((char)buf.peekb(1));
+			if (c == 'x') { /* 0x<hex> */
+				base = 16;
+				buf.discardb(2);
+			}
+			else if (c == 'b') { /* 0b<binary> */
+				base = 2;
+				buf.discardb(2);
+			}
+			else {
+				r = cc_parsedigit(c);
+				if (r >= 0 && r <= 7) { /* 0<octal> */
+					base = 8;
+					buf.discardb();
+				}
+				else if (r >= 8) {
+					/* uh, 0<digits> that isn't octal is invalid */
+					return errno_return(EINVAL);
+				}
+				else {
+					/* it's just zero and nothing more */
+				}
+			}
+		}
+
+		/* look ahead, refill buf, no constant should be 4096/2 = 2048 chars long!
+		 * we need to know if this is an integer constant or floating point constant,
+		 * which is only possible if decimal or hexadecimal. */
+		rbuf_sfd_refill(buf,sfo);
+		if (base == 10 || base == 16) {
+			const unsigned char *scan = buf.data;
+			while (scan < buf.end && (*scan == '\'' || cc_parsedigit(*scan,base) >= 0)) scan++;
+			if (scan < buf.end && (*scan == '.' || tolower((char)(*scan)) == 'e')) {
+				/* It's a floating point constant */
+				fprintf(stderr,"Float not yet supported\n");
+				return errno_return(ENOSYS);
+			}
+		}
+
+		t.type = token_type_t::integer;
+		t.v.integer.init();
+
+		const uint64_t sat_v = 0xFFFFFFFFFFFFFFFFull;
+		const uint64_t max_v = sat_v / uint64_t(base);
+
+		do {
+			const unsigned char c = buf.peekb();
+			if (c == '\'') { buf.discardb(); continue; } /* ' separators */
+			r = cc_parsedigit(c,base); if (r < 0) break; buf.discardb();
+
+			if (t.v.integer.v.u <= max_v) {
+				t.v.integer.v.u *= uint64_t(base);
+				t.v.integer.v.u += uint64_t(r);
+			}
+			else {
+				t.v.integer.v.u = sat_v;
+				t.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+				while (cc_parsedigit(buf.peekb(),base) >= 0) buf.discardb();
+				break;
+			}
+		} while (1);
+
+		do {
+			unsigned char c = (unsigned char)tolower((char)buf.peekb());
+
+			if (c == 'u') {
+				t.v.integer.flags &= ~integer_value_t::FL_SIGNED;
+				buf.discardb();
+			}
+			else if (c == 'l') {
+				t.v.integer.flags |= integer_value_t::FL_LONG;
+				buf.discardb();
+
+				c = (unsigned char)tolower((char)buf.peekb());
+				if (c == 'l') {
+					t.v.integer.flags &= ~integer_value_t::FL_LONG;
+					t.v.integer.flags |= integer_value_t::FL_LONGLONG;
+					buf.discardb();
+				}
+			}
+			else {
+				break;
+			}
+		} while(1);
+
+		return 1;
 	}
 
 	int lgtok(rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -461,6 +618,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				t.type = token_type_t::pipe; buf.discardb();
 				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); }
 				break;
+			case '0': case '1': case '2': case '3': case '4':
+			case '5': case '6': case '7': case '8': case '9':
+				return lgtok_number(buf,sfo,t);
 			default:
 				return errno_return(ESRCH);
 		}
