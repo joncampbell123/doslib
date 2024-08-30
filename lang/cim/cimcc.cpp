@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <math.h>
 
 #include <unordered_map>
 #include <type_traits>
@@ -375,6 +376,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		pipepipe,
 		caret,
 		integer,				// 15
+		floating,
 
 		__MAX__
 	};
@@ -395,12 +397,72 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"pipe",
 		"pipepipe",
 		"caret",
-		"integer"				// 15
+		"integer",				// 15
+		"floating"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
 		return (t < token_type_t::__MAX__) ? token_type_t_strlist[size_t(t)] : "";
 	}
+
+	struct floating_value_t {
+		uint64_t				mantissa;
+		int32_t					exponent;
+		unsigned int				flags;
+
+		static constexpr unsigned int		FL_NAN        = (1u << 0u);
+		static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
+		static constexpr unsigned int           FL_FLOAT      = (1u << 2u);
+		static constexpr unsigned int           FL_DOUBLE     = (1u << 3u);
+		static constexpr unsigned int           FL_LONG       = (1u << 4u);
+		static constexpr unsigned int           FL_NEGATIVE   = (1u << 5u);
+
+		static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
+
+		std::string to_str(void) const {
+			std::string s;
+			char tmp[256];
+
+			if (!(flags & FL_NAN)) {
+				sprintf(tmp,"v=0x%llx e=%ld ",(unsigned long long)mantissa,(long)exponent);
+				s += tmp;
+
+				sprintf(tmp,"%.20f",ldexp(double(mantissa),(int)exponent-63));
+				s += tmp;
+			}
+			else {
+				s += "NaN";
+			}
+
+			if (flags & FL_NEGATIVE) s += " negative";
+			if (flags & FL_OVERFLOW) s += " overflow";
+			if (flags & FL_FLOAT) s += " float";
+			if (flags & FL_DOUBLE) s += " double";
+			if (flags & FL_LONG) s += " long";
+
+			return s;
+		}
+
+		void init(void) { flags = FL_DOUBLE; mantissa=0; exponent=0; }
+
+		void setsn(const uint64_t m,const int32_t e) {
+			mantissa = m;
+			exponent = e+63;
+			normalize();
+		}
+
+		void normalize(void) {
+			if (mantissa != uint64_t(0)) {
+				while (!(mantissa & mant_msb)) {
+					mantissa <<= uint64_t(1ull);
+					exponent--;
+				}
+			}
+			else {
+				exponent = 0;
+			}
+		}
+	};
 
 	struct integer_value_t {
 		union {
@@ -442,6 +504,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 		union {
 			integer_value_t		integer; /* token_type_t::integer */
+			floating_value_t	floating; /* token_type_t::floating */
 		} v;
 
 		std::string to_str(void) const {
@@ -450,6 +513,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			switch (type) {
 				case token_type_t::integer:
 					s += "("; s += v.integer.to_str(); s += ")";
+					break;
+				case token_type_t::floating:
+					s += "("; s += v.floating.to_str(); s += ")";
 					break;
 				default:
 					break;
@@ -522,9 +588,24 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			const unsigned char *scan = buf.data;
 			while (scan < buf.end && (*scan == '\'' || cc_parsedigit(*scan,base) >= 0)) scan++;
 			if (scan < buf.end && (*scan == '.' || tolower((char)(*scan)) == 'e')) {
+				/* TODO: Parse it ourself */
+				do {
+					if (cc_parsedigit(buf.peekb(),base) >= 0) {
+						buf.discardb();
+					}
+					else if (buf.peekb() == 'e' || buf.peekb() == 'E' || buf.peekb() == '.') {
+						buf.discardb();
+					}
+					else {
+						break;
+					}
+				} while(1);
+
+				t.type = token_type_t::floating;
+				t.v.floating.init();
+				t.v.floating.setsn(1,0); /* 1 * 2^0 = 1.0 */
 				/* It's a floating point constant */
-				fprintf(stderr,"Float not yet supported\n");
-				return errno_return(ENOSYS);
+				return 1;
 			}
 		}
 
