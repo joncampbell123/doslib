@@ -407,16 +407,23 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	}
 
 	struct floating_value_t {
+		enum class type_t:unsigned char {
+			NONE=0,			// 0
+			FLOAT,
+			DOUBLE,
+			LONGDOUBLE,
+
+			__MAX__
+		};
+
 		uint64_t				mantissa;
 		int32_t					exponent;
-		unsigned int				flags;
+		unsigned char				flags;
+		type_t					type;
 
 		static constexpr unsigned int		FL_NAN        = (1u << 0u);
 		static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
-		static constexpr unsigned int           FL_FLOAT      = (1u << 2u);
-		static constexpr unsigned int           FL_DOUBLE     = (1u << 3u);
-		static constexpr unsigned int           FL_LONG       = (1u << 4u);
-		static constexpr unsigned int           FL_NEGATIVE   = (1u << 5u);
+		static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
 
 		static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
 
@@ -435,16 +442,23 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				s += "NaN";
 			}
 
+			s += " t=\"";
+			switch (type) {
+				case type_t::NONE:       s += "none"; break;
+				case type_t::FLOAT:      s += "float"; break;
+				case type_t::DOUBLE:     s += "double"; break;
+				case type_t::LONGDOUBLE: s += "long double"; break;
+				default: break;
+			}
+			s += "\"";
+
 			if (flags & FL_NEGATIVE) s += " negative";
 			if (flags & FL_OVERFLOW) s += " overflow";
-			if (flags & FL_FLOAT) s += " float";
-			if (flags & FL_DOUBLE) s += " double";
-			if (flags & FL_LONG) s += " long";
 
 			return s;
 		}
 
-		void init(void) { flags = FL_DOUBLE; mantissa=0; exponent=0; }
+		void init(void) { flags = 0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
 
 		void setsn(const uint64_t m,const int32_t e) {
 			mantissa = m;
@@ -516,7 +530,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return s;
 		}
 
-		void init(void) { flags = FL_SIGNED; type=type_t::NONE; v.v=0; }
+		void init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 	};
 
 	struct token_t {
@@ -632,18 +646,15 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				/* look for suffixes */
 				if (scan < buf.end) {
 					if (tolower(*scan) == 'f') {
-						t.v.floating.flags &= ~(floating_value_t::FL_DOUBLE|floating_value_t::FL_LONG);
-						t.v.floating.flags |= floating_value_t::FL_FLOAT;
+						t.v.floating.type = floating_value_t::type_t::FLOAT;
 						scan++;
 					}
 					else if (tolower(*scan) == 'd') {
-						t.v.floating.flags &= ~(floating_value_t::FL_FLOAT|floating_value_t::FL_LONG);
-						t.v.floating.flags |= floating_value_t::FL_DOUBLE;
+						t.v.floating.type = floating_value_t::type_t::DOUBLE;
 						scan++;
 					}
 					else if (tolower(*scan) == 'l') {
-						t.v.floating.flags &= ~floating_value_t::FL_FLOAT;
-						t.v.floating.flags |= floating_value_t::FL_LONG|floating_value_t::FL_DOUBLE;
+						t.v.floating.type = floating_value_t::type_t::LONGDOUBLE;
 						scan++;
 					}
 				}
