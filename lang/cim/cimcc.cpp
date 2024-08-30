@@ -217,10 +217,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			if (base != NULL || sz < 64 || sz > 1024*1024)
 				return false;
 
-			if ((base=data=end=(unsigned char*)::malloc(sz)) == NULL)
+			if ((base=data=end=(unsigned char*)::malloc(sz+1)) == NULL)
 				return false;
 
 			fence = base + sz;
+			*fence = 0;
 			return true;
 		}
 
@@ -585,26 +586,47 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		 * which is only possible if decimal or hexadecimal. */
 		rbuf_sfd_refill(buf,sfo);
 		if (base == 10 || base == 16) {
-			const unsigned char *scan = buf.data;
+			unsigned char *scan = buf.data;
 			while (scan < buf.end && (*scan == '\'' || cc_parsedigit(*scan,base) >= 0)) scan++;
-			if (scan < buf.end && (*scan == '.' || tolower((char)(*scan)) == 'e')) {
-				/* TODO: Parse it ourself */
-				do {
-					if (cc_parsedigit(buf.peekb(),base) >= 0) {
-						buf.discardb();
-					}
-					else if (buf.peekb() == 'e' || buf.peekb() == 'E' || buf.peekb() == '.') {
-						buf.discardb();
-					}
-					else {
-						break;
-					}
-				} while(1);
-
+			if (scan < buf.end && (*scan == '.' || tolower((char)(*scan)) == 'e' || tolower((char)(*scan)) == 'f' || tolower((char)(*scan)) == 'd' || tolower((char)(*scan)) == 'p')) {
+				/* It's a floating point constant */
 				t.type = token_type_t::floating;
 				t.v.floating.init();
-				t.v.floating.setsn(1,0); /* 1 * 2^0 = 1.0 */
-				/* It's a floating point constant */
+				scan = buf.data;
+
+				/* use strtold directly on the buffer--this is why the rbuf code allocates in such a way that
+				 * there is a NUL at the end of the buffer. someday we'll have our own code to do this. */
+				assert(buf.end <= buf.fence); *buf.end = 0;
+
+				/* assume strtold will never move scan to a point before the initial scan */
+				const long double x = strtold((char*)scan,(char**)(&scan));
+				assert(scan <= buf.end);
+
+				/* convert to mantissa, exponent, assume positive number because our parsing method should never strtold() a negative number */
+				int exp = 0; const long double m = frexpl(x,&exp); assert(m == 0.0 || (m >= 0.5 && m < 1.0)); /* <- as documented */
+				const uint64_t mc = (uint64_t)ldexpl(m,64); /* i.e 0.5 => 0x8000'0000'0000'0000 */
+				t.v.floating.setsn(mc,exp-64);
+
+				/* look for suffixes */
+				if (scan < buf.end) {
+					if (tolower(*scan) == 'f') {
+						t.v.floating.flags &= ~(floating_value_t::FL_DOUBLE|floating_value_t::FL_LONG);
+						t.v.floating.flags |= floating_value_t::FL_FLOAT;
+						scan++;
+					}
+					else if (tolower(*scan) == 'd') {
+						t.v.floating.flags &= ~(floating_value_t::FL_FLOAT|floating_value_t::FL_LONG);
+						t.v.floating.flags |= floating_value_t::FL_DOUBLE;
+						scan++;
+					}
+					else if (tolower(*scan) == 'l') {
+						t.v.floating.flags &= ~floating_value_t::FL_FLOAT;
+						t.v.floating.flags |= floating_value_t::FL_LONG|floating_value_t::FL_DOUBLE;
+						scan++;
+					}
+				}
+
+				buf.data = scan;
 				return 1;
 			}
 		}
