@@ -277,12 +277,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
 	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
 
-	void utf8_to_str(char* &w,char *f,unicode_char_t c) {
+	void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c) {
 		if (c < unicode_char_t(0)) {
 			/* do nothing */
 		}
 		else if (c <= unicode_char_t(0x7Fu)) {
-			if (w < f) *w++ = (char)(c&0xFFu);
+			if (w < f) *w++ = (unsigned char)(c&0xFFu);
 		}
 		else if (c <= unicode_char_t(0x7FFFFFFFul)) {
 			/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
@@ -299,21 +299,21 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 			const uint8_t ib = 0xFC << (5 - more);
 			if ((w+1+more) > f) return;
-			char *wr = w; w += 1+more; assert(w <= f);
-			do { wr[more] = (char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
+			unsigned char *wr = w; w += 1+more; assert(w <= f);
+			do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
 			assert(uint32_t(c) <= uint32_t((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
-			wr[0] = (char)(ib | (unsigned char)c);
+			wr[0] = (unsigned char)(ib | (unsigned char)c);
 		}
 	}
 
 	std::string utf8_to_str(const unicode_char_t c) {
-		char tmp[64],*w=tmp;
+		unsigned char tmp[64],*w=tmp;
 
 		utf8_to_str(/*&*/w,/*fence*/tmp+sizeof(tmp),c);
 		assert(w < (tmp+sizeof(tmp)));
 		*w++ = 0;
 
-		return std::string(tmp);
+		return std::string((char*)tmp);
 	}
 
 	unicode_char_t getcnu(rbuf &buf,source_file_object &sfo) { /* non-unicode */
@@ -899,8 +899,7 @@ private:
 					v = lgtok_cslitget(buf,sfo);
 					if (cslt == charstrliteral_t::type_t::UTF8) {
 						if (v < 0x00) return errno_return(EINVAL);
-						char *c = (char*)p; utf8_to_str(c,(char*)f,v); p = (unsigned char*)c;
-						assert(p <= f);
+						utf8_to_str(p,f,v); assert(p <= f);
 					}
 					else {
 						if (v < 0x00 || v > 0xFF) return errno_return(EINVAL);
@@ -943,9 +942,17 @@ private:
 					}
 
 					v = lgtok_cslitget(buf,sfo);
-					if (v < 0x00 || v > 0xFFff) return errno_return(EINVAL);
-					assert((p+1) <= f);
-					*p++ = (uint16_t)v;
+					if (v < 0x00l || v > 0x20FFFFl) return errno_return(EINVAL);
+					if (v >= 0x10000l) {
+						/* surrogate pair */
+						assert((p+2) <= f);
+						*p++ = (uint16_t)((((v - 0x10000l) >> 10l) & 0x3FFl) + 0xD800l);
+						*p++ = (uint16_t)(( (v - 0x10000l)         & 0x3FFl) + 0xDC00l);
+					}
+					else {
+						assert((p+1) <= f);
+						*p++ = (uint16_t)v;
+					}
 				} while (1);
 
 				{
