@@ -322,6 +322,17 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		return unicode_char_t(buf.getb());
 	}
 
+	unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f) {
+		if (p >= f) return unicode_eof;
+
+		if ((p+2) <= f && (p[0]&0xDC00u) == 0xD800u && (p[1]&0xDC00u) == 0xDC00u) {
+			const uint32_t v = uint32_t(((p[0]&0x3FFul) << 10ul) + (p[1]&0x3FFul) + 0x10000ul); p += 2;
+			return unicode_char_t(v);
+		}
+
+		return unicode_char_t(*p++);
+	}
+
 	unicode_char_t p_utf8_decode(const unsigned char* &p,const unsigned char* const f) {
 		if (p >= f) return unicode_eof;
 
@@ -682,16 +693,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						const uint16_t *p = as_u16();
 						const uint16_t *f = p + units();
 						while (p < f) {
-							if (*p < 0x20u) {
-								s += to_escape(*p++);
-							}
-							else if ((p+2) <= f && (p[0]&0xDC00u) == 0xD800u && (p[1]&0xDC00u) == 0xDC00u) {
-								const uint32_t v = uint32_t(((p[0]&0x3FFul) << 10ul) + (p[1]&0x3FFul) + 0x10000ul); p += 2;
-								s += utf8_to_str(v);
-							}
-							else {
-								s += utf8_to_str(*p++); /* TODO: Surrogates? */
-							}
+							const int32_t v = p_utf16_decode(p,f);
+							if (v < 0l)
+								s += "?";
+							else if (v < 0x20l || v > 0x10FFFFl)
+								s += to_escape(v);
+							else
+								s += utf8_to_str((uint32_t)v);
 						}
 						break; }
 					case type_t::UNICODE32: {
