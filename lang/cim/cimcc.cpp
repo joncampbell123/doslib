@@ -378,6 +378,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		caret,
 		integer,				// 15
 		floating,
+		charliteral,
+		strliteral,
 
 		__MAX__
 	};
@@ -399,7 +401,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"pipepipe",
 		"caret",
 		"integer",				// 15
-		"floating"
+		"floating",
+		"charliteral",
+		"strliteral"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -533,15 +537,160 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		void init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 	};
 
+	struct charstrliteral_t {
+		enum type_t {
+			CHAR=0,
+			BINARY,
+			UTF8, /* multibyte */
+			UNICODE16,
+			UNICODE32,
+
+			__MAX__
+		};
+
+		type_t			type;
+		void*			data;
+		size_t			length; /* in bytes */
+		size_t			allocated;
+
+		void init(void) { type = type_t::CHAR; data = NULL; length = 0; allocated = 0; }
+		void free(void) { if (data) ::free(data); data = NULL; length = 0; allocated = 0; type = type_t::CHAR; }
+
+		const char *as_char(void) const { return (const char*)data; }
+		const unsigned char *as_binary(void) const { return (const unsigned char*)data; }
+		const unsigned char *as_utf8(void) const { return (const unsigned char*)data; }
+		const uint16_t *as_u16(void) const { return (const uint16_t*)data; }
+		const uint32_t *as_u32(void) const { return (const uint32_t*)data; }
+
+		size_t units(void) const {
+			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 1, 2, 4 };
+			return length / unit_size[type];
+		}
+
+		bool alloc(const size_t sz) {
+			if (data != NULL || sz == 0 || sz >= (1024*1024))
+				return false;
+
+			data = malloc(sz);
+			if (data == NULL)
+				return false;
+
+			length = sz;
+			allocated = sz;
+			return true;
+		}
+
+		bool realloc(const size_t sz) {
+			if (data == NULL)
+				return alloc(sz);
+
+			if (sz > allocated) {
+				void *np = ::realloc(data,sz);
+				if (np == NULL)
+					return false;
+
+				data = np;
+				allocated = sz;
+			}
+
+			length = sz;
+			return true;
+		}
+
+		static std::string to_escape8(const unsigned char c) {
+			char tmp[32];
+
+			sprintf(tmp,"\\x%02x",c);
+			return std::string(tmp);
+		}
+
+		std::string to_str(void) const {
+			std::string s;
+			char tmp[128];
+
+			if (data) {
+				s += "v=\"";
+				switch (type) {
+					case type_t::CHAR:
+					case type_t::BINARY: {
+						const unsigned char *p = as_binary();
+						const unsigned char *f = p + length;
+						while (p < f) {
+							if (*p < 0x20 || *p >= 0x80)
+								s += to_escape8(*p++);
+							else
+								s += (char)(*p++);
+						}
+						break; }
+					case type_t::UTF8: {
+						const unsigned char *p = as_binary();
+						const unsigned char *f = p + length;
+						while (p < f) {
+							if (*p < 0x20)
+								s += to_escape8(*p++);
+							else
+								s += (char)(*p++); /* assume UTF-8 which we want to emit to STDOUT */
+						}
+						break; }
+					case type_t::UNICODE16: {
+						const uint16_t *p = as_u16();
+						const uint16_t *f = p + units();
+						while (p < f) {
+							if (*p < 0x20u)
+								s += to_escape8(*p++);
+							else
+								s += utf8_to_str(*p++); /* TODO: Surrogates? */
+						}
+						break; }
+					case type_t::UNICODE32: {
+						const uint32_t *p = as_u32();
+						const uint32_t *f = p + units();
+						while (p < f) {
+							if (*p < 0x20u || *p >= 0x10FFFu)
+								s += to_escape8(*p++);
+							else
+								s += utf8_to_str(*p++); /* TODO: Surrogates? */
+						}
+						break; }
+					default:
+						break;
+				}
+				s += "\"";
+			}
+
+			s += " t=\"";
+			switch (type) {
+				case type_t::CHAR:       s += "char"; break;
+				case type_t::BINARY:     s += "binary"; break;
+				case type_t::UTF8:       s += "utf8"; break;
+				case type_t::UNICODE16:  s += "unicode16"; break;
+				case type_t::UNICODE32:  s += "unicode32"; break;
+				default: break;
+			}
+			s += "\"";
+
+			sprintf(tmp," lenb=%zu lenu=%zu",length,units());
+			s += tmp;
+
+			return s;
+		}
+	};
+
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 
-		token_t() { }
-		token_t(const token_type_t t) : type(t) { }
+		token_t() { common_init(); }
+		~token_t() { common_delete(); }
+		token_t(const token_t &t) = delete;
+		token_t(token_t &&t) { common_move(t); }
+		token_t(const token_type_t t) : type(t) { common_init(); }
+		token_t &operator=(const token_t &t) = delete;
+		token_t &operator=(token_t &&t) { common_move(t); return *this; }
 
 		union {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
+			charstrliteral_t	strliteral; /* token_type_t::charliteral or token_type_t::strliteral */
 		} v;
 
 		std::string to_str(void) const {
@@ -554,11 +703,50 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::floating:
 					s += "("; s += v.floating.to_str(); s += ")";
 					break;
+				case token_type_t::charliteral:
+				case token_type_t::strliteral:
+					s += "("; s += v.strliteral.to_str(); s += ")";
+					break;
 				default:
 					break;
 			}
 
 			return s;
+		}
+
+private:
+		void common_delete(void) {
+			switch (type) {
+				case token_type_t::charliteral:
+				case token_type_t::strliteral:
+					v.strliteral.free();
+					break;
+				default:
+					break;
+			}
+		}
+
+		void common_init(void) {
+			switch (type) {
+				case token_type_t::integer:
+					v.integer.init();
+					break;
+				case token_type_t::floating:
+					v.floating.init();
+					break;
+				case token_type_t::charliteral:
+				case token_type_t::strliteral:
+					v.strliteral.init();
+					break;
+				default:
+					break;
+			}
+		}
+
+		void common_move(token_t &x) {
+			common_delete();
+			type = x.type; x.type = token_type_t::none;
+			v = x.v; /* x.type == none so pointers no longer matter */
 		}
 	};
 
@@ -582,6 +770,125 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return c + 10 - 'A';
 
 		return -1;
+	}
+
+	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
+		int32_t v;
+
+		v = unicode ? getc(buf,sfo) : buf.getb();
+		if (v == 0) return int32_t(-1);
+
+		if (v == uint32_t('\\')) {
+			v = unicode ? getc(buf,sfo) : buf.getb();
+
+			switch (v) {
+				case '\'':
+				case '\"':
+				case '\?':
+				case '\\':
+					return v;
+				case 'a':
+					return int32_t(7);
+				case 'b':
+					return int32_t(8);
+				case 'f':
+					return int32_t(12);
+				case 'n':
+					return int32_t(10);
+				case 'r':
+					return int32_t(13);
+				case 't':
+					return int32_t(9);
+				case 'v':
+					return int32_t(11);
+				case '0': case '1': case '2': case '3':
+				case '4': case '5': case '6': case '7': {
+					v = cc_parsedigit((unsigned char)v,8);
+					assert(v >= int32_t(0));
+
+					for (unsigned int c=0;c < 2;c++) {
+						const int n = cc_parsedigit(buf.peekb(),8);
+						if (n >= 0) {
+							v = int32_t(((unsigned int)v << 3u) | (unsigned int)n);
+							buf.discardb();
+						}
+						else {
+							break;
+						}
+					}
+					break; }
+				case 'x': {
+					int n;
+
+					buf.discardb(); v = 0;
+					while ((n=cc_parsedigit(buf.peekb(),16)) >= 0) {
+						v = int32_t(((unsigned int)v << 4u) | (unsigned int)n);
+						buf.discardb();
+					}
+					break; }
+				default:
+					return int32_t(-1);
+			}
+		}
+
+		return v;
+	}
+
+	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t) {
+		unsigned char separator = buf.peekb();
+
+		if (separator == '\'' || separator == '\"') {
+			buf.discardb();
+
+			assert(t.type == token_type_t::none);
+			if (separator == '\"') t.type = token_type_t::strliteral;
+			else t.type = token_type_t::charliteral;
+			t.v.strliteral.init();
+
+			{ /* char/binary */
+				int32_t v;
+				unsigned char *p,*f;
+
+				if (!t.v.strliteral.alloc(128))
+					return errno_return(ENOMEM);
+
+				p = (unsigned char*)t.v.strliteral.data;
+				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+				do {
+					if (buf.peekb() == separator) {
+						buf.discardb();
+						break;
+					}
+
+					if ((p+1) >= f) {
+						const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+						if (!t.v.strliteral.realloc(t.v.strliteral.length+(t.v.strliteral.length/2u)))
+							return errno_return(ENOMEM);
+
+						p = (unsigned char*)t.v.strliteral.data+wo;
+						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+					}
+
+					v = lgtok_cslitget(buf,sfo);
+					if (v < 0x00 || v > 0xFF) return errno_return(EINVAL);
+
+					assert((p+1) <= f);
+					*p++ = (unsigned char)v;
+				} while (1);
+
+				{
+					const size_t fo = size_t(p-t.v.strliteral.as_binary());
+					assert(fo <= t.v.strliteral.allocated);
+					t.v.strliteral.length = fo;
+				}
+			}
+
+			return 1;
+		}
+		else {
+			return errno_return(EINVAL);
+		}
 	}
 
 	int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -753,6 +1060,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				t.type = token_type_t::pipe; buf.discardb();
 				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); }
 				break;
+			case '\'':
+			case '\"':
+				return lgtok_charstrlit(buf,sfo,t);
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
 				return lgtok_number(buf,sfo,t);
