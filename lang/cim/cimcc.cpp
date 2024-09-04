@@ -598,10 +598,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return true;
 		}
 
-		static std::string to_escape8(const unsigned char c) {
+		static std::string to_escape(const uint32_t c) {
 			char tmp[32];
 
-			sprintf(tmp,"\\x%02x",c);
+			sprintf(tmp,"\\x%02lx",(unsigned long)c);
 			return std::string(tmp);
 		}
 
@@ -632,7 +632,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						const unsigned char *f = p + length;
 						while (p < f) {
 							if (*p < 0x20 || *p >= 0x80)
-								s += to_escape8(*p++);
+								s += to_escape(*p++);
 							else
 								s += (char)(*p++);
 						}
@@ -642,7 +642,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						const unsigned char *f = p + length;
 						while (p < f) {
 							if (*p < 0x20)
-								s += to_escape8(*p++);
+								s += to_escape(*p++);
 							else
 								s += (char)(*p++); /* assume UTF-8 which we want to emit to STDOUT */
 						}
@@ -651,18 +651,24 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						const uint16_t *p = as_u16();
 						const uint16_t *f = p + units();
 						while (p < f) {
-							if (*p < 0x20u)
-								s += to_escape8(*p++);
-							else
+							if (*p < 0x20u) {
+								s += to_escape(*p++);
+							}
+							else if ((p+2) <= f && (p[0]&0xDC00u) == 0xD800u && (p[1]&0xDC00u) == 0xDC00u) {
+								const uint32_t v = uint32_t(((p[0]&0x3FFul) << 10ul) + (p[1]&0x3FFul) + 0x10000ul); p += 2;
+								s += utf8_to_str(v);
+							}
+							else {
 								s += utf8_to_str(*p++); /* TODO: Surrogates? */
+							}
 						}
 						break; }
 					case type_t::UNICODE32: {
 						const uint32_t *p = as_u32();
 						const uint32_t *f = p + units();
 						while (p < f) {
-							if (*p < 0x20u || *p >= 0x10FFFu)
-								s += to_escape8(*p++);
+							if (*p < 0x20u || *p >= 0x10FFFFu)
+								s += to_escape(*p++);
 							else
 								s += utf8_to_str(*p++);
 						}
@@ -896,7 +902,7 @@ private:
 						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 					}
 
-					v = lgtok_cslitget(buf,sfo);
+					v = lgtok_cslitget(buf,sfo,cslt == charstrliteral_t::type_t::UTF8);
 					if (cslt == charstrliteral_t::type_t::UTF8) {
 						if (v < 0x00) return errno_return(EINVAL);
 						utf8_to_str(p,f,v); assert(p <= f);
@@ -941,7 +947,7 @@ private:
 						f = (uint16_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
 					}
 
-					v = lgtok_cslitget(buf,sfo);
+					v = lgtok_cslitget(buf,sfo,true);
 					if (v < 0x00l || v > 0x20FFFFl) return errno_return(EINVAL);
 					if (v >= 0x10000l) {
 						/* surrogate pair */
@@ -987,7 +993,7 @@ private:
 						f = (uint32_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
 					}
 
-					v = lgtok_cslitget(buf,sfo);
+					v = lgtok_cslitget(buf,sfo,true);
 					if (v < 0x00) return errno_return(EINVAL);
 					assert((p+1) <= f);
 					*p++ = (uint32_t)v;
