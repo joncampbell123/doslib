@@ -277,6 +277,22 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
 	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
 
+	void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
+		if (c < unicode_char_t(0)) {
+			/* do nothing */
+		}
+		else if (c >= 0x10000l) {
+			/* surrogate pair */
+			if ((w+2) <= f) {
+				*w++ = (uint16_t)((((c - 0x10000l) >> 10l) & 0x3FFl) + 0xD800l);
+				*w++ = (uint16_t)(( (c - 0x10000l)         & 0x3FFl) + 0xDC00l);
+			}
+		}
+		else {
+			if (w < f) *w++ = (uint16_t)c;
+		}
+	}
+
 	void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c) {
 		if (c < unicode_char_t(0)) {
 			/* do nothing */
@@ -904,6 +920,88 @@ private:
 		return v;
 	}
 
+	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
+
+	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::CHAR,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
+		if (v < 0x00 || v > 0xFF)
+			return errno_return(EINVAL);
+
+		assert((p+1) <= f);
+		*p++ = (unsigned char)v;
+		return 1;
+	}
+
+	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UTF8,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
+		if (v < 0x00)
+			return errno_return(EINVAL);
+
+		utf8_to_str(p,f,v);
+		assert(p <= f);
+		return 1;
+	}
+
+	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UNICODE16,uint16_t>(uint16_t* &p,uint16_t* const f,const unicode_char_t v) {
+		if (v < 0x00l || v > 0x20FFFFl)
+			return errno_return(EINVAL);
+
+		utf16_to_str(p,f,v);
+		assert(p <= f);
+		return 1;
+	}
+
+	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UNICODE32,uint32_t>(uint32_t* &p,uint32_t* const f,const unicode_char_t v) {
+		if (v < 0x00)
+			return errno_return(EINVAL);
+
+		assert((p+1) <= f);
+		*p++ = (uint32_t)v;
+		return 1;
+	}
+
+	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
+		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral);
+		const bool unicode = !(cslt == charstrliteral_t::type_t::CHAR);
+		ptrat *p,*f;
+		int32_t v;
+		int rr;
+
+		if (!t.v.strliteral.alloc(64))
+			return errno_return(ENOMEM);
+
+		p = (ptrat*)((char*)t.v.strliteral.data);
+		f = (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+		do {
+			if (buf.peekb() == separator) {
+				buf.discardb();
+				break;
+			}
+
+			if ((p+16) >= f) {
+				const size_t wo = size_t(p-((ptrat*)t.v.strliteral.data));
+				const size_t ns = t.v.strliteral.units() + (t.v.strliteral.units() / 2u);
+				assert((t.v.strliteral.units()*sizeof(ptrat)) == t.v.strliteral.length);
+
+				if (!t.v.strliteral.realloc(ns*sizeof(ptrat)))
+					return errno_return(ENOMEM);
+
+				p = ((ptrat*)((char*)t.v.strliteral.data)) + wo;
+				f =  (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+			}
+
+			v = lgtok_cslitget(buf,sfo,unicode);
+			if ((rr=lgtok_strlit_wrch<cslt,ptrat>(p,f,v)) <= 0) return rr;
+		} while(1);
+
+		{
+			const size_t fo = size_t(p-((ptrat*)t.v.strliteral.data)) * sizeof(ptrat);
+			assert(fo <= t.v.strliteral.allocated);
+			t.v.strliteral.length = fo;
+			t.v.strliteral.shrinkfit();
+		}
+
+		return 1;
+	}
+
 	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
@@ -916,134 +1014,17 @@ private:
 			t.v.strliteral.init();
 			t.v.strliteral.type = cslt;
 
-			if (cslt == charstrliteral_t::type_t::CHAR || cslt == charstrliteral_t::type_t::UTF8) { /* char */
-				int32_t v;
-				unsigned char *p,*f;
-
-				if (!t.v.strliteral.alloc(64))
-					return errno_return(ENOMEM);
-
-				p = (unsigned char*)t.v.strliteral.data;
-				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-				do {
-					if (buf.peekb() == separator) {
-						buf.discardb();
-						break;
-					}
-
-					if ((p+10) >= f) {
-						const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-						if (!t.v.strliteral.realloc(t.v.strliteral.length+(t.v.strliteral.length/2u)))
-							return errno_return(ENOMEM);
-
-						p = (unsigned char*)t.v.strliteral.data+wo;
-						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-					}
-
-					v = lgtok_cslitget(buf,sfo,cslt == charstrliteral_t::type_t::UTF8);
-					if (cslt == charstrliteral_t::type_t::UTF8) {
-						if (v < 0x00) return errno_return(EINVAL);
-						utf8_to_str(p,f,v); assert(p <= f);
-					}
-					else {
-						if (v < 0x00 || v > 0xFF) return errno_return(EINVAL);
-						assert((p+1) <= f);
-						*p++ = (unsigned char)v;
-					}
-
-				} while (1);
-
-				{
-					const size_t fo = size_t(p-t.v.strliteral.as_binary());
-					assert(fo <= t.v.strliteral.allocated);
-					t.v.strliteral.length = fo;
-					t.v.strliteral.shrinkfit();
-				}
-			}
-			else if (cslt == charstrliteral_t::type_t::UNICODE16) {
-				int32_t v;
-				uint16_t *p,*f;
-
-				if (!t.v.strliteral.alloc(64))
-					return errno_return(ENOMEM);
-
-				p = (uint16_t*)t.v.strliteral.data;
-				f = (uint16_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
-				do {
-					if (buf.peekb() == separator) {
-						buf.discardb();
-						break;
-					}
-
-					if ((p+10) >= f) {
-						const size_t wo = size_t(p-t.v.strliteral.as_u16());
-
-						if (!t.v.strliteral.realloc(t.v.strliteral.length+(((t.v.strliteral.length+3u)/2u)&(~1u))))
-							return errno_return(ENOMEM);
-
-						p = (uint16_t*)t.v.strliteral.data+wo;
-						f = (uint16_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
-					}
-
-					v = lgtok_cslitget(buf,sfo,true);
-					if (v < 0x00l || v > 0x20FFFFl) return errno_return(EINVAL);
-					if (v >= 0x10000l) {
-						/* surrogate pair */
-						assert((p+2) <= f);
-						*p++ = (uint16_t)((((v - 0x10000l) >> 10l) & 0x3FFl) + 0xD800l);
-						*p++ = (uint16_t)(( (v - 0x10000l)         & 0x3FFl) + 0xDC00l);
-					}
-					else {
-						assert((p+1) <= f);
-						*p++ = (uint16_t)v;
-					}
-				} while (1);
-
-				{
-					const size_t fo = size_t(p-t.v.strliteral.as_u16()) * sizeof(uint16_t);
-					assert(fo <= t.v.strliteral.allocated);
-					t.v.strliteral.length = fo;
-					t.v.strliteral.shrinkfit();
-				}
-			}
-			else if (cslt == charstrliteral_t::type_t::UNICODE32) {
-				int32_t v;
-				uint32_t *p,*f;
-
-				if (!t.v.strliteral.alloc(64))
-					return errno_return(ENOMEM);
-
-				p = (uint32_t*)t.v.strliteral.data;
-				f = (uint32_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
-				do {
-					if (buf.peekb() == separator) {
-						buf.discardb();
-						break;
-					}
-
-					if ((p+10) >= f) {
-						const size_t wo = size_t(p-t.v.strliteral.as_u32());
-
-						if (!t.v.strliteral.realloc(t.v.strliteral.length+(((t.v.strliteral.length+7u)/4u)&(~3u))))
-							return errno_return(ENOMEM);
-
-						p = (uint32_t*)t.v.strliteral.data+wo;
-						f = (uint32_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
-					}
-
-					v = lgtok_cslitget(buf,sfo,true);
-					if (v < 0x00) return errno_return(EINVAL);
-					assert((p+1) <= f);
-					*p++ = (uint32_t)v;
-				} while (1);
-
-				{
-					const size_t fo = size_t(p-t.v.strliteral.as_u32()) * sizeof(uint32_t);
-					assert(fo <= t.v.strliteral.allocated);
-					t.v.strliteral.length = fo;
-					t.v.strliteral.shrinkfit();
-				}
+			switch (cslt) {
+				case charstrliteral_t::type_t::CHAR:
+					return lgtok_strlit_common<charstrliteral_t::type_t::CHAR,unsigned char>(buf,sfo,t,separator);
+				case charstrliteral_t::type_t::UTF8:
+					return lgtok_strlit_common<charstrliteral_t::type_t::UTF8,unsigned char>(buf,sfo,t,separator);
+				case charstrliteral_t::type_t::UNICODE16:
+					return lgtok_strlit_common<charstrliteral_t::type_t::UNICODE16,uint16_t>(buf,sfo,t,separator);
+				case charstrliteral_t::type_t::UNICODE32:
+					return lgtok_strlit_common<charstrliteral_t::type_t::UNICODE32,uint32_t>(buf,sfo,t,separator);
+				default:
+					break;
 			}
 
 			return 1;
