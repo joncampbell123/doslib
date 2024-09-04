@@ -675,12 +675,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return true;
 		}
 
-		std::string to_str(void) const {
-			std::string s;
-			char tmp[128];
-
+		std::string makestring(void) const {
 			if (data) {
-				s += "v=\"";
+				std::string s;
+
 				switch (type) {
 					case type_t::CHAR: {
 						const unsigned char *p = as_binary();
@@ -731,6 +729,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 					default:
 						break;
 				}
+
+				return s;
+			}
+
+			return std::string();
+		}
+
+		std::string to_str(void) const {
+			std::string s;
+			char tmp[128];
+
+			if (data) {
+				s += "v=\"";
+				s += makestring();
 				s += "\"";
 			}
 
