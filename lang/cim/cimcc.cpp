@@ -605,6 +605,21 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return std::string(tmp);
 		}
 
+		bool shrinkfit(void) {
+			if (data) {
+				if (allocated > length) {
+					void *np = ::realloc(data,length);
+					if (np == NULL)
+						return false;
+
+					data = np;
+					allocated = length;
+				}
+			}
+
+			return true;
+		}
+
 		std::string to_str(void) const {
 			std::string s;
 			char tmp[128];
@@ -885,6 +900,7 @@ private:
 			const size_t fo = size_t(p-t.v.strliteral.as_binary());
 			assert(fo <= t.v.strliteral.allocated);
 			t.v.strliteral.length = fo;
+			t.v.strliteral.shrinkfit();
 		}
 
 		return 1;
@@ -938,6 +954,7 @@ private:
 					const size_t fo = size_t(p-t.v.strliteral.as_binary());
 					assert(fo <= t.v.strliteral.allocated);
 					t.v.strliteral.length = fo;
+					t.v.strliteral.shrinkfit();
 				}
 			}
 
