@@ -664,7 +664,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 							if (*p < 0x20u || *p >= 0x10FFFu)
 								s += to_escape8(*p++);
 							else
-								s += utf8_to_str(*p++); /* TODO: Surrogates? */
+								s += utf8_to_str(*p++);
 						}
 						break; }
 					default:
