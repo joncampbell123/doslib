@@ -859,6 +859,148 @@ private:
 		return v;
 	}
 
+	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
+		unsigned char separator = buf.peekb();
+
+		if (separator == '\'' || separator == '\"') {
+			buf.discardb();
+
+			assert(t.type == token_type_t::none);
+			if (separator == '\"') t.type = token_type_t::strliteral;
+			else t.type = token_type_t::charliteral;
+			t.v.strliteral.init();
+			t.v.strliteral.type = cslt;
+
+			if (cslt == charstrliteral_t::type_t::CHAR || cslt == charstrliteral_t::type_t::UTF8) { /* char */
+				int32_t v;
+				unsigned char *p,*f;
+
+				if (!t.v.strliteral.alloc(64))
+					return errno_return(ENOMEM);
+
+				p = (unsigned char*)t.v.strliteral.data;
+				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+				do {
+					if (buf.peekb() == separator) {
+						buf.discardb();
+						break;
+					}
+
+					if ((p+10) >= f) {
+						const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+						if (!t.v.strliteral.realloc(t.v.strliteral.length+(t.v.strliteral.length/2u)))
+							return errno_return(ENOMEM);
+
+						p = (unsigned char*)t.v.strliteral.data+wo;
+						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+					}
+
+					v = lgtok_cslitget(buf,sfo);
+					if (cslt == charstrliteral_t::type_t::UTF8) {
+						if (v < 0x00) return errno_return(EINVAL);
+						char *c = (char*)p; utf8_to_str(c,(char*)f,v); p = (unsigned char*)c;
+						assert(p <= f);
+					}
+					else {
+						if (v < 0x00 || v > 0xFF) return errno_return(EINVAL);
+						assert((p+1) <= f);
+						*p++ = (unsigned char)v;
+					}
+
+				} while (1);
+
+				{
+					const size_t fo = size_t(p-t.v.strliteral.as_binary());
+					assert(fo <= t.v.strliteral.allocated);
+					t.v.strliteral.length = fo;
+					t.v.strliteral.shrinkfit();
+				}
+			}
+			else if (cslt == charstrliteral_t::type_t::UNICODE16) {
+				int32_t v;
+				uint16_t *p,*f;
+
+				if (!t.v.strliteral.alloc(64))
+					return errno_return(ENOMEM);
+
+				p = (uint16_t*)t.v.strliteral.data;
+				f = (uint16_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+				do {
+					if (buf.peekb() == separator) {
+						buf.discardb();
+						break;
+					}
+
+					if ((p+10) >= f) {
+						const size_t wo = size_t(p-t.v.strliteral.as_u16());
+
+						if (!t.v.strliteral.realloc(t.v.strliteral.length+(((t.v.strliteral.length+3u)/2u)&(~1u))))
+							return errno_return(ENOMEM);
+
+						p = (uint16_t*)t.v.strliteral.data+wo;
+						f = (uint16_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+					}
+
+					v = lgtok_cslitget(buf,sfo);
+					if (v < 0x00 || v > 0xFFff) return errno_return(EINVAL);
+					assert((p+1) <= f);
+					*p++ = (uint16_t)v;
+				} while (1);
+
+				{
+					const size_t fo = size_t(p-t.v.strliteral.as_u16()) * sizeof(uint16_t);
+					assert(fo <= t.v.strliteral.allocated);
+					t.v.strliteral.length = fo;
+					t.v.strliteral.shrinkfit();
+				}
+			}
+			else if (cslt == charstrliteral_t::type_t::UNICODE32) {
+				int32_t v;
+				uint32_t *p,*f;
+
+				if (!t.v.strliteral.alloc(64))
+					return errno_return(ENOMEM);
+
+				p = (uint32_t*)t.v.strliteral.data;
+				f = (uint32_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+				do {
+					if (buf.peekb() == separator) {
+						buf.discardb();
+						break;
+					}
+
+					if ((p+10) >= f) {
+						const size_t wo = size_t(p-t.v.strliteral.as_u32());
+
+						if (!t.v.strliteral.realloc(t.v.strliteral.length+(((t.v.strliteral.length+7u)/4u)&(~3u))))
+							return errno_return(ENOMEM);
+
+						p = (uint32_t*)t.v.strliteral.data+wo;
+						f = (uint32_t*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+					}
+
+					v = lgtok_cslitget(buf,sfo);
+					if (v < 0x00) return errno_return(EINVAL);
+					assert((p+1) <= f);
+					*p++ = (uint32_t)v;
+				} while (1);
+
+				{
+					const size_t fo = size_t(p-t.v.strliteral.as_u32()) * sizeof(uint32_t);
+					assert(fo <= t.v.strliteral.allocated);
+					t.v.strliteral.length = fo;
+					t.v.strliteral.shrinkfit();
+				}
+			}
+
+			return 1;
+		}
+		else {
+			return errno_return(EINVAL);
+		}
+	}
+
 	int lgtok_identifier(rbuf &buf,source_file_object &sfo,token_t &t) {
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::identifier;
@@ -903,66 +1045,29 @@ private:
 			t.v.strliteral.shrinkfit();
 		}
 
-		return 1;
-	}
-
-	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
-		unsigned char separator = buf.peekb();
-
-		if (separator == '\'' || separator == '\"') {
-			buf.discardb();
-
-			assert(t.type == token_type_t::none);
-			if (separator == '\"') t.type = token_type_t::strliteral;
-			else t.type = token_type_t::charliteral;
-			t.v.strliteral.init();
-			t.v.strliteral.type = cslt;
-
-			if (cslt == charstrliteral_t::type_t::CHAR) { /* char */
-				int32_t v;
-				unsigned char *p,*f;
-
-				if (!t.v.strliteral.alloc(64))
-					return errno_return(ENOMEM);
-
-				p = (unsigned char*)t.v.strliteral.data;
-				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-				do {
-					if (buf.peekb() == separator) {
-						buf.discardb();
-						break;
-					}
-
-					if ((p+1) >= f) {
-						const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-						if (!t.v.strliteral.realloc(t.v.strliteral.length+(t.v.strliteral.length/2u)))
-							return errno_return(ENOMEM);
-
-						p = (unsigned char*)t.v.strliteral.data+wo;
-						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-					}
-
-					v = lgtok_cslitget(buf,sfo);
-					if (v < 0x00 || v > 0xFF) return errno_return(EINVAL);
-
-					assert((p+1) <= f);
-					*p++ = (unsigned char)v;
-				} while (1);
-
-				{
-					const size_t fo = size_t(p-t.v.strliteral.as_binary());
-					assert(fo <= t.v.strliteral.allocated);
-					t.v.strliteral.length = fo;
-					t.v.strliteral.shrinkfit();
+		/* but wait: if the identifier is followed by a quotation mark, and it's some specific sequence,
+		 * then it's actually a char/string literal i.e. L"blah" would be a wide char string. No space
+		 * allowed. */
+		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
+			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
+				t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+			}
+			else if (t.v.strliteral.length == 1) {
+				if (*((const char*)t.v.strliteral.data) == 'U') {
+					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+				}
+				else if (*((const char*)t.v.strliteral.data) == 'u') {
+					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+				}
+				else if (*((const char*)t.v.strliteral.data) == 'L') {
+					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
+					 *        Linux wide char is 32 bits. */
+					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
+		}
 
-			return 1;
-		}
-		else {
-			return errno_return(EINVAL);
-		}
+		return 1;
 	}
 
 	int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
