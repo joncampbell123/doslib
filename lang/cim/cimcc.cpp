@@ -540,7 +540,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	struct charstrliteral_t {
 		enum type_t {
 			CHAR=0,
-			BINARY,
 			UTF8, /* multibyte */
 			UNICODE16,
 			UNICODE32,
@@ -563,7 +562,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		const uint32_t *as_u32(void) const { return (const uint32_t*)data; }
 
 		size_t units(void) const {
-			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 1, 2, 4 };
+			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
 			return length / unit_size[type];
 		}
 
@@ -611,8 +610,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			if (data) {
 				s += "v=\"";
 				switch (type) {
-					case type_t::CHAR:
-					case type_t::BINARY: {
+					case type_t::CHAR: {
 						const unsigned char *p = as_binary();
 						const unsigned char *f = p + length;
 						while (p < f) {
@@ -661,7 +659,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			s += " t=\"";
 			switch (type) {
 				case type_t::CHAR:       s += "char"; break;
-				case type_t::BINARY:     s += "binary"; break;
 				case type_t::UTF8:       s += "utf8"; break;
 				case type_t::UNICODE16:  s += "unicode16"; break;
 				case type_t::UNICODE32:  s += "unicode32"; break;
@@ -834,7 +831,7 @@ private:
 		return v;
 	}
 
-	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t) {
+	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
 		if (separator == '\'' || separator == '\"') {
@@ -844,8 +841,9 @@ private:
 			if (separator == '\"') t.type = token_type_t::strliteral;
 			else t.type = token_type_t::charliteral;
 			t.v.strliteral.init();
+			t.v.strliteral.type = cslt;
 
-			{ /* char/binary */
+			if (cslt == charstrliteral_t::type_t::CHAR) { /* char */
 				int32_t v;
 				unsigned char *p,*f;
 
