@@ -380,6 +380,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		floating,
 		charliteral,
 		strliteral,
+		identifier,
 
 		__MAX__
 	};
@@ -403,7 +404,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"integer",				// 15
 		"floating",
 		"charliteral",
-		"strliteral"
+		"strliteral",
+		"identifier"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -687,7 +689,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		union {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
-			charstrliteral_t	strliteral; /* token_type_t::charliteral or token_type_t::strliteral */
+			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier */
 		} v;
 
 		std::string to_str(void) const {
@@ -702,6 +704,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
+				case token_type_t::identifier:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
 				default:
@@ -716,6 +719,7 @@ private:
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
+				case token_type_t::identifier:
 					v.strliteral.free();
 					break;
 				default:
@@ -733,6 +737,7 @@ private:
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
+				case token_type_t::identifier:
 					v.strliteral.init();
 					break;
 				default:
@@ -767,6 +772,14 @@ private:
 			return c + 10 - 'A';
 
 		return -1;
+	}
+
+	bool is_identifier_first_char(unsigned char c) {
+		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	}
+
+	bool is_identifier_char(unsigned char c) {
+		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 	}
 
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
@@ -831,6 +844,52 @@ private:
 		return v;
 	}
 
+	int lgtok_identifier(rbuf &buf,source_file_object &sfo,token_t &t) {
+		assert(t.type == token_type_t::none);
+		t.type = token_type_t::identifier;
+		t.v.strliteral.init();
+		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+
+		if (!t.v.strliteral.alloc(32))
+			return errno_return(ENOMEM);
+
+		unsigned char *p,*f;
+
+		p = (unsigned char*)t.v.strliteral.data;
+		f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+
+		assert(p < f);
+		assert(is_identifier_first_char(buf.peekb()));
+		rbuf_sfd_refill(buf,sfo);
+		*p++ = buf.getb();
+		while (is_identifier_char(buf.peekb())) {
+			if ((p+1) >= f) {
+				const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+				if (wo >= 120)
+					return errno_return(ENAMETOOLONG);
+
+				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
+					return errno_return(ENOMEM);
+
+				p = (unsigned char*)t.v.strliteral.data+wo;
+				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+			}
+
+			assert((p+1) <= f);
+			*p++ = (unsigned char)buf.getb();
+			rbuf_sfd_refill(buf,sfo);
+		}
+
+		{
+			const size_t fo = size_t(p-t.v.strliteral.as_binary());
+			assert(fo <= t.v.strliteral.allocated);
+			t.v.strliteral.length = fo;
+		}
+
+		return 1;
+	}
+
 	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
@@ -847,7 +906,7 @@ private:
 				int32_t v;
 				unsigned char *p,*f;
 
-				if (!t.v.strliteral.alloc(128))
+				if (!t.v.strliteral.alloc(64))
 					return errno_return(ENOMEM);
 
 				p = (unsigned char*)t.v.strliteral.data;
@@ -1065,7 +1124,10 @@ private:
 			case '5': case '6': case '7': case '8': case '9':
 				return lgtok_number(buf,sfo,t);
 			default:
-				return errno_return(ESRCH);
+				if (is_identifier_first_char(buf.peekb()))
+					return lgtok_identifier(buf,sfo,t);
+				else
+					return errno_return(ESRCH);
 		}
 
 		return 1;
