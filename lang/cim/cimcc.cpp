@@ -446,6 +446,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		forwardslash,
 		starequals,
 		forwardslashequals,
+		percent,				// 30
+		percentequals,
 
 		__MAX__
 	};
@@ -480,7 +482,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"star",
 		"forwardslash",
 		"starequals",
-		"forwardslashequals"
+		"forwardslashequals",
+		"percent",				// 30
+		"percentequals"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1292,6 +1296,10 @@ private:
 			case '/':
 				t.type = token_type_t::forwardslash; buf.discardb();
 				if (buf.peekb() == '=') { t.type = token_type_t::forwardslashequals; buf.discardb(); }
+				break;
+			case '%':
+				t.type = token_type_t::percent; buf.discardb();
+				if (buf.peekb() == '=') { t.type = token_type_t::percentequals; buf.discardb(); }
 				break;
 			case '=':
 				t.type = token_type_t::equal; buf.discardb();
