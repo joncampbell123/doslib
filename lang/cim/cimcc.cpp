@@ -439,6 +439,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		comma,					// 20
 		pipeequals,
 		caretequals,
+		ampersandequals,
+		plusequals,
+		minusequals,				// 25
 
 		__MAX__
 	};
@@ -466,7 +469,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"identifier",
 		"comma",				// 20
 		"pipeequals",
-		"caretequals"
+		"caretequals",
+		"ampersandequals",
+		"plusequals",
+		"minusequals"				// 25
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1264,10 +1270,12 @@ private:
 			case '+':
 				t.type = token_type_t::plus; buf.discardb();
 				if (buf.peekb() == '+') { t.type = token_type_t::plusplus; buf.discardb(); }
+				else if (buf.peekb() == '=') { t.type = token_type_t::plusequals; buf.discardb(); }
 				break;
 			case '-':
 				t.type = token_type_t::minus; buf.discardb();
 				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); }
+				else if (buf.peekb() == '=') { t.type = token_type_t::minusequals; buf.discardb(); }
 				break;
 			case '=':
 				t.type = token_type_t::equal; buf.discardb();
@@ -1286,6 +1294,7 @@ private:
 			case '&':
 				t.type = token_type_t::ampersand; buf.discardb();
 				if (buf.peekb() == '&') { t.type = token_type_t::ampersandampersand; buf.discardb(); }
+				else if (buf.peekb() == '=') { t.type = token_type_t::ampersandequals; buf.discardb(); }
 				break;
 			case '|':
 				t.type = token_type_t::pipe; buf.discardb();
