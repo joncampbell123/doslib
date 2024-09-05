@@ -465,6 +465,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		minusrightanglebracketstar,
 		period,
 		periodstar,
+		opensquarebracket,
+		closesquarebracket,			// 50
+		opencurlybracket,
+		closecurlybracket,
+		openparenthesis,
+		closeparenthesis,
 
 		__MAX__
 	};
@@ -518,7 +524,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"minusrightanglebracket",		// 45
 		"minusrightanglebracketstar",
 		"period",
-		"periodstar"
+		"periodstar",
+		"opensquarebracket",
+		"closesquarebracket",			// 50
+		"opencurlybracket",
+		"closecurlybracket",
+		"openparenthesis",
+		"closeparenthesis"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1379,6 +1391,24 @@ private:
 				break;
 			case ',':
 				t.type = token_type_t::comma; buf.discardb();
+				break;
+			case '[':
+				t.type = token_type_t::opensquarebracket; buf.discardb();
+				break;
+			case ']':
+				t.type = token_type_t::closesquarebracket; buf.discardb();
+				break;
+			case '{':
+				t.type = token_type_t::opencurlybracket; buf.discardb();
+				break;
+			case '}':
+				t.type = token_type_t::closecurlybracket; buf.discardb();
+				break;
+			case '(':
+				t.type = token_type_t::openparenthesis; buf.discardb();
+				break;
+			case ')':
+				t.type = token_type_t::closeparenthesis; buf.discardb();
 				break;
 			case '<':
 				t.type = token_type_t::lessthan; buf.discardb();
