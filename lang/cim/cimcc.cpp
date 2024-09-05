@@ -450,6 +450,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		percentequals,
 		exclamationequals,
 		exclamation,
+		question,
+		colon,					// 35
 
 		__MAX__
 	};
@@ -489,6 +491,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"percentequals",
 		"exclamationequals",
 		"exclamation",
+		"question",
+		"colon"					// 35
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1318,6 +1322,12 @@ private:
 				break;
 			case '~':
 				t.type = token_type_t::tilde; buf.discardb();
+				break;
+			case '?':
+				t.type = token_type_t::question; buf.discardb();
+				break;
+			case ':':
+				t.type = token_type_t::colon; buf.discardb();
 				break;
 			case '^':
 				t.type = token_type_t::caret; buf.discardb();
