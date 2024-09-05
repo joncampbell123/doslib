@@ -471,6 +471,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		closecurlybracket,
 		openparenthesis,
 		closeparenthesis,
+		coloncolon,				// 55
 
 		__MAX__
 	};
@@ -530,7 +531,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"opencurlybracket",
 		"closecurlybracket",
 		"openparenthesis",
-		"closeparenthesis"
+		"closeparenthesis",
+		"coloncolon"				// 55
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1370,6 +1372,7 @@ private:
 				break;
 			case ':':
 				t.type = token_type_t::colon; buf.discardb();
+				if (buf.peekb() == ':') { t.type = token_type_t::coloncolon; buf.discardb(); } /* :: */
 				break;
 			case '^':
 				t.type = token_type_t::caret; buf.discardb();
