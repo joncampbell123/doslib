@@ -436,6 +436,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		charliteral,
 		strliteral,
 		identifier,
+		comma,					// 20
+		pipeequals,
+		caretequals,
 
 		__MAX__
 	};
@@ -460,7 +463,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"floating",
 		"charliteral",
 		"strliteral",
-		"identifier"
+		"identifier",
+		"comma",				// 20
+		"pipeequals",
+		"caretequals"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1275,6 +1281,7 @@ private:
 				break;
 			case '^':
 				t.type = token_type_t::caret; buf.discardb();
+				if (buf.peekb() == '=') { t.type = token_type_t::caretequals; buf.discardb(); }
 				break;
 			case '&':
 				t.type = token_type_t::ampersand; buf.discardb();
@@ -1283,6 +1290,10 @@ private:
 			case '|':
 				t.type = token_type_t::pipe; buf.discardb();
 				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); }
+				else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); }
+				break;
+			case ',':
+				t.type = token_type_t::comma; buf.discardb();
 				break;
 			case '\'':
 			case '\"':
