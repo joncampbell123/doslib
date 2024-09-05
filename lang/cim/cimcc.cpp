@@ -442,6 +442,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		ampersandequals,
 		plusequals,
 		minusequals,				// 25
+		star,
+		forwardslash,
+		starequals,
+		forwardslashequals,
 
 		__MAX__
 	};
@@ -472,7 +476,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"caretequals",
 		"ampersandequals",
 		"plusequals",
-		"minusequals"				// 25
+		"minusequals",				// 25
+		"star",
+		"forwardslash",
+		"starequals",
+		"forwardslashequals"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1276,6 +1284,14 @@ private:
 				t.type = token_type_t::minus; buf.discardb();
 				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); }
 				else if (buf.peekb() == '=') { t.type = token_type_t::minusequals; buf.discardb(); }
+				break;
+			case '*':
+				t.type = token_type_t::star; buf.discardb();
+				if (buf.peekb() == '=') { t.type = token_type_t::starequals; buf.discardb(); }
+				break;
+			case '/':
+				t.type = token_type_t::forwardslash; buf.discardb();
+				if (buf.peekb() == '=') { t.type = token_type_t::forwardslashequals; buf.discardb(); }
 				break;
 			case '=':
 				t.type = token_type_t::equal; buf.discardb();
