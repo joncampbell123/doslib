@@ -461,6 +461,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		greaterthangreaterthan,
 		greaterthangreaterthanequals,
 		greaterthanequals,
+		minusrightanglebracket,			// 45
+		minusrightanglebracketstar,
+		period,
+		periodstar,
 
 		__MAX__
 	};
@@ -510,7 +514,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"greaterthan",
 		"greaterthangreaterthan",
 		"greaterthangreaterthanequals",
-		"greaterthanequals"
+		"greaterthanequals",
+		"minusrightanglebracket",		// 45
+		"minusrightanglebracketstar",
+		"period",
+		"periodstar"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1314,6 +1322,10 @@ private:
 				t.type = token_type_t::minus; buf.discardb();
 				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); } /* -- */
 				else if (buf.peekb() == '=') { t.type = token_type_t::minusequals; buf.discardb(); } /* -= */
+				else if (buf.peekb() == '>') {
+					t.type = token_type_t::minusrightanglebracket; buf.discardb(); /* -> */
+					if (buf.peekb() == '*') { t.type = token_type_t::minusrightanglebracketstar; buf.discardb(); } /* ->* */
+				}
 				break;
 			case '*':
 				t.type = token_type_t::star; buf.discardb();
@@ -1360,6 +1372,10 @@ private:
 				t.type = token_type_t::pipe; buf.discardb();
 				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); } /* || */
 				else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); } /* |= */
+				break;
+			case '.':
+				t.type = token_type_t::period; buf.discardb();
+				if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
 				break;
 			case ',':
 				t.type = token_type_t::comma; buf.discardb();
