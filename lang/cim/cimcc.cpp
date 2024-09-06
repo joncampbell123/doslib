@@ -473,9 +473,47 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		closeparenthesis,
 		coloncolon,				// 55
 		ppidentifier,
+		r_alignas,
+		r_alignof,
+		r_auto,
+		r_bool,					// 60
+		r_break,
+		r_case,
+		r_char,
+		r_const,
 
 		__MAX__
 	};
+
+	static const char str_alignas[] = "alignas";
+	static const char str_alignof[] = "alignof";
+	static const char str_auto[] = "auto";
+	static const char str_bool[] = "bool";
+	static const char str_break[] = "break";
+	static const char str_case[] = "case";
+	static const char str_char[] = "char";
+	static const char str_const[] = "const";
+
+	struct ident2token_t {
+		const char*		str;
+		uint16_t		len; /* more than enough */
+		uint16_t		token; /* make larger in case more than 65535 tokens defined */
+	};
+
+#define X(len,name) { str_##name, len, uint16_t(token_type_t::r_##name) }
+	static const ident2token_t ident2tok[] = {
+/*                  123456789 */
+		X(7,alignas),
+		X(7,alignof),
+		X(4,auto),
+		X(4,bool),
+		X(5,break),
+		X(4,case),
+		X(4,char),
+		X(5,const)
+	};
+#undef X
+	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 
 	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
 		"none",					// 0
@@ -534,7 +572,15 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"openparenthesis",
 		"closeparenthesis",
 		"coloncolon",				// 55
-		"ppidentifier"
+		"ppidentifier",
+		str_alignas,
+		str_alignof,
+		str_auto,
+		str_bool,				// 60
+		str_break,
+		str_case,
+		str_char,
+		str_const
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1189,6 +1235,16 @@ private:
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
 					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+				}
+			}
+		}
+
+		/* it might be a reserved keyword, check */
+		for (const ident2token_t *i2t=ident2tok;i2t < (ident2tok+ident2tok_length);i2t++) {
+			if (t.v.strliteral.length == i2t->len) {
+				if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
+					t = token_t(token_type_t(i2t->token));
+					return 1;
 				}
 			}
 		}

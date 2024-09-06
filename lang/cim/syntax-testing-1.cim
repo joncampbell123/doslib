@@ -27,4 +27,4 @@ type() type{}
 a++ a--
 ::
 ident #ident
-
+alignas alignof auto bool break case char const
