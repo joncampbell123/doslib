@@ -89,4 +89,9 @@ wchar_t
 #warning
 #line
 #pragma
+__LINE__
+__FILE__
+__VA_OPT__
+__VA_ARGS__
+...
 

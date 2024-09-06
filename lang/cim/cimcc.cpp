@@ -557,6 +557,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppwarning,
 		r_ppline,
 		r_pppragma,				// 140
+		ellipsis,
+		r___LINE__,
+		r___FILE__,
+		r___VA_OPT__,
+		r___VA_ARGS__,				// 145
 
 		__MAX__
 	};
@@ -566,6 +571,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 // identifiers only
 #define DEFX(name) static const char str_##name[] = #name; static constexpr size_t str_##name##_len = sizeof(str_##name) - 1
+// __identifiers__ only
+#define DEFXUU(name) static const char str___##name##__[] = "__" #name "__"; static constexpr size_t str___##name##___len = sizeof(str___##name##__) - 1
 // identifiers and/or #identifiers
 #define DEFB(name) static const char str_pp##name[] = "#"#name; static constexpr size_t str_pp##name##_len = sizeof(str_pp##name) - 1; static const char * const str_##name = (str_pp##name)+1; static constexpr size_t str_##name##_len = str_pp##name##_len - 1
 	DEFX(alignas);
@@ -650,6 +657,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFB(warning);
 	DEFB(line);
 	DEFB(pragma);
+	DEFXUU(LINE);
+	DEFXUU(FILE);
+	DEFXUU(VA_OPT);
+	DEFXUU(VA_ARGS);
 #undef DEFX
 
 	struct ident2token_t {
@@ -659,6 +670,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	};
 
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
+#define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
 	static const ident2token_t ident2tok[] = {
 /*                  123456789 */
 		X(alignas),
@@ -730,7 +742,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(typeid),
 		X(typename),
 		X(using),
-		X(wchar_t)
+		X(wchar_t),
+		XUU(LINE),
+		XUU(FILE),
+		XUU(VA_OPT),
+		XUU(VA_ARGS)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
@@ -897,7 +913,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_pperror,
 		str_ppwarning,
 		str_ppline,
-		str_pppragma				// 140
+		str_pppragma,				// 140
+		"ellipsis",
+		str___LINE__,
+		str___FILE__,
+		str___VA_OPT__,
+		str___VA_ARGS__
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1785,6 +1806,7 @@ private:
 			case '.':
 				t.type = token_type_t::period; buf.discardb();
 				if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
+				else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
 				break;
 			case ',':
 				t.type = token_type_t::comma; buf.discardb();
