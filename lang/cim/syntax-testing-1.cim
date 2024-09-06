@@ -98,3 +98,9 @@ __VA_ARGS__
 literal"
 "string\n\
 literal"
+int x/* comment */ = 5;
+int x/* multiple
+   line
+   comment */ = 5;
+int x/* comment /* with /* nesting */ in */ here */ = 5;
+
