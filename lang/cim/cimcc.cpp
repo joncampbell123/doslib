@@ -472,6 +472,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		openparenthesis,
 		closeparenthesis,
 		coloncolon,				// 55
+		ppidentifier,
 
 		__MAX__
 	};
@@ -532,7 +533,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"closecurlybracket",
 		"openparenthesis",
 		"closeparenthesis",
-		"coloncolon"				// 55
+		"coloncolon",				// 55
+		"ppidentifier"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -865,6 +867,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
 				default:
@@ -880,6 +883,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
 					v.strliteral.free();
 					break;
 				default:
@@ -898,6 +902,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
 					v.strliteral.init();
 					break;
 				default:
@@ -1133,8 +1138,12 @@ private:
 		f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 
 		assert(p < f);
-		assert(is_identifier_first_char(buf.peekb()));
+		assert(is_identifier_first_char(buf.peekb()) || buf.peekb() == '#');
 		rbuf_sfd_refill(buf,sfo);
+		if (buf.peekb() == '#') {
+			t.type = token_type_t::ppidentifier;
+			buf.discardb();
+		}
 		*p++ = buf.getb();
 		while (is_identifier_char(buf.peekb())) {
 			if ((p+1) >= f) {
@@ -1441,7 +1450,7 @@ private:
 			case '5': case '6': case '7': case '8': case '9':
 				return lgtok_number(buf,sfo,t);
 			default:
-				if (is_identifier_first_char(buf.peekb()))
+				if (is_identifier_first_char(buf.peekb()) || buf.peekb() == '#')
 					return lgtok_identifier(buf,sfo,t);
 				else
 					return errno_return(ESRCH);

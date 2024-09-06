@@ -26,4 +26,5 @@ a()
 type() type{}
 a++ a--
 ::
+ident #ident
 
