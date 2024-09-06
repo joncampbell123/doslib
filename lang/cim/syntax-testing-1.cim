@@ -94,4 +94,7 @@ __FILE__
 __VA_OPT__
 __VA_ARGS__
 ...
-
+"string \
+literal"
+"string\n\
+literal"

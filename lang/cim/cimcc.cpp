@@ -276,6 +276,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	typedef int32_t unicode_char_t;
 	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
 	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
+	static constexpr unicode_char_t unicode_nothing = unicode_char_t(-3l);
 
 	void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
 		if (c < unicode_char_t(0)) {
@@ -1346,6 +1347,11 @@ private:
 				case '\?':
 				case '\\':
 					return v;
+				case '\r':
+					if (buf.peekb() == '\n') buf.discardb(); /* \r\n */
+					return unicode_nothing;
+				case '\n':
+					return unicode_nothing;
 				case 'a':
 					return int32_t(7);
 				case 'b':
@@ -1462,6 +1468,7 @@ private:
 			}
 
 			v = lgtok_cslitget(buf,sfo,unicode);
+			if (v == unicode_nothing) continue;
 			if ((rr=lgtok_strlit_wrch<cslt,ptrat>(p,f,v)) <= 0) return rr;
 		} while(1);
 
