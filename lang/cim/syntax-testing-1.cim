@@ -85,4 +85,8 @@ wchar_t
 #elifdef
 #ifndef
 #include
+#error
+#warning
+#line
+#pragma
 
