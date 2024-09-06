@@ -497,6 +497,41 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_inline,
 		r_int,
 		r_long,					// 80
+		r_nullptr,
+		r_register,
+		r_restrict,
+		r_return,
+		r_short,				// 85
+		r_signed,
+		r_sizeof,
+		r_static,
+		r_static_assert,
+		r_struct,				// 90
+		r_switch,
+		r_thread_local,
+		r_true,
+		r_typedef,
+		r_typeof,				// 95
+		r_typeof_unqual,
+		r_union,
+		r_unsigned,
+		r_void,
+		r_volatile,				// 100
+		r_while,
+		r__Alignas,
+		r__Alignof,
+		r__Atomic,
+		r__BitInt,				// 105
+		r__Bool,
+		r__Complex,
+		r__Decimal128,
+		r__Decimal32,
+		r__Decimal64,				// 110
+		r__Generic,
+		r__Imaginary,
+		r__Noreturn,
+		r__Static_assert,
+		r__Thread_local,			// 115
 
 		__MAX__
 	};
@@ -526,6 +561,41 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(inline);
 	DEFX(int);
 	DEFX(long);
+	DEFX(nullptr);
+	DEFX(register);
+	DEFX(restrict);
+	DEFX(return);
+	DEFX(short);
+	DEFX(signed);
+	DEFX(sizeof);
+	DEFX(static);
+	DEFX(static_assert);
+	DEFX(struct);
+	DEFX(switch);
+	DEFX(thread_local);
+	DEFX(true);
+	DEFX(typedef);
+	DEFX(typeof);
+	DEFX(typeof_unqual);
+	DEFX(union);
+	DEFX(unsigned);
+	DEFX(void);
+	DEFX(volatile);
+	DEFX(while);
+	DEFX(_Alignas);
+	DEFX(_Alignof);
+	DEFX(_Atomic);
+	DEFX(_BitInt);
+	DEFX(_Bool);
+	DEFX(_Complex);
+	DEFX(_Decimal128);
+	DEFX(_Decimal32);
+	DEFX(_Decimal64);
+	DEFX(_Generic);
+	DEFX(_Imaginary);
+	DEFX(_Noreturn);
+	DEFX(_Static_assert);
+	DEFX(_Thread_local);
 #undef DEFX
 
 	struct ident2token_t {
@@ -560,7 +630,42 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(if),
 		X(inline),
 		X(int),
-		X(long)
+		X(long),
+		X(nullptr),
+		X(register),
+		X(restrict),
+		X(return),
+		X(short),
+		X(signed),
+		X(sizeof),
+		X(static),
+		X(static_assert),
+		X(struct),
+		X(switch),
+		X(thread_local),
+		X(true),
+		X(typedef),
+		X(typeof),
+		X(typeof_unqual),
+		X(union),
+		X(unsigned),
+		X(void),
+		X(volatile),
+		X(while),
+		X(_Alignas),
+		X(_Alignof),
+		X(_Atomic),
+		X(_BitInt),
+		X(_Bool),
+		X(_Complex),
+		X(_Decimal128),
+		X(_Decimal32),
+		X(_Decimal64),
+		X(_Generic),
+		X(_Imaginary),
+		X(_Noreturn),
+		X(_Static_assert),
+		X(_Thread_local)
 	};
 #undef X
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
@@ -646,7 +751,42 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_if,
 		str_inline,
 		str_int,
-		str_long				// 80
+		str_long,				// 80
+		str_nullptr,
+		str_register,
+		str_restrict,
+		str_return,
+		str_short,				// 85
+		str_signed,
+		str_sizeof,
+		str_static,
+		str_static_assert,
+		str_struct,				// 90
+		str_switch,
+		str_thread_local,
+		str_true,
+		str_typedef,
+		str_typeof,				// 95
+		str_typeof_unqual,
+		str_union,
+		str_unsigned,
+		str_void,
+		str_volatile,				// 100
+		str_while,
+		str__Alignas,
+		str__Alignof,
+		str__Atomic,
+		str__BitInt,				// 105
+		str__Bool,
+		str__Complex,
+		str__Decimal128,
+		str__Decimal32,
+		str__Decimal64,				// 110
+		str__Generic,
+		str__Imaginary,
+		str__Noreturn,
+		str__Static_assert,
+		str__Thread_local			// 115
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
