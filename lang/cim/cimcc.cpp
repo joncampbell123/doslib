@@ -501,30 +501,32 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		__MAX__
 	};
 
-	static const char str_alignas[] = "alignas";
-	static const char str_alignof[] = "alignof";
-	static const char str_auto[] = "auto";
-	static const char str_bool[] = "bool";
-	static const char str_break[] = "break";
-	static const char str_case[] = "case";
-	static const char str_char[] = "char";
-	static const char str_const[] = "const";
-	static const char str_constexpr[] = "constexpr";
-	static const char str_continue[] = "continue";
-	static const char str_default[] = "default";
-	static const char str_do[] = "do";
-	static const char str_double[] = "double";
-	static const char str_else[] = "else";
-	static const char str_enum[] = "enum";
-	static const char str_extern[] = "extern";
-	static const char str_false[] = "false";
-	static const char str_float[] = "float";
-	static const char str_for[] = "for";
-	static const char str_goto[] = "goto";
-	static const char str_if[] = "if";
-	static const char str_inline[] = "inline";
-	static const char str_int[] = "int";
-	static const char str_long[] = "long";
+#define DEFX(name) static const char str_##name[] = #name; static constexpr size_t str_##name##_len = sizeof(str_##name) - 1
+	DEFX(alignas);
+	DEFX(alignof);
+	DEFX(auto);
+	DEFX(bool);
+	DEFX(break);
+	DEFX(case);
+	DEFX(char);
+	DEFX(const);
+	DEFX(constexpr);
+	DEFX(continue);
+	DEFX(default);
+	DEFX(do);
+	DEFX(double);
+	DEFX(else);
+	DEFX(enum);
+	DEFX(extern);
+	DEFX(false); 
+	DEFX(float);
+	DEFX(for);
+	DEFX(goto);
+	DEFX(if);
+	DEFX(inline);
+	DEFX(int);
+	DEFX(long);
+#undef DEFX
 
 	struct ident2token_t {
 		const char*		str;
@@ -532,33 +534,33 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		uint16_t		token; /* make larger in case more than 65535 tokens defined */
 	};
 
-#define X(len,name) { str_##name, len, uint16_t(token_type_t::r_##name) }
+#define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
 	static const ident2token_t ident2tok[] = {
 /*                  123456789 */
-		X(7,alignas),
-		X(7,alignof),
-		X(4,auto),
-		X(4,bool),
-		X(5,break),
-		X(4,case),
-		X(4,char),
-		X(5,const),
-		X(9,constexpr),
-		X(8,continue),
-		X(7,default),
-		X(2,do),
-		X(6,double),
-		X(4,else),
-		X(4,enum),
-		X(6,extern),
-		X(5,false), 
-		X(5,float),
-		X(3,for),
-		X(4,goto),
-		X(2,if),
-		X(6,inline),
-		X(3,int),
-		X(4,long)
+		X(alignas),
+		X(alignof),
+		X(auto),
+		X(bool),
+		X(break),
+		X(case),
+		X(char),
+		X(const),
+		X(constexpr),
+		X(continue),
+		X(default),
+		X(do),
+		X(double),
+		X(else),
+		X(enum),
+		X(extern),
+		X(false), 
+		X(float),
+		X(for),
+		X(goto),
+		X(if),
+		X(inline),
+		X(int),
+		X(long)
 	};
 #undef X
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
