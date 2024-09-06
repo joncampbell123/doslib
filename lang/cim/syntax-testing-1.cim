@@ -135,3 +135,6 @@ int_fast64_t
 uint_fast64_t
 intptr_t
 uintptr_t
+size_t
+ssize_t
+

@@ -593,6 +593,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_uint_fast64_t,
 		r_intptr_t,
 		r_uintptr_t,				// 175
+		r_size_t,
+		r_ssize_t,
 
 		__MAX__
 	};
@@ -720,6 +722,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(uint_fast64_t);
 	DEFX(intptr_t);
 	DEFX(uintptr_t);
+	DEFX(size_t);
+	DEFX(ssize_t);
 #undef DEFX
 
 	struct ident2token_t {
@@ -833,7 +837,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(int_fast64_t),
 		X(uint_fast64_t),
 		X(intptr_t),
-		X(uintptr_t)
+		X(uintptr_t),
+		X(size_t),
+		X(ssize_t)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
@@ -1035,7 +1041,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_int_fast64_t,
 		str_uint_fast64_t,
 		str_intptr_t,
-		str_uintptr_t				// 175
+		str_uintptr_t,				// 175
+		str_size_t,
+		str_ssize_t
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
