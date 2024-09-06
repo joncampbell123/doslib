@@ -28,3 +28,4 @@ a++ a--
 ::
 ident #ident
 alignas alignof auto bool break case char const
+constexpr continue default do double else enum extern false float for goto if inline int long

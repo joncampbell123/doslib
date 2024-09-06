@@ -481,6 +481,22 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_case,
 		r_char,
 		r_const,
+		r_constexpr,				// 65
+		r_continue,
+		r_default,
+		r_do,
+		r_double,
+		r_else,					// 70
+		r_enum,
+		r_extern,
+		r_false,
+		r_float,
+		r_for,					// 75
+		r_goto,
+		r_if,
+		r_inline,
+		r_int,
+		r_long,					// 80
 
 		__MAX__
 	};
@@ -493,6 +509,22 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	static const char str_case[] = "case";
 	static const char str_char[] = "char";
 	static const char str_const[] = "const";
+	static const char str_constexpr[] = "constexpr";
+	static const char str_continue[] = "continue";
+	static const char str_default[] = "default";
+	static const char str_do[] = "do";
+	static const char str_double[] = "double";
+	static const char str_else[] = "else";
+	static const char str_enum[] = "enum";
+	static const char str_extern[] = "extern";
+	static const char str_false[] = "false";
+	static const char str_float[] = "float";
+	static const char str_for[] = "for";
+	static const char str_goto[] = "goto";
+	static const char str_if[] = "if";
+	static const char str_inline[] = "inline";
+	static const char str_int[] = "int";
+	static const char str_long[] = "long";
 
 	struct ident2token_t {
 		const char*		str;
@@ -510,7 +542,23 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(5,break),
 		X(4,case),
 		X(4,char),
-		X(5,const)
+		X(5,const),
+		X(9,constexpr),
+		X(8,continue),
+		X(7,default),
+		X(2,do),
+		X(6,double),
+		X(4,else),
+		X(4,enum),
+		X(6,extern),
+		X(5,false), 
+		X(5,float),
+		X(3,for),
+		X(4,goto),
+		X(2,if),
+		X(6,inline),
+		X(3,int),
+		X(4,long)
 	};
 #undef X
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
@@ -580,7 +628,23 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_break,
 		str_case,
 		str_char,
-		str_const
+		str_const,
+		str_constexpr,				// 65
+		str_continue,
+		str_default,
+		str_do,
+		str_double,
+		str_else,				// 70
+		str_enum,
+		str_extern,
+		str_false,
+		str_float,
+		str_for,				// 75
+		str_goto,
+		str_if,
+		str_inline,
+		str_int,
+		str_long				// 80
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
