@@ -563,6 +563,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___FILE__,
 		r___VA_OPT__,
 		r___VA_ARGS__,				// 145
+		opensquarebracketopensquarebracket,
+		closesquarebracketclosesquarebracket,
 
 		__MAX__
 	};
@@ -919,7 +921,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___LINE__,
 		str___FILE__,
 		str___VA_OPT__,
-		str___VA_ARGS__
+		str___VA_ARGS__,			// 145
+		"opensquarebracketopensquarebracket",
+		"closesquarebracketclosesquarebracket"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1860,9 +1864,11 @@ try_again:	t = token_t();
 				break;
 			case '[':
 				t.type = token_type_t::opensquarebracket; buf.discardb();
+				if (buf.peekb() == '[') { t.type = token_type_t::opensquarebracketopensquarebracket; buf.discardb(); } /* [[ */
 				break;
 			case ']':
 				t.type = token_type_t::closesquarebracket; buf.discardb();
+				if (buf.peekb() == ']') { t.type = token_type_t::closesquarebracketclosesquarebracket; buf.discardb(); } /* ]] */
 				break;
 			case '{':
 				t.type = token_type_t::opencurlybracket; buf.discardb();
