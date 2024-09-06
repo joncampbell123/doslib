@@ -548,6 +548,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppdefine,
 		r_ppundef,				// 130
 		r_ppelse,
+		r_ppdefined,
+		r_ppelif,
+		r_ppelifdef,
+		r_ppifndef,				// 135
+		r_ppinclude,
 
 		__MAX__
 	};
@@ -632,6 +637,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFB(ifdef);
 	DEFB(define);
 	DEFB(undef);
+	DEFB(defined);
+	DEFB(elif);
+	DEFB(elifdef);
+	DEFB(ifndef);
+	DEFB(include);
 #undef DEFX
 
 	struct ident2token_t {
@@ -724,7 +734,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(ifdef),
 		X(define),
 		X(undef),
-		X(else)
+		X(else),
+		X(defined),
+		X(elif),
+		X(elifdef),
+		X(ifndef),
+		X(include)
+
 	};
 	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
 #undef X
@@ -861,7 +877,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_ppifdef,
 		str_ppdefine,
 		str_ppundef,				// 130
-		str_ppelse
+		str_ppelse,
+		str_ppdefined,
+		str_ppelif,
+		str_ppelifdef,
+		str_ppifndef,				// 135
+		str_ppinclude
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {

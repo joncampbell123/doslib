@@ -80,4 +80,9 @@ wchar_t
 #define
 #undef
 #else
+#defined
+#elif
+#elifdef
+#ifndef
+#include
 
