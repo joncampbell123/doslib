@@ -425,7 +425,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		minusminus,				// 5
 		semicolon,
 		equal,
-		equalequal,
+		compare_equal,
 		tilde,
 		ampersand,				// 10
 		ampersandampersand,
@@ -449,7 +449,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		forwardslashequals,
 		percent,				// 30
 		percentequals,
-		exclamationequals,
+		compare_notequal,
 		exclamation,
 		question,
 		colon,					// 35
@@ -782,7 +782,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"minusminus",				// 5
 		"semicolon",
 		"equal",
-		"equalequal",
+		"compare_equal",
 		"tilde",
 		"ampersand",				// 10
 		"ampersandampersand",
@@ -806,7 +806,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"forwardslashequals",
 		"percent",				// 30
 		"percentequals",
-		"exclamationequals",
+		"compare_notequal",
 		"exclamation",
 		"question",
 		"colon",				// 35
@@ -1817,11 +1817,11 @@ try_again:	t = token_t();
 				break;
 			case '!':
 				t.type = token_type_t::exclamation; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::exclamationequals; buf.discardb(); } /* != */
+				if (buf.peekb() == '=') { t.type = token_type_t::compare_notequal; buf.discardb(); } /* != */
 				break;
 			case '=':
 				t.type = token_type_t::equal; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::equalequal; buf.discardb(); } /* == */
+				if (buf.peekb() == '=') { t.type = token_type_t::compare_equal; buf.discardb(); } /* == */
 				break;
 			case ';':
 				t.type = token_type_t::semicolon; buf.discardb();
