@@ -565,6 +565,34 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___VA_ARGS__,				// 145
 		opensquarebracketopensquarebracket,
 		closesquarebracketclosesquarebracket,
+		r_intmax_t,
+		r_uintmax_t,
+		r_int8_t,				// 150
+		r_uint8_t,
+		r_int16_t,
+		r_uint16_t,
+		r_int32_t,
+		r_uint32_t,				// 155
+		r_int64_t,
+		r_uint64_t,
+		r_int_least8_t,
+		r_uint_least8_t,
+		r_int_least16_t,			// 160
+		r_uint_least16_t,
+		r_int_least32_t,
+		r_uint_least32_t,
+		r_int_least64_t,
+		r_uint_least64_t,			// 165
+		r_int_fast8_t,
+		r_uint_fast8_t,
+		r_int_fast16_t,
+		r_uint_fast16_t,
+		r_int_fast32_t,				// 170
+		r_uint_fast32_t,
+		r_int_fast64_t,
+		r_uint_fast64_t,
+		r_intptr_t,
+		r_uintptr_t,				// 175
 
 		__MAX__
 	};
@@ -664,6 +692,34 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFXUU(FILE);
 	DEFXUU(VA_OPT);
 	DEFXUU(VA_ARGS);
+	DEFX(intmax_t);
+	DEFX(uintmax_t);
+	DEFX(int8_t);
+	DEFX(uint8_t);
+	DEFX(int16_t);
+	DEFX(uint16_t);
+	DEFX(int32_t);
+	DEFX(uint32_t);
+	DEFX(int64_t);
+	DEFX(uint64_t);
+	DEFX(int_least8_t);
+	DEFX(uint_least8_t);
+	DEFX(int_least16_t);
+	DEFX(uint_least16_t);
+	DEFX(int_least32_t);
+	DEFX(uint_least32_t);
+	DEFX(int_least64_t);
+	DEFX(uint_least64_t);
+	DEFX(int_fast8_t);
+	DEFX(uint_fast8_t);
+	DEFX(int_fast16_t);
+	DEFX(uint_fast16_t);
+	DEFX(int_fast32_t);
+	DEFX(uint_fast32_t);
+	DEFX(int_fast64_t);
+	DEFX(uint_fast64_t);
+	DEFX(intptr_t);
+	DEFX(uintptr_t);
 #undef DEFX
 
 	struct ident2token_t {
@@ -749,7 +805,35 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XUU(LINE),
 		XUU(FILE),
 		XUU(VA_OPT),
-		XUU(VA_ARGS)
+		XUU(VA_ARGS),
+		X(intmax_t),
+		X(uintmax_t),
+		X(int8_t),
+		X(uint8_t),
+		X(int16_t),
+		X(uint16_t),
+		X(int32_t),
+		X(uint32_t),
+		X(int64_t),
+		X(uint64_t),
+		X(int_least8_t),
+		X(uint_least8_t),
+		X(int_least16_t),
+		X(uint_least16_t),
+		X(int_least32_t),
+		X(uint_least32_t),
+		X(int_least64_t),
+		X(uint_least64_t),
+		X(int_fast8_t),
+		X(uint_fast8_t),
+		X(int_fast16_t),
+		X(uint_fast16_t),
+		X(int_fast32_t),
+		X(uint_fast32_t),
+		X(int_fast64_t),
+		X(uint_fast64_t),
+		X(intptr_t),
+		X(uintptr_t)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
@@ -923,7 +1007,35 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___VA_OPT__,
 		str___VA_ARGS__,			// 145
 		"opensquarebracketopensquarebracket",
-		"closesquarebracketclosesquarebracket"
+		"closesquarebracketclosesquarebracket",
+		str_intmax_t,
+		str_uintmax_t,
+		str_int8_t,				// 150
+		str_uint8_t,
+		str_int16_t,
+		str_uint16_t,
+		str_int32_t,
+		str_uint32_t,				// 155
+		str_int64_t,
+		str_uint64_t,
+		str_int_least8_t,
+		str_uint_least8_t,
+		str_int_least16_t,			// 160
+		str_uint_least16_t,
+		str_int_least32_t,
+		str_uint_least32_t,
+		str_int_least64_t,
+		str_uint_least64_t,			// 165
+		str_int_fast8_t,
+		str_uint_fast8_t,
+		str_int_fast16_t,
+		str_uint_fast16_t,
+		str_int_fast32_t,			// 170
+		str_uint_fast32_t,
+		str_int_fast64_t,
+		str_uint_fast64_t,
+		str_intptr_t,
+		str_uintptr_t				// 175
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
