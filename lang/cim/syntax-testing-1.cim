@@ -64,4 +64,16 @@ _Imaginary
 _Noreturn
 _Static_assert
 _Thread_local
+char8_t
+char16_t
+char32_t
+consteval
+constinit
+namespace
+template
+typeid
+typename
+using
+wchar_t
+
 

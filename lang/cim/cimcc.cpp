@@ -532,6 +532,17 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r__Noreturn,
 		r__Static_assert,
 		r__Thread_local,			// 115
+		r_char8_t,
+		r_char16_t,
+		r_char32_t,
+		r_consteval,
+		r_constinit,				// 120
+		r_namespace,
+		r_template,
+		r_typeid,
+		r_typename,
+		r_using,				// 125
+		r_wchar_t,
 
 		__MAX__
 	};
@@ -596,6 +607,17 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(_Noreturn);
 	DEFX(_Static_assert);
 	DEFX(_Thread_local);
+	DEFX(char8_t);
+	DEFX(char16_t);
+	DEFX(char32_t);
+	DEFX(consteval);
+	DEFX(constinit);
+	DEFX(namespace);
+	DEFX(template);
+	DEFX(typeid);
+	DEFX(typename);
+	DEFX(using);
+	DEFX(wchar_t);
 #undef DEFX
 
 	struct ident2token_t {
@@ -665,7 +687,18 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(_Imaginary),
 		X(_Noreturn),
 		X(_Static_assert),
-		X(_Thread_local)
+		X(_Thread_local),
+		X(char8_t),
+		X(char16_t),
+		X(char32_t),
+		X(consteval),
+		X(constinit),
+		X(namespace),
+		X(template),
+		X(typeid),
+		X(typename),
+		X(using),
+		X(wchar_t)
 	};
 #undef X
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
@@ -786,7 +819,18 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str__Imaginary,
 		str__Noreturn,
 		str__Static_assert,
-		str__Thread_local			// 115
+		str__Thread_local,			// 115
+		str_char8_t,
+		str_char16_t,
+		str_char32_t,
+		str_consteval,
+		str_constinit,				// 120
+		str_namespace,
+		str_template,
+		str_typeid,
+		str_typename,
+		str_using,				// 125
+		str_wchar_t
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
