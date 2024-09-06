@@ -75,5 +75,9 @@ typeid
 typename
 using
 wchar_t
-
+#if
+#ifdef
+#define
+#undef
+#else
 

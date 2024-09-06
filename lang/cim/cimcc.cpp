@@ -543,11 +543,19 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_typename,
 		r_using,				// 125
 		r_wchar_t,
+		r_ppif,
+		r_ppifdef,
+		r_ppdefine,
+		r_ppundef,				// 130
+		r_ppelse,
 
 		__MAX__
 	};
 
+// identifiers only
 #define DEFX(name) static const char str_##name[] = #name; static constexpr size_t str_##name##_len = sizeof(str_##name) - 1
+// identifiers and/or #identifiers
+#define DEFB(name) static const char str_pp##name[] = "#"#name; static constexpr size_t str_pp##name##_len = sizeof(str_pp##name) - 1; static const char * const str_##name = (str_pp##name)+1; static constexpr size_t str_##name##_len = str_pp##name##_len - 1
 	DEFX(alignas);
 	DEFX(alignof);
 	DEFX(auto);
@@ -561,14 +569,14 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(default);
 	DEFX(do);
 	DEFX(double);
-	DEFX(else);
+	DEFB(else);
 	DEFX(enum);
 	DEFX(extern);
 	DEFX(false); 
 	DEFX(float);
 	DEFX(for);
 	DEFX(goto);
-	DEFX(if);
+	DEFB(if);
 	DEFX(inline);
 	DEFX(int);
 	DEFX(long);
@@ -618,6 +626,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(typename);
 	DEFX(using);
 	DEFX(wchar_t);
+	DEFB(ifdef);
+	DEFB(define);
+	DEFB(undef);
 #undef DEFX
 
 	struct ident2token_t {
@@ -700,8 +711,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(using),
 		X(wchar_t)
 	};
-#undef X
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
+#undef X
+
+#define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
+	static const ident2token_t ppident2tok[] = {
+/*                  123456789 */
+		X(if),
+		X(ifdef),
+		X(define),
+		X(undef),
+		X(else)
+	};
+	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
+#undef X
 
 	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
 		"none",					// 0
@@ -830,7 +853,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_typeid,
 		str_typename,
 		str_using,				// 125
-		str_wchar_t
+		str_wchar_t,
+		str_ppif,
+		str_ppifdef,
+		str_ppdefine,
+		str_ppundef,				// 130
+		str_ppelse
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1490,11 +1518,23 @@ private:
 		}
 
 		/* it might be a reserved keyword, check */
-		for (const ident2token_t *i2t=ident2tok;i2t < (ident2tok+ident2tok_length);i2t++) {
-			if (t.v.strliteral.length == i2t->len) {
-				if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-					t = token_t(token_type_t(i2t->token));
-					return 1;
+		if (t.type == token_type_t::ppidentifier) {
+			for (const ident2token_t *i2t=ppident2tok;i2t < (ppident2tok+ppident2tok_length);i2t++) {
+				if (t.v.strliteral.length == i2t->len) {
+					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
+						t = token_t(token_type_t(i2t->token));
+						return 1;
+					}
+				}
+			}
+		}
+		else {
+			for (const ident2token_t *i2t=ident2tok;i2t < (ident2tok+ident2tok_length);i2t++) {
+				if (t.v.strliteral.length == i2t->len) {
+					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
+						t = token_t(token_type_t(i2t->token));
+						return 1;
+					}
 				}
 			}
 		}
