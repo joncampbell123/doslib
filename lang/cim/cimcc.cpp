@@ -552,6 +552,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		__MAX__
 	};
 
+// str_name[] = "token" str_name_len = strlen("token")
+// str_ppname[] = "#token" str_ppname_len = strlen("#token") str_name = str_ppname + 1 = "token" str_name_len = strlen("token")
+
 // identifiers only
 #define DEFX(name) static const char str_##name[] = #name; static constexpr size_t str_##name##_len = sizeof(str_##name) - 1
 // identifiers and/or #identifiers
