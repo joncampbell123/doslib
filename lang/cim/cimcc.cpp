@@ -595,6 +595,19 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_uintptr_t,				// 175
 		r_size_t,
 		r_ssize_t,
+		r_near,
+		r_far,
+		r_huge,					// 180
+		r___pascal,
+		r___watcall,
+		r___stdcall,
+		r___cdecl,
+		r___syscall,				// 185
+		r___fastcall,
+		r___safecall,
+		r___thiscall,
+		r___vectorcall,
+		r___fortran,				// 190
 
 		__MAX__
 	};
@@ -724,6 +737,19 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(uintptr_t);
 	DEFX(size_t);
 	DEFX(ssize_t);
+	DEFX(near);
+	DEFX(far);
+	DEFX(huge);
+	DEFX(__pascal);
+	DEFX(__watcall);
+	DEFX(__stdcall);
+	DEFX(__cdecl);
+	DEFX(__syscall);
+	DEFX(__fastcall);
+	DEFX(__safecall);
+	DEFX(__thiscall);
+	DEFX(__vectorcall);
+	DEFX(__fortran);
 #undef DEFX
 
 	struct ident2token_t {
@@ -839,7 +865,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(intptr_t),
 		X(uintptr_t),
 		X(size_t),
-		X(ssize_t)
+		X(ssize_t),
+		X(near),
+		X(far),
+		X(huge),
+		X(__pascal),
+		X(__watcall),
+		X(__stdcall),
+		X(__cdecl),
+		X(__syscall),
+		X(__fastcall),
+		X(__safecall),
+		X(__thiscall),
+		X(__vectorcall),
+		X(__fortran)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
@@ -1043,7 +1082,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_intptr_t,
 		str_uintptr_t,				// 175
 		str_size_t,
-		str_ssize_t
+		str_ssize_t,
+		str_near,
+		str_far,
+		str_huge,				// 180
+		str___pascal,
+		str___watcall,
+		str___stdcall,
+		str___cdecl,
+		str___syscall,				// 185
+		str___fastcall,
+		str___safecall,
+		str___thiscall,
+		str___vectorcall,
+		str___fortran				// 190
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {

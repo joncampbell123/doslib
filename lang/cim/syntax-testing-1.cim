@@ -137,4 +137,17 @@ intptr_t
 uintptr_t
 size_t
 ssize_t
+near
+far
+huge
+__pascal
+__watcall
+__stdcall
+__cdecl
+__syscall
+__fastcall
+__safecall
+__thiscall
+__vectorcall
+__fortran
 
