@@ -1752,7 +1752,7 @@ private:
 		assert(t.type == token_type_t::r___asm);
 		assert(t.v.strliteral.type == charstrliteral_t::type_t::CHAR);
 
-		/* TODO: if curly brace */
+		int braces = 0;
 
 		/* it's MSVC++ so read the rest of the line or to the next __asm token */
 		if (!t.v.strliteral.alloc(32))
@@ -1767,20 +1767,47 @@ private:
 			assert(p < f);
 			rbuf_sfd_refill(buf,sfo);
 			do {
-				if (buf.peekb() == '_' || buf.peekb() == 'a') {
+				{
 					unsigned char *s = buf.data,*f = buf.end;
-					if (s < f && *s == '_') s++;
-					if (s < f && *s == '_') s++;
-					if ((s+3) <= f && !memcmp(s,"asm",3)) {
-						s += 3;
-						if (s >= f)
-							break;
-						else if (is_whitespace(*s))
-							break;
+					if (s < f && *s == '_') {
+						s++;
+						if (s < f && *s == '_') s++;
+
+						if ((s+3) <= f && !memcmp(s,"asm",3)) {
+							s += 3;
+							if (s >= f)
+								break;
+							if (is_whitespace(*s)) {
+								if (braces == 0) {
+									break;
+								}
+								else {
+									*s = '\n';
+									buf.data = s;
+								}
+							}
+						}
 					}
 				}
-				else if (buf.peekb() == 0 || is_newline(buf.peekb())) {
+
+				if (buf.peekb() == 0) {
 					break;
+				}
+				else if (is_newline(buf.peekb())) {
+					if (braces == 0) break;
+				}
+				else if (buf.peekb() == '{') {
+					braces++;
+					buf.discardb();
+					rbuf_sfd_refill(buf,sfo);
+					continue;
+				}
+				else if (buf.peekb() == '}') {
+					if (braces == 0) break;
+					buf.discardb();
+					if (--braces == 0) break;
+					rbuf_sfd_refill(buf,sfo);
+					continue;
 				}
 
 				if ((p+1) >= f) {

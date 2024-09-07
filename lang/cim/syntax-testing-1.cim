@@ -171,4 +171,27 @@ asm("nop");
 __asm__("nop");
 __asm__ __volatile__("nop");
 __asm__ volatile inline goto ("nop");
+__asm { nop }; int x;
+__asm {
+	nop
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm	nop
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm {
+		nop
+		cli
+		__asm {
+			sti
+			pop	cs
+		}
+		sti
+	}
+	mov	eax,esi
+}
 
