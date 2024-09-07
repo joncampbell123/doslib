@@ -610,7 +610,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___fortran,				// 190
 		r___attribute__,
 		r___declspec,
-		r_asm,
+		r_asm, /* GNU asm/__asm__ */
+		r___asm, /* MSVC/OpenWatcom _asm __asm */
 
 		__MAX__
 	};
@@ -898,9 +899,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(__attribute__),
 		X(__declspec),
 		XAS(asm,      asm),
-		XAS(_asm,     asm),
-		XAS(__asm,    asm),
 		XAS(__asm__,  asm),
+		XAS(_asm,     __asm),
+		XAS(__asm,    __asm),
 		XAS(inline,       inline),
 		XAS(_inline,      inline),
 		XAS(__inline,     inline),
@@ -1128,7 +1129,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___fortran,				// 190
 		str___attribute__,
 		str___declspec,
-		str___asm__
+		"asm",
+		"__asm"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1468,7 +1470,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::floating:
 					s += "("; s += v.floating.to_str(); s += ")";
 					break;
-				case token_type_t::r_asm:
+				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1485,7 +1487,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 private:
 		void common_delete(void) {
 			switch (type) {
-				case token_type_t::r_asm:
+				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1505,7 +1507,7 @@ private:
 				case token_type_t::floating:
 					v.floating.init();
 					break;
-				case token_type_t::r_asm:
+				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1743,69 +1745,12 @@ private:
 		}
 	}
 
-	/* following "asm" check whether parenthesis follow.
-	 * if not, it's the Microsoft C++ variation which runs to the end of the
-	 * line or to the next "asm" token. if the next token is {, it's Microsoft C++
-	 * style again and the asm runs until the closing }
-	 *
-	 * the Microsoft C++ variant will encode the following asm as a string or a
-	 * series of strings, one per line.
-	 *
-	 * if the next token is ; or (, it's either our own variant or the GNU GCC
-	 * style __asm__("gnu as assembler") and maybe there are colons there for
-	 * input, output, and clobbered registers. */
-#define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
-	static const ident2token_t asm_ident2tok[] = {
-		XAS(asm,      asm),
-		XAS(_asm,     asm),
-		XAS(__asm,    asm),
-		XAS(__asm__,  asm),
-		XAS(inline,       inline),
-		XAS(_inline,      inline),
-		XAS(__inline,     inline),
-		XAS(__inline__,   inline),
-		XAS(volatile,     volatile),
-		XAS(__volatile__, volatile)
-	};
-	static constexpr size_t asm_ident2tok_length = sizeof(asm_ident2tok) / sizeof(asm_ident2tok[0]);
-#undef XAS
-
 	int lgtok_check_asm(rbuf &buf,source_file_object &sfo,token_t &t) {
 		rbuf_sfd_refill(buf,sfo);
 		while (is_whitespace(buf.peekb()) && !is_newline(buf.peekb())) buf.discardb(); /* but not newlines */
 
-		assert(t.type == token_type_t::r_asm);
+		assert(t.type == token_type_t::r___asm);
 		assert(t.v.strliteral.type == charstrliteral_t::type_t::CHAR);
-
-		{
-			/* if the next word is inline, volatile, or goto, it's the GCC variation */
-			unsigned char *s = buf.data,*f = buf.end;
-
-			while (s < f && !is_newline(*s) && is_whitespace(*s)) s++;
-
-			if (s < f && !is_newline(*s) && is_identifier_first_char(*s)) { /* __asm without curly braces cannot span lines */
-				unsigned char *chk = s; chk++;
-				while (chk < f && is_identifier_char(*chk)) chk++;
-
-				const size_t len = size_t(chk-s);
-				token_type_t fnd = token_type_t::none;
-
-				for (const ident2token_t *i2t=asm_ident2tok;i2t < (asm_ident2tok+asm_ident2tok_length);i2t++) {
-					if (len == i2t->len) {
-						if (!memcmp(s,i2t->str,i2t->len)) {
-							fnd = token_type_t(i2t->token);
-							break;
-						}
-					}
-				}
-
-				if (!(fnd == token_type_t::r_asm || fnd == token_type_t::none)) /* MSVC++ __asm can have another __asm on the same line */
-					return 1; /* MSVC++ does not support __asm inline etc */
-			}
-
-			/* if the next token is '(' then it's the GNU assembler style or our own variant */
-			if (s < f && *s == '(') return 1;
-		}
 
 		/* TODO: if curly brace */
 
@@ -1955,7 +1900,7 @@ private:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token));
-						if (t.type == token_type_t::r_asm) {
+						if (t.type == token_type_t::r___asm) {
 							t.v.strliteral.init();
 							t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
 							if ((r=lgtok_check_asm(buf,sfo,t)) < 1) return r;
