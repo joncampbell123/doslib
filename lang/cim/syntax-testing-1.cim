@@ -161,4 +161,14 @@ inline
 _inline
 __inline
 __inline__
+asm mov eax,esi
+asm l1: jmp far [somewhere] ; comment
+_asm mov eax,esi
+__asm mov eax,esi
+__asm mov eax,asi __asm mov [somewhere],eax __asm nop
+__asm mov eax,esi ; comment __asm [somewhere],eax ; another comment __asm nop ; yay
+asm("nop");
+__asm__("nop");
+__asm__ __volatile__("nop");
+__asm__ volatile inline goto ("nop");
 

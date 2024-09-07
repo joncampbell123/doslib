@@ -909,6 +909,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XAS(__volatile__, volatile)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
+#undef XUU
+#undef XAS
 #undef X
 
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
@@ -1306,7 +1308,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			if (data == NULL)
 				return alloc(sz);
 
-			if (sz > allocated) {
+			/* NTS: GNU glibc realloc(data,0) frees the buffer */
+			if (sz == 0) {
+				free();
+			}
+			else if (sz > allocated) {
 				void *np = ::realloc(data,sz);
 				if (np == NULL)
 					return false;
@@ -1329,12 +1335,18 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		bool shrinkfit(void) {
 			if (data) {
 				if (allocated > length) {
-					void *np = ::realloc(data,length);
-					if (np == NULL)
-						return false;
+					/* NTS: GNU glibc realloc(data,0) frees the buffer */
+					if (length == 0) {
+						free();
+					}
+					else {
+						void *np = ::realloc(data,length);
+						if (np == NULL)
+							return false;
 
-					data = np;
-					allocated = length;
+						data = np;
+						allocated = length;
+					}
 				}
 			}
 
@@ -1443,7 +1455,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		union {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
-			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier */
+			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
 		} v;
 
 		std::string to_str(void) const {
@@ -1456,6 +1468,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::floating:
 					s += "("; s += v.floating.to_str(); s += ")";
 					break;
+				case token_type_t::r_asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1472,6 +1485,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 private:
 		void common_delete(void) {
 			switch (type) {
+				case token_type_t::r_asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1491,6 +1505,7 @@ private:
 				case token_type_t::floating:
 					v.floating.init();
 					break;
+				case token_type_t::r_asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
@@ -1511,11 +1526,18 @@ private:
 
 	////////////////////////////////////////////////////////////////////
 
+	bool is_newline(const unsigned char b) {
+		return b == '\n' || b == '\t';
+	}
+
+	bool is_whitespace(const unsigned char b) {
+		return b == ' ' || b == '\n' || b == '\t';
+	}
+
 	void eat_whitespace(rbuf &buf,source_file_object &sfo) {
 		do {
 			if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-			const unsigned char b = buf.peekb();
-			if (b == ' ' || b == '\n' || b == '\t') buf.discardb();
+			if (is_whitespace(buf.peekb())) buf.discardb();
 			else break;
 		} while (1);
 	}
@@ -1721,7 +1743,133 @@ private:
 		}
 	}
 
+	/* following "asm" check whether parenthesis follow.
+	 * if not, it's the Microsoft C++ variation which runs to the end of the
+	 * line or to the next "asm" token. if the next token is {, it's Microsoft C++
+	 * style again and the asm runs until the closing }
+	 *
+	 * the Microsoft C++ variant will encode the following asm as a string or a
+	 * series of strings, one per line.
+	 *
+	 * if the next token is ; or (, it's either our own variant or the GNU GCC
+	 * style __asm__("gnu as assembler") and maybe there are colons there for
+	 * input, output, and clobbered registers. */
+#define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
+	static const ident2token_t asm_ident2tok[] = {
+		XAS(asm,      asm),
+		XAS(_asm,     asm),
+		XAS(__asm,    asm),
+		XAS(__asm__,  asm),
+		XAS(inline,       inline),
+		XAS(_inline,      inline),
+		XAS(__inline,     inline),
+		XAS(__inline__,   inline),
+		XAS(volatile,     volatile),
+		XAS(__volatile__, volatile)
+	};
+	static constexpr size_t asm_ident2tok_length = sizeof(asm_ident2tok) / sizeof(asm_ident2tok[0]);
+#undef XAS
+
+	int lgtok_check_asm(rbuf &buf,source_file_object &sfo,token_t &t) {
+		rbuf_sfd_refill(buf,sfo);
+		while (is_whitespace(buf.peekb()) && !is_newline(buf.peekb())) buf.discardb(); /* but not newlines */
+
+		assert(t.type == token_type_t::r_asm);
+		assert(t.v.strliteral.type == charstrliteral_t::type_t::CHAR);
+
+		{
+			/* if the next word is inline, volatile, or goto, it's the GCC variation */
+			unsigned char *s = buf.data,*f = buf.end;
+
+			while (s < f && !is_newline(*s) && is_whitespace(*s)) s++;
+
+			if (s < f && !is_newline(*s) && is_identifier_first_char(*s)) { /* __asm without curly braces cannot span lines */
+				unsigned char *chk = s; chk++;
+				while (chk < f && is_identifier_char(*chk)) chk++;
+
+				const size_t len = size_t(chk-s);
+				token_type_t fnd = token_type_t::none;
+
+				for (const ident2token_t *i2t=asm_ident2tok;i2t < (asm_ident2tok+asm_ident2tok_length);i2t++) {
+					if (len == i2t->len) {
+						if (!memcmp(s,i2t->str,i2t->len)) {
+							fnd = token_type_t(i2t->token);
+							break;
+						}
+					}
+				}
+
+				if (!(fnd == token_type_t::r_asm || fnd == token_type_t::none)) /* MSVC++ __asm can have another __asm on the same line */
+					return 1; /* MSVC++ does not support __asm inline etc */
+			}
+
+			/* if the next token is '(' then it's the GNU assembler style or our own variant */
+			if (s < f && *s == '(') return 1;
+		}
+
+		/* TODO: if curly brace */
+
+		/* it's MSVC++ so read the rest of the line or to the next __asm token */
+		if (!t.v.strliteral.alloc(32))
+			return errno_return(ENOMEM);
+
+		{
+			unsigned char *p,*f;
+
+			p = (unsigned char*)t.v.strliteral.data;
+			f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+
+			assert(p < f);
+			rbuf_sfd_refill(buf,sfo);
+			do {
+				if (buf.peekb() == '_' || buf.peekb() == 'a') {
+					unsigned char *s = buf.data,*f = buf.end;
+					if (s < f && *s == '_') s++;
+					if (s < f && *s == '_') s++;
+					if ((s+3) <= f && !memcmp(s,"asm",3)) {
+						s += 3;
+						if (s >= f)
+							break;
+						else if (is_whitespace(*s))
+							break;
+					}
+				}
+				else if (buf.peekb() == 0 || is_newline(buf.peekb())) {
+					break;
+				}
+
+				if ((p+1) >= f) {
+					const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+					if (wo >= 120)
+						return errno_return(ENAMETOOLONG);
+
+					if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
+						return errno_return(ENOMEM);
+
+					p = (unsigned char*)t.v.strliteral.data+wo;
+					f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+				}
+
+				assert((p+1) <= f);
+				*p++ = (unsigned char)buf.getb();
+				rbuf_sfd_refill(buf,sfo);
+			} while (1);
+
+			{
+				const size_t fo = size_t(p-t.v.strliteral.as_binary());
+				assert(fo <= t.v.strliteral.allocated);
+				t.v.strliteral.length = fo;
+				t.v.strliteral.shrinkfit();
+			}
+		}
+
+		return 1;
+	}
+
 	int lgtok_identifier(rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::identifier;
 		t.v.strliteral.init();
@@ -1807,6 +1955,11 @@ private:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token));
+						if (t.type == token_type_t::r_asm) {
+							t.v.strliteral.init();
+							t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+							if ((r=lgtok_check_asm(buf,sfo,t)) < 1) return r;
+						}
 						return 1;
 					}
 				}
