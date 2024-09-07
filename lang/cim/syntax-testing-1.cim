@@ -150,4 +150,10 @@ __safecall
 __thiscall
 __vectorcall
 __fortran
+__attribute__
+__declspec
+asm
+_asm
+__asm
+__asm__
 

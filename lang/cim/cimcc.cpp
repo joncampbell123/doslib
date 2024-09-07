@@ -608,6 +608,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___thiscall,
 		r___vectorcall,
 		r___fortran,				// 190
+		r___attribute__,
+		r___declspec,
+		r_asm,
 
 		__MAX__
 	};
@@ -750,6 +753,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(__thiscall);
 	DEFX(__vectorcall);
 	DEFX(__fortran);
+	DEFX(__attribute__);
+	DEFX(__declspec);
+// asm, _asm, __asm, __asm__
+	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
+	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
+	static const char * const str__asm = str___asm__+1;    static constexpr size_t str__asm_len = sizeof(str___asm__) - 1 - 2 - 1;
+	static const char * const str_asm = str___asm__+2;     static constexpr size_t str_asm_len = sizeof(str___asm__) - 1 - 2 - 2;
 #undef DEFX
 
 	struct ident2token_t {
@@ -759,6 +769,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	};
 
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
+#define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
 	static const ident2token_t ident2tok[] = {
 /*                  123456789 */
@@ -878,7 +889,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(__safecall),
 		X(__thiscall),
 		X(__vectorcall),
-		X(__fortran)
+		X(__fortran),
+		X(__attribute__),
+		X(__declspec),
+		XAS(asm,      asm),
+		XAS(_asm,     asm),
+		XAS(__asm,    asm),
+		XAS(__asm__,  asm),
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
@@ -1095,7 +1112,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___safecall,
 		str___thiscall,
 		str___vectorcall,
-		str___fortran				// 190
+		str___fortran,				// 190
+		str___attribute__,
+		str___declspec,
+		str___asm__
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
