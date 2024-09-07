@@ -645,7 +645,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(for);
 	DEFX(goto);
 	DEFB(if);
-	DEFX(inline);
 	DEFX(int);
 	DEFX(long);
 	DEFX(nullptr);
@@ -667,7 +666,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(union);
 	DEFX(unsigned);
 	DEFX(void);
-	DEFX(volatile);
 	DEFX(while);
 	DEFX(_Alignas);
 	DEFX(_Alignof);
@@ -760,6 +758,14 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
 	static const char * const str__asm = str___asm__+1;    static constexpr size_t str__asm_len = sizeof(str___asm__) - 1 - 2 - 1;
 	static const char * const str_asm = str___asm__+2;     static constexpr size_t str_asm_len = sizeof(str___asm__) - 1 - 2 - 2;
+// volatile, __volatile__
+	static const char         str___volatile__[] = "__volatile__";   static constexpr size_t str___volatile___len = sizeof(str___volatile__) - 1;
+	static const char * const str_volatile = str___volatile__+2;     static constexpr size_t str_volatile_len = sizeof(str___volatile__) - 1 - 2 - 2;
+// inline, _inline, __inline, __inline__
+	static const char         str___inline__[] = "__inline__";   static constexpr size_t str___inline___len = sizeof(str___inline__) - 1;
+	static const char * const str___inline = str___inline__;     static constexpr size_t str___inline_len = sizeof(str___inline__) - 1 - 2;
+	static const char * const str__inline = str___inline__+1;    static constexpr size_t str__inline_len = sizeof(str___inline__) - 1 - 2 - 1;
+	static const char * const str_inline = str___inline__+2;     static constexpr size_t str_inline_len = sizeof(str___inline__) - 1 - 2 - 2;
 #undef DEFX
 
 	struct ident2token_t {
@@ -771,7 +777,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
 #define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
-	static const ident2token_t ident2tok[] = {
+	static const ident2token_t ident2tok[] = { // normal tokens
 /*                  123456789 */
 		X(alignas),
 		X(alignof),
@@ -816,7 +822,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(union),
 		X(unsigned),
 		X(void),
-		X(volatile),
 		X(while),
 		X(_Alignas),
 		X(_Alignof),
@@ -896,12 +901,18 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XAS(_asm,     asm),
 		XAS(__asm,    asm),
 		XAS(__asm__,  asm),
+		XAS(inline,       inline),
+		XAS(_inline,      inline),
+		XAS(__inline,     inline),
+		XAS(__inline__,   inline),
+		XAS(volatile,     volatile),
+		XAS(__volatile__, volatile)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef X
 
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
-	static const ident2token_t ppident2tok[] = {
+	static const ident2token_t ppident2tok[] = { // preprocessor tokens
 /*                  123456789 */
 		X(if),
 		X(ifdef),
@@ -1000,7 +1011,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_for,				// 75
 		str_goto,
 		str_if,
-		str_inline,
+		str___inline__,
 		str_int,
 		str_long,				// 80
 		str_nullptr,
@@ -1022,7 +1033,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_union,
 		str_unsigned,
 		str_void,
-		str_volatile,				// 100
+		str___volatile__,			// 100
 		str_while,
 		str__Alignas,
 		str__Alignof,

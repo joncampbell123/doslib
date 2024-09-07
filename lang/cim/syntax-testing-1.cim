@@ -156,4 +156,9 @@ asm
 _asm
 __asm
 __asm__
+__volatile__
+inline
+_inline
+__inline
+__inline__
 
