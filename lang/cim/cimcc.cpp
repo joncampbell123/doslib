@@ -1759,13 +1759,15 @@ private:
 			return errno_return(ENOMEM);
 
 		{
-			unsigned char *p,*f;
+			unsigned char *b,*p,*f;
 
+			b = (unsigned char*)t.v.strliteral.data;
 			p = (unsigned char*)t.v.strliteral.data;
 			f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 
 			assert(p < f);
 			rbuf_sfd_refill(buf,sfo);
+			while (buf.peekb() == ' ' || buf.peekb() == '\t') buf.discardb();
 			do {
 				{
 					unsigned char *s = buf.data,*f = buf.end;
@@ -1795,11 +1797,14 @@ private:
 				}
 				else if (is_newline(buf.peekb())) {
 					if (braces == 0) break;
+					while (p > b && is_newline(*(p-1))) p--;
+					assert(p >= b);
 				}
 				else if (buf.peekb() == '{') {
 					braces++;
 					buf.discardb();
 					rbuf_sfd_refill(buf,sfo);
+					while (buf.peekb() == ' ' || buf.peekb() == '\t' || is_newline(buf.peekb())) buf.discardb();
 					continue;
 				}
 				else if (buf.peekb() == '}') {
@@ -1807,6 +1812,7 @@ private:
 					buf.discardb();
 					if (--braces == 0) break;
 					rbuf_sfd_refill(buf,sfo);
+					while (buf.peekb() == ' ' || buf.peekb() == '\t' || is_newline(buf.peekb())) buf.discardb();
 					continue;
 				}
 
@@ -1819,14 +1825,23 @@ private:
 					if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
 						return errno_return(ENOMEM);
 
+					b = (unsigned char*)t.v.strliteral.data;
 					p = (unsigned char*)t.v.strliteral.data+wo;
 					f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 				}
 
 				assert((p+1) <= f);
-				*p++ = (unsigned char)buf.getb();
+				unsigned char w_p = buf.getb();
+				if (w_p == '\t') w_p = ' ';
+				else if (w_p == '\r') w_p = '\n';
+				*p++ = w_p;
 				rbuf_sfd_refill(buf,sfo);
+				if (w_p == ' ' || w_p == '\t' || is_newline(w_p)) {
+					while (buf.peekb() == ' ' || buf.peekb() == '\t') buf.discardb();
+				}
 			} while (1);
+			while (p > b && is_whitespace(*(p-1))) p--;
+			assert(p >= b);
 
 			{
 				const size_t fo = size_t(p-t.v.strliteral.as_binary());
