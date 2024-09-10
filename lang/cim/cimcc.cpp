@@ -642,6 +642,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___declspec,
 		r_asm, /* GNU asm/__asm__ */
 		r___asm, /* MSVC/OpenWatcom _asm __asm */
+		r___asm_text,
 
 		__MAX__
 	};
@@ -1160,7 +1161,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___attribute__,
 		str___declspec,
 		"asm",
-		"__asm"
+		"__asm",
+		"asm_text"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1501,11 +1503,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::floating:
 					s += "("; s += v.floating.to_str(); s += ")";
 					break;
-				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
 				default:
@@ -1518,11 +1520,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 private:
 		void common_delete(void) {
 			switch (type) {
-				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
 					v.strliteral.free();
 					break;
 				default:
@@ -1538,11 +1540,11 @@ private:
 				case token_type_t::floating:
 					v.floating.init();
 					break;
-				case token_type_t::r___asm:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
 					v.strliteral.init();
 					break;
 				default:
@@ -1560,7 +1562,7 @@ private:
 	////////////////////////////////////////////////////////////////////
 
 	bool is_newline(const unsigned char b) {
-		return b == '\n' || b == '\t';
+		return b == '\r' || b == '\n';
 	}
 
 	bool is_whitespace(const unsigned char b) {
@@ -1776,102 +1778,14 @@ private:
 		}
 	}
 
-	int lgtok_check_asm(rbuf &buf,source_file_object &sfo,token_t &t) {
-		rbuf_sfd_refill(buf,sfo);
-		while (is_whitespace(buf.peekb()) && !is_newline(buf.peekb())) buf.discardb(); /* but not newlines */
+	struct lgtok_state_t {
+		unsigned int		flags = 0;
+		unsigned int		curlies = 0;
 
-		assert(t.type == token_type_t::r___asm);
-		assert(t.v.strliteral.type == charstrliteral_t::type_t::CHAR);
+		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
+	};
 
-		int braces = 0;
-
-		/* it's MSVC++ so read the rest of the line or to the next __asm token */
-		if (!t.v.strliteral.alloc(32))
-			return errno_return(ENOMEM);
-
-		{
-			unsigned char *p,*f;
-
-			p = (unsigned char*)t.v.strliteral.data;
-			f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-
-			assert(p < f);
-			rbuf_sfd_refill(buf,sfo);
-			do {
-				{
-					unsigned char *s = buf.data,*f = buf.end;
-					if (s < f && *s == '_') {
-						s++;
-						if (s < f && *s == '_') s++;
-
-						if ((s+3) <= f && !memcmp(s,"asm",3)) {
-							s += 3;
-							if (s >= f)
-								break;
-							if (is_whitespace(*s)) {
-								if (braces == 0) {
-									break;
-								}
-								else {
-									buf.pos_track(buf.data,s);
-									buf.data = s;
-									*s = 0x01; // special code to signal __asm break
-								}
-							}
-						}
-					}
-				}
-
-				if (buf.peekb() == 0) {
-					break;
-				}
-				else if (is_newline(buf.peekb())) {
-					if (braces == 0) break;
-				}
-				else if (buf.peekb() == '{') {
-					braces++;
-					buf.discardb();
-					rbuf_sfd_refill(buf,sfo);
-					continue;
-				}
-				else if (buf.peekb() == '}') {
-					if (braces == 0) break;
-					buf.discardb();
-					if (--braces == 0) break;
-					rbuf_sfd_refill(buf,sfo);
-					continue;
-				}
-
-				if ((p+1) >= f) {
-					const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-					if (wo >= 120)
-						return errno_return(ENAMETOOLONG);
-
-					if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
-						return errno_return(ENOMEM);
-
-					p = (unsigned char*)t.v.strliteral.data+wo;
-					f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-				}
-
-				assert((p+1) <= f);
-				*p++ = buf.getb();
-				rbuf_sfd_refill(buf,sfo);
-			} while (1);
-
-			{
-				const size_t fo = size_t(p-t.v.strliteral.as_binary());
-				assert(fo <= t.v.strliteral.allocated);
-				t.v.strliteral.length = fo;
-				t.v.strliteral.shrinkfit();
-			}
-		}
-
-		return 1;
-	}
-
-	int lgtok_identifier(rbuf &buf,source_file_object &sfo,token_t &t) {
+	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		position_t pos = t.pos;
 		int r;
 
@@ -1961,10 +1875,10 @@ private:
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token)); t.pos = pos;
 						if (t.type == token_type_t::r___asm) {
-							t.v.strliteral.init();
-							t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-							if ((r=lgtok_check_asm(buf,sfo,t)) < 1) return r;
+							lst.flags |= lgtok_state_t::FL_MSASM;
+							lst.curlies = 0;
 						}
+
 						return 1;
 					}
 				}
@@ -2141,10 +2055,20 @@ private:
 		return 1;
 	}
 
-	int lgtok(rbuf &buf,source_file_object &sfo,token_t &t) {
+	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 try_again:	t = token_t();
 
-		eat_whitespace(buf,sfo);
+		if (lst.flags & lgtok_state_t::FL_MSASM) {
+			while (is_whitespace(buf.peekb()) && !is_newline(buf.peekb())) buf.discardb();
+
+			if (lst.curlies == 0 && is_newline(buf.peekb()))
+				lst.flags &= ~lgtok_state_t::FL_MSASM;
+
+			eat_whitespace(buf,sfo);
+		}
+		else {
+			eat_whitespace(buf,sfo);
+		}
 		t.pos = buf.pos;
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
@@ -2152,6 +2076,101 @@ try_again:	t = token_t();
 			t.type = token_type_t::eof;
 			if (buf.err) return buf.err;
 			else return 0;
+		}
+
+		if (lst.flags & lgtok_state_t::FL_MSASM) {
+			if (buf.peekb() == '{') {
+				/* pass */
+				lst.curlies++;
+			}
+			else if (buf.peekb() == '}') {
+				/* pass */
+				if (--lst.curlies == 0)
+					lst.flags &= ~lgtok_state_t::FL_MSASM;
+			}
+			else if (buf.peekb() == ';') {
+				/* pass */
+			}
+			else {
+				assert(!is_whitespace(buf.peekb()));
+				/* copy until newline or another __asm or curly brace or semicolon */
+				assert(t.type == token_type_t::none);
+				t.type = token_type_t::r___asm_text;
+				t.v.strliteral.init();
+				t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+
+				if (!t.v.strliteral.alloc(32))
+					return errno_return(ENOMEM);
+
+				unsigned char *p,*f;
+
+				p = (unsigned char*)t.v.strliteral.data;
+				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+				assert(p < f);
+
+				do {
+					if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
+
+					if (buf.peekb() == 0) break;
+					if (is_newline(buf.peekb())) break;
+					if (buf.peekb() == ';') {
+						buf.discardb();
+						break;
+					}
+					if (buf.peekb() == '{' || buf.peekb() == '}') break;
+
+					if (buf.peekb() == '_') {
+						unsigned char *s = buf.data+1; /* buf.data is already _ so s = data+1 */
+						unsigned char *f = buf.end;
+
+						if (s < f && *s == '_') s++; /* can be _asm or __asm */
+						if ((s+3+1) <= f && !memcmp(s,"asm",3)) {
+							s += 3;
+							assert(s < f);
+							if (is_whitespace(*s)) { /* stop at __asm, eat it, resume parsing later */
+								buf.pos_track(buf.data,s);
+								buf.data = s;
+								break;
+							}
+						}
+					}
+
+					if ((p+1) >= f) {
+						const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+						if (wo >= 1024)
+							return errno_return(ENAMETOOLONG);
+
+						if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
+							return errno_return(ENOMEM);
+
+						p = (unsigned char*)t.v.strliteral.data+wo;
+						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+					}
+
+					assert((p+1) <= f);
+					*p++ = (unsigned char)buf.getb();
+				} while(1);
+
+				{
+					const unsigned char *b = t.v.strliteral.as_binary();
+					while (p > b && is_whitespace(*(p-1))) p--;
+				}
+
+				{
+					const size_t fo = size_t(p-t.v.strliteral.as_binary());
+					assert(fo <= t.v.strliteral.allocated);
+					t.v.strliteral.length = fo;
+					t.v.strliteral.shrinkfit();
+				}
+
+				if (t.v.strliteral.length == 0) {
+					t.v.strliteral.free();
+					goto try_again;
+				}
+
+				return 1;
+			}
 		}
 
 		switch (buf.peekb()) {
@@ -2275,7 +2294,7 @@ try_again:	t = token_t();
 				return lgtok_number(buf,sfo,t);
 			default:
 				if (is_identifier_first_char(buf.peekb()) || buf.peekb() == '#')
-					return lgtok_identifier(buf,sfo,t);
+					return lgtok_identifier(lst,buf,sfo,t);
 				else
 					return errno_return(ESRCH);
 		}
@@ -2464,12 +2483,13 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 		else if (test_mode == TEST_LTOK) {
+			CIMCC::lgtok_state_t lst;
 			CIMCC::token_t tok;
 			CIMCC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			while ((r=CIMCC::lgtok(rb,*sfo,tok)) > 0) {
+			while ((r=CIMCC::lgtok(lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
 				printf(" %s\n",tok.to_str().c_str());
