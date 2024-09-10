@@ -186,6 +186,15 @@ __asm {
 	__asm {
 		nop
 		cli
+		sti
+	}
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm {
+		nop
+		cli
 		__asm {
 			sti
 			pop	cs
@@ -194,4 +203,4 @@ __asm {
 	}
 	mov	eax,esi
 }
-
+hello;

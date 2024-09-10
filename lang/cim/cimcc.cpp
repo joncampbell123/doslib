@@ -1790,15 +1790,13 @@ private:
 			return errno_return(ENOMEM);
 
 		{
-			unsigned char *b,*p,*f;
+			unsigned char *p,*f;
 
-			b = (unsigned char*)t.v.strliteral.data;
 			p = (unsigned char*)t.v.strliteral.data;
 			f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 
 			assert(p < f);
 			rbuf_sfd_refill(buf,sfo);
-			while (buf.peekb() == ' ' || buf.peekb() == '\t') buf.discardb();
 			do {
 				{
 					unsigned char *s = buf.data,*f = buf.end;
@@ -1815,9 +1813,9 @@ private:
 									break;
 								}
 								else {
-									*s = '\n';
 									buf.pos_track(buf.data,s);
 									buf.data = s;
+									*s = 0x01; // special code to signal __asm break
 								}
 							}
 						}
@@ -1829,14 +1827,11 @@ private:
 				}
 				else if (is_newline(buf.peekb())) {
 					if (braces == 0) break;
-					while (p > b && is_newline(*(p-1))) p--;
-					assert(p >= b);
 				}
 				else if (buf.peekb() == '{') {
 					braces++;
 					buf.discardb();
 					rbuf_sfd_refill(buf,sfo);
-					while (buf.peekb() == ' ' || buf.peekb() == '\t' || is_newline(buf.peekb())) buf.discardb();
 					continue;
 				}
 				else if (buf.peekb() == '}') {
@@ -1844,7 +1839,6 @@ private:
 					buf.discardb();
 					if (--braces == 0) break;
 					rbuf_sfd_refill(buf,sfo);
-					while (buf.peekb() == ' ' || buf.peekb() == '\t' || is_newline(buf.peekb())) buf.discardb();
 					continue;
 				}
 
@@ -1857,23 +1851,14 @@ private:
 					if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
 						return errno_return(ENOMEM);
 
-					b = (unsigned char*)t.v.strliteral.data;
 					p = (unsigned char*)t.v.strliteral.data+wo;
 					f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 				}
 
 				assert((p+1) <= f);
-				unsigned char w_p = buf.getb();
-				if (w_p == '\t') w_p = ' ';
-				else if (w_p == '\r') w_p = '\n';
-				*p++ = w_p;
+				*p++ = buf.getb();
 				rbuf_sfd_refill(buf,sfo);
-				if (w_p == ' ' || w_p == '\t' || is_newline(w_p)) {
-					while (buf.peekb() == ' ' || buf.peekb() == '\t') buf.discardb();
-				}
 			} while (1);
-			while (p > b && is_whitespace(*(p-1))) p--;
-			assert(p >= b);
 
 			{
 				const size_t fo = size_t(p-t.v.strliteral.as_binary());
@@ -1964,7 +1949,7 @@ private:
 			for (const ident2token_t *i2t=ppident2tok;i2t < (ppident2tok+ppident2tok_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token));
+						t = token_t(token_type_t(i2t->token)); t.pos = pos;
 						return 1;
 					}
 				}
@@ -1974,7 +1959,7 @@ private:
 			for (const ident2token_t *i2t=ident2tok;i2t < (ident2tok+ident2tok_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token));
+						t = token_t(token_type_t(i2t->token)); t.pos = pos;
 						if (t.type == token_type_t::r___asm) {
 							t.v.strliteral.init();
 							t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
