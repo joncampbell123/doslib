@@ -80,6 +80,17 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	//////////////////////////////////////////////////////////////
 
+	struct position_t {
+		uint16_t			col;
+		uint16_t			row;
+		uint32_t			ofs;
+
+		position_t() : col(0),row(0),ofs(0) { }
+		position_t(const unsigned int row) : col(1),row(row),ofs(0) { }
+	};
+
+	//////////////////////////////////////////////////////////////
+
 	struct source_fd : public source_file_object {
 		virtual const char*		getname(void);
 		virtual ssize_t			read(void *buffer,size_t count);
@@ -148,8 +159,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		unsigned char*			fence = NULL;
 		int				err = 0;
 		bool				eof = false;
+		position_t			pos;
 
-		rbuf() { }
+		rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
 		~rbuf() { free(); }
 
 		rbuf(const rbuf &x) = delete;
@@ -166,6 +178,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			fence = x.fence; x.fence = NULL;
 			err   = x.err;   x.err = 0;
 			eof   = x.eof;   x.eof = false;
+			pos   = x.pos;
 			assert(sanity_check());
 		}
 
@@ -201,15 +214,15 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return 0;
 		}
 
-		void discardb(const size_t count=1) {
-			if (data < end) {
-				if ((data += count) > end)
-					data = end;
+		void discardb(size_t count=1) {
+			while (data < end && count > 0) {
+				pos_track(*data++);
+				count--;
 			}
 		}
 
 		unsigned char getb(void) {
-			if (data < end) return *data++;
+			if (data < end) { pos_track(*data); return *data++; }
 			return 0;
 		}
 
@@ -240,6 +253,23 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		void lazy_flush(void) {
 			if (data_offset() >= (buffer_size()/2))
 				flush();
+		}
+
+		void pos_track(const unsigned char c) {
+			pos.ofs++;
+			if (c == '\r') {
+			}
+			else if (c == '\n') {
+				pos.col=1;
+				pos.row++;
+			}
+			else if (c < 0x80 || c >= 0xc0) {
+				pos.col++;
+			}
+		}
+
+		void pos_track(const unsigned char *from,const unsigned char *to) {
+			while (from < to) pos_track(*from++);
 		}
 	};
 
@@ -1445,8 +1475,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	struct token_t {
 		token_type_t		type = token_type_t::none;
+		position_t		pos;
 
-		token_t() { common_init(); }
+		token_t() : pos(1) { common_init(); }
 		~token_t() { common_delete(); }
 		token_t(const token_t &t) = delete;
 		token_t(token_t &&t) { common_move(t); }
@@ -1785,6 +1816,7 @@ private:
 								}
 								else {
 									*s = '\n';
+									buf.pos_track(buf.data,s);
 									buf.data = s;
 								}
 							}
@@ -1855,6 +1887,7 @@ private:
 	}
 
 	int lgtok_identifier(rbuf &buf,source_file_object &sfo,token_t &t) {
+		position_t pos = t.pos;
 		int r;
 
 		assert(t.type == token_type_t::none);
@@ -1909,19 +1942,19 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+				t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
 			else if (t.v.strliteral.length == 1) {
 				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(); return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
 		}
@@ -2031,6 +2064,7 @@ private:
 					}
 				}
 
+				buf.pos_track(buf.data,scan);
 				buf.data = scan;
 				return 1;
 			}
@@ -2126,6 +2160,8 @@ private:
 try_again:	t = token_t();
 
 		eat_whitespace(buf,sfo);
+		t.pos = buf.pos;
+
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
 		if (buf.data_avail() == 0) {
 			t.type = token_type_t::eof;
@@ -2448,7 +2484,11 @@ int main(int argc,char **argv) {
 			int r;
 
 			assert(rb.allocate());
-			while ((r=CIMCC::lgtok(rb,*sfo,tok)) > 0) printf("Token: %s\n",tok.to_str().c_str());
+			while ((r=CIMCC::lgtok(rb,*sfo,tok)) > 0) {
+				printf("Token:");
+				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				printf(" %s\n",tok.to_str().c_str());
+			}
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
