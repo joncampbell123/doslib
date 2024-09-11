@@ -642,7 +642,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___declspec,
 		r_asm, /* GNU asm/__asm__ */
 		r___asm, /* MSVC/OpenWatcom _asm __asm */
-		r___asm_text,
+		r___asm_text,				// 195
+		newline,
 
 		__MAX__
 	};
@@ -1162,7 +1163,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str___declspec,
 		"asm",
 		"__asm",
-		"asm_text"
+		"asm_text",				// 195
+		"newline"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1577,6 +1579,12 @@ private:
 		} while (1);
 	}
 
+	void eat_newline(rbuf &buf,source_file_object &sfo) {
+		if (buf.data_avail() < 4) rbuf_sfd_refill(buf,sfo);
+		if (buf.peekb() == '\r') buf.discardb();
+		if (buf.peekb() == '\n') buf.discardb();
+	}
+
 	int cc_parsedigit(unsigned char c,const unsigned char base=10) {
 		if (c >= '0' && c <= '9')
 			return c - '0';
@@ -1594,6 +1602,14 @@ private:
 
 	bool is_identifier_char(unsigned char c) {
 		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+	}
+
+	bool is_asm_text_first_char(unsigned char c) {
+		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	}
+
+	bool is_asm_text_char(unsigned char c) {
+		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 	}
 
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
@@ -1784,6 +1800,89 @@ private:
 
 		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
 	};
+
+	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		(void)lst;
+
+		position_t pos = t.pos;
+
+		assert(t.type == token_type_t::none);
+		t.type = token_type_t::r___asm_text;
+		t.v.strliteral.init();
+		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+
+		if (!t.v.strliteral.alloc(32))
+			return errno_return(ENOMEM);
+
+		unsigned char *p,*f;
+
+		p = (unsigned char*)t.v.strliteral.data;
+		f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+
+		assert(p < f);
+		assert(is_asm_text_first_char(buf.peekb()) || buf.peekb() == '#');
+		rbuf_sfd_refill(buf,sfo);
+		if (buf.peekb() == '#') {
+			t.type = token_type_t::ppidentifier;
+			buf.discardb();
+		}
+		*p++ = buf.getb();
+		while (is_asm_text_char(buf.peekb())) {
+			if ((p+1) >= f) {
+				const size_t wo = size_t(p-t.v.strliteral.as_binary());
+
+				if (wo >= 120)
+					return errno_return(ENAMETOOLONG);
+
+				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
+					return errno_return(ENOMEM);
+
+				p = (unsigned char*)t.v.strliteral.data+wo;
+				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
+			}
+
+			assert((p+1) <= f);
+			*p++ = (unsigned char)buf.getb();
+			rbuf_sfd_refill(buf,sfo);
+		}
+
+		{
+			const size_t fo = size_t(p-t.v.strliteral.as_binary());
+			assert(fo <= t.v.strliteral.allocated);
+			t.v.strliteral.length = fo;
+			t.v.strliteral.shrinkfit();
+		}
+
+		/* but wait: if the identifier is followed by a quotation mark, and it's some specific sequence,
+		 * then it's actually a char/string literal i.e. L"blah" would be a wide char string. No space
+		 * allowed. */
+		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
+			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
+				t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+			}
+			else if (t.v.strliteral.length == 1) {
+				if (*((const char*)t.v.strliteral.data) == 'U') {
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+				}
+				else if (*((const char*)t.v.strliteral.data) == 'u') {
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+				}
+				else if (*((const char*)t.v.strliteral.data) == 'L') {
+					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
+					 *        Linux wide char is 32 bits. */
+					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+				}
+			}
+		}
+
+		/* it might be _asm or __asm */
+		if (	(t.v.strliteral.length == 4 && !memcmp(t.v.strliteral.data,"_asm",4)) ||
+			(t.v.strliteral.length == 5 && !memcmp(t.v.strliteral.data,"__asm",5))) {
+			t = token_t(token_type_t(token_type_t::r___asm));
+		}
+
+		return 1;
+	}
 
 	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		position_t pos = t.pos;
@@ -2058,12 +2157,22 @@ private:
 try_again:	t = token_t();
 
 		if (lst.flags & lgtok_state_t::FL_MSASM) {
-			while (is_whitespace(buf.peekb()) && !is_newline(buf.peekb())) buf.discardb();
+			while (is_whitespace(buf.peekb())) {
+				if (is_newline(buf.peekb())) {
+					t.type = token_type_t::newline;
+					t.pos = buf.pos;
 
-			if (lst.curlies == 0 && is_newline(buf.peekb()))
-				lst.flags &= ~lgtok_state_t::FL_MSASM;
+					eat_newline(buf,sfo);
 
-			eat_whitespace(buf,sfo);
+					if (lst.curlies == 0)
+						lst.flags &= ~lgtok_state_t::FL_MSASM;
+
+					return 1;
+				}
+				else {
+					buf.discardb();
+				}
+			}
 		}
 		else {
 			eat_whitespace(buf,sfo);
@@ -2086,89 +2195,6 @@ try_again:	t = token_t();
 				/* pass */
 				if (--lst.curlies == 0)
 					lst.flags &= ~lgtok_state_t::FL_MSASM;
-			}
-			else if (buf.peekb() == ';') {
-				/* pass */
-			}
-			else {
-				assert(!is_whitespace(buf.peekb()));
-				/* copy until newline or another __asm or curly brace or semicolon */
-				assert(t.type == token_type_t::none);
-				t.type = token_type_t::r___asm_text;
-				t.v.strliteral.init();
-				t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-
-				if (!t.v.strliteral.alloc(32))
-					return errno_return(ENOMEM);
-
-				unsigned char *p,*f;
-
-				p = (unsigned char*)t.v.strliteral.data;
-				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-				assert(p < f);
-
-				do {
-					if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
-
-					if (buf.peekb() == 0) break;
-					if (is_newline(buf.peekb())) break;
-					if (buf.peekb() == ';') {
-						buf.discardb();
-						break;
-					}
-					if (buf.peekb() == '{' || buf.peekb() == '}') break;
-
-					if (buf.peekb() == '_') {
-						unsigned char *s = buf.data+1; /* buf.data is already _ so s = data+1 */
-						unsigned char *f = buf.end;
-
-						if (s < f && *s == '_') s++; /* can be _asm or __asm */
-						if ((s+3+1) <= f && !memcmp(s,"asm",3)) {
-							s += 3;
-							assert(s < f);
-							if (is_whitespace(*s)) { /* stop at __asm, eat it, resume parsing later */
-								buf.pos_track(buf.data,s);
-								buf.data = s;
-								break;
-							}
-						}
-					}
-
-					if ((p+1) >= f) {
-						const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-						if (wo >= 1024)
-							return errno_return(ENAMETOOLONG);
-
-						if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
-							return errno_return(ENOMEM);
-
-						p = (unsigned char*)t.v.strliteral.data+wo;
-						f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-					}
-
-					assert((p+1) <= f);
-					*p++ = (unsigned char)buf.getb();
-				} while(1);
-
-				{
-					const unsigned char *b = t.v.strliteral.as_binary();
-					while (p > b && is_whitespace(*(p-1))) p--;
-				}
-
-				{
-					const size_t fo = size_t(p-t.v.strliteral.as_binary());
-					assert(fo <= t.v.strliteral.allocated);
-					t.v.strliteral.length = fo;
-					t.v.strliteral.shrinkfit();
-				}
-
-				if (t.v.strliteral.length == 0) {
-					t.v.strliteral.free();
-					goto try_again;
-				}
-
-				return 1;
 			}
 		}
 
@@ -2237,9 +2263,15 @@ try_again:	t = token_t();
 				else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); } /* |= */
 				break;
 			case '.':
-				t.type = token_type_t::period; buf.discardb();
-				if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
-				else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
+				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					/* ASM directives like .386p .flat, etc */
+					return lgtok_asm_text(lst,buf,sfo,t);
+				}
+				else {
+					t.type = token_type_t::period; buf.discardb();
+					if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
+					else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
+				}
 				break;
 			case ',':
 				t.type = token_type_t::comma; buf.discardb();
@@ -2292,7 +2324,9 @@ try_again:	t = token_t();
 			case '5': case '6': case '7': case '8': case '9':
 				return lgtok_number(buf,sfo,t);
 			default:
-				if (is_identifier_first_char(buf.peekb()) || buf.peekb() == '#')
+				if ((lst.flags & lgtok_state_t::FL_MSASM) && is_asm_text_first_char(buf.peekb()))
+					return lgtok_asm_text(lst,buf,sfo,t);
+				else if (is_identifier_first_char(buf.peekb()) || buf.peekb() == '#')
 					return lgtok_identifier(lst,buf,sfo,t);
 				else
 					return errno_return(ESRCH);

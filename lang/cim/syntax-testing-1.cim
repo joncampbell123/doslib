@@ -211,3 +211,10 @@ l1:	nop
 l2:	jmp
 }
 hello;
+__asm {
+	.386p
+	.flat
+	nop
+	mov	ax,@fardata
+}
+
