@@ -1787,7 +1787,6 @@ private:
 
 	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		position_t pos = t.pos;
-		int r;
 
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::identifier;
