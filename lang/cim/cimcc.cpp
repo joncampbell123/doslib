@@ -158,8 +158,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		unsigned char*			end = NULL;
 		unsigned char*			fence = NULL;
 		int				err = 0;
-		bool				eof = false;
+		unsigned int			flags = 0;
 		position_t			pos;
+
+		static const unsigned int	PFL_EOF = 1u << 0u;
+		static const unsigned int	PFL_NEWLINE = 1u << 1u;
 
 		rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
 		~rbuf() { free(); }
@@ -176,8 +179,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			data  = x.data;  x.data = NULL;
 			end   = x.end;   x.end = NULL;
 			fence = x.fence; x.fence = NULL;
+			flags = x.flags; x.flags = 0;
 			err   = x.err;   x.err = 0;
-			eof   = x.eof;   x.eof = false;
 			pos   = x.pos;
 			assert(sanity_check());
 		}
@@ -262,6 +265,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			else if (c == '\n') {
 				pos.col=1;
 				pos.row++;
+				flags |= PFL_NEWLINE;
 			}
 			else if (c < 0x80 || c >= 0xc0) {
 				pos.col++;
@@ -289,14 +293,14 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				return (buf.err=errno_return(rd));
 			}
 			else {
-				buf.eof = true;
+				buf.flags |= rbuf::PFL_EOF;
 				return 0;
 			}
 		}
 		else if (buf.err) {
 			return buf.err;
 		}
-		else if (buf.eof) {
+		else if (buf.flags & rbuf::PFL_EOF) {
 			return 0;
 		}
 
@@ -644,6 +648,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___asm, /* MSVC/OpenWatcom _asm __asm */
 		r___asm_text,				// 195
 		newline,
+		pound,
 
 		__MAX__
 	};
@@ -1164,7 +1169,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"asm",
 		"__asm",
 		"asm_text",				// 195
-		"newline"
+		"newline",
+		"pound"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1799,6 +1805,7 @@ private:
 		unsigned int		curlies = 0;
 
 		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
+		static constexpr unsigned int FL_NEWLINE = (1u << 1u);
 	};
 
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -1825,6 +1832,12 @@ private:
 		if (buf.peekb() == '#') {
 			t.type = token_type_t::ppidentifier;
 			buf.discardb();
+			while (is_whitespace(buf.peekb())) {
+				if (is_newline(buf.peekb()))
+					return errno_return(EINVAL);
+
+				buf.discardb();
+			}
 		}
 		*p++ = buf.getb();
 		while (is_asm_text_char(buf.peekb())) {
@@ -1906,6 +1919,12 @@ private:
 		if (buf.peekb() == '#') {
 			t.type = token_type_t::ppidentifier;
 			buf.discardb();
+			while (is_whitespace(buf.peekb())) {
+				if (is_newline(buf.peekb()))
+					return errno_return(EINVAL);
+
+				buf.discardb();
+			}
 		}
 		*p++ = buf.getb();
 		while (is_identifier_char(buf.peekb())) {
@@ -2179,23 +2198,19 @@ try_again:	t = token_t();
 		}
 		t.pos = buf.pos;
 
+		if (buf.flags & rbuf::PFL_NEWLINE) {
+			lst.flags |= lgtok_state_t::FL_NEWLINE;
+			buf.flags = ~rbuf::PFL_NEWLINE;
+		}
+		else {
+			lst.flags &= ~lgtok_state_t::FL_NEWLINE;
+		}
+
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
 		if (buf.data_avail() == 0) {
 			t.type = token_type_t::eof;
 			if (buf.err) return buf.err;
 			else return 0;
-		}
-
-		if (lst.flags & lgtok_state_t::FL_MSASM) {
-			if (buf.peekb() == '{') {
-				/* pass */
-				lst.curlies++;
-			}
-			else if (buf.peekb() == '}') {
-				/* pass */
-				if (--lst.curlies == 0)
-					lst.flags &= ~lgtok_state_t::FL_MSASM;
-			}
 		}
 
 		switch (buf.peekb()) {
@@ -2286,9 +2301,16 @@ try_again:	t = token_t();
 				break;
 			case '{':
 				t.type = token_type_t::opencurlybracket; buf.discardb();
+				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					lst.curlies++;
+				}
 				break;
 			case '}':
 				t.type = token_type_t::closecurlybracket; buf.discardb();
+				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					if (--lst.curlies == 0)
+						lst.flags &= ~lgtok_state_t::FL_MSASM;
+				}
 				break;
 			case '(':
 				t.type = token_type_t::openparenthesis; buf.discardb();
@@ -2320,13 +2342,22 @@ try_again:	t = token_t();
 			case '\'':
 			case '\"':
 				return lgtok_charstrlit(buf,sfo,t);
+			case '#':
+				if (lst.flags & lgtok_state_t::FL_NEWLINE) {
+					return lgtok_identifier(lst,buf,sfo,t);
+				}
+				else {
+					t.type = token_type_t::pound;
+					buf.discardb();
+				}
+				break;
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
 				return lgtok_number(buf,sfo,t);
 			default:
 				if ((lst.flags & lgtok_state_t::FL_MSASM) && is_asm_text_first_char(buf.peekb()))
 					return lgtok_asm_text(lst,buf,sfo,t);
-				else if (is_identifier_first_char(buf.peekb()) || buf.peekb() == '#')
+				else if (is_identifier_first_char(buf.peekb()))
 					return lgtok_identifier(lst,buf,sfo,t);
 				else
 					return errno_return(ESRCH);

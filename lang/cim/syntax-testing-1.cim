@@ -26,7 +26,7 @@ a()
 type() type{}
 a++ a--
 ::
-ident #ident
+#ident ident #ident
 alignas alignof auto bool break case char const
 constexpr continue default do double else enum extern false float for goto if inline int long
 nullptr
@@ -89,6 +89,16 @@ wchar_t
 #warning
 #line
 #pragma
+#if
+# if
+#  if
+#   if
+#line
+# line
+#  line
+#   line
+#	line
+#		line
 __LINE__
 __FILE__
 __VA_OPT__
@@ -172,6 +182,8 @@ __asm__("nop");
 __asm__ __volatile__("nop");
 __asm__ volatile inline goto ("nop");
 __asm nop
+__asm mov eax,esi
+hello;
 __asm { nop }; int x;
 __asm { mov eax,esi }; int x;
 __asm {
