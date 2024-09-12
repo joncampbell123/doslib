@@ -2343,7 +2343,7 @@ enum test_mode_t {
 	TEST_RBF,
 	TEST_RBFGC,
 	TEST_RBFGCNU,
-	TEST_LTOK
+	TEST_LGTOK
 };
 
 static std::vector<std::string>		main_input_files;
@@ -2351,7 +2351,7 @@ static enum test_mode_t			test_mode = TEST_NONE;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
-	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|ltok>         Test mode\n");
+	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok>         Test mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -2380,8 +2380,8 @@ static int parse_argv(int argc,char **argv) {
 					test_mode = TEST_RBFGC;
 				else if (!strcmp(a,"rbfgcnu"))
 					test_mode = TEST_RBFGCNU;
-				else if (!strcmp(a,"ltok"))
-					test_mode = TEST_LTOK;
+				else if (!strcmp(a,"lgtok"))
+					test_mode = TEST_LGTOK;
 				else if (!strcmp(a,"none"))
 					test_mode = TEST_NONE;
 				else
@@ -2515,7 +2515,7 @@ int main(int argc,char **argv) {
 				}
 			} while (1);
 		}
-		else if (test_mode == TEST_LTOK) {
+		else if (test_mode == TEST_LGTOK) {
 			CIMCC::lgtok_state_t lst;
 			CIMCC::token_t tok;
 			CIMCC::rbuf rb;
@@ -2538,7 +2538,7 @@ int main(int argc,char **argv) {
 		delete sfo;
 	}
 
-	if (test_mode == TEST_SFO || test_mode == TEST_LTOK || test_mode == TEST_RBF || test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU) return 0;
+	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF || test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU) return 0;
 
 	return 0;
 }
