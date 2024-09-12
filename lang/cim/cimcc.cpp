@@ -2185,6 +2185,9 @@ try_again:	t = token_t();
 			else return 0;
 		}
 
+		const unsigned int lst_was_flags = lst.flags & lgtok_state_t::FL_NEWLINE;
+		lst.flags &= ~lst_was_flags;
+
 		switch (buf.peekb()) {
 			case '+':
 				t.type = token_type_t::plus; buf.discardb();
@@ -2315,7 +2318,7 @@ try_again:	t = token_t();
 			case '\"':
 				return lgtok_charstrlit(buf,sfo,t);
 			case '#':
-				if (lst.flags & lgtok_state_t::FL_NEWLINE) {
+				if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
 					return lgtok_identifier(lst,buf,sfo,t);
 				}
 				else {
@@ -2330,6 +2333,7 @@ try_again:	t = token_t();
 			case '\n':
 				buf.discardb();
 				t.type = token_type_t::newline;
+				lst.flags |= lgtok_state_t::FL_NEWLINE;
 				if (lst.flags & lgtok_state_t::FL_MSASM) {
 					if (lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
