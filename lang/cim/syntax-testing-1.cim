@@ -99,6 +99,8 @@ wchar_t
 #   line
 #	line
 #		line
+token#paste
+token##paste
 __LINE__
 __FILE__
 __VA_OPT__

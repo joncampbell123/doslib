@@ -649,6 +649,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___asm_text,				// 195
 		newline,
 		pound,
+		poundpound,
 
 		__MAX__
 	};
@@ -1170,7 +1171,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"__asm",
 		"asm_text",				// 195
 		"newline",
-		"pound"
+		"pound",
+		"poundpound"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2347,8 +2349,8 @@ try_again:	t = token_t();
 					return lgtok_identifier(lst,buf,sfo,t);
 				}
 				else {
-					t.type = token_type_t::pound;
-					buf.discardb();
+					t.type = token_type_t::pound; buf.discardb();
+					if (buf.peekb() == '#') { t.type = token_type_t::poundpound; buf.discardb(); } /* ## */
 				}
 				break;
 			case '0': case '1': case '2': case '3': case '4':
