@@ -162,7 +162,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		position_t			pos;
 
 		static const unsigned int	PFL_EOF = 1u << 0u;
-		static const unsigned int	PFL_NEWLINE = 1u << 1u;
 
 		rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
 		~rbuf() { free(); }
@@ -265,7 +264,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			else if (c == '\n') {
 				pos.col=1;
 				pos.row++;
-				flags |= PFL_NEWLINE;
 			}
 			else if (c < 0x80 || c >= 0xc0) {
 				pos.col++;
@@ -1576,7 +1574,7 @@ private:
 	}
 
 	bool is_whitespace(const unsigned char b) {
-		return b == ' ' || b == '\n' || b == '\t';
+		return b == ' ' || b == '\t';
 	}
 
 	void eat_whitespace(rbuf &buf,source_file_object &sfo) {
@@ -2177,36 +2175,8 @@ private:
 	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 try_again:	t = token_t();
 
-		if (lst.flags & lgtok_state_t::FL_MSASM) {
-			while (is_whitespace(buf.peekb())) {
-				if (is_newline(buf.peekb())) {
-					t.type = token_type_t::newline;
-					t.pos = buf.pos;
-
-					eat_newline(buf,sfo);
-
-					if (lst.curlies == 0)
-						lst.flags &= ~lgtok_state_t::FL_MSASM;
-
-					return 1;
-				}
-				else {
-					buf.discardb();
-				}
-			}
-		}
-		else {
-			eat_whitespace(buf,sfo);
-		}
+		eat_whitespace(buf,sfo);
 		t.pos = buf.pos;
-
-		if (buf.flags & rbuf::PFL_NEWLINE) {
-			lst.flags |= lgtok_state_t::FL_NEWLINE;
-			buf.flags = ~rbuf::PFL_NEWLINE;
-		}
-		else {
-			lst.flags &= ~lgtok_state_t::FL_NEWLINE;
-		}
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
 		if (buf.data_avail() == 0) {
@@ -2351,6 +2321,18 @@ try_again:	t = token_t();
 				else {
 					t.type = token_type_t::pound; buf.discardb();
 					if (buf.peekb() == '#') { t.type = token_type_t::poundpound; buf.discardb(); } /* ## */
+				}
+				break;
+			case '\r':
+				buf.discardb();
+				if (buf.peekb() != '\n') break;
+				/* fall through */
+			case '\n':
+				buf.discardb();
+				t.type = token_type_t::newline;
+				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					if (lst.curlies == 0)
+						lst.flags &= ~lgtok_state_t::FL_MSASM;
 				}
 				break;
 			case '0': case '1': case '2': case '3': case '4':
