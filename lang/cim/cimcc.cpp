@@ -2335,6 +2335,15 @@ try_again:	t = token_t();
 		return 1;
 	}
 
+	int pptok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
+		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+			return r;
+
+		return 1;
+	}
+
 }
 
 enum test_mode_t {
@@ -2343,7 +2352,8 @@ enum test_mode_t {
 	TEST_RBF,
 	TEST_RBFGC,
 	TEST_RBFGCNU,
-	TEST_LGTOK
+	TEST_LGTOK,
+	TEST_PPTOK
 };
 
 static std::vector<std::string>		main_input_files;
@@ -2351,7 +2361,7 @@ static enum test_mode_t			test_mode = TEST_NONE;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
-	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok>         Test mode\n");
+	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok|pptok>         Test mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -2382,6 +2392,8 @@ static int parse_argv(int argc,char **argv) {
 					test_mode = TEST_RBFGCNU;
 				else if (!strcmp(a,"lgtok"))
 					test_mode = TEST_LGTOK;
+				else if (!strcmp(a,"pptok"))
+					test_mode = TEST_PPTOK;
 				else if (!strcmp(a,"none"))
 					test_mode = TEST_NONE;
 				else
@@ -2523,6 +2535,24 @@ int main(int argc,char **argv) {
 
 			assert(rb.allocate());
 			while ((r=CIMCC::lgtok(lst,rb,*sfo,tok)) > 0) {
+				printf("Token:");
+				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				printf(" %s\n",tok.to_str().c_str());
+			}
+
+			if (r < 0) {
+				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
+				return -1;
+			}
+		}
+		else if (test_mode == TEST_PPTOK) {
+			CIMCC::lgtok_state_t lst;
+			CIMCC::token_t tok;
+			CIMCC::rbuf rb;
+			int r;
+
+			assert(rb.allocate());
+			while ((r=CIMCC::pptok(lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
 				printf(" %s\n",tok.to_str().c_str());
