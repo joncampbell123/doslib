@@ -1328,7 +1328,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		const uint16_t *as_u16(void) const { return (const uint16_t*)data; }
 		const uint32_t *as_u32(void) const { return (const uint32_t*)data; }
 
-		bool operator==(const charstrliteral_t &rhs) {
+		bool operator==(const charstrliteral_t &rhs) const {
 			if (length != rhs.length) return false;
 
 			if ((type == type_t::CHAR || type == type_t::UTF8) == (rhs.type == type_t::CHAR || rhs.type == type_t::UTF8)) { /* OK */ }
@@ -1336,13 +1336,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 			return memcmp(data,rhs.data,length) == 0;
 		}
-		inline bool operator!=(const charstrliteral_t &rhs) { return !(*this == rhs); }
+		inline bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
 
-		bool operator==(const std::string &rhs) {
+		bool operator==(const std::string &rhs) const {
 			if (length != rhs.size() || !(type == type_t::CHAR || type == type_t::UTF8)) return false;
 			return memcmp(data,rhs.data(),length) == 0;
 		}
-		inline bool operator!=(const std::string &rhs) { return !(*this == rhs); }
+		inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
 
 		size_t units(void) const {
 			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
@@ -1497,6 +1497,50 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 			return s;
 		}
+	};
+
+	struct identifier_str_t {
+		unsigned char*		data;
+		size_t			length;
+
+		identifier_str_t() : data(NULL), length(0) { }
+		identifier_str_t(const identifier_str_t &x) = delete;
+		identifier_str_t &operator=(const identifier_str_t &x) = delete;
+
+		identifier_str_t(identifier_str_t &&x) { common_move(x); }
+		identifier_str_t &operator=(identifier_str_t &&x) { common_move(x); return *this; }
+
+		~identifier_str_t() { free(); }
+
+		void free(void) {
+			if (data) { ::free(data); data = NULL; }
+			length = 0;
+		}
+
+		void common_move(identifier_str_t &other) {
+			data = other.data; other.data = NULL;
+			length = other.length; other.length = 0;
+		}
+
+		void take_from(charstrliteral_t &l) {
+			free();
+			if (l.type == charstrliteral_t::type_t::CHAR || l.type == charstrliteral_t::type_t::UTF8) {
+				data = (unsigned char*)l.data; l.data = NULL;
+				length = l.length; l.length = 0;
+			}
+		}
+
+		std::string to_str(void) const {
+			if (data != NULL && length != 0) return std::string((char*)data,length);
+			return std::string();
+		}
+
+		bool operator==(const identifier_str_t &rhs) const {
+			if (length != rhs.length) return false;
+			if (length != 0) return memcmp(data,rhs.data,length) == 0;
+			return true;
+		}
+		bool operator!=(const identifier_str_t &rhs) const { return !(*this == rhs); }
 	};
 
 	struct token_t {
@@ -2395,8 +2439,8 @@ try_again:	t = token_t();
 		/* #define has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 		 * unless set to token_type_t::none in which case it will fetch another one */
+		identifier_str_t s_id;
 		pptok_macro_t macro;
-		token_t t_id;
 		int r;
 
 		(void)pst;
@@ -2406,7 +2450,7 @@ try_again:	t = token_t();
 
 		if (t.type != token_type_t::identifier)
 			return errno_return(EINVAL);
-		t_id = std::move(t);
+		s_id.take_from(t.v.strliteral);
 
 		do {
 			if ((r=lgtok(lst,buf,sfo,t)) < 1)
@@ -2421,7 +2465,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
-		fprintf(stderr,"MACRO '%s'\n",t_id.to_str().c_str());
+		fprintf(stderr,"MACRO '%s'\n",s_id.to_str().c_str());
 		fprintf(stderr,"  tokens:\n");
 		for (auto i=macro.tokens.begin();i!=macro.tokens.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
