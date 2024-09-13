@@ -2367,12 +2367,23 @@ try_again:	t = token_t();
 		return 1;
 	}
 
-	int pptok_define(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	struct pptok_macro_t {
+		std::vector<token_t>		tokens;
+	};
+
+	struct pptok_state_t {
+		unsigned int			nothing = 0;
+	};
+
+	int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* #define has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 		 * unless set to token_type_t::none in which case it will fetch another one */
+		pptok_macro_t macro;
 		token_t t_id;
 		int r;
+
+		(void)pst;
 
 		if ((r=lgtok(lst,buf,sfo,t)) < 1)
 			return r;
@@ -2380,8 +2391,6 @@ try_again:	t = token_t();
 		if (t.type != token_type_t::identifier)
 			return errno_return(EINVAL);
 		t_id = std::move(t);
-
-		std::vector<token_t> macro;
 
 		do {
 			if ((r=lgtok(lst,buf,sfo,t)) < 1)
@@ -2392,18 +2401,20 @@ try_again:	t = token_t();
 				break;
 			}
 
-			macro.push_back(std::move(t));
+			macro.tokens.push_back(std::move(t));
 		} while (1);
 
+#if 1//DEBUG
 		fprintf(stderr,"MACRO '%s'\n",t_id.to_str().c_str());
 		fprintf(stderr,"  tokens:\n");
-		for (auto i=macro.begin();i!=macro.end();i++)
+		for (auto i=macro.tokens.begin();i!=macro.tokens.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
+#endif
 
 		return 1;
 	}
 
-	int pptok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		int r;
 
 #define TRY_AGAIN \
@@ -2419,7 +2430,7 @@ try_again:
 try_again_w_token:
 		switch (t.type) {
 			case token_type_t::r_ppdefine:
-				if ((r=pptok_define(lst,buf,sfo,t)) < 1)
+				if ((r=pptok_define(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
@@ -2635,12 +2646,13 @@ int main(int argc,char **argv) {
 		}
 		else if (test_mode == TEST_PPTOK) {
 			CIMCC::lgtok_state_t lst;
+			CIMCC::pptok_state_t pst;
 			CIMCC::token_t tok;
 			CIMCC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			while ((r=CIMCC::pptok(lst,rb,*sfo,tok)) > 0) {
+			while ((r=CIMCC::pptok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
 				printf(" %s\n",tok.to_str().c_str());
