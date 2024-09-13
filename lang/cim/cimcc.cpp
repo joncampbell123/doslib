@@ -2172,6 +2172,19 @@ private:
 		return 1;
 	}
 
+	/* NTS: This is the LOWEST LEVEL tokenizer.
+	 *      It is never expected to look ahead or buffer tokens.
+	 *      It is expected to always parse tokens from whatever is next in the buffer.
+	 *      The reason this matters is that some other layers like the preprocessor
+	 *      may need to call buf.peekb() to see if whitespace exists or not before
+	 *      parsing another token i.e. #define processing and any readahead or buffering
+	 *      here would prevent that.
+	 *
+	 *      Example: Apparently the difference between #define X <tokens> and #define X(paramlist) <tokens>
+	 *      is whether there is a space between the identifier "X" and the open parenthesis.
+	 *
+	 *      #define X (y,z)                         X (no parameters) expands to y,z
+	 *      #define X(x,y)                          X (parameters x, z) expands to nothing */
 	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 try_again:	t = token_t();
 
