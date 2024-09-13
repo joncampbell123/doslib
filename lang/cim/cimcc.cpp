@@ -1328,6 +1328,22 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		const uint16_t *as_u16(void) const { return (const uint16_t*)data; }
 		const uint32_t *as_u32(void) const { return (const uint32_t*)data; }
 
+		bool operator==(const charstrliteral_t &rhs) {
+			if (length != rhs.length) return false;
+
+			if ((type == type_t::CHAR || type == type_t::UTF8) == (rhs.type == type_t::CHAR || rhs.type == type_t::UTF8)) { /* OK */ }
+			else if (type != rhs.type) return false;
+
+			return memcmp(data,rhs.data,length) == 0;
+		}
+		inline bool operator!=(const charstrliteral_t &rhs) { return !(*this == rhs); }
+
+		bool operator==(const std::string &rhs) {
+			if (length != rhs.size() || !(type == type_t::CHAR || type == type_t::UTF8)) return false;
+			return memcmp(data,rhs.data(),length) == 0;
+		}
+		inline bool operator!=(const std::string &rhs) { return !(*this == rhs); }
+
 		size_t units(void) const {
 			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
 			return length / unit_size[type];
