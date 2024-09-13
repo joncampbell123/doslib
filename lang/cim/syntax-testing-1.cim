@@ -77,7 +77,13 @@ using
 wchar_t
 #if
 #ifdef
-#define
+#define X
+#define X ( 4 )
+#define X (4 )
+#define X ( 4)
+#define X (4)
+#define X (x,y)
+#define X "hello" "world"
 #undef
 #else
 #defined

@@ -2367,11 +2367,67 @@ try_again:	t = token_t();
 		return 1;
 	}
 
-	int pptok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int pptok_define(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		/* #define has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		token_t t_id;
 		int r;
 
 		if ((r=lgtok(lst,buf,sfo,t)) < 1)
 			return r;
+
+		if (t.type != token_type_t::identifier)
+			return errno_return(EINVAL);
+		t_id = std::move(t);
+
+		std::vector<token_t> macro;
+
+		do {
+			if ((r=lgtok(lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+
+			macro.push_back(std::move(t));
+		} while (1);
+
+		fprintf(stderr,"MACRO '%s'\n",t_id.to_str().c_str());
+		fprintf(stderr,"  tokens:\n");
+		for (auto i=macro.begin();i!=macro.end();i++)
+			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
+
+		return 1;
+	}
+
+	int pptok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
+#define TRY_AGAIN \
+		if (t.type != token_type_t::none) \
+			goto try_again_w_token; \
+		else \
+			goto try_again;
+
+try_again:
+		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+			return r;
+
+try_again_w_token:
+		switch (t.type) {
+			case token_type_t::r_ppdefine:
+				if ((r=pptok_define(lst,buf,sfo,t)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			default:
+				break;
+		}
+
+#undef TRY_AGAIN
 
 		return 1;
 	}
