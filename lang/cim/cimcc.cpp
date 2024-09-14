@@ -2882,11 +2882,47 @@ try_again_w_token:
 					/* inject tokens from macro */
 					std::vector<token_t> out;
 					for (auto i=macro->ment.tokens.begin();i!=macro->ment.tokens.end();i++) {
+go_again:
 						if ((*i).type == token_type_t::r_macro_paramref) {
 							assert((*i).v.paramref < params.size());
 							const auto &param = params[(*i).v.paramref];
 							for (auto j=param.begin();j!=param.end();j++)
 								out.push_back(*j);
+						}
+						else if ((*i).type == token_type_t::r___VA_OPT__) {
+							i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip __VA_OPT__ */
+							if ((*i).type != token_type_t::openparenthesis) return errno_return(EINVAL);
+							i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip opening paren */
+
+							unsigned int sparen = 0;
+							bool do_copy = false;
+
+							if ((macro->ment.flags & pptok_macro_t::FL_VARIADIC) && params.size() > macro->ment.parameters.size())
+								do_copy = true;
+
+							do {
+								if (i == macro->ment.tokens.end()) return errno_return(EINVAL);
+								const auto &current = (*i); i++;
+
+								if (current.type == token_type_t::closeparenthesis) {
+									if (sparen == 0)
+										break;
+									else
+										sparen--;
+								}
+								else if (current.type == token_type_t::openparenthesis) {
+									sparen++;
+								}
+								else {
+									if (do_copy) out.push_back(current);
+								}
+							} while (1);
+
+							/* this is a for loop that will do i++, jump back to beginning */
+							if (i == macro->ment.tokens.end())
+								break;
+							else
+								goto go_again;
 						}
 						else if ((*i).type == token_type_t::r___VA_ARGS__) {
 							if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
