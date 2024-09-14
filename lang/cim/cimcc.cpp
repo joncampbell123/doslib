@@ -2596,6 +2596,7 @@ try_again:	t = token_t();
 			return 1;
 		}
 		else {
+			pst.macro_expansion_counter = 0;
 			return lgtok(lst,buf,sfo,t);
 		}
 	}
