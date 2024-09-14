@@ -256,4 +256,6 @@ XX;
 #define X4(a,b,c) xyz
 #define X5(_a123,_b456,___c789) xyz
 #define X6(a,b,c) x y z a b c 1 2 3 c b a
+X4(1,2,3); X6(1,2,3); X4(,,); X6(,,);
+X4(4*3+2,((4*2),2),1); /* the comma inside parenthesis should NOT split the parameter */
 

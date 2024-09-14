@@ -2494,6 +2494,9 @@ try_again:	t = token_t();
 	struct pptok_macro_t {
 		std::vector<token_t>		tokens;
 		std::vector<identifier_str_t>	parameters;
+		unsigned int			flags = 0;
+
+		static constexpr unsigned int	FL_PARENTHESIS = 1u << 0u;
 	};
 
 	struct pptok_state_t {
@@ -2699,6 +2702,8 @@ try_again:	t = token_t();
 		if (buf.peekb() == '(') {
 			buf.discardb(); /* don't bother with parsing as token */
 
+			macro.flags |= pptok_macro_t::FL_PARENTHESIS;
+
 			do {
 				identifier_str_t s_p;
 
@@ -2805,6 +2810,57 @@ try_again_w_token:
 					if (pst.macro_expansion_counter > 1024) {
 						fprintf(stderr,"Too many macro expansions\n");
 						return errno_return(ELOOP);
+					}
+
+					std::vector< std::vector<token_t> > params;
+
+					if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
+						std::vector<token_t> arg;
+						unsigned int paren = 0;
+
+						if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+							return r;
+						if (t.type != token_type_t::openparenthesis)
+							return errno_return(EINVAL);
+
+						do {
+							if ((r=lgtok(lst,buf,sfo,t)) < 1)
+								return r;
+							if (!pptok_define_allowed_token(t))
+								return errno_return(EINVAL);
+
+							if (t.type == token_type_t::closeparenthesis) {
+								if (paren == 0) {
+									if (!params.empty() || !arg.empty()) {
+										params.push_back(std::move(arg)); arg.clear();
+									}
+									break;
+								}
+								else {
+									paren--;
+								}
+							}
+							else if (t.type == token_type_t::openparenthesis) {
+								paren++;
+							}
+							else if (t.type == token_type_t::comma && paren == 0) {
+								params.push_back(std::move(arg)); arg.clear();
+							}
+							else {
+								arg.push_back(std::move(t));
+							}
+						} while (1);
+
+#if 1//DEBUG
+						fprintf(stderr,"  Parameters filled in at call:\n");
+						for (auto i=params.begin();i!=params.end();i++) {
+							auto &ent = *i;
+
+							fprintf(stderr,"    [%u]\n",(unsigned int)(i-params.begin()));
+							for (auto j=ent.begin();j!=ent.end();j++)
+								fprintf(stderr,"      %s\n",(*j).to_str().c_str());
+						}
+#endif
 					}
 
 					/* inject tokens from macro */
