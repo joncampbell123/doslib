@@ -2497,6 +2497,7 @@ try_again:	t = token_t();
 		unsigned int			flags = 0;
 
 		static constexpr unsigned int	FL_PARENTHESIS = 1u << 0u;
+		static constexpr unsigned int	FL_VARIADIC = 1u << 1u;
 	};
 
 	struct pptok_state_t {
@@ -2713,6 +2714,12 @@ try_again:	t = token_t();
 					return errno_return(EINVAL);
 				if (t.type == token_type_t::closeparenthesis)
 					break;
+				if (macro.flags & pptok_macro_t::FL_VARIADIC) /* you can't put additional params past the ... or even a comma */
+					return errno_return(EINVAL);
+				if (t.type == token_type_t::ellipsis) {
+					macro.flags |= pptok_macro_t::FL_VARIADIC;
+					continue;
+				}
 				if (t.type != token_type_t::identifier)
 					return errno_return(EINVAL);
 
@@ -2759,7 +2766,10 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
-		fprintf(stderr,"MACRO '%s'\n",s_id.to_str().c_str());
+		fprintf(stderr,"MACRO '%s'",s_id.to_str().c_str());
+		if (macro.flags & pptok_macro_t::FL_PARENTHESIS) fprintf(stderr," PARENTHESIS");
+		if (macro.flags & pptok_macro_t::FL_VARIADIC) fprintf(stderr," VARIADIC");
+		fprintf(stderr,"\n");
 		fprintf(stderr,"  parameters:\n");
 		for (auto i=macro.parameters.begin();i!=macro.parameters.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
@@ -2863,6 +2873,9 @@ try_again_w_token:
 
 						if (params.size() < macro->ment.parameters.size())
 							return errno_return(EPIPE);
+						if (params.size() > macro->ment.parameters.size() &&
+							!(macro->ment.flags & pptok_macro_t::FL_VARIADIC))
+							return errno_return(E2BIG);
 #endif
 					}
 

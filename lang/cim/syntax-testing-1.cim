@@ -261,3 +261,6 @@ X4(4*3+2,((4*2),2),1); /* the comma inside parenthesis should NOT split the para
 #define TRIPS(a,b,c) a,b,c,a,b,c,a,b,c
 #define TRIP2(a,b,c) TRIPS(a+b,b+c,c+a)
 TRIP2(1,2,3); 1,2,3;
+#define XV1(a,b,...) a,b
+XV1(1,2);
+XV1(1,2,3,4,5);
