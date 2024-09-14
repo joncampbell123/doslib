@@ -255,4 +255,5 @@ XX;
 #define X3 (a,b,c) xyz
 #define X4(a,b,c) xyz
 #define X5(_a123,_b456,___c789) xyz
+#define X6(a,b,c) x y z a b c 1 2 3 c b a
 

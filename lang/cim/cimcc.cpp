@@ -650,6 +650,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		pound,
 		poundpound,
 		backslashnewline,
+		r_macro_paramref,			// 140
 
 		__MAX__
 	};
@@ -1171,7 +1172,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"newline",
 		"pound",
 		"poundpound",
-		"backslashnewline"
+		"backslashnewline",
+		"macro_paramref"			// 140
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1587,6 +1589,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
 			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
+			size_t			paramref; /* token_type_t::r_macro_paramref */
 		} v;
 
 		std::string to_str(void) const {
@@ -1606,6 +1609,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::r___asm_text:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
+				case token_type_t::r_macro_paramref: {
+					char tmp[64];
+					sprintf(tmp,"(%u)",(unsigned int)v.paramref);
+					s += tmp;
+					break; }
 				default:
 					break;
 			}
@@ -2723,6 +2731,19 @@ try_again:	t = token_t();
 			}
 			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
 				macro.tokens.push_back(token_t(token_type_t::newline));
+			}
+			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+				/* if the identifier matches a paraemeter then put in a parameter reference,
+				 * else pass the identifier along. */
+				for (auto pi=macro.parameters.begin();pi!=macro.parameters.end();pi++) {
+					if ((*pi) == t.v.strliteral) {
+						t = token_t(token_type_t::r_macro_paramref);
+						t.v.paramref = size_t(pi - macro.parameters.begin());
+						break;
+					}
+				}
+
+				macro.tokens.push_back(std::move(t));
 			}
 			else if (pptok_define_allowed_token(t)) {
 				macro.tokens.push_back(std::move(t));
