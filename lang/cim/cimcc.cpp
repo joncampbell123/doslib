@@ -2445,19 +2445,7 @@ try_again:	t = token_t();
 			pptok_macro_ent_t*	next;
 		};
 
-		const pptok_macro_ent_t* lookup_macro(const identifier_str_t &i) const {
-			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
-			while (p != NULL) {
-				if (p->name == i)
-					return p;
-
-				p = p->next;
-			}
-
-			return NULL;
-		}
-
-		const pptok_macro_ent_t* lookup_macro(const charstrliteral_t &i) const {
+		template <typename idT> const pptok_macro_ent_t* lookup_macro(const idT &i) const {
 			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
 			while (p != NULL) {
 				if (p->name == i)
@@ -2519,11 +2507,11 @@ try_again:	t = token_t();
 				free_macro_bucket(i);
 		}
 
-		static uint8_t macro_hash_id(const identifier_str_t &i) {
+		static uint8_t macro_hash_id(const unsigned char *data,const size_t len) {
 			unsigned int h = 0x2222;
 
-			for (size_t c=0;c < i.length;c++)
-				h = (h ^ (h << 9)) + i.data[c];
+			for (size_t c=0;c < len;c++)
+				h = (h ^ (h << 9)) + data[c];
 
 			h ^= (h >> 16);
 			h ^= ~(h >> 8);
@@ -2531,16 +2519,12 @@ try_again:	t = token_t();
 			return h & (macro_bucket_count - 1u);
 		}
 
+		inline uint8_t macro_hash_id(const identifier_str_t &i) const {
+			return macro_hash_id(i.data,i.length);
+		}
+
 		static uint8_t macro_hash_id(const charstrliteral_t &i) {
-			unsigned int h = 0x2222;
-
-			for (size_t c=0;c < i.length;c++)
-				h = (h ^ (h << 9)) + ((const unsigned char*)(i.data))[c];
-
-			h ^= (h >> 16);
-			h ^= ~(h >> 8);
-			h ^= (h >> 4) ^ 3;
-			return h & (macro_bucket_count - 1u);
+			return macro_hash_id((const unsigned char*)i.data,i.length);
 		}
 
 		pptok_macro_ent_t* macro_buckets[macro_bucket_count] = { NULL };
