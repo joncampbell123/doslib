@@ -2884,8 +2884,18 @@ try_again_w_token:
 						if ((*i).type == token_type_t::r_macro_paramref) {
 							assert((*i).v.paramref < params.size());
 							const auto &param = params[(*i).v.paramref];
-							for (auto j=param.begin();j!=param.end();j++)
+							for (auto j=param.rbegin();j!=param.rend();j++)
 								pst.macro_expansion.push_front(*j);
+						}
+						else if ((*i).type == token_type_t::r___VA_ARGS__) {
+							if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
+								for (ssize_t pi=params.size()-1;pi >= (ssize_t)macro->ment.parameters.size();pi--) {
+									if (pi != 0) pst.macro_expansion.push_front(token_t(token_type_t::comma));
+									const auto &param = params[pi];
+									for (auto j=param.rbegin();j!=param.rend();j++)
+										pst.macro_expansion.push_front(*j);
+								}
+							}
 						}
 						else {
 							pst.macro_expansion.push_front(*i);
