@@ -2824,7 +2824,7 @@ try_again_w_token:
 							return errno_return(EINVAL);
 
 						do {
-							if ((r=lgtok(lst,buf,sfo,t)) < 1)
+							if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 								return r;
 							if (!pptok_define_allowed_token(t))
 								return errno_return(EINVAL);
@@ -2860,12 +2860,24 @@ try_again_w_token:
 							for (auto j=ent.begin();j!=ent.end();j++)
 								fprintf(stderr,"      %s\n",(*j).to_str().c_str());
 						}
+
+						if (params.size() < macro->ment.parameters.size())
+							return errno_return(EPIPE);
 #endif
 					}
 
 					/* inject tokens from macro */
-					for (auto i=macro->ment.tokens.rbegin();i!=macro->ment.tokens.rend();i++)
-						pst.macro_expansion.push_front(*i);
+					for (auto i=macro->ment.tokens.rbegin();i!=macro->ment.tokens.rend();i++) {
+						if ((*i).type == token_type_t::r_macro_paramref) {
+							assert((*i).v.paramref < params.size());
+							const auto &param = params[(*i).v.paramref];
+							for (auto j=param.begin();j!=param.end();j++)
+								pst.macro_expansion.push_front(*j);
+						}
+						else {
+							pst.macro_expansion.push_front(*i);
+						}
+					}
 
 					pst.macro_expansion_counter++;
 					goto try_again;
