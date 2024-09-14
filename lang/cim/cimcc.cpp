@@ -2890,7 +2890,9 @@ try_again_w_token:
 						else if ((*i).type == token_type_t::r___VA_ARGS__) {
 							if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
 								for (ssize_t pi=params.size()-1;pi >= (ssize_t)macro->ment.parameters.size();pi--) {
-									if (pi != 0) pst.macro_expansion.push_front(token_t(token_type_t::comma));
+									if (pi != (ssize_t)params.size()-1)
+										pst.macro_expansion.push_front(token_t(token_type_t::comma));
+
 									const auto &param = params[pi];
 									for (auto j=param.rbegin();j!=param.rend();j++)
 										pst.macro_expansion.push_front(*j);
