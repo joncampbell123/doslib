@@ -2758,6 +2758,19 @@ try_again:	t = token_t();
 				macro.tokens.push_back(std::move(t));
 			}
 			else if (pptok_define_allowed_token(t)) {
+				if (t.type == token_type_t::r___VA_ARGS__ && macro.tokens.size() >= 2) {
+					const size_t i = macro.tokens.size() - 2;
+					/* GNU extension: expression, ##__VA_ARGS__ which means the same thing as expression __VA_OPT__(,) */
+					if (macro.tokens[i].type == token_type_t::comma && macro.tokens[i+1].type == token_type_t::poundpound) {
+						/* convert ,##__VA_ARGS__ to __VA__OPT__(,) */
+						macro.tokens.resize(i);
+						macro.tokens.push_back(token_t(token_type_t::r___VA_OPT__));
+						macro.tokens.push_back(token_t(token_type_t::openparenthesis));
+						macro.tokens.push_back(token_t(token_type_t::comma));
+						macro.tokens.push_back(token_t(token_type_t::closeparenthesis));
+					}
+				}
+
 				macro.tokens.push_back(std::move(t));
 			}
 			else {
