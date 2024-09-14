@@ -581,7 +581,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppdefine,
 		r_ppundef,				// 130
 		r_ppelse,
-		REMOVED, // REMOVED, place a new token here in the future
+		backslash,
 		r_ppelif,
 		r_ppelifdef,
 		r_ppifndef,				// 135
@@ -648,6 +648,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		newline,
 		pound,
 		poundpound,
+		backslashnewline,
 
 		__MAX__
 	};
@@ -1102,7 +1103,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_ppdefine,
 		str_ppundef,				// 130
 		str_ppelse,
-		"REMOVED",
+		"backslash",
 		str_ppelif,
 		str_ppelifdef,
 		str_ppifndef,				// 135
@@ -1168,7 +1169,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"asm_text",				// 195
 		"newline",
 		"pound",
-		"poundpound"
+		"poundpound",
+		"backslashnewline"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2395,6 +2397,14 @@ try_again:	t = token_t();
 			case '\'':
 			case '\"':
 				return lgtok_charstrlit(buf,sfo,t);
+			case '\\':
+				buf.discardb();
+				t.type = token_type_t::backslash;
+				if (is_newline(buf.peekb())) {
+					buf.discardb();
+					t.type = token_type_t::backslashnewline;
+				}
+				break;
 			case '#':
 				if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
 					return lgtok_identifier(lst,buf,sfo,t);
@@ -2602,8 +2612,12 @@ try_again:	t = token_t();
 				t = token_t();
 				break;
 			}
-
-			macro.tokens.push_back(std::move(t));
+			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+				macro.tokens.push_back(token_t(token_type_t::newline));
+			}
+			else {
+				macro.tokens.push_back(std::move(t));
+			}
 		} while (1);
 
 #if 1//DEBUG
