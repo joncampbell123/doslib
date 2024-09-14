@@ -77,13 +77,14 @@ using
 wchar_t
 #if
 #ifdef
+#define A
+#define B ( 4 )
+#define C (4 )
+#define D ( 4)
+#define E (4)
+#define F (x,y)
+#define G "hello" "world"
 #define X
-#define X ( 4 )
-#define X (4 )
-#define X ( 4)
-#define X (4)
-#define X (x,y)
-#define X "hello" "world"
 #undef
 #else
 #defined

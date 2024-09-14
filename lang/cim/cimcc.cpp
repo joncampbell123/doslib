@@ -2432,7 +2432,94 @@ try_again:	t = token_t();
 	};
 
 	struct pptok_state_t {
-		unsigned int			nothing = 0;
+		struct pptok_macro_ent_t {
+			pptok_macro_t		ment;
+			identifier_str_t	name;
+			pptok_macro_ent_t*	next;
+		};
+
+		const pptok_macro_ent_t* lookup_macro(const identifier_str_t &i) const {
+			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
+			while (p != NULL) {
+				if (p->name == i)
+					return p;
+
+				p = p->next;
+			}
+
+			return NULL;
+		}
+
+		bool create_macro(identifier_str_t &i,pptok_macro_t &m) {
+			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
+
+			while ((*p) != NULL) {
+				if ((*p)->name == i)
+					return false; /* already exists */
+
+				p = &((*p)->next);
+			}
+
+			(*p) = new pptok_macro_ent_t;
+			(*p)->ment = std::move(m);
+			(*p)->name = std::move(i);
+			(*p)->next = NULL;
+			return true;
+		}
+
+		bool delete_macro(const identifier_str_t &i) {
+			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
+			while ((*p) != NULL) {
+				if ((*p)->name == i) {
+					pptok_macro_ent_t* d = *p;
+					(*p) = (*p)->next;
+					delete d;
+					return true;
+				}
+
+				p = &((*p)->next);
+			}
+
+			return false;
+		}
+
+		static constexpr size_t macro_bucket_count = 4096u / sizeof(char*); /* power of 2 */
+		static_assert((macro_bucket_count & (macro_bucket_count - 1)) == 0, "must be power of 2"); /* is power of 2 */
+
+		void free_macro_bucket(const unsigned int bucket) {
+			pptok_macro_ent_t *d;
+
+			while ((d=macro_buckets[bucket]) != NULL) {
+				macro_buckets[bucket] = d->next;
+				delete d;
+			}
+		}
+
+		void free_macros(void) {
+			for (unsigned int i=0;i < macro_bucket_count;i++)
+				free_macro_bucket(i);
+		}
+
+		static uint8_t macro_hash_id(const identifier_str_t &i) {
+			unsigned int h = 0x2222;
+
+			for (size_t c=0;c < i.length;c++)
+				h = (h ^ (h << 9)) + i.data[c];
+
+			h ^= (h >> 16);
+			h ^= ~(h >> 8);
+			h ^= (h >> 4) ^ 3;
+			return h & (macro_bucket_count - 1u);
+		}
+
+		pptok_macro_ent_t* macro_buckets[macro_bucket_count] = { NULL };
+
+		pptok_state_t() { }
+		pptok_state_t(const pptok_state_t &) = delete;
+		pptok_state_t &operator=(const pptok_state_t &) = delete;
+		pptok_state_t(pptok_state_t &&) = delete;
+		pptok_state_t &operator=(pptok_state_t &&) = delete;
+		~pptok_state_t() { free_macros(); }
 	};
 
 	int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -2470,6 +2557,9 @@ try_again:	t = token_t();
 		for (auto i=macro.tokens.begin();i!=macro.tokens.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
 #endif
+
+		if (!pst.create_macro(s_id,macro))
+			return errno_return(EEXIST);
 
 		return 1;
 	}
