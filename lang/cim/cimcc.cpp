@@ -1541,6 +1541,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return true;
 		}
 		bool operator!=(const identifier_str_t &rhs) const { return !(*this == rhs); }
+
+		bool operator==(const charstrliteral_t &rhs) const {
+			if (length != rhs.length) return false;
+			if (length != 0) return memcmp(data,rhs.data,length) == 0;
+			return true;
+		}
+		bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
 	};
 
 	struct token_t {
@@ -2450,6 +2457,18 @@ try_again:	t = token_t();
 			return NULL;
 		}
 
+		const pptok_macro_ent_t* lookup_macro(const charstrliteral_t &i) const {
+			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
+			while (p != NULL) {
+				if (p->name == i)
+					return p;
+
+				p = p->next;
+			}
+
+			return NULL;
+		}
+
 		bool create_macro(identifier_str_t &i,pptok_macro_t &m) {
 			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
 
@@ -2505,6 +2524,18 @@ try_again:	t = token_t();
 
 			for (size_t c=0;c < i.length;c++)
 				h = (h ^ (h << 9)) + i.data[c];
+
+			h ^= (h >> 16);
+			h ^= ~(h >> 8);
+			h ^= (h >> 4) ^ 3;
+			return h & (macro_bucket_count - 1u);
+		}
+
+		static uint8_t macro_hash_id(const charstrliteral_t &i) {
+			unsigned int h = 0x2222;
+
+			for (size_t c=0;c < i.length;c++)
+				h = (h ^ (h << 9)) + ((const unsigned char*)(i.data))[c];
 
 			h ^= (h >> 16);
 			h ^= ~(h >> 8);
@@ -2584,6 +2615,19 @@ try_again_w_token:
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
+			case token_type_t::identifier:
+			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
+				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+				if (macro) {
+#if 1//DEBUG
+					fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
+#endif
+					// TODO: Begin reading and returning tokens from this macro instead of lgtok,
+					//       which in turn would allow further macro expansion.
+
+					goto try_again;
+				}
+				break; }
 			default:
 				break;
 		}
