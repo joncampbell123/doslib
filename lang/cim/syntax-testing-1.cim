@@ -267,6 +267,7 @@ TRIP2(1,2,3); 1,2,3;
 #define XV3(a,b,...) __VA_ARGS__,a,b,__VA_ARGS__
 #define XV4(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__
 #define XV5(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__ __VA_OPT__(,"and more")
+#define XV6(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__ __VA_OPT__(,((4+3),2)+1)
 XV1(1,2);
 XV1(1,2,3,4,5);
 XV2(1,2);
@@ -276,3 +277,5 @@ XV4(1,2);
 XV4(1,2,3,4,5);
 XV5(1,2);
 XV5(1,2,3,4,5);
+XV6(1,2);
+XV6(1,2,3,4,5);

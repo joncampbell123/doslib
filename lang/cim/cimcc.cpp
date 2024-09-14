@@ -2848,10 +2848,12 @@ try_again_w_token:
 								}
 								else {
 									paren--;
+									arg.push_back(std::move(t));
 								}
 							}
 							else if (t.type == token_type_t::openparenthesis) {
 								paren++;
+								arg.push_back(std::move(t));
 							}
 							else if (t.type == token_type_t::comma && paren == 0) {
 								params.push_back(std::move(arg)); arg.clear();
@@ -2905,13 +2907,17 @@ go_again:
 								const auto &current = (*i); i++;
 
 								if (current.type == token_type_t::closeparenthesis) {
-									if (sparen == 0)
+									if (sparen == 0) {
 										break;
-									else
+									}
+									else {
 										sparen--;
+										if (do_copy) out.push_back(current);
+									}
 								}
 								else if (current.type == token_type_t::openparenthesis) {
 									sparen++;
+									if (do_copy) out.push_back(current);
 								}
 								else {
 									if (do_copy) out.push_back(current);
