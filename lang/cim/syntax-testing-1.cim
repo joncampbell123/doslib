@@ -252,3 +252,7 @@ X2;
 Hello;
 #define XX X1 X2
 XX;
+#define X3 (a,b,c) xyz
+#define X4(a,b,c) xyz
+#define X5(_a123,_b456,___c789) xyz
+

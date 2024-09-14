@@ -2485,6 +2485,7 @@ try_again:	t = token_t();
 
 	struct pptok_macro_t {
 		std::vector<token_t>		tokens;
+		std::vector<identifier_str_t>	parameters;
 	};
 
 	struct pptok_state_t {
@@ -2685,6 +2686,33 @@ try_again:	t = token_t();
 			return errno_return(EINVAL);
 		s_id.take_from(t.v.strliteral);
 
+		/* if the next character is '(' (without a space), it's a parameter list.
+		 * a space and then '(' doesn't count. that's how GCC behaves, anyway. */
+		if (buf.peekb() == '(') {
+			buf.discardb(); /* don't bother with parsing as token */
+
+			do {
+				identifier_str_t s_p;
+
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type == token_type_t::newline)
+					return errno_return(EINVAL);
+				if (t.type == token_type_t::closeparenthesis)
+					break;
+				if (t.type != token_type_t::identifier)
+					return errno_return(EINVAL);
+
+				s_p.take_from(t.v.strliteral);
+				macro.parameters.push_back(std::move(s_p));
+
+				eat_whitespace(buf,sfo);
+				if (buf.peekb() == ',') { buf.discardb(); }
+				else if (buf.peekb() == ')') { buf.discardb(); break; }
+				else return errno_return(EINVAL);
+			} while (1);
+		}
+
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
@@ -2706,6 +2734,9 @@ try_again:	t = token_t();
 
 #if 1//DEBUG
 		fprintf(stderr,"MACRO '%s'\n",s_id.to_str().c_str());
+		fprintf(stderr,"  parameters:\n");
+		for (auto i=macro.parameters.begin();i!=macro.parameters.end();i++)
+			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
 		fprintf(stderr,"  tokens:\n");
 		for (auto i=macro.tokens.begin();i!=macro.tokens.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
