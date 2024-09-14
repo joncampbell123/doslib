@@ -2784,6 +2784,150 @@ try_again:	t = token_t();
 		return 1;
 	}
 
+	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		/* caller just parsed the identifier token */
+		int r;
+
+#if 1//DEBUG
+		fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
+#endif
+
+		if (pst.macro_expansion_counter > 1024) {
+			fprintf(stderr,"Too many macro expansions\n");
+			return errno_return(ELOOP);
+		}
+
+		std::vector< std::vector<token_t> > params;
+
+		if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
+			std::vector<token_t> arg;
+			unsigned int paren = 0;
+
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type != token_type_t::openparenthesis)
+				return errno_return(EINVAL);
+
+			do {
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (!pptok_define_allowed_token(t))
+					return errno_return(EINVAL);
+
+				if (t.type == token_type_t::closeparenthesis) {
+					if (paren == 0) {
+						if (!params.empty() || !arg.empty()) {
+							params.push_back(std::move(arg)); arg.clear();
+						}
+						break;
+					}
+					else {
+						paren--;
+						arg.push_back(std::move(t));
+					}
+				}
+				else if (t.type == token_type_t::openparenthesis) {
+					paren++;
+					arg.push_back(std::move(t));
+				}
+				else if (t.type == token_type_t::comma && paren == 0) {
+					params.push_back(std::move(arg)); arg.clear();
+				}
+				else {
+					arg.push_back(std::move(t));
+				}
+			} while (1);
+
+#if 1//DEBUG
+			fprintf(stderr,"  Parameters filled in at call:\n");
+			for (auto i=params.begin();i!=params.end();i++) {
+				auto &ent = *i;
+
+				fprintf(stderr,"    [%u]\n",(unsigned int)(i-params.begin()));
+				for (auto j=ent.begin();j!=ent.end();j++)
+					fprintf(stderr,"      %s\n",(*j).to_str().c_str());
+			}
+
+			if (params.size() < macro->ment.parameters.size())
+				return errno_return(EPIPE);
+			if (params.size() > macro->ment.parameters.size() &&
+					!(macro->ment.flags & pptok_macro_t::FL_VARIADIC))
+				return errno_return(E2BIG);
+#endif
+		}
+
+		/* inject tokens from macro */
+		std::vector<token_t> out;
+		for (auto i=macro->ment.tokens.begin();i!=macro->ment.tokens.end();i++) {
+go_again:
+			if ((*i).type == token_type_t::r_macro_paramref) {
+				assert((*i).v.paramref < params.size());
+				const auto &param = params[(*i).v.paramref];
+				for (auto j=param.begin();j!=param.end();j++)
+					out.push_back(*j);
+			}
+			else if ((*i).type == token_type_t::r___VA_OPT__) {
+				i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip __VA_OPT__ */
+				if ((*i).type != token_type_t::openparenthesis) return errno_return(EINVAL);
+				i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip opening paren */
+
+				unsigned int sparen = 0;
+				bool do_copy = false;
+
+				if ((macro->ment.flags & pptok_macro_t::FL_VARIADIC) && params.size() > macro->ment.parameters.size())
+					do_copy = true;
+
+				do {
+					if (i == macro->ment.tokens.end()) return errno_return(EINVAL);
+					const auto &current = (*i); i++;
+
+					if (current.type == token_type_t::closeparenthesis) {
+						if (sparen == 0) {
+							break;
+						}
+						else {
+							sparen--;
+							if (do_copy) out.push_back(current);
+						}
+					}
+					else if (current.type == token_type_t::openparenthesis) {
+						sparen++;
+						if (do_copy) out.push_back(current);
+					}
+					else {
+						if (do_copy) out.push_back(current);
+					}
+				} while (1);
+
+				/* this is a for loop that will do i++, jump back to beginning */
+				if (i == macro->ment.tokens.end())
+					break;
+				else
+					goto go_again;
+			}
+			else if ((*i).type == token_type_t::r___VA_ARGS__) {
+				if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
+					for (size_t pi=macro->ment.parameters.size();pi < params.size();pi++) {
+						if (pi != macro->ment.parameters.size())
+							out.push_back(token_t(token_type_t::comma));
+
+						const auto &param = params[pi];
+						for (auto j=param.begin();j!=param.end();j++)
+							out.push_back(*j);
+					}
+				}
+			}
+			else {
+				out.push_back(*i);
+			}
+		}
+
+		for (auto i=out.rbegin();i!=out.rend();i++)
+			pst.macro_expansion.push_front(std::move(*i));
+
+		return 1;
+	}
+
 	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		int r;
 
@@ -2813,142 +2957,8 @@ try_again_w_token:
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
 				if (macro) {
-#if 1//DEBUG
-					fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
-#endif
-
-					if (pst.macro_expansion_counter > 1024) {
-						fprintf(stderr,"Too many macro expansions\n");
-						return errno_return(ELOOP);
-					}
-
-					std::vector< std::vector<token_t> > params;
-
-					if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
-						std::vector<token_t> arg;
-						unsigned int paren = 0;
-
-						if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-							return r;
-						if (t.type != token_type_t::openparenthesis)
-							return errno_return(EINVAL);
-
-						do {
-							if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-								return r;
-							if (!pptok_define_allowed_token(t))
-								return errno_return(EINVAL);
-
-							if (t.type == token_type_t::closeparenthesis) {
-								if (paren == 0) {
-									if (!params.empty() || !arg.empty()) {
-										params.push_back(std::move(arg)); arg.clear();
-									}
-									break;
-								}
-								else {
-									paren--;
-									arg.push_back(std::move(t));
-								}
-							}
-							else if (t.type == token_type_t::openparenthesis) {
-								paren++;
-								arg.push_back(std::move(t));
-							}
-							else if (t.type == token_type_t::comma && paren == 0) {
-								params.push_back(std::move(arg)); arg.clear();
-							}
-							else {
-								arg.push_back(std::move(t));
-							}
-						} while (1);
-
-#if 1//DEBUG
-						fprintf(stderr,"  Parameters filled in at call:\n");
-						for (auto i=params.begin();i!=params.end();i++) {
-							auto &ent = *i;
-
-							fprintf(stderr,"    [%u]\n",(unsigned int)(i-params.begin()));
-							for (auto j=ent.begin();j!=ent.end();j++)
-								fprintf(stderr,"      %s\n",(*j).to_str().c_str());
-						}
-
-						if (params.size() < macro->ment.parameters.size())
-							return errno_return(EPIPE);
-						if (params.size() > macro->ment.parameters.size() &&
-							!(macro->ment.flags & pptok_macro_t::FL_VARIADIC))
-							return errno_return(E2BIG);
-#endif
-					}
-
-					/* inject tokens from macro */
-					std::vector<token_t> out;
-					for (auto i=macro->ment.tokens.begin();i!=macro->ment.tokens.end();i++) {
-go_again:
-						if ((*i).type == token_type_t::r_macro_paramref) {
-							assert((*i).v.paramref < params.size());
-							const auto &param = params[(*i).v.paramref];
-							for (auto j=param.begin();j!=param.end();j++)
-								out.push_back(*j);
-						}
-						else if ((*i).type == token_type_t::r___VA_OPT__) {
-							i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip __VA_OPT__ */
-							if ((*i).type != token_type_t::openparenthesis) return errno_return(EINVAL);
-							i++; if (i == macro->ment.tokens.end()) return errno_return(EINVAL); /* skip opening paren */
-
-							unsigned int sparen = 0;
-							bool do_copy = false;
-
-							if ((macro->ment.flags & pptok_macro_t::FL_VARIADIC) && params.size() > macro->ment.parameters.size())
-								do_copy = true;
-
-							do {
-								if (i == macro->ment.tokens.end()) return errno_return(EINVAL);
-								const auto &current = (*i); i++;
-
-								if (current.type == token_type_t::closeparenthesis) {
-									if (sparen == 0) {
-										break;
-									}
-									else {
-										sparen--;
-										if (do_copy) out.push_back(current);
-									}
-								}
-								else if (current.type == token_type_t::openparenthesis) {
-									sparen++;
-									if (do_copy) out.push_back(current);
-								}
-								else {
-									if (do_copy) out.push_back(current);
-								}
-							} while (1);
-
-							/* this is a for loop that will do i++, jump back to beginning */
-							if (i == macro->ment.tokens.end())
-								break;
-							else
-								goto go_again;
-						}
-						else if ((*i).type == token_type_t::r___VA_ARGS__) {
-							if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
-								for (size_t pi=macro->ment.parameters.size();pi < params.size();pi++) {
-									if (pi != macro->ment.parameters.size())
-										out.push_back(token_t(token_type_t::comma));
-
-									const auto &param = params[pi];
-									for (auto j=param.begin();j!=param.end();j++)
-										out.push_back(*j);
-								}
-							}
-						}
-						else {
-							out.push_back(*i);
-						}
-					}
-
-					for (auto i=out.rbegin();i!=out.rend();i++)
-						pst.macro_expansion.push_front(std::move(*i));
+					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
+						return r;
 
 					pst.macro_expansion_counter++;
 					goto try_again;
