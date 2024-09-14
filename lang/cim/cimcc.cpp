@@ -581,7 +581,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppdefine,
 		r_ppundef,				// 130
 		r_ppelse,
-		r_ppdefined,
+		REMOVED, // REMOVED, place a new token here in the future
 		r_ppelif,
 		r_ppelifdef,
 		r_ppifndef,				// 135
@@ -732,7 +732,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFB(ifdef);
 	DEFB(define);
 	DEFB(undef);
-	DEFB(defined);
 	DEFB(elif);
 	DEFB(elifdef);
 	DEFB(ifndef);
@@ -958,7 +957,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(define),
 		X(undef),
 		X(else),
-		X(defined),
 		X(elif),
 		X(elifdef),
 		X(ifndef),
@@ -1104,7 +1102,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_ppdefine,
 		str_ppundef,				// 130
 		str_ppelse,
-		str_ppdefined,
+		"REMOVED",
 		str_ppelif,
 		str_ppelifdef,
 		str_ppifndef,				// 135
