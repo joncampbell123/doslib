@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <deque>
 #include <new>
 
 #ifndef O_BINARY
@@ -1322,6 +1323,26 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		void init(void) { type = type_t::CHAR; data = NULL; length = 0; allocated = 0; }
 		void free(void) { if (data) ::free(data); data = NULL; length = 0; allocated = 0; type = type_t::CHAR; }
 
+		bool copy_from(const charstrliteral_t &x) {
+			free();
+			type = x.type;
+			assert(data == NULL);
+			assert(length == 0);
+			assert(allocated == 0);
+
+			if (x.length != 0) {
+				if (!alloc(x.length))
+					return false;
+
+				assert(data != NULL);
+				assert(x.data != NULL);
+				assert(length == x.length);
+				memcpy(data,x.data,x.length);
+			}
+
+			return true;
+		}
+
 		const char *as_char(void) const { return (const char*)data; }
 		const unsigned char *as_binary(void) const { return (const unsigned char*)data; }
 		const unsigned char *as_utf8(void) const { return (const unsigned char*)data; }
@@ -1556,10 +1577,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 		token_t() : pos(1) { common_init(); }
 		~token_t() { common_delete(); }
-		token_t(const token_t &t) = delete;
+		token_t(const token_t &t) { common_copy(t); }
 		token_t(token_t &&t) { common_move(t); }
 		token_t(const token_type_t t) : type(t) { common_init(); }
-		token_t &operator=(const token_t &t) = delete;
+		token_t &operator=(const token_t &t) { common_copy(t); return *this; }
 		token_t &operator=(token_t &&t) { common_move(t); return *this; }
 
 		union {
@@ -1627,9 +1648,29 @@ private:
 			}
 		}
 
+		void common_copy(const token_t &x) {
+			common_delete();
+			type = x.type;
+
+			switch (type) {
+				case token_type_t::charliteral:
+				case token_type_t::strliteral:
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					v.strliteral.init();
+					v.strliteral.copy_from(x.v.strliteral);
+					break;
+				default:
+					v = x.v;
+					break;
+			}
+		}
+
 		void common_move(token_t &x) {
 			common_delete();
 			type = x.type; x.type = token_type_t::none;
+			pos = x.pos; x.pos = position_t();
 			v = x.v; /* x.type == none so pointers no longer matter */
 		}
 	};
@@ -2453,6 +2494,9 @@ try_again:	t = token_t();
 			pptok_macro_ent_t*	next;
 		};
 
+		unsigned int macro_expansion_counter = 0; /* to prevent runaway expansion */
+		std::deque<token_t> macro_expansion;
+
 		template <typename idT> const pptok_macro_ent_t* lookup_macro(const idT &i) const {
 			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
 			while (p != NULL) {
@@ -2545,6 +2589,17 @@ try_again:	t = token_t();
 		~pptok_state_t() { free_macros(); }
 	};
 
+	int pptok_lgtok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		if (!pst.macro_expansion.empty()) {
+			t = std::move(pst.macro_expansion.front());
+			pst.macro_expansion.pop_front();
+			return 1;
+		}
+		else {
+			return lgtok(lst,buf,sfo,t);
+		}
+	}
+
 	int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* #undef has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
@@ -2555,7 +2610,7 @@ try_again:	t = token_t();
 
 		(void)pst;
 
-		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
 		if (t.type != token_type_t::identifier)
@@ -2563,7 +2618,7 @@ try_again:	t = token_t();
 		s_id.take_from(t.v.strliteral);
 
 		do {
-			if ((r=lgtok(lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
 			if (t.type == token_type_t::newline) {
@@ -2597,7 +2652,7 @@ try_again:	t = token_t();
 
 		(void)pst;
 
-		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
 		if (t.type != token_type_t::identifier)
@@ -2605,7 +2660,7 @@ try_again:	t = token_t();
 		s_id.take_from(t.v.strliteral);
 
 		do {
-			if ((r=lgtok(lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
 			if (t.type == token_type_t::newline) {
@@ -2643,7 +2698,7 @@ try_again:	t = token_t();
 			goto try_again;
 
 try_again:
-		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
 try_again_w_token:
@@ -2665,9 +2720,17 @@ try_again_w_token:
 #if 1//DEBUG
 					fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
 #endif
-					// TODO: Begin reading and returning tokens from this macro instead of lgtok,
-					//       which in turn would allow further macro expansion.
 
+					if (pst.macro_expansion_counter > 1024) {
+						fprintf(stderr,"Too many macro expansions\n");
+						return errno_return(ELOOP);
+					}
+
+					/* inject tokens from macro */
+					for (auto i=macro->ment.tokens.rbegin();i!=macro->ment.tokens.rend();i++)
+						pst.macro_expansion.push_front(*i);
+
+					pst.macro_expansion_counter++;
 					goto try_again;
 				}
 				break; }

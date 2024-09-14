@@ -250,4 +250,5 @@ that spans lines */ else
 X1;
 X2;
 Hello;
-
+#define XX X1 X2
+XX;
