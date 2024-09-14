@@ -284,7 +284,10 @@ XVG1(1,2);
 XVG1(1,2,3,4,5);
 #define XVGA1(a,b,args...) a,b,args
 #define XVGA2(a,b,anything...) a,b,anything
+#define XVGA3(a,b,anything...) a,b,anything __VA_ARGS__ /* GNU args... use means __VA_ARGS__ is not valid */
 XVGA1(1,2);
 XVGA1(1,2,3,4,5);
 XVGA2(1,2);
 XVGA2(1,2,3,4,5);
+XVGA3(1,2);
+XVGA3(1,2,3,4,5);

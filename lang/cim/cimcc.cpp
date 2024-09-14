@@ -2498,6 +2498,7 @@ try_again:	t = token_t();
 
 		static constexpr unsigned int	FL_PARENTHESIS = 1u << 0u;
 		static constexpr unsigned int	FL_VARIADIC = 1u << 1u;
+		static constexpr unsigned int	FL_NO_VA_ARGS = 1u << 2u; /* set if GNU args... used instead */
 	};
 
 	struct pptok_state_t {
@@ -2729,7 +2730,7 @@ try_again:	t = token_t();
 				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
 					/* Ah, GNU style args... variadic macros that predate __VA_ARGS__ */
 					s_id_va_args_subst.take_from(t.v.strliteral);
-					macro.flags |= pptok_macro_t::FL_VARIADIC;
+					macro.flags |= pptok_macro_t::FL_VARIADIC | pptok_macro_t::FL_NO_VA_ARGS;
 					buf.discardb(3);
 				}
 				else {
@@ -2775,16 +2776,22 @@ try_again:	t = token_t();
 				macro.tokens.push_back(std::move(t));
 			}
 			else if (pptok_define_allowed_token(t)) {
-				if (t.type == token_type_t::r___VA_ARGS__ && macro.tokens.size() >= 2) {
-					const size_t i = macro.tokens.size() - 2;
-					/* GNU extension: expression, ##__VA_ARGS__ which means the same thing as expression __VA_OPT__(,) __VA_ARGS__ */
-					if (macro.tokens[i].type == token_type_t::comma && macro.tokens[i+1].type == token_type_t::poundpound) {
-						/* convert ,##__VA_ARGS__ to __VA__OPT__(,) __VA_ARGS__ and then continue to bottom to add __VA_ARGS__ */
-						macro.tokens.resize(i+4);
-						macro.tokens[i+0] = std::move(token_t(token_type_t::r___VA_OPT__));
-						macro.tokens[i+1] = std::move(token_t(token_type_t::openparenthesis));
-						macro.tokens[i+2] = std::move(token_t(token_type_t::comma));
-						macro.tokens[i+3] = std::move(token_t(token_type_t::closeparenthesis));
+				if (t.type == token_type_t::r___VA_ARGS__) {
+					if (macro.flags & pptok_macro_t::FL_NO_VA_ARGS) {
+						/* do not expand __VA_ARGS__ if GNU args... syntax used */
+						continue;
+					}
+					else if (macro.tokens.size() >= 2) {
+						const size_t i = macro.tokens.size() - 2;
+						/* GNU extension: expression, ##__VA_ARGS__ which means the same thing as expression __VA_OPT__(,) __VA_ARGS__ */
+						if (macro.tokens[i].type == token_type_t::comma && macro.tokens[i+1].type == token_type_t::poundpound) {
+							/* convert ,##__VA_ARGS__ to __VA__OPT__(,) __VA_ARGS__ and then continue to bottom to add __VA_ARGS__ */
+							macro.tokens.resize(i+4);
+							macro.tokens[i+0] = std::move(token_t(token_type_t::r___VA_OPT__));
+							macro.tokens[i+1] = std::move(token_t(token_type_t::openparenthesis));
+							macro.tokens[i+2] = std::move(token_t(token_type_t::comma));
+							macro.tokens[i+3] = std::move(token_t(token_type_t::closeparenthesis));
+						}
 					}
 				}
 
@@ -2799,6 +2806,7 @@ try_again:	t = token_t();
 		fprintf(stderr,"MACRO '%s'",s_id.to_str().c_str());
 		if (macro.flags & pptok_macro_t::FL_PARENTHESIS) fprintf(stderr," PARENTHESIS");
 		if (macro.flags & pptok_macro_t::FL_VARIADIC) fprintf(stderr," VARIADIC");
+		if (macro.flags & pptok_macro_t::FL_NO_VA_ARGS) fprintf(stderr," NO_VA_ARGS");
 		fprintf(stderr,"\n");
 		fprintf(stderr,"  parameters:\n");
 		for (auto i=macro.parameters.begin();i!=macro.parameters.end();i++)
