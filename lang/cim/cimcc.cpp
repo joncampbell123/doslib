@@ -2685,6 +2685,7 @@ try_again:	t = token_t();
 		/* #define has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 		 * unless set to token_type_t::none in which case it will fetch another one */
+		identifier_str_t s_id_va_args_subst;
 		identifier_str_t s_id;
 		pptok_macro_t macro;
 		int r;
@@ -2723,10 +2724,19 @@ try_again:	t = token_t();
 				if (t.type != token_type_t::identifier)
 					return errno_return(EINVAL);
 
-				s_p.take_from(t.v.strliteral);
-				macro.parameters.push_back(std::move(s_p));
-
 				eat_whitespace(buf,sfo);
+
+				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
+					/* Ah, GNU style args... variadic macros that predate __VA_ARGS__ */
+					s_id_va_args_subst.take_from(t.v.strliteral);
+					macro.flags |= pptok_macro_t::FL_VARIADIC;
+					buf.discardb(3);
+				}
+				else {
+					s_p.take_from(t.v.strliteral);
+					macro.parameters.push_back(std::move(s_p));
+				}
+
 				if (buf.peekb() == ',') { buf.discardb(); }
 				else if (buf.peekb() == ')') { buf.discardb(); break; }
 				else return errno_return(EINVAL);
@@ -2747,11 +2757,18 @@ try_again:	t = token_t();
 			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
 				/* if the identifier matches a paraemeter then put in a parameter reference,
 				 * else pass the identifier along. */
-				for (auto pi=macro.parameters.begin();pi!=macro.parameters.end();pi++) {
-					if ((*pi) == t.v.strliteral) {
-						t = token_t(token_type_t::r_macro_paramref);
-						t.v.paramref = size_t(pi - macro.parameters.begin());
-						break;
+
+				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == t.v.strliteral) {
+					/* GNU args... variadic convert to __VA_ARGS__ */
+					t = token_t(token_type_t::r___VA_ARGS__);
+				}
+				else {
+					for (auto pi=macro.parameters.begin();pi!=macro.parameters.end();pi++) {
+						if ((*pi) == t.v.strliteral) {
+							t = token_t(token_type_t::r_macro_paramref);
+							t.v.paramref = size_t(pi - macro.parameters.begin());
+							break;
+						}
 					}
 				}
 

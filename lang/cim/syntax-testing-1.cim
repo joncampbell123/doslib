@@ -282,3 +282,9 @@ XV6(1,2);
 XV6(1,2,3,4,5);
 XVG1(1,2);
 XVG1(1,2,3,4,5);
+#define XVGA1(a,b,args...) a,b,args
+#define XVGA2(a,b,anything...) a,b,anything
+XVGA1(1,2);
+XVGA1(1,2,3,4,5);
+XVGA2(1,2);
+XVGA2(1,2,3,4,5);
