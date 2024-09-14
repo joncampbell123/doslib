@@ -2880,29 +2880,33 @@ try_again_w_token:
 					}
 
 					/* inject tokens from macro */
-					for (auto i=macro->ment.tokens.rbegin();i!=macro->ment.tokens.rend();i++) {
+					std::vector<token_t> out;
+					for (auto i=macro->ment.tokens.begin();i!=macro->ment.tokens.end();i++) {
 						if ((*i).type == token_type_t::r_macro_paramref) {
 							assert((*i).v.paramref < params.size());
 							const auto &param = params[(*i).v.paramref];
-							for (auto j=param.rbegin();j!=param.rend();j++)
-								pst.macro_expansion.push_front(*j);
+							for (auto j=param.begin();j!=param.end();j++)
+								out.push_back(*j);
 						}
 						else if ((*i).type == token_type_t::r___VA_ARGS__) {
 							if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
-								for (ssize_t pi=params.size()-1;pi >= (ssize_t)macro->ment.parameters.size();pi--) {
-									if (pi != (ssize_t)params.size()-1)
-										pst.macro_expansion.push_front(token_t(token_type_t::comma));
+								for (size_t pi=macro->ment.parameters.size();pi < params.size();pi++) {
+									if (pi != macro->ment.parameters.size())
+										out.push_back(token_t(token_type_t::comma));
 
 									const auto &param = params[pi];
-									for (auto j=param.rbegin();j!=param.rend();j++)
-										pst.macro_expansion.push_front(*j);
+									for (auto j=param.begin();j!=param.end();j++)
+										out.push_back(*j);
 								}
 							}
 						}
 						else {
-							pst.macro_expansion.push_front(*i);
+							out.push_back(*i);
 						}
 					}
+
+					for (auto i=out.rbegin();i!=out.rend();i++)
+						pst.macro_expansion.push_front(std::move(*i));
 
 					pst.macro_expansion_counter++;
 					goto try_again;
