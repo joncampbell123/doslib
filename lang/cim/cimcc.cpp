@@ -2553,6 +2553,48 @@ try_again:	t = token_t();
 		~pptok_state_t() { free_macros(); }
 	};
 
+	int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		/* #undef has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		identifier_str_t s_id;
+		pptok_macro_t macro;
+		int r;
+
+		(void)pst;
+
+		if ((r=lgtok(lst,buf,sfo,t)) < 1)
+			return r;
+
+		if (t.type != token_type_t::identifier)
+			return errno_return(EINVAL);
+		s_id.take_from(t.v.strliteral);
+
+		do {
+			if ((r=lgtok(lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+
+			/* ignore trailing tokens */
+		} while (1);
+
+#if 1//DEBUG
+		fprintf(stderr,"UNDEF '%s'\n",s_id.to_str().c_str());
+#endif
+
+		if (!pst.delete_macro(s_id)) {
+#if 1//DEBUG
+			fprintf(stderr,"  Macro wasn't defined anyway\n");
+#endif
+		}
+
+		return 1;
+	}
+
 	int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* #define has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
@@ -2615,7 +2657,12 @@ try_again_w_token:
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
-			case token_type_t::identifier:
+			case token_type_t::r_ppundef:
+				if ((r=pptok_undef(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::identifier: /* macro substitution */
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
 				if (macro) {
