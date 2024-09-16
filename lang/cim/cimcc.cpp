@@ -1668,6 +1668,7 @@ private:
 		void common_copy(const token_t &x) {
 			common_delete();
 			type = x.type;
+			pos = x.pos;
 
 			switch (type) {
 				case token_type_t::charliteral:
