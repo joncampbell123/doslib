@@ -2999,11 +2999,6 @@ try_again:	t = token_t();
 				else {
 					const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
 					if (macro) {
-						token_t tt;
-
-						/* NTS: ungetch and expansion pushes into the front of the queue so things have
-						 * to be pushed in reverse to be read forward */
-
 						if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
 							return r;
 
