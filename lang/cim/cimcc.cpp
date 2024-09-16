@@ -2693,6 +2693,7 @@ try_again:	t = token_t();
 	int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie) {
 		std::stack< std::pair<unsigned char,token_t> > os;
 		std::stack<integer_value_t> vs;
+		bool expect_op2 = false;
 		int er;
 
 		enum {
@@ -2717,23 +2718,34 @@ try_again:	t = token_t();
 			if (ib != ie) {
 				switch ((*ib).type) {
 					case token_type_t::plus:
-						ib++; if (ib == ie) return errno_return(EINVAL);
-						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-						vs.push(r);
-						continue; /* loop while loop again */
+						if (expect_op2) {
+							expect_op2 = false; lev = AS; break;
+						}
+						else {
+							ib++; if (ib == ie) return errno_return(EINVAL);
+							if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+							vs.push(r);
+							continue; /* loop while loop again */
+						}
 					case token_type_t::minus:
-						ib++; if (ib == ie) return errno_return(EINVAL);
-						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-						r.flags |= integer_value_t::FL_SIGNED;
-						r.v.v = -r.v.v;
-						vs.push(r);
-						continue; /* loop while loop again */
+						if (expect_op2) {
+							expect_op2 = false; lev = AS; break;
+						}
+						else {
+							ib++; if (ib == ie) return errno_return(EINVAL);
+							if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+							r.flags |= integer_value_t::FL_SIGNED;
+							r.v.v = -r.v.v;
+							vs.push(r);
+							continue; /* loop while loop again */
+						}
 					case token_type_t::tilde:
 						ib++; if (ib == ie) return errno_return(EINVAL);
 						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
 						r.flags &= ~integer_value_t::FL_SIGNED;
 						r.v.u = ~r.v.u;
 						vs.push(r);
+						expect_op2 = true;
 						continue; /* loop while loop again */
 					case token_type_t::exclamation:
 						ib++; if (ib == ie) return errno_return(EINVAL);
@@ -2741,31 +2753,34 @@ try_again:	t = token_t();
 						r.flags |= integer_value_t::FL_SIGNED;
 						r.v.v = (r.v.v == int64_t(0)) ? 1 : 0;
 						vs.push(r);
+						expect_op2 = true;
 						continue; /* loop while loop again */
 					case token_type_t::integer:
+						if (expect_op2 == true) return errno_return(EINVAL);
 						vs.push((*ib).v.integer); ib++;
+						expect_op2 = true;
 						continue;
 					case token_type_t::pipepipe:
-						lev = LOG_OR; break;
+						expect_op2 = false; lev = LOG_OR; break;
 					case token_type_t::ampersandampersand:
-						lev = LOG_AND; break;
+						expect_op2 = false; lev = LOG_AND; break;
 					case token_type_t::pipe:
-						lev = BIT_OR; break;
+						expect_op2 = false; lev = BIT_OR; break;
 					case token_type_t::caret:
-						lev = BIT_XOR; break;
+						expect_op2 = false; lev = BIT_XOR; break;
 					case token_type_t::ampersand:
-						lev = BIT_AND; break;
+						expect_op2 = false; lev = BIT_AND; break;
 					case token_type_t::equalequal:
 					case token_type_t::exclamationequals:
-						lev = EQU; break;
+						expect_op2 = false; lev = EQU; break;
 					case token_type_t::lessthan:
 					case token_type_t::greaterthan:
 					case token_type_t::lessthanequals:
 					case token_type_t::greaterthanequals:
-						lev = CMP; break;
+						expect_op2 = false; lev = CMP; break;
 					case token_type_t::lessthanlessthan:
 					case token_type_t::greaterthangreaterthan:
-						lev = SHF; break;
+						expect_op2 = false; lev = SHF; break;
 					default:
 						return errno_return(EINVAL);
 				}
@@ -2820,6 +2835,12 @@ try_again:	t = token_t();
 							break;
 						case token_type_t::greaterthangreaterthan:
 							a.v.u = a.v.v >> b.v.v;
+							break;
+						case token_type_t::plus:
+							a.v.u = a.v.v + b.v.v;
+							break;
+						case token_type_t::minus:
+							a.v.u = a.v.v - b.v.v;
 							break;
 						default:
 							return errno_return(EINVAL);
