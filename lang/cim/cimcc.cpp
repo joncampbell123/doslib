@@ -2676,13 +2676,13 @@ try_again:	t = token_t();
 			/* ignore trailing tokens */
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"UNDEF '%s'\n",s_id.to_str().c_str());
 #endif
 
 		if (!pst.delete_macro(s_id)) {
-#if 1//DEBUG
+#if 0//DEBUG
 			fprintf(stderr,"  Macro wasn't defined anyway\n");
 #endif
 		}
@@ -2813,7 +2813,7 @@ try_again:	t = token_t();
 									return errno_return(EINVAL);
 							}
 
-#if 1//DEBUG
+#if 0//DEBUG
 							fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
 #endif
 
@@ -2893,7 +2893,7 @@ try_again:	t = token_t();
 								return errno_return(EINVAL);
 						}
 
-#if 1//DEBUG
+#if 0//DEBUG
 						fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
 #endif
 
@@ -3016,7 +3016,7 @@ try_again:	t = token_t();
 			expr.push_back(std::move(t));
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"%s (SUBST1)\n",is_if?"IF":"ELIF");
 		for (auto i=expr.begin();i!=expr.end();i++) fprintf(stderr,"  > %s\n",(*i).to_str().c_str());
@@ -3035,7 +3035,7 @@ try_again:	t = token_t();
 				return errno_return(EINVAL);
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"%s Result %s\n",is_if?"IF":"ELIF",rv.to_str().c_str());
 #endif
 
@@ -3102,7 +3102,7 @@ try_again:	t = token_t();
 			/* ignore trailing tokens */
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"%s '%s'\n",is_ifdef?(match_cond?"IFDEF":"IFNDEF"):(match_cond?"ELIFDEF":"ELIFNDEF"),s_id.to_str().c_str());
 #endif
@@ -3159,7 +3159,7 @@ try_again:	t = token_t();
 			/* ignore trailing tokens */
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"ELSE condempty=%u\n",pst.cond_block.empty());
 #endif
@@ -3201,7 +3201,7 @@ try_again:	t = token_t();
 			/* ignore trailing tokens */
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		for (size_t i=1;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"ENDIF\n");
 #endif
@@ -3360,7 +3360,7 @@ try_again:	t = token_t();
 			}
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"MACRO '%s'",s_id.to_str().c_str());
 		if (macro.flags & pptok_macro_t::FL_PARENTHESIS) fprintf(stderr," PARENTHESIS");
 		if (macro.flags & pptok_macro_t::FL_VARIADIC) fprintf(stderr," VARIADIC");
@@ -3384,7 +3384,7 @@ try_again:	t = token_t();
 		/* caller just parsed the identifier token */
 		int r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
 #endif
 
@@ -3434,7 +3434,7 @@ try_again:	t = token_t();
 				}
 			} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 			fprintf(stderr,"  Parameters filled in at call:\n");
 			for (auto i=params.begin();i!=params.end();i++) {
 				auto &ent = *i;
