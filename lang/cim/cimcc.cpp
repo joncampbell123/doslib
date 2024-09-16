@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <stack>
 #include <deque>
 #include <new>
 
@@ -651,6 +652,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		poundpound,
 		backslashnewline,
 		r_macro_paramref,			// 140
+		r_ppendif,
 
 		__MAX__
 	};
@@ -792,6 +794,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(__fortran);
 	DEFX(__attribute__);
 	DEFX(__declspec);
+	DEFB(endif);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -967,7 +970,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(error),
 		X(warning),
 		X(line),
-		X(pragma)
+		X(pragma),
+		X(endif)
 	};
 	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
 #undef X
@@ -1173,7 +1177,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"pound",
 		"poundpound",
 		"backslashnewline",
-		"macro_paramref"			// 140
+		"macro_paramref",			// 140
+		str_ppendif
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2507,6 +2512,25 @@ try_again:	t = token_t();
 			identifier_str_t	name;
 			pptok_macro_ent_t*	next;
 		};
+		struct cond_block_t {
+			enum {
+				WAITING=0,	/* false, waiting for elseif/else */
+				IS_TRUE,	/* true, next elseif/else switches to done. #else && WAITING == IS_TRUE */
+				DONE		/* state was IS_TRUE, skip anything else */
+			};
+			unsigned char		state = WAITING;
+			unsigned char		flags = 0;
+			static constexpr unsigned char FL_ELSE = 1u << 0u;
+		};
+
+		std::stack<cond_block_t>	cond_block;
+
+		bool condb_true(void) const {
+			if (cond_block.empty())
+				return true;
+			else
+				return cond_block.top().state == cond_block_t::IS_TRUE;
+		}
 
 		unsigned int macro_expansion_counter = 0; /* to prevent runaway expansion */
 		std::deque<token_t> macro_expansion;
@@ -2657,6 +2681,125 @@ try_again:	t = token_t();
 		return 1;
 	}
 
+	int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool match_cond) {
+		/* #ifdef has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		identifier_str_t s_id;
+		pptok_macro_t macro;
+		int r;
+
+		(void)pst;
+
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+			return r;
+
+		if (t.type != token_type_t::identifier)
+			return errno_return(EINVAL);
+		s_id.take_from(t.v.strliteral);
+
+		do {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+
+			/* ignore trailing tokens */
+		} while (1);
+
+#if 1//DEBUG
+		fprintf(stderr,"%s '%s'\n",match_cond?"IFDEF":"IFNDEF",s_id.to_str().c_str());
+#endif
+
+		const bool cond = (pst.lookup_macro(s_id) != NULL);
+		pptok_state_t::cond_block_t cb;
+
+		/* if the condition matches and the parent condition if any is true */
+		if (pst.condb_true())
+			cb.state = (cond == match_cond) ? pptok_state_t::cond_block_t::IS_TRUE : pptok_state_t::cond_block_t::WAITING;
+		else
+			cb.state = pptok_state_t::cond_block_t::DONE; /* never will be true */
+
+		pst.cond_block.push(std::move(cb));
+		return 1;
+	}
+
+	int pptok_else(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		/* #else has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		pptok_macro_t macro;
+		int r;
+
+		(void)pst;
+
+		do {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+
+			/* ignore trailing tokens */
+		} while (1);
+
+#if 1//DEBUG
+		fprintf(stderr,"ELSE condempty=%u\n",pst.cond_block.empty());
+#endif
+
+		if (pst.cond_block.empty())
+			return errno_return(EINVAL); /* #else to what?? */
+
+		auto &ent = pst.cond_block.top();
+		if (ent.flags & pptok_state_t::cond_block_t::FL_ELSE) return errno_return(EINVAL); /* #else cannot follow #else */
+		ent.flags |= pptok_state_t::cond_block_t::FL_ELSE;
+
+		/* if nothing else was true, this block is true
+		 * if the previous block was true, this is false */
+		if (ent.state == pptok_state_t::cond_block_t::WAITING)
+			ent.state = pptok_state_t::cond_block_t::IS_TRUE;
+		else if (ent.state == pptok_state_t::cond_block_t::IS_TRUE)
+			ent.state = pptok_state_t::cond_block_t::DONE;
+		return 1;
+	}
+
+	int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		/* #endif has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		pptok_macro_t macro;
+		int r;
+
+		(void)pst;
+
+		do {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+
+			/* ignore trailing tokens */
+		} while (1);
+
+#if 1//DEBUG
+		fprintf(stderr,"ENDIF\n");
+#endif
+
+		if (pst.cond_block.empty())
+			return errno_return(EPIPE);
+
+		pst.cond_block.pop();
+		return 1;
+	}
+
 	bool pptok_define_allowed_token(const token_t &t) {
 		switch (t.type) {
 			/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
@@ -2668,6 +2811,7 @@ try_again:	t = token_t();
 			case token_type_t::r_ppelse:
 			case token_type_t::r_ppelif:
 			case token_type_t::r_ppelifdef:
+			case token_type_t::r_ppendif:
 			case token_type_t::r_ppifndef:
 			case token_type_t::r_ppinclude:
 			case token_type_t::r_pperror:
@@ -2980,6 +3124,17 @@ try_again:
 			return r;
 
 try_again_w_token:
+		if (!pst.condb_true()) {
+			if (t.type == token_type_t::r_ppifdef || t.type == token_type_t::r_ppendif || t.type == token_type_t::r_ppelse ||
+				t.type == token_type_t::r_ppelifdef || t.type == token_type_t::r_ppif || t.type == token_type_t::r_ppelif ||
+				t.type == token_type_t::r_ppifndef) {
+				/* pass */
+			}
+			else {
+				goto try_again;
+			}
+		}
+
 		switch (t.type) {
 			case token_type_t::r_ppdefine:
 				if ((r=pptok_define(pst,lst,buf,sfo,t)) < 1)
@@ -2988,6 +3143,26 @@ try_again_w_token:
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppundef:
 				if ((r=pptok_undef(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppifdef:
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppifndef:
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppelse:
+				if ((r=pptok_else(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppendif:
+				if ((r=pptok_endif(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */

@@ -79,7 +79,6 @@ typename
 using
 wchar_t
 #if
-#ifdef
 #define A
 #define B ( 4 )
 #define C (4 )
@@ -92,10 +91,8 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 #undef X
 #undef X
 hello 4 X 4 A
-#else
 #elif
 #elifdef
-#ifndef
 #include
 #error
 #warning
@@ -291,3 +288,54 @@ XVGA2(1,2);
 XVGA2(1,2,3,4,5);
 XVGA3(1,2);
 XVGA3(1,2,3,4,5);
+
+#ifdef A
+should see this;
+#endif
+
+#ifndef A
+should not see this;
+#endif
+
+#ifdef NOTEXIST
+should not see this;
+#endif
+
+#ifndef NOTEXIST
+should see this;
+#endif
+
+#ifdef A
+# ifdef B
+should see this;
+# endif
+should also see this;
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# endif
+nor this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# endif
+nor this
+#else
+you should see this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#else
+you should see this
+#endif
+
