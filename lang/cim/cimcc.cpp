@@ -3004,11 +3004,9 @@ try_again:	t = token_t();
 						/* NTS: ungetch and expansion pushes into the front of the queue so things have
 						 * to be pushed in reverse to be read forward */
 
-						tt = token_t(token_type_t::closeparenthesis); pptok_lgtok_ungetch(pst,tt);
 						if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
 							return r;
 
-						tt = token_t(token_type_t::openparenthesis); pptok_lgtok_ungetch(pst,tt);
 						pst.macro_expansion_counter++;
 						continue;
 					}
