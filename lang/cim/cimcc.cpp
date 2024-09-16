@@ -3375,6 +3375,13 @@ try_again:	t = token_t();
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
 #endif
 
+		// FIXME:
+		//  Open Watcom header rel/h/win/win16.h
+		//    WM_SPOOLERSTATUS is defined twice, but with the exact same value.
+		//    many compilers overlook #defining a macro multiple times IF each
+		//    time the value is exactly the same. We need to do that too:
+		//    If the macro exists but the tokens are the same, silently ignore
+		//    it instead of throwing an error.
 		if (!pst.create_macro(s_id,macro))
 			return errno_return(EEXIST);
 
