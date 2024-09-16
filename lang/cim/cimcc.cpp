@@ -2763,6 +2763,9 @@ try_again:	t = token_t();
 					case token_type_t::lessthanequals:
 					case token_type_t::greaterthanequals:
 						lev = CMP; break;
+					case token_type_t::lessthanlessthan:
+					case token_type_t::greaterthangreaterthan:
+						lev = SHF; break;
 					default:
 						return errno_return(EINVAL);
 				}
@@ -2811,6 +2814,12 @@ try_again:	t = token_t();
 							break;
 						case token_type_t::greaterthanequals:
 							a.v.u = (a.v.v >= b.v.v) ? 1 : 0;
+							break;
+						case token_type_t::lessthanlessthan:
+							a.v.u = a.v.v << b.v.v;
+							break;
+						case token_type_t::greaterthangreaterthan:
+							a.v.u = a.v.v >> b.v.v;
 							break;
 						default:
 							return errno_return(EINVAL);
