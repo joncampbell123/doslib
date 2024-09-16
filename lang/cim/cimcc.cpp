@@ -653,6 +653,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		backslashnewline,
 		r_macro_paramref,			// 140
 		r_ppendif,
+		r_ppelifndef,
 
 		__MAX__
 	};
@@ -795,6 +796,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(__attribute__);
 	DEFX(__declspec);
 	DEFB(endif);
+	DEFB(elifndef);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -971,7 +973,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(warning),
 		X(line),
 		X(pragma),
-		X(endif)
+		X(endif),
+		X(elifndef)
 	};
 	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
 #undef X
@@ -1178,7 +1181,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"poundpound",
 		"backslashnewline",
 		"macro_paramref",			// 140
-		str_ppendif
+		str_ppendif,
+		str_ppelifndef
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2813,6 +2817,7 @@ try_again:	t = token_t();
 			case token_type_t::r_ppelifdef:
 			case token_type_t::r_ppendif:
 			case token_type_t::r_ppifndef:
+			case token_type_t::r_ppelifndef:
 			case token_type_t::r_ppinclude:
 			case token_type_t::r_pperror:
 			case token_type_t::r_ppwarning:
@@ -3127,7 +3132,7 @@ try_again_w_token:
 		if (!pst.condb_true()) {
 			if (t.type == token_type_t::r_ppifdef || t.type == token_type_t::r_ppendif || t.type == token_type_t::r_ppelse ||
 				t.type == token_type_t::r_ppelifdef || t.type == token_type_t::r_ppif || t.type == token_type_t::r_ppelif ||
-				t.type == token_type_t::r_ppifndef) {
+				t.type == token_type_t::r_ppifndef || t.type == token_type_t::r_ppelifndef) {
 				/* pass */
 			}
 			else {

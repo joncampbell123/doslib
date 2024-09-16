@@ -339,3 +339,6 @@ nor this
 you should see this
 #endif
 
+#elifdef
+#elifndef
+
