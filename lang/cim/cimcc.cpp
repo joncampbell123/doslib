@@ -2755,6 +2755,14 @@ try_again:	t = token_t();
 						lev = BIT_XOR; break;
 					case token_type_t::ampersand:
 						lev = BIT_AND; break;
+					case token_type_t::equalequal:
+					case token_type_t::exclamationequals:
+						lev = EQU; break;
+					case token_type_t::lessthan:
+					case token_type_t::greaterthan:
+					case token_type_t::lessthanequals:
+					case token_type_t::greaterthanequals:
+						lev = CMP; break;
 					default:
 						return errno_return(EINVAL);
 				}
@@ -2764,8 +2772,9 @@ try_again:	t = token_t();
 				if (lev <= os.top().first) {
 					if (vs.size() < 2) return errno_return(EINVAL);
 
-					integer_value_t a = vs.top(); vs.pop();
+					/* a, b pushed to stack in a, b order so pops off b, a */
 					integer_value_t b = vs.top(); vs.pop();
+					integer_value_t a = vs.top(); vs.pop();
 
 					/* a OP b,
 					 * put result in a */
@@ -2784,6 +2793,24 @@ try_again:	t = token_t();
 							break;
 						case token_type_t::ampersand:
 							a.v.u = a.v.u & b.v.u;
+							break;
+						case token_type_t::equalequal:
+							a.v.u = (a.v.u == b.v.u) ? 1 : 0;
+							break;
+						case token_type_t::exclamationequals:
+							a.v.u = (a.v.u != b.v.u) ? 1 : 0;
+							break;
+						case token_type_t::lessthan:
+							a.v.u = (a.v.v < b.v.v) ? 1 : 0;
+							break;
+						case token_type_t::greaterthan:
+							a.v.u = (a.v.v > b.v.v) ? 1 : 0;
+							break;
+						case token_type_t::lessthanequals:
+							a.v.u = (a.v.v <= b.v.v) ? 1 : 0;
+							break;
+						case token_type_t::greaterthanequals:
+							a.v.u = (a.v.v >= b.v.v) ? 1 : 0;
 							break;
 						default:
 							return errno_return(EINVAL);

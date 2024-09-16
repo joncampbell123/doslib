@@ -444,3 +444,59 @@ you should not see this B
 you should see this B
 #endif
 
+#if 1 == 1
+you should see this B
+#endif
+
+#if 1 == 2
+you should not see this B
+#endif
+
+#if 1 != 1
+you should not see this B
+#endif
+
+#if 1 != 2
+you should see this B
+#endif
+
+#if 1 < 2
+you should see this B
+#endif
+
+#if 1 < 0
+you should not see this B
+#endif
+
+#if 2 > 1
+you should see this B
+#endif
+
+#if 0 > 1
+you should not see this B
+#endif
+
+#if 2 >= 1
+you should see this B
+#endif
+
+#if 1 >= 1
+you should see this B
+#endif
+
+#if 0 >= 1
+you should not see this B
+#endif
+
+#if 0 <= 1
+you should see this B
+#endif
+
+#if 1 <= 1
+you should see this B
+#endif
+
+#if 2 <= 1
+you should not see this B
+#endif
+
