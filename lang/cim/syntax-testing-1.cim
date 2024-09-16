@@ -92,7 +92,6 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 #undef X
 hello 4 X 4 A
 #elif
-#elifdef
 #include
 #error
 #warning
@@ -339,6 +338,31 @@ nor this
 you should see this
 #endif
 
-#elifdef
-#elifndef
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#elifdef A
+you should see this
+#else
+you should not see this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#elifndef A
+you should not see this
+#elifndef NOTEXIST2
+you should see this
+#else
+you should not see this
+#endif
 

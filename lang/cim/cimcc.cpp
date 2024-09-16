@@ -2685,7 +2685,7 @@ try_again:	t = token_t();
 		return 1;
 	}
 
-	int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool match_cond) {
+	int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_ifdef,const bool match_cond) {
 		/* #ifdef has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 		 * unless set to token_type_t::none in which case it will fetch another one */
@@ -2715,19 +2715,37 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
-		fprintf(stderr,"%s '%s'\n",match_cond?"IFDEF":"IFNDEF",s_id.to_str().c_str());
+		fprintf(stderr,"%s '%s'\n",is_ifdef?(match_cond?"IFDEF":"IFNDEF"):(match_cond?"ELIFDEF":"ELIFNDEF"),s_id.to_str().c_str());
 #endif
 
-		const bool cond = (pst.lookup_macro(s_id) != NULL);
-		pptok_state_t::cond_block_t cb;
+		const bool cond = (pst.lookup_macro(s_id) != NULL) == match_cond;
 
-		/* if the condition matches and the parent condition if any is true */
-		if (pst.condb_true())
-			cb.state = (cond == match_cond) ? pptok_state_t::cond_block_t::IS_TRUE : pptok_state_t::cond_block_t::WAITING;
-		else
-			cb.state = pptok_state_t::cond_block_t::DONE; /* never will be true */
+		if (is_ifdef) {
+			pptok_state_t::cond_block_t cb;
 
-		pst.cond_block.push(std::move(cb));
+			/* if the condition matches and the parent condition if any is true */
+			if (pst.condb_true())
+				cb.state = cond ? pptok_state_t::cond_block_t::IS_TRUE : pptok_state_t::cond_block_t::WAITING;
+			else
+				cb.state = pptok_state_t::cond_block_t::DONE; /* never will be true */
+
+			pst.cond_block.push(std::move(cb));
+		}
+		else {
+			if (pst.cond_block.empty())
+				return errno_return(EINVAL); /* #elifdef to what?? */
+
+			auto &ent = pst.cond_block.top();
+			if (ent.flags & pptok_state_t::cond_block_t::FL_ELSE) return errno_return(EINVAL); /* #elifdef,etc cannot follow #else */
+
+			if (ent.state == pptok_state_t::cond_block_t::WAITING) {
+				if (cond) ent.state = pptok_state_t::cond_block_t::IS_TRUE;
+			}
+			else if (ent.state == pptok_state_t::cond_block_t::IS_TRUE) {
+				ent.state = pptok_state_t::cond_block_t::DONE;
+			}
+		}
+
 		return 1;
 	}
 
@@ -3152,12 +3170,22 @@ try_again_w_token:
 
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppifdef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true)) < 1)
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,true)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppifndef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false)) < 1)
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,false)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppelifdef:
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,true)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppelifndef:
+				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,false)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
