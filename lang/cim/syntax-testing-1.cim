@@ -78,7 +78,6 @@ typeid
 typename
 using
 wchar_t
-#if
 #define A
 #define B ( 4 )
 #define C (4 )
@@ -91,16 +90,11 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 #undef X
 #undef X
 hello 4 X 4 A
-#elif
 #include
 #error
 #warning
 #line
 #pragma
-#if
-# if
-#  if
-#   if
 #line
 # line
 #  line
@@ -364,5 +358,89 @@ you should not see this
 you should see this
 #else
 you should not see this
+#endif
+
+#if 1
+you should see this
+#endif
+
+#if 0
+you should not see this
+#endif
+
+#if defined(A)
+you should see this
+#endif
+
+#if defined(NOTEXIST)
+you should not see this
+#endif
+
+#if 4
+you should see this B
+#endif
+
+#if -4
+you should see this B
+#endif
+
+#if +4
+you should see this B
+#endif
+
+#if !4
+you should not see this B
+#endif
+
+#if !0
+you should see this B
+#endif
+
+#if 0 || 0
+you should not see this B
+#endif
+
+#if 0 || 1
+you should see this B
+#endif
+
+#if 0 && 0
+you should not see this B
+#endif
+
+#if 0 && 1
+you should not see this B
+#endif
+
+#if 1 && 1
+you should see this B
+#endif
+
+#if 1 && 0 || 0
+you should not see this B
+#endif
+
+#if 1 && 0 || 1
+you should see this B
+#endif
+
+#if 0|1
+you should see this B
+#endif
+
+#if 1^1
+you should not see this B
+#endif
+
+#if 1^2
+you should see this B
+#endif
+
+#if 1&2
+you should not see this B
+#endif
+
+#if 1&1
+you should see this B
 #endif
 

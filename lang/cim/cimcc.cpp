@@ -2643,6 +2643,10 @@ try_again:	t = token_t();
 		}
 	}
 
+	void pptok_lgtok_ungetch(pptok_state_t &pst,token_t &t) {
+		pst.macro_expansion.push_front(std::move(t));
+	}
+
 	int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* #undef has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
@@ -2681,6 +2685,291 @@ try_again:	t = token_t();
 #if 1//DEBUG
 			fprintf(stderr,"  Macro wasn't defined anyway\n");
 #endif
+		}
+
+		return 1;
+	}
+
+	int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie) {
+		std::stack< std::pair<unsigned char,token_t> > os;
+		std::stack<integer_value_t> vs;
+		int er;
+
+		enum {
+			NONE=0,
+			LOG_OR, /* || */
+			LOG_AND, /* && */
+			BIT_OR, /* | */
+			BIT_XOR, /* ^ */
+			BIT_AND, /* & */
+			EQU, /* == != */
+			CMP, /* < <= > >= */
+			SHF, /* << >> */
+			AS, /* + - */
+			MDR /* * / % */
+		};
+
+		if (ib == ie) return errno_return(EINVAL);
+
+		while (ib != ie || !os.empty()) {
+			unsigned char lev = NONE;
+
+			if (ib != ie) {
+				switch ((*ib).type) {
+					case token_type_t::plus:
+						ib++; if (ib == ie) return errno_return(EINVAL);
+						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+						vs.push(r);
+						continue; /* loop while loop again */
+					case token_type_t::minus:
+						ib++; if (ib == ie) return errno_return(EINVAL);
+						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+						r.flags |= integer_value_t::FL_SIGNED;
+						r.v.v = -r.v.v;
+						vs.push(r);
+						continue; /* loop while loop again */
+					case token_type_t::tilde:
+						ib++; if (ib == ie) return errno_return(EINVAL);
+						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+						r.flags &= ~integer_value_t::FL_SIGNED;
+						r.v.u = ~r.v.u;
+						vs.push(r);
+						continue; /* loop while loop again */
+					case token_type_t::exclamation:
+						ib++; if (ib == ie) return errno_return(EINVAL);
+						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
+						r.flags |= integer_value_t::FL_SIGNED;
+						r.v.v = (r.v.v == int64_t(0)) ? 1 : 0;
+						vs.push(r);
+						continue; /* loop while loop again */
+					case token_type_t::integer:
+						vs.push((*ib).v.integer); ib++;
+						continue;
+					case token_type_t::pipepipe:
+						lev = LOG_OR; break;
+					case token_type_t::ampersandampersand:
+						lev = LOG_AND; break;
+					case token_type_t::pipe:
+						lev = BIT_OR; break;
+					case token_type_t::caret:
+						lev = BIT_XOR; break;
+					case token_type_t::ampersand:
+						lev = BIT_AND; break;
+					default:
+						return errno_return(EINVAL);
+				}
+			}
+
+			while (!os.empty()) {
+				if (lev <= os.top().first) {
+					if (vs.size() < 2) return errno_return(EINVAL);
+
+					integer_value_t a = vs.top(); vs.pop();
+					integer_value_t b = vs.top(); vs.pop();
+
+					/* a OP b,
+					 * put result in a */
+					switch (os.top().second.type) {
+						case token_type_t::pipepipe:
+							a.v.u = ((a.v.u != 0) || (b.v.u != 0)) ? 1 : 0;
+							break;
+						case token_type_t::ampersandampersand:
+							a.v.u = ((a.v.u != 0) && (b.v.u != 0)) ? 1 : 0;
+							break;
+						case token_type_t::pipe:
+							a.v.u = a.v.u | b.v.u;
+							break;
+						case token_type_t::caret:
+							a.v.u = a.v.u ^ b.v.u;
+							break;
+						case token_type_t::ampersand:
+							a.v.u = a.v.u & b.v.u;
+							break;
+						default:
+							return errno_return(EINVAL);
+					}
+
+#if 1//DEBUG
+					fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
+#endif
+
+					vs.push(a);
+					os.pop();
+				}
+				else {
+					break;
+				}
+			}
+
+			if (lev != NONE) {
+				assert(ib != ie);
+				os.push( std::pair<unsigned char,token_t>(lev,*ib) );
+				ib++;
+			}
+		}
+
+		if (!os.empty())
+			return errno_return(EINVAL);
+		if (vs.size() != 1)
+			return errno_return(EINVAL);
+
+		r = vs.top();
+		return 1;
+	}
+
+	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+
+	int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_if) {
+		/* #if has already been parsed.
+		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
+		 * unless set to token_type_t::none in which case it will fetch another one */
+		std::deque<token_t> expr;
+		int r;
+
+		(void)pst;
+
+		do {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+			else if (t.type == token_type_t::backslashnewline) {
+				continue;
+			}
+			else if (t.type == token_type_t::floating) {
+				return errno_return(EINVAL);
+			}
+			else if (t.type == token_type_t::strliteral) {
+				return errno_return(EINVAL);
+			}
+			else if (t.type == token_type_t::charliteral) {
+				return errno_return(EINVAL);
+			}
+			else if (t.type == token_type_t::r_true || t.type == token_type_t::r_false) {
+				const bool res = (t.type == token_type_t::r_true);
+				t = token_t(token_type_t::integer);
+				t.v.integer.init();
+				t.v.integer.v.u = (res > 0) ? 1 : 0;
+			}
+			else if (t.type == token_type_t::identifier) {
+				if (t.v.strliteral == "defined") { /* defined(MACRO) */
+					int paren = 0;
+					int res = -1;
+
+					do {
+						if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+							return r;
+
+						if (t.type == token_type_t::openparenthesis) {
+							paren++;
+						}
+						else if (t.type == token_type_t::closeparenthesis) {
+							if (paren == 0) return errno_return(EINVAL);
+							paren--;
+							if (paren == 0) break;
+						}
+						else if (t.type == token_type_t::identifier) {
+							if (res >= 0) return errno_return(EINVAL);
+							res = (pst.lookup_macro(t.v.strliteral) != NULL) ? 1 : 0;
+						}
+						else if (t.type == token_type_t::newline) {
+							pptok_lgtok_ungetch(pst,t);
+							break;
+						}
+						else {
+							break;
+						}
+					} while (1);
+
+					if (res < 0)
+						return errno_return(EINVAL);
+
+					t = token_t(token_type_t::integer);
+					t.v.integer.init();
+					t.v.integer.v.u = (res > 0) ? 1 : 0;
+				}
+				else {
+					const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+					if (macro) {
+						token_t tt;
+
+						/* NTS: ungetch and expansion pushes into the front of the queue so things have
+						 * to be pushed in reverse to be read forward */
+
+						tt = token_t(token_type_t::closeparenthesis); pptok_lgtok_ungetch(pst,tt);
+						if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
+							return r;
+
+						tt = token_t(token_type_t::openparenthesis); pptok_lgtok_ungetch(pst,tt);
+						pst.macro_expansion_counter++;
+						continue;
+					}
+					else {
+						t = token_t(token_type_t::integer);
+						t.v.integer.init();
+						t.v.integer.v.u = 0;
+					}
+				}
+			}
+
+			expr.push_back(std::move(t));
+		} while (1);
+
+#if 1//DEBUG
+		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
+		fprintf(stderr,"%s (SUBST1)\n",is_if?"IF":"ELIF");
+		for (auto i=expr.begin();i!=expr.end();i++) fprintf(stderr,"  > %s\n",(*i).to_str().c_str());
+#endif
+
+		integer_value_t rv;
+		rv.init();
+
+		{
+			std::deque<token_t>::iterator ib = expr.begin();
+
+			if ((r=pptok_eval_expr(rv,ib,expr.end())) < 1)
+				return r;
+
+			if (ib != expr.end())
+				return errno_return(EINVAL);
+		}
+
+#if 1//DEBUG
+		fprintf(stderr,"%s Result %s\n",is_if?"IF":"ELIF",rv.to_str().c_str());
+#endif
+
+		if (expr.empty())
+			return errno_return(EINVAL);
+
+		const bool cond = (rv.v.u != 0);
+
+		if (is_if) {
+			pptok_state_t::cond_block_t cb;
+
+			/* if the condition matches and the parent condition if any is true */
+			if (pst.condb_true())
+				cb.state = cond ? pptok_state_t::cond_block_t::IS_TRUE : pptok_state_t::cond_block_t::WAITING;
+			else
+				cb.state = pptok_state_t::cond_block_t::DONE; /* never will be true */
+
+			pst.cond_block.push(std::move(cb));
+		}
+		else {
+			if (pst.cond_block.empty())
+				return errno_return(EINVAL); /* #elifdef to what?? */
+
+			auto &ent = pst.cond_block.top();
+			if (ent.flags & pptok_state_t::cond_block_t::FL_ELSE) return errno_return(EINVAL); /* #elif cannot follow #else */
+
+			if (ent.state == pptok_state_t::cond_block_t::WAITING) {
+				if (cond) ent.state = pptok_state_t::cond_block_t::IS_TRUE;
+			}
+			else if (ent.state == pptok_state_t::cond_block_t::IS_TRUE) {
+				ent.state = pptok_state_t::cond_block_t::DONE;
+			}
 		}
 
 		return 1;
@@ -3200,6 +3489,16 @@ try_again_w_token:
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppendif:
 				if ((r=pptok_endif(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppif:
+				if ((r=pptok_if(pst,lst,buf,sfo,t,true)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppelif:
+				if ((r=pptok_if(pst,lst,buf,sfo,t,false)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
