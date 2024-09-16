@@ -2694,7 +2694,6 @@ try_again:	t = token_t();
 		std::stack< std::pair<unsigned char,token_t> > os;
 		std::stack<integer_value_t> vs;
 		bool expect_op2 = false;
-		int er;
 
 		enum {
 			NONE=0,
@@ -2707,7 +2706,9 @@ try_again:	t = token_t();
 			CMP, /* < <= > >= */
 			SHF, /* << >> */
 			AS, /* + - */
-			MDR /* * / % */
+			MDR, /* * / % */
+			NOT, /* ! ~ */
+			NEG /* leading + - */
 		};
 
 		if (ib == ie) return errno_return(EINVAL);
@@ -2722,38 +2723,20 @@ try_again:	t = token_t();
 							expect_op2 = false; lev = AS; break;
 						}
 						else {
-							ib++; if (ib == ie) return errno_return(EINVAL);
-							if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-							vs.push(r);
-							continue; /* loop while loop again */
+							lev = NEG; break;
 						}
 					case token_type_t::minus:
 						if (expect_op2) {
 							expect_op2 = false; lev = AS; break;
 						}
 						else {
-							ib++; if (ib == ie) return errno_return(EINVAL);
-							if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-							r.flags |= integer_value_t::FL_SIGNED;
-							r.v.v = -r.v.v;
-							vs.push(r);
-							continue; /* loop while loop again */
+							lev = NEG; break;
 						}
 					case token_type_t::tilde:
-						ib++; if (ib == ie) return errno_return(EINVAL);
-						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-						r.flags &= ~integer_value_t::FL_SIGNED;
-						r.v.u = ~r.v.u;
-						vs.push(r);
-						expect_op2 = true;
+						lev = NOT; break;
 						continue; /* loop while loop again */
 					case token_type_t::exclamation:
-						ib++; if (ib == ie) return errno_return(EINVAL);
-						if ((er=pptok_eval_expr(r,ib,ie)) < 1) return er;
-						r.flags |= integer_value_t::FL_SIGNED;
-						r.v.v = (r.v.v == int64_t(0)) ? 1 : 0;
-						vs.push(r);
-						expect_op2 = true;
+						lev = NOT; break;
 						continue; /* loop while loop again */
 					case token_type_t::integer:
 						if (expect_op2 == true) return errno_return(EINVAL);
@@ -2788,70 +2771,104 @@ try_again:	t = token_t();
 
 			while (!os.empty()) {
 				if (lev <= os.top().first) {
-					if (vs.size() < 2) return errno_return(EINVAL);
+					if (os.top().first == NOT || os.top().first == NEG) {
+						if (vs.size() > 0) {
+							integer_value_t &a = vs.top();
 
-					/* a, b pushed to stack in a, b order so pops off b, a */
-					integer_value_t b = vs.top(); vs.pop();
-					integer_value_t a = vs.top(); vs.pop();
-
-					/* a OP b,
-					 * put result in a */
-					switch (os.top().second.type) {
-						case token_type_t::pipepipe:
-							a.v.u = ((a.v.u != 0) || (b.v.u != 0)) ? 1 : 0;
-							break;
-						case token_type_t::ampersandampersand:
-							a.v.u = ((a.v.u != 0) && (b.v.u != 0)) ? 1 : 0;
-							break;
-						case token_type_t::pipe:
-							a.v.u = a.v.u | b.v.u;
-							break;
-						case token_type_t::caret:
-							a.v.u = a.v.u ^ b.v.u;
-							break;
-						case token_type_t::ampersand:
-							a.v.u = a.v.u & b.v.u;
-							break;
-						case token_type_t::equalequal:
-							a.v.u = (a.v.u == b.v.u) ? 1 : 0;
-							break;
-						case token_type_t::exclamationequals:
-							a.v.u = (a.v.u != b.v.u) ? 1 : 0;
-							break;
-						case token_type_t::lessthan:
-							a.v.u = (a.v.v < b.v.v) ? 1 : 0;
-							break;
-						case token_type_t::greaterthan:
-							a.v.u = (a.v.v > b.v.v) ? 1 : 0;
-							break;
-						case token_type_t::lessthanequals:
-							a.v.u = (a.v.v <= b.v.v) ? 1 : 0;
-							break;
-						case token_type_t::greaterthanequals:
-							a.v.u = (a.v.v >= b.v.v) ? 1 : 0;
-							break;
-						case token_type_t::lessthanlessthan:
-							a.v.u = a.v.v << b.v.v;
-							break;
-						case token_type_t::greaterthangreaterthan:
-							a.v.u = a.v.v >> b.v.v;
-							break;
-						case token_type_t::plus:
-							a.v.u = a.v.v + b.v.v;
-							break;
-						case token_type_t::minus:
-							a.v.u = a.v.v - b.v.v;
-							break;
-						default:
-							return errno_return(EINVAL);
-					}
+							/* does not pop, just modifies in place */
+							switch (os.top().second.type) {
+								case token_type_t::plus:
+									/* nothing */
+									break;
+								case token_type_t::minus:
+									a.v.v = -a.v.v;
+									break;
+								case token_type_t::tilde:
+									a.v.u = ~a.v.u;
+									break;
+								case token_type_t::exclamation:
+									a.v.u = (a.v.u == 0) ? 1 : 0;
+									break;
+								default:
+									return errno_return(EINVAL);
+							}
 
 #if 1//DEBUG
-					fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
+							fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
 #endif
 
-					vs.push(a);
-					os.pop();
+							os.pop();
+						}
+						else {
+							break;
+						}
+					}
+					else {
+						if (vs.size() < 2) return errno_return(EINVAL);
+
+						/* a, b pushed to stack in a, b order so pops off b, a */
+						integer_value_t b = vs.top(); vs.pop();
+						integer_value_t a = vs.top(); vs.pop();
+
+						/* a OP b,
+						 * put result in a */
+						switch (os.top().second.type) {
+							case token_type_t::pipepipe:
+								a.v.u = ((a.v.u != 0) || (b.v.u != 0)) ? 1 : 0;
+								break;
+							case token_type_t::ampersandampersand:
+								a.v.u = ((a.v.u != 0) && (b.v.u != 0)) ? 1 : 0;
+								break;
+							case token_type_t::pipe:
+								a.v.u = a.v.u | b.v.u;
+								break;
+							case token_type_t::caret:
+								a.v.u = a.v.u ^ b.v.u;
+								break;
+							case token_type_t::ampersand:
+								a.v.u = a.v.u & b.v.u;
+								break;
+							case token_type_t::equalequal:
+								a.v.u = (a.v.u == b.v.u) ? 1 : 0;
+								break;
+							case token_type_t::exclamationequals:
+								a.v.u = (a.v.u != b.v.u) ? 1 : 0;
+								break;
+							case token_type_t::lessthan:
+								a.v.u = (a.v.v < b.v.v) ? 1 : 0;
+								break;
+							case token_type_t::greaterthan:
+								a.v.u = (a.v.v > b.v.v) ? 1 : 0;
+								break;
+							case token_type_t::lessthanequals:
+								a.v.u = (a.v.v <= b.v.v) ? 1 : 0;
+								break;
+							case token_type_t::greaterthanequals:
+								a.v.u = (a.v.v >= b.v.v) ? 1 : 0;
+								break;
+							case token_type_t::lessthanlessthan:
+								a.v.u = a.v.v << b.v.v;
+								break;
+							case token_type_t::greaterthangreaterthan:
+								a.v.u = a.v.v >> b.v.v;
+								break;
+							case token_type_t::plus:
+								a.v.u = a.v.v + b.v.v;
+								break;
+							case token_type_t::minus:
+								a.v.u = a.v.v - b.v.v;
+								break;
+							default:
+								return errno_return(EINVAL);
+						}
+
+#if 1//DEBUG
+						fprintf(stderr,"Reduce op %u <= %u: %s\n",lev,os.top().first,os.top().second.to_str().c_str());
+#endif
+
+						vs.push(a);
+						os.pop();
+					}
 				}
 				else {
 					break;

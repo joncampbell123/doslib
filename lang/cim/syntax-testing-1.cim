@@ -532,3 +532,10 @@ you should see this B
 you should not see this B
 #endif
 
+#if -4 + 4 == 0
+you should see this B
+#endif
+
+#if -4 == -4
+you should see this B
+#endif
