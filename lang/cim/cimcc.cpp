@@ -2690,10 +2690,11 @@ try_again:	t = token_t();
 		return 1;
 	}
 
-	int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie) {
+	int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie,const bool subexpr=false) {
 		std::stack< std::pair<unsigned char,token_t> > os;
 		std::stack<integer_value_t> vs;
 		bool expect_op2 = false;
+		int er;
 
 		enum {
 			NONE=0,
@@ -2717,59 +2718,74 @@ try_again:	t = token_t();
 			unsigned char lev = NONE;
 
 			if (ib != ie) {
-				switch ((*ib).type) {
-					case token_type_t::plus:
-						if (expect_op2) {
-							expect_op2 = false; lev = AS; break;
-						}
-						else {
-							lev = NEG; break;
-						}
-					case token_type_t::minus:
-						if (expect_op2) {
-							expect_op2 = false; lev = AS; break;
-						}
-						else {
-							lev = NEG; break;
-						}
-					case token_type_t::tilde:
-						lev = NOT; break;
-						continue; /* loop while loop again */
-					case token_type_t::exclamation:
-						lev = NOT; break;
-						continue; /* loop while loop again */
-					case token_type_t::integer:
-						if (expect_op2 == true) return errno_return(EINVAL);
-						vs.push((*ib).v.integer); ib++;
-						expect_op2 = true;
-						continue;
-					case token_type_t::pipepipe:
-						expect_op2 = false; lev = LOG_OR; break;
-					case token_type_t::ampersandampersand:
-						expect_op2 = false; lev = LOG_AND; break;
-					case token_type_t::pipe:
-						expect_op2 = false; lev = BIT_OR; break;
-					case token_type_t::caret:
-						expect_op2 = false; lev = BIT_XOR; break;
-					case token_type_t::ampersand:
-						expect_op2 = false; lev = BIT_AND; break;
-					case token_type_t::equalequal:
-					case token_type_t::exclamationequals:
-						expect_op2 = false; lev = EQU; break;
-					case token_type_t::lessthan:
-					case token_type_t::greaterthan:
-					case token_type_t::lessthanequals:
-					case token_type_t::greaterthanequals:
-						expect_op2 = false; lev = CMP; break;
-					case token_type_t::lessthanlessthan:
-					case token_type_t::greaterthangreaterthan:
-						expect_op2 = false; lev = SHF; break;
-					case token_type_t::star:
-					case token_type_t::forwardslash:
-					case token_type_t::percent:
-						expect_op2 = false; lev = MDR; break;
-					default:
-						return errno_return(EINVAL);
+				if (subexpr && (*ib).type == token_type_t::closeparenthesis) {
+					/* step past close parenthesis and force loop to end and pop stacks */
+					ib++;
+					ie = ib;
+				}
+				else {
+					switch ((*ib).type) {
+						case token_type_t::plus:
+							if (expect_op2) {
+								expect_op2 = false; lev = AS; break;
+							}
+							else {
+								lev = NEG; break;
+							}
+						case token_type_t::minus:
+							if (expect_op2) {
+								expect_op2 = false; lev = AS; break;
+							}
+							else {
+								lev = NEG; break;
+							}
+						case token_type_t::tilde:
+							lev = NOT; break;
+							continue; /* loop while loop again */
+						case token_type_t::exclamation:
+							lev = NOT; break;
+							continue; /* loop while loop again */
+						case token_type_t::integer:
+							if (expect_op2 == true) return errno_return(EINVAL);
+							vs.push((*ib).v.integer); ib++;
+							expect_op2 = true;
+							continue;
+						case token_type_t::openparenthesis:
+							if (expect_op2 == true) return errno_return(EINVAL);
+							ib++;
+							if ((er=pptok_eval_expr(r,ib,ie,/*subexpr*/true)) < 1)
+								return er;
+							vs.push(r);
+							expect_op2 = true;
+							continue;
+						case token_type_t::pipepipe:
+							expect_op2 = false; lev = LOG_OR; break;
+						case token_type_t::ampersandampersand:
+							expect_op2 = false; lev = LOG_AND; break;
+						case token_type_t::pipe:
+							expect_op2 = false; lev = BIT_OR; break;
+						case token_type_t::caret:
+							expect_op2 = false; lev = BIT_XOR; break;
+						case token_type_t::ampersand:
+							expect_op2 = false; lev = BIT_AND; break;
+						case token_type_t::equalequal:
+						case token_type_t::exclamationequals:
+							expect_op2 = false; lev = EQU; break;
+						case token_type_t::lessthan:
+						case token_type_t::greaterthan:
+						case token_type_t::lessthanequals:
+						case token_type_t::greaterthanequals:
+							expect_op2 = false; lev = CMP; break;
+						case token_type_t::lessthanlessthan:
+						case token_type_t::greaterthangreaterthan:
+							expect_op2 = false; lev = SHF; break;
+						case token_type_t::star:
+						case token_type_t::forwardslash:
+						case token_type_t::percent:
+							expect_op2 = false; lev = MDR; break;
+						default:
+							return errno_return(EINVAL);
+					}
 				}
 			}
 
