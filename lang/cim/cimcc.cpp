@@ -2673,6 +2673,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
+		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"UNDEF '%s'\n",s_id.to_str().c_str());
 #endif
 
@@ -2715,6 +2716,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
+		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"%s '%s'\n",is_ifdef?(match_cond?"IFDEF":"IFNDEF"):(match_cond?"ELIFDEF":"ELIFNDEF"),s_id.to_str().c_str());
 #endif
 
@@ -2771,6 +2773,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
+		for (size_t i=0;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"ELSE condempty=%u\n",pst.cond_block.empty());
 #endif
 
@@ -2812,6 +2815,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 1//DEBUG
+		for (size_t i=1;i < pst.cond_block.size();i++) fprintf(stderr,"  ");
 		fprintf(stderr,"ENDIF\n");
 #endif
 
