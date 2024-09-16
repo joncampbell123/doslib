@@ -539,3 +539,21 @@ you should see this B
 #if -4 == -4
 you should see this B
 #endif
+
+#if 4*4 == 16
+you should see this B
+#endif
+
+#if 4*4*4 == 64
+you should see this B
+#endif
+
+#if 16/4 == 4
+you should see this B
+#endif
+
+#if 16%4 == 0
+you should see this B
+#endif
+
+

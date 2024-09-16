@@ -2764,6 +2764,10 @@ try_again:	t = token_t();
 					case token_type_t::lessthanlessthan:
 					case token_type_t::greaterthangreaterthan:
 						expect_op2 = false; lev = SHF; break;
+					case token_type_t::star:
+					case token_type_t::forwardslash:
+					case token_type_t::percent:
+						expect_op2 = false; lev = MDR; break;
 					default:
 						return errno_return(EINVAL);
 				}
@@ -2857,6 +2861,17 @@ try_again:	t = token_t();
 								break;
 							case token_type_t::minus:
 								a.v.u = a.v.v - b.v.v;
+								break;
+							case token_type_t::star:
+								a.v.u = a.v.v * b.v.v;
+								break;
+							case token_type_t::forwardslash:
+								if (b.v.v == 0) return errno_return(EINVAL);
+								a.v.u = a.v.v / b.v.v;
+								break;
+							case token_type_t::percent:
+								if (b.v.v == 0) return errno_return(EINVAL);
+								a.v.u = a.v.v % b.v.v;
 								break;
 							default:
 								return errno_return(EINVAL);
