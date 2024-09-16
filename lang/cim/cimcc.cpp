@@ -1594,6 +1594,27 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		token_t &operator=(const token_t &t) { common_copy(t); return *this; }
 		token_t &operator=(token_t &&t) { common_move(t); return *this; }
 
+		bool operator==(const token_t &t) const {
+			if (type != t.type)
+				return false;
+
+			switch (type) {
+				case token_type_t::integer:
+					if (v.integer.v.u != t.v.integer.v.u)
+						return false;
+					if (v.integer.flags != t.v.integer.flags)
+						return false;
+					break;
+				default:
+					break;
+			}
+
+			return true;
+		}
+		bool operator!=(const token_t &t) const {
+			return !(*this == t);
+		}
+
 		union {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
@@ -2556,8 +2577,27 @@ try_again:	t = token_t();
 			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
 
 			while ((*p) != NULL) {
-				if ((*p)->name == i)
-					return false; /* already exists */
+				if ((*p)->name == i) {
+					/* already exists. */
+					/* this is an error, unless the attempt re-states the same macro and definition,
+					 * which is not an error.
+					 *
+					 * not an error:
+					 *
+					 * #define X 5
+					 * #define X 5
+					 *
+					 * error:
+					 *
+					 * #define X 5
+					 * #define X 4 */
+					if (	(*p)->ment.tokens == m.tokens &&
+						(*p)->ment.parameters == m.parameters &&
+						(*p)->ment.flags == m.flags)
+						return true;
+
+					return false;
+				}
 
 				p = &((*p)->next);
 			}
@@ -3375,7 +3415,7 @@ try_again:	t = token_t();
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
 #endif
 
-		// FIXME:
+		// NTS:
 		//  Open Watcom header rel/h/win/win16.h
 		//    WM_SPOOLERSTATUS is defined twice, but with the exact same value.
 		//    many compilers overlook #defining a macro multiple times IF each

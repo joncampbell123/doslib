@@ -601,3 +601,13 @@ you should see this H(3,H(4,5))
 you should not see this H(3,H(4,5))
 #endif
 
+/* If you define the same macro again, it's an error, unless the re-definition
+   restates what was already defined, which is then silently ignores. This is
+   what actual C compilers do. */
+#define AGAIN ABC
+#define AGAIN ABC
+#define AGAIN  ABC
+
+#define AG2 4
+#define AG2  4
+
