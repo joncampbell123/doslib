@@ -1921,14 +1921,16 @@ private:
 	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
-		if (separator == '\'' || separator == '\"') {
+		if (separator == '\'' || separator == '\"' || separator == '<') {
 			buf.discardb();
 
 			assert(t.type == token_type_t::none);
-			if (separator == '\"') t.type = token_type_t::strliteral;
+			if (separator == '\"' || separator == '<') t.type = token_type_t::strliteral;
 			else t.type = token_type_t::charliteral;
 			t.v.strliteral.init();
 			t.v.strliteral.type = cslt;
+
+			if (separator == '<') separator = '>';
 
 			switch (cslt) {
 				case charstrliteral_t::type_t::CHAR:
@@ -1956,6 +1958,7 @@ private:
 
 		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
 		static constexpr unsigned int FL_NEWLINE = (1u << 1u);
+		static constexpr unsigned int FL_ARROWSTR = (1u << 2u); /* <string> in #include <string> */
 	};
 
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -2336,6 +2339,8 @@ private:
 	 *      #define X (y,z)                         X (no parameters) expands to y,z
 	 *      #define X(x,y)                          X (parameters x, z) expands to nothing */
 	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
 try_again:	t = token_t();
 
 		eat_whitespace(buf,sfo);
@@ -2457,14 +2462,19 @@ try_again:	t = token_t();
 				t.type = token_type_t::closeparenthesis; buf.discardb();
 				break;
 			case '<':
-				t.type = token_type_t::lessthan; buf.discardb();
-				if (buf.peekb() == '<') {
-					t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
-					if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
+				if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
+					return lgtok_charstrlit(buf,sfo,t);
 				}
-				else if (buf.peekb() == '=') {
-					t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
-					if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
+				else {
+					t.type = token_type_t::lessthan; buf.discardb();
+					if (buf.peekb() == '<') {
+						t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
+						if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
+					}
+					else if (buf.peekb() == '=') {
+						t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
+						if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
+					}
 				}
 				break;
 			case '>':
@@ -2490,7 +2500,14 @@ try_again:	t = token_t();
 				break;
 			case '#':
 				if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-					return lgtok_identifier(lst,buf,sfo,t);
+					if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
+						return r;
+
+					if (t.type == token_type_t::r_ppinclude) {
+						lst.flags |= lgtok_state_t::FL_ARROWSTR;
+					}
+
+					return 1;
 				}
 				else {
 					t.type = token_type_t::pound; buf.discardb();
@@ -2509,6 +2526,11 @@ try_again:	t = token_t();
 					if (lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
 				}
+				if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
+					if (lst.curlies == 0)
+						lst.flags &= ~lgtok_state_t::FL_ARROWSTR;
+				}
+
 				break;
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
