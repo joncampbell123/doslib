@@ -3590,24 +3590,17 @@ try_again:
 			return r;
 
 try_again_w_token:
-		if (!pst.condb_true()) {
-			if (t.type == token_type_t::r_ppifdef || t.type == token_type_t::r_ppendif || t.type == token_type_t::r_ppelse ||
-				t.type == token_type_t::r_ppelifdef || t.type == token_type_t::r_ppif || t.type == token_type_t::r_ppelif ||
-				t.type == token_type_t::r_ppifndef || t.type == token_type_t::r_ppelifndef) {
-				/* pass */
-			}
-			else {
-				goto try_again;
-			}
-		}
-
 		switch (t.type) {
 			case token_type_t::r_ppdefine:
+				if (!pst.condb_true())
+					goto try_again;
 				if ((r=pptok_define(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppundef:
+				if (!pst.condb_true())
+					goto try_again;
 				if ((r=pptok_undef(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
@@ -3654,6 +3647,9 @@ try_again_w_token:
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::identifier: /* macro substitution */
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
+				if (!pst.condb_true())
+					goto try_again;
+
 				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
 				if (macro) {
 					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
@@ -3664,6 +3660,9 @@ try_again_w_token:
 				}
 				break; }
 			default:
+				if (!pst.condb_true())
+					goto try_again;
+
 				break;
 		}
 
