@@ -96,6 +96,7 @@ hello 4 X 4 A
 #warning
 #line
 #pragma
+#embed
 #line
 # line
 #  line

@@ -654,6 +654,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_macro_paramref,			// 140
 		r_ppendif,
 		r_ppelifndef,
+		r_ppembed,
 
 		__MAX__
 	};
@@ -746,6 +747,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFB(warning);
 	DEFB(line);
 	DEFB(pragma);
+	DEFB(embed);
 	DEFXUU(LINE);
 	DEFXUU(FILE);
 	DEFXUU(VA_OPT);
@@ -1182,7 +1184,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"backslashnewline",
 		"macro_paramref",			// 140
 		str_ppendif,
-		str_ppelifndef
+		str_ppelifndef,
+		str_ppembed
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -3273,6 +3276,7 @@ try_again:	t = token_t();
 			case token_type_t::r_ppwarning:
 			case token_type_t::r_ppline:
 			case token_type_t::r_pppragma:
+			case token_type_t::r_ppembed:
 				return false;
 			default:
 				break;
