@@ -93,9 +93,14 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 hello 4 X 4 A
 #include
 #error
+#error cannot define anything
+#error "cannot #define anything"
 #warning
+#warning cannot define anything
+#warning "cannot #define anything"
 #line
 #pragma
+#pragma justignorethis
 #embed
 #line
 # line
