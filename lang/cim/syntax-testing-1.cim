@@ -92,6 +92,10 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 #undef X
 hello 4 X 4 A
 #include
+#include <something.h>
+#include "something.h"
+#include <add/x/y/something.h>
+#include "add/x/y/something.h"
 #error
 #error cannot define anything
 #error "cannot #define anything"
