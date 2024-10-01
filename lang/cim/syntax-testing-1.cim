@@ -633,6 +633,9 @@ you should not see this H(3,H(4,5))
 #define FREETYPE_H "ft2/ft.h"
 #include FREETYPE_H
 
+#define FREETYPE2_H <ft2/ft2.h>
+#include FREETYPE2_H
+
 #define BIN1 "ft1.ttf"
 #embed BIN1
 

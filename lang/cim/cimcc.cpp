@@ -1923,6 +1923,28 @@ private:
 		return 1;
 	}
 
+	bool is_hchar(unsigned char c) {
+		return isalpha((char)c) || isdigit((char)c) || c == '.' || c == ',' || c == '/' || c == '\\';
+	}
+
+	bool looks_like_arrowstr(rbuf &buf,source_file_object &sfo) {
+		rbuf_sfd_refill(buf,sfo);
+
+		unsigned char *p = buf.data,*f = buf.end;
+
+		if (p >= f) return false;
+		if (*p != '<') return false;
+		p++;
+
+		while (p < f && is_hchar(*p)) p++;
+
+		if (p >= f) return false;
+		if (*p != '>') return false;
+		p++;
+
+		return true;
+	}
+
 	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
@@ -2468,18 +2490,18 @@ try_again:	t = token_t();
 				break;
 			case '<':
 				if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
-					return lgtok_charstrlit(buf,sfo,t);
+					if (looks_like_arrowstr(buf,sfo))
+						return lgtok_charstrlit(buf,sfo,t);
 				}
-				else {
-					t.type = token_type_t::lessthan; buf.discardb();
-					if (buf.peekb() == '<') {
-						t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
-						if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
-					}
-					else if (buf.peekb() == '=') {
-						t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
-						if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
-					}
+
+				t.type = token_type_t::lessthan; buf.discardb();
+				if (buf.peekb() == '<') {
+					t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
+					if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
+				}
+				else if (buf.peekb() == '=') {
+					t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
+					if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
 				}
 				break;
 			case '>':
@@ -2510,6 +2532,7 @@ try_again:	t = token_t();
 
 					if (	t.type == token_type_t::r_ppinclude ||
 						t.type == token_type_t::r_ppinclude_next ||
+						t.type == token_type_t::r_ppdefine ||
 						t.type == token_type_t::r_ppembed) {
 						lst.flags |= lgtok_state_t::FL_ARROWSTR;
 					}
