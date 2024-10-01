@@ -111,6 +111,8 @@ hello 4 X 4 A
 #pragma
 #pragma justignorethis
 #embed
+#embed <hello>
+#embed "hello"
 #line
 # line
 #  line
