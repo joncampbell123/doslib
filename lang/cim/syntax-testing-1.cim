@@ -96,6 +96,11 @@ hello 4 X 4 A
 #include "something.h"
 #include <add/x/y/something.h>
 #include "add/x/y/something.h"
+#include_next
+#include_next <else.h>
+#include_next "else.h"
+#include_next <and/else.h>
+#include_next "and/else.h"
 #error
 #error cannot define anything
 #error "cannot #define anything"

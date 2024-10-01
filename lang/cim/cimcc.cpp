@@ -655,6 +655,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppendif,
 		r_ppelifndef,
 		r_ppembed,
+		r_ppinclude_next,
 
 		__MAX__
 	};
@@ -748,6 +749,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFB(line);
 	DEFB(pragma);
 	DEFB(embed);
+	DEFB(include_next);
 	DEFXUU(LINE);
 	DEFXUU(FILE);
 	DEFXUU(VA_OPT);
@@ -976,7 +978,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(line),
 		X(pragma),
 		X(endif),
-		X(elifndef)
+		X(elifndef),
+		X(embed),
+		X(include_next)
 	};
 	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
 #undef X
@@ -1185,7 +1189,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"macro_paramref",			// 140
 		str_ppendif,
 		str_ppelifndef,
-		str_ppembed
+		str_ppembed,
+		str_ppinclude_next
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2503,7 +2508,7 @@ try_again:	t = token_t();
 					if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
 						return r;
 
-					if (t.type == token_type_t::r_ppinclude) {
+					if (t.type == token_type_t::r_ppinclude || t.type == token_type_t::r_ppinclude_next) {
 						lst.flags |= lgtok_state_t::FL_ARROWSTR;
 					}
 
