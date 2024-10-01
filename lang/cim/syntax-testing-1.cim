@@ -119,6 +119,8 @@ hello 4 X 4 A
 #   line
 #	line
 #		line
+#line 1
+#line 3
 token#paste
 token##paste
 __LINE__
