@@ -656,6 +656,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppelifndef,
 		r_ppembed,
 		r_ppinclude_next,
+		anglestrliteral,			// 145
 
 		__MAX__
 	};
@@ -1190,7 +1191,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_ppendif,
 		str_ppelifndef,
 		str_ppembed,
-		str_ppinclude_next
+		str_ppinclude_next,
+		"anglestrliteral"			// 145
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1645,6 +1647,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
+				case token_type_t::anglestrliteral:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
 				case token_type_t::r_macro_paramref: {
@@ -1667,6 +1670,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
+				case token_type_t::anglestrliteral:
 					v.strliteral.free();
 					break;
 				default:
@@ -1687,6 +1691,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
+				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					break;
 				default:
@@ -1705,6 +1710,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
+				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					v.strliteral.copy_from(x.v.strliteral);
 					break;
@@ -1879,7 +1885,7 @@ private:
 	}
 
 	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
-		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral);
+		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral || t.type == token_type_t::anglestrliteral);
 		const bool unicode = !(cslt == charstrliteral_t::type_t::CHAR);
 		ptrat *p,*f;
 		int32_t v;
@@ -1952,7 +1958,8 @@ private:
 			buf.discardb();
 
 			assert(t.type == token_type_t::none);
-			if (separator == '\"' || separator == '<') t.type = token_type_t::strliteral;
+			if (separator == '\"') t.type = token_type_t::strliteral;
+			else if (separator == '<') t.type = token_type_t::anglestrliteral;
 			else t.type = token_type_t::charliteral;
 			t.v.strliteral.init();
 			t.v.strliteral.type = cslt;
