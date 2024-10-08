@@ -3027,6 +3027,41 @@ try_again:	t = token_t();
 
 	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
+	int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_err) {
+		std::string msg;
+		int r;
+
+		(void)pst;
+
+		do {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+			else if (t.type == token_type_t::backslashnewline) {
+				continue;
+			}
+			else if (t.type == token_type_t::strliteral) {
+				if (!msg.empty()) msg += " ";
+				msg += t.v.strliteral.makestring();
+			}
+			else if (t.type == token_type_t::identifier) {
+				if (!msg.empty()) msg += " ";
+				msg += t.v.strliteral.makestring();
+			}
+			else {
+				if (!msg.empty()) msg += " ";
+				msg += token_type_t_str(t.type);
+			}
+		} while (1);
+
+		printf("%s: %s\n",is_err?"Error":"Warning",msg.c_str());
+		return 1;
+	}
+
 	int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_if) {
 		/* #if has already been parsed.
 		 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
@@ -3701,6 +3736,12 @@ try_again_w_token:
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppelif:
 				if ((r=pptok_if(pst,lst,buf,sfo,t,false)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_pperror:
+			case token_type_t::r_ppwarning:
+				if ((r=pptok_errwarn(pst,lst,buf,sfo,t,t.type == token_type_t::r_pperror)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */

@@ -102,11 +102,11 @@ hello 4 X 4 A
 #include_next <and/else.h>
 #include_next "and/else.h"
 #error
-#error cannot define anything
-#error "cannot #define anything"
+#error cannot define anything for fun
+#error "cannot #define anything for fun"
 #warning
-#warning cannot define anything
-#warning "cannot #define anything"
+#warning cannot define anything for fun
+#warning "cannot #define anything for fun"
 #line
 #pragma
 #pragma justignorethis
