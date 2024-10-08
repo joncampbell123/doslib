@@ -3028,6 +3028,7 @@ try_again:	t = token_t();
 	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
 	int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_err) {
+		const int line = t.pos.row;
 		std::string msg;
 		int r;
 
@@ -3058,7 +3059,7 @@ try_again:	t = token_t();
 			}
 		} while (1);
 
-		printf("%s: %s\n",is_err?"Error":"Warning",msg.c_str());
+		printf("%s(%d): %s\n",is_err?"Error":"Warning",line,msg.c_str());
 		return 1;
 	}
 
