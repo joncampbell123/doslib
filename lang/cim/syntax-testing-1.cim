@@ -124,14 +124,17 @@ hello 4 X 4 A
 #line 200 "funny.cpp"
 #warning hello
 #ifdef NOTR
-#line 202 "funny2.cpp"
-#warning hello
+# line 202 "funny2.cpp"
+# warning hello
 #endif
 #define NOTR
 #ifdef NOTR
-#line 203 "funny3.cpp"
-#warning hello
+# line 203 "funny3.cpp"
+# warning hello
 #endif
+#define LINE1 2002
+#line LINE1
+#warning hello
 token#paste
 token##paste
 __LINE__

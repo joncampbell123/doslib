@@ -3036,6 +3036,17 @@ try_again:	t = token_t();
 		/* line number */
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
+		if (t.type == token_type_t::identifier) {
+			const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+			if (macro) {
+				if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
+					return r;
+
+				pst.macro_expansion_counter++;
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+			}
+		}
 		if (t.type != token_type_t::integer)
 			return errno_return(EINVAL);
 		if (t.v.integer.v.v < 0ll || t.v.integer.v.v > 0xFFFFll)
