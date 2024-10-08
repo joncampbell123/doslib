@@ -3027,6 +3027,50 @@ try_again:	t = token_t();
 
 	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
+	int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		std::string msg;
+		int r;
+
+		(void)pst;
+
+		/* line number */
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+			return r;
+		if (t.type != token_type_t::integer)
+			return errno_return(EINVAL);
+		if (t.v.integer.v.v < 0ll || t.v.integer.v.v > 0xFFFFll)
+			return errno_return(EINVAL);
+
+		const unsigned int row = (unsigned int)t.v.integer.v.u;
+		std::string name;
+
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+			return r;
+
+		/* optional quoted filename */
+		if (t.type == token_type_t::strliteral) {
+			name = t.v.strliteral.makestring();
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+		}
+
+		do {
+			if (t.type == token_type_t::newline) {
+				t = token_t();
+				break;
+			}
+			else if (t.type == token_type_t::backslashnewline) {
+				continue;
+			}
+
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+		} while(1);
+
+		buf.pos.row = row;
+		return 1;
+	}
+
 	int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_err) {
 		const int line = t.pos.row;
 		std::string msg;
@@ -3743,6 +3787,11 @@ try_again_w_token:
 			case token_type_t::r_pperror:
 			case token_type_t::r_ppwarning:
 				if ((r=pptok_errwarn(pst,lst,buf,sfo,t,t.type == token_type_t::r_pperror)) < 1)
+					return r;
+
+				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppline:
+				if ((r=pptok_line(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
