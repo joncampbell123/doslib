@@ -3786,11 +3786,15 @@ try_again_w_token:
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_pperror:
 			case token_type_t::r_ppwarning:
+				if (!pst.condb_true())
+					goto try_again;
 				if ((r=pptok_errwarn(pst,lst,buf,sfo,t,t.type == token_type_t::r_pperror)) < 1)
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
 			case token_type_t::r_ppline:
+				if (!pst.condb_true())
+					goto try_again;
 				if ((r=pptok_line(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
