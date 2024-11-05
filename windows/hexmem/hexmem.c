@@ -1500,7 +1500,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	OtherProcessHandle = INVALID_HANDLE_VALUE;
 #endif
 
-	DestroyMenu(hwndMainMenu);
+// Menu is attached to window, so should be destroyed with window.
+// If you destroy it again with a destroyed window, under Windows 3.0, your
+// program will hang if run twice.
+//	DestroyMenu(hwndMainMenu);
 	hwndMainMenu = NULL;
 	DeleteObject(monospaceFont);
 	monospaceFont = NULL;
