@@ -8,7 +8,7 @@
 
 #ifndef TARGET_PC98
 /* INT 10h AX=0x1A00 GET DISPLAY COMBINATION CODE (PS,VGA/MCGA) values of BL [http://www.ctyme.com/intr/rb-0219.htm] */
-#define probe_vga2_dcc_to_flags_sz 0x0D
+# define probe_vga2_dcc_to_flags_sz 0x0D
 static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_NONE,                                                                         // 0x00
     VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x01
@@ -23,6 +23,25 @@ static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA | VGA2_FLAG_DIGITAL_DISPLAY,                             // 0x0A
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA | VGA2_FLAG_MONO_DISPLAY,                                // 0x0B
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA                                                          // 0x0C
+};
+#endif
+
+#ifndef TARGET_PC98
+/* INT 10h AH=0x12 BL=0x10 GET EGA INFO values of CL [http://www.ctyme.com/intr/rb-0162.htm] */
+# define probe_vga2_egasw_to_flags_sz 0x0C
+static const uint8_t probe_vga2_egasw_to_flags[probe_vga2_egasw_to_flags_sz] = {
+    VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x00 also secondary EGA+ 40x25
+    VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x01 also secondary EGA+ 80x25
+    VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x02 also secondary EGA+ 80x25
+    VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x03 also secondary EGA+ 80x25
+    VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY,                                              // 0x04 also secondary EGA+ 80x25 mono, primary CGA 40x25
+    VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY,                                              // 0x05 also secondary EGA+ 80x25 mono, primary CGA 80x25
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA,                                                          // 0x06 also optional secondary MDA/Herc
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA,                                                          // 0x07 also optional secondary MDA/Herc
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA,                                                          // 0x08 also optional secondary MDA/Herc
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA,                                                          // 0x09 also optional secondary MDA/Herc
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_MONO_DISPLAY,                                 // 0x0A also optional secondary CGA 40x25
+    VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_MONO_DISPLAY                                  // 0x0B also optional secondary CGA 80x25
 };
 #endif
 
@@ -80,10 +99,9 @@ void probe_vga2(void) {
 
     /* Then: EGA. Ask the BIOS */
     {
-        const unsigned char egasw = (unsigned char)vga2_alt_ega_switches_inline() & (unsigned char)0xFEu; /* filter out LSB, we don't need it */
-        if (egasw != 0xFEu) { /* CL=FFh if no EGA BIOS */
-            vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_DIGITAL_DISPLAY;
-            if (egasw == 0x04 || egasw == 0x0A) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
+        const unsigned char egasw = vga2_alt_ega_switches_inline();
+        if (egasw < probe_vga2_egasw_to_flags_sz) {
+            vga2_flags = probe_vga2_egasw_to_flags[egasw];
             goto done;
         }
     }

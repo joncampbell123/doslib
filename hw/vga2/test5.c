@@ -212,6 +212,9 @@ unsigned int do_test(unsigned int w) {
 }
 
 int main(int argc,char **argv) {
+    (void)argc;
+    (void)argv;
+
     /* base classicifcation */
     probe_vga2();
     vga2_update_alpha_modeinfo();

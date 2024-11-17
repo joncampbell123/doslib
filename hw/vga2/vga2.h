@@ -181,6 +181,7 @@ static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
     /* nothing */
+    (void)s;
 }
 
 static inline unsigned long vga2_alpha_ptrsz(void) {
@@ -193,6 +194,7 @@ static inline uint16_t vga2_alpha_ptrszseg(void) {
 
 static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
     /* nothing */
+    (void)s;
 }
 
 static inline unsigned int vga2_alpha_ptr_valid(void) {
@@ -333,6 +335,7 @@ uint16_t vga2_int11_equipment(void);
 #ifndef TARGET_PC98
 /* INT 10h AX=0x1A00 GET DISPLAY COMBINATION CODE (PS,VGA/MCGA) [http://www.ctyme.com/intr/rb-0219.htm].
  * Return value from BL (active display code). Does not return BH (alternate display code).
+ * BIOS RETURNS AL=1Ah to indicate function supported, but we don't check that.
  *
  * If BL == 0xFF then the BIOS does not support the call. */
 uint8_t vga2_get_dcc_inline(void);

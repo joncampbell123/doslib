@@ -12,6 +12,9 @@ static const char msg[] = "Hello world";
 int main(int argc,char **argv) {
     unsigned char x,y;
 
+    (void)argc;
+    (void)argv;
+
     /* base classicifcation */
     probe_vga2();
 

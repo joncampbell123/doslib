@@ -8,6 +8,9 @@
 #include <hw/vga2/vga2.h>
 
 int main(int argc,char **argv) {
+    (void)argc;
+    (void)argv;
+
     /* base classicifcation */
     probe_vga2();
 
