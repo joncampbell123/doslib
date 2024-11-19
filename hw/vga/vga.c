@@ -35,6 +35,7 @@ void update_state_from_vga() {
 	vga_state.vga_9wide = 0;
 	vga_state.vga_ram_base = 0xA0000;
 	vga_state.vga_ram_size = 0x03F00;
+	vga_state.vga_card_memory_kb = 256;
 
 	vga_state.vga_graphics_ram = NULL;
 	vga_state.vga_graphics_ram_fence = NULL;
@@ -279,6 +280,7 @@ int probe_vga() {
 #if defined(TARGET_WINDOWS)
 	/* TODO: More comprehensive tests! */
 	vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA | VGA_IS_ANALOG;
+	vga_state.vga_card_memory_kb = 256;
 	update_state_from_vga();
 	return 1;
 #else
@@ -286,6 +288,7 @@ int probe_vga() {
 
 	vga_state.vga_flags = 0;
 	vga_state.vga_base_3x0 = 0;
+	vga_state.vga_card_memory_kb = 256;
 
 	/* apparently the best way is to ask the VGA BIOS */
 	/* according to sources I have this function only works on VGA BIOSes and nothing prior to that */
@@ -304,7 +307,7 @@ int probe_vga() {
 
 	/* if that didn't work, then assume it's not VGA, and probe around a bit */
 	/* are you an EGA? Determine by BIOS */
-	if (vga_state.vga_flags == 0) {
+	if (vga_state.vga_flags == 0 || (vga_state.vga_flags&(VGA_IS_VGA|VGA_IS_EGA)) == VGA_IS_EGA) {
 		regs.w.ax = 0x1200;
 		regs.w.bx = 0xFF10;
 #if TARGET_MSDOS == 32
@@ -315,6 +318,9 @@ int probe_vga() {
 		if (regs.h.bh != 0xFF) { /* so, if BH changes the EGA BIOS or higher is present? */
 			if (regs.h.cl < (sizeof(vga_ega_switches_table)/sizeof(vga_ega_switches_table[0])))
 				vga_state.vga_flags = vga_ega_switches_table[regs.h.cl];
+
+			if ((vga_state.vga_flags & VGA_IS_EGA) && regs.h.bl <= 3)
+				vga_state.vga_card_memory_kb = 64u * (regs.h.bl + 1u);
 		}
 	}
 
@@ -342,8 +348,15 @@ int probe_vga() {
 			vga_state.vga_flags = VGA_IS_CGA | VGA_IS_DIGITAL;
 	}
 
+	if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_EGA|VGA_IS_TANDY|VGA_IS_PCJR)) == VGA_IS_MCGA)
+		vga_state.vga_card_memory_kb = 64;
+	else if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA|VGA_IS_MDA)) == VGA_IS_CGA)
+		vga_state.vga_card_memory_kb = 16;
+	else if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA|VGA_IS_MDA)) == VGA_IS_MDA)
+		vga_state.vga_card_memory_kb = 4;
+
 	/* if it looks like CGA, it might be PCjr */
-	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY|VGA_IS_EGA|VGA_IS_VGA|VGA_IS_MCGA|VGA_IS_PGA))) {
 		unsigned char mb; /* Look at the BIOS model byte */
 
 #if TARGET_MSDOS == 32
@@ -357,7 +370,7 @@ int probe_vga() {
 	}
 
 	/* if it looks like CGA, it might be Tandy */
-	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY|VGA_IS_MCGA|VGA_IS_EGA|VGA_IS_VGA))) {
 		/* Detect by the 3-voice chip.
 		 * FIXME: Is there a better way? */
 		{
@@ -371,6 +384,7 @@ int probe_vga() {
 			if (regs.h.al & 0x80) {
 				if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
 					vga_state.vga_flags |= VGA_IS_TANDY | VGA_IS_DIGITAL;
+					vga_state.vga_card_memory_kb = 32;
 				}
 			}
 		}
@@ -412,6 +426,7 @@ int probe_vga() {
 			inp(0x80);
 		}
 		if (patience > 0 && (c^cm) & 0x80) { /* if it changed, then HGC */
+			vga_state.vga_card_memory_kb = 64;
 			vga_state.vga_flags |= VGA_IS_HGC;
 			vga_state.vga_hgc_type = (c >> 4) & 7;
 			switch ((c>>4)&7) {

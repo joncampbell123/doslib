@@ -58,26 +58,30 @@ char *vga_get_buf = NULL;
 void vga_write_state_DEBUG(FILE *f) {
 	unsigned char tmp[128];
 	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy=%u PCjr=%u Amstrad=%u\n",
-			(vga_state.vga_flags & VGA_IS_VGA) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_EGA) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_CGA) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_MDA) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
-			(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_PCJR) ? 1 : 0,
-			(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
+		(vga_state.vga_flags & VGA_IS_VGA) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_EGA) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_CGA) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_MDA) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
+		(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_PCJR) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
 	if (f == NULL)
 		vga_write(tmp);
 	else
 		fputs(tmp,f);
 
-	sprintf(tmp,"  3x0 I/O base = 0x%03x  RAM @ 0x%05lx-0x%05lx  ALPHA=%u 9W=%u\n",
+	sprintf(tmp,"  3x0 base=0x%03x RAM@0x%05lx-0x%05lx ALM=%u 9W=%u Ana=%u Dig=%u Mono=%u msz=%uK\n",
 		vga_state.vga_base_3x0,
 		(unsigned long)vga_state.vga_ram_base,
 		(unsigned long)vga_state.vga_ram_base+vga_state.vga_ram_size-1UL,
 		vga_state.vga_alpha_mode,
-		vga_state.vga_9wide);
+		vga_state.vga_9wide,
+		(vga_state.vga_flags & VGA_IS_ANALOG) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_DIGITAL) ? 1 : 0,
+		(vga_state.vga_flags & VGA_IS_MONOCHROME) ? 1 : 0,
+		vga_state.vga_card_memory_kb);
 	if (f == NULL)
 		vga_write(tmp);
 	else

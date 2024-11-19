@@ -30,6 +30,9 @@ struct vgastate_t {
 	unsigned char		vga_pos_x,vga_pos_y;		// 4 char = 4 byte align
 	unsigned char		vga_hgc_type;
 	unsigned char		vga_stride;
+	unsigned char		vga_color;			// 4 char (one is bitfield) = 4 byte align
+	unsigned char		vga_draw_stride;
+	unsigned char		vga_draw_stride_limit;		// further X clipping
 	uint16_t		vga_width,vga_height;		// 4 uint16_t = 8 byte align
 	uint16_t		vga_base_3x0;
 	uint16_t		vga_flags;
@@ -39,9 +42,7 @@ struct vgastate_t {
 	VGA_RAM_PTR		vga_graphics_ram_fence;
 	VGA_ALPHA_PTR		vga_alpha_ram;
 	VGA_ALPHA_PTR		vga_alpha_ram_fence;
-	unsigned char		vga_color;			// 4 char (one is bitfield) = 4 byte align
-	unsigned char		vga_draw_stride;
-	unsigned char		vga_draw_stride_limit;		// further X clipping
+	uint16_t		vga_card_memory_kb;
 	unsigned char		vga_alpha_mode:1;
 	unsigned char		vga_9wide:1;
 };
