@@ -94,15 +94,20 @@ static inline void vga_write_color(unsigned char c) {
 #else
 
 /* vga_flags */
-#define VGA_IS_TANDY			0x02
-#define VGA_IS_HGC			0x04
-#define VGA_IS_MCGA			0x08
-#define VGA_IS_VGA			0x10
-#define VGA_IS_EGA			0x20
-#define VGA_IS_CGA			0x40
-#define VGA_IS_MDA			0x80
-#define VGA_IS_AMSTRAD			0x100
-#define VGA_IS_PCJR             0x200
+#define VGA_NO_MONITOR			0x0001
+#define VGA_IS_TANDY			0x0002
+#define VGA_IS_HGC			0x0004
+#define VGA_IS_MCGA			0x0008
+#define VGA_IS_VGA			0x0010
+#define VGA_IS_EGA			0x0020
+#define VGA_IS_CGA			0x0040
+#define VGA_IS_MDA			0x0080
+#define VGA_IS_AMSTRAD			0x0100
+#define VGA_IS_PCJR			0x0200
+#define VGA_IS_PGA			0x0480
+#define VGA_IS_MONOCHROME		0x0800
+#define VGA_IS_ANALOG			0x1000
+#define VGA_IS_DIGITAL			0x2000
 
 /* attribute controller index, OR with index to enable palette again */
 #define VGA_AC_ENABLE			0x20

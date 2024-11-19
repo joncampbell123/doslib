@@ -33,8 +33,8 @@ void update_state_from_vga() {
 	vga_state.vga_height = 25;
 	vga_state.vga_width = 80;
 	vga_state.vga_9wide = 0;
-    vga_state.vga_ram_base = 0xA0000;
-    vga_state.vga_ram_size = 0x03F00;
+	vga_state.vga_ram_base = 0xA0000;
+	vga_state.vga_ram_size = 0x03F00;
 
 	vga_state.vga_graphics_ram = NULL;
 	vga_state.vga_graphics_ram_fence = NULL;
@@ -226,11 +226,11 @@ void update_state_from_vga() {
 			vga_state.vga_width = 40;
 		}
 
-        if (c >= 0x08)
-            update_state_vga_memory_map_select(1); /* 0xA0000 */
-        else
-            update_state_vga_memory_map_select(3); /* 0xB8000 */
-    }
+		if (c >= 0x08)
+			update_state_vga_memory_map_select(1); /* 0xA0000 */
+		else
+			update_state_vga_memory_map_select(3); /* 0xB8000 */
+	}
 	else if (vga_state.vga_flags & VGA_IS_MDA) {
 		vga_state.vga_base_3x0 = 0x3B0; /* always at 0x3Bx */
 		vga_state.vga_alpha_mode = 1; /* stock MDA doesn't have graphics */
@@ -243,10 +243,42 @@ void update_state_from_vga() {
 	vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = vga_state.vga_stride;
 }
 
+static const uint16_t vga_dcc_table[0x0D] = {
+	/*0x00*/VGA_NO_MONITOR,
+	/*0x01*/VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x02*/VGA_IS_CGA | VGA_IS_DIGITAL,
+	/*0x03*/0,
+	/*0x04*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL,
+	/*0x05*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x06*/VGA_IS_CGA | VGA_IS_PGA | VGA_IS_ANALOG,
+	/*0x07*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_VGA | VGA_IS_ANALOG | VGA_IS_MONOCHROME,
+	/*0x08*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_VGA | VGA_IS_ANALOG,
+	/*0x09*/0,
+	/*0x0A*/VGA_IS_CGA | VGA_IS_MCGA | VGA_IS_DIGITAL,
+	/*0x0B*/VGA_IS_CGA | VGA_IS_MCGA | VGA_IS_ANALOG | VGA_IS_MONOCHROME,
+	/*0x0C*/VGA_IS_CGA | VGA_IS_MCGA | VGA_IS_ANALOG
+};
+
+static const uint16_t vga_ega_switches_table[0x0C] = {
+	/*0x00*/VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x01*/VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x02*/VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x03*/VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x04*/VGA_IS_CGA | VGA_IS_DIGITAL,
+	/*0x05*/VGA_IS_CGA | VGA_IS_DIGITAL,
+	/*0x06*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL,
+	/*0x07*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL,
+	/*0x08*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL,
+	/*0x09*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL,
+	/*0x0A*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME,
+	/*0x0B*/VGA_IS_CGA | VGA_IS_EGA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME
+
+};
+
 int probe_vga() {
 #if defined(TARGET_WINDOWS)
 	/* TODO: More comprehensive tests! */
-	vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
+	vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA | VGA_IS_ANALOG;
 	update_state_from_vga();
 	return 1;
 #else
@@ -265,23 +297,8 @@ int probe_vga() {
 		int86(0x10,&regs,&regs);
 #endif
 		if (regs.h.al == 0x1A) {
-			if (regs.h.bl == 1) {
-				vga_state.vga_flags |= VGA_IS_MDA;
-			}
-			else if (regs.h.bl == 2) {
-				vga_state.vga_flags |= VGA_IS_CGA;
-			}
-			else if (regs.h.bl == 4 || regs.h.bl == 5) {
-				/* it's an EGA */
-				vga_state.vga_flags |= VGA_IS_EGA | VGA_IS_CGA;
-			}
-			else if (regs.h.bl == 7 || regs.h.bl == 8) {
-				/* VGA, officially */
-				vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
-			}
-			else if (regs.h.bl == 10 || regs.h.bl == 11 || regs.h.bl == 12) {
-				vga_state.vga_flags |= VGA_IS_MCGA | VGA_IS_CGA;
-			}
+			if (regs.h.bl < (sizeof(vga_dcc_table)/sizeof(vga_dcc_table[0])))
+				vga_state.vga_flags = vga_dcc_table[regs.h.bl];
 		}
 	}
 
@@ -296,87 +313,87 @@ int probe_vga() {
 		int86(0x10,&regs,&regs);
 #endif
 		if (regs.h.bh != 0xFF) { /* so, if BH changes the EGA BIOS or higher is present? */
-			vga_state.vga_flags |= VGA_IS_CGA | VGA_IS_EGA;
-			/* and BH == 0 if color */
+			if (regs.h.cl < (sizeof(vga_ega_switches_table)/sizeof(vga_ega_switches_table[0])))
+				vga_state.vga_flags = vga_ega_switches_table[regs.h.cl];
 		}
 	}
 
-    /* If nothing found yet, then it's either CGA or MDA. At this point, ask the BIOS.
-     * Probing I/O ports on old hardware is not advised because the undefined ports
-     * may return values other than 0xFF especially with aging components. */
+	/* If nothing found yet, then it's either CGA or MDA. At this point, ask the BIOS.
+	 * Probing I/O ports on old hardware is not advised because the undefined ports
+	 * may return values other than 0xFF especially with aging components. */
 	if (vga_state.vga_flags == 0) {
-        unsigned short equip = 0;
+		unsigned short equip = 0;
 
-        __asm {
-            push    ax
-            int     11h
-            mov     equip,ax
-            pop     ax
-        }
+		__asm {
+			push    ax
+			int     11h
+			mov     equip,ax
+			pop     ax
+		}
 
-        /* bits [5:4]
-         *   11 = TTL monochrome (MDA)
-         *   10 = 80-column CGA
-         *   01 = 40-column CGA
-         *   00 = ?? */
-        if ((equip & (3 << 4)) == (3 << 4))
-			vga_state.vga_flags |= VGA_IS_MDA;
-        else if ((equip & (3 << 4)) != (0 << 4))
-			vga_state.vga_flags |= VGA_IS_CGA;
-    }
+		/* bits [5:4]
+		 *   11 = TTL monochrome (MDA)
+		 *   10 = 80-column CGA
+		 *   01 = 40-column CGA
+		 *   00 = ?? */
+		if ((equip & (3 << 4)) == (3 << 4))
+			vga_state.vga_flags = VGA_IS_MDA | VGA_IS_DIGITAL | VGA_IS_MONOCHROME;
+		else if ((equip & (3 << 4)) != (0 << 4))
+			vga_state.vga_flags = VGA_IS_CGA | VGA_IS_DIGITAL;
+	}
 
-    /* if it looks like CGA, it might be PCjr */
-    if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
-        unsigned char mb; /* Look at the BIOS model byte */
+	/* if it looks like CGA, it might be PCjr */
+	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+		unsigned char mb; /* Look at the BIOS model byte */
 
 #if TARGET_MSDOS == 32
-        mb = *((unsigned char*)0xFFFFE);
+		mb = *((unsigned char*)0xFFFFE);
 #else
-        mb = *((unsigned char far*)MK_FP(0xF000,0xFFFE));
+		mb = *((unsigned char far*)MK_FP(0xF000,0xFFFE));
 #endif
 
-        if (mb == 0xFD)
-            vga_state.vga_flags |= VGA_IS_PCJR;
-    }
+		if (mb == 0xFD)
+			vga_state.vga_flags |= VGA_IS_PCJR;
+	}
 
-    /* if it looks like CGA, it might be Tandy */
-    if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
-        /* Detect by the 3-voice chip.
-         * FIXME: Is there a better way? */
-        {
-            union REGS regs = {0};
-            regs.w.ax = 0x8100;
+	/* if it looks like CGA, it might be Tandy */
+	if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+		/* Detect by the 3-voice chip.
+		 * FIXME: Is there a better way? */
+		{
+			union REGS regs = {0};
+			regs.w.ax = 0x8100;
 #if TARGET_MSDOS == 32
-            int386(0x1A,&regs,&regs);
+			int386(0x1A,&regs,&regs);
 #else
-            int86(0x1A,&regs,&regs);
+			int86(0x1A,&regs,&regs);
 #endif
-            if (regs.h.al & 0x80) {
-                if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
-                    vga_state.vga_flags |= VGA_IS_TANDY;
-                }
-            }
-        }
+			if (regs.h.al & 0x80) {
+				if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
+					vga_state.vga_flags |= VGA_IS_TANDY | VGA_IS_DIGITAL;
+				}
+			}
+		}
 
-        /* what about Amstrad? */
-        {
-            union REGS regs = {0};
-            regs.w.ax = 0x0600;
-            regs.w.bx = 0;
-            regs.w.cflag = 0;
+		/* what about Amstrad? */
+		{
+			union REGS regs = {0};
+			regs.w.ax = 0x0600;
+			regs.w.bx = 0;
+			regs.w.cflag = 0;
 #if TARGET_MSDOS == 32
-            int386(0x15,&regs,&regs);
+			int386(0x15,&regs,&regs);
 #else
-            int86(0x15,&regs,&regs);
+			int86(0x15,&regs,&regs);
 #endif
-            if (regs.w.bx != 0 && !(regs.w.cflag & 1)) {
-                vga_state.vga_flags |= VGA_IS_AMSTRAD;
-                /* TODO: If I read the Amstrad tech manual correctly, their video hardware also emulates Hercules modes, right? */
-                /* TODO: I get the impression Amstrad graphics do not include Tandy modes, is that correct? */
-                //vga_state.vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
-            }
-        }
-    }
+			if (regs.w.bx != 0 && !(regs.w.cflag & 1)) {
+				vga_state.vga_flags |= VGA_IS_AMSTRAD | VGA_IS_DIGITAL;
+				/* TODO: If I read the Amstrad tech manual correctly, their video hardware also emulates Hercules modes, right? */
+				/* TODO: I get the impression Amstrad graphics do not include Tandy modes, is that correct? */
+				//vga_state.vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
+			}
+		}
+	}
 
 	/* If it looks like an MDA, then it might be helpful to tell whether it's a
 	 * Hercules graphics card */
@@ -404,6 +421,7 @@ int probe_vga() {
 		}
 	}
 
+done:
 	update_state_from_vga();
 	return 1;
 #endif
