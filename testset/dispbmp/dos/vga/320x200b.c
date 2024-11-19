@@ -12,7 +12,7 @@
 #include "libbmp.h"
 
 /* VGA 320x200 256-color mode.
- * Standard INT 13h mode without any tweaks. */
+ * Standard INT 13h mode but with unchained 256-color mode. */
 
 static const char bmpfile[] = "200l8v.bmp";
 static const unsigned int img_width = 320;
@@ -21,18 +21,24 @@ static const unsigned int img_height = 200;
 static void draw_scanline(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
 #if TARGET_MSDOS == 32
-		unsigned char *d = (unsigned char*)0xA0000 + (y * img_width);
-		memcpy(d,src,pixels);
+		unsigned char *d = (unsigned char*)0xA0000 + (y * (img_width >> 2u));
 #else
-		unsigned char far *d = MK_FP(0xA000,y * img_width);
-		_fmemcpy(d,src,pixels);
+		unsigned char far *d = MK_FP(0xA000,y * (img_width >> 2u));
 #endif
+		unsigned char bitplane;
+		unsigned int x,o;
+
+		for (bitplane=0;bitplane < 4;bitplane++) {
+			outpw(0x3C4,0x0002 + (0x100 << bitplane)); /* sequencer map mask */
+			o = 0; for (x=bitplane;x < pixels;x += 4) d[o++] = src[x];
+		}
 	}
 }
 
 int main() {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
+	uint16_t iobase;
 
 	bfr = open_bmp(bmpfile);
 	if (bfr == NULL) {
@@ -44,11 +50,19 @@ int main() {
 		return 1;
 	}
 
-	/* set 320x200x256 VGA */
+	/* set 320x200x256 VGA then tweak into unchained 256-color mode */
 	__asm {
 		mov	ax,0x0013	; AH=0x00 AL=0x13
 		int	0x10
 	}
+	/* read 0x3CC to determine color vs mono */
+	iobase = (inp(0x3CC) & 1) ? 0x3D0 : 0x3B0;
+
+	/* CRTC byte mode */
+	outpw(iobase+4,0x0014); /* underline register 0x14 turn off doubleword addressing */
+	outpw(iobase+4,0xE317); /* crtc mode control 0x17 SE=1 bytemode AW=1 DIV2=0 SLDIV=0 MAP14=1 MAP13=1 */
+	outpw(iobase+4,0x2813); /* offset register 0x13: 0x28 for 320 pixels across */
+	outpw(0x3C4,0x0604); /* sequencer memory mode: disable chain4, disable odd/even, extended memory enable */
 
 	/* set palette */
 	outp(0x3C8,0);

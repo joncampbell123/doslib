@@ -16,6 +16,7 @@ $(LIBBMP_LIB):
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
 320X200A_EXE =     $(SUBDIR)$(HPS)320x200a.$(EXEEXT)
+320X200B_EXE =     $(SUBDIR)$(HPS)320x200b.$(EXEEXT)
 ! endif
 !endif
 
@@ -32,11 +33,19 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 	
-exe: $(320X200A_EXE) .symbolic
+exe: $(320X200A_EXE) $(320X200B_EXE) .symbolic
 
 !ifdef 320X200A_EXE
 $(320X200A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
 	%write tmp.cmd option quiet option map=$(320X200A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200a.obj name $(320X200A_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w320$(HPS)200vga.bmp $(SUBDIR)$(HPS)200l8v.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 320X200B_EXE
+$(320X200B_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200b.obj
+	%write tmp.cmd option quiet option map=$(320X200B_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200b.obj name $(320X200B_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w320$(HPS)200vga.bmp $(SUBDIR)$(HPS)200l8v.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
