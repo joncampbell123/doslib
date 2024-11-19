@@ -4,6 +4,13 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = HW_VGA_LIB
 
+OBJS =        $(SUBDIR)$(HPS)libbmp.obj
+
+LIBBMP_LIB =  $(SUBDIR)$(HPS)libbmp.lib
+
+$(LIBBMP_LIB): $(OBJS)
+	wlib -q -b -c $(LIBBMP_LIB) -+$(SUBDIR)$(HPS)libbmp.obj
+
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
 320X200A_EXE =     $(SUBDIR)$(HPS)320x200a.$(EXEEXT)
@@ -21,13 +28,13 @@ NOW_BUILDING = HW_VGA_LIB
 
 all: $(OMFSEGDG) lib exe
        
-lib: .symbolic
+lib: $(LIBBMP_LIB) .symbolic
 	
 exe: $(320X200A_EXE) .symbolic
 
 !ifdef 320X200A_EXE
-$(320X200A_EXE): $(SUBDIR)$(HPS)320x200a.obj
-	%write tmp.cmd option quiet option map=$(320X200A_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)320x200a.obj name $(320X200A_EXE)
+$(320X200A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
+	%write tmp.cmd option quiet option map=$(320X200A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200a.obj name $(320X200A_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w320$(HPS)200vga.bmp $(SUBDIR)$(HPS)200l8v.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
