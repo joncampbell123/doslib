@@ -12,7 +12,6 @@
 static const char bmpfile[] = "200l8v.bmp";
 static const unsigned int img_width = 320;
 static const unsigned int img_height = 200;
-static const unsigned int img_palsize = 256;
 
 #pragma pack(push,1)
 struct BMPPALENTRY {
@@ -192,7 +191,7 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 static void draw_scanline(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
 #if TARGET_MSDOS == 32
-		unsigned char *d = 0xA0000 + (y * img_width);
+		unsigned char *d = (unsigned char*)0xA0000 + (y * img_width);
 		memcpy(d,src,pixels);
 #else
 		unsigned char far *d = MK_FP(0xA000,y * img_width);
@@ -223,7 +222,7 @@ int main() {
 
 	/* set palette */
 	outp(0x3C8,0);
-	for (i=0;i < 256;i++) {
+	for (i=0;i < bfr->colors;i++) {
 		outp(0x3C9,bfr->palette[i].rgbRed >> 2);
 		outp(0x3C9,bfr->palette[i].rgbGreen >> 2);
 		outp(0x3C9,bfr->palette[i].rgbBlue >> 2);
