@@ -1,15 +1,17 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.."
 NOW_BUILDING = HW_VGA_LIB
 
 OBJS =        $(SUBDIR)$(HPS)libbmp.obj
 
-LIBBMP_LIB =  $(SUBDIR)$(HPS)libbmp.lib
+LIBBMP_LIB =  ..$(HPS)..$(HPS)$(SUBDIR)$(HPS)libbmp.lib
 
-$(LIBBMP_LIB): $(OBJS)
-	wlib -q -b -c $(LIBBMP_LIB) -+$(SUBDIR)$(HPS)libbmp.obj
+$(LIBBMP_LIB):
+	@cd ..$(HPS)..$(HPS)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
 
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
