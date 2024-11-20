@@ -11,7 +11,8 @@
 
 #include "libbmp.h"
 
-/* Tseng ET3000/ET4000 640x350 */
+/* Tseng ET4000 1024x768 */
+#define ET4K
 
 static const char bmpfile[] = "10247688.bmp";
 static const unsigned int img_width = 1024;
