@@ -12,25 +12,18 @@
 #include "libbmp.h"
 
 /* VGA 320x240 256-color mode.
- * Standard INT 13h mode but with unchained 256-color mode and tweaked 320x300 mode */
+ * Standard INT 13h mode but with unchained 256-color mode and tweaked 320x400 mode */
 
-static const char bmpfile[] = "300l8v6.bmp";
+static const char bmpfile[] = "400l8v6.bmp";
 static const unsigned int img_width = 360;
-static const unsigned int img_height = 300;
+static const unsigned int img_height = 400;
 
 #include "dr_unch.h"
 
 /* CRTC mode parameters.
- * Basically 800x600 mode applied to 256-color mode */
+ * Basically 640x350 mode applied to 256-color mode */
 static const uint16_t crtcchg[] = {
 	0x0011,		/* vertical retrace end 0x11: turn off protect */
-	0x7806,		/* vertical total 0x06 from 640x480 */
-	0xF007,		/* overflow 0x07 from same */
-	0x6109,		/* maximum scan line register 0x09 */
-	0x5C10,		/* vertical retrace start 0x10 */
-	0x5712,		/* vertical display end 0x12 */
-	0x5B15,		/* start vertical blanking 0x15 */
-	0x7516,		/* end vertical blanking 0x16 */
 	0x6B00,		/* horizontal total */
 	0x5901,		/* end horizontal display */
 	0x5A02,		/* start horizontal blanking */
@@ -67,7 +60,7 @@ int main() {
 	/* CRTC byte mode */
 	outpw(iobase+4,0x0014); /* underline register 0x14 turn off doubleword addressing */
 	outpw(iobase+4,0xE317); /* crtc mode control 0x17 SE=1 bytemode AW=1 DIV2=0 SLDIV=0 MAP14=1 MAP13=1 */
-	outpw(iobase+4,0x2813); /* offset register 0x13: 0x28 for 320 pixels across */
+	outpw(iobase+4,0x4009); /* max scanline 0x09 disable doublescan to get 400 lines */
 	outpw(0x3C4,0x0604); /* sequencer memory mode: disable chain4, disable odd/even, extended memory enable */
 	outp(0x3C2,0x67); /* misc control select 28MHz clock */
 
