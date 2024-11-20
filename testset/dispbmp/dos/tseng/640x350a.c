@@ -26,7 +26,7 @@ int main() {
 	unsigned int dispw,i;
 
 	/* TODO: Tseng ET3K/ET4K detect */
-	draw_scanline = draw_scanline_et3k;
+	draw_scanline = draw_scanline_et4k;
 
 	bfr = open_bmp(bmpfile);
 	if (bfr == NULL) {
