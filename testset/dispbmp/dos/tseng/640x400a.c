@@ -26,9 +26,9 @@ int main() {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
 
-	/* TODO: Tseng ET3K/ET4K detect */
 	if (tseng_et3000_detect()) {
-		draw_scanline = draw_scanline_et3k;
+		fprintf(stderr,"This only works on an ET4000\n");
+		return 1;
 	}
 	else if (tseng_et4000_detect()) {
 		draw_scanline = draw_scanline_et4k;
@@ -48,8 +48,7 @@ int main() {
 		return 1;
 	}
 
-	/* set 640x400x256 Tseng ET3k/ET4k */
-	/* FIXME: DOSBox/DOSBox-X source code says this mode only exists on the ET4000 BIOS? */
+	/* set 640x400x256 Tseng ET4k */
 	__asm {
 		mov	ax,0x002F	; AH=0x00 AL=0x2F
 		int	0x10

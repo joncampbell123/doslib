@@ -26,7 +26,6 @@ int main() {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
 
-	/* TODO: Tseng ET3K/ET4K detect */
 	if (tseng_et3000_detect()) {
 		draw_scanline = draw_scanline_et3k;
 	}
