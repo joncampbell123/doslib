@@ -15,6 +15,7 @@ static char *bmpfile = NULL;
 static unsigned int img_width = 0;
 static unsigned int img_height = 0;
 static unsigned int img_stride = 0;
+static unsigned int img_dac_width = 0;
 static uint32_t window_size = 0,window_mult = 0;
 static uint16_t window_bank_advance = 0;
 
@@ -280,6 +281,28 @@ static int set_vbe_mode(uint16_t mode) {
 	return 1;
 }
 
+static int vbe_set_dac_width(uint8_t w) {
+	uint16_t status = 0;
+
+	(void)w;
+
+#if TARGET_MSDOS == 32
+	return 0;//TODO
+#else
+	__asm {
+		mov	ax,0x4F08	; AH=4Fh AL=08h DAC palette control
+		mov	bl,0		; set it
+		mov	bh,w
+		int	10h
+		mov	status,ax
+	}
+#endif
+
+	if (status != 0x004F) return 0; /* AH=0x00 success AL=0x4F supported */
+
+	return 1;
+}
+
 static void vbe_bank_switch_int10(uint16_t bank) {
 	(void)bank;
 
@@ -297,8 +320,10 @@ static void vbe_bank_switch_int10(uint16_t bank) {
 
 static void vbe_bank_switch_rmwnfunc(uint16_t bank) {
 	uint32_t proc = vbe_modeinfo.window_function;
+	if (proc == 0) return;
 
 	(void)bank;
+	(void)proc;
 
 #if TARGET_MSDOS == 32
 	// TODO
@@ -479,12 +504,24 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+	if (vbe_info.capabilities & VBE_CAP_8BIT_DAC) {
+		if (vbe_set_dac_width(8)) {
+			img_dac_width = 8;
+		}
+	}
+
 	/* set palette */
-	outp(0x3C8,0);
-	for (i=0;i < bfr->colors;i++) {
-		outp(0x3C9,bfr->palette[i].rgbRed >> 2);
-		outp(0x3C9,bfr->palette[i].rgbGreen >> 2);
-		outp(0x3C9,bfr->palette[i].rgbBlue >> 2);
+	if (vbe_modeinfo.bits_per_pixel == 8) {
+		unsigned int shf = 2;
+
+		if (img_dac_width == 8) shf = 0;
+
+		outp(0x3C8,0);
+		for (i=0;i < bfr->colors;i++) {
+			outp(0x3C9,bfr->palette[i].rgbRed >> shf);
+			outp(0x3C9,bfr->palette[i].rgbGreen >> shf);
+			outp(0x3C9,bfr->palette[i].rgbBlue >> shf);
+		}
 	}
 
 	/* load and render */
