@@ -177,6 +177,10 @@ static int accept_mode(unsigned int width,unsigned int height,unsigned int bpp) 
 	if (vbe_modeinfo.bytes_per_scan_line == 0)
 		return 0;
 
+	/* windowing must be available */
+	if (vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE_WINDOWING)
+		return 0;
+
 	/* bank switching validation */
 	if (vbe_modeinfo.win_granularity == 0 || vbe_modeinfo.win_granularity > 128)
 		return 0;
