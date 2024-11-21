@@ -19,6 +19,7 @@ static unsigned int img_dac_width = 0;
 static uint32_t window_size = 0,window_mult = 0;
 static uint16_t window_bank_advance = 0;
 static unsigned char enable_8bit_dac = 1;
+static unsigned char enable_rmwnfunc = 1;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
 typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int pixels);
@@ -408,6 +409,7 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int p
 static void help(void) {
 	fprintf(stderr,"general [opts] <bmp file>\n");
 	fprintf(stderr," -no-8bit-dac          Do not attempt 8-bit DAC\n");
+	fprintf(stderr," -no-rmwnfunc          Do not use real-mode direct call window control\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -427,6 +429,9 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"no-8bit-dac")) {
 				enable_8bit_dac = 0;
+			}
+			else if (!strcmp(a,"no-rmwnfunc")) {
+				enable_rmwnfunc = 0;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -502,10 +507,7 @@ int main(int argc,char **argv) {
 	}
 
 	draw_scanline_bank_switch = bnksw_int10;
-	if (vbe_modeinfo.window_function != 0) {
-		fprintf(stderr,"Direct bank switching function available\n");
-		draw_scanline_bank_switch = bnksw_rmwnfnc;
-	}
+	if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
 	draw_scanline = draw_scanline_bnksw;
 
 	if (!set_vbe_mode(vbemode)) {
