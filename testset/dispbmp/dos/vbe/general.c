@@ -18,6 +18,7 @@ static unsigned int img_stride = 0;
 static unsigned int img_dac_width = 0;
 static uint32_t window_size = 0,window_mult = 0;
 static uint16_t window_bank_advance = 0;
+static unsigned char enable_8bit_dac = 1;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
 typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int pixels);
@@ -405,7 +406,8 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int p
 }
 
 static void help(void) {
-	fprintf(stderr,"general <bmp file>\n");
+	fprintf(stderr,"general [opts] <bmp file>\n");
+	fprintf(stderr," -no-8bit-dac          Do not attempt 8-bit DAC\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -422,6 +424,9 @@ static int parse_argv(int argc,char **argv) {
 			if (!strcmp(a,"?") || !strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 0;
+			}
+			else if (!strcmp(a,"no-8bit-dac")) {
+				enable_8bit_dac = 0;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -508,7 +513,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	if (vbe_info.capabilities & VBE_CAP_8BIT_DAC) {
+	if ((vbe_info.capabilities & VBE_CAP_8BIT_DAC) && enable_8bit_dac) {
 		if (vbe_set_dac_width(8)) {
 			img_dac_width = 8;
 		}
