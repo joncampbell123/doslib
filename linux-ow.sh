@@ -21,6 +21,13 @@ if [ -z "$WATCOM" ]; then
         export WATCOM=/usr/src/open-watcom-v2/rel
     fi
 
+    # roaming development on an external drive? (depends on Bash)
+    if [ -n "${BASH_SOURCE[0]}" ]; then
+        x="`dirname ${BASH_SOURCE[0]}`/../open-watcom-v2"
+	if [ -n "$x" ]; then x=`realpath "$x"`; fi
+        if [ -d "$x" ]; then export WATCOM="$x/rel"; fi
+    fi
+
     export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
     export EDPATH=$WATCOM/eddat
     export INCLUDE=$WATCOM/lh
