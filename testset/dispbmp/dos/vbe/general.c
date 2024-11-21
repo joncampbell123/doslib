@@ -190,10 +190,6 @@ static int accept_mode(unsigned int width,unsigned int height,unsigned int bpp) 
 
 	/* OK, match video resolution */
 	if (vbe_modeinfo.x_resolution == width && vbe_modeinfo.y_resolution == height) {
-		fprintf(stderr,"%u x %u x %ubpp mmodel=0x%x\n",
-			vbe_modeinfo.x_resolution,vbe_modeinfo.y_resolution,vbe_modeinfo.bits_per_pixel,
-			vbe_modeinfo.memory_model);
-
 		if (vbe_modeinfo.bits_per_pixel == bpp) {
 			if (vbe_modeinfo.bits_per_pixel == 8 && vbe_modeinfo.number_of_planes <= 1 &&
 				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x05/*non-chain 256-color*/)) {
