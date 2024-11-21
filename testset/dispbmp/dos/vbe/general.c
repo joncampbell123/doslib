@@ -299,12 +299,33 @@ static void vbe_bank_switch_int10(uint16_t bank) {
 #endif
 }
 
+static void vbe_bank_switch_rmwnfunc(uint16_t bank) {
+	uint32_t proc = vbe_modeinfo.window_function;
+
+	(void)bank;
+
+#if TARGET_MSDOS == 32
+	// TODO
+#else
+	__asm {
+		mov	ax,0x4F05	; AH=4Fh AL=05h CPU memory window control
+		mov	bx,0		; Set window, Window A
+		mov	dx,bank		; window position in granularity units
+		call	dword ptr [proc]
+	}
+#endif
+}
+
 ///
 
 static uint16_t current_bank = ~0u;
 
 static void bnksw_int10(uint16_t bank) {
 	vbe_bank_switch_int10(bank);
+}
+
+static void bnksw_rmwnfnc(uint16_t bank) {
+	vbe_bank_switch_rmwnfunc(bank);
 }
 
 static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int pixels) {
@@ -451,6 +472,10 @@ int main(int argc,char **argv) {
 	}
 
 	draw_scanline_bank_switch = bnksw_int10;
+	if (vbe_modeinfo.window_function != 0) {
+		fprintf(stderr,"Direct bank switching function available\n");
+		draw_scanline_bank_switch = bnksw_rmwnfnc;
+	}
 	draw_scanline = draw_scanline_bnksw;
 
 	if (!set_vbe_mode(vbemode)) {
