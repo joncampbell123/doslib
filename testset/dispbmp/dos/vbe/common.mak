@@ -48,6 +48,8 @@ $(GENERAL_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)general.obj
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)24bpp$(HPS)w640$(HPS)400.bmp $(SUBDIR)$(HPS)64040024.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)24bpp$(HPS)w640$(HPS)480.bmp $(SUBDIR)$(HPS)64048024.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)24bpp$(HPS)w800$(HPS)600.bmp $(SUBDIR)$(HPS)80060024.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)15bpp$(HPS)w640$(HPS)480.bmp $(SUBDIR)$(HPS)64048015.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)16bpp$(HPS)w640$(HPS)480.bmp $(SUBDIR)$(HPS)64048016.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 

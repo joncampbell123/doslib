@@ -357,18 +357,23 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x05/*non-chain 256-color*/)) {
 				return 1;
 			}
-			else if (vbe_modeinfo.bits_per_pixel == 24 && vbe_modeinfo.number_of_planes <= 1 &&
-				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x06/*packed*/)) {
-				vbe_mode_blue_shift = 0;
-				vbe_mode_blue_width = 8;
-				vbe_mode_green_shift = 8;
-				vbe_mode_green_width = 8;
-				vbe_mode_red_shift = 16;
-				vbe_mode_red_width = 8;
-				vbe_mode_res_shift = 0;
-				vbe_mode_res_width = 0;
+			else if ((vbe_modeinfo.bits_per_pixel == 24 || vbe_modeinfo.bits_per_pixel == 32 ||
+				vbe_modeinfo.bits_per_pixel == 15 || vbe_modeinfo.bits_per_pixel == 16)
+				&& vbe_modeinfo.number_of_planes <= 1 &&
+				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x06/*direct color*/)) {
 
 				if (vbe_modeinfo.memory_model == 0x06) {
+					/* if the caller asked for 15bpp then match 5:5:5
+					 * if the caller asked for 16bpp then match 5:6:5 */
+					if (bpp == 15) {
+						if (vbe_modeinfo.blue_mask_size != 5 || vbe_modeinfo.green_mask_size != 5 || vbe_modeinfo.red_mask_size != 5)
+							return 0;
+					}
+					else if (bpp == 16) {
+						if (vbe_modeinfo.blue_mask_size != 5 || vbe_modeinfo.green_mask_size != 6 || vbe_modeinfo.red_mask_size != 5)
+							return 0;
+					}
+
 					vbe_mode_blue_shift = vbe_modeinfo.blue_field_position;
 					vbe_mode_blue_width = vbe_modeinfo.blue_mask_size;
 					vbe_mode_green_shift = vbe_modeinfo.green_field_position;
@@ -377,6 +382,10 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 					vbe_mode_red_width = vbe_modeinfo.red_mask_size;
 					vbe_mode_res_shift = vbe_modeinfo.reserved_field_position;
 					vbe_mode_res_width = vbe_modeinfo.reserved_mask_size;
+				}
+				else {
+					// TODO: VESA BIOS 1.1 and earlier where directcolor was packed and you assumed formats.
+					return 0;
 				}
 
 				return 1;
@@ -750,7 +759,8 @@ int main(int argc,char **argv) {
 	/* TODO: This is where it might be handy to support the Windows 95 BI_BITFIELDS extension to distinguish 15/16bpp */
 	fprintf(stderr,"BMP is %u x %u x %ubpp\n",bfr->width,bfr->height,bfr->bpp);
 	if (bfr->colors != 0) fprintf(stderr,"With a %u color palette\n",bfr->colors);
-	fprintf(stderr,"BMP R/G/B/XorA{shift,width}: {%u,%u} {%u,%u} {%u,%u} {%u,%u}\n",
+	fprintf(stderr,"BMP R/G/B/%c{shift,width}: {%u,%u} {%u,%u} {%u,%u} {%u,%u}\n",
+		bfr->has_alpha?'A':'X',
 		bfr->red_shift,bfr->red_width,
 		bfr->green_shift,bfr->green_width,
 		bfr->blue_shift,bfr->blue_width,
@@ -763,8 +773,10 @@ int main(int argc,char **argv) {
 		if (enable_window) mode_flags |= FINDVBE_WINDOW;
 		if (enable_lfb) mode_flags |= FINDVBE_LFB;
 
-		/* TODO: Including bitfields from BI_BITFIELDS */
-		vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,bfr->bpp);
+		if (bfr->bpp == 16 && bfr->green_width == 5 && bfr->red_width == 5 && bfr->blue_width == 5) /* 5:5:5 */
+			vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,15);
+		else
+			vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,bfr->bpp);
 	}
 	if (vbemode == 0) {
 		fprintf(stderr,"No matching VESA BIOS mode\n");

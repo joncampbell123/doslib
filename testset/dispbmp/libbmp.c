@@ -11,6 +11,29 @@
 
 #include "libbmp.h"
 
+static void mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width) {
+	if (mask != 0) {
+		uint8_t c;
+
+		c = 0;
+		while ((mask&(uint32_t)1ul) == (uint32_t)0ul) {
+			mask >>= (uint32_t)1ul;
+			c++;
+		}
+		*shift = c;
+
+		c = 0;
+		while (mask&(uint32_t)1ul) {
+			mask >>= (uint32_t)1ul;
+			c++;
+		}
+		*width = c;
+	}
+	else {
+		*shift = *width = 0;
+	}
+}
+
 struct BMPFILEREAD *open_bmp(const char *path) {
 	struct BMPFILEREAD *bmp = (struct BMPFILEREAD*)calloc(1,sizeof(struct BMPFILEREAD));
 	unsigned char *temp;
@@ -85,6 +108,17 @@ struct BMPFILEREAD *open_bmp(const char *path) {
 				/* palette follows struct */
 				if (read(bmp->fd,bmp->palette,bmp->colors * sizeof(struct BMPPALENTRY)) != (bmp->colors * sizeof(struct BMPPALENTRY))) goto fail;
 			}
+			else if (bmp->bpp == 15 || bmp->bpp == 16) {
+				bmp->blue_shift = 0;
+				bmp->blue_width = 5;
+				bmp->green_shift = 5;
+				bmp->green_width = 5;
+				bmp->red_shift = 10;
+				bmp->red_width = 5;
+				bmp->alpha_shift = 15;
+				bmp->alpha_width = 1;
+				bmp->has_alpha = 0;
+			}
 			else if (bmp->bpp == 24) {
 				bmp->blue_shift = 0;
 				bmp->blue_width = 8;
@@ -92,9 +126,51 @@ struct BMPFILEREAD *open_bmp(const char *path) {
 				bmp->green_width = 8;
 				bmp->red_shift = 16;
 				bmp->red_width = 8;
+				bmp->has_alpha = 0;
+			}
+			else if (bmp->bpp == 32) {
+				bmp->blue_shift = 0;
+				bmp->blue_width = 8;
+				bmp->green_shift = 8;
+				bmp->green_width = 8;
+				bmp->red_shift = 16;
+				bmp->red_width = 8;
+				bmp->alpha_shift = 24;
+				bmp->alpha_width = 8;
+				bmp->has_alpha = 0;
+			}
+			else {
+				errno = ENOSYS;
+				goto fail;
+			}
+		}
+		/* NTS: The GNU Image Manipulation Program likes to write cheap BITMAPV4HEADER structures that
+		 *      only contain 52/56 bytes, just enough for the bV4Mask fields. Good thing we don't care
+		 *      about anything past those fields or this code would be much more complex. */
+		else if (bi->biCompression == 3/*BI_BITFIELDS*/ && bi->biSize >= 52) {
+			struct winBITMAPV4HEADER *bi4 = (struct winBITMAPV4HEADER*)temp;
+
+			bmp->stride = (((bmp->width * bmp->bpp) + 31u) & (~31u)) >> 3u;
+			if (bmp->stride == 0) goto fail;
+			bmp->scanline_size = bmp->stride;
+			bmp->scanline = malloc(bmp->scanline_size + 8u);
+			if (bmp->scanline == NULL) goto fail;
+			bmp->size = (unsigned long)bmp->stride * (unsigned long)bmp->height;
+
+			if (bmp->bpp == 16 || bmp->bpp == 32) {
+				mask2shift(bi4->bV4BlueMask,&bmp->blue_shift,&bmp->blue_width);
+				mask2shift(bi4->bV4GreenMask,&bmp->green_shift,&bmp->green_width);
+				mask2shift(bi4->bV4RedMask,&bmp->red_shift,&bmp->red_width);
+				mask2shift(bi->biSize >= 56 ? bi4->bV4AlphaMask : 0,&bmp->alpha_shift,&bmp->alpha_width);
+				bmp->has_alpha = 1;
+			}
+			else {
+				errno = ENOSYS;
+				goto fail;
 			}
 		}
 		else {
+			errno = ENOSYS;
 			goto fail;
 		}
 	}
