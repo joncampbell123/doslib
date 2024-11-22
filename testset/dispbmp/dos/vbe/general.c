@@ -20,6 +20,9 @@ static uint32_t window_size = 0,window_mult = 0;
 static uint16_t window_bank_advance = 0;
 static unsigned char enable_8bit_dac = 1;
 static unsigned char enable_rmwnfunc = 1;
+static unsigned char enable_window = 1;
+static unsigned char enable_lfb = 1;
+static unsigned char pause_info = 0;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
 typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int pixels);
@@ -123,9 +126,14 @@ struct vbe_mode_info {
 	uint8_t		reserved[190];		/* +0x042 */
 };						/* =0x100 */
 
+#define FINDVBE_WINDOW			(1u << 0u)
+#define FINDVBE_LFB			(1u << 1u)
+
 static struct vbe_info_block vbe_info={0};
 static struct vbe_mode_info vbe_modeinfo={0};
 static uint16_t vbe_mode_number = 0;
+static uint8_t vbe_mode_can_window = 0;
+static uint8_t vbe_mode_can_lfb = 0;
 
 #if TARGET_MSDOS == 32
 static uint32_t real2lin(const uint32_t realfarptr) {
@@ -165,19 +173,19 @@ static int detect_vbe(void) {
 	return 1;
 }
 
-static int accept_mode(unsigned int width,unsigned int height,unsigned int bpp) {
-	/* must be supported, color, graphics */
-	if ((vbe_modeinfo.mode_attributes & (VESA_MODE_ATTR_HW_SUPPORTED|VESA_MODE_ATTR_GRAPHICS_MODE|VESA_MODE_ATTR_COLOR_MODE)) !=
-		(VESA_MODE_ATTR_HW_SUPPORTED|VESA_MODE_ATTR_GRAPHICS_MODE|VESA_MODE_ATTR_COLOR_MODE))
+static int accept_can_lfb_mode(unsigned int flags) {
+	(void)flags;
+
+	if (!(vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE))
+		return 0;
+	if (vbe_modeinfo.phys_base_ptr == 0)
 		return 0;
 
-	/* believe it or not, VESA BIOS 1.0 standard allowed the BIOS to return information without any resolution information */
-	if ((vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_VBE_1X_MOREINFO) == 0)
-		return 0; /* not supported yet */
+	return 1;
+}
 
-	/* additional validation */
-	if (vbe_modeinfo.bytes_per_scan_line == 0)
-		return 0;
+static int accept_can_window_mode(unsigned int flags) {
+	(void)flags;
 
 	/* windowing must be available */
 	if (vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE_WINDOWING)
@@ -195,6 +203,40 @@ static int accept_mode(unsigned int width,unsigned int height,unsigned int bpp) 
 	if (vbe_modeinfo.win_a_segment == 0)
 		return 0;
 
+	return 1;
+}
+
+static int accept_mode(unsigned int flags,unsigned int width,unsigned int height,unsigned int bpp) {
+	vbe_mode_can_window = 0;
+	vbe_mode_can_lfb = 0;
+
+	/* must be supported, color, graphics */
+	if ((vbe_modeinfo.mode_attributes & (VESA_MODE_ATTR_HW_SUPPORTED|VESA_MODE_ATTR_GRAPHICS_MODE|VESA_MODE_ATTR_COLOR_MODE)) !=
+		(VESA_MODE_ATTR_HW_SUPPORTED|VESA_MODE_ATTR_GRAPHICS_MODE|VESA_MODE_ATTR_COLOR_MODE))
+		return 0;
+
+	/* believe it or not, VESA BIOS 1.0 standard allowed the BIOS to return information without any resolution information */
+	if ((vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_VBE_1X_MOREINFO) == 0)
+		return 0; /* not supported yet */
+
+	/* additional validation */
+	if (vbe_modeinfo.bytes_per_scan_line == 0)
+		return 0;
+
+	if (flags & FINDVBE_WINDOW) {
+		if (accept_can_window_mode(flags))
+			vbe_mode_can_window = 1;
+	}
+
+	if (flags & FINDVBE_LFB) {
+		if (accept_can_lfb_mode(flags))
+			vbe_mode_can_lfb = 1;
+	}
+
+	/* if it can't do either than do not use this mode */
+	if (!vbe_mode_can_window && !vbe_mode_can_lfb)
+		return 0;
+
 	/* OK, match video resolution */
 	if (vbe_modeinfo.x_resolution == width && vbe_modeinfo.y_resolution == height) {
 		if (vbe_modeinfo.bits_per_pixel == bpp) {
@@ -208,7 +250,7 @@ static int accept_mode(unsigned int width,unsigned int height,unsigned int bpp) 
 	return 0;
 }
 
-static unsigned int find_vbe_mode(unsigned int width,unsigned int height,unsigned int bpp) {
+static unsigned int find_vbe_mode(unsigned int flags,unsigned int width,unsigned int height,unsigned int bpp) {
 	unsigned int ret = 0;
 	unsigned int count = 0;
 	uint16_t status = 0;
@@ -247,7 +289,7 @@ static unsigned int find_vbe_mode(unsigned int width,unsigned int height,unsigne
 		}
 #endif
 		if (status == 0x004F) { /* AH=00h successful AL=4Fh supported */
-			if (accept_mode(width,height,bpp)) {
+			if (accept_mode(flags,width,height,bpp)) {
 				vbe_mode_number = ret = mode;
 
 				window_size = (uint32_t)vbe_modeinfo.win_size << 10ul;
@@ -410,6 +452,9 @@ static void help(void) {
 	fprintf(stderr,"general [opts] <bmp file>\n");
 	fprintf(stderr," -no-8bit-dac          Do not attempt 8-bit DAC\n");
 	fprintf(stderr," -no-rmwnfunc          Do not use real-mode direct call window control\n");
+	fprintf(stderr," -no-lfb               Do not use linear framebuffer\n");
+	fprintf(stderr," -no-window            Do not use bank switching window\n");
+	fprintf(stderr," -pause-info           Pause to show info before setting mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -432,6 +477,15 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"no-rmwnfunc")) {
 				enable_rmwnfunc = 0;
+			}
+			else if (!strcmp(a,"no-lfb")) {
+				enable_lfb = 0;
+			}
+			else if (!strcmp(a,"no-window")) {
+				enable_window = 0;
+			}
+			else if (!strcmp(a,"pause-info")) {
+				pause_info = 1;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -488,8 +542,15 @@ int main(int argc,char **argv) {
 	if (bfr->colors != 0) fprintf(stderr,"With a %u color palette\n",bfr->colors);
 
 	/* Now find a VESA BIOS mode that matches the bitmap */
-	/* TODO: Including bitfields from BI_BITFIELDS */
-	vbemode = find_vbe_mode(bfr->width,bfr->height,bfr->bpp);
+	{
+		unsigned int mode_flags = 0;
+
+		if (enable_window) mode_flags |= FINDVBE_WINDOW;
+		if (enable_lfb) mode_flags |= FINDVBE_LFB;
+
+		/* TODO: Including bitfields from BI_BITFIELDS */
+		vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,bfr->bpp);
+	}
 	if (vbemode == 0) {
 		fprintf(stderr,"No matching VESA BIOS mode\n");
 		return 1;
@@ -509,6 +570,14 @@ int main(int argc,char **argv) {
 	draw_scanline_bank_switch = bnksw_int10;
 	if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
 	draw_scanline = draw_scanline_bnksw;
+
+	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
+	fprintf(stderr,"Linear framebuffer: %s (lfb at 0x%08lx)\n",vbe_mode_can_lfb?"yes":"no",(unsigned long)vbe_modeinfo.phys_base_ptr);
+
+	if (pause_info) {
+		fprintf(stderr,"Hit enter to continue\n");
+		while (getch() != 13);
+	}
 
 	if (!set_vbe_mode(vbemode)) {
 		fprintf(stderr,"Unable to set mode\n");
