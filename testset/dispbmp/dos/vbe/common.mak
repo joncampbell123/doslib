@@ -52,6 +52,9 @@ $(GENERAL_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)general.obj
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)16bpp$(HPS)w640$(HPS)480.bmp $(SUBDIR)$(HPS)64048016.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)32bpp$(HPS)w640$(HPS)480.bmp $(SUBDIR)$(HPS)64048032.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)32bpp$(HPS)w640$(HPS)480a1.bmp $(SUBDIR)$(HPS)6404803A.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)350vga.bmp $(SUBDIR)$(HPS)640350_4.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)400vga.bmp $(SUBDIR)$(HPS)640400_4.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)640480_4.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 

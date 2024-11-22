@@ -353,7 +353,12 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 	/* OK, match video resolution */
 	if (vbe_modeinfo.x_resolution == width && vbe_modeinfo.y_resolution == height) {
 		if (vbe_modeinfo.bits_per_pixel == bpp) {
-			if (vbe_modeinfo.bits_per_pixel == 8 && vbe_modeinfo.number_of_planes <= 1 &&
+			if (vbe_modeinfo.bits_per_pixel == 4 && vbe_modeinfo.number_of_planes <= 1 &&
+				vbe_modeinfo.memory_model == 0x04/*packed*/) {
+				/* 4bpp 1-plane packed is a real video mode on some Chips & Tech and S3 SVGA hardware */
+				return 1;
+			}
+			else if (vbe_modeinfo.bits_per_pixel == 8 && vbe_modeinfo.number_of_planes <= 1 &&
 				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x05/*non-chain 256-color*/)) {
 				return 1;
 			}
@@ -903,7 +908,7 @@ int main(int argc,char **argv) {
 	}
 
 	/* set palette */
-	if (vbe_modeinfo.bits_per_pixel == 8) {
+	if (vbe_modeinfo.bits_per_pixel >= 1 && vbe_modeinfo.bits_per_pixel <= 8) {
 		unsigned int shf = 2;
 
 		if (img_dac_width == 8) shf = 0;
