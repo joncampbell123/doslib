@@ -159,6 +159,7 @@ static uint8_t vbe_mode_can_lfb = 0;
 #if TARGET_MSDOS == 32
 static uint16_t vbe_dos_selector = 0; /* selector value returned by DPMI */
 static void *vbe_dos_segment = NULL; /* pointer to DOS segment */
+static void *lfb_lin_base = NULL;
 #endif
 
 #if TARGET_MSDOS == 32
@@ -166,6 +167,36 @@ static uint32_t real2lin(const uint32_t realfarptr) {
 	const uint16_t segv = realfarptr >> 16u;
 	const uint16_t ofsv = realfarptr & 0xFFFFu;
 	return ((uint32_t)segv << (uint32_t)4u) + (uint32_t)ofsv;
+}
+#endif
+
+#if TARGET_MSDOS == 32
+void *dpmi_phys_addr_map(uint32_t phys,uint32_t size) {
+	uint32_t retv = 0;
+
+	__asm {
+		mov	ax,0x0800
+		mov	cx,word ptr phys
+		mov	bx,word ptr phys+2
+		mov	di,word ptr size
+		mov	si,word ptr size+2
+		int	0x31
+		jc	endf
+		mov	word ptr retv,cx
+		mov	word ptr retv+2,bx
+endf:
+	}
+
+	return (void*)retv;
+}
+
+void dpmi_phys_addr_free(void *base) {
+	__asm {
+		mov	ax,0x0801
+		mov	cx,word ptr base
+		mov	bx,word ptr base+2
+		int	0x31
+	}
 }
 #endif
 
@@ -507,6 +538,16 @@ static void bnksw_rmwnfnc(uint16_t bank) {
 }
 #endif
 
+#if TARGET_MSDOS == 32
+static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int pixels) {
+	if (y < img_height && lfb_lin_base) {
+		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
+		unsigned char *d = (unsigned char*)lfb_lin_base + addr;
+		memcpy(d,src,pixels);
+	}
+}
+#endif
+
 static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
 		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
@@ -699,14 +740,33 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	draw_scanline_bank_switch = bnksw_int10;
-#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
-	if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
-#endif
-	draw_scanline = draw_scanline_bnksw;
-
 	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
 	fprintf(stderr,"Linear framebuffer: %s (lfb at 0x%08lx)\n",vbe_mode_can_lfb?"yes":"no",(unsigned long)vbe_modeinfo.phys_base_ptr);
+
+	if (vbe_mode_can_lfb) {
+#if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
+		draw_scanline_bank_switch = NULL;
+		draw_scanline = draw_scanline_lfb;
+		fprintf(stderr,"I will draw using linear framebuffer\n");
+#else
+		fprintf(stderr,"How did LFB enable occur anyway??\n");
+		return 1;
+#endif
+	}
+	else if (vbe_mode_can_window) {
+		draw_scanline_bank_switch = bnksw_int10;
+#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
+		if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
+#endif
+		draw_scanline = draw_scanline_bnksw;
+		fprintf(stderr,"I will draw using bank switching\n");
+	}
+	else {
+		fprintf(stderr,"No method to draw?\n");
+		return 1;
+	}
+
+	fprintf(stderr,"Final VBE mode 0x%x\n",vbemode);
 
 	if (pause_info) {
 		fprintf(stderr,"Hit enter to continue\n");
@@ -717,6 +777,20 @@ int main(int argc,char **argv) {
 		fprintf(stderr,"Unable to set mode\n");
 		return 1;
 	}
+
+#if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
+	if (vbe_mode_can_lfb) {
+		lfb_lin_base = dpmi_phys_addr_map(vbe_modeinfo.phys_base_ptr,vbe_modeinfo.bytes_per_scan_line * vbe_modeinfo.y_resolution);
+		if (lfb_lin_base == NULL) {
+			__asm {
+				mov	ax,0x0003	; AH=0x00 AL=0x03
+				int	0x10
+			}
+			fprintf(stderr,"Cannot map linear framebuffer\n");
+			return 1;
+		}
+	}
+#endif
 
 	if ((vbe_info.capabilities & VBE_CAP_8BIT_DAC) && enable_8bit_dac) {
 		if (vbe_set_dac_width(8)) {
@@ -764,6 +838,13 @@ int main(int argc,char **argv) {
 
 	/* wait for ENTER */
 	while (getch() != 13);
+
+#if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
+	if (vbe_mode_can_lfb && lfb_lin_base) {
+		dpmi_phys_addr_free(lfb_lin_base);
+		lfb_lin_base = NULL;
+	}
+#endif
 
 	/* restore text */
 	__asm {
