@@ -7,6 +7,7 @@
 #include <conio.h>
 #include <stdio.h>
 #include <errno.h>
+#include <dos.h>
 #include <i86.h>
 
 #include "libbmp.h"
@@ -56,6 +57,26 @@ static draw_scanline_func_t draw_scanline;
 
 #if TARGET_MSDOS == 32
 # define VBE_DOS_BUFFER_SIZE	4096
+#endif
+
+#if TARGET_MSDOS == 32
+#pragma pack(push,1)
+struct dpmi_realmode_call {
+	uint32_t	edi,esi,ebp,reserved;
+	uint32_t	ebx,edx,ecx,eax;
+	uint16_t	flags,es,ds,fs,gs,ip,cs,sp,ss;
+};
+#pragma pack(pop)
+
+static void vbe_realint(struct dpmi_realmode_call *rc) {
+	__asm {
+		mov	ax,0x0300
+		mov	bx,0x0010
+		xor	cx,cx
+		mov	edi,rc		; we trust Watcom has left ES == DS
+		int	0x31		; call DPMI
+	}
+}
 #endif
 
 #pragma pack(push,1)
@@ -135,12 +156,50 @@ static struct vbe_mode_info vbe_modeinfo={0};
 static uint16_t vbe_mode_number = 0;
 static uint8_t vbe_mode_can_window = 0;
 static uint8_t vbe_mode_can_lfb = 0;
+#if TARGET_MSDOS == 32
+static uint16_t vbe_dos_selector = 0; /* selector value returned by DPMI */
+static void *vbe_dos_segment = NULL; /* pointer to DOS segment */
+#endif
 
 #if TARGET_MSDOS == 32
 static uint32_t real2lin(const uint32_t realfarptr) {
 	const uint16_t segv = realfarptr >> 16u;
 	const uint16_t ofsv = realfarptr & 0xFFFFu;
 	return ((uint32_t)segv << (uint32_t)4u) + (uint32_t)ofsv;
+}
+#endif
+
+#if TARGET_MSDOS == 32
+void *dpmi_alloc_dos(unsigned long len,uint16_t *selector) {
+	unsigned short rm=0,pm=0,fail=0;
+
+	/* convert len to paragraphs */
+	len = (len + 15) >> 4UL;
+	if (len >= 0xFF00UL) return NULL;
+
+	__asm {
+		mov	bx,WORD PTR len
+		mov	ax,0x100
+		int	0x31
+
+		mov	rm,ax
+		mov	pm,dx
+		sbb	ax,ax
+		mov	fail,ax
+	}
+
+	if (fail) return NULL;
+
+	*selector = pm;
+	return (void*)((unsigned long)rm << 4UL);
+}
+
+void dpmi_free_dos(uint16_t selector) {
+	__asm {
+		mov	ax,0x101
+		mov	dx,selector
+		int	0x31
+	}
 }
 #endif
 
@@ -152,7 +211,21 @@ static int detect_vbe(void) {
 	memcpy(&vbe_info.signature,"VBE2",4);
 
 #if TARGET_MSDOS == 32
-	return 0;//TODO
+	if (vbe_dos_segment == NULL) {
+		vbe_dos_segment = dpmi_alloc_dos(1024,&vbe_dos_selector);
+		if (vbe_dos_segment == NULL)
+			return 1;
+	}
+
+	{
+		struct dpmi_realmode_call rc={0};
+		rc.eax = 0x4F00;
+		rc.edi = 0;
+		rc.es = (uint16_t)((uint32_t)vbe_dos_segment >> 4ul);
+		vbe_realint(&rc);
+		status = (uint16_t)rc.eax;
+		if (status == 0x004F) memcpy(&vbe_info,vbe_dos_segment,sizeof(vbe_info));
+	}
 #else
 	__asm {
 		push	es
@@ -273,7 +346,16 @@ static unsigned int find_vbe_mode(unsigned int flags,unsigned int width,unsigned
 		uint16_t mode = *modearray;
 
 #if TARGET_MSDOS == 32
-		// TODO
+		if (vbe_dos_segment != NULL) {
+			struct dpmi_realmode_call rc={0};
+			rc.eax = 0x4F01;
+			rc.ecx = mode;
+			rc.edi = 0;
+			rc.es = (uint16_t)((uint32_t)vbe_dos_segment >> 4ul);
+			vbe_realint(&rc);
+			status = (uint16_t)rc.eax;
+			if (status == 0x004F) memcpy(&vbe_modeinfo,vbe_dos_segment,sizeof(vbe_modeinfo));
+		}
 #else
 		__asm {
 			push		es
@@ -314,16 +396,12 @@ static int set_vbe_mode(uint16_t mode) {
 
 	(void)mode;
 
-#if TARGET_MSDOS == 32
-	return 0;//TODO
-#else
 	__asm {
 		mov	ax,0x4F02	; AH=4Fh AL=02h set video mode
 		mov	bx,mode
 		int	10h
 		mov	status,ax
 	}
-#endif
 
 	if (status != 0x004F) return 0; /* AH=0x00 success AL=0x4F supported */
 
@@ -335,9 +413,6 @@ static int vbe_set_dac_width(uint8_t w) {
 
 	(void)w;
 
-#if TARGET_MSDOS == 32
-	return 0;//TODO
-#else
 	__asm {
 		mov	ax,0x4F08	; AH=4Fh AL=08h DAC palette control
 		mov	bl,0		; set it
@@ -345,7 +420,6 @@ static int vbe_set_dac_width(uint8_t w) {
 		int	10h
 		mov	status,ax
 	}
-#endif
 
 	if (status != 0x004F) return 0; /* AH=0x00 success AL=0x4F supported */
 
@@ -357,8 +431,21 @@ static void vbe_set_palette(unsigned int first,unsigned int count,unsigned char 
 	(void)count;
 	(void)pal;
 
+	if (first >= 256) return;
+	if (count > 256) return;
+	if ((first+count) > 256) return;
+
 #if TARGET_MSDOS == 32
-	// TODO
+	if (vbe_dos_segment != NULL) {
+		struct dpmi_realmode_call rc={0};
+		memcpy(vbe_dos_segment,pal,4*count);
+		rc.eax = 0x4F09;
+		rc.ecx = count;
+		rc.edx = first;
+		rc.edi = 0;
+		rc.es = (uint16_t)((uint32_t)vbe_dos_segment >> 4ul);
+		vbe_realint(&rc);
+	}
 #else
 	__asm {
 		push	es
@@ -384,36 +471,27 @@ static void vbe_set_palette(unsigned int first,unsigned int count,unsigned char 
 static void vbe_bank_switch_int10(uint16_t bank) {
 	(void)bank;
 
-#if TARGET_MSDOS == 32
-	// TODO
-#else
 	__asm {
 		mov	ax,0x4F05	; AH=4Fh AL=05h CPU memory window control
 		mov	bx,0		; Set window, Window A
 		mov	dx,bank		; window position in granularity units
 		int	10h
 	}
-#endif
 }
 
+#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
 static void vbe_bank_switch_rmwnfunc(uint16_t bank) {
 	uint32_t proc = vbe_modeinfo.window_function;
 	if (proc == 0) return;
 
-	(void)bank;
-	(void)proc;
-
-#if TARGET_MSDOS == 32
-	// TODO
-#else
 	__asm {
 		mov	ax,0x4F05	; AH=4Fh AL=05h CPU memory window control
 		mov	bx,0		; Set window, Window A
 		mov	dx,bank		; window position in granularity units
 		call	dword ptr [proc]
 	}
-#endif
 }
+#endif
 
 ///
 
@@ -423,9 +501,11 @@ static void bnksw_int10(uint16_t bank) {
 	vbe_bank_switch_int10(bank);
 }
 
+#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
 static void bnksw_rmwnfnc(uint16_t bank) {
 	vbe_bank_switch_rmwnfunc(bank);
 }
+#endif
 
 static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
@@ -620,7 +700,9 @@ int main(int argc,char **argv) {
 	}
 
 	draw_scanline_bank_switch = bnksw_int10;
+#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
 	if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
+#endif
 	draw_scanline = draw_scanline_bnksw;
 
 	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
