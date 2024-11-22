@@ -556,6 +556,18 @@ int main(int argc,char **argv) {
 	if (!parse_argv(argc,argv))
 		return 1;
 
+#if TARGET_MSDOS == 16
+	/* we cannot support the linear framebuffer.
+	 * or, well, we COULD, but that requires some extra trickery to
+	 * enable "flat real mode" to reach up into extended memory to
+	 * touch the framebuffer. to help keep this code simple, we do
+	 * not support real-mode linear framebuffer access at this time. */
+	if (enable_lfb) {
+		fprintf(stderr,"Real-mode builds do not support the LFB at this time, sorry.\n");
+		enable_lfb = 0;
+	}
+#endif
+
 	if (!detect_vbe()) {
 		fprintf(stderr,"VESA BIOS extensios not detected\n");
 		return 1;
