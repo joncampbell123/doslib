@@ -44,6 +44,7 @@ $(GENERAL_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)general.obj
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w800$(HPS)600vga.bmp $(SUBDIR)$(HPS)800600_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w1024$(HPS)768vga.bmp $(SUBDIR)$(HPS)10247688.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w1280$(HPS)1024vga.bmp $(SUBDIR)$(HPS)128102_8.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w1600$(HPS)1200vga.bmp $(SUBDIR)$(HPS)160120_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
