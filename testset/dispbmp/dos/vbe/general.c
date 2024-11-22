@@ -156,6 +156,7 @@ static struct vbe_mode_info vbe_modeinfo={0};
 static uint16_t vbe_mode_number = 0;
 static uint8_t vbe_mode_can_window = 0;
 static uint8_t vbe_mode_can_lfb = 0;
+static uint32_t vbe_mode_total_memory = 0;
 #if TARGET_MSDOS == 32
 static uint16_t vbe_dos_selector = 0; /* selector value returned by DPMI */
 static void *vbe_dos_segment = NULL; /* pointer to DOS segment */
@@ -274,7 +275,6 @@ static int detect_vbe(void) {
 	if (status != 0x004F) return 0;/* AH=00h successful AL=4Fh supported */
 	if (memcmp(&vbe_info.signature,"VESA",4)) return 0; /* signature must be "VESA" */
 	if (vbe_info.video_mode_ptr == 0ul || vbe_info.video_mode_ptr == 0xFFFFFFFFul) return 0; /* no video modes... riiiiight */
-
 	return 1;
 }
 
@@ -419,6 +419,7 @@ static unsigned int find_vbe_mode(unsigned int flags,unsigned int width,unsigned
 		count++;
 	}
 
+	vbe_mode_total_memory = (uint32_t)vbe_info.total_memory_64kb << (uint32_t)16ul;
 	return ret;
 }
 
@@ -740,6 +741,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+	fprintf(stderr,"VBE board has %lu (0x%lx) bytes of memory\n",(unsigned long)vbe_mode_total_memory,(unsigned long)vbe_mode_total_memory);
 	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
 	fprintf(stderr,"Linear framebuffer: %s (lfb at 0x%08lx)\n",vbe_mode_can_lfb?"yes":"no",(unsigned long)vbe_modeinfo.phys_base_ptr);
 
@@ -780,6 +782,15 @@ int main(int argc,char **argv) {
 
 #if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
 	if (vbe_mode_can_lfb) {
+		if ((vbe_modeinfo.bytes_per_scan_line * vbe_modeinfo.y_resolution) > vbe_mode_total_memory) {
+			__asm {
+				mov	ax,0x0003	; AH=0x00 AL=0x03
+				int	0x10
+			}
+			fprintf(stderr,"Not enough video RAM\n");
+			return 1;
+		}
+
 		lfb_lin_base = dpmi_phys_addr_map(vbe_modeinfo.phys_base_ptr,vbe_modeinfo.bytes_per_scan_line * vbe_modeinfo.y_resolution);
 		if (lfb_lin_base == NULL) {
 			__asm {
