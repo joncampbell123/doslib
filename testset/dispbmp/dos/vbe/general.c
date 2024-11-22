@@ -711,6 +711,29 @@ static int parse_argv(int argc,char **argv) {
 	return 1;
 }
 
+typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
+static conv_scanline_func_t convert_scanline;
+
+void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+	(void)bytes;
+	(void)src;
+	(void)bfr;
+}
+
+void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+	uint32_t *s32 = (uint32_t*)src;
+
+	bytes >>= 2u;
+	while (bytes-- > 0u) {
+		uint32_t f;
+
+		f  = ((*s32 >> (uint32_t)bfr->red_shift) & 0xFFu) << (uint32_t)vbe_mode_red_shift;
+		f += ((*s32 >> (uint32_t)bfr->green_shift) & 0xFFu) << (uint32_t)vbe_mode_green_shift;
+		f += ((*s32 >> (uint32_t)bfr->blue_shift) & 0xFFu) << (uint32_t)vbe_mode_blue_shift;
+		*s32++ = f;
+	}
+}
+
 int main(int argc,char **argv) {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
@@ -783,6 +806,8 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+	convert_scanline = convert_scanline_none;
+
 	img_width = vbe_modeinfo.x_resolution;
 	img_height = vbe_modeinfo.y_resolution;
 	img_stride = vbe_modeinfo.bytes_per_scan_line;
@@ -824,6 +849,18 @@ int main(int argc,char **argv) {
 	else {
 		fprintf(stderr,"No method to draw?\n");
 		return 1;
+	}
+
+	if (bfr->bpp == 32) {
+		if (	vbe_mode_red_shift != bfr->red_shift ||
+			vbe_mode_green_shift != bfr->green_shift ||
+			vbe_mode_blue_shift != bfr->blue_shift) {
+			if (vbe_mode_red_width == bfr->red_width && vbe_mode_green_width == bfr->green_width && vbe_mode_blue_width == bfr->blue_width) {
+				if (bfr->red_width == 8 && bfr->green_width == 8 && bfr->blue_width == 8) {
+					convert_scanline = convert_scanline_32bpp8;
+				}
+			}
+		}
 	}
 
 	fprintf(stderr,"Final VBE mode 0x%x\n",vbemode);
@@ -900,8 +937,10 @@ int main(int argc,char **argv) {
 	dispw = bfr->width;
 	if (dispw > img_width) dispw = img_width;
 	dispw = ((dispw * bfr->bpp) + 7u) >> 3u;
-	while (read_bmp_line(bfr) == 0)
+	while (read_bmp_line(bfr) == 0) {
+		convert_scanline(bfr,bfr->scanline,dispw);
 		draw_scanline((unsigned int)bfr->current_line,bfr->scanline,dispw);
+	}
 
 	/* done reading */
 	close_bmp(&bfr);
