@@ -349,6 +349,10 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x05/*non-chain 256-color*/)) {
 				return 1;
 			}
+			else if (vbe_modeinfo.bits_per_pixel == 24 && vbe_modeinfo.number_of_planes <= 1 &&
+				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x06/*packed*/)) {
+				return 1;
+			}
 		}
 	}
 
@@ -700,7 +704,11 @@ int main(int argc,char **argv) {
 		fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
 		return 1;
 	}
-	if (bfr->bpp == 0 || bfr->bpp > 32 || bfr->colors == 0 || bfr->colors > 256 || bfr->palette == 0) {
+	if (bfr->bpp == 0 || bfr->bpp > 32) {
+		fprintf(stderr,"BMP wrong format\n");
+		return 1;
+	}
+	if (bfr->bpp <= 8 && (bfr->colors == 0 || bfr->palette == NULL)) {
 		fprintf(stderr,"BMP wrong format\n");
 		return 1;
 	}
@@ -841,6 +849,7 @@ int main(int argc,char **argv) {
 	/* load and render */
 	dispw = bfr->width;
 	if (dispw > img_width) dispw = img_width;
+	dispw = ((dispw * bfr->bpp) + 7u) >> 3u;
 	while (read_bmp_line(bfr) == 0)
 		draw_scanline((unsigned int)bfr->current_line,bfr->scanline,dispw);
 
