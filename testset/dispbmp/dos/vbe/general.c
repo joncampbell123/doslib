@@ -27,7 +27,7 @@ static unsigned char enable_lfb = 1;
 static unsigned char pause_info = 0;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
-typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int pixels);
+typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int bytes);
 
 static draw_scanline_bnksw_t draw_scanline_bank_switch;
 static draw_scanline_func_t draw_scanline;
@@ -539,16 +539,16 @@ static void bnksw_rmwnfnc(uint16_t bank) {
 #endif
 
 #if TARGET_MSDOS == 32
-static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int pixels) {
+static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int bytes) {
 	if (y < img_height && lfb_lin_base) {
 		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
 		unsigned char *d = (unsigned char*)lfb_lin_base + addr;
-		memcpy(d,src,pixels);
+		memcpy(d,src,bytes);
 	}
 }
 #endif
 
-static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int pixels) {
+static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int bytes) {
 	if (y < img_height) {
 		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
 		uint16_t bank = (uint16_t)(addr / window_mult);
@@ -567,10 +567,10 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int p
 
 		if (bnkaddr != 0) {
 			cpy = window_size - bnkaddr;
-			if (cpy > pixels) cpy = pixels;
+			if (cpy > bytes) cpy = bytes;
 		}
 		else {
-			cpy = pixels;
+			cpy = bytes;
 		}
 
 #if TARGET_MSDOS == 32
@@ -578,8 +578,8 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int p
 #else
 		_fmemcpy(d,src,cpy);
 #endif
-		pixels -= cpy;
-		if (pixels != 0) {
+		bytes -= cpy;
+		if (bytes != 0) {
 			src += cpy;
 			bank += window_bank_advance;
 
@@ -590,10 +590,10 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int p
 
 #if TARGET_MSDOS == 32
 			d = (unsigned char*)0xA0000;
-			memcpy(d,src,pixels);
+			memcpy(d,src,bytes);
 #else
 			d = MK_FP(0xA000,0);
-			_fmemcpy(d,src,pixels);
+			_fmemcpy(d,src,bytes);
 #endif
 		}
 	}
