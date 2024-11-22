@@ -24,6 +24,8 @@ static unsigned char enable_8bit_dac = 1;
 static unsigned char enable_rmwnfunc = 1;
 static unsigned char enable_window = 1;
 static unsigned char enable_lfb = 1;
+static unsigned char enable_4packed = 1;
+static unsigned char enable_4planar = 1;
 static unsigned char pause_info = 0;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
@@ -150,6 +152,8 @@ struct vbe_mode_info {
 
 #define FINDVBE_WINDOW			(1u << 0u)
 #define FINDVBE_LFB			(1u << 1u)
+#define FINDVBE_4PACKED			(1u << 2u)
+#define FINDVBE_4PLANAR			(1u << 3u)
 
 static struct vbe_info_block vbe_info={0};
 static struct vbe_mode_info vbe_modeinfo={0};
@@ -354,8 +358,14 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 	if (vbe_modeinfo.x_resolution == width && vbe_modeinfo.y_resolution == height) {
 		if (vbe_modeinfo.bits_per_pixel == bpp) {
 			if (vbe_modeinfo.bits_per_pixel == 4 && vbe_modeinfo.number_of_planes <= 1 &&
-				vbe_modeinfo.memory_model == 0x04/*packed*/) {
+				vbe_modeinfo.memory_model == 0x04/*packed*/ && (flags & FINDVBE_4PACKED)) {
 				/* 4bpp 1-plane packed is a real video mode on some Chips & Tech and S3 SVGA hardware */
+				return 1;
+			}
+			else if (vbe_modeinfo.bits_per_pixel == 4 && vbe_modeinfo.number_of_planes == 4 && vbe_modeinfo.memory_model == 0x03/*4-plane planar*/ && (flags & FINDVBE_4PLANAR)) {
+				/* erm, as far as I know, VGA planar can't work with a linear framebuffer */
+				vbe_mode_can_lfb = 0;
+				if (!vbe_mode_can_window) return 0;
 				return 1;
 			}
 			else if (vbe_modeinfo.bits_per_pixel == 8 && vbe_modeinfo.number_of_planes <= 1 &&
@@ -595,6 +605,88 @@ static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int byt
 }
 #endif
 
+#if TARGET_MSDOS == 32
+static inline void vga_rmw(unsigned char *d,const unsigned char b) {
+	__asm {
+		push	esi
+		mov	esi,d
+		mov	al,[esi]
+		mov	al,b
+		mov	[esi],al
+		pop	esi
+	}
+}
+#else
+static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
+}
+#endif
+
+#if TARGET_MSDOS == 32
+static void vga4pcpy(unsigned char *d,unsigned char *src,unsigned int bytes) {
+#else
+static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int bytes) {
+#endif
+	unsigned int x,b;
+
+	for (b=0;b < 8;b++) {
+		outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
+		outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
+		outpw(0x3CE,0x0008 + (0x8000 >> b)); /* bit mask */
+		for (x=b;x < bytes;x += 8) vga_rmw(&d[x>>3u],(src[x>>1u] >> (((x^1u)&1u)*4u))&0xFu);
+	}
+
+	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
+	outpw(0x3CE,0xFF08); /* bit mask */
+}
+
+static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int pixels) {
+	if (y < img_height) {
+		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
+		uint16_t bank = (uint16_t)(addr / window_mult);
+		uint32_t bnkaddr = (addr % window_mult);
+#if TARGET_MSDOS == 32
+		unsigned char *d = (unsigned char*)((uint32_t)vbe_modeinfo.win_a_segment << 4ul) + bnkaddr;
+#else
+		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment,bnkaddr);
+#endif
+		unsigned int cpy;
+
+		if (current_bank != bank) {
+			draw_scanline_bank_switch(bank);
+			current_bank = bank;
+		}
+
+		if (bnkaddr != 0) {
+			cpy = window_size - bnkaddr;
+			if (cpy > (0xffffu/8u)) cpy = (0xffffu/8u); /* prevent 16-bit overflow */
+			cpy *= 8u; /* this is where it would happen */
+			if (cpy > pixels) cpy = pixels;
+		}
+		else {
+			cpy = pixels;
+		}
+
+		vga4pcpy(d,src,cpy);
+		pixels -= cpy;
+		if (pixels != 0) {
+			src += cpy / 2u;
+			bank += window_bank_advance;
+
+			if (current_bank != bank) {
+				draw_scanline_bank_switch(bank);
+				current_bank = bank;
+			}
+
+#if TARGET_MSDOS == 32
+			d = (unsigned char*)0xA0000;
+#else
+			d = MK_FP(0xA000,0);
+#endif
+			vga4pcpy(d,src,cpy);
+		}
+	}
+}
+
 static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int bytes) {
 	if (y < img_height) {
 		const uint32_t addr = ((uint32_t)y * (uint32_t)img_stride);
@@ -654,6 +746,8 @@ static void help(void) {
 	fprintf(stderr," -no-window            Do not use bank switching window\n");
 	fprintf(stderr," -pause-info           Pause to show info before setting mode\n");
 	fprintf(stderr," -vbe-palset           Always use VBE functions to set palette\n");
+	fprintf(stderr," -no-4packed           Do not use 4bpp packed modes\n");
+	fprintf(stderr," -no-4planar           Do not use 1bpp 4-plane (16-color) modes\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -688,6 +782,12 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"vbe-palset")) {
 				force_vbe_palset = 1;
+			}
+			else if (!strcmp(a,"no-4packed")) {
+				enable_4packed = 0;
+			}
+			else if (!strcmp(a,"no-4planar")) {
+				enable_4planar = 0;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -798,6 +898,8 @@ int main(int argc,char **argv) {
 	{
 		unsigned int mode_flags = 0;
 
+		if (enable_4packed) mode_flags |= FINDVBE_4PACKED;
+		if (enable_4planar) mode_flags |= FINDVBE_4PLANAR;
 		if (enable_window) mode_flags |= FINDVBE_WINDOW;
 		if (enable_lfb) mode_flags |= FINDVBE_LFB;
 
@@ -834,6 +936,10 @@ int main(int argc,char **argv) {
 		vbe_mode_res_shift,vbe_mode_res_width);
 
 	if (vbe_mode_can_lfb) {
+		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
+			fprintf(stderr,"Whoah, hey, linear framebuffer doesn't work with 4bpp planar!\n");
+			return 1;
+		}
 #if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
 		draw_scanline_bank_switch = NULL;
 		draw_scanline = draw_scanline_lfb;
@@ -848,7 +954,16 @@ int main(int argc,char **argv) {
 #if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
 		if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
 #endif
-		draw_scanline = draw_scanline_bnksw;
+		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
+			if (bfr->bpp != 4) {
+				fprintf(stderr,"4-planar 16-color only works with 4bpp bitmaps\n");
+				return 1;
+			}
+			draw_scanline = draw_scanline_bnksw4p;
+		}
+		else {
+			draw_scanline = draw_scanline_bnksw;
+		}
 		fprintf(stderr,"I will draw using bank switching\n");
 	}
 	else {
@@ -907,6 +1022,18 @@ int main(int argc,char **argv) {
 		}
 	}
 
+	/* VGA 16-color: We need to program the Attribute Controller palette to an identity mapping for the palette to work */
+	if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
+		unsigned int x;
+		for (x=0;x < 16;x++) {
+			inp(0x3DA);
+			outp(0x3C0,x); /* index */
+			outp(0x3C0,x); /* data */
+		}
+		inp(0x3DA);
+		outp(0x3C0,0x20); /* reenable the display */
+	}
+
 	/* set palette */
 	if (vbe_modeinfo.bits_per_pixel >= 1 && vbe_modeinfo.bits_per_pixel <= 8) {
 		unsigned int shf = 2;
@@ -939,7 +1066,11 @@ int main(int argc,char **argv) {
 	/* load and render */
 	dispw = bfr->width;
 	if (dispw > img_width) dispw = img_width;
-	dispw = ((dispw * bfr->bpp) + 7u) >> 3u;
+
+	if (vbe_modeinfo.memory_model != 0x03/*4-plane 16-color?*/) {
+		dispw = ((dispw * bfr->bpp) + 7u) >> 3u;
+	}
+
 	while (read_bmp_line(bfr) == 0) {
 		convert_scanline(bfr,bfr->scanline,dispw);
 		draw_scanline((unsigned int)bfr->current_line,bfr->scanline,dispw);
