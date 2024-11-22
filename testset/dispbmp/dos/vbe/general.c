@@ -18,6 +18,7 @@ static unsigned int img_stride = 0;
 static unsigned int img_dac_width = 0;
 static uint32_t window_size = 0,window_mult = 0;
 static uint16_t window_bank_advance = 0;
+static unsigned char force_vbe_palset = 0;
 static unsigned char enable_8bit_dac = 1;
 static unsigned char enable_rmwnfunc = 1;
 static unsigned char enable_window = 1;
@@ -484,6 +485,7 @@ static void help(void) {
 	fprintf(stderr," -no-lfb               Do not use linear framebuffer\n");
 	fprintf(stderr," -no-window            Do not use bank switching window\n");
 	fprintf(stderr," -pause-info           Pause to show info before setting mode\n");
+	fprintf(stderr," -vbe-palset           Always use VBE functions to set palette\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -515,6 +517,9 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"pause-info")) {
 				pause_info = 1;
+			}
+			else if (!strcmp(a,"vbe-palset")) {
+				force_vbe_palset = 1;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -564,6 +569,12 @@ int main(int argc,char **argv) {
 	if (bfr->bpp == 0 || bfr->bpp > 32 || bfr->colors == 0 || bfr->colors > 256 || bfr->palette == 0) {
 		fprintf(stderr,"BMP wrong format\n");
 		return 1;
+	}
+
+	/* VBE set palette call didn't exist until VBE 2.0 */
+	if (force_vbe_palset && vbe_info.version < 0x200) {
+		fprintf(stderr,"Cannot force VBE call to set palette because VESA BIOS follows pre-2.0 standard\n");
+		force_vbe_palset = 0;
 	}
 
 	/* TODO: This is where it might be handy to support the Windows 95 BI_BITFIELDS extension to distinguish 15/16bpp */
@@ -625,7 +636,7 @@ int main(int argc,char **argv) {
 
 		if (img_dac_width == 8) shf = 0;
 
-		if (vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+		if ((vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) || force_vbe_palset) {
 			unsigned char *pal = malloc(256*4);
 			if (pal) {
 				for (i=0;i < bfr->colors;i++) {
