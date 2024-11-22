@@ -351,6 +351,35 @@ static int vbe_set_dac_width(uint8_t w) {
 	return 1;
 }
 
+static void vbe_set_palette(unsigned int first,unsigned int count,unsigned char *pal) {
+	(void)first;
+	(void)count;
+	(void)pal;
+
+#if TARGET_MSDOS == 32
+	// TODO
+#else
+	__asm {
+		push	es
+		push	di
+		mov	ax,0x4F09	; AH=4Fh AL=09h palette data
+		mov	bl,0x00		; set palette
+		mov	cx,count
+		mov	dx,first
+#if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
+		les	di,dword ptr [pal]
+#else
+		push	ds
+		pop	es
+		mov	di,[pal]
+#endif
+		int	10h
+		pop	di
+		pop	es
+	}
+#endif
+}
+
 static void vbe_bank_switch_int10(uint16_t bank) {
 	(void)bank;
 
@@ -596,11 +625,26 @@ int main(int argc,char **argv) {
 
 		if (img_dac_width == 8) shf = 0;
 
-		outp(0x3C8,0);
-		for (i=0;i < bfr->colors;i++) {
-			outp(0x3C9,bfr->palette[i].rgbRed >> shf);
-			outp(0x3C9,bfr->palette[i].rgbGreen >> shf);
-			outp(0x3C9,bfr->palette[i].rgbBlue >> shf);
+		if (vbe_modeinfo.mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			unsigned char *pal = malloc(256*4);
+			if (pal) {
+				for (i=0;i < bfr->colors;i++) {
+					pal[i*4+0] = bfr->palette[i].rgbBlue >> shf;
+					pal[i*4+1] = bfr->palette[i].rgbGreen >> shf;
+					pal[i*4+2] = bfr->palette[i].rgbRed >> shf;
+					pal[i*4+3] = 0;
+				}
+				vbe_set_palette(0,256,pal);
+				free(pal);
+			}
+		}
+		else {
+			outp(0x3C8,0);
+			for (i=0;i < bfr->colors;i++) {
+				outp(0x3C9,bfr->palette[i].rgbRed >> shf);
+				outp(0x3C9,bfr->palette[i].rgbGreen >> shf);
+				outp(0x3C9,bfr->palette[i].rgbBlue >> shf);
+			}
 		}
 	}
 
