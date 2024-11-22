@@ -852,9 +852,7 @@ int main(int argc,char **argv) {
 	}
 
 	if (bfr->bpp == 32) {
-		if (	vbe_mode_red_shift != bfr->red_shift ||
-			vbe_mode_green_shift != bfr->green_shift ||
-			vbe_mode_blue_shift != bfr->blue_shift) {
+		if (vbe_mode_red_shift != bfr->red_shift || vbe_mode_green_shift != bfr->green_shift || vbe_mode_blue_shift != bfr->blue_shift) {
 			if (vbe_mode_red_width == bfr->red_width && vbe_mode_green_width == bfr->green_width && vbe_mode_blue_width == bfr->blue_width) {
 				if (bfr->red_width == 8 && bfr->green_width == 8 && bfr->blue_width == 8) {
 					convert_scanline = convert_scanline_32bpp8;
