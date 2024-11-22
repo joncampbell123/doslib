@@ -157,6 +157,14 @@ static uint16_t vbe_mode_number = 0;
 static uint8_t vbe_mode_can_window = 0;
 static uint8_t vbe_mode_can_lfb = 0;
 static uint32_t vbe_mode_total_memory = 0;
+static uint8_t vbe_mode_red_shift = 0;
+static uint8_t vbe_mode_red_width = 0;
+static uint8_t vbe_mode_green_shift = 0;
+static uint8_t vbe_mode_green_width = 0;
+static uint8_t vbe_mode_blue_shift = 0;
+static uint8_t vbe_mode_blue_width = 0;
+static uint8_t vbe_mode_res_shift = 0;
+static uint8_t vbe_mode_res_width = 0;
 #if TARGET_MSDOS == 32
 static uint16_t vbe_dos_selector = 0; /* selector value returned by DPMI */
 static void *vbe_dos_segment = NULL; /* pointer to DOS segment */
@@ -351,6 +359,26 @@ static int accept_mode(unsigned int flags,unsigned int width,unsigned int height
 			}
 			else if (vbe_modeinfo.bits_per_pixel == 24 && vbe_modeinfo.number_of_planes <= 1 &&
 				(vbe_modeinfo.memory_model == 0x04/*packed*/ || vbe_modeinfo.memory_model == 0x06/*packed*/)) {
+				vbe_mode_blue_shift = 0;
+				vbe_mode_blue_width = 8;
+				vbe_mode_green_shift = 8;
+				vbe_mode_green_width = 8;
+				vbe_mode_red_shift = 16;
+				vbe_mode_red_width = 8;
+				vbe_mode_res_shift = 0;
+				vbe_mode_res_width = 0;
+
+				if (vbe_modeinfo.memory_model == 0x06) {
+					vbe_mode_blue_shift = vbe_modeinfo.blue_field_position;
+					vbe_mode_blue_width = vbe_modeinfo.blue_mask_size;
+					vbe_mode_green_shift = vbe_modeinfo.green_field_position;
+					vbe_mode_green_width = vbe_modeinfo.green_mask_size;
+					vbe_mode_red_shift = vbe_modeinfo.red_field_position;
+					vbe_mode_red_width = vbe_modeinfo.red_mask_size;
+					vbe_mode_res_shift = vbe_modeinfo.reserved_field_position;
+					vbe_mode_res_width = vbe_modeinfo.reserved_mask_size;
+				}
+
 				return 1;
 			}
 		}
@@ -722,6 +750,11 @@ int main(int argc,char **argv) {
 	/* TODO: This is where it might be handy to support the Windows 95 BI_BITFIELDS extension to distinguish 15/16bpp */
 	fprintf(stderr,"BMP is %u x %u x %ubpp\n",bfr->width,bfr->height,bfr->bpp);
 	if (bfr->colors != 0) fprintf(stderr,"With a %u color palette\n",bfr->colors);
+	fprintf(stderr,"BMP R/G/B/XorA{shift,width}: {%u,%u} {%u,%u} {%u,%u} {%u,%u}\n",
+		bfr->red_shift,bfr->red_width,
+		bfr->green_shift,bfr->green_width,
+		bfr->blue_shift,bfr->blue_width,
+		bfr->alpha_shift,bfr->alpha_width);
 
 	/* Now find a VESA BIOS mode that matches the bitmap */
 	{
@@ -752,6 +785,11 @@ int main(int argc,char **argv) {
 	fprintf(stderr,"VBE board has %lu (0x%lx) bytes of memory\n",(unsigned long)vbe_mode_total_memory,(unsigned long)vbe_mode_total_memory);
 	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
 	fprintf(stderr,"Linear framebuffer: %s (lfb at 0x%08lx)\n",vbe_mode_can_lfb?"yes":"no",(unsigned long)vbe_modeinfo.phys_base_ptr);
+	fprintf(stderr,"R/G/B/X{shift,width}: {%u,%u} {%u,%u} {%u,%u} {%u,%u}\n",
+		vbe_mode_red_shift,vbe_mode_red_width,
+		vbe_mode_green_shift,vbe_mode_green_width,
+		vbe_mode_blue_shift,vbe_mode_blue_width,
+		vbe_mode_res_shift,vbe_mode_res_width);
 
 	if (vbe_mode_can_lfb) {
 #if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */

@@ -24,6 +24,14 @@ struct BMPFILEREAD {
 	int			current_line;
 	int			current_line_add;
 	struct BMPPALENTRY*	palette;	/* size is "colors" */
+	uint8_t			red_shift;
+	uint8_t			red_width;
+	uint8_t			green_shift;
+	uint8_t			green_width;
+	uint8_t			blue_shift;
+	uint8_t			blue_width;
+	uint8_t			alpha_shift;
+	uint8_t			alpha_width;
 };
 
 #pragma pack(push,1)

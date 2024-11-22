@@ -85,6 +85,14 @@ struct BMPFILEREAD *open_bmp(const char *path) {
 				/* palette follows struct */
 				if (read(bmp->fd,bmp->palette,bmp->colors * sizeof(struct BMPPALENTRY)) != (bmp->colors * sizeof(struct BMPPALENTRY))) goto fail;
 			}
+			else if (bmp->bpp == 24) {
+				bmp->blue_shift = 0;
+				bmp->blue_width = 8;
+				bmp->green_shift = 8;
+				bmp->green_width = 8;
+				bmp->red_shift = 16;
+				bmp->red_width = 8;
+			}
 		}
 		else {
 			goto fail;
