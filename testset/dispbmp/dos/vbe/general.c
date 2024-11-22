@@ -607,6 +607,8 @@ static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int byt
 
 #if TARGET_MSDOS == 32
 static inline void vga_rmw(unsigned char *d,const unsigned char b) {
+	(void)d;
+	(void)b;
 	__asm {
 		push	esi
 		mov	esi,d
@@ -618,6 +620,8 @@ static inline void vga_rmw(unsigned char *d,const unsigned char b) {
 }
 #else
 static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
+	(void)d;
+	(void)b;
 }
 #endif
 
