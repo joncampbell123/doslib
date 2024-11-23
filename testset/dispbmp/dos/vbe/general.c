@@ -956,7 +956,9 @@ int main(int argc,char **argv) {
 		if (enable_window) mode_flags |= FINDVBE_WINDOW;
 		if (enable_lfb) mode_flags |= FINDVBE_LFB;
 
-		if (bfr->bpp == 16 && bfr->green_width == 5 && bfr->red_width == 5 && bfr->blue_width == 5) /* 5:5:5 */
+		if (bfr->bpp == 1) /* monochrome 1bpp */
+			vbemode = find_vbe_mode(mode_flags & (~FINDVBE_4PACKED),bfr->width,bfr->height,4); /* HACK: Look for VGA 4bpp planar to treat it like a 1bpp mode */
+		else if (bfr->bpp == 16 && bfr->green_width == 5 && bfr->red_width == 5 && bfr->blue_width == 5) /* 5:5:5 */
 			vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,15);
 		else
 			vbemode = find_vbe_mode(mode_flags,bfr->width,bfr->height,bfr->bpp);
@@ -989,6 +991,7 @@ int main(int argc,char **argv) {
 		vbe_mode_res_shift,vbe_mode_res_width);
 
 	if (vbe_mode_can_lfb) {
+		vbemode |= 0x4000u; /* use linear framebuffer */
 		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
 			fprintf(stderr,"Whoah, hey, linear framebuffer doesn't work with 4bpp planar!\n");
 			return 1;
@@ -1008,11 +1011,16 @@ int main(int argc,char **argv) {
 		if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
 #endif
 		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
-			if (bfr->bpp != 4) {
-				fprintf(stderr,"4-planar 16-color only works with 4bpp bitmaps\n");
+			if (bfr->bpp == 4) {
+				draw_scanline = draw_scanline_bnksw4p;
+			}
+			else if (bfr->bpp == 1) {
+				draw_scanline = draw_scanline_bnksw;
+			}
+			else {
+				fprintf(stderr,"4-planar 16-color only works with 1bpp or 4bpp bitmaps\n");
 				return 1;
 			}
-			draw_scanline = draw_scanline_bnksw4p;
 		}
 		else {
 			draw_scanline = draw_scanline_bnksw;
@@ -1134,7 +1142,10 @@ int main(int argc,char **argv) {
 	dispw = bfr->width;
 	if (dispw > img_width) dispw = img_width;
 
-	if (vbe_modeinfo.memory_model != 0x03/*4-plane 16-color?*/) {
+	if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/ && bfr->bpp == 4) {
+		/* no change */
+	}
+	else {
 		dispw = ((dispw * bfr->bpp) + 7u) >> 3u;
 	}
 
