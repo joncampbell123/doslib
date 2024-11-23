@@ -35,7 +35,6 @@ static const uint16_t crtcchg[] = {
 	0x8E11		/* vertical retrace end 0x11 which also sets protect, which is why this is the last write */
 };
 
-
 int main() {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
