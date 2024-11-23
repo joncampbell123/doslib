@@ -13,8 +13,8 @@
 
 /* VGA 320x200 16-color mode. */
 
-static const char bmpfile[] = "200mc.bmp";
-static const char bmpfile2[] = "200m.bmp";
+static const char bmpfile[] = "3x200mc.bmp";
+static const char bmpfile2[] = "3x200m.bmp";
 static const unsigned int img_width = 320;
 static const unsigned int img_height = 200;
 static const unsigned int img_stride = 320 / 8;
