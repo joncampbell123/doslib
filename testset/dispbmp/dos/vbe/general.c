@@ -27,6 +27,7 @@ static unsigned char enable_lfb = 1;
 static unsigned char enable_4packed = 1;
 static unsigned char enable_4planar = 1;
 static unsigned char pause_info = 0;
+static unsigned char write_mode_4bpp = 0;
 
 typedef void (*draw_scanline_bnksw_t)(uint16_t bank);
 typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int bytes);
@@ -824,6 +825,7 @@ static void help(void) {
 	fprintf(stderr," -vbe-palset           Always use VBE functions to set palette\n");
 	fprintf(stderr," -no-4packed           Do not use 4bpp packed modes\n");
 	fprintf(stderr," -no-4planar           Do not use 1bpp 4-plane (16-color) modes\n");
+	fprintf(stderr," -4planar-wr <x>       Use VGA write mode x. 0 or 2\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -864,6 +866,12 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"no-4planar")) {
 				enable_4planar = 0;
+			}
+			else if (!strcmp(a,"4planar-wr")) {
+				a = argv[i++];
+				if (a == NULL) return 1;
+				write_mode_4bpp = atoi(a);
+				if (!(write_mode_4bpp == 0 || write_mode_4bpp == 2)) return 1;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -1019,8 +1027,16 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	vga4pcpy_setup = vga4pcpy_setup_wr0;
-	vga4pcpy = vga4pcpy_wr0;
+	if (write_mode_4bpp == 2) {
+		fprintf(stderr,"4bpp planar: Using write mode 2\n");
+		vga4pcpy_setup = vga4pcpy_setup_wr2;
+		vga4pcpy = vga4pcpy_wr2;
+	}
+	else {
+		fprintf(stderr,"4bpp planar: Using write mode 0\n");
+		vga4pcpy_setup = vga4pcpy_setup_wr0;
+		vga4pcpy = vga4pcpy_wr0;
+	}
 
 	convert_scanline = convert_scanline_none;
 
