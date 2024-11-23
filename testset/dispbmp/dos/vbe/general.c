@@ -704,7 +704,7 @@ static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int
 #else
 			d = MK_FP(0xA000,0);
 #endif
-			vga4pcpy(d,src,cpy);
+			vga4pcpy(d,src,pixels);
 		}
 
 		outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
