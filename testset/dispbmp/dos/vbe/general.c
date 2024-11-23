@@ -622,6 +622,16 @@ static inline void vga_rmw(unsigned char *d,const unsigned char b) {
 static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
 	(void)d;
 	(void)b;
+	__asm {
+		push	ds
+		push	si
+		lds	si,d
+		mov	al,[si]
+		mov	al,b
+		mov	[si],al
+		pop	si
+		pop	ds
+	}
 }
 #endif
 
