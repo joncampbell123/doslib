@@ -31,12 +31,14 @@ static const uint16_t crtcchg[] = {
 	0x5D12,		/* vertical display end 0x12 */
 	0x6315,		/* start vertical blanking 0x15 */
 	0xBA16,		/* end vertical blanking 0x16 */
+
 	0x6B00,		/* horizontal total */
 	0x5901,		/* end horizontal display */
 	0x5A02,		/* start horizontal blanking */
 	0x8E03,		/* end horizontal blanking */
 	0x5E04,		/* start horiztonal retrace */
 	0x8A05,		/* end horiztonal retrace */
+
 	0x2D13,		/* offset register */
 	0x8511		/* vertical retrace end 0x11 which also sets protect, which is why this is the last write */
 };

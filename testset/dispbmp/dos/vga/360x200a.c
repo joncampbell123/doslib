@@ -24,12 +24,14 @@ static const unsigned int img_height = 200;
  * No vertical changes, but horizontal changes to get 720. Borrowed from Quake source code. */
 static const uint16_t crtcchg[] = {
 	0x0011,		/* vertical retrace end 0x11: turn off protect */
+
 	0x6B00,		/* horizontal total */
 	0x5901,		/* end horizontal display */
 	0x5A02,		/* start horizontal blanking */
 	0x8E03,		/* end horizontal blanking */
 	0x5E04,		/* start horiztonal retrace */
 	0x8A05,		/* end horiztonal retrace */
+
 	0x2D13,		/* offset register */
 	0x8E11		/* vertical retrace end 0x11 which also sets protect, which is why this is the last write */
 };
