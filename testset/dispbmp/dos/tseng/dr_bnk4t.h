@@ -1,4 +1,5 @@
 
+#ifdef DSCOLOR
 /* draw scanline in 4bpp planar 16-color mode */
 static void DSFUNC(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
@@ -11,7 +12,9 @@ static void DSFUNC(unsigned int y,unsigned char *src,unsigned int pixels) {
 #endif
 	}
 }
+#endif
 
+#ifdef DSMONO
 /* draw scanline in 4bpp planar 16-color mode */
 static void DSFUNCM(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
@@ -25,4 +28,5 @@ static void DSFUNCM(unsigned int y,unsigned char *src,unsigned int pixels) {
 #endif
 	}
 }
+#endif
 

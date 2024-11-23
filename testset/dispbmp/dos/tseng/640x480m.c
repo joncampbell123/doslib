@@ -12,6 +12,7 @@
 #include "libbmp.h"
 
 /* Tseng ET3000/ET4000 640x480 */
+#define DSMONO
 #define ET3K
 #define ET4K
 

@@ -1,4 +1,5 @@
 
+#ifdef DSCOLOR
 #if TARGET_MSDOS == 32
 static inline void vga_rmw(unsigned char *d,const unsigned char b) {
 	(void)d;
@@ -28,7 +29,9 @@ static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
 	}
 }
 #endif
+#endif
 
+#ifdef DSCOLOR
 #if TARGET_MSDOS == 32
 static void vga4pcpy(unsigned char *d,unsigned char *src,unsigned int pixels) {
 	register unsigned char *w;
@@ -57,6 +60,7 @@ static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels
 	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
 	outpw(0x3CE,0xFF08); /* bit mask */
 }
+#endif
 
 typedef void (*draw_scanline_func_t)(unsigned int y,unsigned char *src,unsigned int pixels);
 
