@@ -11,7 +11,7 @@
 
 #include "libbmp.h"
 
-/* VGA 640x480 16-color mode.
+/* VGA 640x480 16-color mode with tweaks to make it a 1bpp mode.
  * Standard INT 13h mode without any tweaks. */
 
 static const char bmpfile[] = "480m.bmp";
@@ -36,7 +36,7 @@ int main() {
 		return 1;
 	}
 
-	/* set 640x480x2 MCGA */
+	/* set 640x480x16 VGA, we're going to tweak it into a 1bpp mode */
 	__asm {
 		mov	ax,0x0011	; AH=0x00 AL=0x11
 		int	0x10
