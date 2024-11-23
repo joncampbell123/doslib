@@ -636,10 +636,16 @@ static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
 #endif
 
 #if TARGET_MSDOS == 32
-static void vga4pcpy(unsigned char *d,unsigned char *src,unsigned int pixels) {
+typedef void (*vga4pcpy_t)(unsigned char *d,unsigned char *src,unsigned int pixels);
+#else
+typedef void (*vga4pcpy_t)(unsigned char far *d,unsigned char *src,unsigned int pixels);
+#endif
+
+#if TARGET_MSDOS == 32
+static void vga4pcpy_wr2(unsigned char *d,unsigned char *src,unsigned int pixels) {
 	register unsigned char *w;
 #else
-static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels) {
+static void vga4pcpy_wr2(unsigned char far *d,unsigned char *src,unsigned int pixels) {
 	register unsigned char far *w;
 #endif
 	register unsigned char *s;
@@ -657,6 +663,8 @@ static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels
 		outpw(0x3CE,0x0008 + m); m >>= 1u; w = d; s = src++; x = count; do { vga_rmw(w++,*s & 0xFu); s += 4; } while (--x != 0u);
 	}
 }
+
+static vga4pcpy_t vga4pcpy = vga4pcpy_wr2;
 
 static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
