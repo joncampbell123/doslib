@@ -731,7 +731,7 @@ static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int
 #if TARGET_MSDOS == 32
 		unsigned char *d = (unsigned char*)((uint32_t)vbe_modeinfo.win_a_segment << 4ul) + bnkaddr;
 #else
-		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment,bnkaddr);
+		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment + (uint16_t)(bnkaddr >> 4u),(uint16_t)(bnkaddr & 0xFu));
 #endif
 		unsigned int cpy;
 
@@ -785,7 +785,7 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int b
 #if TARGET_MSDOS == 32
 		unsigned char *d = (unsigned char*)((uint32_t)vbe_modeinfo.win_a_segment << 4ul) + bnkaddr;
 #else
-		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment,bnkaddr);
+		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment + (uint16_t)(bnkaddr >> 4u),(uint16_t)(bnkaddr & 0xFu));
 #endif
 		unsigned int cpy;
 
