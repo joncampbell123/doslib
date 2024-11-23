@@ -635,11 +635,54 @@ static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
 }
 #endif
 
+typedef void (*vga4pcpy_setup_t)(void);
 #if TARGET_MSDOS == 32
 typedef void (*vga4pcpy_t)(unsigned char *d,unsigned char *src,unsigned int pixels);
 #else
 typedef void (*vga4pcpy_t)(unsigned char far *d,unsigned char *src,unsigned int pixels);
 #endif
+
+static void vga4pcpy_setup_wr0(void) {
+	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
+}
+
+#if TARGET_MSDOS == 32
+static void vga4pcpy_wr0(unsigned char *d,unsigned char *src,unsigned int pixels) {
+	register unsigned char *w;
+#else
+static void vga4pcpy_wr0(unsigned char far *d,unsigned char *src,unsigned int pixels) {
+	register unsigned char far *w;
+#endif
+	register unsigned char *s;
+	unsigned char plane;
+	unsigned int b;
+
+	outpw(0x3CE,0xFF08);
+	for (plane=0;plane < 4;plane++) {
+		w = d; s = src; outpw(0x3C4,0x0002 + (0x100 << plane)); /* write one bitplane (map mask) */
+		for (b=0;b < pixels;b += 8) {
+			register unsigned char b,t;
+			t  = (*s++) >> plane;
+			b  = (t & 0x10) << (7u - 4u);
+			b |= (t & 0x01) << (6u - 0u);
+			t  = (*s++) >> plane;
+			b |= (t & 0x10) << (5u - 4u);
+			b |= (t & 0x01) << (4u - 0u);
+			t  = (*s++) >> plane;
+			b |= (t & 0x10) >> (4u - 3u);
+			b |= (t & 0x01) << (2u - 0u);
+			t  = (*s++) >> plane;
+			b |= (t & 0x10) >> (4u - 1u);
+			b |= (t & 0x01) << (0u - 0u);
+			*w++ = b;
+		}
+	}
+}
+
+static void vga4pcpy_setup_wr2(void) {
+	outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
+	outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
+}
 
 #if TARGET_MSDOS == 32
 static void vga4pcpy_wr2(unsigned char *d,unsigned char *src,unsigned int pixels) {
@@ -664,7 +707,8 @@ static void vga4pcpy_wr2(unsigned char far *d,unsigned char *src,unsigned int pi
 	}
 }
 
-static vga4pcpy_t vga4pcpy = vga4pcpy_wr2;
+static vga4pcpy_setup_t vga4pcpy_setup;
+static vga4pcpy_t vga4pcpy;
 
 static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int pixels) {
 	if (y < img_height) {
@@ -678,8 +722,7 @@ static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int
 #endif
 		unsigned int cpy;
 
-		outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
-		outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
+		vga4pcpy_setup();
 
 		if (current_bank != bank) {
 			draw_scanline_bank_switch(bank);
@@ -975,6 +1018,9 @@ int main(int argc,char **argv) {
 		fprintf(stderr,"No matching VESA BIOS mode\n");
 		return 1;
 	}
+
+	vga4pcpy_setup = vga4pcpy_setup_wr0;
+	vga4pcpy = vga4pcpy_wr0;
 
 	convert_scanline = convert_scanline_none;
 
