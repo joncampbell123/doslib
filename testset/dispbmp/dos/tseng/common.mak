@@ -26,6 +26,8 @@ $(LIBBMP_LIB):
 1024X768_EXE =     $(SUBDIR)$(HPS)1024x768.$(EXEEXT)
 1024768L_EXE =     $(SUBDIR)$(HPS)1024768l.$(EXEEXT)
 1024768M_EXE =     $(SUBDIR)$(HPS)1024768m.$(EXEEXT)
+1281024L_EXE =     $(SUBDIR)$(HPS)1281024l.$(EXEEXT)
+1281024M_EXE =     $(SUBDIR)$(HPS)1281024m.$(EXEEXT)
 ! endif
 !endif
 
@@ -42,7 +44,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 	
-exe: $(640X350A_EXE) $(640X400A_EXE) $(640X480A_EXE) $(640X480L_EXE) $(640X480M_EXE) $(800X600A_EXE) $(800X600L_EXE) $(800X600M_EXE) $(1024X768_EXE) $(1024768L_EXE) $(1024768M_EXE) .symbolic
+exe: $(640X350A_EXE) $(640X400A_EXE) $(640X480A_EXE) $(640X480L_EXE) $(640X480M_EXE) $(800X600A_EXE) $(800X600L_EXE) $(800X600M_EXE) $(1024X768_EXE) $(1024768L_EXE) $(1024768M_EXE) $(1281024L_EXE) $(1281024M_EXE) .symbolic
 
 !ifdef 640X350A_EXE
 $(640X350A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x350a.obj
@@ -132,6 +134,23 @@ $(1024X768_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1024x768.obj
 	%write tmp.cmd option quiet option map=$(1024X768_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)1024x768.obj name $(1024X768_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w1024$(HPS)768vga.bmp $(SUBDIR)$(HPS)10247688.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 1281024L_EXE
+$(1281024L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1281024l.obj
+	%write tmp.cmd option quiet option map=$(1281024L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)1281024l.obj name $(1281024L_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w1280$(HPS)1024vga.bmp $(SUBDIR)$(HPS)12810244.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 1281024M_EXE
+$(1281024M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1281024m.obj
+	%write tmp.cmd option quiet option map=$(1281024M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)1281024m.obj name $(1281024M_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w1280$(HPS)1024vga.bmp $(SUBDIR)$(HPS)12810241.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w1280$(HPS)1024m.bmp $(SUBDIR)$(HPS)1281024m.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
