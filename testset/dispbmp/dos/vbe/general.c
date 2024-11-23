@@ -626,21 +626,16 @@ static inline void vga_rmw(unsigned char far *d,const unsigned char b) {
 #endif
 
 #if TARGET_MSDOS == 32
-static void vga4pcpy(unsigned char *d,unsigned char *src,unsigned int bytes) {
+static void vga4pcpy(unsigned char *d,unsigned char *src,unsigned int pixels) {
 #else
-static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int bytes) {
+static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels) {
 #endif
 	unsigned int x,b;
 
 	for (b=0;b < 8;b++) {
-		outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
-		outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
 		outpw(0x3CE,0x0008 + (0x8000 >> b)); /* bit mask */
-		for (x=b;x < bytes;x += 8) vga_rmw(&d[x>>3u],(src[x>>1u] >> (((x^1u)&1u)*4u))&0xFu);
+		for (x=b;x < pixels;x += 8) vga_rmw(&d[x>>3u],(src[x>>1u] >> (((x^1u)&1u)*4u))&0xFu);
 	}
-
-	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
-	outpw(0x3CE,0xFF08); /* bit mask */
 }
 
 static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int pixels) {
@@ -654,6 +649,9 @@ static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int
 		unsigned char far *d = MK_FP(vbe_modeinfo.win_a_segment,bnkaddr);
 #endif
 		unsigned int cpy;
+
+		outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
+		outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
 
 		if (current_bank != bank) {
 			draw_scanline_bank_switch(bank);
@@ -688,6 +686,9 @@ static void draw_scanline_bnksw4p(unsigned int y,unsigned char *src,unsigned int
 #endif
 			vga4pcpy(d,src,cpy);
 		}
+
+		outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
+		outpw(0x3CE,0xFF08); /* bit mask */
 	}
 }
 
