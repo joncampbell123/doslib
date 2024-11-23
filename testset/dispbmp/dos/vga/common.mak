@@ -30,6 +30,7 @@ $(LIBBMP_LIB):
 360X400A_EXE =     $(SUBDIR)$(HPS)360x400a.$(EXEEXT)
 360X480A_EXE =     $(SUBDIR)$(HPS)360x480a.$(EXEEXT)
 360X600A_EXE =     $(SUBDIR)$(HPS)360x600a.$(EXEEXT)
+640X480L_EXE =     $(SUBDIR)$(HPS)640x480l.$(EXEEXT)
 ! endif
 !endif
 
@@ -46,7 +47,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 	
-exe: $(320X200A_EXE) $(320X200B_EXE) $(320X240A_EXE) $(320X300A_EXE) $(320X350A_EXE) $(320X400A_EXE) $(320X480A_EXE) $(320X600A_EXE) $(360X200A_EXE) $(360X240A_EXE) $(360X300A_EXE) $(360X350A_EXE) $(360X400A_EXE) $(360X480A_EXE) $(360X600A_EXE) .symbolic
+exe: $(320X200A_EXE) $(320X200B_EXE) $(320X240A_EXE) $(320X300A_EXE) $(320X350A_EXE) $(320X400A_EXE) $(320X480A_EXE) $(320X600A_EXE) $(360X200A_EXE) $(360X240A_EXE) $(360X300A_EXE) $(360X350A_EXE) $(360X400A_EXE) $(360X480A_EXE) $(360X600A_EXE) $(640X480L_EXE) .symbolic
 
 !ifdef 320X200A_EXE
 $(320X200A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
@@ -165,6 +166,14 @@ $(360X600A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)360x600a.obj
 	%write tmp.cmd option quiet option map=$(360X600A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)360x600a.obj name $(360X600A_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w360$(HPS)600vga.bmp $(SUBDIR)$(HPS)600l8v6.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 640X480L_EXE
+$(640X480L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x480l.obj
+	%write tmp.cmd option quiet option map=$(640X480L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x480l.obj name $(640X480L_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)480l16.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
