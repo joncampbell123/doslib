@@ -1107,6 +1107,23 @@ int main(int argc,char **argv) {
 		}
 		inp(0x3DA);
 		outp(0x3C0,0x20); /* reenable the display */
+
+		/* 1bpp: We make a "1bpp" display mode by taking 4bpp planar and using only one bitplane.
+		 *       As far as I know, no VESA BIOS exists that offers 1bpp SVGA modes. Think about it.
+		 *       They're there to sell SVGA high resolution color modes with lots of colors and
+		 *       capabilities, why would they make a monochrome bitmap mode?? */
+		if (bfr->bpp == 1) {
+			outpw(0x3C4,0x0102); /* write only bitplane 0 (map mask) */
+			outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
+			outpw(0x3CE,0xFF08); /* write all bits */
+
+			/* enable only the first bitplane */
+			inp(0x3DA);
+			outp(0x3C0,0x12);
+			outp(0x3C0,0x01);
+			inp(0x3DA);
+			outp(0x3C0,0x20); /* reenable the display */
+		}
 	}
 
 	/* set palette */
