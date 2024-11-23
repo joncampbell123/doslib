@@ -1047,9 +1047,11 @@ int main(int argc,char **argv) {
 		}
 	}
 
-	/* VGA 16-color: We need to program the Attribute Controller palette to an identity mapping for the palette to work */
+	/* VGA 16-color: We need to program the Attribute Controller palette to an identity mapping for palette programming to work,
+	 * unless of course you want to take care to write only 0x00-0x07 and 0x38-0x3F all the time. Hm? No? Thought so. */
 	if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
 		unsigned int x;
+
 		for (x=0;x < 16;x++) {
 			inp(0x3DA);
 			outp(0x3C0,x); /* index */
