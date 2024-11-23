@@ -25,6 +25,9 @@ $(LIBBMP_LIB):
 320X400B_EXE =     $(SUBDIR)$(HPS)320x400b.$(EXEEXT)
 320X480B_EXE =     $(SUBDIR)$(HPS)320x480b.$(EXEEXT)
 320X600B_EXE =     $(SUBDIR)$(HPS)320x600b.$(EXEEXT)
+360X400B_EXE =     $(SUBDIR)$(HPS)360x400b.$(EXEEXT)
+360X480B_EXE =     $(SUBDIR)$(HPS)360x480b.$(EXEEXT)
+360X600B_EXE =     $(SUBDIR)$(HPS)360x600b.$(EXEEXT)
 640X350A_EXE =     $(SUBDIR)$(HPS)640x350a.$(EXEEXT)
 640X400A_EXE =     $(SUBDIR)$(HPS)640x400a.$(EXEEXT)
 640X480A_EXE =     $(SUBDIR)$(HPS)640x480a.$(EXEEXT)
@@ -54,7 +57,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 	
-exe: $(320X240A_EXE) $(320X240B_EXE) $(320X300A_EXE) $(320X300B_EXE) $(320X350A_EXE) $(320X350B_EXE) $(320X400A_EXE) $(320X400B_EXE) $(320X480B_EXE) $(320X600B_EXE) $(640X350A_EXE) $(640X400A_EXE) $(640X480A_EXE) $(640X480L_EXE) $(640X480M_EXE) $(800X600A_EXE) $(800X600L_EXE) $(800X600M_EXE) $(1024X768_EXE) $(1024768L_EXE) $(1024768M_EXE) $(1281024L_EXE) $(1281024M_EXE) .symbolic
+exe: $(320X240A_EXE) $(320X240B_EXE) $(320X300A_EXE) $(320X300B_EXE) $(320X350A_EXE) $(320X350B_EXE) $(320X400A_EXE) $(320X400B_EXE) $(320X480B_EXE) $(320X600B_EXE) $(360X400B_EXE) $(360X480B_EXE) $(360X600B_EXE) $(640X350A_EXE) $(640X400A_EXE) $(640X480A_EXE) $(640X480L_EXE) $(640X480M_EXE) $(800X600A_EXE) $(800X600L_EXE) $(800X600M_EXE) $(1024X768_EXE) $(1024768L_EXE) $(1024768M_EXE) $(1281024L_EXE) $(1281024M_EXE) .symbolic
 
 !ifdef 320X240A_EXE
 $(320X240A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x240a.obj
@@ -133,6 +136,30 @@ $(320X600B_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x600b.obj
 	%write tmp.cmd option quiet option map=$(320X600B_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x600b.obj name $(320X600B_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w320$(HPS)600vga.bmp $(SUBDIR)$(HPS)320600_8.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 360X400B_EXE
+$(360X400B_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)360x400b.obj
+	%write tmp.cmd option quiet option map=$(360X400B_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)360x400b.obj name $(360X400B_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w360$(HPS)400vga.bmp $(SUBDIR)$(HPS)360400_8.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 360X480B_EXE
+$(360X480B_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)360x480b.obj
+	%write tmp.cmd option quiet option map=$(360X480B_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)360x480b.obj name $(360X480B_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w360$(HPS)480vga.bmp $(SUBDIR)$(HPS)360480_8.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 360X600B_EXE
+$(360X600B_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)360x600b.obj
+	%write tmp.cmd option quiet option map=$(360X600B_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)360x600b.obj name $(360X600B_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w360$(HPS)600vga.bmp $(SUBDIR)$(HPS)360600_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
