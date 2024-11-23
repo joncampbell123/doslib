@@ -11,8 +11,7 @@
 
 #include "libbmp.h"
 
-/* VGA 640x480 16-color mode with tweaks to make it a 640x200 1bpp mode.
- * Standard INT 13h mode without any tweaks. */
+/* VGA 640x200 16-color mode with tweaks to make it a 640x200 1bpp mode. */
 
 static const char bmpfile[] = "200mc.bmp";
 static const char bmpfile2[] = "200m.bmp";
@@ -22,20 +21,6 @@ static const unsigned int img_stride = 640 / 8;
 
 #include "dr_1bp.h"
 #include "dr_aci.h"
-
-/* CRTC mode parameters.
- * Basically 400-line 256-color mode applied to 640x480 16-color mode */
-static const uint16_t crtcchg[] = {
-	0x0011,		/* vertical retrace end 0x11: turn off protect */
-	0xBF06,		/* vertical total */
-	0x1F07,		/* overflow */
-	0x4109,		/* maximum scan line register */
-	0x9C10,		/* vertical retrace start */
-	0x8F12,		/* vertical display end */
-	0x9615,		/* start vertical blanking */
-	0xB916,		/* end vertical blanking */
-	0x8E11		/* vertical retrace end 0x11 which also sets protect, which is why this is the last write */
-};
 
 static void display(struct BMPFILEREAD *bfr) {
 	unsigned int dispw,i;
@@ -75,23 +60,15 @@ static struct BMPFILEREAD *load(const char *path) {
 
 int main() {
 	struct BMPFILEREAD *bfr;
-	uint16_t iobase;
-	unsigned int i;
 
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;
 
-	/* set 640x480x16 VGA, we're going to tweak it into a 1bpp mode */
+	/* set 640x200x16 VGA, we're going to tweak it into a 1bpp mode */
 	__asm {
-		mov	ax,0x0011	; AH=0x00 AL=0x11
+		mov	ax,0x000E	; AH=0x00 AL=0x0E
 		int	0x10
 	}
-	/* read 0x3CC to determine color vs mono */
-	iobase = (inp(0x3CC) & 1) ? 0x3D0 : 0x3B0;
-
-	/* CRTC mode set */
-	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)
-		outpw(iobase+4,crtcchg[i]);
 
 	/* VGA may make this mode the same as 16-color but with a mono palette.
 	 * To get what we want, some additional programming is needed. */
