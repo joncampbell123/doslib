@@ -654,27 +654,39 @@ static void vga4pcpy_wr0(unsigned char *d,unsigned char *src,unsigned int pixels
 static void vga4pcpy_wr0(unsigned char far *d,unsigned char *src,unsigned int pixels) {
 	register unsigned char far *w;
 #endif
-	register unsigned char *s;
+	register unsigned int *s;
 	unsigned char plane;
 	unsigned int b;
 
 	outpw(0x3CE,0xFF08);
 	for (plane=0;plane < 4;plane++) {
-		w = d; s = src; outpw(0x3C4,0x0002 + (0x100 << plane)); /* write one bitplane (map mask) */
+		w = d; s = (unsigned int*)src; outpw(0x3C4,0x0002 + (0x100 << plane)); /* write one bitplane (map mask) */
 		for (b=0;b < pixels;b += 8) {
-			register unsigned char b,t;
-			t  = (*s++) >> plane;
-			b  = (t & 0x10) << (7u - 4u);
-			b |= (t & 0x01) << (6u - 0u);
-			t  = (*s++) >> plane;
-			b |= (t & 0x10) << (5u - 4u);
-			b |= (t & 0x01) << (4u - 0u);
-			t  = (*s++) >> plane;
-			b |= (t & 0x10) >> (4u - 3u);
-			b |= (t & 0x01) << (2u - 0u);
-			t  = (*s++) >> plane;
-			b |= (t & 0x10) >> (4u - 1u);
-			b |= (t & 0x01) << (0u - 0u);
+			register unsigned char b = 0,m = 0x80;
+			register unsigned int t;
+
+#if TARGET_MSDOS == 32
+			t = (*s++) >> plane;
+			if (t & 0x00000010u) b |= m; m >>= 1u;
+			if (t & 0x00000001u) b |= m; m >>= 1u; t >>= 8u;
+			if (t & 0x00000010u) b |= m; m >>= 1u;
+			if (t & 0x00000001u) b |= m; m >>= 1u; t >>= 8u;
+			if (t & 0x00000010u) b |= m; m >>= 1u;
+			if (t & 0x00000001u) b |= m; m >>= 1u; t >>= 8u;
+			if (t & 0x00000010u) b |= m; m >>= 1u;
+			if (t & 0x00000001u) b |= m;
+#else // 16-bit
+			t = (*s++) >> plane;
+			if (t & 0x0010u) b |= m; m >>= 1u;
+			if (t & 0x0001u) b |= m; m >>= 1u; t >>= 8u;
+			if (t & 0x0010u) b |= m; m >>= 1u;
+			if (t & 0x0001u) b |= m; m >>= 1u;
+			t = (*s++) >> plane;
+			if (t & 0x0010u) b |= m; m >>= 1u;
+			if (t & 0x0001u) b |= m; m >>= 1u; t >>= 8u;
+			if (t & 0x0010u) b |= m; m >>= 1u;
+			if (t & 0x0001u) b |= m;
+#endif
 			*w++ = b;
 		}
 	}
