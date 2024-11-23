@@ -88,6 +88,7 @@ int main() {
 	outpw(iobase+4,0x0014); /* underline register 0x14 turn off doubleword addressing */
 	outpw(iobase+4,0xE317); /* crtc mode control 0x17 SE=1 bytemode AW=1 DIV2=0 SLDIV=0 MAP14=1 MAP13=1 */
 	outpw(iobase+4,0x2813); /* offset register 0x13: 0x28 for 320 pixels across */
+	outp(0x3C2,0x67); /* misc control select 28MHz clock */
 
 	/* CRTC mode set */
 	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)
