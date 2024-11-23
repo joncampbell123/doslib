@@ -114,7 +114,7 @@ $(800X600M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)800x600m.obj
 $(1024768L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1024768l.obj
 	%write tmp.cmd option quiet option map=$(1024768L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)1024768l.obj name $(1024768L_EXE)
 	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w800$(HPS)600vga.bmp $(SUBDIR)$(HPS)10247684.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w1024$(HPS)768vga.bmp $(SUBDIR)$(HPS)10247684.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
@@ -122,8 +122,8 @@ $(1024768L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1024768l.obj
 $(1024768M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)1024768m.obj
 	%write tmp.cmd option quiet option map=$(1024768M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)1024768m.obj name $(1024768M_EXE)
 	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w800$(HPS)600vga.bmp $(SUBDIR)$(HPS)10247681.bmp
-	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w800$(HPS)600m.bmp $(SUBDIR)$(HPS)1024768m.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w1024$(HPS)768vga.bmp $(SUBDIR)$(HPS)10247681.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w1024$(HPS)768m.bmp $(SUBDIR)$(HPS)1024768m.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
