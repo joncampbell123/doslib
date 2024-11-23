@@ -201,7 +201,8 @@ $(640X480L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x480l.obj
 $(640X480M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x480m.obj
 	%write tmp.cmd option quiet option map=$(640X480M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x480m.obj name $(640X480M_EXE)
 	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)480m.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)480mc.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480m.bmp $(SUBDIR)$(HPS)480m.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 

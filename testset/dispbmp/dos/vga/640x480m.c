@@ -14,7 +14,8 @@
 /* VGA 640x480 16-color mode with tweaks to make it a 1bpp mode.
  * Standard INT 13h mode without any tweaks. */
 
-static const char bmpfile[] = "480m.bmp";
+static const char bmpfile[] = "480mc.bmp";
+static const char bmpfile2[] = "480m.bmp";
 static const unsigned int img_width = 640;
 static const unsigned int img_height = 480;
 static const unsigned int img_stride = 640 / 8;
@@ -22,19 +23,47 @@ static const unsigned int img_stride = 640 / 8;
 #include "dr_1bp.h"
 #include "dr_aci.h"
 
-int main() {
-	struct BMPFILEREAD *bfr;
+static void display(struct BMPFILEREAD *bfr) {
 	unsigned int dispw,i;
 
-	bfr = open_bmp(bmpfile);
+	/* set palette */
+	outp(0x3C8,0);
+	for (i=0;i < bfr->colors;i++) {
+		outp(0x3C9,bfr->palette[i].rgbRed >> 2);
+		outp(0x3C9,bfr->palette[i].rgbGreen >> 2);
+		outp(0x3C9,bfr->palette[i].rgbBlue >> 2);
+	}
+
+	/* load and render */
+	dispw = bfr->width;
+	if (dispw > img_width) dispw = img_width;
+	while (read_bmp_line(bfr) == 0)
+		draw_scanline((unsigned int)bfr->current_line,bfr->scanline,dispw);
+}
+
+static struct BMPFILEREAD *load(const char *path) {
+	struct BMPFILEREAD *bfr;
+
+	bfr = open_bmp(path);
 	if (bfr == NULL) {
 		fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
-		return 1;
+		close_bmp(&bfr);
+		return NULL;
 	}
 	if (bfr->bpp != 1 || bfr->colors == 0 || bfr->colors > 2 || bfr->palette == 0) {
 		fprintf(stderr,"BMP wrong format\n");
-		return 1;
+		close_bmp(&bfr);
+		return NULL;
 	}
+
+	return bfr;
+}
+
+int main() {
+	struct BMPFILEREAD *bfr;
+
+	if ((bfr=load(bmpfile)) == NULL)
+		return 1;
 
 	/* set 640x480x16 VGA, we're going to tweak it into a 1bpp mode */
 	__asm {
@@ -58,22 +87,21 @@ int main() {
 	/* make sure AC palette is identity mapping to eliminate EGA-like default. */
 	vga_ac_identity_map();
 
-	/* set palette */
-	outp(0x3C8,0);
-	for (i=0;i < bfr->colors;i++) {
-		outp(0x3C9,bfr->palette[i].rgbRed >> 2);
-		outp(0x3C9,bfr->palette[i].rgbGreen >> 2);
-		outp(0x3C9,bfr->palette[i].rgbBlue >> 2);
-	}
-
-	/* load and render */
-	dispw = bfr->width;
-	if (dispw > img_width) dispw = img_width;
-	while (read_bmp_line(bfr) == 0)
-		draw_scanline((unsigned int)bfr->current_line,bfr->scanline,dispw);
-
-	/* done reading */
+	display(bfr);
 	close_bmp(&bfr);
+
+	/* wait for ENTER */
+	while (getch() != 13);
+
+	/////
+
+	if ((bfr=load(bmpfile2)) == NULL)
+		return 1;
+
+	display(bfr);
+	close_bmp(&bfr);
+
+	/////
 
 	/* wait for ENTER */
 	while (getch() != 13);
