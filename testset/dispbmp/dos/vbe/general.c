@@ -1067,6 +1067,8 @@ int main(int argc,char **argv) {
 	fprintf(stderr,"VBE board has %lu (0x%lx) bytes of memory\n",(unsigned long)vbe_mode_total_memory,(unsigned long)vbe_mode_total_memory);
 	fprintf(stderr,"Bank switching: %s (window at 0x%04x0)\n",vbe_mode_can_window?"yes":"no",vbe_modeinfo.win_a_segment);
 	fprintf(stderr,"Linear framebuffer: %s (lfb at 0x%08lx)\n",vbe_mode_can_lfb?"yes":"no",(unsigned long)vbe_modeinfo.phys_base_ptr);
+	fprintf(stderr,"Window size: %lu (0x%lx) bytes\n",(unsigned long)window_size,(unsigned long)window_size);
+	fprintf(stderr,"Window granularity: %lu (0x%lx) bytes\n",(unsigned long)window_mult,(unsigned long)window_mult);
 	fprintf(stderr,"R/G/B/X{shift,width}: {%u,%u} {%u,%u} {%u,%u} {%u,%u}\n",
 		vbe_mode_red_shift,vbe_mode_red_width,
 		vbe_mode_green_shift,vbe_mode_green_width,
