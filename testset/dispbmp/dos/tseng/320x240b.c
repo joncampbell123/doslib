@@ -11,19 +11,20 @@
 
 #include "libbmp.h"
 
+#define ET3K
+#define ET4K
+
 /* VGA 320x240 256-color mode.
- * Standard INT 13h mode but takes advantage of ET3000/ET4000 behavior where you can map it to A0000-BFFFF and
- * it will actually map to the first 128KB instead of the first 64K twice. This is due to the alternate way
- * that chained 256-color works on the ET3K/ET4K cards where instead of just masking off the low 2 bits for
- * bitplane and leaving the rest as-is for planar byte, the ET4K instead masks off the low 2 bits for
- * bitplane and then right shifts down 2 bits to determine planar byte. */
+ * Standard INT 13h mode but we use ET4000 bank switching instead of unchained */
 
 static const char bmpfile[] = "320240_8.bmp";
 static const unsigned int img_width = 320;
 static const unsigned int img_height = 240;
 
-#include "dr_ch.h"
+#include "dr_bnkl.h"
 #include "detect.h"
+
+static draw_scanline_func_t draw_scanline;
 
 /* CRTC mode parameters.
  * Basically 640x480 mode applied to 256-color mode */
@@ -45,8 +46,10 @@ int main() {
 	uint16_t iobase;
 
 	if (tseng_et3000_detect()) {
+		draw_scanline = draw_scanline_et3k;
 	}
 	else if (tseng_et4000_detect()) {
+		draw_scanline = draw_scanline_et4k;
 	}
 	else {
 		fprintf(stderr,"Tseng ET3000/ET4000 not detected\n");
@@ -75,7 +78,6 @@ int main() {
 	outpw(iobase+4,0x0014); /* underline register 0x14 turn off doubleword addressing */
 	outpw(iobase+4,0xE317); /* crtc mode control 0x17 SE=1 bytemode AW=1 DIV2=0 SLDIV=0 MAP14=1 MAP13=1 */
 	outpw(iobase+4,0x2813); /* offset register 0x13: 0x28 for 320 pixels across */
-	outpw(0x3CE,0x0106); /* leave graphics mode enabled, no odd/even mode, map to 0xA0000-0xBFFFF */
 
 	/* CRTC mode set */
 	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)
