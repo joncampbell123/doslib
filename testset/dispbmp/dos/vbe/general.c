@@ -864,6 +864,34 @@ void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned
 	}
 }
 
+void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+	uint16_t *s16 = (uint16_t*)src;
+
+	bytes >>= 1u;
+	while (bytes-- > 0u) {
+		uint16_t f;
+
+		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)vbe_mode_red_shift;
+		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x1Fu) << (uint16_t)vbe_mode_green_shift;
+		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)vbe_mode_blue_shift;
+		*s16++ = f;
+	}
+}
+
+void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+	uint16_t *s16 = (uint16_t*)src;
+
+	bytes >>= 1u;
+	while (bytes-- > 0u) {
+		uint16_t f;
+
+		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)vbe_mode_red_shift;
+		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x3Fu) << (uint16_t)vbe_mode_green_shift;
+		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)vbe_mode_blue_shift;
+		*s16++ = f;
+	}
+}
+
 int main(int argc,char **argv) {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
@@ -1001,6 +1029,18 @@ int main(int argc,char **argv) {
 			if (vbe_mode_red_width == bfr->red_width && vbe_mode_green_width == bfr->green_width && vbe_mode_blue_width == bfr->blue_width) {
 				if (bfr->red_width == 8 && bfr->green_width == 8 && bfr->blue_width == 8) {
 					convert_scanline = convert_scanline_32bpp8;
+				}
+			}
+		}
+	}
+	else if (bfr->bpp == 16 || bfr->bpp == 15) {
+		if (vbe_mode_red_shift != bfr->red_shift || vbe_mode_green_shift != bfr->green_shift || vbe_mode_blue_shift != bfr->blue_shift) {
+			if (vbe_mode_red_width == bfr->red_width && vbe_mode_green_width == bfr->green_width && vbe_mode_blue_width == bfr->blue_width) {
+				if (bfr->red_width == 5 && bfr->green_width == 5 && bfr->blue_width == 5) {
+					convert_scanline = convert_scanline_16bpp555;
+				}
+				else if (bfr->red_width == 5 && bfr->green_width == 6 && bfr->blue_width == 5) {
+					convert_scanline = convert_scanline_16bpp565;
 				}
 			}
 		}
