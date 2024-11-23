@@ -42,6 +42,12 @@ $(LIBBMP_LIB):
 640X400M_EXE =     $(SUBDIR)$(HPS)640x400m.$(EXEEXT)
 640X480L_EXE =     $(SUBDIR)$(HPS)640x480l.$(EXEEXT)
 640X480M_EXE =     $(SUBDIR)$(HPS)640x480m.$(EXEEXT)
+720X350L_EXE =     $(SUBDIR)$(HPS)720x350l.$(EXEEXT)
+720X350M_EXE =     $(SUBDIR)$(HPS)720x350m.$(EXEEXT)
+720X400L_EXE =     $(SUBDIR)$(HPS)720x400l.$(EXEEXT)
+720X400M_EXE =     $(SUBDIR)$(HPS)720x400m.$(EXEEXT)
+720X480L_EXE =     $(SUBDIR)$(HPS)720x480l.$(EXEEXT)
+720X480M_EXE =     $(SUBDIR)$(HPS)720x480m.$(EXEEXT)
 800X600L_EXE =     $(SUBDIR)$(HPS)800x600l.$(EXEEXT)
 ! endif
 !endif
@@ -59,7 +65,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 	
-exe: $(320X200A_EXE) $(320X200B_EXE) $(320X240A_EXE) $(320X300A_EXE) $(320X350A_EXE) $(320X400A_EXE) $(320X480A_EXE) $(320X600A_EXE) $(360X200A_EXE) $(360X240A_EXE) $(360X300A_EXE) $(360X350A_EXE) $(360X400A_EXE) $(360X480A_EXE) $(360X600A_EXE) $(320X200L_EXE) $(320X200M_EXE) $(640X200L_EXE) $(640X200M_EXE) $(640X240L_EXE) $(640X240M_EXE) $(640X350L_EXE) $(640X350M_EXE) $(640X400L_EXE) $(640X400M_EXE) $(640X480L_EXE) $(640X480M_EXE) $(800X600L_EXE) .symbolic
+exe: $(320X200A_EXE) $(320X200B_EXE) $(320X240A_EXE) $(320X300A_EXE) $(320X350A_EXE) $(320X400A_EXE) $(320X480A_EXE) $(320X600A_EXE) $(360X200A_EXE) $(360X240A_EXE) $(360X300A_EXE) $(360X350A_EXE) $(360X400A_EXE) $(360X480A_EXE) $(360X600A_EXE) $(320X200L_EXE) $(320X200M_EXE) $(640X200L_EXE) $(640X200M_EXE) $(640X240L_EXE) $(640X240M_EXE) $(640X350L_EXE) $(640X350M_EXE) $(640X400L_EXE) $(640X400M_EXE) $(640X480L_EXE) $(640X480M_EXE) $(720X350L_EXE) $(720X350M_EXE) $(720X400L_EXE) $(720X400M_EXE) $(720X480L_EXE) $(720X480M_EXE) $(800X600L_EXE) .symbolic
 
 !ifdef 320X200A_EXE
 $(320X200A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
@@ -280,6 +286,57 @@ $(640X480M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x480m.obj
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)480mc.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480m.bmp $(SUBDIR)$(HPS)480m.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X350L_EXE
+$(720X350L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x350l.obj
+	%write tmp.cmd option quiet option map=$(720X350L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x350l.obj name $(720X350L_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w720$(HPS)350vga.bmp $(SUBDIR)$(HPS)72035016.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X350M_EXE
+$(720X350M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x350m.obj
+	%write tmp.cmd option quiet option map=$(720X350M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x350m.obj name $(720X350M_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)350vga.bmp $(SUBDIR)$(HPS)720350mc.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)350m.bmp $(SUBDIR)$(HPS)720350m.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X400L_EXE
+$(720X400L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x400l.obj
+	%write tmp.cmd option quiet option map=$(720X400L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x400l.obj name $(720X400L_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w720$(HPS)400vga.bmp $(SUBDIR)$(HPS)72040016.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X400M_EXE
+$(720X400M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x400m.obj
+	%write tmp.cmd option quiet option map=$(720X400M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x400m.obj name $(720X400M_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)400vga.bmp $(SUBDIR)$(HPS)720400mc.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)400m.bmp $(SUBDIR)$(HPS)720400m.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X480L_EXE
+$(720X480L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x480l.obj
+	%write tmp.cmd option quiet option map=$(720X480L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x480l.obj name $(720X480L_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w720$(HPS)480vga.bmp $(SUBDIR)$(HPS)72048016.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef 720X480M_EXE
+$(720X480M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x480m.obj
+	%write tmp.cmd option quiet option map=$(720X480M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)720x480m.obj name $(720X480M_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)480vga.bmp $(SUBDIR)$(HPS)720480mc.bmp
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w720$(HPS)480m.bmp $(SUBDIR)$(HPS)720480m.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
