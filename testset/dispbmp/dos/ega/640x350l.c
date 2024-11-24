@@ -20,6 +20,7 @@ static const unsigned int img_height = 350;
 static const unsigned int img_stride = 640 / 8;
 
 #include "dr_4bp.h"
+#include "dr_mem.h"
 #include "dr_col64.h"
 
 int main() {
@@ -33,6 +34,12 @@ int main() {
 	}
 	if (bfr->bpp != 4 || bfr->colors == 0 || bfr->colors > 16 || bfr->palette == 0) {
 		fprintf(stderr,"BMP wrong format\n");
+		return 1;
+	}
+
+	/* 640x350x16 requires at least 128KB onboard memory */
+	if (ega_memory_size() < 128) {
+		fprintf(stderr,"This program requires an EGA card with at least 128KB of video RAM\n");
 		return 1;
 	}
 

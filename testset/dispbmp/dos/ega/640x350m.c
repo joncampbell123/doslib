@@ -21,6 +21,7 @@ static const unsigned int img_height = 350;
 static const unsigned int img_stride = 640 / 8;
 
 #include "dr_1bp.h"
+#include "dr_mem.h"
 #include "dr_col64.h"
 
 static void display(struct BMPFILEREAD *bfr) {
@@ -72,6 +73,12 @@ int main() {
 
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;
+
+	/* 640x350x16 requires at least 128KB onboard memory */
+	if (ega_memory_size() < 128) {
+		fprintf(stderr,"This program requires an EGA card with at least 128KB of video RAM\n");
+		return 1;
+	}
 
 	/* set 640x350x16 EGA, we're going to tweak it into a 1bpp mode */
 	__asm {
