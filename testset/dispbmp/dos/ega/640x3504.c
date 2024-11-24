@@ -19,9 +19,12 @@ static const unsigned int img_width = 640;
 static const unsigned int img_height = 350;
 static const unsigned int img_stride = 640 / 8;
 
+#define EGA4COLOR
+
 #include "dr_4bp.h"
 #include "dr_mem.h"
 #include "dr_col64.h"
+#include "dr_vpt.h"
 
 static unsigned char translate_nibble4(unsigned char b) {
 	return ((b & 1) ? 3 : 0) + ((b & 2) ? 12 : 0);
@@ -58,9 +61,24 @@ int main() {
 	}
 
 	/* 640x350x4 only happens for 64KB
-	 * If we WANT 640x350x4 in any other case we have to set it up ourselves */
+	 * If we WANT 640x350x4 in any other case we have to set it up ourselves from the Video Parameter Table */
 	if (ega_memory_size() >= 128) {
-		// TODO
+#if TARGET_MSDOS == 32
+		unsigned char *vp;
+#else
+		unsigned char far *vp;
+#endif
+
+		vp = find_vpt();
+		if (vp != NULL) {
+			/* advance to the entry for 640x350x4 for 64KB cards */
+			/* if the mode is there, the first two bytes will be nonzero */
+			vp += 0x40*0x10;
+			if (vp[0] != 0 && vp[1] != 0) {
+				printf("VPTable entry available!\n");
+				apply_vpt_mode(vp);
+			}
+		}
 	}
 
 	/* set palette */

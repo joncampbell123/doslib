@@ -41,7 +41,11 @@ static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels
 	unsigned int b;
 
 	outpw(0x3C4,0x0F02); /* write all bitplanes (map mask) */
+#if defined(EGA4COLOR)
+	outpw(0x3CE,0x1205); /* write mode 2 (read mode 0) odd/even mode */
+#else
 	outpw(0x3CE,0x0205); /* write mode 2 (read mode 0) */
+#endif
 
 	m = 0x8000;
 	for (b=0;b < 8 && b < pixels;b += 2) {
@@ -54,7 +58,11 @@ static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels
 		outpw(0x3CE,0x0008 + m); m >>= 1u; w = d; s = src++; x = count; do { vga_rmw(w++,*s & 0xFu); s += 4; } while (--x != 0u);
 	}
 
+#if defined(EGA4COLOR)
+	outpw(0x3CE,0x1205); /* write mode 2 (read mode 0) odd/even mode */
+#else
 	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
+#endif
 	outpw(0x3CE,0xFF08); /* bit mask */
 }
 
