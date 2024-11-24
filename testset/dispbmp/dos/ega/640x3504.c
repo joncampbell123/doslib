@@ -51,16 +51,16 @@ int main() {
 		return 1;
 	}
 
-	/* 640x350x4 only happens for 64KB */
-	if (ega_memory_size() >= 128) {
-		fprintf(stderr,"This program requires an EGA card with 64KB of video RAM\n");
-		return 1;
-	}
-
 	/* set 640x350x16 EGA */
 	__asm {
 		mov	ax,0x0010	; AH=0x00 AL=0x10
 		int	0x10
+	}
+
+	/* 640x350x4 only happens for 64KB
+	 * If we WANT 640x350x4 in any other case we have to set it up ourselves */
+	if (ega_memory_size() >= 128) {
+		// TODO
 	}
 
 	/* set palette */
@@ -72,7 +72,7 @@ int main() {
 			ac[i] = rgb2ega64(bfr->palette[j].rgbRed,bfr->palette[j].rgbGreen,bfr->palette[j].rgbBlue);
 		}
 
-		for (i=0;i < bfr->colors;i++) {
+		for (i=0;i < 16;i++) {
 			inp(0x3DA);
 			outp(0x3C0,i);
 			outp(0x3C0,ac[i]);
