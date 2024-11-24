@@ -62,7 +62,7 @@ int main() {
 			outp(0x3C0,ac[i]);
 		}
 		inp(0x3DA);
-		outp(0x3C0,0x20 | ac[0]);
+		outp(0x3C0,0x20);
 	}
 
 	/* load and render */
