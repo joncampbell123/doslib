@@ -103,26 +103,18 @@ int main() {
 	else
 		ega4c = 0;
 
-	if (ega4c) {
+	if (ega4c)
 		outpw(0x3C4,0x0302); /* write only bitplane 0+1 (map mask) */
-
-		/* enable the first two bitplanes */
-		inp(0x3DA);
-		outp(0x3C0,0x12);
-		outp(0x3C0,0x03);
-		inp(0x3DA);
-		outp(0x3C0,0x20); /* reenable the display */
-	}
-	else {
+	else
 		outpw(0x3C4,0x0102); /* write only bitplane 0 (map mask) */
 
-		/* enable only the first bitplane */
-		inp(0x3DA);
-		outp(0x3C0,0x12);
-		outp(0x3C0,0x01);
-		inp(0x3DA);
-		outp(0x3C0,0x20); /* reenable the display */
-	}
+	/* enable only the first bitplane */
+	inp(0x3DA);
+	outp(0x3C0,0x12);
+	outp(0x3C0,0x01);
+	inp(0x3DA);
+	outp(0x3C0,0x20); /* reenable the display */
+
 	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
 	outpw(0x3CE,0xFF08); /* write all bits */
 
