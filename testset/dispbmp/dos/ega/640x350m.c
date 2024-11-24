@@ -34,8 +34,8 @@ static void display(struct BMPFILEREAD *bfr) {
 		unsigned char ac[16];
 
 		if (ega4c) {
-			ac[0] = rgb2ega64(bfr->palette[0].rgbRed,bfr->palette[0].rgbGreen,bfr->palette[0].rgbBlue);
-			for (i=1;i < 4;i++) ac[i] = rgb2ega64(bfr->palette[1].rgbRed,bfr->palette[1].rgbGreen,bfr->palette[1].rgbBlue);
+			ac[0] = ac[2] = rgb2ega64(bfr->palette[0].rgbRed,bfr->palette[0].rgbGreen,bfr->palette[0].rgbBlue);
+			ac[1] = ac[3] = rgb2ega64(bfr->palette[1].rgbRed,bfr->palette[1].rgbGreen,bfr->palette[1].rgbBlue);
 
 			for (i=0;i < 4;i++) {
 				inp(0x3DA);
