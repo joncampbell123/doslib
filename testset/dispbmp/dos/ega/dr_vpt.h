@@ -4,7 +4,7 @@ static unsigned char *find_vpt(void) {
 #else
 static unsigned char far *find_vpt(void) {
 #endif
-	/* NTS: VGA BIOSes also provide a VPT with this mode listed. At least the IBM PS/2 VGA BIOS does. */
+	/* NTS: EGA and VGA BIOSes also provide a VPT with this mode listed. At least the IBM PS/2 VGA BIOS does. */
 	/* Video Parameter Control Block at 40:A8 */
 	/* The first DWORD in that is the 0x40 byte blocks per video mode */
 	/* layout:
