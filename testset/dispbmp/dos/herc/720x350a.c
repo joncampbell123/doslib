@@ -19,6 +19,7 @@ static const unsigned int img_height = 350;
 static const unsigned int img_stride = 720 / 8;
 
 #include "dr_1bp.h"
+#include "dr_det.h"
 
 /* HGC values for HGC graphics */
 static const unsigned char hgc_graphics_crtc[12] = {
@@ -96,6 +97,12 @@ static struct BMPFILEREAD *load(const char *path) {
 
 int main() {
 	struct BMPFILEREAD *bfr;
+
+	(void)hgc_type;
+	if (!herc_detect()) {
+		fprintf(stderr,"This program requires a Hercules graphics adapter. MDA will not suffice.\n");
+		return 1;
+	}
 
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;

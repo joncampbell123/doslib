@@ -19,6 +19,7 @@ static const unsigned int img_height = 350;
 static const unsigned int img_stride = 640 / 8;
 
 #include "dr_1bp.h"
+#include "dr_det.h"
 
 /* HGC values for HGC graphics, adjusted for 640 pixels active display */
 /* UNTESTED: Sync position was also adjusted to theoretically center the 640 wide display */
@@ -97,6 +98,12 @@ static struct BMPFILEREAD *load(const char *path) {
 
 int main() {
 	struct BMPFILEREAD *bfr;
+
+	(void)hgc_type;
+	if (!herc_detect()) {
+		fprintf(stderr,"This program requires a Hercules graphics adapter. MDA will not suffice.\n");
+		return 1;
+	}
 
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;
