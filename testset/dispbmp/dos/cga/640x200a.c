@@ -55,7 +55,7 @@ int main() {
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;
 
-	/* set 640x480x2 CGA */
+	/* set 640x200x2 CGA */
 	__asm {
 		mov	ax,0x0006	; AH=0x00 AL=0x06
 		int	0x10
