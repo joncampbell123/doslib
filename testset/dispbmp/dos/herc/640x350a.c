@@ -21,9 +21,9 @@ static const unsigned int img_stride = 640 / 8;
 #include "dr_1bp.h"
 
 /* HGC values for HGC graphics, adjusted for 640 pixels active display */
-/* TODO: Adjust sync position to center image? */
+/* UNTESTED: Sync position was also adjusted to theoretically center the 640 wide display */
 static const unsigned char hgc_graphics_crtc[12] = {
-	0x35,0x28,0x2E,0x07,
+	0x35,0x28,0x2B,0x07,
 	0x5B,0x02,0x57,0x57,
 	0x02,0x03,0x00,0x00
 };
