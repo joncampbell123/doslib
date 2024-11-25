@@ -15,6 +15,7 @@ $(LIBBMP_LIB):
 
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
+640X350A_EXE =     $(SUBDIR)$(HPS)640x350a.$(EXEEXT)
 720X350A_EXE =     $(SUBDIR)$(HPS)720x350a.$(EXEEXT)
 ! endif
 !endif
@@ -32,7 +33,15 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(LIBBMP_LIB) .symbolic
 
-exe: $(720X350A_EXE) .symbolic
+exe: $(640X350A_EXE) $(720X350A_EXE) .symbolic
+
+!ifdef 640X350A_EXE
+$(640X350A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x350a.obj
+	%write tmp.cmd option quiet option map=$(640X350A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x350a.obj name $(640X350A_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)350m.bmp $(SUBDIR)$(HPS)640350.bmp
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
 
 !ifdef 720X350A_EXE
 $(720X350A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)720x350a.obj
