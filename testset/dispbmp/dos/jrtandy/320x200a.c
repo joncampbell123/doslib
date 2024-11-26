@@ -23,10 +23,11 @@ static unsigned char *img_vram;
 #else
 static unsigned char far *img_vram;
 #endif
-static unsigned char is_pcjr = 1;
+static unsigned char is_pcjr = 0;
 static unsigned char is_tandy = 0;
 
 #include "dr_4bp.h"
+#include "dr_jrdet.h"
 #include "dr_pcjrm.h"
 
 static void display(struct BMPFILEREAD *bfr) {
@@ -58,6 +59,14 @@ static struct BMPFILEREAD *load(const char *path) {
 
 int main() {
 	struct BMPFILEREAD *bfr;
+
+	if (detect_pcjr()) {
+		is_pcjr = 1;
+	}
+	else {
+		fprintf(stderr,"This program requires a PCjr system\n");
+		return 1;
+	}
 
 	img_vram = get_pcjr_mem();
 	if (img_vram == NULL) {
