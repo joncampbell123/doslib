@@ -11,13 +11,13 @@
 
 #include "libbmp.h"
 
-/* PCjr 320x200 16-color mode.
+/* PCjr 160x200 16-color mode.
  * Standard INT 13h mode without any tweaks. */
 
-static const char bmpfile[] = "32020016.bmp";
-static const unsigned int img_width = 320;
+static const char bmpfile[] = "16020016.bmp";
+static const unsigned int img_width = 160;
 static const unsigned int img_height = 200;
-static const unsigned int img_stride = 320 / 2;
+static const unsigned int img_stride = 160 / 2;
 #if TARGET_MSDOS == 32
 static unsigned char *img_vram;
 #else
@@ -26,7 +26,7 @@ static unsigned char far *img_vram;
 static unsigned char is_pcjr = 0;
 static unsigned char is_tandy = 0;
 
-#include "dr_4bp2.h"
+#include "dr_4bp1.h"
 #include "dr_jrdet.h"
 #include "dr_pcjrm.h"
 
@@ -80,9 +80,9 @@ int main() {
 	if ((bfr=load(bmpfile)) == NULL)
 		return 1;
 
-	/* set 320x200x16 PCjr */
+	/* set 160x200x16 PCjr */
 	__asm {
-		mov	ax,0x0009	; AH=0x00 AL=0x09
+		mov	ax,0x0008	; AH=0x00 AL=0x08
 		int	0x10
 	}
 
