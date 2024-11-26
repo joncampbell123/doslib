@@ -63,8 +63,11 @@ int main() {
 	if (detect_pcjr()) {
 		is_pcjr = 1;
 	}
+	else if (detect_tandy()) {
+		is_tandy = 1;
+	}
 	else {
-		fprintf(stderr,"This program requires a PCjr system\n");
+		fprintf(stderr,"This program requires a PCjr or Tandy system\n");
 		return 1;
 	}
 
