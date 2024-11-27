@@ -74,15 +74,6 @@ static void draw_scanline(unsigned int y,unsigned char *src,unsigned int pixels)
 #endif
 			scanline_pack2planar(d,src,pixels,2);
 		}
-
-		{
-#if TARGET_MSDOS == 32
-			unsigned char * const d = (unsigned char*)0xE0000 + addr;
-#else
-			unsigned char far * const d = MK_FP(0xE000,addr);
-#endif
-			scanline_pack2planar(d,src,pixels,3);
-		}
 	}
 }
 #endif
