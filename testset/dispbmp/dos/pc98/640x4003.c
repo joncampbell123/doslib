@@ -17,11 +17,7 @@ static const unsigned int img_width = 640;
 static const unsigned int img_height = 400;
 static const unsigned int img_stride = 640 / 8; /* 8-color planar, 1bpp x 3 bitplanes */
 
-static unsigned char rgb2dig8(unsigned char r,unsigned char g,unsigned char b) {
-	return	((g & 0x80) ? 0x4 : 0x0) +
-		((r & 0x80) ? 0x2 : 0x0) +
-		((b & 0x80) ? 0x1 : 0x0);
-}
+# include "dr_dig8.h"
 
 #if TARGET_MSDOS == 32
 static inline void scanline_pack2planar(unsigned char *d,unsigned char *src,unsigned int pixels,const unsigned char shf) {

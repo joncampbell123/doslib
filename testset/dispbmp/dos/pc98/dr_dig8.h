@@ -1,0 +1,7 @@
+
+static unsigned char rgb2dig8(unsigned char r,unsigned char g,unsigned char b) {
+	return	((g & 0x80) ? 0x4 : 0x0) +
+		((r & 0x80) ? 0x2 : 0x0) +
+		((b & 0x80) ? 0x1 : 0x0);
+}
+
