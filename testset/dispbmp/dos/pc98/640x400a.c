@@ -12,9 +12,9 @@
 #if defined(TARGET_PC98)
 # include "libbmp.h"
  
-static const char bmpfile[] = "640480_8.bmp";
+static const char bmpfile[] = "640400_8.bmp";
 static const unsigned int img_width = 640;
-static const unsigned int img_height = 480;
+static const unsigned int img_height = 400;
 static const unsigned int img_stride = 640;
 
 # include "dr_pegc8.h"
@@ -36,7 +36,12 @@ int main() {
 		return 1;
 	}
 
-	/* Set PEGC mode 640x480x256 and turn off text. */
+	/* Set PEGC mode 640x400x256 and turn off text. */
+	/* NOTE: PC-98 systems in the traditional 400-line raster can be in one of two sync configurations.
+	 *       One is a 640x400 70Hz mode that is fully compatible with standard VGA monitors.
+	 *       The other is a 640x400 56Hz mode that is incompatible with VGA but was standard for the platform (24KHz hsync),
+	 *       though if you own an NEC brand VGA monitor it may support the mode through the VGA cable regardless.
+	 *       To support both, this code queries the mode, then sets the mode without changing the AL register. */
 	/* NOTE: Get display mode call did not appear until EGC functions were added? */
 	__asm {
 		mov	ah,0x31		; get display mode
@@ -46,8 +51,9 @@ int main() {
 		mov	ah,0x12		; hide cursor
 		int	18h
 		mov	ah,0x30		; set display mode
-		mov	bh,0x31		; 640x480 with 80x25 text
-		mov	al,0x0C		; 31KHz sync
+		mov	bh,0x21		; 640x400 with 80x25 text
+					; Do not change AL, keep the sync the same
+					; FIXME: The system could be running a 80x25 text mode at 640x480, perhaps
 		int	18h
 		mov	ah,0x0D		; text layer disable
 		int	18h
