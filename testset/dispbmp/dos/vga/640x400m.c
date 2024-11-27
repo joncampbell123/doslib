@@ -89,6 +89,10 @@ int main() {
 	/* read 0x3CC to determine color vs mono */
 	iobase = (inp(0x3CC) & 1) ? 0x3D0 : 0x3B0;
 
+	/* NTS: The polarity of hsync+vsync matters, not just for older VGA monitors, but also some LCD flat panel controllers.
+	 *      This is necessary on some Cirrus LCD controllers to disable the hardware vertical "expanding" that it applies for 400-line modes for example. */
+	outp(0x3C2,0x63); /* color, enable CPU memory, 25MHz clock, high 64KB bank?, hsync positive, vsync positive (to signal 400-line mode) */ 
+
 	/* CRTC mode set */
 	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)
 		outpw(iobase+4,crtcchg[i]);

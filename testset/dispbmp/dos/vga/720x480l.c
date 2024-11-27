@@ -61,7 +61,7 @@ int main() {
 	/* read 0x3CC to determine color vs mono */
 	iobase = (inp(0x3CC) & 1) ? 0x3D0 : 0x3B0;
 
-	outp(0x3C2,0x67); /* misc control select 28MHz clock */
+	outp(0x3C2,0xE7); /* misc control select 28MHz clock */
 
 	/* CRTC mode set */
 	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)

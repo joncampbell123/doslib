@@ -63,6 +63,10 @@ int main() {
 	outpw(iobase+4,0x2813); /* offset register 0x13: 0x28 for 320 pixels across */
 	outpw(0x3C4,0x0604); /* sequencer memory mode: disable chain4, disable odd/even, extended memory enable */
 
+	/* NTS: The polarity of hsync+vsync matters, not just for older VGA monitors, but also some LCD flat panel controllers.
+	 *      This is necessary on some Cirrus LCD controllers to disable the hardware vertical "expanding" that it applies for 400-line modes for example. */
+	outp(0x3C2,0xE3); /* color, enable CPU memory, 25MHz clock, high 64KB bank?, hsync positive, vsync positive (to signal 480-line mode) */
+
 	/* CRTC mode set */
 	for (i=0;i < (sizeof(crtcchg)/sizeof(crtcchg[0]));i++)
 		outpw(iobase+4,crtcchg[i]);
