@@ -12,9 +12,9 @@
 #if defined(TARGET_PC98)
 # include "libbmp.h"
  
-static const char bmpfile[] = "640400_4.bmp";
+static const char bmpfile[] = "640200_4.bmp";
 static const unsigned int img_width = 640;
-static const unsigned int img_height = 400;
+static const unsigned int img_height = 200;
 static const unsigned int img_stride = 640 / 8; /* 16-color planar, 1bpp x 4 bitplanes */
 
 #if TARGET_MSDOS == 32
@@ -120,7 +120,7 @@ int main() {
 		mov	ah,0x12		; hide cursor
 		int	18h
 		mov	ah,0x30		; set display mode
-		mov	bh,0x21		; 640x400 with 80x25 text
+		mov	bh,0x01		; 640x200 with 80x25 text
 					; Do not change AL, keep the sync the same
 					; FIXME: The system could be running a 80x25 text mode at 640x480, perhaps
 		int	18h
