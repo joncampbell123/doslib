@@ -42,6 +42,10 @@ int main() {
 	 *       The other is a 640x400 56Hz mode that is incompatible with VGA but was standard for the platform (24KHz hsync),
 	 *       though if you own an NEC brand VGA monitor it may support the mode through the VGA cable regardless.
 	 *       To support both, this code queries the mode, then sets the mode without changing the AL register. */
+	/* NOTE: PC-98 supports 8/16-color 200-line and 400-line modes, because it faithfully emulates
+	 *       registers of their particular video chipset that allows that to happen. However once
+	 *       you go into 256-color PEGC mode, some functions disappear and it is not possible to
+	 *       "double scan" 256-color mode to get 640x240 or 640x200 modes. Believe, me, I tried. */
 	/* NOTE: Get display mode call did not appear until EGC functions were added? */
 	__asm {
 		mov	ah,0x31		; get display mode

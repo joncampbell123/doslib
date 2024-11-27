@@ -38,6 +38,10 @@ int main() {
 
 	/* Set PEGC mode 640x480x256 and turn off text. */
 	/* NOTE: Get display mode call did not appear until EGC functions were added? */
+	/* NOTE: PC-98 supports 8/16-color 200-line and 400-line modes, because it faithfully emulates
+	 *       registers of their particular video chipset that allows that to happen. However once
+	 *       you go into 256-color PEGC mode, some functions disappear and it is not possible to
+	 *       "double scan" 256-color mode to get 640x240 or 640x200 modes. Believe, me, I tried. */
 	__asm {
 		mov	ah,0x31		; get display mode
 		int	18h
