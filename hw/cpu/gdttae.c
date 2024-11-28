@@ -28,7 +28,7 @@
 # include <hw/dos/winfcon.h>
 #endif
 
-unsigned char tmp[16]; /* <- Watcom C you fucking pussy */
+unsigned char tmp[16];
 int lines=0;
 
 #if TARGET_MSDOS == 32 && defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
