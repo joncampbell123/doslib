@@ -1149,6 +1149,10 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+	/* S3 register unlock */
+	outpw(0x3D4,0x4838); /* CRT register unlock 1 */
+	outpw(0x3D4,0xA539); /* CRT register unlock 2 */
+
 #if TARGET_MSDOS == 32 /* 32-bit only. For 16-bit real mode to touch the LFB would take flat real mode or other tricks. */
 	if (vbe_mode_can_lfb) {
 		if ((vbe_modeinfo.bytes_per_scan_line * vbe_modeinfo.y_resolution) > vbe_mode_total_memory) {
