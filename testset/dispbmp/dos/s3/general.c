@@ -557,9 +557,22 @@ static void bnksw_port35(uint16_t bank) {
 	register unsigned char b;
 
 	outp(0x3D4,0x35);
-
 	b = inp(0x3D5);
 	b = (b & 0xF0) | (bank & 0xFu);
+	outp(0x3D5,b);
+}
+
+static void bnksw_port51(uint16_t bank) {
+	register unsigned char b;
+
+	outp(0x3D4,0x35);
+	b = inp(0x3D5);
+	b = (b & 0xF0) | (bank & 0xFu);
+	outp(0x3D5,b);
+
+	outp(0x3D4,0x51);
+	b = inp(0x3D5);
+	b = (b & 0xF3) | (((bank >> 4u) & 0x3u) << 2u);
 	outp(0x3D5,b);
 }
 
@@ -1077,6 +1090,8 @@ int main(int argc,char **argv) {
 	}
 	else if (vbe_mode_can_window) {
 		draw_scanline_bank_switch = bnksw_port35;
+		if (s3_chipid >= 0x90) draw_scanline_bank_switch = bnksw_port51; /* 86c928+ */
+
 		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
 			if (bfr->bpp == 4) {
 				draw_scanline = draw_scanline_bnksw4p;
