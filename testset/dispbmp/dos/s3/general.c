@@ -549,44 +549,19 @@ static void vbe_set_palette(unsigned int first,unsigned int count,unsigned char 
 #endif
 }
 
-static void vbe_bank_switch_int10(uint16_t bank) {
-	(void)bank;
-
-	__asm {
-		mov	ax,0x4F05	; AH=4Fh AL=05h CPU memory window control
-		mov	bx,0		; Set window, Window A
-		mov	dx,bank		; window position in granularity units
-		int	10h
-	}
-}
-
-#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
-static void vbe_bank_switch_rmwnfunc(uint16_t bank) {
-	uint32_t proc = vbe_modeinfo.window_function;
-	if (proc == 0) return;
-
-	__asm {
-		mov	ax,0x4F05	; AH=4Fh AL=05h CPU memory window control
-		mov	bx,0		; Set window, Window A
-		mov	dx,bank		; window position in granularity units
-		call	dword ptr [proc]
-	}
-}
-#endif
-
 ///
 
 static uint16_t current_bank = ~0u;
 
-static void bnksw_int10(uint16_t bank) {
-	vbe_bank_switch_int10(bank);
-}
+static void bnksw_port35(uint16_t bank) {
+	register unsigned char b;
 
-#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
-static void bnksw_rmwnfnc(uint16_t bank) {
-	vbe_bank_switch_rmwnfunc(bank);
+	outp(0x3D4,0x35);
+
+	b = inp(0x3D5);
+	b = (b & 0xF0) | (bank & 0xFu);
+	outp(0x3D5,b);
 }
-#endif
 
 #if TARGET_MSDOS == 32
 static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int bytes) {
@@ -1076,10 +1051,7 @@ int main(int argc,char **argv) {
 #endif
 	}
 	else if (vbe_mode_can_window) {
-		draw_scanline_bank_switch = bnksw_int10;
-#if TARGET_MSDOS == 16 /* 16-bit only. You could call from 32-bit protected mode but it's harder to do. */
-		if (vbe_modeinfo.window_function != 0 && enable_rmwnfunc) draw_scanline_bank_switch = bnksw_rmwnfnc;
-#endif
+		draw_scanline_bank_switch = bnksw_port35;
 		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
 			if (bfr->bpp == 4) {
 				draw_scanline = draw_scanline_bnksw4p;
