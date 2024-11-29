@@ -575,6 +575,11 @@ static void bnksw_port51(uint16_t bank) {
 	outp(0x3D5,b);
 }
 
+static void bnksw_port6A(uint16_t bank) {
+	outp(0x3D4,0x6A);
+	outp(0x3D5,bank);
+}
+
 #if TARGET_MSDOS == 32
 static void draw_scanline_lfb(unsigned int y,unsigned char *src,unsigned int bytes) {
 	if (y < img_height && lfb_lin_base) {
@@ -1086,6 +1091,7 @@ int main(int argc,char **argv) {
 	else if (vbe_mode_can_window) {
 		draw_scanline_bank_switch = bnksw_port35;
 		if (s3_chipid >= 0x90) draw_scanline_bank_switch = bnksw_port51; /* 86c928+ */
+		if (s3_chipid >= 0xC0) draw_scanline_bank_switch = bnksw_port6A; /* 864/964+ */
 
 		if (vbe_modeinfo.memory_model == 0x03/*4-plane 16-color?*/) {
 			if (bfr->bpp == 4) {
