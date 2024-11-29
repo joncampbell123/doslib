@@ -19,7 +19,6 @@ static unsigned int img_stride = 0;
 static unsigned int img_dac_width = 0;
 static unsigned char force_vbe_palset = 0;
 static unsigned char enable_8bit_dac = 1;
-static unsigned char enable_rmwnfunc = 1;
 static unsigned char enable_window = 1;
 static unsigned char enable_lfb = 1;
 static unsigned char enable_4packed = 1;
@@ -811,7 +810,6 @@ static void draw_scanline_bnksw(unsigned int y,unsigned char *src,unsigned int b
 static void help(void) {
 	fprintf(stderr,"general [opts] <bmp file>\n");
 	fprintf(stderr," -no-8bit-dac          Do not attempt 8-bit DAC\n");
-	fprintf(stderr," -no-rmwnfunc          Do not use real-mode direct call window control\n");
 	fprintf(stderr," -no-lfb               Do not use linear framebuffer\n");
 	fprintf(stderr," -no-window            Do not use bank switching window\n");
 	fprintf(stderr," -pause-info           Pause to show info before setting mode\n");
@@ -838,9 +836,6 @@ static int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"no-8bit-dac")) {
 				enable_8bit_dac = 0;
-			}
-			else if (!strcmp(a,"no-rmwnfunc")) {
-				enable_rmwnfunc = 0;
 			}
 			else if (!strcmp(a,"no-lfb")) {
 				enable_lfb = 0;
