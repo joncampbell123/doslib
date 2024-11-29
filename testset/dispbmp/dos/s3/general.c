@@ -931,6 +931,23 @@ void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsign
 	}
 }
 
+static unsigned char s3_chipid = 0;
+static unsigned char s3_revision = 0;
+static unsigned char s3_newchipid = 0;
+
+static unsigned int detect_s3() {
+	s3_chipid = 0;
+	s3_revision = 0;
+	s3_newchipid = 0;
+
+	outp(0x3D4,0x30); s3_chipid = inp(0x3D5);
+	outp(0x3D4,0x2F); s3_revision = inp(0x3D5);
+	outp(0x3D4,0x2E); s3_newchipid = inp(0x3D5);
+
+	if (s3_chipid < 0x81 || s3_chipid > 0xE1) return 0;
+	return 1;
+}
+
 int main(int argc,char **argv) {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
@@ -950,6 +967,14 @@ int main(int argc,char **argv) {
 		enable_lfb = 0;
 	}
 #endif
+
+	if (!detect_s3()) {
+		fprintf(stderr,"S3 chipset required\n");
+		return 1;
+	}
+
+	fprintf(stderr,"S3 chipid=0x%02x revision=0x%02x newid=0x%02x\n",
+		s3_chipid,s3_revision,s3_newchipid);
 
 	if (!detect_vbe()) {
 		fprintf(stderr,"VESA BIOS extensios not detected\n");
