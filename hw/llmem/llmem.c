@@ -117,9 +117,9 @@ int llmem_init() {
 
 		/* decide the PSE access limit. Older Pentium III systems are 36 bit limited.
 		 * Newer AMD64 systems allow up to 40 bits. */
-		llmem_pse_limit = 0xFFFFFFFFFULL; /* 36 bits by default */
-		if (cpu_cpuid_ext_info != NULL && cpu_cpuid_ext_info->features.a.raw[3] & (1UL << 29UL))
-			llmem_pse_limit = 0xFFFFFFFFFFULL; /* 40 bits if CPU supports 64-bit long mode */
+		/* FIXME: There is a way to query through CPUID the maximum physical memory address supported, use it.
+		 *        Ref [https://www.sandpile.org/x86/cpuid.htm#level_8000_0008h]*/
+		llmem_pse_limit = 0xFFFFFFFFFFULL; /* 40 bits by default */
 
 		/* by default, assume the physical limit is the PSE limit */
 		llmem_phys_limit = llmem_pse_limit;
@@ -865,14 +865,14 @@ size_t llmemcpy(uint64_t dst,uint64_t src,size_t len) {
 		 * [0,1] = source
 		 * [2,3] = dest */
 		p[1020] = (uint32_t)(((uint32_t)src & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)(src >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)(src >> 32ULL)) & 0xFFUL) << 13UL));
 		p[1021] = (uint32_t)(((uint32_t)(src+0x400000ULL) & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)((src+0x400000ULL) >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)((src+0x400000ULL) >> 32ULL)) & 0xFFUL) << 13UL));
 
 		p[1022] = (uint32_t)(((uint32_t)dst & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)(dst >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)(dst >> 32ULL)) & 0xFFUL) << 13UL));
 		p[1023] = (uint32_t)(((uint32_t)(dst+0x400000ULL) & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)((dst+0x400000ULL) >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)((dst+0x400000ULL) >> 32ULL)) & 0xFFUL) << 13UL));
 
 		/* compute flat addr of page tables.
 		 * we do this HERE because if done further down
@@ -1126,14 +1126,14 @@ size_t llmemcpy(uint64_t dst,uint64_t src,size_t len) {
 			 * [0,1] = source
 			 * [2,3] = dest */
 			p[1020] = (uint32_t)(((uint32_t)src & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)(src >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)(src >> 32ULL)) & 0xFFUL) << 13UL));
 			p[1021] = (uint32_t)(((uint32_t)(src+0x400000ULL) & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)((src+0x400000ULL) >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)((src+0x400000ULL) >> 32ULL)) & 0xFFUL) << 13UL));
 
 			p[1022] = (uint32_t)(((uint32_t)dst & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)(dst >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)(dst >> 32ULL)) & 0xFFUL) << 13UL));
 			p[1023] = (uint32_t)(((uint32_t)(dst+0x400000ULL) & 0xFFC00000ULL) | (1 << 7UL) | 7UL |
-				((((uint32_t)((dst+0x400000ULL) >> 32ULL)) & 0xFUL) << 13UL));
+				((((uint32_t)((dst+0x400000ULL) >> 32ULL)) & 0xFFUL) << 13UL));
 
 			/* we're going to fuck with the page tables, we don't want interrupts to cause problems */
 			_cli();
