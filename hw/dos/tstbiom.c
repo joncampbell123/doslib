@@ -24,6 +24,7 @@
 
 int main() {
 #if TARGET_MSDOS == 16
+	cpu_probe();
 	probe_dos();
 	printf("DOS version %x.%02u\n",dos_version>>8,dos_version&0xFF);
 	if (detect_windows()) {
