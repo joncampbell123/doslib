@@ -55,7 +55,7 @@ void printf_video_modeinfo(uint16_t mode,struct vbe_mode_info *mi) {
 			mi->x_resolution,mi->y_resolution,mi->x_char_size,mi->y_char_size,
 			mi->number_of_planes,mi->bits_per_pixel,mi->number_of_banks,mi->memory_model);
 	printf("    Model is '%s'. Bank size=%uKB. Image pages=%u\n",vbe_memory_model_to_str(mi->memory_model),
-			mi->bank_size,mi->number_of_image_pages);
+			mi->bank_size,mi->number_of_image_pages+1);
 	printf("    RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) DCModeInfo=0x%02X\n",
 			mi->red_mask_size,	mi->red_field_position,
 			mi->green_mask_size,	mi->green_field_position,
