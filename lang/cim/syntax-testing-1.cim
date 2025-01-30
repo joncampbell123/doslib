@@ -211,6 +211,15 @@ __inline
 __inline__
 asm("mov eax,esi")
 asm("l1: jmp far [somewhere] ; comment")
+asm("movl %1, %0\n"
+    "add $1, %0"
+    : "=r" (dst)
+    : "r" (src));
+asm("movl %1, %0\n"
+    "add $1, %0"
+    : "=r" (dst)
+    : "r" (src)
+    : "cc");
 _asm mov eax,esi
 __asm mov eax,esi
 __asm mov eax,asi __asm mov [somewhere],eax __asm nop
