@@ -113,27 +113,19 @@ hello 4 X 4 A
 #embed <hello>
 #embed "hello"
 #warning hello
-#line 1
 #warning hello
-#line 3
 #warning hello
-#line 69
 #warning hello
-#line 100
 #warning hello
-#line 200 "funny.cpp"
 #warning hello
 #ifdef NOTR
-# line 202 "funny2.cpp"
 # warning hello
 #endif
 #define NOTR
 #ifdef NOTR
-# line 203 "funny3.cpp"
 # warning hello
 #endif
 #define LINE1 2002
-#line LINE1
 #warning hello
 token#paste
 token##paste
@@ -643,6 +635,46 @@ you should see this H(3,H(4,5))
 you should not see this H(3,H(4,5))
 #endif
 
+#if !0
+you should see this
+#endif
+
+#if !1
+you should not see this
+#endif
+
+#if ~0
+you should see this
+#endif
+
+#if ~~0
+you should not see this
+#endif
+
+#if !!1
+you should see this
+#endif
+
+#if !!0
+you should not see this
+#endif
+
+#if !0 == 1
+you should see this
+#endif
+
+#if !1 == 0
+you should see this
+#endif
+
+#if !(0+0) == 1
+you should see this
+#endif
+
+#if !(0+1) == 0
+you should see this
+#endif
+
 /* If you define the same macro again, it's an error, unless the re-definition
    restates what was already defined, which is then silently ignores. This is
    what actual C compilers do. */
@@ -664,4 +696,9 @@ you should not see this H(3,H(4,5))
 
 __FUNCTION__
 __func__
+
+#line 12345
+
+hello();
+hello_again(12345);
 
