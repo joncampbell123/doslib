@@ -657,6 +657,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r_ppembed,
 		r_ppinclude_next,
 		anglestrliteral,			// 145
+		r___func__,
+		r___FUNCTION__,
 
 		__MAX__
 	};
@@ -802,6 +804,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	DEFX(__declspec);
 	DEFB(endif);
 	DEFB(elifndef);
+	DEFXUU(func);
+	DEFXUU(FUNCTION);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -955,7 +959,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XAS(__inline,     inline),
 		XAS(__inline__,   inline),
 		XAS(volatile,     volatile),
-		XAS(__volatile__, volatile)
+		XAS(__volatile__, volatile),
+		XUU(func),
+		XUU(FUNCTION)
 	};
 	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
 #undef XUU
@@ -1192,7 +1198,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_ppelifndef,
 		str_ppembed,
 		str_ppinclude_next,
-		"anglestrliteral"			// 145
+		"anglestrliteral",			// 145
+		"__func__",
+		"__FUNCTION__"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {

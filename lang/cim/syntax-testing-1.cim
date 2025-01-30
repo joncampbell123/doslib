@@ -653,3 +653,6 @@ you should not see this H(3,H(4,5))
 #define BIN1 "ft1.ttf"
 #embed BIN1
 
+__FUNCTION__
+__func__
+
