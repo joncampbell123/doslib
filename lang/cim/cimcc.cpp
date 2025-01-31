@@ -2619,7 +2619,39 @@ try_again:	t = token_t();
 			static constexpr unsigned char FL_ELSE = 1u << 0u;
 		};
 
+		/* recursion stack, for #include */
+		struct include_t {
+			CIMCC::source_file_object*	sfo = NULL;
+			CIMCC::rbuf			rb;
+		};
+
+		std::stack<include_t>		include_stk;
 		std::stack<cond_block_t>	cond_block;
+
+		void include_push(CIMCC::source_file_object *sfo) {
+			if (sfo != NULL) {
+				include_t i;
+				i.sfo = sfo;
+				assert(i.rb.allocate());
+				include_stk.push(std::move(i));
+			}
+		}
+
+		void include_pop(void) {
+			if (!include_stk.empty()) {
+				include_t &e = include_stk.top();
+				if (e.sfo) delete e.sfo;
+				include_stk.pop();
+			}
+		}
+
+		void include_popall(void) {
+			while (!include_stk.empty()) {
+				include_t &e = include_stk.top();
+				if (e.sfo) delete e.sfo;
+				include_stk.pop();
+			}
+		}
 
 		bool condb_true(void) const {
 			if (cond_block.empty())
@@ -2739,7 +2771,7 @@ try_again:	t = token_t();
 		pptok_state_t &operator=(const pptok_state_t &) = delete;
 		pptok_state_t(pptok_state_t &&) = delete;
 		pptok_state_t &operator=(pptok_state_t &&) = delete;
-		~pptok_state_t() { free_macros(); }
+		~pptok_state_t() { include_popall(); free_macros(); }
 	};
 
 	int pptok_lgtok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -3734,6 +3766,69 @@ go_again:
 		return 1;
 	}
 
+	static constexpr unsigned int CBIS_USER_HEADER = (1u << 0u);
+	static constexpr unsigned int CBIS_SYS_HEADER = (1u << 1u);
+	static constexpr unsigned int CBIS_NEXT = (1u << 2u);
+
+	static void path_slash_translate(std::string &path) {
+		for (auto &c : path) {
+			if (c == '\\') c = '/';
+		}
+	}
+
+	static std::string path_combine(const std::string &base,const std::string &rel) {
+		if (!base.empty() && !rel.empty())
+			return base + "/" + rel;
+		if (!rel.empty())
+			return rel;
+
+		return std::string();
+	}
+
+	std::vector<std::string> cb_include_search_paths;
+
+	typedef bool (*cb_include_accept_path_t)(const std::string &p);
+
+	static bool cb_include_accept_path_default(const std::string &/*p*/) {
+		return true;
+	}
+
+	cb_include_accept_path_t cb_include_accept_path = cb_include_accept_path_default;
+
+	typedef CIMCC::source_file_object* (*cb_include_search_t)(CIMCC::pptok_state_t &pst,CIMCC::lgtok_state_t &lst,const CIMCC::token_t &t,unsigned int fl);
+
+	static CIMCC::source_file_object* cb_include_search_default(CIMCC::pptok_state_t &/*pst*/,CIMCC::lgtok_state_t &/*lst*/,const CIMCC::token_t &t,unsigned int fl) {
+		CIMCC::source_file_object *sfo = NULL;
+
+		if (fl & CBIS_USER_HEADER) {
+			std::string path = t.v.strliteral.makestring();	path_slash_translate(path);
+			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
+				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
+				if (fd >= 0) {
+					sfo = new CIMCC::source_fd(fd/*takes ownership*/,path);
+					assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+					return sfo;
+				}
+			}
+		}
+
+		for (auto ipi=cb_include_search_paths.begin();ipi!=cb_include_search_paths.end();ipi++) {
+			std::string path = path_combine(*ipi,t.v.strliteral.makestring()); path_slash_translate(path);
+			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
+				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
+				if (fd >= 0) {
+					sfo = new CIMCC::source_fd(fd/*takes ownership*/,path);
+					assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+					return sfo;
+				}
+			}
+		}
+
+		return NULL;
+	}
+
+	cb_include_search_t cb_include_search = cb_include_search_default;
+
 	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		int r;
 
@@ -3744,8 +3839,20 @@ go_again:
 			goto try_again;
 
 try_again:
-		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-			return r;
+		if (!pst.include_stk.empty()) {
+			CIMCC::pptok_state_t::include_t &i = pst.include_stk.top();
+			if ((r=pptok_lgtok(pst,lst,i.rb,*i.sfo,t)) < 0)
+				return r;
+
+			if (r == 0) {
+				pst.include_pop();
+				goto try_again;
+			}
+		}
+		else {
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+		}
 
 try_again_w_token:
 		switch (t.type) {
@@ -3818,6 +3925,56 @@ try_again_w_token:
 					return r;
 
 				TRY_AGAIN; /* does not fall through */
+			case token_type_t::r_ppinclude: {
+				if (!pst.condb_true())
+					goto try_again;
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type == token_type_t::strliteral) {
+					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
+					if (sfo == NULL) {
+						fprintf(stderr,"Unable to #include \"%s\"\n",t.v.strliteral.makestring().c_str());
+						return errno_return(ENOENT);
+					}
+					pst.include_push(sfo);
+					goto try_again;
+				}
+				else if (t.type == token_type_t::anglestrliteral) {
+					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
+					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
+					if (sfo == NULL) {
+						fprintf(stderr,"Unable to #include <%s>\n",t.v.strliteral.makestring().c_str());
+						return errno_return(ENOENT);
+					}
+					pst.include_push(sfo);
+					goto try_again;
+				}
+				goto try_again_w_token; }
+			case token_type_t::r_ppinclude_next: {
+				if (!pst.condb_true())
+					goto try_again;
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type == token_type_t::strliteral) {
+					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
+					if (sfo == NULL) {
+						fprintf(stderr,"Unable to #include_next \"%s\"\n",t.v.strliteral.makestring().c_str());
+						return errno_return(ENOENT);
+					}
+					pst.include_push(sfo);
+					goto try_again;
+				}
+				else if (t.type == token_type_t::anglestrliteral) {
+					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
+					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
+					if (sfo == NULL) {
+						fprintf(stderr,"Unable to #include_next <%s>\n",t.v.strliteral.makestring().c_str());
+						return errno_return(ENOENT);
+					}
+					pst.include_push(sfo);
+					goto try_again;
+				}
+				goto try_again_w_token; }
 			case token_type_t::identifier: /* macro substitution */
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				if (!pst.condb_true())
