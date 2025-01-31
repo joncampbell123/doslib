@@ -2086,7 +2086,7 @@ private:
 		/* it might be _asm or __asm */
 		if (	(t.v.strliteral.length == 4 && !memcmp(t.v.strliteral.data,"_asm",4)) ||
 			(t.v.strliteral.length == 5 && !memcmp(t.v.strliteral.data,"__asm",5))) {
-			t = token_t(token_type_t(token_type_t::r___asm));
+			t = token_t(token_type_t(token_type_t::r___asm)); t.pos = pos;
 		}
 
 		return 1;
