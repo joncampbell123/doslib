@@ -441,22 +441,21 @@ int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx) {
 		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_4xx;
 	else if (cx->dsp_vmaj == 3)
 		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_3xx;
-	else if (cx->dsp_vmaj == 2 && cx->dsp_vmin >= 1) {
-		/* Gravis SBOS does not do auto-init at all.
-		   Gravis MEGA-EM will fucking hang the computer and gripe
-		   about "unknown DSP command 1Ch" despite reporting itself
-		   as DSP v2.1 (EMUSET -X2). So don't do it! */
-		if (cx->sbos || cx->mega_em)
-			cx->dsp_play_method = SNDSB_DSPOUTMETHOD_1xx;
-		else
-			cx->dsp_play_method = SNDSB_DSPOUTMETHOD_201;
-	}
+	else if (cx->dsp_vmaj == 2 && cx->dsp_vmin >= 1)
+		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_201;
 	else if (cx->dsp_vmaj == 2)
 		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_200;
 	else if (cx->dsp_vmaj == 1)
 		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_1xx;
 	else
 		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_DIRECT;
+
+	/* Gravis SBOS does not do auto-init at all.
+	   Gravis MEGA-EM will fucking hang the computer and gripe
+	   about "unknown DSP command 1Ch" despite reporting itself
+	   as DSP v2.1 (EMUSET -X2). So don't do it! */
+	if ((cx->sbos || cx->mega_em) && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200)
+		cx->dsp_play_method = SNDSB_DSPOUTMETHOD_1xx;
 
 	return 1;
 }
