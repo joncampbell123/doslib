@@ -235,8 +235,8 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx) {
 		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
 	}
 
-	/* DSP 2xx and earlier do not have auto-init commands */
-	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
+	/* DSP 1.xx do not have auto-init commands. DSP 2.00, 2.01 and higher have auto-init. */
+	if (cx->dsp_vmaj < 2)
 		cx->dsp_autoinit_command = cx->dsp_autoinit_dma = 0;
 
 	/* if we did not obtain an IRQ, and we are not using auto-init mode, then we can
