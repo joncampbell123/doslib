@@ -3641,46 +3641,131 @@ try_again:	t = token_t();
 		}
 
 		std::vector< std::vector<token_t> > params;
-		std::vector< std::string > params_str;
+		std::vector< rbuf > params_str;
 
 		if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
-			std::vector<token_t> arg;
-			unsigned int paren = 0;
-
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::openparenthesis)
 				return errno_return(EINVAL);
 
-			do {
-				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (!pptok_define_allowed_token(t))
-					return errno_return(EINVAL);
+			if (macro->ment.flags & pptok_macro_t::FL_STRINGIFY) {
+				/* parse every arg as a string, then convert to tokens, but preserve the string
+				 * so the code below can properly expand #parameter to string */
 
-				if (t.type == token_type_t::closeparenthesis) {
-					if (paren == 0) {
-						if (!params.empty() || !arg.empty()) {
-							params.push_back(std::move(arg)); arg.clear();
-						}
+				do {
+					eat_whitespace(buf,sfo);
+					if (buf.peekb() == ')') {
+						buf.discardb();
 						break;
 					}
-					else {
-						paren--;
+
+					unsigned int paren = 0;
+					rbuf arg_str;
+
+					/* if you're calling a macro with 4096 chars in it you are using too much, split it up! */
+					if (!arg_str.allocate(4096))
+						return errno_return(ENOMEM);
+
+					do {
+						if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+						if (buf.data_avail() == 0) return errno_return(EINVAL);
+
+						unsigned char c = buf.peekb();
+						if (c == ',' && paren == 0) {
+							buf.discardb();
+							break;
+						}
+
+						/* TODO: string and char constants "str" and 'c',
+						 *       so that you can use parens and commas inside
+						 *       the strings and not break proper parsing. */
+
+						if (c == '(') {
+							paren++;
+						}
+						else if (c == ')') {
+							if (paren == 0) break; /* leave it for the outer loop */
+							paren--;
+						}
+
+						if (arg_str.end >= arg_str.fence) return errno_return(ENOSPC);
+						*(arg_str.end++) = c;
+						buf.discardb();
+
+						if (c == ' ') eat_whitespace(buf,sfo);
+					} while (1);
+
+					while (arg_str.end > arg_str.data && is_whitespace(*(arg_str.end-1)))
+						arg_str.end--;
+
+					params_str.push_back(std::move(arg_str));
+				} while (1);
+
+#if 0//DEBUG
+				fprintf(stderr,"  Parameters filled in at call (stringify):\n");
+				for (auto i=params_str.begin();i!=params_str.end();i++) {
+					assert((*i).data != NULL);
+					fprintf(stderr,"    [%u]\n",(unsigned int)(i-params_str.begin()));
+					fprintf(stderr,"      \"");
+					fwrite((*i).data,(*i).data_avail(),1,stderr);
+					fprintf(stderr,"\"\n");
+				}
+#endif
+
+				for (auto i=params_str.begin();i!=params_str.end();i++) {
+					source_file_object subsfo;
+					std::vector<token_t> arg;
+					auto &subbuf = *i;
+
+					eat_whitespace(subbuf,subsfo);
+					while (subbuf.data_avail() > 0) {
+						if ((r=pptok_lgtok(pst,lst,subbuf,subsfo,t)) < 1)
+							return r;
+						if (!pptok_define_allowed_token(t))
+							return errno_return(EINVAL);
+
+						arg.push_back(std::move(t));
+						eat_whitespace(subbuf,subsfo);
+					}
+
+					params.push_back(std::move(arg));
+				}
+			}
+			else {
+				std::vector<token_t> arg;
+				unsigned int paren = 0;
+
+				do {
+					if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+						return r;
+					if (!pptok_define_allowed_token(t))
+						return errno_return(EINVAL);
+
+					if (t.type == token_type_t::closeparenthesis) {
+						if (paren == 0) {
+							if (!params.empty() || !arg.empty()) {
+								params.push_back(std::move(arg)); arg.clear();
+							}
+							break;
+						}
+						else {
+							paren--;
+							arg.push_back(std::move(t));
+						}
+					}
+					else if (t.type == token_type_t::openparenthesis) {
+						paren++;
 						arg.push_back(std::move(t));
 					}
-				}
-				else if (t.type == token_type_t::openparenthesis) {
-					paren++;
-					arg.push_back(std::move(t));
-				}
-				else if (t.type == token_type_t::comma && paren == 0) {
-					params.push_back(std::move(arg)); arg.clear();
-				}
-				else {
-					arg.push_back(std::move(t));
-				}
-			} while (1);
+					else if (t.type == token_type_t::comma && paren == 0) {
+						params.push_back(std::move(arg)); arg.clear();
+					}
+					else {
+						arg.push_back(std::move(t));
+					}
+				} while (1);
+			}
 
 #if 0//DEBUG
 			fprintf(stderr,"  Parameters filled in at call:\n");
