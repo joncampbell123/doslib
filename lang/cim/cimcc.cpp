@@ -3653,6 +3653,12 @@ try_again:	t = token_t();
 				/* parse every arg as a string, then convert to tokens, but preserve the string
 				 * so the code below can properly expand #parameter to string */
 
+				/* NTS: #__VA_ARGS__ is valid, and it stringifies into every parameter past the
+				 *      last named parameter INCLUDING the commas!
+				 *
+				 *      i.e. #define XYZ(a,...) #a #__VA_ARGS__
+				 *           XYZ(a,b,c,d) would become "ab,c,d" */
+
 				do {
 					eat_whitespace(buf,sfo);
 					if (buf.peekb() == ')') {
@@ -3660,8 +3666,13 @@ try_again:	t = token_t();
 						break;
 					}
 
+					bool allow_commas = false;
 					unsigned int paren = 0;
 					rbuf arg_str;
+
+					/* Apparently in variadic macros, #__VA_ARGS__ expands to the extra parameters INCLUDING commas */
+					if ((macro->ment.flags & pptok_macro_t::FL_VARIADIC) && params_str.size() >= macro->ment.parameters.size())
+						allow_commas = true;
 
 					/* if you're calling a macro with 4096 chars in it you are using too much, split it up! */
 					if (!arg_str.allocate(4096))
@@ -3672,7 +3683,7 @@ try_again:	t = token_t();
 						if (buf.data_avail() == 0) return errno_return(EINVAL);
 
 						unsigned char c = buf.peekb();
-						if (c == ',' && paren == 0) {
+						if (c == ',' && paren == 0 && !allow_commas) {
 							buf.discardb();
 							break;
 						}

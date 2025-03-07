@@ -715,3 +715,16 @@ XYZ1((a) ( b ))
 XYZ1( (a)  ( b )   )
 XYZ1( #define #if something )
 
+#define XYZ2(a,b) #a #b
+XYZ2(a,b)
+XYZ2(a a,b b)
+
+#define XYZ3(a,...) #a #__VA_ARGS__
+XYZ3(a)
+XYZ3(a,b)
+XYZ3(a,b,c,d,e,f,g)
+
+#define XYZ4(a,b,...) #a #b #__VA_ARGS__
+XYZ4(a,b)
+XYZ4(a,b,c,d,e,f,g)
+
