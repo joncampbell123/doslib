@@ -3916,6 +3916,11 @@ go_again:
 						for (auto j=param.begin();j!=param.end();j++)
 							out.push_back(*j);
 					}
+					else if (current.type == token_type_t::r___VA_OPT__) {
+						/* GCC doesn't allow it, neither do we */
+						fprintf(stderr,"You can't use __VA_OPT__ inside __VA_OPT__\n");
+						return errno_return(EINVAL);
+					}
 					else {
 						if (do_copy) out.push_back(current);
 					}
