@@ -3885,6 +3885,12 @@ go_again:
 						sparen++;
 						if (do_copy) out.push_back(current);
 					}
+					else if (current.type == token_type_t::r_macro_paramref) {
+						assert(current.v.paramref < params.size());
+						const auto &param = params[current.v.paramref];
+						for (auto j=param.begin();j!=param.end();j++)
+							out.push_back(*j);
+					}
 					else {
 						if (do_copy) out.push_back(current);
 					}

@@ -728,3 +728,11 @@ XYZ3(a,b,c,d,e,f,g)
 XYZ4(a,b)
 XYZ4(a,b,c,d,e,f,g)
 
+#define XYZ5(a,b,...) #a #b __VA_OPT__(a) #__VA_ARGS__
+XYZ5(a,b)
+XYZ5(a,b,c,d,e,f,g)
+
+#define XYZ6(a,b,...) #a #b __VA_OPT__(#a) #__VA_ARGS__
+XYZ6(a,b)
+XYZ6(a,b,c,d,e,f,g)
+
