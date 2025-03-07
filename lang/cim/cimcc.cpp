@@ -4074,6 +4074,13 @@ try_again:
 
 try_again_w_token:
 		switch (t.type) {
+			case token_type_t::r___LINE__:
+				if (!pst.condb_true())
+					goto try_again;
+				t.type = token_type_t::integer;
+				t.v.integer.init();
+				t.v.integer.v.u = t.pos.row;
+				break;
 			case token_type_t::r_ppdefine:
 				if (!pst.condb_true())
 					goto try_again;
