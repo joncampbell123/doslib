@@ -702,3 +702,13 @@ __func__
 hello();
 hello_again(12345);
 
+#define XYZ1(a) #a
+XYZ1(a)
+XYZ1((a))
+XYZ1( a )
+XYZ1( ( a ) )
+XYZ1(a b)
+XYZ1(a b c d 1 2 3 4)
+XYZ1((a) ( b ))
+XYZ1( (a)  ( b )   )
+

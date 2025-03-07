@@ -2600,6 +2600,7 @@ try_again:	t = token_t();
 		static constexpr unsigned int	FL_PARENTHESIS = 1u << 0u;
 		static constexpr unsigned int	FL_VARIADIC = 1u << 1u;
 		static constexpr unsigned int	FL_NO_VA_ARGS = 1u << 2u; /* set if GNU args... used instead */
+		static constexpr unsigned int	FL_STRINGIFY = 1u << 3u; /* uses #parameter to stringify */
 	};
 
 	struct pptok_state_t {
@@ -3552,6 +3553,9 @@ try_again:	t = token_t();
 				/* if the identifier matches a paraemeter then put in a parameter reference,
 				 * else pass the identifier along. */
 
+				if (!macro.tokens.empty() && macro.tokens[macro.tokens.size()-1u].type == token_type_t::pound)
+					macro.flags |= pptok_macro_t::FL_STRINGIFY;
+
 				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == t.v.strliteral) {
 					/* GNU args... variadic convert to __VA_ARGS__ */
 					t = token_t(token_type_t::r___VA_ARGS__);
@@ -3600,6 +3604,7 @@ try_again:	t = token_t();
 		if (macro.flags & pptok_macro_t::FL_PARENTHESIS) fprintf(stderr," PARENTHESIS");
 		if (macro.flags & pptok_macro_t::FL_VARIADIC) fprintf(stderr," VARIADIC");
 		if (macro.flags & pptok_macro_t::FL_NO_VA_ARGS) fprintf(stderr," NO_VA_ARGS");
+		if (macro.flags & pptok_macro_t::FL_STRINGIFY) fprintf(stderr," STRINGIFY");
 		fprintf(stderr,"\n");
 		fprintf(stderr,"  parameters:\n");
 		for (auto i=macro.parameters.begin();i!=macro.parameters.end();i++)
@@ -3636,6 +3641,7 @@ try_again:	t = token_t();
 		}
 
 		std::vector< std::vector<token_t> > params;
+		std::vector< std::string > params_str;
 
 		if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
 			std::vector<token_t> arg;
@@ -3688,8 +3694,7 @@ try_again:	t = token_t();
 
 			if (params.size() < macro->ment.parameters.size())
 				return errno_return(EPIPE);
-			if (params.size() > macro->ment.parameters.size() &&
-					!(macro->ment.flags & pptok_macro_t::FL_VARIADIC))
+			if (params.size() > macro->ment.parameters.size() && !(macro->ment.flags & pptok_macro_t::FL_VARIADIC))
 				return errno_return(E2BIG);
 #endif
 		}
