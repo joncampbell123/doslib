@@ -3741,6 +3741,7 @@ try_again:	t = token_t();
 					}
 
 					params.push_back(std::move(arg));
+					subbuf.data = subbuf.base;
 				}
 			}
 			else {
@@ -3799,6 +3800,57 @@ try_again:	t = token_t();
 		std::vector<token_t> out;
 		for (auto i=macro->ment.tokens.begin();i!=macro->ment.tokens.end();i++) {
 go_again:
+			/* check for macro param stringification */
+			if ((*i).type == token_type_t::pound) {
+				auto i2 = i; i2++; /* assume i != macro->ment.tokens.end() */
+				if (i2 != macro->ment.tokens.end()) {
+					if ((*i2).type == token_type_t::r_macro_paramref) {
+						/* #param stringification */
+						i++; /* step forward to ref */
+						assert((*i).v.paramref < params_str.size());
+						const auto &rb = params_str[(*i).v.paramref];
+
+						if (rb.data_avail() > 0) {
+							token_t st;
+							st.type = token_type_t::strliteral;
+							st.v.strliteral.init();
+
+							if (!st.v.strliteral.alloc(rb.data_avail()))
+								return errno_return(ENOMEM);
+
+							assert(st.v.strliteral.length == rb.data_avail());
+							memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+							out.push_back(std::move(st));
+						}
+
+						continue;
+					}
+					else if ((*i2).type == token_type_t::r___VA_ARGS__) {
+						/* #__VA_ARGS__ stringification */
+						i++; /* step forward to ref */
+
+						if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
+							for (size_t pi=macro->ment.parameters.size();pi < params_str.size();pi++) {
+								const auto &rb = params_str[pi];
+								token_t st;
+
+								st.type = token_type_t::strliteral;
+								st.v.strliteral.init();
+
+								if (!st.v.strliteral.alloc(rb.data_avail()))
+									return errno_return(ENOMEM);
+
+								assert(st.v.strliteral.length == rb.data_avail());
+								memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+								out.push_back(std::move(st));
+							}
+
+							continue;
+						}
+					}
+				}
+			}
+
 			if ((*i).type == token_type_t::r_macro_paramref) {
 				assert((*i).v.paramref < params.size());
 				const auto &param = params[(*i).v.paramref];
