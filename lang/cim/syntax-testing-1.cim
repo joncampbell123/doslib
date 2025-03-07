@@ -735,4 +735,8 @@ XYZ5(a,b,c,d,e,f,g)
 #define XYZ6(a,b,...) #a #b __VA_OPT__(#a "x" #b) #__VA_ARGS__
 XYZ6(a,b)
 XYZ6(a,b,c,d,e,f,g)
+XYZ6("a",b)
+XYZ6("\\",b)
+XYZ6("\"",b)
+XYZ6("a\tb\nc",b)
 

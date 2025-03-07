@@ -3689,9 +3689,38 @@ try_again:	t = token_t();
 							break;
 						}
 
-						/* TODO: string and char constants "str" and 'c',
-						 *       so that you can use parens and commas inside
-						 *       the strings and not break proper parsing. */
+						/* string constants are copied as-is and then stringified like that,
+						 * except that within strings, comma and parens are part of the string,
+						 * however escapes like \t and \n are also stringified as-is HOWEVER
+						 * the backslash even if copied still works as an escape i.e you can
+						 * use \" to put \" in the stringified string without closing the string. */
+						if (c == '\"' || c == '\'') {
+							const unsigned char ec = c;
+							if (arg_str.end >= arg_str.fence) return errno_return(ENOSPC);
+							*(arg_str.end++) = c;
+							buf.discardb();
+
+							do {
+								if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+								if (buf.data_avail() == 0) return errno_return(EINVAL);
+								c = buf.getb();
+								if (arg_str.end >= arg_str.fence) return errno_return(ENOSPC);
+								*(arg_str.end++) = c;
+
+								if (c == ec) {
+									break;
+								}
+								else if (c == '\\') {
+									if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+									if (buf.data_avail() == 0) return errno_return(EINVAL);
+									c = buf.getb();
+									if (arg_str.end >= arg_str.fence) return errno_return(ENOSPC);
+									*(arg_str.end++) = c;
+								}
+							} while (1);
+
+							continue;
+						}
 
 						if (c == '(') {
 							paren++;
