@@ -3678,6 +3678,7 @@ try_again:	t = token_t();
 					if (!arg_str.allocate(4096))
 						return errno_return(ENOMEM);
 
+					arg_str.pos = buf.pos;
 					do {
 						if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
 						if (buf.data_avail() == 0) return errno_return(EINVAL);
@@ -3728,6 +3729,7 @@ try_again:	t = token_t();
 					source_file_object subsfo;
 					std::vector<token_t> arg;
 					auto &subbuf = *i;
+					position_t saved_pos = subbuf.pos;
 
 					eat_whitespace(subbuf,subsfo);
 					while (subbuf.data_avail() > 0) {
@@ -3742,6 +3744,7 @@ try_again:	t = token_t();
 
 					params.push_back(std::move(arg));
 					subbuf.data = subbuf.base;
+					subbuf.pos = saved_pos;
 				}
 			}
 			else {
@@ -3814,6 +3817,7 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.v.strliteral.init();
+							st.pos = rb.pos;
 
 							if (!st.v.strliteral.alloc(rb.data_avail()))
 								return errno_return(ENOMEM);
@@ -3836,6 +3840,7 @@ go_again:
 
 								st.type = token_type_t::strliteral;
 								st.v.strliteral.init();
+								st.pos = rb.pos;
 
 								if (!st.v.strliteral.alloc(rb.data_avail()))
 									return errno_return(ENOMEM);
@@ -3895,6 +3900,7 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.v.strliteral.init();
+							st.pos = rb.pos;
 
 							if (!st.v.strliteral.alloc(rb.data_avail()))
 								return errno_return(ENOMEM);
