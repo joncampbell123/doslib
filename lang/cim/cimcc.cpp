@@ -2095,6 +2095,8 @@ private:
 	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		position_t pos = t.pos;
 
+		(void)lst;
+
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::identifier;
 		t.v.strliteral.init();
@@ -2186,11 +2188,6 @@ private:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token)); t.pos = pos;
-						if (t.type == token_type_t::r___asm) {
-							lst.flags |= lgtok_state_t::FL_MSASM;
-							lst.curlies = 0;
-						}
-
 						return 1;
 					}
 				}
@@ -2398,195 +2395,330 @@ try_again:	t = token_t();
 		const unsigned int lst_was_flags = lst.flags & lgtok_state_t::FL_NEWLINE;
 		lst.flags &= ~lst_was_flags;
 
-		switch (buf.peekb()) {
-			case '+':
-				t.type = token_type_t::plus; buf.discardb();
-				if (buf.peekb() == '+') { t.type = token_type_t::plusplus; buf.discardb(); } /* ++ */
-				else if (buf.peekb() == '=') { t.type = token_type_t::plusequals; buf.discardb(); } /* += */
-				break;
-			case '-':
-				t.type = token_type_t::minus; buf.discardb();
-				if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); } /* -- */
-				else if (buf.peekb() == '=') { t.type = token_type_t::minusequals; buf.discardb(); } /* -= */
-				else if (buf.peekb() == '>') {
-					t.type = token_type_t::minusrightanglebracket; buf.discardb(); /* -> */
-					if (buf.peekb() == '*') { t.type = token_type_t::minusrightanglebracketstar; buf.discardb(); } /* ->* */
-				}
-				break;
-			case '*':
-				t.type = token_type_t::star; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::starequals; buf.discardb(); } /* *= */
-				break;
-			case '/':
-				t.type = token_type_t::forwardslash; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::forwardslashequals; buf.discardb(); } /* /= */
-				else if (buf.peekb() == '*') { buf.discardb(2); eat_c_comment(1,buf,sfo); goto try_again; }
-				else if (buf.peekb() == '/') { buf.discardb(2); eat_cpp_comment(buf,sfo); goto try_again; }
-				break;
-			case '%':
-				t.type = token_type_t::percent; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::percentequals; buf.discardb(); } /* %= */
-				break;
-			case '!':
-				t.type = token_type_t::exclamation; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::exclamationequals; buf.discardb(); } /* != */
-				break;
-			case '=':
-				t.type = token_type_t::equal; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::equalequal; buf.discardb(); } /* == */
-				break;
-			case ';':
-				t.type = token_type_t::semicolon; buf.discardb();
-				break;
-			case '~':
-				t.type = token_type_t::tilde; buf.discardb();
-				break;
-			case '?':
-				t.type = token_type_t::question; buf.discardb();
-				break;
-			case ':':
-				t.type = token_type_t::colon; buf.discardb();
-				if (buf.peekb() == ':') { t.type = token_type_t::coloncolon; buf.discardb(); } /* :: */
-				break;
-			case '^':
-				t.type = token_type_t::caret; buf.discardb();
-				if (buf.peekb() == '=') { t.type = token_type_t::caretequals; buf.discardb(); } /* ^= */
-				break;
-			case '&':
-				t.type = token_type_t::ampersand; buf.discardb();
-				if (buf.peekb() == '&') { t.type = token_type_t::ampersandampersand; buf.discardb(); } /* && */
-				else if (buf.peekb() == '=') { t.type = token_type_t::ampersandequals; buf.discardb(); } /* &= */
-				break;
-			case '|':
-				t.type = token_type_t::pipe; buf.discardb();
-				if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); } /* || */
-				else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); } /* |= */
-				break;
-			case '.':
-				if (lst.flags & lgtok_state_t::FL_MSASM) {
-					/* ASM directives like .386p .flat, etc */
-					return lgtok_asm_text(lst,buf,sfo,t);
-				}
-				else {
+		if (lst.flags & lgtok_state_t::FL_MSASM) {
+			switch (buf.peekb()) {
+				case '+':
+					t.type = token_type_t::plus; buf.discardb();
+					break;
+				case '-':
+					t.type = token_type_t::minus; buf.discardb();
+					break;
+				case '*':
+					t.type = token_type_t::star; buf.discardb();
+					break;
+				case '/':
+					t.type = token_type_t::forwardslash; buf.discardb();
+					break;
+				case '%':
+					t.type = token_type_t::percent; buf.discardb();
+					break;
+				case '!':
+					t.type = token_type_t::exclamation; buf.discardb();
+					break;
+				case '=':
+					t.type = token_type_t::equal; buf.discardb();
+					break;
+				case ';':
+					t.type = token_type_t::semicolon; buf.discardb();
+					break;
+				case '~':
+					t.type = token_type_t::tilde; buf.discardb();
+					break;
+				case '?':
+					t.type = token_type_t::question; buf.discardb();
+					break;
+				case ':':
+					t.type = token_type_t::colon; buf.discardb();
+					break;
+				case '^':
+					t.type = token_type_t::caret; buf.discardb();
+					break;
+				case '&':
+					t.type = token_type_t::ampersand; buf.discardb();
+					break;
+				case '|':
+					t.type = token_type_t::pipe; buf.discardb();
+					break;
+				case '.':
 					t.type = token_type_t::period; buf.discardb();
-					if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
-					else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
-				}
-				break;
-			case ',':
-				t.type = token_type_t::comma; buf.discardb();
-				break;
-			case '[':
-				t.type = token_type_t::opensquarebracket; buf.discardb();
-				if (buf.peekb() == '[') { t.type = token_type_t::opensquarebracketopensquarebracket; buf.discardb(); } /* [[ */
-				break;
-			case ']':
-				t.type = token_type_t::closesquarebracket; buf.discardb();
-				if (buf.peekb() == ']') { t.type = token_type_t::closesquarebracketclosesquarebracket; buf.discardb(); } /* ]] */
-				break;
-			case '{':
-				t.type = token_type_t::opencurlybracket; buf.discardb();
-				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					break;
+				case ',':
+					t.type = token_type_t::comma; buf.discardb();
+					break;
+				case '[':
+					t.type = token_type_t::opensquarebracket; buf.discardb();
+					break;
+				case ']':
+					t.type = token_type_t::closesquarebracket; buf.discardb();
+					break;
+				case '{':
+					t.type = token_type_t::opencurlybracket; buf.discardb();
 					lst.curlies++;
-				}
-				break;
-			case '}':
-				t.type = token_type_t::closecurlybracket; buf.discardb();
-				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					break;
+				case '}':
+					t.type = token_type_t::closecurlybracket; buf.discardb();
+					if (lst.curlies == 0)
+						return errno_return(EINVAL);
 					if (--lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
-				}
-				break;
-			case '(':
-				t.type = token_type_t::openparenthesis; buf.discardb();
-				break;
-			case ')':
-				t.type = token_type_t::closeparenthesis; buf.discardb();
-				break;
-			case '<':
-				if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
-					if (looks_like_arrowstr(buf,sfo))
-						return lgtok_charstrlit(buf,sfo,t);
-				}
+					break;
+				case '(':
+					t.type = token_type_t::openparenthesis; buf.discardb();
+					break;
+				case ')':
+					t.type = token_type_t::closeparenthesis; buf.discardb();
+					break;
+				case '<':
+					t.type = token_type_t::lessthan; buf.discardb();
+					break;
+				case '>':
+					t.type = token_type_t::greaterthan; buf.discardb();
+					break;
+				case '\'':
+				case '\"':
+					return lgtok_charstrlit(buf,sfo,t);
+				case '\\':
+					t.type = token_type_t::backslash; buf.discardb();
+					break;
+				case '#':
+					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
+						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
+							return r;
 
-				t.type = token_type_t::lessthan; buf.discardb();
-				if (buf.peekb() == '<') {
-					t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
-					if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
-				}
-				else if (buf.peekb() == '=') {
-					t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
-					if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
-				}
-				break;
-			case '>':
-				t.type = token_type_t::greaterthan; buf.discardb();
-				if (buf.peekb() == '>') {
-					t.type = token_type_t::greaterthangreaterthan; buf.discardb(); /* >> */
-					if (buf.peekb() == '=') { t.type = token_type_t::greaterthangreaterthanequals; buf.discardb(); } /* >>= */
-				}
-				else if (buf.peekb() == '=') {
-					t.type = token_type_t::greaterthanequals; buf.discardb(); /* >= */
-				}
-				break;
-			case '\'':
-			case '\"':
-				return lgtok_charstrlit(buf,sfo,t);
-			case '\\':
-				buf.discardb();
-				t.type = token_type_t::backslash;
-				if (is_newline(buf.peekb())) {
-					buf.discardb();
-					t.type = token_type_t::backslashnewline;
-				}
-				break;
-			case '#':
-				if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-					if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
-						return r;
+						if (	t.type == token_type_t::r_ppinclude ||
+							t.type == token_type_t::r_ppinclude_next ||
+							t.type == token_type_t::r_ppembed) {
+							lst.flags |= lgtok_state_t::FL_ARROWSTR;
+						}
 
-					if (	t.type == token_type_t::r_ppinclude ||
-						t.type == token_type_t::r_ppinclude_next ||
-						t.type == token_type_t::r_ppdefine ||
-						t.type == token_type_t::r_ppembed) {
-						lst.flags |= lgtok_state_t::FL_ARROWSTR;
+						return 1;
 					}
-
-					return 1;
-				}
-				else {
-					t.type = token_type_t::pound; buf.discardb();
-					if (buf.peekb() == '#') { t.type = token_type_t::poundpound; buf.discardb(); } /* ## */
-				}
-				break;
-			case '\r':
-				buf.discardb();
-				if (buf.peekb() != '\n') break;
-				/* fall through */
-			case '\n':
-				buf.discardb();
-				t.type = token_type_t::newline;
-				lst.flags |= lgtok_state_t::FL_NEWLINE;
-				if (lst.flags & lgtok_state_t::FL_MSASM) {
+					else {
+						t.type = token_type_t::pound; buf.discardb();
+					}
+					break;
+				case '\r':
+					buf.discardb();
+					if (buf.peekb() != '\n') break;
+					/* fall through */
+				case '\n':
+					buf.discardb();
+					t.type = token_type_t::newline;
+					lst.flags |= lgtok_state_t::FL_NEWLINE;
 					if (lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
-				}
-				if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
-					if (lst.curlies == 0)
-						lst.flags &= ~lgtok_state_t::FL_ARROWSTR;
-				}
+					break;
+				case '0': case '1': case '2': case '3': case '4':
+				case '5': case '6': case '7': case '8': case '9':
+					return lgtok_number(buf,sfo,t);
+				default:
+					if (is_asm_text_first_char(buf.peekb()))
+						return lgtok_asm_text(lst,buf,sfo,t);
+					else
+						return errno_return(ESRCH);
+					break;
+			}
+		}
+		else {
+			switch (buf.peekb()) {
+				case '+':
+					t.type = token_type_t::plus; buf.discardb();
+					if (buf.peekb() == '+') { t.type = token_type_t::plusplus; buf.discardb(); } /* ++ */
+					else if (buf.peekb() == '=') { t.type = token_type_t::plusequals; buf.discardb(); } /* += */
+					break;
+				case '-':
+					t.type = token_type_t::minus; buf.discardb();
+					if (buf.peekb() == '-') { t.type = token_type_t::minusminus; buf.discardb(); } /* -- */
+					else if (buf.peekb() == '=') { t.type = token_type_t::minusequals; buf.discardb(); } /* -= */
+					else if (buf.peekb() == '>') {
+						t.type = token_type_t::minusrightanglebracket; buf.discardb(); /* -> */
+						if (buf.peekb() == '*') { t.type = token_type_t::minusrightanglebracketstar; buf.discardb(); } /* ->* */
+					}
+					break;
+				case '*':
+					t.type = token_type_t::star; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::starequals; buf.discardb(); } /* *= */
+					break;
+				case '/':
+					t.type = token_type_t::forwardslash; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::forwardslashequals; buf.discardb(); } /* /= */
+					else if (buf.peekb() == '*') { buf.discardb(2); eat_c_comment(1,buf,sfo); goto try_again; }
+					else if (buf.peekb() == '/') { buf.discardb(2); eat_cpp_comment(buf,sfo); goto try_again; }
+					break;
+				case '%':
+					t.type = token_type_t::percent; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::percentequals; buf.discardb(); } /* %= */
+					break;
+				case '!':
+					t.type = token_type_t::exclamation; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::exclamationequals; buf.discardb(); } /* != */
+					break;
+				case '=':
+					t.type = token_type_t::equal; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::equalequal; buf.discardb(); } /* == */
+					break;
+				case ';':
+					t.type = token_type_t::semicolon; buf.discardb();
+					break;
+				case '~':
+					t.type = token_type_t::tilde; buf.discardb();
+					break;
+				case '?':
+					t.type = token_type_t::question; buf.discardb();
+					break;
+				case ':':
+					t.type = token_type_t::colon; buf.discardb();
+					if (buf.peekb() == ':') { t.type = token_type_t::coloncolon; buf.discardb(); } /* :: */
+					break;
+				case '^':
+					t.type = token_type_t::caret; buf.discardb();
+					if (buf.peekb() == '=') { t.type = token_type_t::caretequals; buf.discardb(); } /* ^= */
+					break;
+				case '&':
+					t.type = token_type_t::ampersand; buf.discardb();
+					if (buf.peekb() == '&') { t.type = token_type_t::ampersandampersand; buf.discardb(); } /* && */
+					else if (buf.peekb() == '=') { t.type = token_type_t::ampersandequals; buf.discardb(); } /* &= */
+					break;
+				case '|':
+					t.type = token_type_t::pipe; buf.discardb();
+					if (buf.peekb() == '|') { t.type = token_type_t::pipepipe; buf.discardb(); } /* || */
+					else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); } /* |= */
+					break;
+				case '.':
+					if (lst.flags & lgtok_state_t::FL_MSASM) {
+						/* ASM directives like .386p .flat, etc */
+						return lgtok_asm_text(lst,buf,sfo,t);
+					}
+					else {
+						t.type = token_type_t::period; buf.discardb();
+						if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
+						else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
+					}
+					break;
+				case ',':
+					t.type = token_type_t::comma; buf.discardb();
+					break;
+				case '[':
+					t.type = token_type_t::opensquarebracket; buf.discardb();
+					if (buf.peekb() == '[') { t.type = token_type_t::opensquarebracketopensquarebracket; buf.discardb(); } /* [[ */
+					break;
+				case ']':
+					t.type = token_type_t::closesquarebracket; buf.discardb();
+					if (buf.peekb() == ']') { t.type = token_type_t::closesquarebracketclosesquarebracket; buf.discardb(); } /* ]] */
+					break;
+				case '{':
+					t.type = token_type_t::opencurlybracket; buf.discardb();
+					if (lst.flags & lgtok_state_t::FL_MSASM) {
+						lst.curlies++;
+					}
+					break;
+				case '}':
+					t.type = token_type_t::closecurlybracket; buf.discardb();
+					if (lst.flags & lgtok_state_t::FL_MSASM) {
+						if (--lst.curlies == 0)
+							lst.flags &= ~lgtok_state_t::FL_MSASM;
+					}
+					break;
+				case '(':
+					t.type = token_type_t::openparenthesis; buf.discardb();
+					break;
+				case ')':
+					t.type = token_type_t::closeparenthesis; buf.discardb();
+					break;
+				case '<':
+					if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
+						if (looks_like_arrowstr(buf,sfo))
+							return lgtok_charstrlit(buf,sfo,t);
+					}
 
-				break;
-			case '0': case '1': case '2': case '3': case '4':
-			case '5': case '6': case '7': case '8': case '9':
-				return lgtok_number(buf,sfo,t);
-			default:
-				if ((lst.flags & lgtok_state_t::FL_MSASM) && is_asm_text_first_char(buf.peekb()))
-					return lgtok_asm_text(lst,buf,sfo,t);
-				else if (is_identifier_first_char(buf.peekb()))
-					return lgtok_identifier(lst,buf,sfo,t);
-				else
-					return errno_return(ESRCH);
+					t.type = token_type_t::lessthan; buf.discardb();
+					if (buf.peekb() == '<') {
+						t.type = token_type_t::lessthanlessthan; buf.discardb(); /* << */
+						if (buf.peekb() == '=') { t.type = token_type_t::lessthanlessthanequals; buf.discardb(); } /* <<= */
+					}
+					else if (buf.peekb() == '=') {
+						t.type = token_type_t::lessthanequals; buf.discardb(); /* <= */
+						if (buf.peekb() == '>') { t.type = token_type_t::lessthanequalsgreaterthan; buf.discardb(); } /* <=> */
+					}
+					break;
+				case '>':
+					t.type = token_type_t::greaterthan; buf.discardb();
+					if (buf.peekb() == '>') {
+						t.type = token_type_t::greaterthangreaterthan; buf.discardb(); /* >> */
+						if (buf.peekb() == '=') { t.type = token_type_t::greaterthangreaterthanequals; buf.discardb(); } /* >>= */
+					}
+					else if (buf.peekb() == '=') {
+						t.type = token_type_t::greaterthanequals; buf.discardb(); /* >= */
+					}
+					break;
+				case '\'':
+				case '\"':
+					return lgtok_charstrlit(buf,sfo,t);
+				case '\\':
+					buf.discardb();
+					t.type = token_type_t::backslash;
+					if (is_newline(buf.peekb())) {
+						buf.discardb();
+						t.type = token_type_t::backslashnewline;
+					}
+					break;
+				case '#':
+					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
+						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
+							return r;
+
+						if (	t.type == token_type_t::r_ppinclude ||
+							t.type == token_type_t::r_ppinclude_next ||
+							t.type == token_type_t::r_ppembed) {
+							lst.flags |= lgtok_state_t::FL_ARROWSTR;
+						}
+
+						return 1;
+					}
+					else {
+						t.type = token_type_t::pound; buf.discardb();
+						if (buf.peekb() == '#') { t.type = token_type_t::poundpound; buf.discardb(); } /* ## */
+					}
+					break;
+				case '\r':
+					buf.discardb();
+					if (buf.peekb() != '\n') break;
+					/* fall through */
+				case '\n':
+					buf.discardb();
+					t.type = token_type_t::newline;
+					lst.flags |= lgtok_state_t::FL_NEWLINE;
+					if (lst.flags & lgtok_state_t::FL_MSASM) {
+						if (lst.curlies == 0)
+							lst.flags &= ~lgtok_state_t::FL_MSASM;
+					}
+					if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
+						if (lst.curlies == 0)
+							lst.flags &= ~lgtok_state_t::FL_ARROWSTR;
+					}
+
+					break;
+				case '0': case '1': case '2': case '3': case '4':
+				case '5': case '6': case '7': case '8': case '9':
+					return lgtok_number(buf,sfo,t);
+				default:
+					if ((lst.flags & lgtok_state_t::FL_MSASM) && is_asm_text_first_char(buf.peekb())) {
+						return lgtok_asm_text(lst,buf,sfo,t);
+					}
+					else if (is_identifier_first_char(buf.peekb())) {
+						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
+							return r;
+
+						if (t.type == token_type_t::r___asm) {
+							lst.flags |= lgtok_state_t::FL_MSASM;
+							lst.curlies = 0;
+						}
+					}
+					else {
+						return errno_return(ESRCH);
+					}
+					break;
+			}
 		}
 
 		return 1;

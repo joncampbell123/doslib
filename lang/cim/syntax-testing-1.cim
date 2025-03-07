@@ -740,3 +740,11 @@ XYZ6("\\",b)
 XYZ6("\"",b)
 XYZ6("a\tb\nc",b)
 
+#define AAA 69
+__asm mov eax,AAA __asm mov eax,[esi+AAA-4]
+
+#define BBB(c) c
+__asm mov eax,BBB(5) __asm mov eax,BBB([esi+4])
+
+#define BBA(a,b) a,b
+__asm mov BBA(eax,BBB(5)) __asm mov BBA([esi+BBB(ebx+5)],BBB(99+3))
