@@ -3885,6 +3885,25 @@ go_again:
 						sparen++;
 						if (do_copy) out.push_back(current);
 					}
+					else if (current.type == token_type_t::pound && i != macro->ment.tokens.end() &&
+						(*i).type == token_type_t::r_macro_paramref) {
+						const auto &pncurrent = (*i); i++;
+						assert(pncurrent.v.paramref < params_str.size());
+						const auto &rb = params_str[pncurrent.v.paramref];
+
+						if (rb.data_avail() > 0) {
+							token_t st;
+							st.type = token_type_t::strliteral;
+							st.v.strliteral.init();
+
+							if (!st.v.strliteral.alloc(rb.data_avail()))
+								return errno_return(ENOMEM);
+
+							assert(st.v.strliteral.length == rb.data_avail());
+							memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+							out.push_back(std::move(st));
+						}
+					}
 					else if (current.type == token_type_t::r_macro_paramref) {
 						assert(current.v.paramref < params.size());
 						const auto &param = params[current.v.paramref];
