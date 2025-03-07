@@ -4081,6 +4081,24 @@ try_again_w_token:
 				t.v.integer.init();
 				t.v.integer.v.u = t.pos.row;
 				break;
+			case token_type_t::r___FILE__:
+				if (!pst.condb_true())
+					goto try_again;
+				t.type = token_type_t::strliteral;
+				t.v.strliteral.init();
+				{
+					const char *name = sfo.getname();
+					if (name) {
+						const size_t l = strlen(name);
+
+						if (!t.v.strliteral.alloc(l))
+							return errno_return(ENOMEM);
+
+						assert(t.v.strliteral.length == l);
+						memcpy(t.v.strliteral.data,name,l);
+					}
+				}
+				break;
 			case token_type_t::r_ppdefine:
 				if (!pst.condb_true())
 					goto try_again;
