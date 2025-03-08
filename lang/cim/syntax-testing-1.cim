@@ -748,3 +748,43 @@ __asm mov eax,BBB(5) __asm mov eax,BBB([esi+4])
 
 #define BBA(a,b) a,b
 __asm mov BBA(eax,BBB(5)) __asm mov BBA([esi+BBB(ebx+5)],BBB(99+3))
+
+#ifdef AAA
+__asm {
+	inc	eax
+	dec	eax
+}
+#endif
+
+__asm inc eax
+#ifdef AAA
+__asm dec eax
+#endif
+
+#define CCC \
+__asm inc ebx __asm inc ecx
+
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+
+#define CCC \
+__asm inc ebx \
+__asm inc ecx
+
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+
+#define CCC \
+__asm { \
+ inc ebx \
+ inc ecx \
+}
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+

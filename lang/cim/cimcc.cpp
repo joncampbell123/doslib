@@ -2486,10 +2486,27 @@ try_again:	t = token_t();
 				case '\"':
 					return lgtok_charstrlit(buf,sfo,t);
 				case '\\':
+					if (is_newline(buf.peekb(1))) {
+						/* stop and switch back to normal tokenizing.
+						 * as far as I know you're not allowed to \n
+						 * __asm blocks like this even within scope.
+						 * doing this allows \n escapes in a #define
+						 * macro */
+						if (lst.curlies == 0) {
+							lst.flags &= ~lgtok_state_t::FL_MSASM;
+							goto try_again;
+						}
+
+						t.type = token_type_t::backslashnewline;
+						buf.discardb(2); /* the '\\' and the newline */
+						return 1;
+					}
+
 					t.type = token_type_t::backslash; buf.discardb();
 					break;
 				case '#':
 					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
+						fprintf(stderr,"Preprocessor directives not allowed in __asm blocks\n");
 						return errno_return(EINVAL); /* NO preprocessor directives allowed inside a __asm block. Open Watcom doesn't allow it either */
 					}
 					else {
