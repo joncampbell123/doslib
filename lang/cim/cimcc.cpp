@@ -4410,6 +4410,28 @@ try_again_w_token:
 		return 1;
 	}
 
+	int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
+		if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+			return r;
+
+		/* it might be a reserved keyword, check */
+		if (t.type == token_type_t::identifier) {
+			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
+				if (t.v.strliteral.length == i2t->len) {
+					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
+						const position_t pos = t.pos;
+						t = token_t(token_type_t(i2t->token)); t.pos = pos;
+						return 1;
+					}
+				}
+			}
+		}
+
+		return 1;
+	}
+
 }
 
 enum test_mode_t {
@@ -4419,7 +4441,8 @@ enum test_mode_t {
 	TEST_RBFGC,    /* rbuf read buffer, getc() */
 	TEST_RBFGCNU,  /* rbuf read buffer, getcnu() (unicode getc) */
 	TEST_LGTOK,    /* lgtok lowest level general tokenizer */
-	TEST_PPTOK     /* pptok preprocessor token processing and macro expansion */
+	TEST_PPTOK,    /* pptok preprocessor token processing and macro expansion */
+	TEST_LCTOK     /* lctok low level C token processing below compiler */
 };
 
 static std::vector<std::string>		main_input_files;
@@ -4427,7 +4450,7 @@ static enum test_mode_t			test_mode = TEST_NONE;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
-	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok|pptok>         Test mode\n");
+	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok|pptok|lctok>         Test mode\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -4460,6 +4483,8 @@ static int parse_argv(int argc,char **argv) {
 					test_mode = TEST_LGTOK;
 				else if (!strcmp(a,"pptok"))
 					test_mode = TEST_PPTOK;
+				else if (!strcmp(a,"lctok"))
+					test_mode = TEST_LCTOK;
 				else if (!strcmp(a,"none"))
 					test_mode = TEST_NONE;
 				else
@@ -4620,6 +4645,25 @@ int main(int argc,char **argv) {
 
 			assert(rb.allocate());
 			while ((r=CIMCC::pptok(pst,lst,rb,*sfo,tok)) > 0) {
+				printf("Token:");
+				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				printf(" %s\n",tok.to_str().c_str());
+			}
+
+			if (r < 0) {
+				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
+				return -1;
+			}
+		}
+		else if (test_mode == TEST_LCTOK) {
+			CIMCC::lgtok_state_t lst;
+			CIMCC::pptok_state_t pst;
+			CIMCC::token_t tok;
+			CIMCC::rbuf rb;
+			int r;
+
+			assert(rb.allocate());
+			while ((r=CIMCC::lctok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
 				printf(" %s\n",tok.to_str().c_str());
