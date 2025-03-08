@@ -4414,12 +4414,12 @@ try_again_w_token:
 
 enum test_mode_t {
 	TEST_NONE=0,
-	TEST_SFO,
-	TEST_RBF,
-	TEST_RBFGC,
-	TEST_RBFGCNU,
-	TEST_LGTOK,
-	TEST_PPTOK
+	TEST_SFO,      /* source file object */
+	TEST_RBF,      /* rbuf read buffer, manual fill */
+	TEST_RBFGC,    /* rbuf read buffer, getc() */
+	TEST_RBFGCNU,  /* rbuf read buffer, getcnu() (unicode getc) */
+	TEST_LGTOK,    /* lgtok lowest level general tokenizer */
+	TEST_PPTOK     /* pptok preprocessor token processing and macro expansion */
 };
 
 static std::vector<std::string>		main_input_files;
