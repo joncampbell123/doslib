@@ -210,6 +210,15 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			source_files[i].refcount++;
 	}
 
+	void source_file_refcount_check(void) {
+		for (size_t i=0;i < source_files.size();i++) {
+			if (source_files[i].refcount != 0) {
+				fprintf(stderr,"Leftover refcount=%u for source '%s'\n",
+					source_files[i].refcount,
+					source_files[i].path.c_str());
+			}
+		}
+	}
 
 	////////////////////////////////////////////////////////////////////
 
@@ -4800,7 +4809,11 @@ int main(int argc,char **argv) {
 		delete sfo;
 	}
 
-	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF || test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU) return 0;
+	CIMCC::source_file_refcount_check();
+
+	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
+		test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU || test_mode == TEST_LGTOK ||
+		test_mode == TEST_PPTOK || test_mode == TEST_LGTOK) return 0;
 
 	return 0;
 }

@@ -697,8 +697,6 @@ you should see this
 __FUNCTION__
 __func__
 
-#line 12345
-
 hello();
 hello_again(12345);
 
@@ -787,4 +785,7 @@ __asm inc eax
 CCC
 __asm inc edx
 #undef CCC
+
+#line 12345
+This should appear line 12345
 
