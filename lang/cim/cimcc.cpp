@@ -2490,14 +2490,7 @@ try_again:	t = token_t();
 					break;
 				case '#':
 					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
-							return r;
-
-						/* only #ifdef, etc. are permitted in __asm blocks */
-						if (!pptok_define_asm_allowed_token(t.type))
-							return errno_return(EINVAL);
-
-						return 1;
+						return errno_return(EINVAL); /* NO preprocessor directives allowed inside a __asm block. Open Watcom doesn't allow it either */
 					}
 					else {
 						t.type = token_type_t::pound; buf.discardb();
