@@ -671,7 +671,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 // __identifiers__ only
 #define DEFXUU(name) static const char str___##name##__[] = "__" #name "__"; static constexpr size_t str___##name##___len = sizeof(str___##name##__) - 1
 // identifiers and/or #identifiers
-#define DEFB(name) static const char str_pp##name[] = "#"#name; static constexpr size_t str_pp##name##_len = sizeof(str_pp##name) - 1; static const char * const str_##name = (str_pp##name)+1; static constexpr size_t str_##name##_len = str_pp##name##_len - 1
+#define DEFB(name) static const char strpp_##name[] = "#"#name; static constexpr size_t strpp_##name##_len = sizeof(strpp_##name) - 1; static const char * const str_##name = (strpp_##name)+1; static constexpr size_t str_##name##_len = strpp_##name##_len - 1
 	DEFX(alignas);
 	DEFX(alignof);
 	DEFX(auto);
@@ -1120,20 +1120,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		str_typename,
 		str_using,				// 125
 		str_wchar_t,
-		str_ppif,
-		str_ppifdef,
-		str_ppdefine,
-		str_ppundef,				// 130
-		str_ppelse,
+		strpp_if,
+		strpp_ifdef,
+		strpp_define,
+		strpp_undef,				// 130
+		strpp_else,
 		"backslash",
-		str_ppelif,
-		str_ppelifdef,
-		str_ppifndef,				// 135
-		str_ppinclude,
-		str_pperror,
-		str_ppwarning,
-		str_ppline,
-		str_pppragma,				// 140
+		strpp_elif,
+		strpp_elifdef,
+		strpp_ifndef,				// 135
+		strpp_include,
+		strpp_error,
+		strpp_warning,
+		strpp_line,
+		strpp_pragma,				// 140
 		"ellipsis",
 		str___LINE__,
 		str___FILE__,
@@ -1194,10 +1194,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"poundpound",
 		"backslashnewline",
 		"macro_paramref",			// 140
-		str_ppendif,
-		str_ppelifndef,
-		str_ppembed,
-		str_ppinclude_next,
+		strpp_endif,
+		strpp_elifndef,
+		strpp_embed,
+		strpp_include_next,
 		"anglestrliteral",			// 145
 		"__func__",
 		"__FUNCTION__"
