@@ -830,8 +830,19 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
 #define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
-	static const ident2token_t ident2tok[] = { // normal tokens
-/*                  123456789 */
+	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time
+		XUU(LINE),
+		XUU(FILE),
+		XUU(VA_OPT),
+		XUU(VA_ARGS),
+		XAS(asm,      asm),
+		XAS(__asm__,  asm),
+		XAS(_asm,     __asm),
+		XAS(__asm,    __asm)
+	};
+	static constexpr size_t ident2tok_pp_length = sizeof(ident2tok_pp) / sizeof(ident2tok_pp[0]);
+
+	static const ident2token_t ident2tok_cc[] = { // normal tokens, compile time
 		X(alignas),
 		X(alignof),
 		X(auto),
@@ -848,7 +859,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(else),
 		X(enum),
 		X(extern),
-		X(false), 
+		X(false),
 		X(float),
 		X(for),
 		X(goto),
@@ -901,10 +912,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(typename),
 		X(using),
 		X(wchar_t),
-		XUU(LINE),
-		XUU(FILE),
-		XUU(VA_OPT),
-		XUU(VA_ARGS),
 		X(intmax_t),
 		X(uintmax_t),
 		X(int8_t),
@@ -950,10 +957,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		X(__fortran),
 		X(__attribute__),
 		X(__declspec),
-		XAS(asm,      asm),
-		XAS(__asm__,  asm),
-		XAS(_asm,     __asm),
-		XAS(__asm,    __asm),
 		XAS(inline,       inline),
 		XAS(_inline,      inline),
 		XAS(__inline,     inline),
@@ -963,7 +966,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XUU(func),
 		XUU(FUNCTION)
 	};
-	static constexpr size_t ident2tok_length = sizeof(ident2tok) / sizeof(ident2tok[0]);
+	static constexpr size_t ident2tok_cc_length = sizeof(ident2tok_cc) / sizeof(ident2tok_cc[0]);
 #undef XUU
 #undef XAS
 #undef X
@@ -2184,7 +2187,7 @@ private:
 			}
 		}
 		else {
-			for (const ident2token_t *i2t=ident2tok;i2t < (ident2tok+ident2tok_length);i2t++) {
+			for (const ident2token_t *i2t=ident2tok_pp;i2t < (ident2tok_pp+ident2tok_pp_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token)); t.pos = pos;
