@@ -830,6 +830,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
 #define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
+#define XPP(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
 	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time
 		XUU(LINE),
 		XUU(FILE),
@@ -967,32 +968,30 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		XUU(FUNCTION)
 	};
 	static constexpr size_t ident2tok_cc_length = sizeof(ident2tok_cc) / sizeof(ident2tok_cc[0]);
-#undef XUU
-#undef XAS
-#undef X
 
-#define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
 	static const ident2token_t ppident2tok[] = { // preprocessor tokens
-/*                  123456789 */
-		X(if),
-		X(ifdef),
-		X(define),
-		X(undef),
-		X(else),
-		X(elif),
-		X(elifdef),
-		X(ifndef),
-		X(include),
-		X(error),
-		X(warning),
-		X(line),
-		X(pragma),
-		X(endif),
-		X(elifndef),
-		X(embed),
-		X(include_next)
+		XPP(if),
+		XPP(ifdef),
+		XPP(define),
+		XPP(undef),
+		XPP(else),
+		XPP(elif),
+		XPP(elifdef),
+		XPP(ifndef),
+		XPP(include),
+		XPP(error),
+		XPP(warning),
+		XPP(line),
+		XPP(pragma),
+		XPP(endif),
+		XPP(elifndef),
+		XPP(embed),
+		XPP(include_next)
 	};
 	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
+#undef XPP
+#undef XUU
+#undef XAS
 #undef X
 
 	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
