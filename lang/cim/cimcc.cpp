@@ -1780,7 +1780,7 @@ private:
 	}
 
 	bool is_asm_text_first_char(unsigned char c) {
-		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 	}
 
 	bool is_asm_text_char(unsigned char c) {
@@ -2364,6 +2364,8 @@ private:
 		return 1;
 	}
 
+	bool pptok_define_asm_allowed_token(const token_t &t);
+
 	/* NTS: This is the LOWEST LEVEL tokenizer.
 	 *      It is never expected to look ahead or buffer tokens.
 	 *      It is expected to always parse tokens from whatever is next in the buffer.
@@ -2440,7 +2442,13 @@ try_again:	t = token_t();
 					t.type = token_type_t::pipe; buf.discardb();
 					break;
 				case '.':
-					t.type = token_type_t::period; buf.discardb();
+					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
+						/* ASM directive i.e. .386p */
+						goto asm_directive;
+					}
+					else {
+						t.type = token_type_t::period; buf.discardb();
+					}
 					break;
 				case ',':
 					t.type = token_type_t::comma; buf.discardb();
@@ -2485,11 +2493,9 @@ try_again:	t = token_t();
 						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
 							return r;
 
-						if (	t.type == token_type_t::r_ppinclude ||
-							t.type == token_type_t::r_ppinclude_next ||
-							t.type == token_type_t::r_ppembed) {
-							lst.flags |= lgtok_state_t::FL_ARROWSTR;
-						}
+						/* only #ifdef, etc. are permitted in __asm blocks */
+						if (!pptok_define_asm_allowed_token(t.type))
+							return errno_return(EINVAL);
 
 						return 1;
 					}
@@ -2508,10 +2514,8 @@ try_again:	t = token_t();
 					if (lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
 					break;
-				case '0': case '1': case '2': case '3': case '4':
-				case '5': case '6': case '7': case '8': case '9':
-					return lgtok_number(buf,sfo,t);
 				default:
+				asm_directive:
 					if (is_asm_text_first_char(buf.peekb()))
 						return lgtok_asm_text(lst,buf,sfo,t);
 					else
@@ -2702,10 +2706,7 @@ try_again:	t = token_t();
 				case '5': case '6': case '7': case '8': case '9':
 					return lgtok_number(buf,sfo,t);
 				default:
-					if ((lst.flags & lgtok_state_t::FL_MSASM) && is_asm_text_first_char(buf.peekb())) {
-						return lgtok_asm_text(lst,buf,sfo,t);
-					}
-					else if (is_identifier_first_char(buf.peekb())) {
+					if (is_identifier_first_char(buf.peekb())) {
 						if ((r=lgtok_identifier(lst,buf,sfo,t)) < 1)
 							return r;
 
@@ -3578,6 +3579,26 @@ try_again:	t = token_t();
 
 		pst.cond_block.pop();
 		return 1;
+	}
+
+	bool pptok_define_asm_allowed_token(const token_t &t) {
+		switch (t.type) {
+			/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
+			 *      even so, make sure! */
+			case token_type_t::r_ppif:
+			case token_type_t::r_ppifdef:
+			case token_type_t::r_ppelse:
+			case token_type_t::r_ppelif:
+			case token_type_t::r_ppelifdef:
+			case token_type_t::r_ppendif:
+			case token_type_t::r_ppifndef:
+			case token_type_t::r_ppelifndef:
+				return false;
+			default:
+				break;
+		}
+
+		return true;
 	}
 
 	bool pptok_define_allowed_token(const token_t &t) {
