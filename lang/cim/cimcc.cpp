@@ -25,6 +25,9 @@
 
 namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
+	static constexpr size_t no_source_file = ~size_t(0);
+	static_assert( ~no_source_file == size_t(0), "oops" );
+
 	static constexpr int errno_return(int e) {
 		return (e >= 0) ? (-e) : (e); /* whether errno values are positive or negative, return as negative */
 	}
@@ -154,6 +157,62 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	////////////////////////////////////////////////////////////////////
 
+	struct source_file_t {
+		std::string		path;
+		uint16_t		refcount = 0;
+
+		bool empty(void) const {
+			return refcount == 0 && path.empty();
+		}
+		void clear(void) {
+			path.clear();
+			refcount = 0;
+		}
+	};
+
+	std::vector<source_file_t> source_files;
+
+	size_t alloc_source_file(const std::string &path) {
+		size_t i=0;
+
+		for (;i < source_files.size();i++) {
+			if (source_files[i].path == path)
+				return i;
+		}
+
+		assert(i == source_files.size());
+
+		{
+			source_file_t nt;
+			nt.path = path;
+			source_files.push_back(std::move(nt));
+		}
+
+		return i;
+	}
+
+	void clear_source_file(const size_t i) {
+		if (i < source_files.size())
+			source_files[i].clear();
+	}
+
+	void release_source_file(const size_t i) {
+		if (i < source_files.size()) {
+			if (source_files[i].refcount > 0)
+				source_files[i].refcount--;
+			if (source_files[i].refcount == 0)
+				clear_source_file(i);
+		}
+	}
+
+	void addref_source_file(const size_t i) {
+		if (i < source_files.size())
+			source_files[i].refcount++;
+	}
+
+
+	////////////////////////////////////////////////////////////////////
+
 	struct rbuf {
 		unsigned char*			base = NULL;
 		unsigned char*			data = NULL;
@@ -165,6 +224,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 		static const unsigned int	PFL_EOF = 1u << 0u;
 
+		size_t				source_file = no_source_file;
+
 		rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
 		~rbuf() { free(); }
 
@@ -173,6 +234,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 		rbuf(rbuf &&x) { common_move(x); }
 		rbuf &operator=(rbuf &&x) { common_move(x); return *this; }
+
+		void set_source_file(const size_t i) {
+			if (i == source_file) return;
+
+			if (source_file != no_source_file) {
+				release_source_file(source_file);
+				source_file = no_source_file;
+			}
+
+			if (i < source_files.size()) {
+				source_file = i;
+				addref_source_file(source_file);
+			}
+		}
 
 		void common_move(rbuf &x) {
 			assert(x.sanity_check());
@@ -183,6 +258,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			flags = x.flags; x.flags = 0;
 			err   = x.err;   x.err = 0;
 			pos   = x.pos;
+			source_file = x.source_file; x.source_file = no_source_file;
 			assert(sanity_check());
 		}
 
@@ -208,6 +284,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 		void free(void) {
 			if (base) {
+				set_source_file(no_source_file);
 				::free((void*)base);
 				base = data = end = fence = NULL;
 			}
@@ -1605,6 +1682,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 		position_t		pos;
+		size_t			source_file = no_source_file; /* index into source file array to indicate token source or -1 */
 
 		token_t() : pos(1) { common_init(); }
 		~token_t() { common_delete(); }
@@ -1613,6 +1691,20 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		token_t(const token_type_t t) : type(t) { common_init(); }
 		token_t &operator=(const token_t &t) { common_copy(t); return *this; }
 		token_t &operator=(token_t &&t) { common_move(t); return *this; }
+
+		void set_source_file(const size_t i) {
+			if (i == source_file) return;
+
+			if (source_file != no_source_file) {
+				release_source_file(source_file);
+				source_file = no_source_file;
+			}
+
+			if (i < source_files.size()) {
+				source_file = i;
+				addref_source_file(source_file);
+			}
+		}
 
 		bool operator==(const token_t &t) const {
 			if (type != t.type)
@@ -1686,6 +1778,8 @@ private:
 				default:
 					break;
 			}
+
+			set_source_file(no_source_file);
 		}
 
 		void common_init(void) {
@@ -1714,6 +1808,8 @@ private:
 			type = x.type;
 			pos = x.pos;
 
+			set_source_file(x.source_file);
+
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
@@ -1732,6 +1828,7 @@ private:
 
 		void common_move(token_t &x) {
 			common_delete();
+			source_file = x.source_file; x.source_file = no_source_file;
 			type = x.type; x.type = token_type_t::none;
 			pos = x.pos; x.pos = position_t();
 			v = x.v; /* x.type == none so pointers no longer matter */
@@ -2068,19 +2165,23 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+				t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
 			else if (t.v.strliteral.length == 1) {
 				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
 		}
@@ -2089,6 +2190,7 @@ private:
 		if (	(t.v.strliteral.length == 4 && !memcmp(t.v.strliteral.data,"_asm",4)) ||
 			(t.v.strliteral.length == 5 && !memcmp(t.v.strliteral.data,"__asm",5))) {
 			t = token_t(token_type_t(token_type_t::r___asm)); t.pos = pos;
+			t.set_source_file(buf.source_file);
 		}
 
 		return 1;
@@ -2157,19 +2259,23 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+				t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
 			else if (t.v.strliteral.length == 1) {
 				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(); t.pos = pos; return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
 		}
@@ -2180,6 +2286,7 @@ private:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token)); t.pos = pos;
+						t.set_source_file(buf.source_file);
 						return 1;
 					}
 				}
@@ -2190,6 +2297,7 @@ private:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						t = token_t(token_type_t(i2t->token)); t.pos = pos;
+						t.set_source_file(buf.source_file);
 						return 1;
 					}
 				}
@@ -2385,6 +2493,7 @@ private:
 		int r;
 
 try_again:	t = token_t();
+		t.set_source_file(buf.source_file);
 
 		eat_whitespace(buf,sfo);
 		t.pos = buf.pos;
@@ -2778,6 +2887,7 @@ try_again:	t = token_t();
 			if (sfo != NULL) {
 				include_t i;
 				i.sfo = sfo;
+				i.rb.set_source_file(alloc_source_file(sfo->getname()));
 				assert(i.rb.allocate());
 				include_stk.push(std::move(i));
 			}
@@ -2786,6 +2896,7 @@ try_again:	t = token_t();
 		void include_pop(void) {
 			if (!include_stk.empty()) {
 				include_t &e = include_stk.top();
+				e.rb.set_source_file(no_source_file);
 				if (e.sfo) delete e.sfo;
 				include_stk.pop();
 			}
@@ -2794,6 +2905,7 @@ try_again:	t = token_t();
 		void include_popall(void) {
 			while (!include_stk.empty()) {
 				include_t &e = include_stk.top();
+				e.rb.set_source_file(no_source_file);
 				if (e.sfo) delete e.sfo;
 				include_stk.pop();
 			}
@@ -3840,10 +3952,11 @@ try_again:	t = token_t();
 						allow_commas = true;
 
 					/* if you're calling a macro with 4096 chars in it you are using too much, split it up! */
+					arg_str.pos = buf.pos;
+					arg_str.set_source_file(buf.source_file);
 					if (!arg_str.allocate(4096))
 						return errno_return(ENOMEM);
 
-					arg_str.pos = buf.pos;
 					do {
 						if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
 						if (buf.data_avail() == 0) return errno_return(EINVAL);
@@ -4010,6 +4123,7 @@ go_again:
 						if (rb.data_avail() > 0) {
 							token_t st;
 							st.type = token_type_t::strliteral;
+							st.set_source_file(rb.source_file);
 							st.v.strliteral.init();
 							st.pos = rb.pos;
 
@@ -4033,6 +4147,7 @@ go_again:
 								token_t st;
 
 								st.type = token_type_t::strliteral;
+								st.set_source_file(rb.source_file);
 								st.v.strliteral.init();
 								st.pos = rb.pos;
 
@@ -4093,6 +4208,7 @@ go_again:
 						if (rb.data_avail() > 0) {
 							token_t st;
 							st.type = token_type_t::strliteral;
+							st.set_source_file(rb.source_file);
 							st.v.strliteral.init();
 							st.pos = rb.pos;
 
@@ -4421,7 +4537,7 @@ try_again_w_token:
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
 						const position_t pos = t.pos;
-						t = token_t(token_type_t(i2t->token)); t.pos = pos;
+						t = token_t(token_type_t(i2t->token)); t.pos = pos; t.set_source_file(buf.source_file);
 						return 1;
 					}
 				}
@@ -4624,9 +4740,11 @@ int main(int argc,char **argv) {
 			int r;
 
 			assert(rb.allocate());
+			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
 			while ((r=CIMCC::lgtok(lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
@@ -4643,9 +4761,11 @@ int main(int argc,char **argv) {
 			int r;
 
 			assert(rb.allocate());
+			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
 			while ((r=CIMCC::pptok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
@@ -4662,9 +4782,11 @@ int main(int argc,char **argv) {
 			int r;
 
 			assert(rb.allocate());
+			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
 			while ((r=CIMCC::lctok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
+				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
