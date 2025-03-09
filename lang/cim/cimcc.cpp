@@ -1698,6 +1698,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		token_t(const token_t &t) { common_copy(t); }
 		token_t(token_t &&t) { common_move(t); }
 		token_t(const token_type_t t) : type(t) { common_init(); }
+		token_t(const token_type_t t,const position_t &n_pos,const size_t n_source_file) : type(t), pos(n_pos) { set_source_file(n_source_file); common_init(); }
 		token_t &operator=(const token_t &t) { common_copy(t); return *this; }
 		token_t &operator=(token_t &&t) { common_move(t); return *this; }
 
@@ -2114,7 +2115,7 @@ private:
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
 
-		position_t pos = t.pos;
+		const position_t pos = t.pos;
 
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::r___asm_text;
@@ -2174,22 +2175,22 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+				t = token_t(token_type_t::none,pos,buf.source_file);
 				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
 			else if (t.v.strliteral.length == 1) {
 				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
@@ -2198,17 +2199,16 @@ private:
 		/* it might be _asm or __asm */
 		if (	(t.v.strliteral.length == 4 && !memcmp(t.v.strliteral.data,"_asm",4)) ||
 			(t.v.strliteral.length == 5 && !memcmp(t.v.strliteral.data,"__asm",5))) {
-			t = token_t(token_type_t(token_type_t::r___asm)); t.pos = pos;
-			t.set_source_file(buf.source_file);
+			t = token_t(token_type_t(token_type_t::r___asm),pos,buf.source_file);
 		}
 
 		return 1;
 	}
 
 	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-		position_t pos = t.pos;
-
 		(void)lst;
+
+		const position_t pos = t.pos;
 
 		assert(t.type == token_type_t::none);
 		t.type = token_type_t::identifier;
@@ -2268,22 +2268,22 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+				t = token_t(token_type_t::none,pos,buf.source_file);
 				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
 			else if (t.v.strliteral.length == 1) {
 				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)t.v.strliteral.data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(); t.pos = pos; t.set_source_file(buf.source_file);
+					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
@@ -2294,8 +2294,7 @@ private:
 			for (const ident2token_t *i2t=ppident2tok;i2t < (ppident2tok+ppident2tok_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token)); t.pos = pos;
-						t.set_source_file(buf.source_file);
+						t = token_t(token_type_t(i2t->token),pos,buf.source_file);
 						return 1;
 					}
 				}
@@ -2305,8 +2304,7 @@ private:
 			for (const ident2token_t *i2t=ident2tok_pp;i2t < (ident2tok_pp+ident2tok_pp_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token)); t.pos = pos;
-						t.set_source_file(buf.source_file);
+						t = token_t(token_type_t(i2t->token),pos,buf.source_file);
 						return 1;
 					}
 				}
@@ -2502,10 +2500,10 @@ private:
 		int r;
 
 try_again:	t = token_t();
+		t.pos = buf.pos;
 		t.set_source_file(buf.source_file);
 
 		eat_whitespace(buf,sfo);
-		t.pos = buf.pos;
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
 		if (buf.data_avail() == 0) {
@@ -3833,7 +3831,7 @@ try_again:	t = token_t();
 				break;
 			}
 			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
-				macro.tokens.push_back(token_t(token_type_t::newline));
+				macro.tokens.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
 			}
 			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
 				/* if the identifier matches a paraemeter then put in a parameter reference,
@@ -3844,7 +3842,7 @@ try_again:	t = token_t();
 
 				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == t.v.strliteral) {
 					/* GNU args... variadic convert to __VA_ARGS__ */
-					t = token_t(token_type_t::r___VA_ARGS__);
+					macro.tokens.push_back(std::move(token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file)));
 				}
 				else {
 					for (auto pi=macro.parameters.begin();pi!=macro.parameters.end();pi++) {
@@ -3872,7 +3870,7 @@ try_again:	t = token_t();
 							macro.tokens.resize(i+4);
 							macro.tokens[i+0] = std::move(token_t(token_type_t::r___VA_OPT__));
 							macro.tokens[i+1] = std::move(token_t(token_type_t::openparenthesis));
-							macro.tokens[i+2] = std::move(token_t(token_type_t::comma));
+							macro.tokens[i+2] = std::move(token_t(token_type_t::comma,t.pos,t.source_file));
 							macro.tokens[i+3] = std::move(token_t(token_type_t::closeparenthesis));
 						}
 					}
@@ -4255,7 +4253,7 @@ go_again:
 				if (macro->ment.flags & pptok_macro_t::FL_VARIADIC) {
 					for (size_t pi=macro->ment.parameters.size();pi < params.size();pi++) {
 						if (pi != macro->ment.parameters.size())
-							out.push_back(token_t(token_type_t::comma));
+							out.push_back(std::move(token_t(token_type_t::comma,(*i).pos,(*i).source_file)));
 
 						const auto &param = params[pi];
 						for (auto j=param.begin();j!=param.end();j++)
