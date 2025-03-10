@@ -3803,8 +3803,8 @@ try_again:	t = token_t();
 
 				eat_whitespace(buf,sfo);
 
+				/* GNU GCC arg... variadic macros that predate __VA_ARGS__ */
 				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
-					/* Ah, GNU style args... variadic macros that predate __VA_ARGS__ */
 					s_id_va_args_subst.take_from(t.v.strliteral);
 					macro.flags |= pptok_macro_t::FL_VARIADIC | pptok_macro_t::FL_NO_VA_ARGS;
 					buf.discardb(3);
@@ -3852,7 +3852,7 @@ try_again:	t = token_t();
 					macro.flags |= pptok_macro_t::FL_STRINGIFY;
 
 				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == t.v.strliteral) {
-					/* GNU args... variadic convert to __VA_ARGS__ */
+					/* GNU arg... variadic convert to __VA_ARGS__ */
 					macro.tokens.push_back(std::move(token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file)));
 				}
 				else {
