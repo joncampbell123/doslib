@@ -920,8 +920,6 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time
 		XUU(LINE),
 		XUU(FILE),
-		XUU(VA_OPT),
-		XUU(VA_ARGS),
 		XAS(asm,      asm),
 		XAS(__asm__,  asm),
 		XAS(_asm,     __asm),
@@ -3825,6 +3823,19 @@ try_again:	t = token_t();
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
+
+			if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+				if (t.v.strliteral == "__VA_ARGS__") {
+					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
+						t = token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file);
+					}
+				}
+				else if (t.v.strliteral == "__VA_OPT__") {
+					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
+						t = token_t(token_type_t::r___VA_OPT__,t.pos,t.source_file);
+					}
+				}
+			}
 
 			if (t.type == token_type_t::newline) {
 				t = token_t();
