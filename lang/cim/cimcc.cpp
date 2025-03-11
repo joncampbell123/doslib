@@ -917,7 +917,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 #define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
 #define XPP(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
-	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time
+	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time (er, well, actually lgtok time to be used by preprocessor)
 		XUU(LINE),
 		XUU(FILE),
 		XAS(asm,      asm),
