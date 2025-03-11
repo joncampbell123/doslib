@@ -4565,6 +4565,348 @@ try_again_w_token:
 		return 1;
 	}
 
+	///////////////////////////////////////
+
+	struct cc_state_t {
+		CIMCC::lgtok_state_t	lst;
+		CIMCC::pptok_state_t	pst;
+		rbuf*			buf = NULL;
+		source_file_object*	sfo = NULL;
+		int			err = 0;
+
+		std::vector<token_t>	tq;
+		size_t			tq_tail = 0;
+
+		bool			ignore_whitespace = true;
+
+		void tq_ft(void) {
+			token_t t(token_type_t::eof);
+			int r;
+
+			do {
+				if (err == 0) {
+					if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
+						err = r;
+				}
+
+				if (ignore_whitespace && err == 0) {
+					if (t.type == token_type_t::newline)
+						continue;
+				}
+
+				break;
+			} while (1);
+
+			tq.push_back(std::move(t));
+		}
+
+		void tq_refill(const size_t i=1) {
+			while ((tq_tail+tq.size()) < i)
+				tq_ft();
+		}
+
+		const token_t &tq_peek(const size_t i=0) {
+			tq_refill(i+1);
+			assert((tq_tail+i) < tq.size());
+			return tq[tq_tail+i];
+		}
+
+		void tq_discard(const size_t i=1) {
+			tq_refill(i);
+			tq_tail += i;
+			assert(tq_tail <= tq.size());
+
+			if (tq_tail == tq.size()) {
+				tq_tail = 0;
+				tq.clear();
+			}
+		}
+
+		const token_t &tq_get(void) {
+			tq_refill();
+			assert(tq_tail < tq.size());
+			return tq[tq_tail++];
+		}
+	};
+
+	///////////////////////////////////////
+
+	enum storage_class_idx_t {
+		SCI_TYPEDEF,		// 0
+		SCI_EXTERN,
+		SCI_STATIC,
+		SCI_AUTO,
+		SCI_REGISTER,
+
+		SCI__MAX
+	};
+
+	const char *storage_class_idx_t_str[SCI__MAX] = {
+		"typedef",		// 0
+		"extern",
+		"static",
+		"auto",
+		"register"
+	};
+
+	typedef unsigned int storage_class_t;
+
+#define X(c) static constexpr storage_class_t SC_##c = 1u << SCI_##c
+	X(TYPEDEF);
+	X(EXTERN);
+	X(STATIC);
+	X(AUTO);
+	X(REGISTER);
+#undef X
+	static constexpr storage_class_t SC_ERROR = ~storage_class_t(0);
+
+	///////////////////////////////////////
+
+	/* this is a bitmask because you can specify more than one, these are indexes */
+	enum type_specifier_idx_t {
+		TSI_VOID=0,		// 0
+		TSI_CHAR,
+		TSI_SHORT,
+		TSI_INT,
+		TSI_LONG,
+		TSI_FLOAT,		// 5
+		TSI_DOUBLE,
+		TSI_SIGNED,
+		TSI_UNSIGNED,
+		TSI_LONGLONG,
+
+		TSI__MAX
+	};
+
+	const char *type_specifier_idx_t_str[TSI__MAX] = {
+		"void",			// 0
+		"char",
+		"short",
+		"int",
+		"long",
+		"float",		// 5
+		"double",
+		"signed",
+		"unsigned",
+		"longlong"
+	};
+
+	typedef unsigned int type_specifier_t;
+
+#define X(c) static constexpr type_specifier_t TS_##c = 1u << TSI_##c
+	X(VOID);
+	X(CHAR);
+	X(SHORT);
+	X(INT);
+	X(LONG);
+	X(FLOAT);
+	X(DOUBLE);
+	X(SIGNED);
+	X(UNSIGNED);
+	X(LONGLONG);
+#undef X
+	static constexpr type_specifier_t TS_ERROR = ~type_specifier_t(0);
+
+	///////////////////////////////////////
+
+	int chkerr(cc_state_t &cc) {
+		const token_t &t = cc.tq_peek();
+		if (t.type == token_type_t::none || t.type == token_type_t::eof || cc.err < 0)
+			return cc.err; /* 0 or negative */
+
+		return 1;
+	}
+
+	storage_class_t read_one_storage_class(cc_state_t &cc) {
+		const token_t &t = cc.tq_peek();
+
+		switch (t.type) {
+			case token_type_t::r_typedef:
+				cc.tq_discard();
+				return SC_TYPEDEF;
+			case token_type_t::r_extern:
+				cc.tq_discard();
+				return SC_EXTERN;
+			case token_type_t::r_static:
+				cc.tq_discard();
+				return SC_STATIC;
+			case token_type_t::r_auto:
+				cc.tq_discard();
+				return SC_AUTO;
+			case token_type_t::r_register:
+				cc.tq_discard();
+				return SC_REGISTER;
+			default:
+				break;
+		};
+
+		return 0;
+	}
+
+	storage_class_t chk_storage_class(cc_state_t &cc) {
+		type_specifier_t r = 0;
+
+		do {
+			const type_specifier_t t = read_one_storage_class(cc);
+
+			if (t) {
+				if (r&t) return SC_ERROR; /* catch out duplicate specifiers, that's an error */
+				r |= t;
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+		return r;
+	}
+
+	type_specifier_t read_one_type_specifier(cc_state_t &cc) {
+		const token_t &t = cc.tq_peek();
+
+		switch (t.type) {
+			case token_type_t::r_void:
+				cc.tq_discard();
+				return TS_VOID;
+			case token_type_t::r_char:
+				cc.tq_discard();
+				return TS_CHAR;
+			case token_type_t::r_short:
+				cc.tq_discard();
+				return TS_SHORT;
+			case token_type_t::r_int:
+				cc.tq_discard();
+				return TS_INT;
+			case token_type_t::r_long:
+				if (cc.tq_peek(1).type == token_type_t::r_long) {
+					cc.tq_discard(2);
+					return TS_LONGLONG;
+				}
+				else {
+					cc.tq_discard();
+					return TS_LONG;
+				}
+			case token_type_t::r_float:
+				cc.tq_discard();
+				return TS_FLOAT;
+			case token_type_t::r_double:
+				cc.tq_discard();
+				return TS_DOUBLE;
+			case token_type_t::r_signed:
+				cc.tq_discard();
+				return TS_SIGNED;
+			case token_type_t::r_unsigned:
+				cc.tq_discard();
+				return TS_UNSIGNED;
+			default:
+				break;
+		};
+
+		return 0;
+	}
+
+	type_specifier_t chk_type_specifier(cc_state_t &cc) {
+		type_specifier_t r = 0;
+
+		do {
+			const type_specifier_t t = read_one_type_specifier(cc);
+
+			if (t) {
+				if (r&t) return TS_ERROR; /* catch out duplicate specifiers, that's an error */
+				r |= t;
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+		return r;
+	}
+
+	int external_declaration(cc_state_t &cc) {
+		int r;
+
+		if ((r=chkerr(cc)) < 1)
+			return r;
+
+		/* external_declaration:
+		 *   : function_definition
+		 *   | declaration */
+		/* declaration:
+		 *   : declaration_specifiers ;
+		 *   | declaration_specifiers init_declarator_list ; */
+		/* function_definition:
+		 *   : declaration_specifiers declarator declaration_list compound_statement
+		 *   | declaration_specifiers declarator compound_statement
+		 *   | declarator declaration_list compound_statement
+		 *   | declarator compound_statement
+		 *   ; */
+
+		/* parse declaration_specifiers if present.
+		 * parse declarator if present.
+		 * if declaration_specifiers, look for init_declarator_list, declarator, declarator_list */
+
+		/* declaration specifiers: storage_class_specifier */
+		storage_class_t storage_class = chk_storage_class(cc);
+
+		if ((r=chkerr(cc)) < 1)
+			return r;
+
+		/* declaration specifiers: type_specifier */
+		type_specifier_t type_specifier = chk_type_specifier(cc);
+
+		if (type_specifier == TS_ERROR)
+			return errno_return(EINVAL);
+		if ((r=chkerr(cc)) < 0)
+			return r;
+
+#if 1//DEBUG
+		fprintf(stderr,"%s():\n",__FUNCTION__);
+
+		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)storage_class);
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)type_specifier);
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"\n");
+#endif
+
+		return 0;
+	}
+
+	int translation_unit(cc_state_t &cc) {
+		const token_t &t = cc.tq_peek();
+		int r;
+
+		if (t.type == token_type_t::none || t.type == token_type_t::eof)
+			return cc.err; /* 0 or negative */
+
+		if ((r=external_declaration(cc)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int CCstep(cc_state_t &cc,rbuf &buf,source_file_object &sfo) {
+		int r;
+
+		cc.buf = &buf;
+		cc.sfo = &sfo;
+
+		if (cc.err == 0) {
+			if ((r=translation_unit(cc)) < 1)
+				return r;
+		}
+
+		if (cc.err < 0)
+			return r;
+
+		return 1;
+	}
+
 }
 
 enum test_mode_t {
@@ -4807,6 +5149,21 @@ int main(int argc,char **argv) {
 				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
+
+			if (r < 0) {
+				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
+				return -1;
+			}
+		}
+		else {
+			/* normal compilation */
+			CIMCC::cc_state_t ccst;
+			CIMCC::rbuf rb;
+			int r;
+
+			assert(rb.allocate());
+			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
+			while ((r=CIMCC::CCstep(ccst,rb,*sfo)) > 0);
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
