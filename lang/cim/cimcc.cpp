@@ -4740,148 +4740,57 @@ try_again_w_token:
 		return 1;
 	}
 
-	storage_class_t read_one_storage_class(cc_state_t &cc) {
-		const token_t &t = cc.tq_peek();
+	struct declaration_specifiers_t {
+		storage_class_t		storage_class = 0;
+		type_specifier_t	type_specifier = 0;
+		type_qualifier_t	type_qualifier = 0;
+	};
 
-		switch (t.type) {
-			case token_type_t::r_typedef:
-				cc.tq_discard();
-				return SC_TYPEDEF;
-			case token_type_t::r_extern:
-				cc.tq_discard();
-				return SC_EXTERN;
-			case token_type_t::r_static:
-				cc.tq_discard();
-				return SC_STATIC;
-			case token_type_t::r_auto:
-				cc.tq_discard();
-				return SC_AUTO;
-			case token_type_t::r_register:
-				cc.tq_discard();
-				return SC_REGISTER;
-			default:
-				break;
-		};
+	static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
+	static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
+	static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
 
-		return 0;
-	}
-
-	storage_class_t chk_storage_class(cc_state_t &cc) {
-		type_specifier_t r = 0;
-
+	int declaration_specifiers_parse(cc_state_t &cc,declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL) {
 		do {
-			const type_specifier_t t = read_one_storage_class(cc);
+			const token_t &t = cc.tq_peek();
 
-			if (t) {
-				if (r&t) return SC_ERROR; /* catch out duplicate specifiers, that's an error */
-				r |= t;
+#define XCHK(f,d,m) if (declspec&f) { if (d&m) return errno_return(EINVAL); else d|=m; } else { break; }
+#define X(f,d,m) { XCHK(f,d,m); cc.tq_discard(); continue; }
+			switch (t.type) {
+				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
+				case token_type_t::r_extern:		X(DECLSPEC_STORAGE,ds.storage_class,SC_EXTERN);
+				case token_type_t::r_static:		X(DECLSPEC_STORAGE,ds.storage_class,SC_STATIC);
+				case token_type_t::r_auto:		X(DECLSPEC_STORAGE,ds.storage_class,SC_AUTO);
+				case token_type_t::r_register:		X(DECLSPEC_STORAGE,ds.storage_class,SC_REGISTER);
+				case token_type_t::r_void:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_VOID);
+				case token_type_t::r_char:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_CHAR);
+				case token_type_t::r_short:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SHORT);
+				case token_type_t::r_int:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_INT);
+				case token_type_t::r_float:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_FLOAT);
+				case token_type_t::r_double:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_DOUBLE);
+				case token_type_t::r_signed:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SIGNED);
+				case token_type_t::r_unsigned:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_UNSIGNED);
+				case token_type_t::r_long:
+					if (cc.tq_peek(1).type == token_type_t::r_long)
+						{ XCHK(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_LONGLONG); cc.tq_discard(2); continue; }
+					else
+						{ X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_LONG); }
+
+				case token_type_t::r_const:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_CONST);
+				case token_type_t::r_volatile:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_VOLATILE);
+				default: break;
 			}
-			else {
-				break;
-			}
+#undef XCHK
+#undef X
+
+			break;
 		} while (1);
 
-		return r;
-	}
-
-	type_specifier_t read_one_type_specifier(cc_state_t &cc) {
-		const token_t &t = cc.tq_peek();
-
-		switch (t.type) {
-			case token_type_t::r_void:
-				cc.tq_discard();
-				return TS_VOID;
-			case token_type_t::r_char:
-				cc.tq_discard();
-				return TS_CHAR;
-			case token_type_t::r_short:
-				cc.tq_discard();
-				return TS_SHORT;
-			case token_type_t::r_int:
-				cc.tq_discard();
-				return TS_INT;
-			case token_type_t::r_long:
-				if (cc.tq_peek(1).type == token_type_t::r_long) {
-					cc.tq_discard(2);
-					return TS_LONGLONG;
-				}
-				else {
-					cc.tq_discard();
-					return TS_LONG;
-				}
-			case token_type_t::r_float:
-				cc.tq_discard();
-				return TS_FLOAT;
-			case token_type_t::r_double:
-				cc.tq_discard();
-				return TS_DOUBLE;
-			case token_type_t::r_signed:
-				cc.tq_discard();
-				return TS_SIGNED;
-			case token_type_t::r_unsigned:
-				cc.tq_discard();
-				return TS_UNSIGNED;
-			default:
-				break;
-		};
-
 		return 0;
-	}
-
-	type_specifier_t chk_type_specifier(cc_state_t &cc) {
-		type_specifier_t r = 0;
-
-		do {
-			const type_specifier_t t = read_one_type_specifier(cc);
-
-			if (t) {
-				if (r&t) return TS_ERROR; /* catch out duplicate specifiers, that's an error */
-				r |= t;
-			}
-			else {
-				break;
-			}
-		} while (1);
-
-		return r;
-	}
-
-	type_qualifier_t read_one_type_qualifier(cc_state_t &cc) {
-		const token_t &t = cc.tq_peek();
-
-		switch (t.type) {
-			case token_type_t::r_const:
-				cc.tq_discard();
-				return TQ_CONST;
-			case token_type_t::r_volatile:
-				cc.tq_discard();
-				return TQ_VOLATILE;
-			default:
-				break;
-		};
-
-		return 0;
-	}
-
-	type_qualifier_t chk_type_qualifier(cc_state_t &cc) {
-		type_qualifier_t r = 0;
-
-		do {
-			const type_qualifier_t t = read_one_type_qualifier(cc);
-
-			if (t) {
-				if (r&t) return TQ_ERROR; /* catch out duplicate specifiers, that's an error */
-				r |= t;
-			}
-			else {
-				break;
-			}
-		} while (1);
-
-		return r;
 	}
 
 	int external_declaration(cc_state_t &cc) {
+		declaration_specifiers_t declspec;
 		int r;
 
 		if ((r=chkerr(cc)) < 1)
@@ -4905,40 +4814,24 @@ try_again_w_token:
 		 * if declaration_specifiers, look for init_declarator_list, declarator, declarator_list */
 
 		/* declaration specifiers: storage_class_specifier */
-		storage_class_t storage_class = chk_storage_class(cc);
-
+		if ((r=declaration_specifiers_parse(cc,declspec)) < 0)
+			return r;
 		if ((r=chkerr(cc)) < 1)
-			return r;
-
-		/* declaration specifiers: type_specifier */
-		type_specifier_t type_specifier = chk_type_specifier(cc);
-
-		if (type_specifier == TS_ERROR)
-			return errno_return(EINVAL);
-		if ((r=chkerr(cc)) < 0)
-			return r;
-
-		/* declaration specifiers: type_qualifier */
-		type_qualifier_t type_qualifier = chk_type_qualifier(cc);
-
-		if (type_qualifier == TQ_ERROR)
-			return errno_return(EINVAL);
-		if ((r=chkerr(cc)) < 0)
 			return r;
 
 #if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
-		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)storage_class);
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)declspec.storage_class);
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (declspec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
-		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)type_specifier);
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)declspec.type_specifier);
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (declspec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
-		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)type_qualifier);
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)declspec.type_qualifier);
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (declspec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
 		fprintf(stderr,"\n");
