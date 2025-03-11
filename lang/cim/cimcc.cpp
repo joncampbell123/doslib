@@ -4709,6 +4709,29 @@ try_again_w_token:
 
 	///////////////////////////////////////
 
+	/* this is a bitmask because you can specify more than one, these are indexes */
+	enum type_qualifier_idx_t {
+		TQI_CONST=0,		// 0
+		TQI_VOLATILE,
+
+		TQI__MAX
+	};
+
+	const char *type_qualifier_idx_t_str[TSI__MAX] = {
+		"const",		// 0
+		"volatile"
+	};
+
+	typedef unsigned int type_qualifier_t;
+
+#define X(c) static constexpr type_qualifier_t TQ_##c = 1u << TQI_##c
+	X(CONST);
+	X(VOLATILE);
+#undef X
+	static constexpr type_qualifier_t TQ_ERROR = ~type_qualifier_t(0);
+
+	///////////////////////////////////////
+
 	int chkerr(cc_state_t &cc) {
 		const token_t &t = cc.tq_peek();
 		if (t.type == token_type_t::none || t.type == token_type_t::eof || cc.err < 0)
@@ -4823,6 +4846,41 @@ try_again_w_token:
 		return r;
 	}
 
+	type_qualifier_t read_one_type_qualifier(cc_state_t &cc) {
+		const token_t &t = cc.tq_peek();
+
+		switch (t.type) {
+			case token_type_t::r_const:
+				cc.tq_discard();
+				return TQ_CONST;
+			case token_type_t::r_volatile:
+				cc.tq_discard();
+				return TQ_VOLATILE;
+			default:
+				break;
+		};
+
+		return 0;
+	}
+
+	type_qualifier_t chk_type_qualifier(cc_state_t &cc) {
+		type_qualifier_t r = 0;
+
+		do {
+			const type_qualifier_t t = read_one_type_qualifier(cc);
+
+			if (t) {
+				if (r&t) return TQ_ERROR; /* catch out duplicate specifiers, that's an error */
+				r |= t;
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+		return r;
+	}
+
 	int external_declaration(cc_state_t &cc) {
 		int r;
 
@@ -4860,6 +4918,14 @@ try_again_w_token:
 		if ((r=chkerr(cc)) < 0)
 			return r;
 
+		/* declaration specifiers: type_qualifier */
+		type_qualifier_t type_qualifier = chk_type_qualifier(cc);
+
+		if (type_qualifier == TQ_ERROR)
+			return errno_return(EINVAL);
+		if ((r=chkerr(cc)) < 0)
+			return r;
+
 #if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
@@ -4869,6 +4935,10 @@ try_again_w_token:
 
 		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)type_specifier);
 		for (unsigned int i=0;i < TSI__MAX;i++) { if (type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)type_qualifier);
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
 		fprintf(stderr,"\n");
