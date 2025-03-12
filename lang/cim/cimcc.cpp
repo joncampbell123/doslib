@@ -4637,6 +4637,9 @@ try_again_w_token:
 		SCI_STATIC,
 		SCI_AUTO,
 		SCI_REGISTER,
+		SCI_NEAR,		// 5
+		SCI_FAR,
+		SCI_HUGE,
 
 		SCI__MAX
 	};
@@ -4646,17 +4649,23 @@ try_again_w_token:
 		"extern",
 		"static",
 		"auto",
-		"register"
+		"register",
+		"near",			// 5
+		"far",
+		"huge"
 	};
 
 	typedef unsigned int storage_class_t;
 
 #define X(c) static constexpr storage_class_t SC_##c = 1u << SCI_##c
-	X(TYPEDEF);
+	X(TYPEDEF);			// 0
 	X(EXTERN);
 	X(STATIC);
 	X(AUTO);
 	X(REGISTER);
+	X(NEAR);			// 5
+	X(FAR);
+	X(HUGE);
 #undef X
 	static constexpr storage_class_t SC_ERROR = ~storage_class_t(0);
 
@@ -4762,6 +4771,9 @@ try_again_w_token:
 				case token_type_t::r_static:		X(DECLSPEC_STORAGE,ds.storage_class,SC_STATIC);
 				case token_type_t::r_auto:		X(DECLSPEC_STORAGE,ds.storage_class,SC_AUTO);
 				case token_type_t::r_register:		X(DECLSPEC_STORAGE,ds.storage_class,SC_REGISTER);
+				case token_type_t::r_near:		X(DECLSPEC_STORAGE,ds.storage_class,SC_NEAR);
+				case token_type_t::r_far:		X(DECLSPEC_STORAGE,ds.storage_class,SC_FAR);
+				case token_type_t::r_huge:		X(DECLSPEC_STORAGE,ds.storage_class,SC_HUGE);
 				case token_type_t::r_void:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_VOID);
 				case token_type_t::r_char:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_CHAR);
 				case token_type_t::r_short:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SHORT);
