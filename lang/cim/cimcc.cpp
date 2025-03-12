@@ -4673,7 +4673,6 @@ try_again_w_token:
 	X(CONSTEXPR);
 	X(RESTRICT);
 #undef X
-	static constexpr storage_class_t SC_ERROR = ~storage_class_t(0);
 
 	///////////////////////////////////////
 
@@ -4720,9 +4719,12 @@ try_again_w_token:
 	X(UNSIGNED);
 	X(LONGLONG);
 #undef X
-	static constexpr type_specifier_t TS_ERROR = ~type_specifier_t(0);
 
 	///////////////////////////////////////
+
+	template <typename T> constexpr bool only_one_bit_set(const T &t) {
+		return (t & (t - T(1u))) == T(0u);
+	}
 
 	/* this is a bitmask because you can specify more than one, these are indexes */
 	enum type_qualifier_idx_t {
@@ -4743,7 +4745,6 @@ try_again_w_token:
 	X(CONST);
 	X(VOLATILE);
 #undef X
-	static constexpr type_qualifier_t TQ_ERROR = ~type_qualifier_t(0);
 
 	///////////////////////////////////////
 
@@ -4816,6 +4817,30 @@ try_again_w_token:
 
 			break;
 		} while (1);
+
+		/* sanity check */
+		{
+			const storage_class_t mm_t = ds.storage_class & (SC_NEAR|SC_FAR|SC_HUGE); /* only one of */
+			if (mm_t && !only_one_bit_set(mm_t)) return errno_return(EINVAL);
+
+			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
+			if (sc_t && !only_one_bit_set(sc_t)) return errno_return(EINVAL);
+		}
+		{
+			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
+			if (sign_t && !only_one_bit_set(sign_t)) return errno_return(EINVAL);
+
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_SHORT|TS_LONG|TS_LONGLONG); /* only one of */
+			if (intlen_t && !only_one_bit_set(intlen_t)) return errno_return(EINVAL);
+
+			const bool is_long_double = !!(ds.type_specifier == (TS_LONG|TS_DOUBLE));
+			const bool is_float = !!(ds.type_specifier & (TS_FLOAT|TS_DOUBLE)); /* is it float? */
+			const bool is_int =
+				!is_long_double && !!(ds.type_specifier & (TS_SHORT|TS_LONG|TS_LONGLONG|TS_INT)); /* is it int? */
+			const type_specifier_t basetype_t =
+				(ds.type_specifier & (TS_VOID|TS_CHAR)) | (is_float?TS_FLOAT:0) | (is_int?TS_INT:0); /* only one of */
+			if (basetype_t && !only_one_bit_set(basetype_t)) return errno_return(EINVAL);
+		}
 
 		return 0;
 	}
