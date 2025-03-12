@@ -4641,6 +4641,7 @@ try_again_w_token:
 		SCI_FAR,
 		SCI_HUGE,
 		SCI_CONSTEXPR,
+		SCI_RESTRICT,
 
 		SCI__MAX
 	};
@@ -4654,7 +4655,8 @@ try_again_w_token:
 		"near",			// 5
 		"far",
 		"huge",
-		"constexpr"
+		"constexpr",
+		"restrict"
 	};
 
 	typedef unsigned int storage_class_t;
@@ -4669,6 +4671,7 @@ try_again_w_token:
 	X(FAR);
 	X(HUGE);
 	X(CONSTEXPR);
+	X(RESTRICT);
 #undef X
 	static constexpr storage_class_t SC_ERROR = ~storage_class_t(0);
 
@@ -4778,6 +4781,7 @@ try_again_w_token:
 				case token_type_t::r_far:		X(DECLSPEC_STORAGE,ds.storage_class,SC_FAR);
 				case token_type_t::r_huge:		X(DECLSPEC_STORAGE,ds.storage_class,SC_HUGE);
 				case token_type_t::r_constexpr:		X(DECLSPEC_STORAGE,ds.storage_class,SC_CONSTEXPR);
+				case token_type_t::r_restrict:		X(DECLSPEC_STORAGE,ds.storage_class,SC_RESTRICT);
 				case token_type_t::r_void:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_VOID);
 				case token_type_t::r_char:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_CHAR);
 				case token_type_t::r_short:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SHORT);
