@@ -4798,22 +4798,137 @@ try_again_w_token:
 
 		/* external_declaration:
 		 *   : function_definition
-		 *   | declaration */
-		/* declaration:
-		 *   : declaration_specifiers ;
-		 *   | declaration_specifiers init_declarator_list ; */
+		 *   | declaration
+		 *   ; */
+		/* declaration
+		 *   : declaration_specifiers ';'
+		 *   | declaration_specifiers init_declarator_list ';'
+		 *   ; */
 		/* function_definition:
 		 *   : declaration_specifiers declarator declaration_list compound_statement
 		 *   | declaration_specifiers declarator compound_statement
 		 *   | declarator declaration_list compound_statement
 		 *   | declarator compound_statement
 		 *   ; */
-
-		/* parse declaration_specifiers if present.
-		 * parse declarator if present.
-		 * if declaration_specifiers, look for init_declarator_list, declarator, declarator_list */
-
-		/* declaration specifiers: storage_class_specifier */
+		/* storage_class_specifier
+		 *   : TYPEDEF
+		 *   | EXTERN
+		 *   | STATIC
+		 *   | AUTO
+		 *   | REGISTER
+		 *   ; */
+		/* type_specifier
+		 *   : VOID
+		 *   | CHAR
+		 *   | SHORT
+		 *   | INT
+		 *   | LONG
+		 *   | FLOAT
+		 *   | DOUBLE
+		 *   | SIGNED
+		 *   | UNSIGNED
+		 *   | struct_or_union_specifier
+		 *   | enum_specifier
+		 *   | TYPE_NAME
+		 *   ; */
+		/* type_qualifier
+		 *   : CONST
+		 *   | VOLATILE
+		 *   ; */
+		/* declaration_specifiers
+		 *   : storage_class_specifier
+		 *   | storage_class_specifier declaration_specifiers
+		 *   | type_specifier
+		 *   | type_specifier declaration_specifiers
+		 *   | type_qualifier
+		 *   | type_qualifier declaration_specifiers
+		 *   ; */
+		/* declaration_list
+		 *   : declaration
+		 *   | declaration_list declaration
+		 *   ; */
+		/* init_declarator_list
+		 *   : init_declarator
+		 *   | init_declarator_list ',' init_declarator
+		 *   ; */
+		/* init_declarator
+		 *   : declarator
+		 *   | declarator '=' initializer
+		 *   ; */
+		/* declarator
+		 *   : pointer direct_declarator
+		 *   | direct_declarator
+		 *   ; */
+		/* pointer
+		 *   : '*'
+		 *   | '*' type_qualifier_list
+		 *   | '*' pointer
+		 *   | '*' type_qualifier_list pointer
+		 *   ; */
+		/* direct_declarator
+		 *   : IDENTIFIER
+		 *   | '(' declarator ')'
+		 *   | direct_declarator '[' constant_expression ']'
+		 *   | direct_declarator '[' ']'
+		 *   | direct_declarator '(' parameter_type_list ')'
+		 *   | direct_declarator '(' identifier_list ')'
+		 *   | direct_declarator '(' ')'
+		 *   ; */
+		/* parameter_type_list
+		 *   : parameter_list
+		 *   | parameter_list ',' ELLIPSIS
+		 *   ; */
+		/* parameter_list
+		 *   : parameter_declaration
+		 *   | parameter_list ',' parameter_declaration
+		 *   ; */
+		/* parameter_declaration
+		 *   : declaration_specifiers declarator
+		 *   | declaration_specifiers abstract_declarator
+		 *   | declaration_specifiers
+		 *   ; */
+		/* abstract_declarator
+		 *   : pointer
+		 *   | direct_abstract_declarator
+		 *   | pointer direct_abstract_declarator
+		 *   ; */
+		/* direct_abstract_declarator
+		 *   : '(' abstract_declarator ')'
+		 *   | '[' ']'
+		 *   | '[' constant_expression ']'
+		 *   | direct_abstract_declarator '[' ']'
+		 *   | direct_abstract_declarator '[' constant_expression ']'
+		 *   | '(' ')'
+		 *   | '(' parameter_type_list ')'
+		 *   | direct_abstract_declarator '(' ')'
+		 *   | direct_abstract_declarator '(' parameter_type_list ')'
+		 *   ; */
+		/* compound_statement
+		 *   : '{' '}'
+		 *   | '{' statement_list '}'
+		 *   | '{' declaration_list '}'
+		 *   | '{' declaration_list statement_list '}'
+		 *   ; */
+		/* statement_list
+		 *   : statement
+		 *   | statement_list statement
+		 *   ; */
+		/* statement
+		 *   : labeled_statement
+		 *   | compound_statement
+		 *   | expression_statement
+		 *   | selection_statement
+		 *   | iteration_statement
+		 *   | jump_statement
+		 *   ; */
+		/* expression_statement
+		 *   : ';'
+		 *   | expression ';'
+		 *   ; */
+		/* expression
+		 *   : assignment_expression
+		 *   | expression ',' assignment_expression
+		 *   ; */
 		if ((r=declaration_specifiers_parse(cc,declspec)) < 0)
 			return r;
 		if ((r=chkerr(cc)) < 1)
