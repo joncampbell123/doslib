@@ -4830,33 +4830,26 @@ try_again_w_token:
 		/* "long int" -> "long"
 		 * "long long int" -> "long"
 		 * "signed long long int" -> "signed long long"
+		 * "short int" -> "short"
 		 *
 		 * The "int" part is redundant */
 		{
 			const type_specifier_t t = ds.type_specifier & ~(TS_SIGNED|TS_UNSIGNED);
-			if (t == (TS_LONG|TS_INT) || t == (TS_LONGLONG|TS_INT))
+			if (t == (TS_LONG|TS_INT) || t == (TS_LONGLONG|TS_INT) || t == (TS_SHORT|TS_INT))
 				ds.type_specifier &= ~TS_INT;
 		}
 
-		{
+		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
 			if (sign_t && !only_one_bit_set(sign_t)) return errno_return(EINVAL);
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_SHORT|TS_LONG|TS_LONGLONG); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) return errno_return(EINVAL);
 
 			const type_specifier_t floattype_t = ds.type_specifier & (TS_FLOAT|TS_DOUBLE); /* only one of */
 			if (floattype_t && !only_one_bit_set(floattype_t)) return errno_return(EINVAL);
-		}
 
-		{
-			const bool is_long_double = !!(ds.type_specifier == (TS_LONG|TS_DOUBLE));
-			const bool is_float = !!(ds.type_specifier & (TS_FLOAT|TS_DOUBLE)); /* is it float? */
-			const bool is_int =
-				!is_long_double && !!(ds.type_specifier & (TS_SHORT|TS_LONG|TS_LONGLONG|TS_INT)); /* is it int? */
-			const type_specifier_t basetype_t =
-				(ds.type_specifier & (TS_VOID|TS_CHAR)) | (is_float?TS_FLOAT:0) | (is_int?TS_INT:0); /* only one of */
-			if (basetype_t && !only_one_bit_set(basetype_t)) return errno_return(EINVAL);
+			if (intlen_t && floattype_t) return errno_return(EINVAL); /* float or integer/char, you can't have both */
 		}
 
 		return 0;
