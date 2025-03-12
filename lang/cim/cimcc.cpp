@@ -4889,6 +4889,10 @@ try_again_w_token:
 				CCerr(pos,"Multiple type specifiers (float+int)");
 				return errno_return(EINVAL); /* float or integer/char, you can't have both */
 			}
+			if (floattype_t && sign_t) {
+				CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
+				return errno_return(EINVAL); /* float/double and signed/unsigned don't mix */
+			}
 		}
 
 		return 0;
