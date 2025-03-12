@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -2498,10 +2499,9 @@ private:
 		int r;
 
 try_again:	t = token_t();
-		t.pos = buf.pos;
 		t.set_source_file(buf.source_file);
-
 		eat_whitespace(buf,sfo);
+		t.pos = buf.pos;
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
 		if (buf.data_avail() == 0) {
@@ -4748,6 +4748,19 @@ try_again_w_token:
 
 	///////////////////////////////////////
 
+	void CCerr(const position_t &pos,const char *fmt,...) {
+		va_list va;
+
+		fprintf(stderr,"Error");
+		if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
+		fprintf(stderr,": ");
+
+		va_start(va,fmt);
+		vfprintf(stderr,fmt,va);
+		va_end(va);
+		fprintf(stderr,"\n");
+	}
+
 	int chkerr(cc_state_t &cc) {
 		const token_t &t = cc.tq_peek();
 		if (t.type == token_type_t::none || t.type == token_type_t::eof || cc.err < 0)
@@ -4767,10 +4780,12 @@ try_again_w_token:
 	static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
 
 	int declaration_specifiers_parse(cc_state_t &cc,declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL) {
+		const position_t pos = cc.tq_peek().pos;
+
 		do {
 			const token_t &t = cc.tq_peek();
 
-#define XCHK(f,d,m) if (declspec&f) { if (d&m) return errno_return(EINVAL); else d|=m; } else { break; }
+#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else d|=m; } else { break; }
 #define X(f,d,m) { XCHK(f,d,m); cc.tq_discard(); continue; }
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
@@ -4798,12 +4813,18 @@ try_again_w_token:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
-							if (ds.type_specifier & TS_LONGLONG) return errno_return(EINVAL);
+							if (ds.type_specifier & TS_LONGLONG) {
+								CCerr(pos,"declarator specifier 'long long' already specified");
+								return errno_return(EINVAL);
+							}
 							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
 							cc.tq_discard(); continue;
 						}
 						else {
-							if (ds.type_specifier & TS_LONG) return errno_return(EINVAL);
+							if (ds.type_specifier & TS_LONG) {
+								CCerr(pos,"declarator specifier 'long' already specified");
+								return errno_return(EINVAL);
+							}
 							ds.type_specifier |= TS_LONG;
 							cc.tq_discard(); continue;
 						}
@@ -4821,10 +4842,16 @@ try_again_w_token:
 		/* sanity check */
 		{
 			const storage_class_t mm_t = ds.storage_class & (SC_NEAR|SC_FAR|SC_HUGE); /* only one of */
-			if (mm_t && !only_one_bit_set(mm_t)) return errno_return(EINVAL);
+			if (mm_t && !only_one_bit_set(mm_t)) {
+				CCerr(pos,"Multiple storage classes specified");
+				return errno_return(EINVAL);
+			}
 
 			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
-			if (sc_t && !only_one_bit_set(sc_t)) return errno_return(EINVAL);
+			if (sc_t && !only_one_bit_set(sc_t)) {
+				CCerr(pos,"Multiple storage classes specified");
+				return errno_return(EINVAL);
+			}
 		}
 
 		/* "long int" -> "long"
@@ -4841,15 +4868,27 @@ try_again_w_token:
 
 		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
-			if (sign_t && !only_one_bit_set(sign_t)) return errno_return(EINVAL);
+			if (sign_t && !only_one_bit_set(sign_t)) {
+				CCerr(pos,"Multiple type specifiers (signed/unsigned)");
+				return errno_return(EINVAL);
+			}
 
 			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG); /* only one of */
-			if (intlen_t && !only_one_bit_set(intlen_t)) return errno_return(EINVAL);
+			if (intlen_t && !only_one_bit_set(intlen_t)) {
+				CCerr(pos,"Multiple type specifiers (int/char/void)");
+				return errno_return(EINVAL);
+			}
 
 			const type_specifier_t floattype_t = ds.type_specifier & (TS_FLOAT|TS_DOUBLE); /* only one of */
-			if (floattype_t && !only_one_bit_set(floattype_t)) return errno_return(EINVAL);
+			if (floattype_t && !only_one_bit_set(floattype_t)) {
+				CCerr(pos,"Multiple type specifiers (float)");
+				return errno_return(EINVAL);
+			}
 
-			if (intlen_t && floattype_t) return errno_return(EINVAL); /* float or integer/char, you can't have both */
+			if (intlen_t && floattype_t) {
+				CCerr(pos,"Multiple type specifiers (float+int)");
+				return errno_return(EINVAL); /* float or integer/char, you can't have both */
+			}
 		}
 
 		return 0;
