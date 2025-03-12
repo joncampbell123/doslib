@@ -4782,14 +4782,25 @@ try_again_w_token:
 				case token_type_t::r_double:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_DOUBLE);
 				case token_type_t::r_signed:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SIGNED);
 				case token_type_t::r_unsigned:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_UNSIGNED);
-				case token_type_t::r_long:
-					if (cc.tq_peek(1).type == token_type_t::r_long)
-						{ XCHK(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_LONGLONG); cc.tq_discard(2); continue; }
-					else
-						{ X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_LONG); }
-
 				case token_type_t::r_const:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_CONST);
 				case token_type_t::r_volatile:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_VOLATILE);
+
+				case token_type_t::r_long:
+					if (declspec&DECLSPEC_TYPE_SPEC) {
+						if (ds.type_specifier & TS_LONG) {
+							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
+							if (ds.type_specifier & TS_LONGLONG) return errno_return(EINVAL);
+							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
+							cc.tq_discard(); continue;
+						}
+						else {
+							if (ds.type_specifier & TS_LONG) return errno_return(EINVAL);
+							ds.type_specifier |= TS_LONG;
+							cc.tq_discard(); continue;
+						}
+					}
+					break;
+
 				default: break;
 			}
 #undef XCHK
