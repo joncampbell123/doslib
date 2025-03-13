@@ -58,6 +58,9 @@ static void apply_vpt_mode(unsigned char far *vp) {
 #endif
 	unsigned int i;
 
+	/* sequencer reset */
+	outpw(0x3C4,0x0100);
+
 	/* sequencer (1-4) */
 	for (i=1;i <= 0x04;i++)
 		outpw(0x3C4,i + ((unsigned int)vp[0x05 + (i-1)] << 8u));
@@ -78,9 +81,13 @@ static void apply_vpt_mode(unsigned char far *vp) {
 	}
 	inp(0x3DA);
 	outp(0x3C0,0x20);
+	inp(0x3DA);
 
 	/* graphics controller (0x00-0x08) */
 	for (i=0;i <= 8;i++)
 		outpw(0x3CE,i + ((unsigned int)vp[0x37 + i] << 8u));
+
+	/* take out of reset */
+	outpw(0x3C4,0x0300);
 }
 

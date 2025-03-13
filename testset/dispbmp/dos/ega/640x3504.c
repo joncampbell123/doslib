@@ -97,6 +97,7 @@ int main() {
 		}
 		inp(0x3DA);
 		outp(0x3C0,0x20);
+		inp(0x3DA);
 	}
 
 	/* load and render */
