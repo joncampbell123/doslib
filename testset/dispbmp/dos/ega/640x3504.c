@@ -85,10 +85,13 @@ int main(int argc,char **argv) {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
 	unsigned char dbg = 0;
+	unsigned char nopr = 0;
 
 	if (argc > 1) {
-		if (!strcmp(argv[1],"-d"))
+		if (!strcmp(argv[1],"-d")) /* show debug info */
 			dbg = 1;
+		if (!strcmp(argv[1],"-n")) /* don't reprogram the mode */
+			nopr = 1;
 	}
 
 	bfr = open_bmp(bmpfile);
@@ -107,9 +110,14 @@ int main(int argc,char **argv) {
 		int	0x10
 	}
 
+	if (nopr) {
+		/* if asked, do nothing.
+		 * the way this code works it still draws correctly even if the full 16 colors
+		 * and 4 bitplanes are available and no reprogramming is done */
+	}
 	/* 640x350x4 only happens for 64KB
 	 * If we WANT 640x350x4 in any other case we have to set it up ourselves from the Video Parameter Table */
-	if (ega_memory_size() >= 128) {
+	else if (ega_memory_size() >= 128) {
 #if TARGET_MSDOS == 32
 		unsigned char *vp;
 #else
@@ -134,6 +142,44 @@ int main(int argc,char **argv) {
 				apply_vpt_mode(vp);
 				ok = 1;
 			}
+		}
+
+		if (!ok) {
+			/* We're likely not going to get any help from the VGA BIOS, we'll have to tweak the mode ourselves.
+			 * The question becomes then: Will the VGA hardware even support it? A lot of mid to late 1990s hardware still
+			 * supports a lot of wild crap including Hercules graphics style interleave display so.... maybe? */
+			if (dbg) {
+				printf("VGA BIOS+VPT is of no help, manually programming 64kb EGA mode\n");
+				getch();
+			}
+
+			/* sequencer reset */
+			outpw(0x3C4,0x0100);
+			/* change offset register to 0x14, instead of 0x28 */
+			outpw(0x3D4,0x1413);
+			/* change mode control to 0x8B (sync en + div2 + address wrap bit 13) */
+			outpw(0x3D4,0x8B17);
+			/* odd/even mode */
+			outpw(0x3CE,0x1005); // odd-even mode
+			outpw(0x3CE,0x0706); // odd-even mode, graphics at 0xA0000-0xAFFFF
+			outpw(0x3CE,0x0F07); // color don't care
+			/* enable bitplanes 0 and 2 only */
+			inp(0x3DA);
+			outp(0x3C0,0x12 | 0x20);
+			outp(0x3C0,0x05);
+			/* sequencer turn on odd/even and half clock, only 64k */
+			outpw(0x3C4,0x0501);
+			outpw(0x3C4,0x0004);
+			/* sequencer restore */
+			outpw(0x3C4,0x0300);
+
+			ok = 1;
+		}
+	}
+	else {
+		if (dbg) {
+			printf("EGA card has 64kb and will already provide 640x350 4-color mode, no programming required\n");
+			getch();
 		}
 	}
 
