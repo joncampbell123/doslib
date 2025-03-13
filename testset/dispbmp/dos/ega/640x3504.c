@@ -86,12 +86,15 @@ int main(int argc,char **argv) {
 	unsigned int dispw,i;
 	unsigned char dbg = 0;
 	unsigned char nopr = 0;
+	unsigned char fopr = 0;
 
-	if (argc > 1) {
-		if (!strcmp(argv[1],"-d")) /* show debug info */
+	for (i=1;i < argc;i++) {
+		if (!strcmp(argv[i],"-d")) /* show debug info */
 			dbg = 1;
-		if (!strcmp(argv[1],"-n")) /* don't reprogram the mode */
+		else if (!strcmp(argv[i],"-n")) /* don't reprogram the mode */
 			nopr = 1;
+		else if (!strcmp(argv[i],"-f")) /* force program the mode */
+			fopr = 1;
 	}
 
 	bfr = open_bmp(bmpfile);
@@ -133,7 +136,7 @@ int main(int argc,char **argv) {
 			}
 
 			vp += 0x40*0x10;
-			if (vpt_looks_like_valid_ega64k350_mode(vp)) {
+			if (vpt_looks_like_valid_ega64k350_mode(vp) && 0) {
 				if (dbg) {
 					printf("VPTable entry available and validated!\n");
 					getch();
@@ -144,10 +147,17 @@ int main(int argc,char **argv) {
 			}
 		}
 
-		if (!ok) {
+		if (!ok && fopr) {
 			/* We're likely not going to get any help from the VGA BIOS, we'll have to tweak the mode ourselves.
 			 * The question becomes then: Will the VGA hardware even support it? A lot of mid to late 1990s hardware still
 			 * supports a lot of wild crap including Hercules graphics style interleave display so.... maybe? */
+			/* NOTES: Paradise/Western Digital: This doesn't work. You only get every other column!
+			 *
+			 * So basically it's best to assume that if the VPT doesn't provide the entry, it's probably a VGA
+			 * chipset from the 1990s that doesn't care to emulate this weird mode anyway.
+			 *
+			 * This code displays the image correctly anyway without reprogramming the registers, so from now on, this
+			 * manual tweaking is only offered if you want it, otherwise, no programming */
 			if (dbg) {
 				printf("VGA BIOS+VPT is of no help, manually programming 64kb EGA mode\n");
 				getch();
@@ -174,6 +184,13 @@ int main(int argc,char **argv) {
 			outpw(0x3C4,0x0300);
 
 			ok = 1;
+		}
+
+		if (!ok) {
+			if (dbg) {
+				printf("Not reprogramming the mode, no need. Use -f if that is wanted.\n");
+				getch();
+			}
 		}
 	}
 	else {
