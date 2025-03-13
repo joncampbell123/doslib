@@ -59,7 +59,7 @@ static void vga4pcpy(unsigned char far *d,unsigned char *src,unsigned int pixels
 	}
 
 #if defined(EGA4COLOR)
-	outpw(0x3CE,0x1205); /* write mode 2 (read mode 0) odd/even mode */
+	outpw(0x3CE,0x1005); /* write mode 0 (read mode 0) odd/even mode */
 #else
 	outpw(0x3CE,0x0005); /* write mode 0 (read mode 0) */
 #endif
