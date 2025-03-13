@@ -93,7 +93,7 @@ int main(int argc,char **argv) {
 			dbg = 1;
 		else if (!strcmp(argv[i],"-n")) /* don't reprogram the mode */
 			nopr = 1;
-		else if (!strcmp(argv[i],"-f")) /* force program the mode */
+		else if (!strcmp(argv[i],"-f")) /* force program the mode, don't even use the VPT */
 			fopr = 1;
 	}
 
@@ -129,7 +129,7 @@ int main(int argc,char **argv) {
 		unsigned char ok = 0;
 
 		vp = find_vpt();
-		if (vp != NULL) {
+		if (vp != NULL && !fopr) {
 			if (dbg) {
 				printf("VPTable found!\n");
 				getch();
