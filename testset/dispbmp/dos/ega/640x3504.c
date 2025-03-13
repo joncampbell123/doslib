@@ -111,6 +111,9 @@ int main(int argc,char **argv) {
 			 * The question becomes then: Will the VGA hardware even support it? A lot of mid to late 1990s hardware still
 			 * supports a lot of wild crap including Hercules graphics style interleave display so.... maybe? */
 			/* NOTES: Paradise/Western Digital: This doesn't work. You only get every other column!
+			 *        The chipset seems to completely ignore the shift/load rate bit (and the VGA shift four bit)
+			 *        in graphics modes, which prevents this from working. Yet for some reason, those bits DO have
+			 *        a visual effect in text mode. Hm.
 			 *
 			 * So basically it's best to assume that if the VPT doesn't provide the entry, it's probably a VGA
 			 * chipset from the 1990s that doesn't care to emulate this weird mode anyway.
@@ -126,7 +129,7 @@ int main(int argc,char **argv) {
 			outpw(0x3C4,0x0100);
 			/* change offset register to 0x14, instead of 0x28 */
 			outpw(0x3D4,0x1413);
-			/* change mode control to 0x8B (sync en + div2 + address wrap bit 13) */
+			/* change mode control to 0x8B (sync en + div2 + address wrap bit 13 + word mode) */
 			outpw(0x3D4,0x8B17);
 			/* odd/even mode */
 			outpw(0x3CE,0x1005); // odd-even mode
