@@ -136,7 +136,7 @@ int main(int argc,char **argv) {
 			}
 
 			vp += 0x40*0x10;
-			if (vpt_looks_like_valid_ega64k350_mode(vp) && 0) {
+			if (vpt_looks_like_valid_ega64k350_mode(vp)) {
 				if (dbg) {
 					printf("VPTable entry available and validated!\n");
 					getch();
