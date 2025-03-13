@@ -26,6 +26,47 @@ static const unsigned int img_stride = 640 / 8;
 #include "dr_col64.h"
 #include "dr_vpt.h"
 
+/* The 64k EGA 4-color mode is an EGA thing.
+ * VGA BIOSes past the early 1990s clearly don't care and have
+ * junk or zero bytes for the 640x350 EGA 64k color mode. */
+/* advance to the entry for 640x350x4 for 64KB cards */
+/* if the mode is there, the first two bytes will be nonzero. */
+/* NOTES:
+ * - Paradise/Western Digital VGA BIOS: It's not that simple.
+ *   There is data there for this mode, but it's invalid. It doesn't
+ *   set odd/even mode, but it does set Chain-4?? Why? Every other
+ *   entry from 0 to 0x10 has junk data for the fields corresponding
+ *   to rows, columns, cell height, and video buffer. To ensure
+ *   that we're not using junk data to init, check those fields! */
+unsigned int vpt_looks_like_valid_ega64k350_mode(
+#if TARGET_MSDOS == 32
+	unsigned char *vp
+#else
+	unsigned char far *vp
+#endif
+) {
+	if (vp[0] == 0 || vp[1] == 0)
+		return 0;
+
+	/* Paradise/Western Digital: Why do you have 0x64 0x4A 0x08 0x00 0xFA here? That's not right! Not even the character height!
+	 * And why do you list Sequencer Registers 1-4 as 0x01 0x0F 0x03 0x0E? Why Chain-4? Using these values won't produce a valid
+	 * mode!
+	 *
+	 * The correct bytes should be: 0x50 0x18 0x0E 0x00 0x08  0x05 0x0F 0x00 0x00
+	 *                              COLS ROWS CHRH -VMEMSIZE  SEQ1 SEQ2 SEQ3 SEQ4
+	 *
+	 * SEQ1 = 8-dots/chr + shift/load=1 (load every other chr clock)
+	 * SEQ2 = map mask all bitplanes
+	 * SEQ3 = character map select (doesn't matter)
+	 * SEQ4 = chain-4 off, odd/even mode, no "extended memory" meaning memory beyond 64k */
+	if (vp[0] == 0x50 && vp[1] == 0x18 && vp[2] == 0x0E && vp[3] == 0x00 && vp[4] == 0x80 &&
+		vp[5]/*SEQ1*/ == 0x05 && vp[6]/*SEQ2*/ == 0x0F && /*SEQ3 doesn't matter*/ vp[8]/*SEQ4*/ == 0x00)
+		return 1;
+
+	return 0;
+}
+
+
 static unsigned char translate_nibble4(unsigned char b) {
 	return ((b & 1) ? 3 : 0) + ((b & 2) ? 12 : 0);
 }
@@ -40,9 +81,15 @@ static void translate_scanline(unsigned char *b,unsigned int w) {
 	}
 }
 
-int main() {
+int main(int argc,char **argv) {
 	struct BMPFILEREAD *bfr;
 	unsigned int dispw,i;
+	unsigned char dbg = 0;
+
+	if (argc > 1) {
+		if (!strcmp(argv[1],"-d"))
+			dbg = 1;
+	}
 
 	bfr = open_bmp(bmpfile);
 	if (bfr == NULL) {
@@ -68,15 +115,24 @@ int main() {
 #else
 		unsigned char far *vp;
 #endif
+		unsigned char ok = 0;
 
 		vp = find_vpt();
 		if (vp != NULL) {
-			/* advance to the entry for 640x350x4 for 64KB cards */
-			/* if the mode is there, the first two bytes will be nonzero */
+			if (dbg) {
+				printf("VPTable found!\n");
+				getch();
+			}
+
 			vp += 0x40*0x10;
-			if (vp[0] != 0 && vp[1] != 0) {
-				printf("VPTable entry available!\n");
+			if (vpt_looks_like_valid_ega64k350_mode(vp)) {
+				if (dbg) {
+					printf("VPTable entry available and validated!\n");
+					getch();
+				}
+
 				apply_vpt_mode(vp);
+				ok = 1;
 			}
 		}
 	}
