@@ -4910,6 +4910,24 @@ try_again_w_token:
 			}
 		}
 
+#if 1//DEBUG
+		fprintf(stderr,"%s():\n",__FUNCTION__);
+
+		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)ds.storage_class);
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)ds.type_qualifier);
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+		fprintf(stderr,"\n");
+
+		fprintf(stderr,"\n");
+#endif
+
 		return 0;
 	}
 
@@ -4924,172 +4942,10 @@ try_again_w_token:
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		/* (start here)
-		 *   function_def:
-		 *     declaration_specifiers declarator declaration_list compound_statement
-		 *       where declaration_list:
-		 *         declaration [ declaration ](0 or more)
-		 *   declaration:
-		 *     declaration_specifiers [init_declarator [ ',' init_declarator ](0 or more) ] ';'
-		 *       where init_declarator:
-		 *         declarator [ = initializer ]
-		 */
-
-		/* external_declaration:
-		 *   : function_definition
-		 *   | declaration
-		 *   ; */
-		/* declaration
-		 *   : declaration_specifiers ';'
-		 *   | declaration_specifiers init_declarator_list ';'
-		 *   ; */
-		/* function_definition:
-		 *   : declaration_specifiers declarator declaration_list compound_statement
-		 *   | declaration_specifiers declarator compound_statement
-		 *   | declarator declaration_list compound_statement
-		 *   | declarator compound_statement
-		 *   ; */
-		/* storage_class_specifier
-		 *   : TYPEDEF
-		 *   | EXTERN
-		 *   | STATIC
-		 *   | AUTO
-		 *   | REGISTER
-		 *   ; */
-		/* type_specifier
-		 *   : VOID
-		 *   | CHAR
-		 *   | SHORT
-		 *   | INT
-		 *   | LONG
-		 *   | FLOAT
-		 *   | DOUBLE
-		 *   | SIGNED
-		 *   | UNSIGNED
-		 *   | struct_or_union_specifier
-		 *   | enum_specifier
-		 *   | TYPE_NAME
-		 *   ; */
-		/* type_qualifier
-		 *   : CONST
-		 *   | VOLATILE
-		 *   ; */
-		/* declaration_specifiers
-		 *   : storage_class_specifier
-		 *   | storage_class_specifier declaration_specifiers
-		 *   | type_specifier
-		 *   | type_specifier declaration_specifiers
-		 *   | type_qualifier
-		 *   | type_qualifier declaration_specifiers
-		 *   ; */
-		/* declaration_list
-		 *   : declaration
-		 *   | declaration_list declaration
-		 *   ; */
-		/* init_declarator_list
-		 *   : init_declarator
-		 *   | init_declarator_list ',' init_declarator
-		 *   ; */
-		/* init_declarator
-		 *   : declarator
-		 *   | declarator '=' initializer
-		 *   ; */
-		/* declarator
-		 *   : pointer direct_declarator
-		 *   | direct_declarator
-		 *   ; */
-		/* pointer
-		 *   : '*'
-		 *   | '*' type_qualifier_list
-		 *   | '*' pointer
-		 *   | '*' type_qualifier_list pointer
-		 *   ; */
-		/* direct_declarator
-		 *   : IDENTIFIER
-		 *   | '(' declarator ')'
-		 *   | direct_declarator '[' constant_expression ']'
-		 *   | direct_declarator '[' ']'
-		 *   | direct_declarator '(' parameter_type_list ')'
-		 *   | direct_declarator '(' identifier_list ')'
-		 *   | direct_declarator '(' ')'
-		 *   ; */
-		/* parameter_type_list
-		 *   : parameter_list
-		 *   | parameter_list ',' ELLIPSIS
-		 *   ; */
-		/* parameter_list
-		 *   : parameter_declaration
-		 *   | parameter_list ',' parameter_declaration
-		 *   ; */
-		/* parameter_declaration
-		 *   : declaration_specifiers declarator
-		 *   | declaration_specifiers abstract_declarator
-		 *   | declaration_specifiers
-		 *   ; */
-		/* abstract_declarator
-		 *   : pointer
-		 *   | direct_abstract_declarator
-		 *   | pointer direct_abstract_declarator
-		 *   ; */
-		/* direct_abstract_declarator
-		 *   : '(' abstract_declarator ')'
-		 *   | '[' ']'
-		 *   | '[' constant_expression ']'
-		 *   | direct_abstract_declarator '[' ']'
-		 *   | direct_abstract_declarator '[' constant_expression ']'
-		 *   | '(' ')'
-		 *   | '(' parameter_type_list ')'
-		 *   | direct_abstract_declarator '(' ')'
-		 *   | direct_abstract_declarator '(' parameter_type_list ')'
-		 *   ; */
-		/* compound_statement
-		 *   : '{' '}'
-		 *   | '{' statement_list '}'
-		 *   | '{' declaration_list '}'
-		 *   | '{' declaration_list statement_list '}'
-		 *   ; */
-		/* statement_list
-		 *   : statement
-		 *   | statement_list statement
-		 *   ; */
-		/* statement
-		 *   : labeled_statement
-		 *   | compound_statement
-		 *   | expression_statement
-		 *   | selection_statement
-		 *   | iteration_statement
-		 *   | jump_statement
-		 *   ; */
-		/* expression_statement
-		 *   : ';'
-		 *   | expression ';'
-		 *   ; */
-		/* expression
-		 *   : assignment_expression
-		 *   | expression ',' assignment_expression
-		 *   ; */
 		if ((r=declaration_specifiers_parse(cc,decl.spec)) < 0)
 			return r;
 		if ((r=chkerr(cc)) < 1)
 			return r;
-
-#if 1//DEBUG
-		fprintf(stderr,"%s():\n",__FUNCTION__);
-
-		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)decl.spec.storage_class);
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (decl.spec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-		fprintf(stderr,"\n");
-
-		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)decl.spec.type_specifier);
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (decl.spec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-		fprintf(stderr,"\n");
-
-		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)decl.spec.type_qualifier);
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (decl.spec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		fprintf(stderr,"\n");
-
-		fprintf(stderr,"\n");
-#endif
 
 		return 0;
 	}
