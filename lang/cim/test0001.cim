@@ -1,3 +1,12 @@
 
 static int c;
+static long int d;
+static long double ldoubleme;
+static int *ic;
+static float *fi;
+static int (x);
+static long ((y));
+static int* ((z));
+static int* ((*zz));
+static const int * const volatile ((* const zz));
 

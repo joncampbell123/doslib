@@ -4601,7 +4601,7 @@ try_again_w_token:
 		}
 
 		void tq_refill(const size_t i=1) {
-			while ((tq_tail+tq.size()) < i)
+			while (tq.size() < (i+tq_tail))
 				tq_ft();
 		}
 
@@ -4913,41 +4913,161 @@ try_again_w_token:
 #if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
-		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)ds.storage_class);
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-		fprintf(stderr,"\n");
+		if (declspec & DECLSPEC_STORAGE) {
+			fprintf(stderr,"  storage class: 0x%lx",(unsigned long)ds.storage_class);
+			for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+			fprintf(stderr,"\n");
+		}
 
-		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-		fprintf(stderr,"\n");
+		if (declspec & DECLSPEC_TYPE_SPEC) {
+			fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
+			for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+			fprintf(stderr,"\n");
+		}
 
-		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)ds.type_qualifier);
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		fprintf(stderr,"\n");
+		if (declspec & DECLSPEC_TYPE_QUAL) {
+			fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)ds.type_qualifier);
+			for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+			fprintf(stderr,"\n");
+		}
 
 		fprintf(stderr,"\n");
 #endif
 
-		return 0;
+		return 1;
 	}
+
+	struct pointer_t {
+		type_qualifier_t		tq = 0;
+	};
 
 	struct declaration_t {
 		declaration_specifiers_t	spec;
 	};
 
+	int pointer_parse(cc_state_t &cc,std::vector<pointer_t> &ptr) {
+		int r;
+
+#if 1//DEBUG
+		fprintf(stderr,"%s():parsing\n",__FUNCTION__);
+#endif
+
+		/* pointer handling
+		 *
+		 *   <nothing>
+		 *   *
+		 *   **
+		 *   * const *
+		 *   *** const * const
+		 *
+		 *   and so on */
+		while (cc.tq_peek().type == token_type_t::star) {
+			declaration_specifiers_t ds;
+			pointer_t p;
+
+			cc.tq_discard();
+
+			if ((r=declaration_specifiers_parse(cc,ds,DECLSPEC_TYPE_QUAL|DECLSPEC_OPTIONAL)) < 1)
+				return r;
+
+			assert(ds.type_specifier == 0 && ds.storage_class == 0);
+			p.tq = ds.type_qualifier;
+
+			ptr.push_back(std::move(p));
+		}
+
+		if (!ptr.empty()) {
+#if 1//DEBUG
+			fprintf(stderr,"%s():\n",__FUNCTION__);
+
+			for (auto i=ptr.begin();i!=ptr.end();i++) {
+				fprintf(stderr,"  * ");
+				for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+				fprintf(stderr,"\n");
+			}
+
+			fprintf(stderr,"\n");
+#endif
+		}
+
+		return 1;
+	}
+
 	int external_declaration(cc_state_t &cc) {
 		declaration_t decl;
 		int r;
 
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
+#endif
+
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		if ((r=declaration_specifiers_parse(cc,decl.spec)) < 0)
+		if ((r=declaration_specifiers_parse(cc,decl.spec)) < 1)
 			return r;
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		return 0;
+		std::vector<pointer_t> ptr;
+
+		if ((r=pointer_parse(cc,ptr)) < 1)
+			return r;
+
+		/* direct declarator
+		 *
+		 *   IDENTIFIER
+		 *   ( declarator )
+		 *
+		 *   followed by
+		 *
+		 *   <nothing>
+		 *   [ constant_expression ]
+		 *   [ ]
+		 *   ( parameter_type_list )
+		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
+		 *   ( ) */
+		token_t ident;
+		int identpd = 0;
+		std::vector<pointer_t> identptr;
+
+		while (cc.tq_peek().type == token_type_t::openparenthesis) {
+			cc.tq_discard();
+			identpd++;
+
+			if ((r=pointer_parse(cc,identptr)) < 1)
+				return r;
+		}
+
+		if (cc.tq_peek().type == token_type_t::identifier)
+			ident = std::move(cc.tq_get());
+		else
+			return errno_return(EINVAL);
+
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
+		fprintf(stderr,"  identifier: %s\n",ident.v.strliteral.makestring().c_str());
+#endif
+
+		// TODO:
+		//    direct_declarator
+		//    direct_declarator[const_expression]
+		//    direct_declarator[]
+		//    direct_declarator(parameter_type_list)
+		//    direct_declarator(identifier_list)
+		//    direct_declarator()
+
+		while (identpd > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
+			cc.tq_discard();
+			identpd--;
+		}
+
+		if (cc.tq_peek().type == token_type_t::semicolon) {
+			cc.tq_discard();
+			return 1;
+		}
+
+		return errno_return(EINVAL);
 	}
 
 	int translation_unit(cc_state_t &cc) {
