@@ -52,9 +52,9 @@ static unsigned char far *find_vpt(void) {
 }
 
 #if TARGET_MSDOS == 32
-static void apply_vpt_mode(unsigned char *vp) {
+static void apply_vpt_mode(const unsigned char *vp) {
 #else
-static void apply_vpt_mode(unsigned char far *vp) {
+static void apply_vpt_mode(const unsigned char far *vp) {
 #endif
 	unsigned int i;
 
@@ -105,9 +105,9 @@ static void apply_vpt_mode(unsigned char far *vp) {
  *   that we're not using junk data to init, check those fields! */
 static unsigned int vpt_looks_like_valid_ega64k350_mode(
 #if TARGET_MSDOS == 32
-	unsigned char *vp
+	const unsigned char *vp
 #else
-	unsigned char far *vp
+	const unsigned char far *vp
 #endif
 ) {
 	if (vp[0] == 0 || vp[1] == 0)
