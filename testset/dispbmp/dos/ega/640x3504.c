@@ -59,6 +59,8 @@ int main(int argc,char **argv) {
 			dbg = 1;
 		else if (!strcmp(argv[i],"-n")) /* don't reprogram the mode */
 			nopr = 1;
+		else if (!strcmp(argv[i],"-N")) /* don't reprogram the mode, AT ALL */
+			nopr = 2;
 		else if (!strcmp(argv[i],"-f")) /* force program the mode, don't even use the VPT */
 			fopr = 1;
 	}
@@ -79,10 +81,26 @@ int main(int argc,char **argv) {
 		int	0x10
 	}
 
-	if (nopr) {
+	if (nopr == 2) {
 		/* if asked, do nothing.
 		 * the way this code works it still draws correctly even if the full 16 colors
 		 * and 4 bitplanes are available and no reprogramming is done */
+		if (dbg) {
+			printf("Will make no effort to program anything\n");
+			getch();
+		}
+	}
+	else if (nopr == 1) {
+		/* Do nothing, but do turn off bitplanes */
+		if (dbg) {
+			printf("Will make no effort to program anything except turn off bitplanes\n");
+			getch();
+		}
+
+		/* enable only bitplanes 0 and 2 */
+		inp(0x3DA);
+		outp(0x3C0,0x12 | 0x20);
+		outp(0x3C0,0x05);
 	}
 	/* 640x350x4 only happens for 64KB
 	 * If we WANT 640x350x4 in any other case we have to set it up ourselves from the Video Parameter Table */
