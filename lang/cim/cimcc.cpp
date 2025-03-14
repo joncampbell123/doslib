@@ -5051,8 +5051,29 @@ try_again_w_token:
 		std::vector<pointer_t> ptr;
 	};
 
-	int direct_declarator(cc_state_t &cc,direct_declarator_t &dd) {
+	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
 		int r;
+
+		/* direct declarator
+		 *
+		 *   IDENTIFIER
+		 *   ( declarator )
+		 *
+		 *   followed by
+		 *
+		 *   <nothing>
+		 *   [ constant_expression ]
+		 *   [ ]
+		 *   ( parameter_type_list )
+		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
+		 *   ( ) */
+
+		// TODO:
+		//    direct_declarator[const_expression]
+		//    direct_declarator[]
+		//    direct_declarator(parameter_type_list)
+		//    direct_declarator(identifier_list)
+		//    direct_declarator()
 
 		while (cc.tq_peek().type == token_type_t::openparenthesis) {
 			cc.tq_discard();
@@ -5084,8 +5105,26 @@ try_again_w_token:
 		return 1;
 	}
 
+	struct declarator_t {
+		direct_declarator_t ddecl;
+		std::vector<pointer_t> ptr;
+	};
+
+	int declarator_parse(cc_state_t &cc,declarator_t &declor) {
+		int r;
+
+		if ((r=pointer_parse(cc,declor.ptr)) < 1)
+			return r;
+
+		if ((r=direct_declarator_parse(cc,declor.ddecl)) < 1)
+			return r;
+
+		return 1;
+	}
+
 	int external_declaration(cc_state_t &cc) {
-		declaration_t decl;
+		declaration_t declion;
+		declarator_t declor;
 		int r;
 
 #if 1//DEBUG
@@ -5095,42 +5134,15 @@ try_again_w_token:
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		if ((r=declaration_specifiers_parse(cc,decl.spec)) < 1)
+		if ((r=declaration_specifiers_parse(cc,declion.spec)) < 1)
 			return r;
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		std::vector<pointer_t> ptr;
-
-		if ((r=pointer_parse(cc,ptr)) < 1)
+		if ((r=declarator_parse(cc,declor)) < 1)
 			return r;
-
-		/* direct declarator
-		 *
-		 *   IDENTIFIER
-		 *   ( declarator )
-		 *
-		 *   followed by
-		 *
-		 *   <nothing>
-		 *   [ constant_expression ]
-		 *   [ ]
-		 *   ( parameter_type_list )
-		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
-		 *   ( ) */
-
-		direct_declarator_t ddecl;
-
-		if ((r=direct_declarator(cc,ddecl)) < 1)
+		if ((r=chkerr(cc)) < 1)
 			return r;
-
-		// TODO:
-		//    direct_declarator
-		//    direct_declarator[const_expression]
-		//    direct_declarator[]
-		//    direct_declarator(parameter_type_list)
-		//    direct_declarator(identifier_list)
-		//    direct_declarator()
 
 		if (cc.tq_peek().type == token_type_t::semicolon) {
 			cc.tq_discard();
