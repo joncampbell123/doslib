@@ -4773,11 +4773,13 @@ try_again_w_token:
 		storage_class_t		storage_class = 0;
 		type_specifier_t	type_specifier = 0;
 		type_qualifier_t	type_qualifier = 0;
+		unsigned int		count = 0;
 	};
 
 	static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
 	static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
 	static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
+	static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
 
 	int declaration_specifiers_parse(cc_state_t &cc,declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL) {
 		const position_t pos = cc.tq_peek().pos;
@@ -4785,7 +4787,7 @@ try_again_w_token:
 		do {
 			const token_t &t = cc.tq_peek();
 
-#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else d|=m; } else { break; }
+#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else { d|=m; ds.count++; } } else { break; }
 #define X(f,d,m) { XCHK(f,d,m); cc.tq_discard(); continue; }
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
@@ -4838,6 +4840,12 @@ try_again_w_token:
 
 			break;
 		} while (1);
+
+		/* unless told otherwise, it is an error for this code not to parse any tokens */
+		if (!(declspec & DECLSPEC_OPTIONAL) && ds.count == 0) {
+			CCerr(pos,"Declaration specifiers expected");
+			return errno_return(EINVAL);
+		}
 
 		/* sanity check */
 		{
@@ -4904,6 +4912,17 @@ try_again_w_token:
 
 		if ((r=chkerr(cc)) < 1)
 			return r;
+
+		/* (start here)
+		 *   function_def:
+		 *     declaration_specifiers declarator declaration_list compound_statement
+		 *       where declaration_list:
+		 *         declaration [ declaration ](0 or more)
+		 *   declaration:
+		 *     declaration_specifiers [init_declarator [ ',' init_declarator ](0 or more) ] ';'
+		 *       where init_declarator:
+		 *         declarator [ = initializer ]
+		 */
 
 		/* external_declaration:
 		 *   : function_definition
