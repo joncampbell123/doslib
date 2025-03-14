@@ -5202,11 +5202,7 @@ try_again_w_token:
 		}
 	}
 
-	int initializer(cc_state_t &cc,ast_node_id_t &aroot) {
-		assert(aroot == ast_node_none);
-
-		/* the equals sign has already been consumed */
-
+	int primary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		if (	cc.tq_peek().type == token_type_t::identifier ||
 			cc.tq_peek().type == token_type_t::strliteral ||
 			cc.tq_peek().type == token_type_t::charliteral ||
@@ -5214,17 +5210,99 @@ try_again_w_token:
 			cc.tq_peek().type == token_type_t::floating) {
 			aroot = ast_node_alloc();
 			ast_node(aroot).t = cc.tq_get();
-
-
-#if 1//DEBUG
-			fprintf(stderr,"init AST:\n");
-			debug_dump_ast("  ",aroot);
-#endif
-
-			return 1;
+		}
+		/* TODO: (expression) */
+		else {
+			return errno_return(EINVAL);
 		}
 
-		return errno_return(EINVAL);
+		return 1;
+	}
+
+	int exclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: exclusive_or_expression '^' and_expression */
+
+		if ((r=primary_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int inclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: inclusive_or_expression '|' exclusive_or_expression */
+
+		if ((r=exclusive_or_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int logical_and_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: logical_and_expression OR_OP inclusive_or_expression */
+
+		if ((r=inclusive_or_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int logical_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: logical_or_expression OR_OP logical_and_expression */
+
+		if ((r=logical_and_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int conditional_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: logical_or_expression ? expression : conditional_expression */
+
+		if ((r=logical_or_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int assignment_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: unary_expression assignment_operator assignment_expression */
+
+		if ((r=conditional_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int initializer(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		assert(aroot == ast_node_none);
+
+		/* the equals sign has already been consumed */
+
+		// TODO { initializer_list }
+
+		if ((r=assignment_expression(cc,aroot)) < 1)
+			return r;
+
+#if 1//DEBUG
+		fprintf(stderr,"init AST:\n");
+		debug_dump_ast("  ",aroot);
+#endif
+
+		return 1;
 	}
 
 	int external_declaration(cc_state_t &cc) {
