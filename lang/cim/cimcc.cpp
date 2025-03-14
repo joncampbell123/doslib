@@ -4808,7 +4808,7 @@ try_again_w_token:
 		assert(ast_nodes[ast_node_next].t.type == token_type_t::none);
 		ast_nodes[ast_node_next] = ast_node_t();
 		ast_nodes[ast_node_next].t.type = token_type_t::eof;
-		return ast_node_next;
+		return ast_node_next++;
 	}
 
 	void ast_node_free(const ast_node_id_t &id) {
@@ -5108,6 +5108,7 @@ try_again_w_token:
 	struct declarator_t {
 		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
+		ast_node_id_t initval = ast_node_none;
 	};
 
 	int declarator_parse(cc_state_t &cc,declarator_t &declor) {
@@ -5120,6 +5121,40 @@ try_again_w_token:
 			return r;
 
 		return 1;
+	}
+
+	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
+		while (r != ast_node_none) {
+			const auto &n = ast_node(r);
+			fprintf(stderr,"%s%s\n",prefix.c_str(),n.t.to_str().c_str());
+			debug_dump_ast(prefix+"  ",n.child);
+			r = n.next;
+		}
+	}
+
+	int initializer(cc_state_t &cc,ast_node_id_t &aroot) {
+		assert(aroot == ast_node_none);
+
+		/* the equals sign has already been consumed */
+
+		if (	cc.tq_peek().type == token_type_t::identifier ||
+			cc.tq_peek().type == token_type_t::strliteral ||
+			cc.tq_peek().type == token_type_t::charliteral ||
+			cc.tq_peek().type == token_type_t::integer ||
+			cc.tq_peek().type == token_type_t::floating) {
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = cc.tq_get();
+
+
+#if 1//DEBUG
+			fprintf(stderr,"init AST:\n");
+			debug_dump_ast("  ",aroot);
+#endif
+
+			return 1;
+		}
+
+		return errno_return(EINVAL);
 	}
 
 	int external_declaration(cc_state_t &cc) {
@@ -5145,6 +5180,13 @@ try_again_w_token:
 				return r;
 			if ((r=chkerr(cc)) < 1)
 				return r;
+
+			if (cc.tq_peek().type == token_type_t::equal) {
+				cc.tq_discard();
+
+				if ((r=initializer(cc,declor.initval)) < 1)
+					return r;
+			}
 
 			if (cc.tq_peek().type == token_type_t::comma) {
 				cc.tq_discard();
