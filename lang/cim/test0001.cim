@@ -9,4 +9,7 @@ static long ((y));
 static int* ((z));
 static int* ((*zz));
 static const int * const volatile ((* const zz));
+static int c,d;
+static long int c,*d;
+static long int *c,**d,e,f,g,h,i;
 

@@ -5124,7 +5124,6 @@ try_again_w_token:
 
 	int external_declaration(cc_state_t &cc) {
 		declaration_t declion;
-		declarator_t declor;
 		int r;
 
 #if 1//DEBUG
@@ -5139,10 +5138,21 @@ try_again_w_token:
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
-		if ((r=declarator_parse(cc,declor)) < 1)
-			return r;
-		if ((r=chkerr(cc)) < 1)
-			return r;
+		do {
+			declarator_t declor;
+
+			if ((r=declarator_parse(cc,declor)) < 1)
+				return r;
+			if ((r=chkerr(cc)) < 1)
+				return r;
+
+			if (cc.tq_peek().type == token_type_t::comma) {
+				cc.tq_discard();
+				continue;
+			}
+
+			break;
+		} while(1);
 
 		if (cc.tq_peek().type == token_type_t::semicolon) {
 			cc.tq_discard();
