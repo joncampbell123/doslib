@@ -4777,14 +4777,83 @@ try_again_w_token:
 		token_t			t;
 		ast_node_id_t		next = ast_node_none;
 		ast_node_id_t		child = ast_node_none;
+		unsigned int		ref = 0;
+
+		ast_node_t&		set_child(const ast_node_id_t n);
+		ast_node_t&		set_next(const ast_node_id_t n);
+		ast_node_t&		addref(void);
+		ast_node_t&		release(void);
+		ast_node_t&		clear(void);
+
+		ast_node_t() { }
+		ast_node_t(const ast_node_t &) = delete;
+		ast_node_t &operator=(const ast_node_t &) = delete;
+		ast_node_t(ast_node_t &&x) { common_move(x); }
+		ast_node_t &operator=(ast_node_t &&x) { common_move(x); return *this; }
+
+		void common_move(ast_node_t &o) {
+			t = std::move(o.t);
+			ref = o.ref; o.ref = 0;
+			next = o.next; o.next = ast_node_none;
+			child = o.child; o.child = ast_node_none;
+		}
 	};
 
 	static std::vector<ast_node_t>	ast_nodes;
 
+	ast_node_t &ast_node(const ast_node_id_t &id);
+
+	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
+		if (child != n) {
+			if (child != ast_node_none) ast_node(child).release();
+			child = n;
+			if (child != ast_node_none) ast_node(child).addref();
+		}
+		return *this;
+	}
+
+	ast_node_t &ast_node_t::set_next(const ast_node_id_t n) {
+		if (next != n) {
+			if (next != ast_node_none) ast_node(next).release();
+			next = n;
+			if (next != ast_node_none) ast_node(next).addref();
+		}
+		return *this;
+	}
+
+	ast_node_t &ast_node_t::clear(void) {
+		ref = 0;
+		t = token_t();
+		set_next(ast_node_none);
+		set_child(ast_node_none);
+		return *this;
+	}
+
+	ast_node_t &ast_node_t::addref(void) {
+		ref++;
+		return *this;
+	}
+
+	ast_node_t &ast_node_t::release(void) {
+		if (ref == 0) throw std::runtime_error("ast_node attempt to release when ref == 0");
+		if (--ref == 0) clear();
+		return *this;
+	}
+
+	void ast_node_refcount_check(void) {
+		for (size_t i=0;i < ast_nodes.size();i++) {
+			if (ast_nodes[i].ref != 0) {
+				fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
+					ast_nodes[i].ref,
+					ast_nodes[i].t.to_str().c_str());
+			}
+		}
+	}
+
 	ast_node_t &ast_node(const ast_node_id_t &id) {
 #if 1//DEBUG
 		if (id < ast_nodes.size()) {
-			if (ast_nodes[id].t.type == token_type_t::none)
+			if (ast_nodes[id].ref == 0)
 				throw std::out_of_range("ast_node not initialized");
 
 			return ast_nodes[id];
@@ -4797,28 +4866,18 @@ try_again_w_token:
 	}
 
 	ast_node_id_t ast_node_alloc(void) {
-#if 0//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-		while (ast_node_next < ast_nodes.size() && ast_nodes[ast_node_next].t.type != token_type_t::none)
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+		while (ast_node_next < ast_nodes.size() && ast_nodes[ast_node_next].ref != 0)
 			ast_node_next++;
 #endif
 		if (ast_node_next == ast_nodes.size())
-			ast_nodes.push_back(std::move(ast_node_t()));
+			ast_nodes.resize(ast_nodes.size()+(ast_nodes.size()/2u)+16u);
 
 		assert(ast_node_next < ast_nodes.size());
-		assert(ast_nodes[ast_node_next].t.type == token_type_t::none);
-		ast_nodes[ast_node_next] = ast_node_t();
+		assert(ast_nodes[ast_node_next].ref == 0);
+		ast_nodes[ast_node_next].clear().addref();
 		ast_nodes[ast_node_next].t.type = token_type_t::eof;
 		return ast_node_next++;
-	}
-
-	void ast_node_free(const ast_node_id_t &id) {
-		if (id < ast_nodes.size()) {
-			if (ast_node_next > id) ast_node_next = id;
-			ast_nodes[id] = ast_node_t();
-		}
-		else {
-			throw std::out_of_range("ast_node out of range");
-		}
 	}
 
 	struct declaration_specifiers_t {
@@ -5109,6 +5168,17 @@ try_again_w_token:
 		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
 		ast_node_id_t initval = ast_node_none;
+
+		declarator_t() { }
+		declarator_t(const declarator_t &) = delete;
+		declarator_t(declarator_t &&) = delete;
+		declarator_t &operator=(const declarator_t &) = delete;
+		declarator_t &operator=(declarator_t &&) = delete;
+
+		~declarator_t() {
+			if (initval != ast_node_none)
+				ast_node(initval).release();
+		}
 	};
 
 	int declarator_parse(cc_state_t &cc,declarator_t &declor) {
@@ -5507,6 +5577,7 @@ int main(int argc,char **argv) {
 	}
 
 	CIMCC::source_file_refcount_check();
+	CIMCC::ast_node_refcount_check();
 
 	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
 		test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU || test_mode == TEST_LGTOK ||
