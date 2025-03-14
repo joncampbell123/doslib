@@ -4769,6 +4769,58 @@ try_again_w_token:
 		return 1;
 	}
 
+	typedef size_t ast_node_id_t;
+	static constexpr ast_node_id_t ast_node_none = ~size_t(0u);
+	static ast_node_id_t ast_node_next = 0;
+
+	struct ast_node_t {
+		token_t			t;
+		ast_node_id_t		next = ast_node_none;
+		ast_node_id_t		child = ast_node_none;
+	};
+
+	static std::vector<ast_node_t>	ast_nodes;
+
+	ast_node_t &ast_node(const ast_node_id_t &id) {
+#if 1//DEBUG
+		if (id < ast_nodes.size()) {
+			if (ast_nodes[id].t.type == token_type_t::none)
+				throw std::out_of_range("ast_node not initialized");
+
+			return ast_nodes[id];
+		}
+
+		throw std::out_of_range("ast_node out of range");
+#else
+		return ast_nodes[id];
+#endif
+	}
+
+	ast_node_id_t ast_node_alloc(void) {
+#if 0//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+		while (ast_node_next < ast_nodes.size() && ast_nodes[ast_node_next].t.type != token_type_t::none)
+			ast_node_next++;
+#endif
+		if (ast_node_next == ast_nodes.size())
+			ast_nodes.push_back(std::move(ast_node_t()));
+
+		assert(ast_node_next < ast_nodes.size());
+		assert(ast_nodes[ast_node_next].t.type == token_type_t::none);
+		ast_nodes[ast_node_next] = ast_node_t();
+		ast_nodes[ast_node_next].t.type = token_type_t::eof;
+		return ast_node_next;
+	}
+
+	void ast_node_free(const ast_node_id_t &id) {
+		if (id < ast_nodes.size()) {
+			if (ast_node_next > id) ast_node_next = id;
+			ast_nodes[id] = ast_node_t();
+		}
+		else {
+			throw std::out_of_range("ast_node out of range");
+		}
+	}
+
 	struct declaration_specifiers_t {
 		storage_class_t		storage_class = 0;
 		type_specifier_t	type_specifier = 0;
