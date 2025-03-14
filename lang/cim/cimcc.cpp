@@ -5062,6 +5062,9 @@ try_again_w_token:
 			identpd--;
 		}
 
+		if (identpd > 0)
+			return errno_return(EINVAL);
+
 		if (cc.tq_peek().type == token_type_t::semicolon) {
 			cc.tq_discard();
 			return 1;
