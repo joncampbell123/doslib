@@ -15,4 +15,5 @@ static long int *c,**d,e,f,g,h,i;
 static int c = 4;
 static int cc = 4,d = 6,ee = 12.34,ff = cc;
 static const char *s = "Hello world";
+static int c = 6;;;
 

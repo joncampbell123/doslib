@@ -5165,6 +5165,10 @@ try_again_w_token:
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
+		if (cc.tq_peek().type == token_type_t::semicolon) {
+			cc.tq_discard();
+			return 1;
+		}
 		if ((r=chkerr(cc)) < 1)
 			return r;
 
