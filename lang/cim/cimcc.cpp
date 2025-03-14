@@ -5045,6 +5045,45 @@ try_again_w_token:
 		return 1;
 	}
 
+	struct direct_declarator_t {
+		token_t name;
+		int indent = 0;
+		std::vector<pointer_t> ptr;
+	};
+
+	int direct_declarator(cc_state_t &cc,direct_declarator_t &dd) {
+		int r;
+
+		while (cc.tq_peek().type == token_type_t::openparenthesis) {
+			cc.tq_discard();
+			dd.indent++;
+
+			if ((r=pointer_parse(cc,dd.ptr)) < 1)
+				return r;
+		}
+
+		if (cc.tq_peek().type == token_type_t::identifier)
+			dd.name = std::move(cc.tq_get());
+		else
+			return errno_return(EINVAL);
+
+		while (dd.indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
+			cc.tq_discard();
+			dd.indent--;
+		}
+
+		if (dd.indent > 0)
+			return errno_return(EINVAL);
+
+		assert(dd.name.type == token_type_t::identifier);
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
+		fprintf(stderr,"  identifier: %s\n",dd.name.v.strliteral.makestring().c_str());
+#endif
+
+		return 1;
+	}
+
 	int external_declaration(cc_state_t &cc) {
 		declaration_t decl;
 		int r;
@@ -5079,27 +5118,11 @@ try_again_w_token:
 		 *   ( parameter_type_list )
 		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
 		 *   ( ) */
-		token_t ident;
-		int identpd = 0;
-		std::vector<pointer_t> identptr;
 
-		while (cc.tq_peek().type == token_type_t::openparenthesis) {
-			cc.tq_discard();
-			identpd++;
+		direct_declarator_t ddecl;
 
-			if ((r=pointer_parse(cc,identptr)) < 1)
-				return r;
-		}
-
-		if (cc.tq_peek().type == token_type_t::identifier)
-			ident = std::move(cc.tq_get());
-		else
-			return errno_return(EINVAL);
-
-#if 1//DEBUG
-		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
-		fprintf(stderr,"  identifier: %s\n",ident.v.strliteral.makestring().c_str());
-#endif
+		if ((r=direct_declarator(cc,ddecl)) < 1)
+			return r;
 
 		// TODO:
 		//    direct_declarator
@@ -5108,14 +5131,6 @@ try_again_w_token:
 		//    direct_declarator(parameter_type_list)
 		//    direct_declarator(identifier_list)
 		//    direct_declarator()
-
-		while (identpd > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
-			cc.tq_discard();
-			identpd--;
-		}
-
-		if (identpd > 0)
-			return errno_return(EINVAL);
 
 		if (cc.tq_peek().type == token_type_t::semicolon) {
 			cc.tq_discard();
