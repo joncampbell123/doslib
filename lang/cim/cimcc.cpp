@@ -4847,6 +4847,13 @@ try_again_w_token:
 			return errno_return(EINVAL);
 		}
 
+		/* unless asked not to parse type specifiers, it is an error not to specify one.
+		 * You can't say "static x" for example */
+		if ((declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
+			CCerr(pos,"Type specifiers expected. Specify a type here");
+			return errno_return(EINVAL);
+		}
+
 		/* sanity check */
 		{
 			const storage_class_t mm_t = ds.storage_class & (SC_NEAR|SC_FAR|SC_HUGE); /* only one of */
