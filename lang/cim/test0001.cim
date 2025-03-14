@@ -16,4 +16,6 @@ static int c = 4;
 static int cc = 4,d = 6,ee = 12.34,ff = cc;
 static const char *s = "Hello world";
 static int c = 6;;;
+static int d = 4 ? 2 : 1;
+static int d = 4 ? 3 ? 2 : 1 : 0;
 

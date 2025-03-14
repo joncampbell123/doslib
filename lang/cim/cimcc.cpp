@@ -746,6 +746,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		anglestrliteral,			// 145
 		r___func__,
 		r___FUNCTION__,
+		op_ternary,
 
 		__MAX__
 	};
@@ -1287,7 +1288,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		strpp_include_next,
 		"anglestrliteral",			// 145
 		"__func__",
-		"__FUNCTION__"
+		"__FUNCTION__",
+		"ternary ? :"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5263,6 +5265,8 @@ try_again_w_token:
 		return 1;
 	}
 
+	int expression(cc_state_t &cc,ast_node_id_t &aroot);
+
 	int conditional_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		int r;
 
@@ -5270,6 +5274,28 @@ try_again_w_token:
 
 		if ((r=logical_or_expression(cc,aroot)) < 1)
 			return r;
+
+		if (cc.tq_peek().type == token_type_t::question) {
+			ast_node_id_t cond_expr = aroot; aroot = ast_node_none;
+			cc.tq_discard();
+
+			ast_node_id_t true_expr = ast_node_alloc();
+			if ((r=expression(cc,true_expr)) < 1)
+				return r;
+
+			if (cc.tq_get().type != token_type_t::colon)
+				return errno_return(EINVAL);
+
+			ast_node_id_t false_expr = ast_node_alloc();
+			if ((r=conditional_expression(cc,false_expr)) < 1)
+				return r;
+
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_ternary);
+			ast_node(aroot).set_child(cond_expr); ast_node(cond_expr).release();
+			ast_node(cond_expr).set_next(true_expr); ast_node(true_expr).release();
+			ast_node(true_expr).set_next(false_expr); ast_node(false_expr).release();
+		}
 
 		return 1;
 	}
@@ -5280,6 +5306,17 @@ try_again_w_token:
 		/* TODO: unary_expression assignment_operator assignment_expression */
 
 		if ((r=conditional_expression(cc,aroot)) < 1)
+			return r;
+
+		return 1;
+	}
+
+	int expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
+		/* TODO: expression, assignment_expression */
+
+		if ((r=assignment_expression(cc,aroot)) < 1)
 			return r;
 
 		return 1;
