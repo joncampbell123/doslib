@@ -4913,8 +4913,12 @@ try_again_w_token:
 		return 0;
 	}
 
+	struct declaration_t {
+		declaration_specifiers_t	spec;
+	};
+
 	int external_declaration(cc_state_t &cc) {
-		declaration_specifiers_t declspec;
+		declaration_t decl;
 		int r;
 
 		if ((r=chkerr(cc)) < 1)
@@ -5064,7 +5068,7 @@ try_again_w_token:
 		 *   : assignment_expression
 		 *   | expression ',' assignment_expression
 		 *   ; */
-		if ((r=declaration_specifiers_parse(cc,declspec)) < 0)
+		if ((r=declaration_specifiers_parse(cc,decl.spec)) < 0)
 			return r;
 		if ((r=chkerr(cc)) < 1)
 			return r;
@@ -5072,16 +5076,16 @@ try_again_w_token:
 #if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
-		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)declspec.storage_class);
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (declspec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)decl.spec.storage_class);
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (decl.spec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
-		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)declspec.type_specifier);
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (declspec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)decl.spec.type_specifier);
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (decl.spec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
-		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)declspec.type_qualifier);
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (declspec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)decl.spec.type_qualifier);
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (decl.spec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
 		fprintf(stderr,"\n");
 
 		fprintf(stderr,"\n");
