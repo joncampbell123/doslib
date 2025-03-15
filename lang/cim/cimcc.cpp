@@ -747,6 +747,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		r___func__,
 		r___FUNCTION__,
 		op_ternary,
+		op_comma,
 
 		__MAX__
 	};
@@ -1289,7 +1290,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"anglestrliteral",			// 145
 		"__func__",
 		"__FUNCTION__",
-		"ternary ? :"
+		"op:ternary ? :",
+		"op:comma"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5318,6 +5320,22 @@ try_again_w_token:
 
 		if ((r=assignment_expression(cc,aroot)) < 1)
 			return r;
+
+		while (cc.tq_peek().type == token_type_t::comma) {
+			cc.tq_discard();
+
+			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_comma);
+			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+			ast_node_id_t expr2 = ast_node_none;
+			if ((r=assignment_expression(cc,expr2)) < 1)
+				return r;
+
+			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+		}
 
 		return 1;
 	}

@@ -18,4 +18,6 @@ static const char *s = "Hello world";
 static int c = 6;;;
 static int d = 4 ? 2 : 1;
 static int d = 4 ? 3 ? 2 : 1 : 0;
+static int d = 4 ? 3,2 : 1;
+static int d = 8 ? 7,6,5,4,3,2 : 1;
 
