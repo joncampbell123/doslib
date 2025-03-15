@@ -5247,11 +5247,6 @@ try_again_w_token:
 		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
 		 *   ( ) */
 
-		// TODO:
-		//    direct_declarator(parameter_type_list)
-		//    direct_declarator(identifier_list)
-		//    direct_declarator()
-
 		while (cc.tq_peek().type == token_type_t::openparenthesis) {
 			cc.tq_discard();
 			indent++;
@@ -5300,13 +5295,18 @@ try_again_w_token:
 			dd.flags |= direct_declarator_t::FL_FUNCTION;
 			if (cc.tq_peek().type != token_type_t::closeparenthesis) {
 				do {
-					parameter_t p;
-
 					if (cc.tq_peek().type == token_type_t::ellipsis) {
 						cc.tq_discard();
 						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
+
+						/* At least one paremter is required for ellipsis! */
+						if (dd.parameters.empty())
+							return errno_return(EINVAL);
+
 						break;
 					}
+
+					parameter_t p;
 
 					if ((r=declaration_specifiers_parse(cc,p.spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
 						return r;
@@ -5390,6 +5390,15 @@ try_again_w_token:
 
 				if (p.ddecl) {
 					const auto &name = p.ddecl->name;
+
+					for (auto i=p.ddecl->ptr.begin();i!=p.ddecl->ptr.end();i++) {
+						fprintf(stderr," (*)");
+						for (unsigned int x=0;x < TQI__MAX;x++) {
+							if ((*i).tq&(1u<<x))
+								fprintf(stderr," %s",type_qualifier_idx_t_str[x]);
+						}
+					}
+
 					if (name.type == token_type_t::identifier)
 						fprintf(stderr," '%s'",name.v.strliteral.makestring().c_str());
 				}
