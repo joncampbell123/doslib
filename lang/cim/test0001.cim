@@ -93,4 +93,9 @@ static int d = (b*a)*c;
 static int d = (b+a)*c;
 static int d = b+a*c;
 static int d = (((a+b)*c)/d)+(e*f);
+static int d = a[5];
+static int d = a[b+c];
+static int d = a[3][5];
+static int d = a[b+c][4+d];
+static int d = (*(a+3))[b][c][d][e][f];
 
