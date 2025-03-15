@@ -750,6 +750,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_comma,
 		op_logical_or,				// 150
 		op_logical_and,
+		op_binary_or,
 
 		__MAX__
 	};
@@ -1295,7 +1296,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:ternary ? :",
 		"op:comma",
 		"op:log-or",				// 150
-		"op:log-and"
+		"op:log-and",
+		"op:bin-or"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5241,10 +5243,24 @@ try_again_w_token:
 	int inclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		int r;
 
-		/* TODO: inclusive_or_expression '|' exclusive_or_expression */
-
 		if ((r=exclusive_or_expression(cc,aroot)) < 1)
 			return r;
+
+		while (cc.tq_peek().type == token_type_t::pipe) {
+			cc.tq_discard();
+
+			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_binary_or);
+			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+			ast_node_id_t expr2 = ast_node_none;
+			if ((r=exclusive_or_expression(cc,expr2)) < 1)
+				return r;
+
+			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+		}
 
 		return 1;
 	}
