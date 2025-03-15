@@ -5025,7 +5025,7 @@ try_again_w_token:
 
 		/* unless asked not to parse type specifiers, it is an error not to specify one.
 		 * You can't say "static x" for example */
-		if ((declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
+		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
 			CCerr(pos,"Type specifiers expected. Specify a type here");
 			return errno_return(EINVAL);
 		}
@@ -5308,7 +5308,7 @@ try_again_w_token:
 						break;
 					}
 
-					if ((r=declaration_specifiers_parse(cc,p.spec)) < 1)
+					if ((r=declaration_specifiers_parse(cc,p.spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
 						return r;
 
 					if ((r=pointer_parse(cc,p.ptr)) < 1)
