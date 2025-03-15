@@ -5315,7 +5315,7 @@ try_again_w_token:
 			ast_node(aroot).t = token_t(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
@@ -5331,7 +5331,7 @@ try_again_w_token:
 			ast_node(aroot2).t = token_t(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(aroot2); ast_node(aroot2).release();
@@ -5345,7 +5345,7 @@ try_again_w_token:
 			ast_node(aroot).t = token_t(token_type_t::op_pointer_deref);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
@@ -5354,7 +5354,7 @@ try_again_w_token:
 			cc.tq_discard();
 
 			/* So basically +4, right? Which we can just treat as a no-op */
-			if ((r=unary_expression(cc,aroot)) < 1)
+			if ((r=cast_expression(cc,aroot)) < 1)
 				return r;
 		}
 		else if (cc.tq_peek().type == token_type_t::minus) {
@@ -5365,7 +5365,7 @@ try_again_w_token:
 			ast_node(aroot).t = token_t(token_type_t::op_negate);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
@@ -5378,7 +5378,7 @@ try_again_w_token:
 			ast_node(aroot).t = token_t(token_type_t::op_binary_not);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
@@ -5391,7 +5391,7 @@ try_again_w_token:
 			ast_node(aroot).t = token_t(token_type_t::op_logical_not);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=cast_expression(cc,expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
