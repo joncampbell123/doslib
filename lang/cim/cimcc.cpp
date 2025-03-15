@@ -5180,9 +5180,11 @@ try_again_w_token:
 		parameter_t() { }
 		parameter_t(const parameter_t &) = delete;
 		parameter_t &operator=(const parameter_t &) = delete;
-		parameter_t(parameter_t &&) = default;
-		parameter_t &operator=(parameter_t &&) = default;
+		parameter_t(parameter_t &&x) { common_move(x); };
+		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
 		~parameter_t();
+
+		void common_move(parameter_t &o);
 	};
 
 	struct direct_declarator_t {
@@ -5209,14 +5211,22 @@ try_again_w_token:
 	};
 
 	parameter_t::~parameter_t() {
-		if (ddecl) delete[] ddecl;
+		if (ddecl) delete ddecl;
 		ddecl = NULL;
 
 		if (initval != ast_node_none)
 			ast_node(initval).release();
 	}
 
+	void parameter_t::common_move(parameter_t &o) {
+		spec = o.spec;
+		ptr = std::move(o.ptr);
+		ddecl = o.ddecl; o.ddecl = NULL;
+		initval = o.initval; o.initval = ast_node_none;
+	}
+
 	int expression(cc_state_t &cc,ast_node_id_t &aroot);
+	int initializer(cc_state_t &cc,ast_node_id_t &aroot);
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 
 	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
@@ -5289,12 +5299,49 @@ try_again_w_token:
 			/* NTS: "()" is acceptable */
 			dd.flags |= direct_declarator_t::FL_FUNCTION;
 			if (cc.tq_peek().type != token_type_t::closeparenthesis) {
-				// TODO
-				return errno_return(EINVAL);
+				do {
+					parameter_t p;
+
+					if (cc.tq_peek().type == token_type_t::ellipsis) {
+						cc.tq_discard();
+						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
+						break;
+					}
+
+					if ((r=declaration_specifiers_parse(cc,p.spec)) < 1)
+						return r;
+
+					if ((r=pointer_parse(cc,p.ptr)) < 1)
+						return r;
+
+					p.ddecl = new direct_declarator_t();
+					if ((r=direct_declarator_parse(cc,*(p.ddecl))) < 1)
+						return r;
+
+					if (cc.tq_peek().type == token_type_t::equal) {
+						cc.tq_discard();
+
+						if ((r=initializer(cc,p.initval)) < 1)
+							return r;
+					}
+
+					dd.parameters.push_back(std::move(p));
+					if (cc.tq_peek().type == token_type_t::comma) {
+						cc.tq_discard();
+						continue;
+					}
+
+					break;
+				} while (1);
 			}
 
 			if (cc.tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
+		}
+
+		while (indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
+			cc.tq_discard();
+			indent--;
 		}
 
 		if (indent > 0)
@@ -5311,6 +5358,43 @@ try_again_w_token:
 		}
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
 			fprintf(stderr,"  functiondef:\n");
+			for (const auto &p : dd.parameters) {
+				fprintf(stderr,"    param:");
+
+				for (unsigned int i=0;i < SCI__MAX;i++) {
+					if (p.spec.storage_class&(1u<<i))
+						fprintf(stderr," %s",storage_class_idx_t_str[i]);
+				}
+				for (unsigned int i=0;i < TSI__MAX;i++) {
+					if (p.spec.type_specifier&(1u<<i))
+						fprintf(stderr," %s",type_specifier_idx_t_str[i]);
+				}
+				for (unsigned int i=0;i < TQI__MAX;i++) {
+					if (p.spec.type_qualifier&(1u<<i))
+						fprintf(stderr," %s",type_qualifier_idx_t_str[i]);
+				}
+
+				for (auto i=p.ptr.begin();i!=p.ptr.end();i++) {
+					fprintf(stderr," *");
+					for (unsigned int x=0;x < TQI__MAX;x++) {
+						if ((*i).tq&(1u<<x))
+							fprintf(stderr," %s",type_qualifier_idx_t_str[x]);
+					}
+				}
+
+				if (p.ddecl) {
+					const auto &name = p.ddecl->name;
+					if (name.type == token_type_t::identifier)
+						fprintf(stderr," '%s'",name.v.strliteral.makestring().c_str());
+				}
+
+				fprintf(stderr,"\n");
+
+				if (p.initval != ast_node_none) {
+					fprintf(stderr,"      init:\n");
+					debug_dump_ast("        ",p.initval);
+				}
+			}
 			if (dd.flags & direct_declarator_t::FL_ELLIPSIS) {
 				fprintf(stderr,"    ... (ellipsis)\n");
 			}
