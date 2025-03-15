@@ -5259,8 +5259,20 @@ try_again_w_token:
 		return 1;
 	}
 
-	int multiplicative_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 #define nextexpr primary_expression
+		int r;
+
+		if ((r=nextexpr(cc,aroot)) < 1)
+			return r;
+
+		/* TODO: (cast expression) */
+#undef nextexpr
+		return 1;
+	}
+
+	int multiplicative_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr cast_expression
 		int r;
 
 		if ((r=nextexpr(cc,aroot)) < 1)
