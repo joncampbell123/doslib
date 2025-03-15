@@ -4703,11 +4703,7 @@ try_again_w_token:
 		SCI_STATIC,
 		SCI_AUTO,
 		SCI_REGISTER,
-		SCI_NEAR,		// 5
-		SCI_FAR,
-		SCI_HUGE,
-		SCI_CONSTEXPR,
-		SCI_RESTRICT,
+		SCI_CONSTEXPR,		// 5
 
 		SCI__MAX
 	};
@@ -4718,11 +4714,7 @@ try_again_w_token:
 		"static",
 		"auto",
 		"register",
-		"near",			// 5
-		"far",
-		"huge",
-		"constexpr",
-		"restrict"
+		"constexpr"		// 5
 	};
 
 	typedef unsigned int storage_class_t;
@@ -4733,11 +4725,7 @@ try_again_w_token:
 	X(STATIC);
 	X(AUTO);
 	X(REGISTER);
-	X(NEAR);			// 5
-	X(FAR);
-	X(HUGE);
-	X(CONSTEXPR);
-	X(RESTRICT);
+	X(CONSTEXPR);			// 5
 #undef X
 
 	///////////////////////////////////////
@@ -4796,13 +4784,21 @@ try_again_w_token:
 	enum type_qualifier_idx_t {
 		TQI_CONST=0,		// 0
 		TQI_VOLATILE,
+		TQI_NEAR,
+		TQI_FAR,
+		TQI_HUGE,
+		TQI_RESTRICT,		// 5
 
 		TQI__MAX
 	};
 
 	const char *type_qualifier_idx_t_str[TSI__MAX] = {
 		"const",		// 0
-		"volatile"
+		"volatile",
+		"near",
+		"far",
+		"huge",
+		"restrict"		// 5
 	};
 
 	typedef unsigned int type_qualifier_t;
@@ -4810,6 +4806,10 @@ try_again_w_token:
 #define X(c) static constexpr type_qualifier_t TQ_##c = 1u << TQI_##c
 	X(CONST);
 	X(VOLATILE);
+	X(NEAR);			// 5
+	X(FAR);
+	X(HUGE);
+	X(RESTRICT);
 #undef X
 
 	///////////////////////////////////////
@@ -4971,11 +4971,7 @@ try_again_w_token:
 				case token_type_t::r_static:		X(DECLSPEC_STORAGE,ds.storage_class,SC_STATIC);
 				case token_type_t::r_auto:		X(DECLSPEC_STORAGE,ds.storage_class,SC_AUTO);
 				case token_type_t::r_register:		X(DECLSPEC_STORAGE,ds.storage_class,SC_REGISTER);
-				case token_type_t::r_near:		X(DECLSPEC_STORAGE,ds.storage_class,SC_NEAR);
-				case token_type_t::r_far:		X(DECLSPEC_STORAGE,ds.storage_class,SC_FAR);
-				case token_type_t::r_huge:		X(DECLSPEC_STORAGE,ds.storage_class,SC_HUGE);
 				case token_type_t::r_constexpr:		X(DECLSPEC_STORAGE,ds.storage_class,SC_CONSTEXPR);
-				case token_type_t::r_restrict:		X(DECLSPEC_STORAGE,ds.storage_class,SC_RESTRICT);
 				case token_type_t::r_void:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_VOID);
 				case token_type_t::r_char:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_CHAR);
 				case token_type_t::r_short:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SHORT);
@@ -4986,6 +4982,10 @@ try_again_w_token:
 				case token_type_t::r_unsigned:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_UNSIGNED);
 				case token_type_t::r_const:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_CONST);
 				case token_type_t::r_volatile:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_VOLATILE);
+				case token_type_t::r_near:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_NEAR);
+				case token_type_t::r_far:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_FAR);
+				case token_type_t::r_huge:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_HUGE);
+				case token_type_t::r_restrict:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_RESTRICT);
 
 				case token_type_t::r_long:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
@@ -5032,7 +5032,7 @@ try_again_w_token:
 
 		/* sanity check */
 		{
-			const storage_class_t mm_t = ds.storage_class & (SC_NEAR|SC_FAR|SC_HUGE); /* only one of */
+			const type_qualifier_t mm_t = ds.type_qualifier & (TQ_NEAR|TQ_FAR|TQ_HUGE); /* only one of */
 			if (mm_t && !only_one_bit_set(mm_t)) {
 				CCerr(pos,"Multiple storage classes specified");
 				return errno_return(EINVAL);

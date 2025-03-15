@@ -9,6 +9,11 @@ static long ((y));
 static int* ((z));
 static int* ((*zz));
 static const int * const volatile ((* const zz));
+static near int x;
+static far int x;
+static huge int x;
+static restrict int x;
+static constexpr int x = 5;
 static int c,d;
 static long int c,*d;
 static long int *c,**d,e,f,g,h,i;
@@ -110,4 +115,4 @@ static int d(int x,float y,int z,char *a,const char *b,const char * const c);
 static int d(int a,int b,...);
 static int d(int x=5,int y=x*3);
 static int d(a,b);
-
+static int d(a,b,c,d,e,f,g,h,i,j,k);
