@@ -766,6 +766,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_multiply,				// 165
 		op_divide,
 		op_modulus,
+		op_pre_increment,
+		op_pre_decrement,
+		op_address_of,				// 170
+		op_pointer_deref,
+		op_negate,
 
 		__MAX__
 	};
@@ -1327,7 +1332,12 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:subtract",
 		"op:multiply",				// 165
 		"op:divide",
-		"op:modulus"
+		"op:modulus",
+		"op:++inc",
+		"op:--dec",
+		"op:addrof",				// 170
+		"op:ptrderef",
+		"op:negate"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5259,8 +5269,112 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot);
+
+	int unary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 #define nextexpr primary_expression
+		int r;
+
+		if (cc.tq_peek().type == token_type_t::plusplus) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_pre_increment);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::minusminus) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_pre_decrement);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::ampersand) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_address_of);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::ampersandampersand) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_address_of);
+
+			ast_node_id_t aroot2 = ast_node_alloc();
+			ast_node(aroot2).t = token_t(token_type_t::op_address_of);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(aroot2); ast_node(aroot2).release();
+			ast_node(aroot2).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::star) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_pointer_deref);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::plus) {
+			cc.tq_discard();
+
+			/* So basically +4, right? Which we can just treat as a no-op */
+			if ((r=unary_expression(cc,aroot)) < 1)
+				return r;
+		}
+		else if (cc.tq_peek().type == token_type_t::minus) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_negate);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else {
+			if ((r=nextexpr(cc,aroot)) < 1)
+				return r;
+		}
+
+#undef nextexpr
+		return 1;
+	}
+
+	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr unary_expression
 		int r;
 
 		if ((r=nextexpr(cc,aroot)) < 1)

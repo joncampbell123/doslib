@@ -64,4 +64,14 @@ static int d = 1 / 2 / 3 / 4;
 static int d = 1 % 2;
 static int d = 1 % 2 % 3 % 4;
 static int d = 1 * 2 / 3 % 4;
+static int d = ++a;
+static int d = --a;
+static int d = ++ ++a;
+static int d = -- --a;
+static int d = &a;
+static int d = &&a;
+static int d = *a;
+static int d = **a;
+static int d = +a;
+static int d = -a;
 
