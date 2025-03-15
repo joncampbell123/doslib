@@ -80,4 +80,12 @@ static int d = !a;
 static int d = !!a;
 static int d = sizeof a;
 static int d = sizeof ~a;
+static int d = a++;
+static int d = a++ ++;
+static int d = a--;
+static int d = a-- --;
+static int d = a.x;
+static int d = a.x.y.z;
+static int d = a->x;
+static int d = a->x->y->z;
 
