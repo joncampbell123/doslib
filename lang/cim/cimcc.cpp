@@ -5314,8 +5314,6 @@ try_again_w_token:
 	int expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		int r;
 
-		/* TODO: expression, assignment_expression */
-
 		if ((r=assignment_expression(cc,aroot)) < 1)
 			return r;
 
