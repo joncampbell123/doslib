@@ -771,6 +771,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_address_of,				// 170
 		op_pointer_deref,
 		op_negate,
+		op_binary_not,
+		op_logical_not,
 
 		__MAX__
 	};
@@ -1337,7 +1339,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:--dec",
 		"op:addrof",				// 170
 		"op:ptrderef",
-		"op:negate"
+		"op:negate",
+		"op:bin-not",
+		"op:log-not"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5357,6 +5361,32 @@ try_again_w_token:
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc();
 			ast_node(aroot).t = token_t(token_type_t::op_negate);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::tilde) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_binary_not);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::exclamation) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_logical_not);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=unary_expression(cc,expr)) < 1)
