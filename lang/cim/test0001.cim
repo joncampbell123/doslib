@@ -103,4 +103,5 @@ static int d[4][5][6][a];
 static int d[a+b*c][d+e][((f+g)*h)+5][g];
 static int d[];
 static int d[][][][];
+static int d();
 

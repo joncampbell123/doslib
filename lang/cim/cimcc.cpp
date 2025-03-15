@@ -5169,10 +5169,32 @@ try_again_w_token:
 		return 1;
 	}
 
+	struct direct_declarator_t;
+
+	struct parameter_t {
+		declaration_specifiers_t		spec;
+		direct_declarator_t*			ddecl = NULL; /* because this type isn't "complete" yet at this point */
+		std::vector<pointer_t>			ptr;
+		ast_node_id_t				initval = ast_node_none;
+
+		parameter_t() { }
+		parameter_t(const parameter_t &) = delete;
+		parameter_t &operator=(const parameter_t &) = delete;
+		parameter_t(parameter_t &&) = default;
+		parameter_t &operator=(parameter_t &&) = default;
+		~parameter_t();
+	};
+
 	struct direct_declarator_t {
 		token_t name;
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
+
+		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
+		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
+
+		unsigned int flags = 0;
+		std::vector<parameter_t> parameters;
 
 		direct_declarator_t() { };
 		direct_declarator_t(const direct_declarator_t &) = delete;
@@ -5185,6 +5207,14 @@ try_again_w_token:
 			arraydef.clear();
 		}
 	};
+
+	parameter_t::~parameter_t() {
+		if (ddecl) delete[] ddecl;
+		ddecl = NULL;
+
+		if (initval != ast_node_none)
+			ast_node(initval).release();
+	}
 
 	int expression(cc_state_t &cc,ast_node_id_t &aroot);
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
@@ -5252,6 +5282,21 @@ try_again_w_token:
 			} while(1);
 		} while (indent > 0);
 
+		/* you are allowed ONE parameter list! ONE! */
+		if (cc.tq_peek().type == token_type_t::openparenthesis) {
+			cc.tq_discard();
+
+			/* NTS: "()" is acceptable */
+			dd.flags |= direct_declarator_t::FL_FUNCTION;
+			if (cc.tq_peek().type != token_type_t::closeparenthesis) {
+				// TODO
+				return errno_return(EINVAL);
+			}
+
+			if (cc.tq_get().type != token_type_t::closeparenthesis)
+				return errno_return(EINVAL);
+		}
+
 		if (indent > 0)
 			return errno_return(EINVAL);
 
@@ -5263,6 +5308,12 @@ try_again_w_token:
 			fprintf(stderr,"  arraydef:\n");
 			if (expr != ast_node_none)
 				debug_dump_ast("    ",expr);
+		}
+		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
+			fprintf(stderr,"  functiondef:\n");
+			if (dd.flags & direct_declarator_t::FL_ELLIPSIS) {
+				fprintf(stderr,"    ... (ellipsis)\n");
+			}
 		}
 #endif
 
