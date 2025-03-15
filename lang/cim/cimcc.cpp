@@ -773,6 +773,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_negate,
 		op_binary_not,
 		op_logical_not,
+		op_sizeof,				// 175
 
 		__MAX__
 	};
@@ -1341,7 +1342,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:ptrderef",
 		"op:negate",
 		"op:bin-not",
-		"op:log-not"
+		"op:log-not",
+		"op:sizeof"				// 175
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5387,6 +5389,27 @@ try_again_w_token:
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc();
 			ast_node(aroot).t = token_t(token_type_t::op_logical_not);
+
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(cc,expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+		else if (cc.tq_peek().type == token_type_t::r_sizeof) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			aroot = ast_node_alloc();
+			ast_node(aroot).t = token_t(token_type_t::op_sizeof);
+
+			// TODO: Support for sizeof ( type_name )
+			//
+			// example:
+			//
+			// sizeof(int)
+			// sizeof(const int)
+			// sizeof(int*)
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=unary_expression(cc,expr)) < 1)

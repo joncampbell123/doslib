@@ -78,4 +78,6 @@ static int d = ~a;
 static int d = ~~a;
 static int d = !a;
 static int d = !!a;
+static int d = sizeof a;
+static int d = sizeof ~a;
 
