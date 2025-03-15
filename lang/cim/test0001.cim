@@ -46,4 +46,10 @@ static int d = 1 <= 2;
 static int d = 1 >= 2;
 static int d = 1 < 2 < 3 < 4 < 5;
 static int d = 1 < 2 > 3 <= 4 >= 5;
+static int d = 1 << 1;
+static int d = 1 >> 1;
+static int d = 1 << 2|3;
+static int d = 1 << 2 << 3 << 4 << 5 << 6;
+static int d = 1 >> 2 >> 3 >> 4 >> 5 >> 6;
+static int d = 1 << 2 >> 3 << 4 >> 5;
 
