@@ -5265,7 +5265,11 @@ try_again_w_token:
 		}
 	}
 
+	int expression(cc_state_t &cc,ast_node_id_t &aroot);
+
 	int primary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+		int r;
+
 		if (	cc.tq_peek().type == token_type_t::identifier ||
 			cc.tq_peek().type == token_type_t::strliteral ||
 			cc.tq_peek().type == token_type_t::charliteral ||
@@ -5275,7 +5279,16 @@ try_again_w_token:
 			aroot = ast_node_alloc();
 			ast_node(aroot).t = cc.tq_get();
 		}
-		/* TODO: (expression) */
+		else if (cc.tq_peek().type == token_type_t::openparenthesis) {
+			cc.tq_discard();
+
+			assert(aroot == ast_node_none);
+			if ((r=expression(cc,aroot)) < 1)
+				return r;
+
+			if (cc.tq_get().type != token_type_t::closeparenthesis)
+				return errno_return(EINVAL);
+		}
 		else {
 			return errno_return(EINVAL);
 		}

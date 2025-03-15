@@ -88,4 +88,9 @@ static int d = a.x;
 static int d = a.x.y.z;
 static int d = a->x;
 static int d = a->x->y->z;
+static int d = (a);
+static int d = (b*a)*c;
+static int d = (b+a)*c;
+static int d = b+a*c;
+static int d = (((a+b)*c)/d)+(e*f);
 
