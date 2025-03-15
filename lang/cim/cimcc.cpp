@@ -755,6 +755,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_binary_and,
 		op_equals,				// 155
 		op_not_equals,
+		op_lessthan,
+		op_greaterthan,
+		op_lessthan_equals,
+		op_greaterthan_equals,			// 160
 
 		__MAX__
 	};
@@ -1305,7 +1309,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:bin-xor",
 		"op:bin-and",
 		"op:equals",				// 155
-		"op:notequals"
+		"op:notequals",
+		"op:lessthan",
+		"op:greaterthan",
+		"op:lessthan_equals",
+		"op:greaterthan_equals"			// 160
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5237,8 +5245,85 @@ try_again_w_token:
 		return 1;
 	}
 
-	int equality_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int relational_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 #define nextexpr primary_expression
+		int r;
+
+		if ((r=nextexpr(cc,aroot)) < 1)
+			return r;
+
+		do {
+			if (cc.tq_peek().type == token_type_t::lessthan) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_lessthan);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else if (cc.tq_peek().type == token_type_t::greaterthan) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_greaterthan);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else if (cc.tq_peek().type == token_type_t::lessthanequals) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_lessthan_equals);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else if (cc.tq_peek().type == token_type_t::greaterthanequals) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_greaterthan_equals);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+#undef nextexpr
+		return 1;
+	}
+
+	int equality_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr relational_expression
 		int r;
 
 		if ((r=nextexpr(cc,aroot)) < 1)
