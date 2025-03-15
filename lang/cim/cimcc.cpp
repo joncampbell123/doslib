@@ -4880,7 +4880,6 @@ try_again_w_token:
 		assert(ast_node_next < ast_nodes.size());
 		assert(ast_nodes[ast_node_next].ref == 0);
 		ast_nodes[ast_node_next].clear().addref();
-		ast_nodes[ast_node_next].t.type = token_type_t::eof;
 		return ast_node_next++;
 	}
 
@@ -5212,6 +5211,7 @@ try_again_w_token:
 			cc.tq_peek().type == token_type_t::charliteral ||
 			cc.tq_peek().type == token_type_t::integer ||
 			cc.tq_peek().type == token_type_t::floating) {
+			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc();
 			ast_node(aroot).t = cc.tq_get();
 		}
@@ -5272,8 +5272,6 @@ try_again_w_token:
 	int conditional_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		int r;
 
-		/* TODO: logical_or_expression ? expression : conditional_expression */
-
 		if ((r=logical_or_expression(cc,aroot)) < 1)
 			return r;
 
@@ -5281,14 +5279,14 @@ try_again_w_token:
 			ast_node_id_t cond_expr = aroot; aroot = ast_node_none;
 			cc.tq_discard();
 
-			ast_node_id_t true_expr = ast_node_alloc();
+			ast_node_id_t true_expr = ast_node_none;
 			if ((r=expression(cc,true_expr)) < 1)
 				return r;
 
 			if (cc.tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
-			ast_node_id_t false_expr = ast_node_alloc();
+			ast_node_id_t false_expr = ast_node_none;
 			if ((r=conditional_expression(cc,false_expr)) < 1)
 				return r;
 
