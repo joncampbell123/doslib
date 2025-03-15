@@ -5177,8 +5177,7 @@ try_again_w_token:
 		enum followtype_t {
 			NONE=0,
 			ARRAY,
-			FUNCTION_PARAMS,
-			FUNCTION_IDENT
+			FUNCTION
 		};
 
 		struct followup_t {
