@@ -763,6 +763,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_rightshift,
 		op_add,
 		op_subtract,
+		op_multiply,				// 165
+		op_divide,
+		op_modulus,
 
 		__MAX__
 	};
@@ -1321,7 +1324,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:leftshift",
 		"op:rightshift",
 		"op:add",
-		"op:subtract"
+		"op:subtract",
+		"op:multiply",				// 165
+		"op:divide",
+		"op:modulus"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5253,8 +5259,69 @@ try_again_w_token:
 		return 1;
 	}
 
-	int additive_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int multiplicative_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 #define nextexpr primary_expression
+		int r;
+
+		if ((r=nextexpr(cc,aroot)) < 1)
+			return r;
+
+		do {
+			if (cc.tq_peek().type == token_type_t::star) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_multiply);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else if (cc.tq_peek().type == token_type_t::forwardslash) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_divide);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else if (cc.tq_peek().type == token_type_t::percent) {
+				cc.tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc();
+				ast_node(aroot).t = token_t(token_type_t::op_modulus);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				ast_node_id_t expr2 = ast_node_none;
+				if ((r=nextexpr(cc,expr2)) < 1)
+					return r;
+
+				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
+			}
+			else {
+				break;
+			}
+		} while (1);
+#undef nextexpr
+		return 1;
+	}
+
+	int additive_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr multiplicative_expression
 		int r;
 
 		if ((r=nextexpr(cc,aroot)) < 1)
