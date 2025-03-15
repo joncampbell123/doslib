@@ -5319,6 +5319,12 @@ try_again_w_token:
 						return r;
 
 					if (cc.tq_peek().type == token_type_t::equal) {
+						/* if no declaration specifiers were given (just a bare identifier
+						 * aka the old 1980s syntax), then you shouldn't be allowed to define
+						 * a default value. */
+						if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+							return errno_return(EINVAL);
+
 						cc.tq_discard();
 
 						if ((r=initializer(cc,p.initval)) < 1)

@@ -116,3 +116,4 @@ static int d(int a,int b,...);
 static int d(int x=5,int y=x*3);
 static int d(a,b);
 static int d(a,b,c,d,e,f,g,h,i,j,k);
+static int d(a,b,c,...);
