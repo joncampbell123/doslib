@@ -98,4 +98,9 @@ static int d = a[b+c];
 static int d = a[3][5];
 static int d = a[b+c][4+d];
 static int d = (*(a+3))[b][c][d][e][f];
+static int d[4];
+static int d[4][5][6][a];
+static int d[a+b*c][d+e][((f+g)*h)+5][g];
+static int d[];
+static int d[][][][];
 

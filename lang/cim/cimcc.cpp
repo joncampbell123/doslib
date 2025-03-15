@@ -5173,7 +5173,37 @@ try_again_w_token:
 		token_t name;
 		int indent = 0;
 		std::vector<pointer_t> ptr;
+
+		enum followtype_t {
+			NONE=0,
+			ARRAY,
+			FUNCTION_PARAMS,
+			FUNCTION_IDENT
+		};
+
+		struct followup_t {
+			followtype_t		t = NONE;
+			ast_node_id_t		expr = ast_node_none;
+		};
+
+		std::vector<followup_t>		followup;
+
+		direct_declarator_t() { };
+		direct_declarator_t(const direct_declarator_t &) = delete;
+		direct_declarator_t &operator=(const direct_declarator_t &) = delete;
+		direct_declarator_t(direct_declarator_t &&) = delete;
+		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
+
+		~direct_declarator_t() {
+			for (auto &i : followup) {
+				if (i.expr != ast_node_none) ast_node(i.expr).release();
+			}
+			followup.clear();
+		}
 	};
+
+	int expression(cc_state_t &cc,ast_node_id_t &aroot);
+	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 
 	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
 		int r;
@@ -5193,8 +5223,6 @@ try_again_w_token:
 		 *   ( ) */
 
 		// TODO:
-		//    direct_declarator[const_expression]
-		//    direct_declarator[]
 		//    direct_declarator(parameter_type_list)
 		//    direct_declarator(identifier_list)
 		//    direct_declarator()
@@ -5212,10 +5240,34 @@ try_again_w_token:
 		else
 			return errno_return(EINVAL);
 
-		while (dd.indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
-			cc.tq_discard();
-			dd.indent--;
-		}
+		do {
+			while (dd.indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
+				cc.tq_discard();
+				dd.indent--;
+			}
+
+			do {
+				if (cc.tq_peek().type == token_type_t::opensquarebracket) {
+					direct_declarator_t::followup_t fup;
+					cc.tq_discard();
+
+					fup.t = direct_declarator_t::ARRAY;
+
+					/* NTS: "[]" is acceptable */
+					if (cc.tq_peek().type != token_type_t::closesquarebracket) {
+						if ((r=expression(cc,fup.expr)) < 1)
+							return r;
+					}
+
+					dd.followup.push_back(std::move(fup));
+					if (cc.tq_get().type != token_type_t::closesquarebracket)
+						return errno_return(EINVAL);
+				}
+				else {
+					break;
+				}
+			} while(1);
+		} while (dd.indent > 0);
 
 		if (dd.indent > 0)
 			return errno_return(EINVAL);
@@ -5224,6 +5276,18 @@ try_again_w_token:
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
 		fprintf(stderr,"  identifier: %s\n",dd.name.v.strliteral.makestring().c_str());
+		fprintf(stderr,"  followup:\n");
+		for (const auto &i : dd.followup) {
+			switch (i.t) {
+				case direct_declarator_t::ARRAY:
+					fprintf(stderr,"    ARRAY:\n"); break;
+				default:
+					fprintf(stderr,"    ??:\n"); break;
+			}
+
+			if (i.expr != ast_node_none)
+				debug_dump_ast("      ",i.expr);
+		}
 #endif
 
 		return 1;
@@ -5266,8 +5330,6 @@ try_again_w_token:
 			r = n.next;
 		}
 	}
-
-	int expression(cc_state_t &cc,ast_node_id_t &aroot);
 
 	int primary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 		int r;
