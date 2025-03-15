@@ -5232,9 +5232,10 @@ try_again_w_token:
 	}
 
 	int exclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr primary_expression
 		int r;
 
-		if ((r=primary_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		while (cc.tq_peek().type == token_type_t::caret) {
@@ -5247,19 +5248,20 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=primary_expression(cc,expr2)) < 1)
+			if ((r=nextexpr(cc,expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
 	int inclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr exclusive_or_expression
 		int r;
 
-		if ((r=exclusive_or_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		while (cc.tq_peek().type == token_type_t::pipe) {
@@ -5272,19 +5274,20 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=exclusive_or_expression(cc,expr2)) < 1)
+			if ((r=nextexpr(cc,expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
 	int logical_and_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr inclusive_or_expression
 		int r;
 
-		if ((r=inclusive_or_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		while (cc.tq_peek().type == token_type_t::ampersandampersand) {
@@ -5297,19 +5300,20 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=inclusive_or_expression(cc,expr2)) < 1)
+			if ((r=nextexpr(cc,expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
 	int logical_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr logical_and_expression
 		int r;
 
-		if ((r=logical_and_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		while (cc.tq_peek().type == token_type_t::pipepipe) {
@@ -5322,21 +5326,22 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=logical_and_expression(cc,expr2)) < 1)
+			if ((r=nextexpr(cc,expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
 	int expression(cc_state_t &cc,ast_node_id_t &aroot);
 
 	int conditional_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr logical_or_expression
 		int r;
 
-		if ((r=logical_or_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		if (cc.tq_peek().type == token_type_t::question) {
@@ -5360,25 +5365,27 @@ try_again_w_token:
 			ast_node(cond_expr).set_next(true_expr); ast_node(true_expr).release();
 			ast_node(true_expr).set_next(false_expr); ast_node(false_expr).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
 	int assignment_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr conditional_expression
 		int r;
 
 		/* TODO: unary_expression assignment_operator assignment_expression */
 
-		if ((r=conditional_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
-
+#undef nextexpr
 		return 1;
 	}
 
 	int expression(cc_state_t &cc,ast_node_id_t &aroot) {
+#define nextexpr assignment_expression
 		int r;
 
-		if ((r=assignment_expression(cc,aroot)) < 1)
+		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
 
 		while (cc.tq_peek().type == token_type_t::comma) {
@@ -5391,12 +5398,12 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=assignment_expression(cc,expr2)) < 1)
+			if ((r=nextexpr(cc,expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 		}
-
+#undef nextexpr
 		return 1;
 	}
 
