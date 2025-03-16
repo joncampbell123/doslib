@@ -5416,6 +5416,29 @@ try_again_w_token:
 		}
 #endif
 
+		/* parameter validation:
+		 * you can have either all parameter_type parameters,
+		 * or identifier_list parameters.
+		 * Do not allow a mix of them. */
+		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
+			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
+
+			for (const auto &p : dd.parameters) {
+				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0) {
+					if (type < 0)
+						type = 0;
+					else if (type != 0)
+						return errno_return(EINVAL);
+				}
+				else {
+					if (type < 0)
+						type = 1;
+					else if (type != 1)
+						return errno_return(EINVAL);
+				}
+			}
+		}
+
 		return 1;
 	}
 
