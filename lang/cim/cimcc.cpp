@@ -6404,6 +6404,18 @@ try_again_w_token:
 			if ((r=chkerr(cc)) < 1)
 				return r;
 
+			if (cc.tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
+				cc.tq_discard();
+
+				/* must end with } closing brace */
+				if (cc.tq_get().type != token_type_t::closecurlybracket)
+					return errno_return(EINVAL);
+
+				/* once the compound statment ends, no more declarators.
+				 * you can't do "int f() { },g() { }" */
+				return 1;
+			}
+
 			if (cc.tq_peek().type == token_type_t::equal) {
 				cc.tq_discard();
 
