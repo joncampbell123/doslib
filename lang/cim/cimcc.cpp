@@ -5124,7 +5124,7 @@ try_again_w_token:
 	int pointer_parse(cc_state_t &cc,std::vector<pointer_t> &ptr) {
 		int r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"%s():parsing\n",__FUNCTION__);
 #endif
 
@@ -5153,7 +5153,7 @@ try_again_w_token:
 		}
 
 		if (!ptr.empty()) {
-#if 1//DEBUG
+#if 0//DEBUG
 			fprintf(stderr,"%s():\n",__FUNCTION__);
 
 			for (auto i=ptr.begin();i!=ptr.end();i++) {
@@ -5230,6 +5230,7 @@ try_again_w_token:
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 
 	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
+		position_t pos = cc.tq_peek().pos;
 		int indent = 0;
 		int r;
 
@@ -5353,6 +5354,129 @@ try_again_w_token:
 		if (indent > 0)
 			return errno_return(EINVAL);
 
+		/* parameter validation:
+		 * you can have either all parameter_type parameters,
+		 * or identifier_list parameters.
+		 * Do not allow a mix of them. */
+		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
+			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
+			int cls;
+
+			for (const auto &p : dd.parameters) {
+				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+					cls = 0;
+				else
+					cls = 1;
+
+				if (type < 0) {
+					type = cls;
+				}
+				else if (type != cls) {
+					CCerr(pos,"Mixed parameter style not allowed");
+					return errno_return(EINVAL);
+				}
+			}
+
+			/* if old-school identifier only, then after the parenthesis there will be declarations of the parameters i.e.
+			 *
+			 * int func(a,b,c)
+			 *   int a;
+			 *   float b;
+			 *   const char *c;
+			 * {
+			 * }
+			 *
+			 * apparently GCC also allows:
+			 *
+			 * int func(a,b,c);
+			 *
+			 * int func(a,b,c)
+			 *   int a;
+			 *   int b;
+			 *   int c;
+			 * {
+			 * }
+			 *
+			 * However that's pretty useless and we're not going to allow that.
+			 */
+			if (type == 0) {
+				do {
+					if (cc.tq_peek().type == token_type_t::opencurlybracket || cc.tq_peek().type == token_type_t::semicolon) {
+						break;
+					}
+					else {
+						declaration_specifiers_t spec;
+
+						if ((r=declaration_specifiers_parse(cc,spec)) < 1)
+							return r;
+
+						do {
+							direct_declarator_t ddecl;
+							std::vector<pointer_t> ptr;
+
+							if ((r=pointer_parse(cc,ptr)) < 1)
+								return r;
+
+							if ((r=direct_declarator_parse(cc,ddecl)) < 1)
+								return r;
+
+							if (ddecl.name.type != token_type_t::identifier)
+								return errno_return(EINVAL);
+
+							/* the name must match a parameter and it must not already have been given it's type */
+							size_t i=0;
+							while (i < dd.parameters.size()) {
+								parameter_t &chk_p = dd.parameters[i];
+
+								if (!chk_p.ddecl)
+									return errno_return(EINVAL);
+								if (chk_p.ddecl->name.type != token_type_t::identifier)
+									return errno_return(EINVAL);
+								if (ddecl.name.v.strliteral == chk_p.ddecl->name.v.strliteral)
+									break;
+
+								i++;
+							}
+
+							if (i == dd.parameters.size())
+								return errno_return(ENOENT);
+
+							parameter_t &fp = dd.parameters[i];
+							if (fp.spec.storage_class == 0 && fp.spec.type_specifier == 0 &&
+								fp.spec.type_qualifier == 0 && fp.ptr.empty()) {
+								fp.spec = std::move(spec);
+								fp.ptr = std::move(ptr);
+							}
+							else {
+								CCerr(pos,"Identifier already given type");
+								return errno_return(EALREADY);
+							}
+
+							if (cc.tq_peek().type == token_type_t::comma) {
+								cc.tq_discard();
+								continue;
+							}
+							else if (cc.tq_peek().type == token_type_t::semicolon) {
+								cc.tq_discard();
+								break;
+							}
+							else {
+								return errno_return(EINVAL);
+							}
+						} while(1);
+					}
+				} while (1);
+
+				if (cc.tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
+					/* no body of the function?
+					 * TODO: Disallow function without body (like header) in this form, because it's useless */
+					fprintf(stderr,"WARNING: This will become an error soon: Identifier list parameter style requires a function body\n");
+//					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
+//					return errno_return(EINVAL);
+				}
+			}
+		}
+
 		assert(dd.name.type == token_type_t::identifier);
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
@@ -5416,25 +5540,14 @@ try_again_w_token:
 		}
 #endif
 
-		/* parameter validation:
-		 * you can have either all parameter_type parameters,
-		 * or identifier_list parameters.
-		 * Do not allow a mix of them. */
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
-			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
-
+			/* any parameter not yet described, is an error */
 			for (const auto &p : dd.parameters) {
 				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0) {
-					if (type < 0)
-						type = 0;
-					else if (type != 0)
-						return errno_return(EINVAL);
-				}
-				else {
-					if (type < 0)
-						type = 1;
-					else if (type != 1)
-						return errno_return(EINVAL);
+					assert(p.ddecl != NULL);
+					assert(p.ddecl->name.type == token_type_t::identifier);
+					CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
+					return errno_return(EINVAL);
 				}
 			}
 		}
