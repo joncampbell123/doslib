@@ -5319,6 +5319,20 @@ try_again_w_token:
 					if ((r=direct_declarator_parse(cc,*(p.ddecl))) < 1)
 						return r;
 
+					/* do not allow using the same name again */
+					if (!p.ddecl)
+						return errno_return(EINVAL);
+					if (p.ddecl->name.type != token_type_t::identifier)
+						return errno_return(EINVAL);
+					for (const auto &chk_p : dd.parameters) {
+						assert(chk_p.ddecl != NULL);
+						assert(chk_p.ddecl->name.type == token_type_t::identifier);
+						if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
+							CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
+							return errno_return(EEXIST);
+						}
+					}
+
 					if (cc.tq_peek().type == token_type_t::equal) {
 						/* if no declaration specifiers were given (just a bare identifier
 						 * aka the old 1980s syntax), then you shouldn't be allowed to define
@@ -5327,7 +5341,6 @@ try_again_w_token:
 							return errno_return(EINVAL);
 
 						cc.tq_discard();
-
 						if ((r=initializer(cc,p.initval)) < 1)
 							return r;
 					}
