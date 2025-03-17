@@ -779,6 +779,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_post_increment,
 		op_post_decrement,
 		op_array_ref,				// 180
+		op_assign,
 
 		__MAX__
 	};
@@ -1353,7 +1354,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:ptr_ref",
 		"op:inc++",
 		"op:dec++",
-		"op:arrayref"				// 180
+		"op:arrayref",				// 180
+		"op:assign"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6322,10 +6324,26 @@ try_again_w_token:
 
 	int assignment_expression(cc_state_t &cc,ast_node_id_t &aroot) {
 #define nextexpr conditional_expression
+		ast_node_id_t to = ast_node_none,from = ast_node_none;
 		int r;
 
 		if ((r=nextexpr(cc,aroot)) < 1)
 			return r;
+
+		switch (cc.tq_peek().type) {
+			case token_type_t::equal:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			default:
+				break;
+		};
+
 #undef nextexpr
 		return 1;
 	}
