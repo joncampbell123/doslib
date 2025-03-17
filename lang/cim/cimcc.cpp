@@ -5301,8 +5301,10 @@ try_again_w_token:
 						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
 
 						/* At least one paremter is required for ellipsis! */
-						if (dd.parameters.empty())
+						if (dd.parameters.empty()) {
+							CCerr(pos,"Variadic functions must have at least one named parameter");
 							return errno_return(EINVAL);
+						}
 
 						break;
 					}
