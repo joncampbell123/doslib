@@ -5481,11 +5481,9 @@ try_again_w_token:
 				} while (1);
 
 				if (cc.tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
-					/* no body of the function?
-					 * TODO: Disallow function without body (like header) in this form, because it's useless */
-					fprintf(stderr,"WARNING: This will become an error soon: Identifier list parameter style requires a function body\n");
-//					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
-//					return errno_return(EINVAL);
+					/* no body of the function? */
+					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
+					return errno_return(EINVAL);
 				}
 			}
 		}
