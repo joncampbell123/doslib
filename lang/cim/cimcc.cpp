@@ -6504,20 +6504,12 @@ try_again_w_token:
 		return 1;
 	}
 
-	int external_declaration(cc_state_t &cc) {
-		declaration_t declion;
+	int declaration_parse(cc_state_t &cc,declaration_t &declion) {
 		int r,count = 0;
 
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
-
-		if (cc.tq_peek().type == token_type_t::semicolon) {
-			cc.tq_discard();
-			return 1;
-		}
-		if ((r=chkerr(cc)) < 1)
-			return r;
 
 		if ((r=declaration_specifiers_parse(cc,declion.spec)) < 1)
 			return r;
@@ -6572,6 +6564,26 @@ try_again_w_token:
 		}
 
 		return errno_return(EINVAL);
+	}
+
+	int external_declaration(cc_state_t &cc) {
+		declaration_t declion;
+		int r;
+
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
+#endif
+
+		if (cc.tq_peek().type == token_type_t::semicolon) {
+			cc.tq_discard();
+			return 1;
+		}
+		if ((r=chkerr(cc)) < 1)
+			return r;
+		if ((r=declaration_parse(cc,declion)) < 1)
+			return r;
+
+		return 1;
 	}
 
 	int translation_unit(cc_state_t &cc) {
