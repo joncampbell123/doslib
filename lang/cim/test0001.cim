@@ -123,3 +123,6 @@ static int d() { }
 static int e(int a) { }
 static int x = y = 5;
 static int x = (y=5);
+static int x = (y*=6);
+static int x = (y/=6);
+static int x = (y%=6);

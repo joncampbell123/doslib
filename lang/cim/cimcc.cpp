@@ -780,6 +780,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_post_decrement,
 		op_array_ref,				// 180
 		op_assign,
+		op_multiply_assign,
+		op_divide_assign,
+		op_modulus_assign,
 
 		__MAX__
 	};
@@ -1355,7 +1358,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:inc++",
 		"op:dec++",
 		"op:arrayref",				// 180
-		"op:assign"
+		"op:assign",
+		"op:multiply_assign",
+		"op:divide_assign",
+		"op:modulus_assign",
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6337,6 +6343,33 @@ try_again_w_token:
 					return r;
 				to = aroot; aroot = ast_node_alloc();
 				ast_node(aroot).t.type = token_type_t::op_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::starequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_multiply_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::forwardslashequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_divide_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::percentequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_modulus_assign;
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
