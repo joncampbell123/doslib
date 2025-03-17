@@ -783,6 +783,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_multiply_assign,
 		op_divide_assign,
 		op_modulus_assign,
+		op_add_assign,				// 185
+		op_subtract_assign,
+		op_leftshift_assign,
+		op_rightshift_assign,
 
 		__MAX__
 	};
@@ -1362,6 +1366,10 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:multiply_assign",
 		"op:divide_assign",
 		"op:modulus_assign",
+		"op:add_assign"	,			// 185
+		"op:subtract_assign",
+		"op:leftshift_assign",
+		"op:rightshift_assign"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6370,6 +6378,42 @@ try_again_w_token:
 					return r;
 				to = aroot; aroot = ast_node_alloc();
 				ast_node(aroot).t.type = token_type_t::op_modulus_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::plusequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_add_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::minusequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_subtract_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::lessthanlessthanequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_leftshift_assign;
+				ast_node(aroot).set_child(to); ast_node(to).release();
+				ast_node(to).set_next(from); ast_node(from).release();
+				break;
+			case token_type_t::greaterthangreaterthanequals:
+				cc.tq_discard();
+				if ((r=assignment_expression(cc,from)) < 1)
+					return r;
+				to = aroot; aroot = ast_node_alloc();
+				ast_node(aroot).t.type = token_type_t::op_rightshift_assign;
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
