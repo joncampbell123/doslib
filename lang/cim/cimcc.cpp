@@ -6506,7 +6506,7 @@ try_again_w_token:
 
 	int external_declaration(cc_state_t &cc) {
 		declaration_t declion;
-		int r;
+		int r,count = 0;
 
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
@@ -6525,6 +6525,7 @@ try_again_w_token:
 			return r;
 
 		do {
+			position_t pos = cc.tq_peek().pos;
 			declarator_t declor;
 
 			if ((r=declarator_parse(cc,declor)) < 1)
@@ -6534,6 +6535,11 @@ try_again_w_token:
 
 			if (cc.tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				cc.tq_discard();
+
+				if (count != 0) {
+					CCerr(pos,"Function body not permitted except if the function is the only declarator here");
+					return errno_return(EINVAL);
+				}
 
 				/* must end with } closing brace */
 				if (cc.tq_get().type != token_type_t::closecurlybracket)
@@ -6551,6 +6557,7 @@ try_again_w_token:
 					return r;
 			}
 
+			count++;
 			if (cc.tq_peek().type == token_type_t::comma) {
 				cc.tq_discard();
 				continue;
