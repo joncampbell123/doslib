@@ -5110,6 +5110,7 @@ try_again_w_token:
 		static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
 
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
+		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int direct_declarator_parse(direct_declarator_t &dd);
 		int multiplicative_expression(ast_node_id_t &aroot);
@@ -6658,7 +6659,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
+	int cc_state_t::compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot) {
 		ast_node_id_t nxt;
 		int r;
 
@@ -6680,10 +6681,8 @@ try_again_w_token:
 			if (tq_peek().type == token_type_t::semicolon)
 				break;
 
-			if (tq_peek().type == token_type_t::closecurlybracket) {
-				tq_discard();
-				return 1;
-			}
+			if (tq_peek().type == token_type_t::closecurlybracket)
+				return 1; /* do not discard, let the calling function take care of it */
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
 			if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
@@ -6708,6 +6707,24 @@ try_again_w_token:
 
 			nroot = nxt;
 		} while (1);
+
+		return 1;
+	}
+
+	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
+		ast_node_id_t nxt;
+		int r;
+
+		assert(
+			(aroot == ast_node_none && nroot == ast_node_none) ||
+			(aroot != ast_node_none && nroot == ast_node_none) ||
+			(aroot != ast_node_none && nroot != ast_node_none)
+		);
+
+		/* caller already ate the { */
+
+		if ((r=compound_statement_declarators(aroot,nroot)) < 1)
+			return r;
 
 		/* OK, now statements */
 		do {
