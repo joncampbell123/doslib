@@ -791,6 +791,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_and_assign,
 		op_xor_assign,				// 190
 		op_or_assign,
+		op_declaration,
 
 		__MAX__
 	};
@@ -1376,7 +1377,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:rightshift_assign",
 		"op:and_assign",
 		"op:xor_assign",			// 190
-		"op:or_assign"
+		"op:or_assign",
+		"op:declaration"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1776,6 +1778,11 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
 	};
 
+	struct declaration_t;
+
+	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
+	template <class T> void typ_delete(T *p);
+
 	struct token_t {
 		token_type_t		type = token_type_t::none;
 		position_t		pos;
@@ -1825,11 +1832,13 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 			return !(*this == t);
 		}
 
-		union {
+		union v_t {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
 			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
 			size_t			paramref; /* token_type_t::r_macro_paramref */
+			declaration_t*		declaration; /* token_type_t::op_declaration */
+			void*			general_ptr; /* for use in clearing general ppinter */
 		} v;
 
 		std::string to_str(void) const {
@@ -1873,6 +1882,9 @@ private:
 				case token_type_t::anglestrliteral:
 					v.strliteral.free();
 					break;
+				case token_type_t::op_declaration:
+					typ_delete(v.declaration);
+					break;
 				default:
 					break;
 			}
@@ -1896,6 +1908,10 @@ private:
 				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					break;
+				case token_type_t::op_declaration:
+					v.general_ptr = NULL;
+					static_assert( offsetof(v_t,general_ptr) == offsetof(v_t,declaration), "oops" );
+					break;
 				default:
 					break;
 			}
@@ -1918,6 +1934,9 @@ private:
 					v.strliteral.init();
 					v.strliteral.copy_from(x.v.strliteral);
 					break;
+				case token_type_t::op_declaration:
+					throw std::runtime_error("Copy constructor not available");
+					break;
 				default:
 					v = x.v;
 					break;
@@ -1929,7 +1948,7 @@ private:
 			source_file = x.source_file; x.source_file = no_source_file;
 			type = x.type; x.type = token_type_t::none;
 			pos = x.pos; x.pos = position_t();
-			v = x.v; /* x.type == none so pointers no longer matter */
+			v = x.v; memset(&x.v,0,sizeof(x.v)); /* x.type == none so pointers no longer matter */
 		}
 	};
 
@@ -6599,6 +6618,11 @@ try_again_w_token:
 			return r;
 
 		return 1;
+	}
+
+	template <class T> void typ_delete(T *p) {
+		if (p) delete p;
+		p = NULL;
 	}
 
 }
