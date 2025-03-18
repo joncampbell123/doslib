@@ -5747,9 +5747,11 @@ try_again_w_token:
 	}
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
+		unsigned int count = 0;
+
 		while (r != ast_node_none) {
 			const auto &n = ast_node(r);
-			fprintf(stderr,"%s%s\n",prefix.c_str(),n.t.to_str().c_str());
+			fprintf(stderr,"%s%s[%u]\n",prefix.c_str(),n.t.to_str().c_str(),count);
 
 			if (n.t.type == token_type_t::op_declaration) {
 				if (n.t.v.declaration) {
@@ -5852,6 +5854,7 @@ try_again_w_token:
 
 			debug_dump_ast(prefix+"  ",n.child);
 			r = n.next;
+			count++;
 		}
 	}
 
