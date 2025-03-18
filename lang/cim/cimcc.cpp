@@ -5038,6 +5038,24 @@ try_again_w_token:
 
 	struct declaration_t {
 		declaration_specifiers_t	spec;
+		std::vector<declarator_t*>	declor;
+
+		declarator_t &new_declarator(void) {
+			declarator_t *n = new declarator_t();
+			declor.push_back(n);
+			return *n;
+		}
+
+		declaration_t() { }
+		declaration_t(const declaration_t &) = delete;
+		declaration_t(declaration_t &&) = delete;
+		declaration_t &operator=(const declaration_t &) = delete;
+		declaration_t &operator=(declaration_t &&) = delete;
+
+		~declaration_t() {
+			for (auto &i : declor) delete i;
+			declor.clear();
+		}
 	};
 
 	static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
@@ -6518,7 +6536,7 @@ try_again_w_token:
 
 		do {
 			position_t pos = cc.tq_peek().pos;
-			declarator_t declor;
+			declarator_t &declor = declion.new_declarator();
 
 			if ((r=declarator_parse(cc,declor)) < 1)
 				return r;
