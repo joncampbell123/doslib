@@ -210,4 +210,7 @@ static int d(int a) {
 	for (x=0;x < 5;x++,z++) z++;
 	return x;
 }
+static int d(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
+	return 5;
+}
 

@@ -5137,10 +5137,12 @@ try_again_w_token:
 		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
 		static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
 
+		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
+
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
+		int direct_declarator_parse(direct_declarator_t &dd,unsigned int flags=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
-		int direct_declarator_parse(direct_declarator_t &dd);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5412,7 +5414,7 @@ try_again_w_token:
 		initval = o.initval; o.initval = ast_node_none;
 	}
 
-	int cc_state_t::direct_declarator_parse(direct_declarator_t &dd) {
+	int cc_state_t::direct_declarator_parse(direct_declarator_t &dd,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		int indent = 0;
 		int r;
@@ -5441,6 +5443,8 @@ try_again_w_token:
 
 		if (tq_peek().type == token_type_t::identifier)
 			dd.name = std::move(tq_get());
+		else if (flags & DIRDECL_ALLOW_ABSTRACT)
+			dd.name = std::move(token_t(token_type_t::none));
 		else
 			return errno_return(EINVAL);
 
@@ -5501,33 +5505,37 @@ try_again_w_token:
 						return r;
 
 					p.ddecl = new direct_declarator_t();
-					if ((r=direct_declarator_parse(*(p.ddecl))) < 1)
+					if ((r=direct_declarator_parse(*(p.ddecl),DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
 					if (!p.ddecl)
 						return errno_return(EINVAL);
-					if (p.ddecl->name.type != token_type_t::identifier)
-						return errno_return(EINVAL);
-					for (const auto &chk_p : dd.parameters) {
-						assert(chk_p.ddecl != NULL);
-						assert(chk_p.ddecl->name.type == token_type_t::identifier);
-						if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
-							CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
-							return errno_return(EEXIST);
-						}
-					}
 
-					if (tq_peek().type == token_type_t::equal) {
-						/* if no declaration specifiers were given (just a bare identifier
-						 * aka the old 1980s syntax), then you shouldn't be allowed to define
-						 * a default value. */
-						if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+					if (p.ddecl->name.type != token_type_t::none) {
+						if (p.ddecl->name.type != token_type_t::identifier)
 							return errno_return(EINVAL);
+						for (const auto &chk_p : dd.parameters) {
+							assert(chk_p.ddecl != NULL);
+							if (chk_p.ddecl->name.type == token_type_t::identifier) {
+								if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
+									CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
+									return errno_return(EEXIST);
+								}
+							}
+						}
 
-						tq_discard();
-						if ((r=initializer(p.initval)) < 1)
-							return r;
+						if (tq_peek().type == token_type_t::equal) {
+							/* if no declaration specifiers were given (just a bare identifier
+							 * aka the old 1980s syntax), then you shouldn't be allowed to define
+							 * a default value. */
+							if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+								return errno_return(EINVAL);
+
+							tq_discard();
+							if ((r=initializer(p.initval)) < 1)
+								return r;
+						}
 					}
 
 					dd.parameters.push_back(std::move(p));
@@ -5665,10 +5673,15 @@ try_again_w_token:
 			}
 		}
 
-		assert(dd.name.type == token_type_t::identifier);
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
-		fprintf(stderr,"  identifier: %s\n",dd.name.v.strliteral.makestring().c_str());
+		if (dd.name.type == token_type_t::identifier)
+			fprintf(stderr,"  identifier: %s\n",dd.name.v.strliteral.makestring().c_str());
+		else if (dd.name.type == token_type_t::none)
+			fprintf(stderr,"  identifier: (none)\n");
+		else
+			abort();
+
 		for (const auto &expr : dd.arraydef) {
 			fprintf(stderr,"  arraydef:\n");
 			if (expr != ast_node_none)
@@ -5713,6 +5726,8 @@ try_again_w_token:
 
 					if (name.type == token_type_t::identifier)
 						fprintf(stderr," '%s'",name.v.strliteral.makestring().c_str());
+					else if (name.type == token_type_t::none)
+						fprintf(stderr," (none)");
 				}
 
 				fprintf(stderr,"\n");
