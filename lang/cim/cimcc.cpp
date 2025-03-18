@@ -5110,7 +5110,7 @@ try_again_w_token:
 		static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
 
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
-		int compound_statement(declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot);
+		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int direct_declarator_parse(direct_declarator_t &dd);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
@@ -6658,12 +6658,9 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::compound_statement(declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot) {
+	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
 		ast_node_id_t nxt;
 		int r;
-
-		(void)declion;
-		(void)declor;
 
 		assert(
 			(aroot == ast_node_none && nroot == ast_node_none) ||
@@ -6735,7 +6732,7 @@ try_again_w_token:
 				/* a compound statement within a compound statement */
 				ast_node_id_t cur = ast_node_none;
 				ast_node_id_t curnxt = ast_node_none;
-				if ((r=compound_statement(declion,declor,cur,curnxt)) < 1)
+				if ((r=compound_statement(cur,curnxt)) < 1)
 					return r;
 
 				nxt = ast_node_alloc(token_type_t::op_compound_statement);
@@ -6800,7 +6797,7 @@ try_again_w_token:
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
-				if ((r=compound_statement(declion,declor,fbroot,fbrootnext)) < 1)
+				if ((r=compound_statement(fbroot,fbrootnext)) < 1)
 					return r;
 
 				/* once the compound statment ends, no more declarators.
