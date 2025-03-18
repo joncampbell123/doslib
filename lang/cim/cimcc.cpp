@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <type_traits>
 #include <stdexcept>
+#include <memory>
 #include <vector>
 #include <string>
 #include <limits>
@@ -6709,7 +6710,7 @@ int main(int argc,char **argv) {
 	}
 
 	for (auto mifi=main_input_files.begin();mifi!=main_input_files.end();mifi++) {
-		CIMCC::source_file_object *sfo = NULL;
+		std::unique_ptr<CIMCC::source_file_object> sfo;
 
 		if (*mifi == "-") {
 			struct stat st;
@@ -6722,7 +6723,7 @@ int main(int argc,char **argv) {
 				fprintf(stderr,"Cannot use STDIN. Must be a file, socket, or pipe\n");
 				return 1;
 			}
-			sfo = new CIMCC::source_fd(0/*STDIN, takes ownership*/,"<stdin>");
+			sfo.reset(new CIMCC::source_fd(0/*STDIN, takes ownership*/,"<stdin>"));
 			assert(sfo->iface == CIMCC::source_file_object::IF_FD);
 		}
 		else {
@@ -6731,7 +6732,7 @@ int main(int argc,char **argv) {
 				fprintf(stderr,"Cannot open '%s', '%s'\n",(*mifi).c_str(),strerror(errno));
 				return 1;
 			}
-			sfo = new CIMCC::source_fd(fd/*takes ownership*/,*mifi);
+			sfo.reset(new CIMCC::source_fd(fd/*takes ownership*/,*mifi));
 			assert(sfo->iface == CIMCC::source_file_object::IF_FD);
 		}
 
@@ -6891,8 +6892,7 @@ int main(int argc,char **argv) {
 			}
 		}
 
-		assert(sfo != NULL);
-		delete sfo;
+		assert(sfo.get() != NULL);
 	}
 
 	CIMCC::source_file_refcount_check();
