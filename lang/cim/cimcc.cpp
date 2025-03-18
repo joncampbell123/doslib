@@ -5726,9 +5726,76 @@ try_again_w_token:
 							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 						}
 
-						fprintf(stderr," %s",declr.ddecl.name.v.strliteral.makestring().c_str());
+						if (!declr.ddecl.ptr.empty()) fprintf(stderr," (");
 
+						for (auto i=declr.ddecl.ptr.begin();i!=declr.ddecl.ptr.end();i++) {
+							fprintf(stderr," *");
+							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+						}
+
+						fprintf(stderr," %s",declr.ddecl.name.v.strliteral.makestring().c_str());
+						if (!declr.ddecl.ptr.empty()) fprintf(stderr," )");
 						fprintf(stderr,"\n");
+
+						for (const auto &expr : declr.ddecl.arraydef) {
+							fprintf(stderr,"%s    arraydef:\n",prefix.c_str());
+							if (expr != ast_node_none)
+								debug_dump_ast(prefix+"      ",expr);
+						}
+
+						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
+							fprintf(stderr,"%s    function:\n",prefix.c_str());
+
+							for (auto &p : declr.ddecl.parameters) {
+								fprintf(stderr,"%s      parameter:\n",prefix.c_str());
+
+								fprintf(stderr,"%s        decl specifier:",prefix.c_str());
+								for (unsigned int i=0;i < SCI__MAX;i++) { if (p.spec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+								for (unsigned int i=0;i < TSI__MAX;i++) { if (p.spec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+								for (unsigned int i=0;i < TQI__MAX;i++) { if (p.spec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+								fprintf(stderr,"\n");
+
+								fprintf(stderr,"%s        declr:",prefix.c_str());
+
+								for (auto i=p.ptr.begin();i!=p.ptr.end();i++) {
+									fprintf(stderr," *");
+									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+								}
+
+								assert(p.ddecl != NULL);
+								auto &p_declr = *(p.ddecl);
+
+								if (!p_declr.ptr.empty()) fprintf(stderr," (");
+
+								for (auto i=p_declr.ptr.begin();i!=p_declr.ptr.end();i++) {
+									fprintf(stderr," *");
+									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+								}
+
+								fprintf(stderr," %s",p_declr.name.v.strliteral.makestring().c_str());
+								if (!p_declr.ptr.empty()) fprintf(stderr," )");
+								fprintf(stderr,"\n");
+
+								for (const auto &expr : p_declr.arraydef) {
+									fprintf(stderr,"%s          arraydef:\n",prefix.c_str());
+									if (expr != ast_node_none)
+										debug_dump_ast(prefix+"            ",expr);
+								}
+
+								if (p.initval != ast_node_none) {
+									fprintf(stderr,"%s          init:\n",prefix.c_str());
+									debug_dump_ast(prefix+"            ",p.initval);
+								}
+							}
+
+							if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+								fprintf(stderr,"%s      ... elipsis\n",prefix.c_str());
+						}
+
+						if (declr.initval != ast_node_none) {
+							fprintf(stderr,"%s    init:\n",prefix.c_str());
+							debug_dump_ast(prefix+"      ",declr.initval);
+						}
 					}
 
 					fprintf(stderr,"%s}\n",prefix.c_str());
