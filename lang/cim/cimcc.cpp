@@ -4711,7 +4711,7 @@ try_again_w_token:
 			}
 		}
 
-		const token_t &tq_get(void) {
+		token_t &tq_get(void) {
 			tq_refill();
 			assert(tq_tail < tq.size());
 			return tq[tq_tail++];
@@ -4872,7 +4872,7 @@ try_again_w_token:
 		ast_node_t&		set_next(const ast_node_id_t n);
 		ast_node_t&		addref(void);
 		ast_node_t&		release(void);
-		ast_node_t&		clear(const token_t &tt);
+		ast_node_t&		clear_and_move_assign(token_t &tt);
 		ast_node_t&		clear(const token_type_t t);
 
 		ast_node_t() { }
@@ -4911,7 +4911,7 @@ try_again_w_token:
 		return *this;
 	}
 
-	ast_node_t &ast_node_t::clear(const token_t &tt) {
+	ast_node_t &ast_node_t::clear_and_move_assign(token_t &tt) {
 		ref = 0;
 		t = std::move(tt);
 		set_next(ast_node_none);
@@ -4982,9 +4982,9 @@ try_again_w_token:
 		return ast_node_next++;
 	}
 
-	ast_node_id_t ast_node_alloc(const token_t &t) {
+	ast_node_id_t ast_node_alloc(token_t &t) {
 		ast_node_t &a = __internal_ast_node_alloc();
-		a.clear(t).addref();
+		a.clear_and_move_assign(t).addref();
 		return ast_node_next++;
 	}
 
