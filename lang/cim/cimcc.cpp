@@ -793,6 +793,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_or_assign,
 		op_declaration,
 		op_compound_statement,
+		op_goto_label,
+		op_default_label,			// 195
 
 		__MAX__
 	};
@@ -1380,7 +1382,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:xor_assign",			// 190
 		"op:or_assign",
 		"op:declaration",
-		"op:compound_statement"
+		"op:compound_statement",
+		"op:goto_label",
+		"op:default_label"			// 195
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6733,6 +6737,16 @@ try_again_w_token:
 
 			aroot = ast_node_alloc(token_type_t::op_compound_statement);
 			ast_node(aroot).set_child(cur); ast_node(cur).release();
+		}
+		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */
+			aroot = ast_node_alloc(token_type_t::op_goto_label);
+			ast_node(aroot).set_child(label); ast_node(label).release();
+			tq_discard(); /* eats the ':' */
+		}
+		else if (tq_peek(0).type == token_type_t::r_default && tq_peek(1).type == token_type_t::colon) {
+			aroot = ast_node_alloc(token_type_t::op_default_label);
+			tq_discard(2);
 		}
 		else {
 			if ((r=expression(aroot)) < 1)

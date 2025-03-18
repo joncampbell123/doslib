@@ -166,5 +166,9 @@ static int d(int a,int b) {
 			}
 		}
 	}
+
+	label1: x |= 3;
+	label2: label3: x -= 4;
+	default: x += 5;
 }
 
