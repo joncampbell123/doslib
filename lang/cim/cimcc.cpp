@@ -5114,8 +5114,28 @@ try_again_w_token:
 		do {
 			const token_t &t = cc.tq_peek();
 
-#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else { ds.count++; if (declspec&DECLSPEC_CHECK_ONLY) return 1; d|=m; } } else { break; }
-#define X(f,d,m) { XCHK(f,d,m); cc.tq_discard(); continue; }
+#define XCHK(f,d,m) \
+	if (declspec&f) { \
+		if (d&m) { \
+			CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
+			return errno_return(EINVAL); \
+		} \
+		else { \
+			ds.count++; \
+			if (declspec&DECLSPEC_CHECK_ONLY) return 1; \
+			d|=m; \
+		} \
+	} \
+	else { \
+		break; \
+	}
+#define X(f,d,m) \
+	{ \
+		XCHK(f,d,m); \
+		cc.tq_discard(); \
+		continue; \
+	}
+
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
 				case token_type_t::r_extern:		X(DECLSPEC_STORAGE,ds.storage_class,SC_EXTERN);
