@@ -4872,6 +4872,7 @@ try_again_w_token:
 		ast_node_t&		set_next(const ast_node_id_t n);
 		ast_node_t&		addref(void);
 		ast_node_t&		release(void);
+		ast_node_t&		clear(const token_t &tt);
 		ast_node_t&		clear(const token_type_t t);
 
 		ast_node_t() { }
@@ -4907,6 +4908,14 @@ try_again_w_token:
 			next = n;
 			if (next != ast_node_none) ast_node(next).addref();
 		}
+		return *this;
+	}
+
+	ast_node_t &ast_node_t::clear(const token_t &tt) {
+		ref = 0;
+		t = std::move(tt);
+		set_next(ast_node_none);
+		set_child(ast_node_none);
 		return *this;
 	}
 
@@ -4954,7 +4963,7 @@ try_again_w_token:
 #endif
 	}
 
-	ast_node_id_t ast_node_alloc(token_type_t t=token_type_t::none) {
+	static ast_node_t& __internal_ast_node_alloc() {
 #if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
 		while (ast_node_next < ast_nodes.size() && ast_nodes[ast_node_next].ref != 0)
 			ast_node_next++;
@@ -4964,7 +4973,18 @@ try_again_w_token:
 
 		assert(ast_node_next < ast_nodes.size());
 		assert(ast_nodes[ast_node_next].ref == 0);
-		ast_nodes[ast_node_next].clear(t).addref();
+		return ast_nodes[ast_node_next];
+	}
+
+	ast_node_id_t ast_node_alloc(token_type_t t=token_type_t::none) {
+		ast_node_t &a = __internal_ast_node_alloc();
+		a.clear(t).addref();
+		return ast_node_next++;
+	}
+
+	ast_node_id_t ast_node_alloc(const token_t &t) {
+		ast_node_t &a = __internal_ast_node_alloc();
+		a.clear(t).addref();
 		return ast_node_next++;
 	}
 
@@ -5649,8 +5669,7 @@ try_again_w_token:
 			cc.tq_peek().type == token_type_t::integer ||
 			cc.tq_peek().type == token_type_t::floating) {
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc();
-			ast_node(aroot).t = cc.tq_get();
+			aroot = ast_node_alloc(cc.tq_get());
 		}
 		else if (cc.tq_peek().type == token_type_t::openparenthesis) {
 			cc.tq_discard();
