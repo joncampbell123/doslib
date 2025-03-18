@@ -4735,6 +4735,27 @@ try_again_w_token:
 			assert(tq_tail < tq.size());
 			return tq[tq_tail++];
 		}
+
+		void CCerr(const position_t &pos,const char *fmt,...) {
+			va_list va;
+
+			fprintf(stderr,"Error");
+			if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
+			fprintf(stderr,": ");
+
+			va_start(va,fmt);
+			vfprintf(stderr,fmt,va);
+			va_end(va);
+			fprintf(stderr,"\n");
+		}
+
+		int chkerr(void) {
+			const token_t &t = tq_peek();
+			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
+				return err; /* 0 or negative */
+
+			return 1;
+		}
 	};
 
 	///////////////////////////////////////
@@ -4855,27 +4876,6 @@ try_again_w_token:
 #undef X
 
 	///////////////////////////////////////
-
-	void CCerr(const position_t &pos,const char *fmt,...) {
-		va_list va;
-
-		fprintf(stderr,"Error");
-		if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
-		fprintf(stderr,": ");
-
-		va_start(va,fmt);
-		vfprintf(stderr,fmt,va);
-		va_end(va);
-		fprintf(stderr,"\n");
-	}
-
-	int chkerr(cc_state_t &cc) {
-		const token_t &t = cc.tq_peek();
-		if (t.type == token_type_t::none || t.type == token_type_t::eof || cc.err < 0)
-			return cc.err; /* 0 or negative */
-
-		return 1;
-	}
 
 	typedef size_t ast_node_id_t;
 	static constexpr ast_node_id_t ast_node_none = ~size_t(0u);
@@ -5117,7 +5117,7 @@ try_again_w_token:
 #define XCHK(f,d,m) \
 	if (declspec&f) { \
 		if (d&m) { \
-			CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
+			cc.CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
 			return errno_return(EINVAL); \
 		} \
 		else { \
@@ -5166,7 +5166,7 @@ try_again_w_token:
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
 							if (ds.type_specifier & TS_LONGLONG) {
-								CCerr(pos,"declarator specifier 'long long' already specified");
+								cc.CCerr(pos,"declarator specifier 'long long' already specified");
 								return errno_return(EINVAL);
 							}
 							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
@@ -5174,7 +5174,7 @@ try_again_w_token:
 						}
 						else {
 							if (ds.type_specifier & TS_LONG) {
-								CCerr(pos,"declarator specifier 'long' already specified");
+								cc.CCerr(pos,"declarator specifier 'long' already specified");
 								return errno_return(EINVAL);
 							}
 							ds.type_specifier |= TS_LONG;
@@ -5193,14 +5193,14 @@ try_again_w_token:
 
 		/* unless told otherwise, it is an error for this code not to parse any tokens */
 		if (!(declspec & DECLSPEC_OPTIONAL) && ds.count == 0) {
-			CCerr(pos,"Declaration specifiers expected");
+			cc.CCerr(pos,"Declaration specifiers expected");
 			return errno_return(EINVAL);
 		}
 
 		/* unless asked not to parse type specifiers, it is an error not to specify one.
 		 * You can't say "static x" for example */
 		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
-			CCerr(pos,"Type specifiers expected. Specify a type here");
+			cc.CCerr(pos,"Type specifiers expected. Specify a type here");
 			return errno_return(EINVAL);
 		}
 
@@ -5208,13 +5208,13 @@ try_again_w_token:
 		{
 			const type_qualifier_t mm_t = ds.type_qualifier & (TQ_NEAR|TQ_FAR|TQ_HUGE); /* only one of */
 			if (mm_t && !only_one_bit_set(mm_t)) {
-				CCerr(pos,"Multiple storage classes specified");
+				cc.CCerr(pos,"Multiple storage classes specified");
 				return errno_return(EINVAL);
 			}
 
 			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
 			if (sc_t && !only_one_bit_set(sc_t)) {
-				CCerr(pos,"Multiple storage classes specified");
+				cc.CCerr(pos,"Multiple storage classes specified");
 				return errno_return(EINVAL);
 			}
 		}
@@ -5234,28 +5234,28 @@ try_again_w_token:
 		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
 			if (sign_t && !only_one_bit_set(sign_t)) {
-				CCerr(pos,"Multiple type specifiers (signed/unsigned)");
+				cc.CCerr(pos,"Multiple type specifiers (signed/unsigned)");
 				return errno_return(EINVAL);
 			}
 
 			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) {
-				CCerr(pos,"Multiple type specifiers (int/char/void)");
+				cc.CCerr(pos,"Multiple type specifiers (int/char/void)");
 				return errno_return(EINVAL);
 			}
 
 			const type_specifier_t floattype_t = ds.type_specifier & (TS_FLOAT|TS_DOUBLE); /* only one of */
 			if (floattype_t && !only_one_bit_set(floattype_t)) {
-				CCerr(pos,"Multiple type specifiers (float)");
+				cc.CCerr(pos,"Multiple type specifiers (float)");
 				return errno_return(EINVAL);
 			}
 
 			if (intlen_t && floattype_t) {
-				CCerr(pos,"Multiple type specifiers (float+int)");
+				cc.CCerr(pos,"Multiple type specifiers (float+int)");
 				return errno_return(EINVAL); /* float or integer/char, you can't have both */
 			}
 			if (floattype_t && sign_t) {
-				CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
+				cc.CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
 				return errno_return(EINVAL); /* float/double and signed/unsigned don't mix */
 			}
 		}
@@ -5428,7 +5428,7 @@ try_again_w_token:
 
 						/* At least one paremter is required for ellipsis! */
 						if (dd.parameters.empty()) {
-							CCerr(pos,"Variadic functions must have at least one named parameter");
+							cc.CCerr(pos,"Variadic functions must have at least one named parameter");
 							return errno_return(EINVAL);
 						}
 
@@ -5456,7 +5456,7 @@ try_again_w_token:
 						assert(chk_p.ddecl != NULL);
 						assert(chk_p.ddecl->name.type == token_type_t::identifier);
 						if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
-							CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
+							cc.CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
 							return errno_return(EEXIST);
 						}
 					}
@@ -5513,7 +5513,7 @@ try_again_w_token:
 					type = cls;
 				}
 				else if (type != cls) {
-					CCerr(pos,"Mixed parameter style not allowed");
+					cc.CCerr(pos,"Mixed parameter style not allowed");
 					return errno_return(EINVAL);
 				}
 			}
@@ -5576,7 +5576,7 @@ try_again_w_token:
 
 							/* no match---fail */
 							if (i == dd.parameters.size()) {
-								CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
+								cc.CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
 								return errno_return(ENOENT);
 							}
 
@@ -5587,13 +5587,13 @@ try_again_w_token:
 								fp.ptr = std::move(d.ptr);
 							}
 							else {
-								CCerr(pos,"Identifier already given type");
+								cc.CCerr(pos,"Identifier already given type");
 								return errno_return(EALREADY);
 							}
 
 							/* do not allow initializer for parameter type declaration */
 							if (d.initval != ast_node_none) {
-								CCerr(pos,"Initializer value not permitted here");
+								cc.CCerr(pos,"Initializer value not permitted here");
 								return errno_return(EINVAL);
 							}
 						}
@@ -5602,7 +5602,7 @@ try_again_w_token:
 
 				if (cc.tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
 					/* no body of the function? */
-					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
+					cc.CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
 					return errno_return(EINVAL);
 				}
 			}
@@ -5677,7 +5677,7 @@ try_again_w_token:
 				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0) {
 					assert(p.ddecl != NULL);
 					assert(p.ddecl->name.type == token_type_t::identifier);
-					CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
+					cc.CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
 					return errno_return(EINVAL);
 				}
 			}
@@ -6673,7 +6673,7 @@ try_again_w_token:
 				break;
 
 			(*declion).spec = declaration_specifiers_t();
-			if ((r=chkerr(cc)) < 1)
+			if ((r=cc.chkerr()) < 1)
 				return r;
 			if ((r=declaration_parse(cc,*declion)) < 1)
 				return r;
@@ -6738,7 +6738,7 @@ try_again_w_token:
 
 		if ((r=declaration_specifiers_parse(cc,declion.spec)) < 1)
 			return r;
-		if ((r=chkerr(cc)) < 1)
+		if ((r=cc.chkerr()) < 1)
 			return r;
 
 		do {
@@ -6747,14 +6747,14 @@ try_again_w_token:
 
 			if ((r=declarator_parse(cc,declor)) < 1)
 				return r;
-			if ((r=chkerr(cc)) < 1)
+			if ((r=cc.chkerr()) < 1)
 				return r;
 
 			if (cc.tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				cc.tq_discard();
 
 				if (count != 0) {
-					CCerr(pos,"Function body not permitted except if the function is the only declarator here");
+					cc.CCerr(pos,"Function body not permitted except if the function is the only declarator here");
 					return errno_return(EINVAL);
 				}
 
@@ -6804,7 +6804,7 @@ try_again_w_token:
 			cc.tq_discard();
 			return 1;
 		}
-		if ((r=chkerr(cc)) < 1)
+		if ((r=cc.chkerr()) < 1)
 			return r;
 		if ((r=declaration_parse(cc,declion)) < 1)
 			return r;
