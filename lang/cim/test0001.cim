@@ -176,6 +176,15 @@ static int d(int a,int b) {
 	if (c == d) x += 3; else x -= 3;
 	if (c == d || fa == fb) { x += 3; d /= 4; } else { x -= 3; d *= 7; }
 
+	if (c == 2)
+		x += 3;
+	else if (c == 3)
+		x += 5;
+	else if (c == 4)
+		x += 6;
+	else
+		x += 7;
+
 	switch (c) {
 		case 3: x += 4; break;;;;;
 		case 7: x += 3; goto label1;
