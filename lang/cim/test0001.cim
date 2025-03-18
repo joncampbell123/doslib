@@ -146,5 +146,25 @@ static int d(int a,int b) {
 
 	c = x + 4; c = (x)+(d/fa)*fb; c |= 3;
 	x |= c + x;
+
+	{
+		int yo_dawg = 5;
+		yo_dawg += x;
+	}
+
+	x |= 3;
+
+	{
+		int nest = 5;
+		nest++;
+		{
+			int nest2 = nest + 1;
+			nest2++; nest2*=3;
+			{
+				int nest3 = nest2 + 1;
+				nest3/=2;
+			}
+		}
+	}
 }
 
