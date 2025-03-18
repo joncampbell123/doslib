@@ -4922,6 +4922,8 @@ try_again_w_token:
 		return ast_node_next++;
 	}
 
+	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
@@ -5098,24 +5100,53 @@ try_again_w_token:
 
 			return 1;
 		}
+
+		static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
+		static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
+		static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
+		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
+		static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
+
+		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
+		int compound_statement(declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot);
+		int direct_declarator_parse(direct_declarator_t &dd);
+		int multiplicative_expression(ast_node_id_t &aroot);
+		int exclusive_or_expression(ast_node_id_t &aroot);
+		int inclusive_or_expression(ast_node_id_t &aroot);
+		int conditional_expression(ast_node_id_t &aroot);
+		int logical_and_expression(ast_node_id_t &aroot);
+		int logical_or_expression(ast_node_id_t &aroot);
+		int assignment_expression(ast_node_id_t &aroot);
+		int relational_expression(ast_node_id_t &aroot);
+		int pointer_parse(std::vector<pointer_t> &ptr);
+		int declaration_parse(declaration_t &declion);
+		int additive_expression(ast_node_id_t &aroot);
+		int equality_expression(ast_node_id_t &aroot);
+		int postfix_expression(ast_node_id_t &aroot);
+		int primary_expression(ast_node_id_t &aroot);
+		int shift_expression(ast_node_id_t &aroot);
+		int declarator_parse(declarator_t &declor);
+		int unary_expression(ast_node_id_t &aroot);
+		int cast_expression(ast_node_id_t &aroot);
+		int and_expression(ast_node_id_t &aroot);
+		int xor_expression(ast_node_id_t &aroot);
+		int or_expression(ast_node_id_t &aroot);
+		int initializer(ast_node_id_t &aroot);
+		int expression(ast_node_id_t &aroot);
+		int external_declaration(void);
+		int translation_unit(void);
 	};
 
-	static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
-	static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
-	static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
-	static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
-	static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
-
-	int declaration_specifiers_parse(cc_state_t &cc,declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL) {
-		const position_t pos = cc.tq_peek().pos;
+	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
+		const position_t pos = tq_peek().pos;
 
 		do {
-			const token_t &t = cc.tq_peek();
+			const token_t &t = tq_peek();
 
 #define XCHK(f,d,m) \
 	if (declspec&f) { \
 		if (d&m) { \
-			cc.CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
+			CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
 			return errno_return(EINVAL); \
 		} \
 		else { \
@@ -5130,7 +5161,7 @@ try_again_w_token:
 #define X(f,d,m) \
 	{ \
 		XCHK(f,d,m); \
-		cc.tq_discard(); \
+		tq_discard(); \
 		continue; \
 	}
 
@@ -5164,19 +5195,19 @@ try_again_w_token:
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
 							if (ds.type_specifier & TS_LONGLONG) {
-								cc.CCerr(pos,"declarator specifier 'long long' already specified");
+								CCerr(pos,"declarator specifier 'long long' already specified");
 								return errno_return(EINVAL);
 							}
 							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
-							cc.tq_discard(); continue;
+							tq_discard(); continue;
 						}
 						else {
 							if (ds.type_specifier & TS_LONG) {
-								cc.CCerr(pos,"declarator specifier 'long' already specified");
+								CCerr(pos,"declarator specifier 'long' already specified");
 								return errno_return(EINVAL);
 							}
 							ds.type_specifier |= TS_LONG;
-							cc.tq_discard(); continue;
+							tq_discard(); continue;
 						}
 					}
 					break;
@@ -5191,14 +5222,14 @@ try_again_w_token:
 
 		/* unless told otherwise, it is an error for this code not to parse any tokens */
 		if (!(declspec & DECLSPEC_OPTIONAL) && ds.count == 0) {
-			cc.CCerr(pos,"Declaration specifiers expected");
+			CCerr(pos,"Declaration specifiers expected");
 			return errno_return(EINVAL);
 		}
 
 		/* unless asked not to parse type specifiers, it is an error not to specify one.
 		 * You can't say "static x" for example */
 		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
-			cc.CCerr(pos,"Type specifiers expected. Specify a type here");
+			CCerr(pos,"Type specifiers expected. Specify a type here");
 			return errno_return(EINVAL);
 		}
 
@@ -5206,13 +5237,13 @@ try_again_w_token:
 		{
 			const type_qualifier_t mm_t = ds.type_qualifier & (TQ_NEAR|TQ_FAR|TQ_HUGE); /* only one of */
 			if (mm_t && !only_one_bit_set(mm_t)) {
-				cc.CCerr(pos,"Multiple storage classes specified");
+				CCerr(pos,"Multiple storage classes specified");
 				return errno_return(EINVAL);
 			}
 
 			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
 			if (sc_t && !only_one_bit_set(sc_t)) {
-				cc.CCerr(pos,"Multiple storage classes specified");
+				CCerr(pos,"Multiple storage classes specified");
 				return errno_return(EINVAL);
 			}
 		}
@@ -5232,28 +5263,28 @@ try_again_w_token:
 		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
 			if (sign_t && !only_one_bit_set(sign_t)) {
-				cc.CCerr(pos,"Multiple type specifiers (signed/unsigned)");
+				CCerr(pos,"Multiple type specifiers (signed/unsigned)");
 				return errno_return(EINVAL);
 			}
 
 			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) {
-				cc.CCerr(pos,"Multiple type specifiers (int/char/void)");
+				CCerr(pos,"Multiple type specifiers (int/char/void)");
 				return errno_return(EINVAL);
 			}
 
 			const type_specifier_t floattype_t = ds.type_specifier & (TS_FLOAT|TS_DOUBLE); /* only one of */
 			if (floattype_t && !only_one_bit_set(floattype_t)) {
-				cc.CCerr(pos,"Multiple type specifiers (float)");
+				CCerr(pos,"Multiple type specifiers (float)");
 				return errno_return(EINVAL);
 			}
 
 			if (intlen_t && floattype_t) {
-				cc.CCerr(pos,"Multiple type specifiers (float+int)");
+				CCerr(pos,"Multiple type specifiers (float+int)");
 				return errno_return(EINVAL); /* float or integer/char, you can't have both */
 			}
 			if (floattype_t && sign_t) {
-				cc.CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
+				CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
 				return errno_return(EINVAL); /* float/double and signed/unsigned don't mix */
 			}
 		}
@@ -5285,7 +5316,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int pointer_parse(cc_state_t &cc,std::vector<pointer_t> &ptr) {
+	int cc_state_t::pointer_parse(std::vector<pointer_t> &ptr) {
 		int r;
 
 #if 0//DEBUG
@@ -5301,13 +5332,13 @@ try_again_w_token:
 		 *   *** const * const
 		 *
 		 *   and so on */
-		while (cc.tq_peek().type == token_type_t::star) {
+		while (tq_peek().type == token_type_t::star) {
 			declaration_specifiers_t ds;
 			pointer_t p;
 
-			cc.tq_discard();
+			tq_discard();
 
-			if ((r=declaration_specifiers_parse(cc,ds,DECLSPEC_TYPE_QUAL|DECLSPEC_OPTIONAL)) < 1)
+			if ((r=declaration_specifiers_parse(ds,DECLSPEC_TYPE_QUAL|DECLSPEC_OPTIONAL)) < 1)
 				return r;
 
 			assert(ds.type_specifier == 0 && ds.storage_class == 0);
@@ -5348,13 +5379,8 @@ try_again_w_token:
 		initval = o.initval; o.initval = ast_node_none;
 	}
 
-	int expression(cc_state_t &cc,ast_node_id_t &aroot);
-	int initializer(cc_state_t &cc,ast_node_id_t &aroot);
-	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
-	int declaration_parse(cc_state_t &cc,declaration_t &declion);
-
-	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
-		position_t pos = cc.tq_peek().pos;
+	int cc_state_t::direct_declarator_parse(direct_declarator_t &dd) {
+		position_t pos = tq_peek().pos;
 		int indent = 0;
 		int r;
 
@@ -5372,38 +5398,38 @@ try_again_w_token:
 		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
 		 *   ( ) */
 
-		while (cc.tq_peek().type == token_type_t::openparenthesis) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
 			indent++;
 
-			if ((r=pointer_parse(cc,dd.ptr)) < 1)
+			if ((r=pointer_parse(dd.ptr)) < 1)
 				return r;
 		}
 
-		if (cc.tq_peek().type == token_type_t::identifier)
-			dd.name = std::move(cc.tq_get());
+		if (tq_peek().type == token_type_t::identifier)
+			dd.name = std::move(tq_get());
 		else
 			return errno_return(EINVAL);
 
 		do {
-			while (indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
-				cc.tq_discard();
+			while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
+				tq_discard();
 				indent--;
 			}
 
 			do {
-				if (cc.tq_peek().type == token_type_t::opensquarebracket) {
-					cc.tq_discard();
+				if (tq_peek().type == token_type_t::opensquarebracket) {
+					tq_discard();
 
 					/* NTS: "[]" is acceptable */
 					ast_node_id_t expr = ast_node_none;
-					if (cc.tq_peek().type != token_type_t::closesquarebracket) {
-						if ((r=expression(cc,expr)) < 1)
+					if (tq_peek().type != token_type_t::closesquarebracket) {
+						if ((r=expression(expr)) < 1)
 							return r;
 					}
 
 					dd.arraydef.push_back(std::move(expr));
-					if (cc.tq_get().type != token_type_t::closesquarebracket)
+					if (tq_get().type != token_type_t::closesquarebracket)
 						return errno_return(EINVAL);
 				}
 				else {
@@ -5413,20 +5439,20 @@ try_again_w_token:
 		} while (indent > 0);
 
 		/* you are allowed ONE parameter list! ONE! */
-		if (cc.tq_peek().type == token_type_t::openparenthesis) {
-			cc.tq_discard();
+		if (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
 
 			/* NTS: "()" is acceptable */
 			dd.flags |= direct_declarator_t::FL_FUNCTION;
-			if (cc.tq_peek().type != token_type_t::closeparenthesis) {
+			if (tq_peek().type != token_type_t::closeparenthesis) {
 				do {
-					if (cc.tq_peek().type == token_type_t::ellipsis) {
-						cc.tq_discard();
+					if (tq_peek().type == token_type_t::ellipsis) {
+						tq_discard();
 						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
 
 						/* At least one paremter is required for ellipsis! */
 						if (dd.parameters.empty()) {
-							cc.CCerr(pos,"Variadic functions must have at least one named parameter");
+							CCerr(pos,"Variadic functions must have at least one named parameter");
 							return errno_return(EINVAL);
 						}
 
@@ -5435,14 +5461,14 @@ try_again_w_token:
 
 					parameter_t p;
 
-					if ((r=declaration_specifiers_parse(cc,p.spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
 						return r;
 
-					if ((r=pointer_parse(cc,p.ptr)) < 1)
+					if ((r=pointer_parse(p.ptr)) < 1)
 						return r;
 
 					p.ddecl = new direct_declarator_t();
-					if ((r=direct_declarator_parse(cc,*(p.ddecl))) < 1)
+					if ((r=direct_declarator_parse(*(p.ddecl))) < 1)
 						return r;
 
 					/* do not allow using the same name again */
@@ -5454,26 +5480,26 @@ try_again_w_token:
 						assert(chk_p.ddecl != NULL);
 						assert(chk_p.ddecl->name.type == token_type_t::identifier);
 						if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
-							cc.CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
+							CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
 							return errno_return(EEXIST);
 						}
 					}
 
-					if (cc.tq_peek().type == token_type_t::equal) {
+					if (tq_peek().type == token_type_t::equal) {
 						/* if no declaration specifiers were given (just a bare identifier
 						 * aka the old 1980s syntax), then you shouldn't be allowed to define
 						 * a default value. */
 						if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
 							return errno_return(EINVAL);
 
-						cc.tq_discard();
-						if ((r=initializer(cc,p.initval)) < 1)
+						tq_discard();
+						if ((r=initializer(p.initval)) < 1)
 							return r;
 					}
 
 					dd.parameters.push_back(std::move(p));
-					if (cc.tq_peek().type == token_type_t::comma) {
-						cc.tq_discard();
+					if (tq_peek().type == token_type_t::comma) {
+						tq_discard();
 						continue;
 					}
 
@@ -5481,12 +5507,12 @@ try_again_w_token:
 				} while (1);
 			}
 
-			if (cc.tq_get().type != token_type_t::closeparenthesis)
+			if (tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 		}
 
-		while (indent > 0 && cc.tq_peek().type == token_type_t::closeparenthesis) {
-			cc.tq_discard();
+		while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
+			tq_discard();
 			indent--;
 		}
 
@@ -5511,7 +5537,7 @@ try_again_w_token:
 					type = cls;
 				}
 				else if (type != cls) {
-					cc.CCerr(pos,"Mixed parameter style not allowed");
+					CCerr(pos,"Mixed parameter style not allowed");
 					return errno_return(EINVAL);
 				}
 			}
@@ -5540,13 +5566,13 @@ try_again_w_token:
 			 */
 			if (type == 0) {
 				do {
-					if (cc.tq_peek().type == token_type_t::opencurlybracket || cc.tq_peek().type == token_type_t::semicolon) {
+					if (tq_peek().type == token_type_t::opencurlybracket || tq_peek().type == token_type_t::semicolon) {
 						break;
 					}
 					else {
 						declaration_t s_declion;
 
-						if ((r=declaration_parse(cc,s_declion)) < 1)
+						if ((r=declaration_parse(s_declion)) < 1)
 							return r;
 
 						/* check */
@@ -5574,7 +5600,7 @@ try_again_w_token:
 
 							/* no match---fail */
 							if (i == dd.parameters.size()) {
-								cc.CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
+								CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
 								return errno_return(ENOENT);
 							}
 
@@ -5585,22 +5611,22 @@ try_again_w_token:
 								fp.ptr = std::move(d.ptr);
 							}
 							else {
-								cc.CCerr(pos,"Identifier already given type");
+								CCerr(pos,"Identifier already given type");
 								return errno_return(EALREADY);
 							}
 
 							/* do not allow initializer for parameter type declaration */
 							if (d.initval != ast_node_none) {
-								cc.CCerr(pos,"Initializer value not permitted here");
+								CCerr(pos,"Initializer value not permitted here");
 								return errno_return(EINVAL);
 							}
 						}
 					}
 				} while (1);
 
-				if (cc.tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
+				if (tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
 					/* no body of the function? */
-					cc.CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
+					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
 					return errno_return(EINVAL);
 				}
 			}
@@ -5675,7 +5701,7 @@ try_again_w_token:
 				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0) {
 					assert(p.ddecl != NULL);
 					assert(p.ddecl->name.type == token_type_t::identifier);
-					cc.CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
+					CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
 					return errno_return(EINVAL);
 				}
 			}
@@ -5684,13 +5710,13 @@ try_again_w_token:
 		return 1;
 	}
 
-	int declarator_parse(cc_state_t &cc,declarator_t &declor) {
+	int cc_state_t::declarator_parse(declarator_t &declor) {
 		int r;
 
-		if ((r=pointer_parse(cc,declor.ptr)) < 1)
+		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(cc,declor.ddecl)) < 1)
+		if ((r=direct_declarator_parse(declor.ddecl)) < 1)
 			return r;
 
 		return 1;
@@ -5805,25 +5831,25 @@ try_again_w_token:
 		}
 	}
 
-	int primary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
 		int r;
 
-		if (	cc.tq_peek().type == token_type_t::identifier ||
-			cc.tq_peek().type == token_type_t::strliteral ||
-			cc.tq_peek().type == token_type_t::charliteral ||
-			cc.tq_peek().type == token_type_t::integer ||
-			cc.tq_peek().type == token_type_t::floating) {
+		if (	tq_peek().type == token_type_t::identifier ||
+			tq_peek().type == token_type_t::strliteral ||
+			tq_peek().type == token_type_t::charliteral ||
+			tq_peek().type == token_type_t::integer ||
+			tq_peek().type == token_type_t::floating) {
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(cc.tq_get());
+			aroot = ast_node_alloc(tq_get());
 		}
-		else if (cc.tq_peek().type == token_type_t::openparenthesis) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
-			if ((r=expression(cc,aroot)) < 1)
+			if ((r=expression(aroot)) < 1)
 				return r;
 
-			if (cc.tq_get().type != token_type_t::closeparenthesis)
+			if (tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 		}
 		else {
@@ -5833,20 +5859,18 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot);
-
-	int postfix_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::postfix_expression(ast_node_id_t &aroot) {
 #define nextexpr primary_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
 			/* TODO: postfix_expression( )
 			 *       postfix_expression( argument_expression_list ) */
-			if (cc.tq_peek().type == token_type_t::opensquarebracket) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::opensquarebracket) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -5854,16 +5878,16 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=expression(cc,expr2)) < 1)
+				if ((r=expression(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 
-				if (cc.tq_get().type != token_type_t::closesquarebracket)
+				if (tq_get().type != token_type_t::closesquarebracket)
 					return errno_return(EINVAL);
 			}
-			else if (cc.tq_peek().type == token_type_t::period) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::period) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -5871,13 +5895,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=postfix_expression(cc,expr2)) < 1)
+				if ((r=postfix_expression(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::minusrightanglebracket) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::minusrightanglebracket) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -5885,21 +5909,21 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=postfix_expression(cc,expr2)) < 1)
+				if ((r=postfix_expression(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::plusplus) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::plusplus) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
 				aroot = ast_node_alloc(token_type_t::op_post_increment);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::minusminus) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::minusminus) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -5914,48 +5938,48 @@ try_again_w_token:
 		return 1;
 	}
 
-	int unary_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::unary_expression(ast_node_id_t &aroot) {
 #define nextexpr postfix_expression
 		int r;
 
-		if (cc.tq_peek().type == token_type_t::plusplus) {
-			cc.tq_discard();
+		if (tq_peek().type == token_type_t::plusplus) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_pre_increment);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=unary_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::minusminus) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::minusminus) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_pre_decrement);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=unary_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::ampersand) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::ampersand) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::ampersandampersand) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::ampersandampersand) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_address_of);
@@ -5963,69 +5987,69 @@ try_again_w_token:
 			ast_node_id_t aroot2 = ast_node_alloc(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(aroot2); ast_node(aroot2).release();
 			ast_node(aroot2).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::star) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::star) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_pointer_deref);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::plus) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::plus) {
+			tq_discard();
 
 			/* So basically +4, right? Which we can just treat as a no-op */
-			if ((r=cast_expression(cc,aroot)) < 1)
+			if ((r=cast_expression(aroot)) < 1)
 				return r;
 		}
-		else if (cc.tq_peek().type == token_type_t::minus) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::minus) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_negate);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::tilde) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::tilde) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_binary_not);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::exclamation) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::exclamation) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_logical_not);
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=cast_expression(cc,expr)) < 1)
+			if ((r=cast_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (cc.tq_peek().type == token_type_t::r_sizeof) {
-			cc.tq_discard();
+		else if (tq_peek().type == token_type_t::r_sizeof) {
+			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_sizeof);
@@ -6039,24 +6063,24 @@ try_again_w_token:
 			// sizeof(int*)
 
 			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(cc,expr)) < 1)
+			if ((r=unary_expression(expr)) < 1)
 				return r;
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else {
-			if ((r=nextexpr(cc,aroot)) < 1)
+			if ((r=nextexpr(aroot)) < 1)
 				return r;
 		}
 #undef nextexpr
 		return 1;
 	}
 
-	int cast_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::cast_expression(ast_node_id_t &aroot) {
 #define nextexpr unary_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		/* TODO: (cast expression) */
@@ -6064,16 +6088,16 @@ try_again_w_token:
 		return 1;
 	}
 
-	int multiplicative_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::multiplicative_expression(ast_node_id_t &aroot) {
 #define nextexpr cast_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
-			if (cc.tq_peek().type == token_type_t::star) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::star) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6081,13 +6105,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::forwardslash) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::forwardslash) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6095,13 +6119,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::percent) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::percent) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6109,7 +6133,7 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6122,16 +6146,16 @@ try_again_w_token:
 		return 1;
 	}
 
-	int additive_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::additive_expression(ast_node_id_t &aroot) {
 #define nextexpr multiplicative_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
-			if (cc.tq_peek().type == token_type_t::plus) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::plus) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6139,13 +6163,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::minus) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::minus) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6153,7 +6177,7 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6166,16 +6190,16 @@ try_again_w_token:
 		return 1;
 	}
 
-	int shift_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::shift_expression(ast_node_id_t &aroot) {
 #define nextexpr additive_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
-			if (cc.tq_peek().type == token_type_t::lessthanlessthan) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::lessthanlessthan) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6183,13 +6207,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::greaterthangreaterthan) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::greaterthangreaterthan) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6197,7 +6221,7 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6210,16 +6234,16 @@ try_again_w_token:
 		return 1;
 	}
 
-	int relational_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::relational_expression(ast_node_id_t &aroot) {
 #define nextexpr shift_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
-			if (cc.tq_peek().type == token_type_t::lessthan) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::lessthan) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6227,13 +6251,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::greaterthan) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::greaterthan) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6241,13 +6265,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::lessthanequals) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::lessthanequals) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6255,13 +6279,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::greaterthanequals) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::greaterthanequals) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6269,7 +6293,7 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6282,16 +6306,16 @@ try_again_w_token:
 		return 1;
 	}
 
-	int equality_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::equality_expression(ast_node_id_t &aroot) {
 #define nextexpr relational_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
 		do {
-			if (cc.tq_peek().type == token_type_t::equalequal) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::equalequal) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6299,13 +6323,13 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (cc.tq_peek().type == token_type_t::exclamationequals) {
-				cc.tq_discard();
+			else if (tq_peek().type == token_type_t::exclamationequals) {
+				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6313,7 +6337,7 @@ try_again_w_token:
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
-				if ((r=nextexpr(cc,expr2)) < 1)
+				if ((r=nextexpr(expr2)) < 1)
 					return r;
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6326,15 +6350,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int and_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::and_expression(ast_node_id_t &aroot) {
 #define nextexpr equality_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::ampersand) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::ampersand) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6342,7 +6366,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6351,15 +6375,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int exclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::exclusive_or_expression(ast_node_id_t &aroot) {
 #define nextexpr and_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::caret) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::caret) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6367,7 +6391,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6376,15 +6400,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int inclusive_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::inclusive_or_expression(ast_node_id_t &aroot) {
 #define nextexpr exclusive_or_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::pipe) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::pipe) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6392,7 +6416,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6401,15 +6425,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int logical_and_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::logical_and_expression(ast_node_id_t &aroot) {
 #define nextexpr inclusive_or_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::ampersandampersand) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::ampersandampersand) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6417,7 +6441,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6426,15 +6450,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int logical_or_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::logical_or_expression(ast_node_id_t &aroot) {
 #define nextexpr logical_and_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::pipepipe) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::pipepipe) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6442,7 +6466,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6451,28 +6475,26 @@ try_again_w_token:
 		return 1;
 	}
 
-	int expression(cc_state_t &cc,ast_node_id_t &aroot);
-
-	int conditional_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::conditional_expression(ast_node_id_t &aroot) {
 #define nextexpr logical_or_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		if (cc.tq_peek().type == token_type_t::question) {
+		if (tq_peek().type == token_type_t::question) {
 			ast_node_id_t cond_expr = aroot; aroot = ast_node_none;
-			cc.tq_discard();
+			tq_discard();
 
 			ast_node_id_t true_expr = ast_node_none;
-			if ((r=expression(cc,true_expr)) < 1)
+			if ((r=expression(true_expr)) < 1)
 				return r;
 
-			if (cc.tq_get().type != token_type_t::colon)
+			if (tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
 			ast_node_id_t false_expr = ast_node_none;
-			if ((r=conditional_expression(cc,false_expr)) < 1)
+			if ((r=conditional_expression(false_expr)) < 1)
 				return r;
 
 			aroot = ast_node_alloc(token_type_t::op_ternary);
@@ -6484,98 +6506,98 @@ try_again_w_token:
 		return 1;
 	}
 
-	int assignment_expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::assignment_expression(ast_node_id_t &aroot) {
 #define nextexpr conditional_expression
 		ast_node_id_t to = ast_node_none,from = ast_node_none;
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		switch (cc.tq_peek().type) {
+		switch (tq_peek().type) {
 			case token_type_t::equal:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::starequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_multiply_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::forwardslashequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_divide_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::percentequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_modulus_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::plusequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_add_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::minusequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_subtract_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::lessthanlessthanequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_leftshift_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::greaterthangreaterthanequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_rightshift_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::ampersandequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_and_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::caretequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_xor_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::pipeequals:
-				cc.tq_discard();
-				if ((r=assignment_expression(cc,from)) < 1)
+				tq_discard();
+				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node_alloc(token_type_t::op_or_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
@@ -6589,15 +6611,15 @@ try_again_w_token:
 		return 1;
 	}
 
-	int expression(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::expression(ast_node_id_t &aroot) {
 #define nextexpr assignment_expression
 		int r;
 
-		if ((r=nextexpr(cc,aroot)) < 1)
+		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (cc.tq_peek().type == token_type_t::comma) {
-			cc.tq_discard();
+		while (tq_peek().type == token_type_t::comma) {
+			tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -6605,7 +6627,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
-			if ((r=nextexpr(cc,expr2)) < 1)
+			if ((r=nextexpr(expr2)) < 1)
 				return r;
 
 			ast_node(expr1).set_next(expr2); ast_node(expr2).release();
@@ -6614,7 +6636,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int initializer(cc_state_t &cc,ast_node_id_t &aroot) {
+	int cc_state_t::initializer(ast_node_id_t &aroot) {
 		int r;
 
 		assert(aroot == ast_node_none);
@@ -6623,7 +6645,7 @@ try_again_w_token:
 
 		// TODO { initializer_list }
 
-		if ((r=assignment_expression(cc,aroot)) < 1)
+		if ((r=assignment_expression(aroot)) < 1)
 			return r;
 
 #if 1//DEBUG
@@ -6634,7 +6656,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int compound_statement(cc_state_t &cc,declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot) {
+	int cc_state_t::compound_statement(declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot) {
 		ast_node_id_t nxt;
 		int r;
 
@@ -6653,27 +6675,27 @@ try_again_w_token:
 		 * Use C rules where they are only allowed at the top of the compound statement.
 		 * Not C++ rules where you can just do it wherever. */
 		do {
-			if (cc.tq_peek().type == token_type_t::eof || cc.tq_peek().type == token_type_t::none)
+			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
 				return errno_return(EINVAL);
 
-			if (cc.tq_peek().type == token_type_t::semicolon)
+			if (tq_peek().type == token_type_t::semicolon)
 				break;
 
-			if (cc.tq_peek().type == token_type_t::closecurlybracket) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::closecurlybracket) {
+				tq_discard();
 				return 1;
 			}
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
-			if ((r=declaration_specifiers_parse(cc,(*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
+			if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
 				return r;
 			if ((*declion).spec.count == 0) /* no tokens seen */
 				break;
 
 			(*declion).spec = declaration_specifiers_t();
-			if ((r=cc.chkerr()) < 1)
+			if ((r=chkerr()) < 1)
 				return r;
-			if ((r=declaration_parse(cc,*declion)) < 1)
+			if ((r=declaration_parse(*declion)) < 1)
 				return r;
 
 			nxt = ast_node_alloc(token_type_t::op_declaration);
@@ -6690,21 +6712,21 @@ try_again_w_token:
 
 		/* OK, now statements */
 		do {
-			if (cc.tq_peek().type == token_type_t::eof || cc.tq_peek().type == token_type_t::none)
+			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
 				return errno_return(EINVAL);
 
-			if (cc.tq_peek().type == token_type_t::closecurlybracket) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::closecurlybracket) {
+				tq_discard();
 				break;
 			}
 
-			if (cc.tq_peek().type == token_type_t::semicolon) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::semicolon) {
+				tq_discard();
 				continue;
 			}
 
 			nxt = ast_node_none;
-			if ((r=expression(cc,nxt)) < 1)
+			if ((r=expression(nxt)) < 1)
 				return r;
 
 			if (aroot == ast_node_none)
@@ -6713,8 +6735,8 @@ try_again_w_token:
 				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
 
 			nroot = nxt;
-			if (cc.tq_peek().type == token_type_t::semicolon)
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::semicolon)
+				tq_discard();
 			else
 				return errno_return(EINVAL);
 		} while (1);
@@ -6727,37 +6749,37 @@ try_again_w_token:
 		return 1;
 	}
 
-	int declaration_parse(cc_state_t &cc,declaration_t &declion) {
+	int cc_state_t::declaration_parse(declaration_t &declion) {
 		int r,count = 0;
 
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
-		if ((r=declaration_specifiers_parse(cc,declion.spec)) < 1)
+		if ((r=declaration_specifiers_parse(declion.spec)) < 1)
 			return r;
-		if ((r=cc.chkerr()) < 1)
+		if ((r=chkerr()) < 1)
 			return r;
 
 		do {
-			position_t pos = cc.tq_peek().pos;
+			position_t pos = tq_peek().pos;
 			declarator_t &declor = declion.new_declarator();
 
-			if ((r=declarator_parse(cc,declor)) < 1)
+			if ((r=declarator_parse(declor)) < 1)
 				return r;
-			if ((r=cc.chkerr()) < 1)
+			if ((r=chkerr()) < 1)
 				return r;
 
-			if (cc.tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
+				tq_discard();
 
 				if (count != 0) {
-					cc.CCerr(pos,"Function body not permitted except if the function is the only declarator here");
+					CCerr(pos,"Function body not permitted except if the function is the only declarator here");
 					return errno_return(EINVAL);
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
-				if ((r=compound_statement(cc,declion,declor,fbroot,fbrootnext)) < 1)
+				if ((r=compound_statement(declion,declor,fbroot,fbrootnext)) < 1)
 					return r;
 
 				/* once the compound statment ends, no more declarators.
@@ -6766,31 +6788,31 @@ try_again_w_token:
 				return 1;
 			}
 
-			if (cc.tq_peek().type == token_type_t::equal) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::equal) {
+				tq_discard();
 
-				if ((r=initializer(cc,declor.initval)) < 1)
+				if ((r=initializer(declor.initval)) < 1)
 					return r;
 			}
 
 			count++;
-			if (cc.tq_peek().type == token_type_t::comma) {
-				cc.tq_discard();
+			if (tq_peek().type == token_type_t::comma) {
+				tq_discard();
 				continue;
 			}
 
 			break;
 		} while(1);
 
-		if (cc.tq_peek().type == token_type_t::semicolon) {
-			cc.tq_discard();
+		if (tq_peek().type == token_type_t::semicolon) {
+			tq_discard();
 			return 1;
 		}
 
 		return errno_return(EINVAL);
 	}
 
-	int external_declaration(cc_state_t &cc) {
+	int cc_state_t::external_declaration(void) {
 		declaration_t declion;
 		int r;
 
@@ -6798,26 +6820,26 @@ try_again_w_token:
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
-		if (cc.tq_peek().type == token_type_t::semicolon) {
-			cc.tq_discard();
+		if (tq_peek().type == token_type_t::semicolon) {
+			tq_discard();
 			return 1;
 		}
-		if ((r=cc.chkerr()) < 1)
+		if ((r=chkerr()) < 1)
 			return r;
-		if ((r=declaration_parse(cc,declion)) < 1)
+		if ((r=declaration_parse(declion)) < 1)
 			return r;
 
 		return 1;
 	}
 
-	int translation_unit(cc_state_t &cc) {
-		const token_t &t = cc.tq_peek();
+	int cc_state_t::translation_unit(void) {
+		const token_t &t = tq_peek();
 		int r;
 
 		if (t.type == token_type_t::none || t.type == token_type_t::eof)
-			return cc.err; /* 0 or negative */
+			return err; /* 0 or negative */
 
-		if ((r=external_declaration(cc)) < 1)
+		if ((r=external_declaration()) < 1)
 			return r;
 
 		return 1;
@@ -6830,7 +6852,7 @@ try_again_w_token:
 		cc.sfo = &sfo;
 
 		if (cc.err == 0) {
-			if ((r=translation_unit(cc)) < 1)
+			if ((r=cc.translation_unit()) < 1)
 				return r;
 		}
 
