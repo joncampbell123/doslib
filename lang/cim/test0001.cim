@@ -196,11 +196,18 @@ static int d(int a,int b) {
 	return (3+x)*y;
 }
 static int d(int a) {
-	int x = 1;
+	int x = 1,y = 0,z = 0;
 	while (a-- > 0) x += x;
 	while (a-- > 0) { x += x; }
 	do { x += x; } while (a-- > 0);
 	do x += x; while (a-- > 0);
+	for (x=0;x < 5;x++) y = (y*2)+1;
+	for (x=0;x < 5;) { y = (y*2)+1; z++; }
+	for (x=0;x < 5;);
+	for (x=0;;);
+	for (;;);
+	for (;;) z++;
+	for (x=0;x < 5;x++,z++) z++;
 	return x;
 }
 

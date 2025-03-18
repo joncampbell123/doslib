@@ -805,6 +805,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_return,
 		op_while_statement,
 		op_do_while_statement,			// 205
+		op_for_statement,
+		op_none,
 
 		__MAX__
 	};
@@ -1404,7 +1406,9 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:goto",
 		"op:return",
 		"op:while_statement",
-		"op:do_while_statement"			// 205
+		"op:do_while_statement",		// 205
+		"op:for_statement",
+		"op:none"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5146,6 +5150,7 @@ try_again_w_token:
 		int assignment_expression(ast_node_id_t &aroot);
 		int relational_expression(ast_node_id_t &aroot);
 		int pointer_parse(std::vector<pointer_t> &ptr);
+		int expression_statement(ast_node_id_t &aroot);
 		int declaration_parse(declaration_t &declion);
 		int additive_expression(ast_node_id_t &aroot);
 		int equality_expression(ast_node_id_t &aroot);
@@ -6739,6 +6744,18 @@ try_again_w_token:
 		return 1;
 	}
 
+	int cc_state_t::expression_statement(ast_node_id_t &aroot) {
+		int r;
+
+		if ((r=statement(aroot)) < 1)
+			return r;
+
+		if (aroot == ast_node_none)
+			aroot = ast_node_alloc(token_type_t::op_none);
+
+		return 1;
+	}
+
 	int cc_state_t::statement(ast_node_id_t &aroot) {
 		int r;
 
@@ -6823,6 +6840,39 @@ try_again_w_token:
 			aroot = ast_node_alloc(token_type_t::op_while_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
+		}
+		else if (tq_peek(0).type == token_type_t::r_for && tq_peek(1).type == token_type_t::openparenthesis) {
+			tq_discard(2);
+
+			ast_node_id_t initexpr = ast_node_none;
+			ast_node_id_t loopexpr = ast_node_none;
+			ast_node_id_t iterexpr = ast_node_none;
+			ast_node_id_t stmt = ast_node_none;
+
+			if ((r=expression_statement(initexpr)) < 1)
+				return r;
+
+			if ((r=expression_statement(loopexpr)) < 1)
+				return r;
+
+			if (tq_peek().type != token_type_t::closeparenthesis) {
+				if ((r=expression(iterexpr)) < 1)
+					return r;
+			}
+			if (iterexpr == ast_node_none)
+				iterexpr = ast_node_alloc(token_type_t::op_none);
+
+			if (tq_get().type != token_type_t::closeparenthesis)
+				return errno_return(EINVAL);
+
+			if ((r=statement(stmt)) < 1)
+				return r;
+
+			aroot = ast_node_alloc(token_type_t::op_for_statement);
+			ast_node(aroot).set_child(initexpr); ast_node(initexpr).release();
+			ast_node(initexpr).set_next(loopexpr); ast_node(loopexpr).release();
+			ast_node(loopexpr).set_next(iterexpr); ast_node(iterexpr).release();
+			if (stmt != ast_node_none) { ast_node(iterexpr).set_next(stmt); ast_node(stmt).release(); }
 		}
 		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
 			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */
