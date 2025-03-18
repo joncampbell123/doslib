@@ -143,5 +143,8 @@ static int d(int a,int b) {
 	int* (*func)(int x,int y,float z);
 	int* (* const *func1)(const int x,int z,int* (*xyz)(int a,int b),float** (* const abcd)(float z),char a[5][b+c],int xx=3,...);
 	int (*func2)(int a=4,int b=2,int c=a+b,...);
+
+	c = x + 4; c = (x)+(d/fa)*fb; c |= 3;
+	x |= c + x;
 }
 

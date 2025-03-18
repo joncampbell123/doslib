@@ -6654,7 +6654,7 @@ try_again_w_token:
 
 			if (cc.tq_peek().type == token_type_t::closecurlybracket) {
 				cc.tq_discard();
-				break;
+				return 1;
 			}
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
@@ -6679,6 +6679,37 @@ try_again_w_token:
 			ast_node(nxt).t.v.declaration = declion.release();
 
 			nroot = nxt;
+		} while (1);
+
+		/* OK, now statements */
+		do {
+			if (cc.tq_peek().type == token_type_t::eof || cc.tq_peek().type == token_type_t::none)
+				return errno_return(EINVAL);
+
+			if (cc.tq_peek().type == token_type_t::closecurlybracket) {
+				cc.tq_discard();
+				break;
+			}
+
+			if (cc.tq_peek().type == token_type_t::semicolon) {
+				cc.tq_discard();
+				continue;
+			}
+
+			nxt = ast_node_none;
+			if ((r=expression(cc,nxt)) < 1)
+				return r;
+
+			if (aroot == ast_node_none)
+				aroot = nxt;
+			else
+				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
+
+			nroot = nxt;
+			if (cc.tq_peek().type == token_type_t::semicolon)
+				cc.tq_discard();
+			else
+				return errno_return(EINVAL);
 		} while (1);
 
 #if 1//DEBUG
