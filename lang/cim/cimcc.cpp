@@ -5285,6 +5285,7 @@ try_again_w_token:
 	int expression(cc_state_t &cc,ast_node_id_t &aroot);
 	int initializer(cc_state_t &cc,ast_node_id_t &aroot);
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+	int declaration_parse(cc_state_t &cc,declaration_t &declion);
 
 	int direct_declarator_parse(cc_state_t &cc,direct_declarator_t &dd) {
 		position_t pos = cc.tq_peek().pos;
@@ -5477,22 +5478,17 @@ try_again_w_token:
 						break;
 					}
 					else {
-						declaration_specifiers_t spec;
+						declaration_t s_declion;
 
-						if ((r=declaration_specifiers_parse(cc,spec)) < 1)
+						if ((r=declaration_parse(cc,s_declion)) < 1)
 							return r;
 
-						do {
-							direct_declarator_t ddecl;
-							std::vector<pointer_t> ptr;
+						/* check */
+						for (auto &dp : s_declion.declor) {
+							assert(dp != NULL);
+							auto &d = *dp;
 
-							if ((r=pointer_parse(cc,ptr)) < 1)
-								return r;
-
-							if ((r=direct_declarator_parse(cc,ddecl)) < 1)
-								return r;
-
-							if (ddecl.name.type != token_type_t::identifier)
+							if (d.ddecl.name.type != token_type_t::identifier)
 								return errno_return(EINVAL);
 
 							/* the name must match a parameter and it must not already have been given it's type */
@@ -5504,38 +5500,27 @@ try_again_w_token:
 									return errno_return(EINVAL);
 								if (chk_p.ddecl->name.type != token_type_t::identifier)
 									return errno_return(EINVAL);
-								if (ddecl.name.v.strliteral == chk_p.ddecl->name.v.strliteral)
+								if (d.ddecl.name.v.strliteral == chk_p.ddecl->name.v.strliteral)
 									break;
 
 								i++;
 							}
 
+							/* no match---fail */
 							if (i == dd.parameters.size())
 								return errno_return(ENOENT);
 
 							parameter_t &fp = dd.parameters[i];
 							if (fp.spec.storage_class == 0 && fp.spec.type_specifier == 0 &&
 								fp.spec.type_qualifier == 0 && fp.ptr.empty()) {
-								fp.spec = std::move(spec);
-								fp.ptr = std::move(ptr);
+								fp.spec = s_declion.spec;
+								fp.ptr = std::move(d.ptr);
 							}
 							else {
 								CCerr(pos,"Identifier already given type");
 								return errno_return(EALREADY);
 							}
-
-							if (cc.tq_peek().type == token_type_t::comma) {
-								cc.tq_discard();
-								continue;
-							}
-							else if (cc.tq_peek().type == token_type_t::semicolon) {
-								cc.tq_discard();
-								break;
-							}
-							else {
-								return errno_return(EINVAL);
-							}
-						} while(1);
+						}
 					}
 				} while (1);
 
