@@ -5324,7 +5324,7 @@ try_again_w_token:
 			}
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
 		if (declspec & DECLSPEC_STORAGE) {
@@ -6707,7 +6707,7 @@ try_again_w_token:
 		if ((r=assignment_expression(aroot)) < 1)
 			return r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"init AST:\n");
 		debug_dump_ast("  ",aroot);
 #endif
@@ -7034,7 +7034,7 @@ try_again_w_token:
 	int cc_state_t::declaration_parse(declaration_t &declion) {
 		int r,count = 0;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
@@ -7098,7 +7098,7 @@ try_again_w_token:
 		declaration_t declion;
 		int r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
