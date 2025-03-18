@@ -177,9 +177,9 @@ static int d(int a,int b) {
 	if (c == d || fa == fb) { x += 3; d /= 4; } else { x -= 3; d *= 7; }
 
 	switch (c) {
-		case 3: x += 4;
-		case 7: x += 3;
-		default: x += 2;
+		case 3: x += 4; break;
+		case 7: x += 3; break;
+		default: x += 2; break;
 	}
 }
 

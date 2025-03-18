@@ -799,6 +799,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_if_statement,
 		op_else_statement,
 		op_switch_statement,
+		op_break,				// 200
 
 		__MAX__
 	};
@@ -1392,7 +1393,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:case_statement",
 		"op:if_statement",
 		"op:else_statement",
-		"op:switch_statement"
+		"op:switch_statement",
+		"op:break"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6725,7 +6727,6 @@ try_again_w_token:
 	}
 
 	int cc_state_t::statement(ast_node_id_t &aroot) {
-		bool require_semicolon = true;
 		int r;
 
 		if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
@@ -6814,15 +6815,19 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else {
-			if ((r=expression(aroot)) < 1)
-				return r;
-
-			if (require_semicolon) {
-				if (tq_peek().type == token_type_t::semicolon)
-					tq_discard();
-				else
-					return errno_return(EINVAL);
+			if (tq_peek().type == token_type_t::r_break) {
+				aroot = ast_node_alloc(token_type_t::op_break);
+				tq_discard();
 			}
+			else {
+				if ((r=expression(aroot)) < 1)
+					return r;
+			}
+
+			if (tq_peek().type == token_type_t::semicolon)
+				tq_discard();
+			else
+				return errno_return(EINVAL);
 		}
 
 		return 1;
