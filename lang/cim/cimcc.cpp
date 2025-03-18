@@ -5079,6 +5079,7 @@ try_again_w_token:
 	struct declaration_t {
 		declaration_specifiers_t	spec;
 		std::vector<declarator_t*>	declor;
+		ast_node_id_t			function_body = ast_node_none;
 
 		declarator_t &new_declarator(void) {
 			declarator_t *n = new declarator_t();
@@ -5095,6 +5096,9 @@ try_again_w_token:
 		~declaration_t() {
 			for (auto &i : declor) delete i;
 			declor.clear();
+
+			if (function_body != ast_node_none)
+				ast_node(function_body).release();
 		}
 	};
 
@@ -5102,6 +5106,7 @@ try_again_w_token:
 	static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
 	static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
 	static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
+	static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
 
 	int declaration_specifiers_parse(cc_state_t &cc,declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL) {
 		const position_t pos = cc.tq_peek().pos;
@@ -5109,7 +5114,7 @@ try_again_w_token:
 		do {
 			const token_t &t = cc.tq_peek();
 
-#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else { d|=m; ds.count++; } } else { break; }
+#define XCHK(f,d,m) if (declspec&f) { if (d&m) { CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); return errno_return(EINVAL); } else { ds.count++; if (declspec&DECLSPEC_CHECK_ONLY) return 1; d|=m; } } else { break; }
 #define X(f,d,m) { XCHK(f,d,m); cc.tq_discard(); continue; }
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
@@ -5135,6 +5140,9 @@ try_again_w_token:
 
 				case token_type_t::r_long:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
+						ds.count++;
+						if (declspec&DECLSPEC_CHECK_ONLY) return 1;
+
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
 							if (ds.type_specifier & TS_LONGLONG) {
@@ -6508,6 +6516,59 @@ try_again_w_token:
 		return 1;
 	}
 
+	int compound_statement(cc_state_t &cc,declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot) {
+		ast_node_id_t nroot = ast_node_none,nxt;
+		int r;
+
+		/* caller already ate the { */
+
+		/* declarator (variables) phase.
+		 * Use C rules where they are only allowed at the top of the compound statement.
+		 * Not C++ rules where you can just do it wherever. */
+		do {
+			if (cc.tq_peek().type == token_type_t::eof || cc.tq_peek().type == token_type_t::none)
+				return errno_return(EINVAL);
+
+			if (cc.tq_peek().type == token_type_t::semicolon)
+				break;
+
+			if (cc.tq_peek().type == token_type_t::closecurlybracket) {
+				cc.tq_discard();
+				break;
+			}
+
+			std::unique_ptr<declaration_t> declion(new declaration_t);
+			if ((r=declaration_specifiers_parse(cc,(*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
+				return r;
+			if ((*declion).spec.count == 0) /* no tokens seen */
+				break;
+
+			(*declion).spec = declaration_specifiers_t();
+			if ((r=chkerr(cc)) < 1)
+				return r;
+			if ((r=declaration_parse(cc,*declion)) < 1)
+				return r;
+
+			nxt = ast_node_alloc(token_type_t::op_declaration);
+			if (aroot == ast_node_none)
+				aroot = nxt;
+			else
+				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
+
+			assert(ast_node(nxt).t.type == token_type_t::op_declaration);
+			ast_node(nxt).t.v.declaration = declion.release();
+
+			nroot = nxt;
+		} while (1);
+
+#if 1//DEBUG
+		fprintf(stderr,"compound declerator:\n");
+		debug_dump_ast("  ",aroot);
+#endif
+
+		return 1;
+	}
+
 	int declaration_parse(cc_state_t &cc,declaration_t &declion) {
 		int r,count = 0;
 
@@ -6537,12 +6598,13 @@ try_again_w_token:
 					return errno_return(EINVAL);
 				}
 
-				/* must end with } closing brace */
-				if (cc.tq_get().type != token_type_t::closecurlybracket)
-					return errno_return(EINVAL);
+				ast_node_id_t fbroot = ast_node_none;
+				if ((r=compound_statement(cc,declion,declor,fbroot)) < 1)
+					return r;
 
 				/* once the compound statment ends, no more declarators.
 				 * you can't do "int f() { },g() { }" */
+				declion.function_body = fbroot;
 				return 1;
 			}
 
