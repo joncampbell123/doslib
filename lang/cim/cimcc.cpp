@@ -6862,12 +6862,15 @@ try_again_w_token:
 			if ((r=statement(nxt)) < 1)
 				return r;
 
-			if (aroot == ast_node_none)
-				aroot = nxt;
-			else
-				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
+			/* NTS: statement() can leave the node unset if an empty statement like a lone ';' */
+			if (nxt != ast_node_none) {
+				if (aroot == ast_node_none)
+					aroot = nxt;
+				else
+					{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
 
-			nroot = nxt;
+				nroot = nxt;
+			}
 		} while (1);
 
 #if 1//DEBUG
