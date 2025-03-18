@@ -797,6 +797,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_default_label,			// 195
 		op_case_statement,
 		op_if_statement,
+		op_else_statement,
 
 		__MAX__
 	};
@@ -1388,7 +1389,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:goto_label",
 		"op:default_label",			// 195
 		"op:case_statement",
-		"op:if_statement"
+		"op:if_statement",
+		"op:else_statement"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6759,6 +6761,16 @@ try_again_w_token:
 			aroot = ast_node_alloc(token_type_t::op_if_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
+
+			if (tq_peek().type == token_type_t::r_else) {
+				tq_discard();
+
+				ast_node_id_t elst = ast_node_none;
+				if ((r=statement(elst)) < 1)
+					return r;
+
+				ast_node(stmt).set_next(elst); ast_node(elst).release();
+			}
 		}
 		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
 			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */

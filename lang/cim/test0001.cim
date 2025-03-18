@@ -173,5 +173,7 @@ static int d(int a,int b) {
 	if (1) x += 3;
 	if (x == 2 || c == (d/4)) x += 5;
 	if (c == d) { x += 2; c /= 4+d; }
+	if (c == d) x += 3; else x -= 3;
+	if (c == d || fa == fb) { x += 3; d /= 4; } else { x -= 3; d *= 7; }
 }
 
