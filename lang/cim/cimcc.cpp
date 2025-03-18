@@ -5928,15 +5928,36 @@ try_again_w_token:
 			return r;
 
 		do {
-			/* TODO: postfix_expression( )
-			 *       postfix_expression( argument_expression_list ) */
 			if (tq_peek().type == token_type_t::openparenthesis) {
 				tq_discard();
 
-				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+				ast_node_id_t expr = aroot; aroot = ast_node_none;
 
 				aroot = ast_node_alloc(token_type_t::op_function_call);
-				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+				ast_node(aroot).set_child(expr); ast_node(expr).release();
+
+				do {
+					if (tq_peek().type == token_type_t::closeparenthesis)
+						break;
+
+					ast_node_id_t nexpr = ast_node_none;
+					if ((r=assignment_expression(nexpr)) < 1)
+						return r;
+
+					ast_node(expr).set_next(nexpr); ast_node(nexpr).release();
+					expr = nexpr;
+
+					if (tq_peek().type == token_type_t::closeparenthesis) {
+						break;
+					}
+					else if (tq_peek().type == token_type_t::comma) {
+						tq_discard();
+						continue;
+					}
+					else {
+						return errno_return(EINVAL);
+					}
+				} while (1);
 
 				if (tq_get().type != token_type_t::closeparenthesis)
 					return errno_return(EINVAL);
