@@ -807,6 +807,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_do_while_statement,			// 205
 		op_for_statement,
 		op_none,
+		op_function_call,
 
 		__MAX__
 	};
@@ -1408,7 +1409,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:while_statement",
 		"op:do_while_statement",		// 205
 		"op:for_statement",
-		"op:none"
+		"op:none",
+		"op:function_call"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5928,7 +5930,18 @@ try_again_w_token:
 		do {
 			/* TODO: postfix_expression( )
 			 *       postfix_expression( argument_expression_list ) */
-			if (tq_peek().type == token_type_t::opensquarebracket) {
+			if (tq_peek().type == token_type_t::openparenthesis) {
+				tq_discard();
+
+				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
+
+				aroot = ast_node_alloc(token_type_t::op_function_call);
+				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
+
+				if (tq_get().type != token_type_t::closeparenthesis)
+					return errno_return(EINVAL);
+			}
+			else if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;

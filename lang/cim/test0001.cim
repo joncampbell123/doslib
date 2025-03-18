@@ -211,6 +211,11 @@ static int d(int a) {
 	return x;
 }
 static int d(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
+	roundto();
+	(*funcptr)();
+	func1()();
+	func1()()()()();
+	func1()[5]();
 	return 5;
 }
 
