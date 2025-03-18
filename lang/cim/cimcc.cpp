@@ -5136,6 +5136,7 @@ try_again_w_token:
 		int or_expression(ast_node_id_t &aroot);
 		int initializer(ast_node_id_t &aroot);
 		int expression(ast_node_id_t &aroot);
+		int statement(ast_node_id_t &aroot);
 		int external_declaration(void);
 		int translation_unit(void);
 	};
@@ -6711,6 +6712,43 @@ try_again_w_token:
 		return 1;
 	}
 
+	int cc_state_t::statement(ast_node_id_t &aroot) {
+		bool require_semicolon = true;
+		int r;
+
+		if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
+			return errno_return(EINVAL);
+
+		if (tq_peek().type == token_type_t::semicolon) {
+			tq_discard();
+		}
+		else if (tq_peek().type == token_type_t::opencurlybracket) {
+			tq_discard();
+
+			/* a compound statement within a compound statement */
+			ast_node_id_t cur = ast_node_none;
+			ast_node_id_t curnxt = ast_node_none;
+			if ((r=compound_statement(cur,curnxt)) < 1)
+				return r;
+
+			aroot = ast_node_alloc(token_type_t::op_compound_statement);
+			ast_node(aroot).set_child(cur); ast_node(cur).release();
+		}
+		else {
+			if ((r=expression(aroot)) < 1)
+				return r;
+
+			if (require_semicolon) {
+				if (tq_peek().type == token_type_t::semicolon)
+					tq_discard();
+				else
+					return errno_return(EINVAL);
+			}
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
 		ast_node_id_t nxt;
 		int r;
@@ -6728,8 +6766,6 @@ try_again_w_token:
 
 		/* OK, now statements */
 		do {
-			bool require_semicolon = true;
-
 			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
 				return errno_return(EINVAL);
 
@@ -6738,29 +6774,9 @@ try_again_w_token:
 				break;
 			}
 
-			if (tq_peek().type == token_type_t::semicolon) {
-				tq_discard();
-				continue;
-			}
-
-			if (tq_peek().type == token_type_t::opencurlybracket) {
-				tq_discard();
-
-				/* a compound statement within a compound statement */
-				ast_node_id_t cur = ast_node_none;
-				ast_node_id_t curnxt = ast_node_none;
-				if ((r=compound_statement(cur,curnxt)) < 1)
-					return r;
-
-				nxt = ast_node_alloc(token_type_t::op_compound_statement);
-				ast_node(nxt).set_child(cur); ast_node(cur).release();
-				require_semicolon = false;
-			}
-			else {
-				nxt = ast_node_none;
-				if ((r=expression(nxt)) < 1)
-					return r;
-			}
+			nxt = ast_node_none;
+			if ((r=statement(nxt)) < 1)
+				return r;
 
 			if (aroot == ast_node_none)
 				aroot = nxt;
@@ -6768,12 +6784,6 @@ try_again_w_token:
 				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
 
 			nroot = nxt;
-			if (require_semicolon) {
-				if (tq_peek().type == token_type_t::semicolon)
-					tq_discard();
-				else
-					return errno_return(EINVAL);
-			}
 		} while (1);
 
 #if 1//DEBUG
