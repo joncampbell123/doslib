@@ -795,6 +795,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_compound_statement,
 		op_goto_label,
 		op_default_label,			// 195
+		op_case_statement,
 
 		__MAX__
 	};
@@ -1384,7 +1385,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:declaration",
 		"op:compound_statement",
 		"op:goto_label",
-		"op:default_label"			// 195
+		"op:default_label",			// 195
+		"op:case_statement"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5432,7 +5434,7 @@ try_again_w_token:
 					/* NTS: "[]" is acceptable */
 					ast_node_id_t expr = ast_node_none;
 					if (tq_peek().type != token_type_t::closesquarebracket) {
-						if ((r=expression(expr)) < 1)
+						if ((r=conditional_expression(expr)) < 1)
 							return r;
 					}
 
@@ -6747,6 +6749,17 @@ try_again_w_token:
 		else if (tq_peek(0).type == token_type_t::r_default && tq_peek(1).type == token_type_t::colon) {
 			aroot = ast_node_alloc(token_type_t::op_default_label);
 			tq_discard(2);
+		}
+		else if (tq_peek().type == token_type_t::r_case) { /* case constant_expression : */
+			tq_discard();
+			ast_node_id_t expr = ast_node_none;
+			if ((r=conditional_expression(expr)) < 1)
+				return r;
+			if (tq_get().type != token_type_t::colon)
+				return errno_return(EINVAL);
+
+			aroot = ast_node_alloc(token_type_t::op_case_statement);
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else {
 			if ((r=expression(aroot)) < 1)
