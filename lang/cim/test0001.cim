@@ -195,4 +195,12 @@ static int d(int a,int b) {
 	return 3;
 	return (3+x)*y;
 }
+static int d(int a) {
+	int x = 1;
+	while (a-- > 0) x += x;
+	while (a-- > 0) { x += x; }
+	do { x += x; } while (a-- > 0);
+	do x += x; while (a-- > 0);
+	return x;
+}
 
