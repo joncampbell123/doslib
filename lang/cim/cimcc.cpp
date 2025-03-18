@@ -800,6 +800,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_else_statement,
 		op_switch_statement,
 		op_break,				// 200
+		op_continue,
 
 		__MAX__
 	};
@@ -1394,7 +1395,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:if_statement",
 		"op:else_statement",
 		"op:switch_statement",
-		"op:break"
+		"op:break",
+		"op:continue"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6817,6 +6819,10 @@ try_again_w_token:
 		else {
 			if (tq_peek().type == token_type_t::r_break) {
 				aroot = ast_node_alloc(token_type_t::op_break);
+				tq_discard();
+			}
+			else if (tq_peek().type == token_type_t::r_continue) {
+				aroot = ast_node_alloc(token_type_t::op_continue);
 				tq_discard();
 			}
 			else {
