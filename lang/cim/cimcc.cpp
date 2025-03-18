@@ -793,7 +793,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_or_assign,
 		op_declaration,
 		op_compound_statement,
-		op_goto_label,
+		op_label,
 		op_default_label,			// 195
 		op_case_statement,
 		op_if_statement,
@@ -1390,7 +1390,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:or_assign",
 		"op:declaration",
 		"op:compound_statement",
-		"op:goto_label",
+		"op:label",
 		"op:default_label",			// 195
 		"op:case_statement",
 		"op:if_statement",
@@ -6799,7 +6799,7 @@ try_again_w_token:
 		}
 		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
 			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */
-			aroot = ast_node_alloc(token_type_t::op_goto_label);
+			aroot = ast_node_alloc(token_type_t::op_label);
 			ast_node(aroot).set_child(label); ast_node(label).release();
 			tq_discard(); /* eats the ':' */
 		}
