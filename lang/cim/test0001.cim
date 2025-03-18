@@ -138,5 +138,7 @@ static int d(int a,int b) {
 	long d = 5 + a*b+c+x,dd = d*d;
 	float fa = 3.3,fb = fa*3,fc = fa*3+fb,fd = 4.44;
 	double da = 2.22,db = 1.11,dc = 33.33,dd = 44.44;
+	const char *x,**y,* const * const z;
+	char arr[5],arb[11];
 }
 
