@@ -5522,6 +5522,12 @@ try_again_w_token:
 								CCerr(pos,"Identifier already given type");
 								return errno_return(EALREADY);
 							}
+
+							/* do not allow initializer for parameter type declaration */
+							if (d.initval != ast_node_none) {
+								CCerr(pos,"Initializer value not permitted here");
+								return errno_return(EINVAL);
+							}
 						}
 					}
 				} while (1);
