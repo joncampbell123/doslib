@@ -6636,9 +6636,18 @@ try_again_w_token:
 		return 1;
 	}
 
-	int compound_statement(cc_state_t &cc,declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot) {
-		ast_node_id_t nroot = ast_node_none,nxt;
+	int compound_statement(cc_state_t &cc,declaration_t &declion,declarator_t &declor,ast_node_id_t &aroot,ast_node_id_t &nroot) {
+		ast_node_id_t nxt;
 		int r;
+
+		(void)declion;
+		(void)declor;
+
+		assert(
+			(aroot == ast_node_none && nroot == ast_node_none) ||
+			(aroot != ast_node_none && nroot == ast_node_none) ||
+			(aroot != ast_node_none && nroot != ast_node_none)
+		);
 
 		/* caller already ate the { */
 
@@ -6749,8 +6758,8 @@ try_again_w_token:
 					return errno_return(EINVAL);
 				}
 
-				ast_node_id_t fbroot = ast_node_none;
-				if ((r=compound_statement(cc,declion,declor,fbroot)) < 1)
+				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
+				if ((r=compound_statement(cc,declion,declor,fbroot,fbrootnext)) < 1)
 					return r;
 
 				/* once the compound statment ends, no more declarators.
