@@ -5732,6 +5732,14 @@ try_again_w_token:
 
 				fprintf(stderr,"\n");
 
+				if (p.ddecl) {
+					for (const auto &expr : p.ddecl->arraydef) {
+						fprintf(stderr,"      arraydef:\n");
+						if (expr != ast_node_none)
+							debug_dump_ast("        ",expr);
+					}
+				}
+
 				if (p.initval != ast_node_none) {
 					fprintf(stderr,"      init:\n");
 					debug_dump_ast("        ",p.initval);
