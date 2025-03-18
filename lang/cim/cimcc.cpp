@@ -4675,91 +4675,6 @@ try_again_w_token:
 
 	///////////////////////////////////////
 
-	struct cc_state_t {
-		CIMCC::lgtok_state_t	lst;
-		CIMCC::pptok_state_t	pst;
-		rbuf*			buf = NULL;
-		source_file_object*	sfo = NULL;
-		int			err = 0;
-
-		std::vector<token_t>	tq;
-		size_t			tq_tail = 0;
-
-		bool			ignore_whitespace = true;
-
-		void tq_ft(void) {
-			token_t t(token_type_t::eof);
-			int r;
-
-			do {
-				if (err == 0) {
-					if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
-						err = r;
-				}
-
-				if (ignore_whitespace && err == 0) {
-					if (t.type == token_type_t::newline)
-						continue;
-				}
-
-				break;
-			} while (1);
-
-			tq.push_back(std::move(t));
-		}
-
-		void tq_refill(const size_t i=1) {
-			while (tq.size() < (i+tq_tail))
-				tq_ft();
-		}
-
-		const token_t &tq_peek(const size_t i=0) {
-			tq_refill(i+1);
-			assert((tq_tail+i) < tq.size());
-			return tq[tq_tail+i];
-		}
-
-		void tq_discard(const size_t i=1) {
-			tq_refill(i);
-			tq_tail += i;
-			assert(tq_tail <= tq.size());
-
-			if (tq_tail == tq.size()) {
-				tq_tail = 0;
-				tq.clear();
-			}
-		}
-
-		token_t &tq_get(void) {
-			tq_refill();
-			assert(tq_tail < tq.size());
-			return tq[tq_tail++];
-		}
-
-		void CCerr(const position_t &pos,const char *fmt,...) {
-			va_list va;
-
-			fprintf(stderr,"Error");
-			if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
-			fprintf(stderr,": ");
-
-			va_start(va,fmt);
-			vfprintf(stderr,fmt,va);
-			va_end(va);
-			fprintf(stderr,"\n");
-		}
-
-		int chkerr(void) {
-			const token_t &t = tq_peek();
-			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
-				return err; /* 0 or negative */
-
-			return 1;
-		}
-	};
-
-	///////////////////////////////////////
-
 	enum storage_class_idx_t {
 		SCI_TYPEDEF,		// 0
 		SCI_EXTERN,
@@ -5099,6 +5014,89 @@ try_again_w_token:
 
 			if (function_body != ast_node_none)
 				ast_node(function_body).release();
+		}
+	};
+
+	struct cc_state_t {
+		CIMCC::lgtok_state_t	lst;
+		CIMCC::pptok_state_t	pst;
+		rbuf*			buf = NULL;
+		source_file_object*	sfo = NULL;
+		int			err = 0;
+
+		std::vector<token_t>	tq;
+		size_t			tq_tail = 0;
+
+		bool			ignore_whitespace = true;
+
+		void tq_ft(void) {
+			token_t t(token_type_t::eof);
+			int r;
+
+			do {
+				if (err == 0) {
+					if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
+						err = r;
+				}
+
+				if (ignore_whitespace && err == 0) {
+					if (t.type == token_type_t::newline)
+						continue;
+				}
+
+				break;
+			} while (1);
+
+			tq.push_back(std::move(t));
+		}
+
+		void tq_refill(const size_t i=1) {
+			while (tq.size() < (i+tq_tail))
+				tq_ft();
+		}
+
+		const token_t &tq_peek(const size_t i=0) {
+			tq_refill(i+1);
+			assert((tq_tail+i) < tq.size());
+			return tq[tq_tail+i];
+		}
+
+		void tq_discard(const size_t i=1) {
+			tq_refill(i);
+			tq_tail += i;
+			assert(tq_tail <= tq.size());
+
+			if (tq_tail == tq.size()) {
+				tq_tail = 0;
+				tq.clear();
+			}
+		}
+
+		token_t &tq_get(void) {
+			tq_refill();
+			assert(tq_tail < tq.size());
+			return tq[tq_tail++];
+		}
+
+		void CCerr(const position_t &pos,const char *fmt,...) {
+			va_list va;
+
+			fprintf(stderr,"Error");
+			if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
+			fprintf(stderr,": ");
+
+			va_start(va,fmt);
+			vfprintf(stderr,fmt,va);
+			va_end(va);
+			fprintf(stderr,"\n");
+		}
+
+		int chkerr(void) {
+			const token_t &t = tq_peek();
+			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
+				return err; /* 0 or negative */
+
+			return 1;
 		}
 	};
 
