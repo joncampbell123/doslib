@@ -181,5 +181,9 @@ static int d(int a,int b) {
 		case 7: x += 3; goto label1;
 		default: x += 2; break;
 	}
+
+	return;
+	return 3;
+	return (3+x)*y;
 }
 

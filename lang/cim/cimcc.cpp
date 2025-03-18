@@ -802,6 +802,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_break,				// 200
 		op_continue,
 		op_goto,
+		op_return,
 
 		__MAX__
 	};
@@ -1398,7 +1399,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:switch_statement",
 		"op:break",
 		"op:continue",
-		"op:goto"
+		"op:goto",
+		"op:return"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6832,6 +6834,18 @@ try_again_w_token:
 				ast_node_id_t label = ast_node_alloc(tq_get());
 				aroot = ast_node_alloc(token_type_t::op_goto);
 				ast_node(aroot).set_child(label); ast_node(label).release();
+			}
+			else if (tq_peek().type == token_type_t::r_return) {
+				aroot = ast_node_alloc(token_type_t::op_return);
+				tq_discard();
+
+				if (tq_peek().type != token_type_t::semicolon) {
+					ast_node_id_t expr = ast_node_none;
+					if ((r=expression(expr)) < 1)
+						return r;
+
+					ast_node(aroot).set_child(expr); ast_node(expr).release();
+				}
 			}
 			else {
 				if ((r=expression(aroot)) < 1)
