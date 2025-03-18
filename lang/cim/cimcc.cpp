@@ -5507,8 +5507,10 @@ try_again_w_token:
 							}
 
 							/* no match---fail */
-							if (i == dd.parameters.size())
+							if (i == dd.parameters.size()) {
+								CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
 								return errno_return(ENOENT);
+							}
 
 							parameter_t &fp = dd.parameters[i];
 							if (fp.spec.storage_class == 0 && fp.spec.type_specifier == 0 &&
