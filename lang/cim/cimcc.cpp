@@ -4968,10 +4968,76 @@ try_again_w_token:
 	}
 
 	struct declaration_specifiers_t {
-		storage_class_t		storage_class = 0;
-		type_specifier_t	type_specifier = 0;
-		type_qualifier_t	type_qualifier = 0;
-		unsigned int		count = 0;
+		storage_class_t				storage_class = 0;
+		type_specifier_t			type_specifier = 0;
+		type_qualifier_t			type_qualifier = 0;
+		unsigned int				count = 0;
+	};
+
+	struct pointer_t {
+		type_qualifier_t			tq = 0;
+	};
+
+	struct direct_declarator_t;
+
+	struct parameter_t {
+		declaration_specifiers_t		spec;
+		direct_declarator_t*			ddecl = NULL; /* because this type isn't "complete" yet at this point */
+		std::vector<pointer_t>			ptr;
+		ast_node_id_t				initval = ast_node_none;
+
+		parameter_t() { }
+		parameter_t(const parameter_t &) = delete;
+		parameter_t &operator=(const parameter_t &) = delete;
+		parameter_t(parameter_t &&x) { common_move(x); };
+		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
+		~parameter_t();
+
+		void common_move(parameter_t &o);
+	};
+
+	struct direct_declarator_t {
+		token_t name;
+		std::vector<pointer_t> ptr;
+		std::vector<ast_node_id_t> arraydef;
+
+		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
+		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
+
+		unsigned int flags = 0;
+		std::vector<parameter_t> parameters;
+
+		direct_declarator_t() { };
+		direct_declarator_t(const direct_declarator_t &) = delete;
+		direct_declarator_t &operator=(const direct_declarator_t &) = delete;
+		direct_declarator_t(direct_declarator_t &&) = delete;
+		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
+
+		~direct_declarator_t() {
+			for (auto &expr : arraydef) { if (expr != ast_node_none) ast_node(expr).release(); }
+			arraydef.clear();
+		}
+	};
+
+	struct declarator_t {
+		direct_declarator_t ddecl;
+		std::vector<pointer_t> ptr;
+		ast_node_id_t initval = ast_node_none;
+
+		declarator_t() { }
+		declarator_t(const declarator_t &) = delete;
+		declarator_t(declarator_t &&) = delete;
+		declarator_t &operator=(const declarator_t &) = delete;
+		declarator_t &operator=(declarator_t &&) = delete;
+
+		~declarator_t() {
+			if (initval != ast_node_none)
+				ast_node(initval).release();
+		}
+	};
+
+	struct declaration_t {
+		declaration_specifiers_t	spec;
 	};
 
 	static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
@@ -5135,14 +5201,6 @@ try_again_w_token:
 		return 1;
 	}
 
-	struct pointer_t {
-		type_qualifier_t		tq = 0;
-	};
-
-	struct declaration_t {
-		declaration_specifiers_t	spec;
-	};
-
 	int pointer_parse(cc_state_t &cc,std::vector<pointer_t> &ptr) {
 		int r;
 
@@ -5190,47 +5248,6 @@ try_again_w_token:
 
 		return 1;
 	}
-
-	struct direct_declarator_t;
-
-	struct parameter_t {
-		declaration_specifiers_t		spec;
-		direct_declarator_t*			ddecl = NULL; /* because this type isn't "complete" yet at this point */
-		std::vector<pointer_t>			ptr;
-		ast_node_id_t				initval = ast_node_none;
-
-		parameter_t() { }
-		parameter_t(const parameter_t &) = delete;
-		parameter_t &operator=(const parameter_t &) = delete;
-		parameter_t(parameter_t &&x) { common_move(x); };
-		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
-		~parameter_t();
-
-		void common_move(parameter_t &o);
-	};
-
-	struct direct_declarator_t {
-		token_t name;
-		std::vector<pointer_t> ptr;
-		std::vector<ast_node_id_t> arraydef;
-
-		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
-		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
-
-		unsigned int flags = 0;
-		std::vector<parameter_t> parameters;
-
-		direct_declarator_t() { };
-		direct_declarator_t(const direct_declarator_t &) = delete;
-		direct_declarator_t &operator=(const direct_declarator_t &) = delete;
-		direct_declarator_t(direct_declarator_t &&) = delete;
-		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
-
-		~direct_declarator_t() {
-			for (auto &expr : arraydef) { if (expr != ast_node_none) ast_node(expr).release(); }
-			arraydef.clear();
-		}
-	};
 
 	parameter_t::~parameter_t() {
 		if (ddecl) delete ddecl;
@@ -5589,23 +5606,6 @@ try_again_w_token:
 
 		return 1;
 	}
-
-	struct declarator_t {
-		direct_declarator_t ddecl;
-		std::vector<pointer_t> ptr;
-		ast_node_id_t initval = ast_node_none;
-
-		declarator_t() { }
-		declarator_t(const declarator_t &) = delete;
-		declarator_t(declarator_t &&) = delete;
-		declarator_t &operator=(const declarator_t &) = delete;
-		declarator_t &operator=(declarator_t &&) = delete;
-
-		~declarator_t() {
-			if (initval != ast_node_none)
-				ast_node(initval).release();
-		}
-	};
 
 	int declarator_parse(cc_state_t &cc,declarator_t &declor) {
 		int r;
