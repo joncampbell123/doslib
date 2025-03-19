@@ -5444,7 +5444,7 @@ try_again_w_token:
 	}
 
 	void parameter_t::common_move(parameter_t &o) {
-		spec = o.spec;
+		spec = std::move(o.spec);
 		ptr = std::move(o.ptr);
 		ddecl = o.ddecl; o.ddecl = NULL;
 		initval = o.initval; o.initval = ast_node_none;
@@ -5852,7 +5852,9 @@ try_again_w_token:
 							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 						}
 
-						fprintf(stderr," %s",declr.ddecl.name.v.strliteral.makestring().c_str());
+						if (declr.ddecl.name.type == token_type_t::identifier)
+							fprintf(stderr," %s",declr.ddecl.name.v.strliteral.makestring().c_str());
+
 						if (!declr.ddecl.ptr.empty()) fprintf(stderr," )");
 						fprintf(stderr,"\n");
 
@@ -5891,7 +5893,9 @@ try_again_w_token:
 									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 								}
 
-								fprintf(stderr," %s",p_declr.name.v.strliteral.makestring().c_str());
+								if (p_declr.name.type == token_type_t::identifier)
+									fprintf(stderr," %s",p_declr.name.v.strliteral.makestring().c_str());
+
 								if (!p_declr.ptr.empty()) fprintf(stderr," )");
 								fprintf(stderr,"\n");
 
@@ -6195,7 +6199,6 @@ try_again_w_token:
 
 			if (typespec) {
 				std::unique_ptr<declaration_t> declion(new declaration_t);
-				(*declion).spec = declaration_specifiers_t();
 
 				if ((r=chkerr()) < 1)
 					return r;
@@ -6245,7 +6248,6 @@ try_again_w_token:
 			tq_discard(); /* toss the open parenthesis */
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
-			(*declion).spec = declaration_specifiers_t();
 
 			if ((r=chkerr()) < 1)
 				return r;
@@ -6916,7 +6918,7 @@ try_again_w_token:
 				break;
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
-			(*declion).spec = declaration_specifiers_t();
+
 			if ((r=chkerr()) < 1)
 				return r;
 			if ((r=declaration_parse(*declion)) < 1)
