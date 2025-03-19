@@ -6274,7 +6274,7 @@ try_again_w_token:
 			if ((r=cast_expression(nxt)) < 1)
 				return r;
 
-			ast_node(decl).set_child(nxt); ast_node(nxt).release();
+			ast_node(decl).set_next(nxt); ast_node(nxt).release();
 			return 1;
 		}
 
