@@ -1,9 +1,9 @@
 
-all: cimcc
+all: ccminic
 
-cimcc: cimcc.cpp
+ccminic: ccminic.cpp
 	g++ -g3 -O0 -std=c++11 -Wall -pedantic -Wextra -o $@ $<
 
 clean:
-	rm -f cimcc
+	rm -f ccminic
 
