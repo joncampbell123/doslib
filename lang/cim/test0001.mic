@@ -255,4 +255,8 @@ union test { } x;
 union test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } x;
 union { int a,b,c; int z; } x;
 struct test { int x; union { struct { int x,y; } i; struct { float a,b; } f; } un; } t;
+struct test {
+	int a;
+	int (*func1)(int a,int b);
+} x;
 
