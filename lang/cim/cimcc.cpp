@@ -809,6 +809,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_none,
 		op_function_call,
 		op_array_define,
+		op_typecast,				// 270
 
 		__MAX__
 	};
@@ -1412,7 +1413,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:for_statement",
 		"op:none",
 		"op:function_call",
-		"op:array_define"
+		"op:array_define",
+		"op:typecast"				// 270
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
