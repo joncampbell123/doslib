@@ -808,6 +808,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		op_for_statement,
 		op_none,
 		op_function_call,
+		op_array_define,
 
 		__MAX__
 	};
@@ -1410,7 +1411,8 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"op:do_while_statement",		// 265
 		"op:for_statement",
 		"op:none",
-		"op:function_call"
+		"op:function_call",
+		"op:array_define"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6771,12 +6773,45 @@ try_again_w_token:
 
 		/* the equals sign has already been consumed */
 
-		// TODO { initializer_list }
+		if (tq_peek().type == token_type_t::opencurlybracket) {
+			tq_discard();
 
-		if ((r=assignment_expression(aroot)) < 1)
-			return r;
+			ast_node_id_t nex = ast_node_none;
+			aroot = ast_node_alloc(token_type_t::op_array_define);
 
-#if 0//DEBUG
+			do {
+				if (tq_peek().type == token_type_t::closecurlybracket)
+					break;
+
+				ast_node_id_t expr = ast_node_none;
+				if ((r=initializer(expr)) < 1)
+					return r;
+
+				if (nex == ast_node_none)
+					ast_node(aroot).set_child(expr);
+				else
+					ast_node(nex).set_next(expr);
+
+				ast_node(expr).release();
+				nex = expr;
+
+				if (tq_peek().type == token_type_t::comma)
+					tq_discard();
+				else if (tq_peek().type == token_type_t::closecurlybracket)
+					break;
+				else
+					return errno_return(EINVAL);
+			} while (1);
+
+			if (tq_get().type != token_type_t::closecurlybracket)
+				return errno_return(EINVAL);
+		}
+		else {
+			if ((r=assignment_expression(aroot)) < 1)
+				return r;
+		}
+
+#if 1//DEBUG
 		fprintf(stderr,"init AST:\n");
 		debug_dump_ast("  ",aroot);
 #endif
