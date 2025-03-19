@@ -5143,6 +5143,7 @@ try_again_w_token:
 		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
 
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
+		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
 
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
@@ -5476,7 +5477,7 @@ try_again_w_token:
 				return r;
 		}
 
-		if (tq_peek().type == token_type_t::identifier)
+		if (tq_peek().type == token_type_t::identifier && !(flags & DIRDECL_NO_IDENTIFIER))
 			dd.name = std::move(tq_get());
 		else if (flags & DIRDECL_ALLOW_ABSTRACT)
 			dd.name = std::move(token_t(token_type_t::none));
@@ -6206,7 +6207,7 @@ try_again_w_token:
 				if ((r=pointer_parse(declor.ptr)) < 1)
 					return r;
 
-				if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
+				if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
 				ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
@@ -6256,7 +6257,7 @@ try_again_w_token:
 			if ((r=pointer_parse(declor.ptr)) < 1)
 				return r;
 
-			if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
+			if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
 			aroot = ast_node_alloc(token_type_t::op_typecast);
