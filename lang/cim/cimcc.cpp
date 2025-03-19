@@ -5141,13 +5141,13 @@ try_again_w_token:
 		static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
 		static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
 		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
-		static constexpr unsigned int DECLSPEC_CHECK_ONLY = 1u << 4u;
 
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
 
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int direct_declarator_parse(direct_declarator_t &dd,unsigned int flags=0);
+		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
@@ -5178,6 +5178,37 @@ try_again_w_token:
 		int translation_unit(void);
 	};
 
+	bool cc_state_t::declaration_specifiers_check(const unsigned int token_offset) {
+		const token_t &t = tq_peek(token_offset);
+
+		switch (t.type) {
+			case token_type_t::r_typedef: return true;
+			case token_type_t::r_extern: return true;
+			case token_type_t::r_static: return true;
+			case token_type_t::r_auto: return true;
+			case token_type_t::r_register: return true;
+			case token_type_t::r_constexpr: return true;
+			case token_type_t::r_void: return true;
+			case token_type_t::r_char: return true;
+			case token_type_t::r_short: return true;
+			case token_type_t::r_int: return true;
+			case token_type_t::r_float: return true;
+			case token_type_t::r_double: return true;
+			case token_type_t::r_signed: return true;
+			case token_type_t::r_unsigned: return true;
+			case token_type_t::r_const: return true;
+			case token_type_t::r_volatile: return true;
+			case token_type_t::r_near: return true;
+			case token_type_t::r_far: return true;
+			case token_type_t::r_huge: return true;
+			case token_type_t::r_restrict: return true;
+			case token_type_t::r_long: return true;
+			default: break;
+		};
+
+		return false;
+	}
+
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
 		const position_t pos = tq_peek().pos;
 
@@ -5192,7 +5223,6 @@ try_again_w_token:
 		} \
 		else { \
 			ds.count++; \
-			if (declspec&DECLSPEC_CHECK_ONLY) return 1; \
 			d|=m; \
 		} \
 	} \
@@ -5231,7 +5261,6 @@ try_again_w_token:
 				case token_type_t::r_long:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
 						ds.count++;
-						if (declspec&DECLSPEC_CHECK_ONLY) return 1;
 
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
@@ -6147,6 +6176,7 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else if (tq_peek().type == token_type_t::r_sizeof) {
+			bool typespec = false;
 			int depth = 0;
 
 			tq_discard();
@@ -6159,13 +6189,11 @@ try_again_w_token:
 				depth++;
 			}
 
-			std::unique_ptr<declaration_t> declion(new declaration_t);
-			if (depth == 1) {
-				if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
-					return r;
-			}
+			if (depth == 1)
+				typespec = declaration_specifiers_check();
 
-			if ((*declion).spec.count != 0) {
+			if (typespec) {
+				std::unique_ptr<declaration_t> declion(new declaration_t);
 				(*declion).spec = declaration_specifiers_t();
 
 				if ((r=chkerr()) < 1)
@@ -6846,12 +6874,10 @@ try_again_w_token:
 			if (tq_peek().type == token_type_t::closecurlybracket)
 				return 1; /* do not discard, let the calling function take care of it */
 
-			std::unique_ptr<declaration_t> declion(new declaration_t);
-			if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
-				return r;
-			if ((*declion).spec.count == 0) /* no tokens seen */
+			if (!declaration_specifiers_check())
 				break;
 
+			std::unique_ptr<declaration_t> declion(new declaration_t);
 			(*declion).spec = declaration_specifiers_t();
 			if ((r=chkerr()) < 1)
 				return r;
