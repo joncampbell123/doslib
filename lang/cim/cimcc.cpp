@@ -25,7 +25,7 @@
 # define O_BINARY 0
 #endif
 
-namespace CIMCC/*TODO: Pick a different name by final release*/ {
+namespace CCMiniC {
 
 	static constexpr size_t no_source_file = ~size_t(0);
 	static_assert( ~no_source_file == size_t(0), "oops" );
@@ -36,7 +36,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 
 	//////////////////////////////////////////////////////////////////
 
-#define CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
+#define CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
 	/* no copy */ \
 	sfclass(const sfclass &) = delete; \
 	virtual sfclass &operator=(const sfclass &) = delete; \
@@ -59,7 +59,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						source_file_object(const unsigned int iface=IF_BASE);
 		virtual				~source_file_object();
 
-						CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
+						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
 		void				common_move(source_file_object &);
 	};
 
@@ -107,7 +107,7 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 						source_fd(const int new_fd/*takes ownership*/,const std::string &new_name);
 		virtual				~source_fd();
 
-						CIMCC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
+						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
 		void				common_move(source_fd &x);
 
 		std::string			name;
@@ -3025,14 +3025,14 @@ try_again:	t = token_t();
 
 		/* recursion stack, for #include */
 		struct include_t {
-			CIMCC::source_file_object*	sfo = NULL;
-			CIMCC::rbuf			rb;
+			CCMiniC::source_file_object*	sfo = NULL;
+			CCMiniC::rbuf			rb;
 		};
 
 		std::stack<include_t>		include_stk;
 		std::stack<cond_block_t>	cond_block;
 
-		void include_push(CIMCC::source_file_object *sfo) {
+		void include_push(CCMiniC::source_file_object *sfo) {
 			if (sfo != NULL) {
 				include_t i;
 				i.sfo = sfo;
@@ -4456,18 +4456,18 @@ go_again:
 
 	cb_include_accept_path_t cb_include_accept_path = cb_include_accept_path_default;
 
-	typedef CIMCC::source_file_object* (*cb_include_search_t)(CIMCC::pptok_state_t &pst,CIMCC::lgtok_state_t &lst,const CIMCC::token_t &t,unsigned int fl);
+	typedef CCMiniC::source_file_object* (*cb_include_search_t)(CCMiniC::pptok_state_t &pst,CCMiniC::lgtok_state_t &lst,const CCMiniC::token_t &t,unsigned int fl);
 
-	static CIMCC::source_file_object* cb_include_search_default(CIMCC::pptok_state_t &/*pst*/,CIMCC::lgtok_state_t &/*lst*/,const CIMCC::token_t &t,unsigned int fl) {
-		CIMCC::source_file_object *sfo = NULL;
+	static CCMiniC::source_file_object* cb_include_search_default(CCMiniC::pptok_state_t &/*pst*/,CCMiniC::lgtok_state_t &/*lst*/,const CCMiniC::token_t &t,unsigned int fl) {
+		CCMiniC::source_file_object *sfo = NULL;
 
 		if (fl & CBIS_USER_HEADER) {
 			std::string path = t.v.strliteral.makestring();	path_slash_translate(path);
 			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
 				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
 				if (fd >= 0) {
-					sfo = new CIMCC::source_fd(fd/*takes ownership*/,path);
-					assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+					sfo = new CCMiniC::source_fd(fd/*takes ownership*/,path);
+					assert(sfo->iface == CCMiniC::source_file_object::IF_FD);
 					return sfo;
 				}
 			}
@@ -4478,8 +4478,8 @@ go_again:
 			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
 				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
 				if (fd >= 0) {
-					sfo = new CIMCC::source_fd(fd/*takes ownership*/,path);
-					assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+					sfo = new CCMiniC::source_fd(fd/*takes ownership*/,path);
+					assert(sfo->iface == CCMiniC::source_file_object::IF_FD);
 					return sfo;
 				}
 			}
@@ -4501,7 +4501,7 @@ go_again:
 
 try_again:
 		if (!pst.include_stk.empty()) {
-			CIMCC::pptok_state_t::include_t &i = pst.include_stk.top();
+			CCMiniC::pptok_state_t::include_t &i = pst.include_stk.top();
 			if ((r=pptok_lgtok(pst,lst,i.rb,*i.sfo,t)) < 0)
 				return r;
 
@@ -4617,7 +4617,7 @@ try_again_w_token:
 				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 				if (t.type == token_type_t::strliteral) {
-					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
+					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
 					if (sfo == NULL) {
 						fprintf(stderr,"Unable to #include \"%s\"\n",t.v.strliteral.makestring().c_str());
 						return errno_return(ENOENT);
@@ -4626,7 +4626,7 @@ try_again_w_token:
 					goto try_again;
 				}
 				else if (t.type == token_type_t::anglestrliteral) {
-					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
+					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
 					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
 					if (sfo == NULL) {
 						fprintf(stderr,"Unable to #include <%s>\n",t.v.strliteral.makestring().c_str());
@@ -4642,7 +4642,7 @@ try_again_w_token:
 				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 				if (t.type == token_type_t::strliteral) {
-					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
+					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
 					if (sfo == NULL) {
 						fprintf(stderr,"Unable to #include_next \"%s\"\n",t.v.strliteral.makestring().c_str());
 						return errno_return(ENOENT);
@@ -4651,7 +4651,7 @@ try_again_w_token:
 					goto try_again;
 				}
 				else if (t.type == token_type_t::anglestrliteral) {
-					CIMCC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
+					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
 					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
 					if (sfo == NULL) {
 						fprintf(stderr,"Unable to #include_next <%s>\n",t.v.strliteral.makestring().c_str());
@@ -5144,8 +5144,8 @@ try_again_w_token:
 	};
 
 	struct cc_state_t {
-		CIMCC::lgtok_state_t	lst;
-		CIMCC::pptok_state_t	pst;
+		CCMiniC::lgtok_state_t	lst;
+		CCMiniC::pptok_state_t	pst;
 		rbuf*			buf = NULL;
 		source_file_object*	sfo = NULL;
 		int			err = 0;
@@ -7755,7 +7755,7 @@ int main(int argc,char **argv) {
 	}
 
 	for (auto mifi=main_input_files.begin();mifi!=main_input_files.end();mifi++) {
-		std::unique_ptr<CIMCC::source_file_object> sfo;
+		std::unique_ptr<CCMiniC::source_file_object> sfo;
 
 		if (*mifi == "-") {
 			struct stat st;
@@ -7768,8 +7768,8 @@ int main(int argc,char **argv) {
 				fprintf(stderr,"Cannot use STDIN. Must be a file, socket, or pipe\n");
 				return 1;
 			}
-			sfo.reset(new CIMCC::source_fd(0/*STDIN, takes ownership*/,"<stdin>"));
-			assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+			sfo.reset(new CCMiniC::source_fd(0/*STDIN, takes ownership*/,"<stdin>"));
+			assert(sfo->iface == CCMiniC::source_file_object::IF_FD);
 		}
 		else {
 			int fd = open((*mifi).c_str(),O_RDONLY|O_BINARY);
@@ -7777,8 +7777,8 @@ int main(int argc,char **argv) {
 				fprintf(stderr,"Cannot open '%s', '%s'\n",(*mifi).c_str(),strerror(errno));
 				return 1;
 			}
-			sfo.reset(new CIMCC::source_fd(fd/*takes ownership*/,*mifi));
-			assert(sfo->iface == CIMCC::source_file_object::IF_FD);
+			sfo.reset(new CCMiniC::source_fd(fd/*takes ownership*/,*mifi));
+			assert(sfo->iface == CCMiniC::source_file_object::IF_FD);
 		}
 
 		if (test_mode == TEST_SFO) {
@@ -7796,7 +7796,7 @@ int main(int argc,char **argv) {
 			}
 		}
 		else if (test_mode == TEST_RBF) {
-			CIMCC::rbuf rb;
+			CCMiniC::rbuf rb;
 			assert(rb.allocate(128));
 
 			do {
@@ -7821,56 +7821,56 @@ int main(int argc,char **argv) {
 			} while (1);
 		}
 		else if (test_mode == TEST_RBFGC) {
-			CIMCC::rbuf rb;
+			CCMiniC::rbuf rb;
 			assert(rb.allocate());
 
 			do {
-				CIMCC::unicode_char_t c = CIMCC::getc(rb,*sfo);
-				if (c == CIMCC::unicode_eof) {
+				CCMiniC::unicode_char_t c = CCMiniC::getc(rb,*sfo);
+				if (c == CCMiniC::unicode_eof) {
 					assert(rb.data_avail() == 0);
 					break;
 				}
-				else if (c == CIMCC::unicode_invalid) {
+				else if (c == CCMiniC::unicode_invalid) {
 					if (write(1/*STDOUT*/,"<INVALID>",9) != 9) return -1;
 				}
 				else {
-					const std::string s = CIMCC::utf8_to_str(c);
+					const std::string s = CCMiniC::utf8_to_str(c);
 					if (write(1/*STDOUT*/,s.data(),s.size()) != ssize_t(s.size())) return -1;
 				}
 			} while (1);
 		}
 		else if (test_mode == TEST_RBFGCNU) {
-			CIMCC::rbuf rb;
+			CCMiniC::rbuf rb;
 			assert(rb.allocate());
 
 			do {
-				CIMCC::unicode_char_t c = CIMCC::getcnu(rb,*sfo);
-				if (c == CIMCC::unicode_eof) {
+				CCMiniC::unicode_char_t c = CCMiniC::getcnu(rb,*sfo);
+				if (c == CCMiniC::unicode_eof) {
 					assert(rb.data_avail() == 0);
 					break;
 				}
-				else if (c == CIMCC::unicode_invalid) {
+				else if (c == CCMiniC::unicode_invalid) {
 					abort(); /* should not happen! */
 				}
 				else {
-					assert(c >= CIMCC::unicode_char_t(0l) && c <= CIMCC::unicode_char_t(0xFFul));
+					assert(c >= CCMiniC::unicode_char_t(0l) && c <= CCMiniC::unicode_char_t(0xFFul));
 					unsigned char cc = (unsigned char)c;
 					if (write(1/*STDOUT*/,&cc,1) != ssize_t(1)) return -1;
 				}
 			} while (1);
 		}
 		else if (test_mode == TEST_LGTOK) {
-			CIMCC::lgtok_state_t lst;
-			CIMCC::token_t tok;
-			CIMCC::rbuf rb;
+			CCMiniC::lgtok_state_t lst;
+			CCMiniC::token_t tok;
+			CCMiniC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
-			while ((r=CIMCC::lgtok(lst,rb,*sfo,tok)) > 0) {
+			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
+			while ((r=CCMiniC::lgtok(lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
-				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
+				if (tok.source_file < CCMiniC::source_files.size()) printf(" src='%s'",CCMiniC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
@@ -7880,18 +7880,18 @@ int main(int argc,char **argv) {
 			}
 		}
 		else if (test_mode == TEST_PPTOK) {
-			CIMCC::lgtok_state_t lst;
-			CIMCC::pptok_state_t pst;
-			CIMCC::token_t tok;
-			CIMCC::rbuf rb;
+			CCMiniC::lgtok_state_t lst;
+			CCMiniC::pptok_state_t pst;
+			CCMiniC::token_t tok;
+			CCMiniC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
-			while ((r=CIMCC::pptok(pst,lst,rb,*sfo,tok)) > 0) {
+			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
+			while ((r=CCMiniC::pptok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
-				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
+				if (tok.source_file < CCMiniC::source_files.size()) printf(" src='%s'",CCMiniC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
@@ -7901,18 +7901,18 @@ int main(int argc,char **argv) {
 			}
 		}
 		else if (test_mode == TEST_LCTOK) {
-			CIMCC::lgtok_state_t lst;
-			CIMCC::pptok_state_t pst;
-			CIMCC::token_t tok;
-			CIMCC::rbuf rb;
+			CCMiniC::lgtok_state_t lst;
+			CCMiniC::pptok_state_t pst;
+			CCMiniC::token_t tok;
+			CCMiniC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
-			while ((r=CIMCC::lctok(pst,lst,rb,*sfo,tok)) > 0) {
+			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
+			while ((r=CCMiniC::lctok(pst,lst,rb,*sfo,tok)) > 0) {
 				printf("Token:");
 				if (tok.pos.row > 0) printf(" pos:row=%u,col=%u,ofs=%u",tok.pos.row,tok.pos.col,tok.pos.ofs);
-				if (tok.source_file < CIMCC::source_files.size()) printf(" src='%s'",CIMCC::source_files[tok.source_file].path.c_str());
+				if (tok.source_file < CCMiniC::source_files.size()) printf(" src='%s'",CCMiniC::source_files[tok.source_file].path.c_str());
 				printf(" %s\n",tok.to_str().c_str());
 			}
 
@@ -7923,13 +7923,13 @@ int main(int argc,char **argv) {
 		}
 		else {
 			/* normal compilation */
-			CIMCC::cc_state_t ccst;
-			CIMCC::rbuf rb;
+			CCMiniC::cc_state_t ccst;
+			CCMiniC::rbuf rb;
 			int r;
 
 			assert(rb.allocate());
-			rb.set_source_file(CIMCC::alloc_source_file(sfo->getname()));
-			while ((r=CIMCC::CCstep(ccst,rb,*sfo)) > 0);
+			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
+			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
@@ -7940,8 +7940,8 @@ int main(int argc,char **argv) {
 		assert(sfo.get() != NULL);
 	}
 
-	CIMCC::source_file_refcount_check();
-	CIMCC::ast_node_refcount_check();
+	CCMiniC::source_file_refcount_check();
+	CCMiniC::ast_node_refcount_check();
 
 	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
 		test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU || test_mode == TEST_LGTOK ||
