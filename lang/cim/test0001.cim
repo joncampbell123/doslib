@@ -223,4 +223,10 @@ static int d(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) 
 	(*funcptr)(&a,a+5);
 	return 5;
 }
-
+static int x = sizeof(int);
+static int x = sizeof(int*);
+static int x = sizeof(const int* const*);
+static int x = sizeof(int[3]);
+static int x = sizeof(int[3][3]);
+static int x = sizeof(int*[3][3]);
+static int x = sizeof(const int);

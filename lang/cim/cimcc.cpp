@@ -6143,24 +6143,58 @@ try_again_w_token:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else if (tq_peek().type == token_type_t::r_sizeof) {
+			int depth = 0;
+
 			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node_alloc(token_type_t::op_sizeof);
 
-			// TODO: Support for sizeof ( type_name )
-			//
-			// example:
-			//
-			// sizeof(int)
-			// sizeof(const int)
-			// sizeof(int*)
+			if (tq_peek().type == token_type_t::openparenthesis) {
+				tq_discard();
+				depth++;
+			}
 
-			ast_node_id_t expr = ast_node_none;
-			if ((r=unary_expression(expr)) < 1)
-				return r;
+			std::unique_ptr<declaration_t> declion(new declaration_t);
+			if (depth == 1) {
+				if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_OPTIONAL|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL|DECLSPEC_CHECK_ONLY)) < 1)
+					return r;
+			}
 
-			ast_node(aroot).set_child(expr); ast_node(expr).release();
+			if ((*declion).spec.count != 0) {
+				(*declion).spec = declaration_specifiers_t();
+
+				if ((r=chkerr()) < 1)
+					return r;
+				if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+					return r;
+
+				declarator_t &declor = (*declion).new_declarator();
+
+				if ((r=pointer_parse(declor.ptr)) < 1)
+					return r;
+
+				if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
+					return r;
+
+				ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
+				assert(ast_node(decl).t.type == token_type_t::op_declaration);
+				ast_node(decl).t.v.declaration = declion.release();
+
+				ast_node(aroot).set_child(decl); ast_node(decl).release();
+			}
+			else {
+				ast_node_id_t expr = ast_node_none;
+				if ((r=unary_expression(expr)) < 1)
+					return r;
+
+				ast_node(aroot).set_child(expr); ast_node(expr).release();
+			}
+
+			while (depth > 0 && tq_peek().type == token_type_t::closeparenthesis) {
+				tq_discard();
+				depth--;
+			}
 		}
 		else {
 			if ((r=nextexpr(aroot)) < 1)
