@@ -241,4 +241,8 @@ static int d(int a) {
 static int d(char a,char b) {
 	return (long)(int)(a+b);
 }
+enum test x;
+enum test { A, B, C, D } x;
+enum test { A=1, B, C=100, D=A*400, E=A+B+C+D } x;
+enum { A, B, C, D } x;
 

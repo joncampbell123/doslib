@@ -4756,6 +4756,7 @@ try_again_w_token:
 		TSI_SIGNED,
 		TSI_UNSIGNED,
 		TSI_LONGLONG,
+		TSI_ENUM,		// 10
 
 		TSI__MAX
 	};
@@ -4770,22 +4771,24 @@ try_again_w_token:
 		"double",
 		"signed",
 		"unsigned",
-		"longlong"
+		"longlong",
+		"enum"			// 10
 	};
 
 	typedef unsigned int type_specifier_t;
 
 #define X(c) static constexpr type_specifier_t TS_##c = 1u << TSI_##c
-	X(VOID);
+	X(VOID);			// 0
 	X(CHAR);
 	X(SHORT);
 	X(INT);
 	X(LONG);
-	X(FLOAT);
+	X(FLOAT);			// 5
 	X(DOUBLE);
 	X(SIGNED);
 	X(UNSIGNED);
 	X(LONGLONG);
+	X(ENUM);			// 10
 #undef X
 
 	///////////////////////////////////////
@@ -4960,11 +4963,55 @@ try_again_w_token:
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 
+	struct enumerator_t {
+		token_t					name;
+		ast_node_id_t				expr = ast_node_none;
+
+		enumerator_t() { }
+		enumerator_t(const enumerator_t &) = delete;
+		enumerator_t &operator=(const enumerator_t &) = delete;
+		enumerator_t(enumerator_t &&x) { common_move(x); }
+		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
+
+		void common_move(enumerator_t &o) {
+			name = std::move(o.name);
+			expr = o.expr; o.expr = ast_node_none;
+		}
+
+		~enumerator_t() {
+			if (expr != ast_node_none) {
+				ast_node(expr).release();
+				expr = ast_node_none;
+			}
+		}
+	};
+
+	struct enumerator_list_t {
+		std::vector<enumerator_t>		enumerator;
+	};
+
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
+		token_t					type_identifier;
+		enumerator_list_t			enum_list;
 		unsigned int				count = 0;
+
+		declaration_specifiers_t() { }
+		declaration_specifiers_t(const declaration_specifiers_t &) = delete;
+		declaration_specifiers_t &operator=(const declaration_specifiers_t &) = delete;
+		declaration_specifiers_t(declaration_specifiers_t &&x) { common_move(x); }
+		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
+
+		void common_move(declaration_specifiers_t &o) {
+			storage_class = o.storage_class;
+			type_specifier = o.type_specifier;
+			type_qualifier = o.type_qualifier;
+			type_identifier = std::move(o.type_identifier);
+			enum_list = std::move(o.enum_list);
+			count = o.count; o.count = 0;
+		}
 	};
 
 	struct pointer_t {
@@ -5204,6 +5251,7 @@ try_again_w_token:
 			case token_type_t::r_huge: return true;
 			case token_type_t::r_restrict: return true;
 			case token_type_t::r_long: return true;
+			case token_type_t::r_enum: return true;
 			default: break;
 		};
 
@@ -5212,6 +5260,7 @@ try_again_w_token:
 
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
 		const position_t pos = tq_peek().pos;
+		int r;
 
 		do {
 			const token_t &t = tq_peek();
@@ -5283,6 +5332,70 @@ try_again_w_token:
 					}
 					break;
 
+				case token_type_t::r_enum:
+					if (declspec&DECLSPEC_TYPE_SPEC) {
+						ds.count++;
+
+						if (ds.type_specifier & TS_ENUM) {
+							CCerr(pos,"declarator specifier 'enum' already specified");
+							return errno_return(EINVAL);
+						}
+						ds.type_specifier |= TS_ENUM;
+						tq_discard();
+
+						/* enum { list }
+						 * enum identifier { list }
+						 * enum identifier
+						 *
+						 * notice "enum" by itself is not allowed, because then
+						 * how would you tell between declaring an enum of x
+						 * vs a variable named "x" of type nameless enum? */
+
+						if (tq_peek().type == token_type_t::identifier)
+							ds.type_identifier = std::move(tq_get());
+
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
+
+							do {
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+
+								enumerator_t en;
+
+								if (tq_peek().type != token_type_t::identifier)
+									return errno_return(EINVAL);
+
+								en.name = std::move(tq_get());
+
+								if (tq_peek().type == token_type_t::equal) {
+									tq_discard();
+
+									if ((r=conditional_expression(en.expr)) < 1)
+										return r;
+								}
+
+								ds.enum_list.enumerator.push_back(std::move(en));
+
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+								else if (tq_peek().type == token_type_t::comma) {
+									tq_discard();
+								}
+								else {
+									return errno_return(EINVAL);
+								}
+							} while (1);
+						}
+
+						continue;
+					}
+					break;
+
 				default: break;
 			}
 #undef XCHK
@@ -5338,7 +5451,7 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) {
 				CCerr(pos,"Multiple type specifiers (int/char/void)");
 				return errno_return(EINVAL);
@@ -5360,7 +5473,7 @@ try_again_w_token:
 			}
 		}
 
-#if 0//DEBUG
+#if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
 		if (declspec & DECLSPEC_STORAGE) {
@@ -5372,7 +5485,26 @@ try_again_w_token:
 		if (declspec & DECLSPEC_TYPE_SPEC) {
 			fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
 			for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+			if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
 			fprintf(stderr,"\n");
+
+			if (!ds.enum_list.enumerator.empty()) {
+				fprintf(stderr,"    enum {\n");
+				for (auto &en : ds.enum_list.enumerator) {
+					fprintf(stderr,"      ");
+
+					if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
+					else fprintf(stderr,"?");
+					fprintf(stderr,"\n");
+
+					if (en.expr != ast_node_none) {
+						fprintf(stderr,"        expr:\n");
+						debug_dump_ast("          ",en.expr);
+					}
+
+				}
+				fprintf(stderr,"    }\n");
+			}
 		}
 
 		if (declspec & DECLSPEC_TYPE_QUAL) {
@@ -5684,7 +5816,7 @@ try_again_w_token:
 							parameter_t &fp = dd.parameters[i];
 							if (fp.spec.storage_class == 0 && fp.spec.type_specifier == 0 &&
 								fp.spec.type_qualifier == 0 && fp.ptr.empty()) {
-								fp.spec = s_declion.spec;
+								fp.spec = std::move(s_declion.spec);
 								fp.ptr = std::move(d.ptr);
 							}
 							else {
