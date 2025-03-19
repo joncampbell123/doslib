@@ -5825,7 +5825,7 @@ try_again_w_token:
 				if (n.t.v.declaration) {
 					auto &ds = n.t.v.declaration->spec;
 
-					fprintf(stderr,"%s{\n",prefix.c_str());
+					fprintf(stderr,"%s  {\n",prefix.c_str());
 
 					fprintf(stderr,"%s  decl specifier:",prefix.c_str());
 					for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
@@ -5916,7 +5916,7 @@ try_again_w_token:
 						}
 					}
 
-					fprintf(stderr,"%s}\n",prefix.c_str());
+					fprintf(stderr,"%s  }\n",prefix.c_str());
 				}
 			}
 
@@ -6240,10 +6240,47 @@ try_again_w_token:
 #define nextexpr unary_expression
 		int r;
 
+		if (tq_peek(0).type == token_type_t::openparenthesis && declaration_specifiers_check(1)) {
+			tq_discard(); /* toss the open parenthesis */
+
+			std::unique_ptr<declaration_t> declion(new declaration_t);
+			(*declion).spec = declaration_specifiers_t();
+
+			if ((r=chkerr()) < 1)
+				return r;
+			if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+				return r;
+
+			declarator_t &declor = (*declion).new_declarator();
+
+			if ((r=pointer_parse(declor.ptr)) < 1)
+				return r;
+
+			if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
+				return r;
+
+			aroot = ast_node_alloc(token_type_t::op_typecast);
+
+			ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
+			assert(ast_node(decl).t.type == token_type_t::op_declaration);
+			ast_node(decl).t.v.declaration = declion.release();
+
+			ast_node(aroot).set_child(decl); ast_node(decl).release();
+
+			if (tq_get().type != token_type_t::closeparenthesis)
+				return errno_return(EINVAL);
+
+			ast_node_id_t nxt = ast_node_none;
+			if ((r=cast_expression(nxt)) < 1)
+				return r;
+
+			ast_node(decl).set_child(nxt); ast_node(nxt).release();
+			return 1;
+		}
+
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		/* TODO: (cast expression) */
 #undef nextexpr
 		return 1;
 	}
@@ -7156,7 +7193,7 @@ try_again_w_token:
 		} while (1);
 
 #if 1//DEBUG
-		fprintf(stderr,"compound declerator:\n");
+		fprintf(stderr,"compound declarator:\n");
 		debug_dump_ast("  ",aroot);
 #endif
 
