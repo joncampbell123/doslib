@@ -5234,13 +5234,14 @@ try_again_w_token:
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
 
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
+		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
+		int struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
-		int direct_declarator_parse(direct_declarator_t &dd,unsigned int flags=0);
+		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
 		int struct_declaration_parse(struct_declaration_t &declion);
-		int struct_declarator_parse(struct_declarator_t &declor);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5257,7 +5258,6 @@ try_again_w_token:
 		int postfix_expression(ast_node_id_t &aroot);
 		int primary_expression(ast_node_id_t &aroot);
 		int shift_expression(ast_node_id_t &aroot);
-		int declarator_parse(declarator_t &declor);
 		int unary_expression(ast_node_id_t &aroot);
 		int cast_expression(ast_node_id_t &aroot);
 		int and_expression(ast_node_id_t &aroot);
@@ -5712,7 +5712,7 @@ try_again_w_token:
 		initval = o.initval; o.initval = ast_node_none;
 	}
 
-	int cc_state_t::direct_declarator_parse(direct_declarator_t &dd,unsigned int flags) {
+	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		int indent = 0;
 		int r;
@@ -5731,6 +5731,12 @@ try_again_w_token:
 		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
 		 *   ( ) */
 
+		bool allowed_no_identifier = false;
+
+		/* if the declaration specifier is an enum, struct, or union, then you're allowed not to specify an identifier */
+		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
+			allowed_no_identifier = true;
+
 		while (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 			indent++;
@@ -5741,7 +5747,7 @@ try_again_w_token:
 
 		if (tq_peek().type == token_type_t::identifier && !(flags & DIRDECL_NO_IDENTIFIER))
 			dd.name = std::move(tq_get());
-		else if (flags & DIRDECL_ALLOW_ABSTRACT)
+		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier)
 			dd.name = std::move(token_t(token_type_t::none));
 		else
 			return errno_return(EINVAL);
@@ -5803,7 +5809,7 @@ try_again_w_token:
 						return r;
 
 					p.ddecl = new direct_declarator_t();
-					if ((r=direct_declarator_parse(*(p.ddecl),DIRDECL_ALLOW_ABSTRACT)) < 1)
+					if ((r=direct_declarator_parse(p.spec,*(p.ddecl),DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
@@ -6065,25 +6071,25 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::declarator_parse(declarator_t &declor) {
+	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
 		int r;
 
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(declor.ddecl)) < 1)
+		if ((r=direct_declarator_parse(ds,declor.ddecl)) < 1)
 			return r;
 
 		return 1;
 	}
 
-	int cc_state_t::struct_declarator_parse(struct_declarator_t &declor) {
+	int cc_state_t::struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor) {
 		int r;
 
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(declor.ddecl)) < 1)
+		if ((r=direct_declarator_parse(ds,declor.ddecl)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::colon) {
@@ -6491,7 +6497,7 @@ try_again_w_token:
 				if ((r=pointer_parse(declor.ptr)) < 1)
 					return r;
 
-				if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+				if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
 				ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
@@ -6540,7 +6546,7 @@ try_again_w_token:
 			if ((r=pointer_parse(declor.ptr)) < 1)
 				return r;
 
-			if ((r=direct_declarator_parse(declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+			if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
 			aroot = ast_node_alloc(token_type_t::op_typecast);
@@ -7500,7 +7506,7 @@ try_again_w_token:
 			position_t pos = tq_peek().pos;
 			declarator_t &declor = declion.new_declarator();
 
-			if ((r=declarator_parse(declor)) < 1)
+			if ((r=declarator_parse(declion.spec,declor)) < 1)
 				return r;
 			if ((r=chkerr()) < 1)
 				return r;
@@ -7579,7 +7585,7 @@ try_again_w_token:
 		do {
 			struct_declarator_t &declor = declion.new_declarator();
 
-			if ((r=struct_declarator_parse(declor)) < 1)
+			if ((r=struct_declarator_parse(declion.spec,declor)) < 1)
 				return r;
 			if ((r=chkerr()) < 1)
 				return r;

@@ -259,4 +259,25 @@ struct test {
 	int a;
 	int (*func1)(int a,int b);
 } x;
-
+enum test;
+enum test {
+	A,
+	B,
+	C,
+	D,
+	E
+};
+struct test;
+struct test {
+	int a;
+	int (*funct1)(int a,int b);
+};
+union test {
+	int a,b;
+};
+struct {
+	int a,b;
+};
+union {
+	int a,b;
+};
