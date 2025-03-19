@@ -5196,6 +5196,7 @@ try_again_w_token:
 		int direct_declarator_parse(direct_declarator_t &dd,unsigned int flags=0);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
+		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5224,6 +5225,48 @@ try_again_w_token:
 		int external_declaration(void);
 		int translation_unit(void);
 	};
+
+	int cc_state_t::enumerator_list_parse(std::vector<enumerator_t> &enum_list) {
+		int r;
+
+		/* caller already ate the { */
+
+		do {
+			if (tq_peek().type == token_type_t::closecurlybracket) {
+				tq_discard();
+				break;
+			}
+
+			enumerator_t en;
+
+			if (tq_peek().type != token_type_t::identifier)
+				return errno_return(EINVAL);
+
+			en.name = std::move(tq_get());
+
+			if (tq_peek().type == token_type_t::equal) {
+				tq_discard();
+
+				if ((r=conditional_expression(en.expr)) < 1)
+					return r;
+			}
+
+			enum_list.push_back(std::move(en));
+
+			if (tq_peek().type == token_type_t::closecurlybracket) {
+				tq_discard();
+				break;
+			}
+			else if (tq_peek().type == token_type_t::comma) {
+				tq_discard();
+			}
+			else {
+				return errno_return(EINVAL);
+			}
+		} while (1);
+
+		return 1;
+	}
 
 	bool cc_state_t::declaration_specifiers_check(const unsigned int token_offset) {
 		const token_t &t = tq_peek(token_offset);
@@ -5353,39 +5396,8 @@ try_again_w_token:
 						if (tq_peek().type == token_type_t::opencurlybracket) {
 							tq_discard();
 
-							do {
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
-									break;
-								}
-
-								enumerator_t en;
-
-								if (tq_peek().type != token_type_t::identifier)
-									return errno_return(EINVAL);
-
-								en.name = std::move(tq_get());
-
-								if (tq_peek().type == token_type_t::equal) {
-									tq_discard();
-
-									if ((r=conditional_expression(en.expr)) < 1)
-										return r;
-								}
-
-								ds.enum_list.push_back(std::move(en));
-
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
-									break;
-								}
-								else if (tq_peek().type == token_type_t::comma) {
-									tq_discard();
-								}
-								else {
-									return errno_return(EINVAL);
-								}
-							} while (1);
+							if ((r=enumerator_list_parse(ds.enum_list)) < 1)
+								return r;
 						}
 
 						continue;
