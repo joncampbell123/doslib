@@ -739,72 +739,72 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		pound,
 		poundpound,
 		backslashnewline,
-		r_macro_paramref,			// 140
+		r_macro_paramref,			// 200
 		r_ppendif,
 		r_ppelifndef,
 		r_ppembed,
 		r_ppinclude_next,
-		anglestrliteral,			// 145
+		anglestrliteral,			// 205
 		r___func__,
 		r___FUNCTION__,
 		op_ternary,
 		op_comma,
-		op_logical_or,				// 150
+		op_logical_or,				// 210
 		op_logical_and,
 		op_binary_or,
 		op_binary_xor,
 		op_binary_and,
-		op_equals,				// 155
+		op_equals,				// 215
 		op_not_equals,
 		op_lessthan,
 		op_greaterthan,
 		op_lessthan_equals,
-		op_greaterthan_equals,			// 160
+		op_greaterthan_equals,			// 220
 		op_leftshift,
 		op_rightshift,
 		op_add,
 		op_subtract,
-		op_multiply,				// 165
+		op_multiply,				// 225
 		op_divide,
 		op_modulus,
 		op_pre_increment,
 		op_pre_decrement,
-		op_address_of,				// 170
+		op_address_of,				// 230
 		op_pointer_deref,
 		op_negate,
 		op_binary_not,
 		op_logical_not,
-		op_sizeof,				// 175
+		op_sizeof,				// 235
 		op_member_ref,
 		op_ptr_ref,
 		op_post_increment,
 		op_post_decrement,
-		op_array_ref,				// 180
+		op_array_ref,				// 240
 		op_assign,
 		op_multiply_assign,
 		op_divide_assign,
 		op_modulus_assign,
-		op_add_assign,				// 185
+		op_add_assign,				// 245
 		op_subtract_assign,
 		op_leftshift_assign,
 		op_rightshift_assign,
 		op_and_assign,
-		op_xor_assign,				// 190
+		op_xor_assign,				// 250
 		op_or_assign,
 		op_declaration,
 		op_compound_statement,
 		op_label,
-		op_default_label,			// 195
+		op_default_label,			// 255
 		op_case_statement,
 		op_if_statement,
 		op_else_statement,
 		op_switch_statement,
-		op_break,				// 200
+		op_break,				// 260
 		op_continue,
 		op_goto,
 		op_return,
 		op_while_statement,
-		op_do_while_statement,			// 205
+		op_do_while_statement,			// 265
 		op_for_statement,
 		op_none,
 		op_function_call,
@@ -1342,72 +1342,72 @@ namespace CIMCC/*TODO: Pick a different name by final release*/ {
 		"pound",
 		"poundpound",
 		"backslashnewline",
-		"macro_paramref",			// 140
+		"macro_paramref",			// 200
 		strpp_endif,
 		strpp_elifndef,
 		strpp_embed,
 		strpp_include_next,
-		"anglestrliteral",			// 145
+		"anglestrliteral",			// 205
 		"__func__",
 		"__FUNCTION__",
-		"op:ternary ? :",
+		"op:ternary",
 		"op:comma",
-		"op:log-or",				// 150
+		"op:log-or",				// 210
 		"op:log-and",
 		"op:bin-or",
 		"op:bin-xor",
 		"op:bin-and",
-		"op:equals",				// 155
+		"op:equals",				// 215
 		"op:notequals",
 		"op:lessthan",
 		"op:greaterthan",
 		"op:lessthan_equals",
-		"op:greaterthan_equals",		// 160
+		"op:greaterthan_equals",		// 220
 		"op:leftshift",
 		"op:rightshift",
 		"op:add",
 		"op:subtract",
-		"op:multiply",				// 165
+		"op:multiply",				// 225
 		"op:divide",
 		"op:modulus",
 		"op:++inc",
 		"op:--dec",
-		"op:addrof",				// 170
+		"op:addrof",				// 230
 		"op:ptrderef",
 		"op:negate",
 		"op:bin-not",
 		"op:log-not",
-		"op:sizeof",				// 175
+		"op:sizeof",				// 235
 		"op:member_ref",
 		"op:ptr_ref",
 		"op:inc++",
 		"op:dec--",
-		"op:arrayref",				// 180
+		"op:arrayref",				// 240
 		"op:assign",
 		"op:multiply_assign",
 		"op:divide_assign",
 		"op:modulus_assign",
-		"op:add_assign"	,			// 185
+		"op:add_assign"	,			// 245
 		"op:subtract_assign",
 		"op:leftshift_assign",
 		"op:rightshift_assign",
 		"op:and_assign",
-		"op:xor_assign",			// 190
+		"op:xor_assign",			// 250
 		"op:or_assign",
 		"op:declaration",
 		"op:compound_statement",
 		"op:label",
-		"op:default_label",			// 195
+		"op:default_label",			// 255
 		"op:case_statement",
 		"op:if_statement",
 		"op:else_statement",
 		"op:switch_statement",
-		"op:break",				// 200
+		"op:break",				// 260
 		"op:continue",
 		"op:goto",
 		"op:return",
 		"op:while_statement",
-		"op:do_while_statement",		// 205
+		"op:do_while_statement",		// 265
 		"op:for_statement",
 		"op:none",
 		"op:function_call"
@@ -5689,6 +5689,7 @@ try_again_w_token:
 			if (expr != ast_node_none)
 				debug_dump_ast("    ",expr);
 		}
+
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
 			fprintf(stderr,"  functiondef:\n");
 			for (const auto &p : dd.parameters) {
@@ -7119,6 +7120,23 @@ try_again_w_token:
 
 			break;
 		} while(1);
+
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d) end parsing\n",__FUNCTION__,__LINE__);
+		for (auto &declor_p : declion.declor) {
+			if (declor_p == NULL) continue;
+			auto &declor = *declor_p;
+			auto &ddecl = declor.ddecl;
+
+			if (ddecl.name.type == token_type_t::identifier)
+				fprintf(stderr,"  declor: '%s'\n",ddecl.name.v.strliteral.makestring().c_str());
+
+			if (declor.initval != ast_node_none) {
+				fprintf(stderr,"    init:\n");
+				debug_dump_ast("      ",declor.initval);
+			}
+		}
+#endif
 
 		if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
