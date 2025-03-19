@@ -4989,16 +4989,12 @@ try_again_w_token:
 		}
 	};
 
-	struct enumerator_list_t {
-		std::vector<enumerator_t>		enumerator;
-	};
-
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
 		token_t					type_identifier;
-		enumerator_list_t			enum_list;
+		std::vector<enumerator_t>		enum_list;
 		unsigned int				count = 0;
 
 		declaration_specifiers_t() { }
@@ -5377,7 +5373,7 @@ try_again_w_token:
 										return r;
 								}
 
-								ds.enum_list.enumerator.push_back(std::move(en));
+								ds.enum_list.push_back(std::move(en));
 
 								if (tq_peek().type == token_type_t::closecurlybracket) {
 									tq_discard();
@@ -5510,9 +5506,9 @@ try_again_w_token:
 			if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
 			fprintf(stderr,"\n");
 
-			if (!ds.enum_list.enumerator.empty()) {
+			if (!ds.enum_list.empty()) {
 				fprintf(stderr,"    enum {\n");
-				for (auto &en : ds.enum_list.enumerator) {
+				for (auto &en : ds.enum_list) {
 					fprintf(stderr,"      ");
 
 					if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
