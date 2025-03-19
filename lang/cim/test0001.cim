@@ -246,4 +246,8 @@ enum test { A, B, C, D } x;
 enum test { A=1, B, C=100, D=A*400, E=A+B+C+D } x;
 enum { A, B, C, D } x;
 struct test x,*y,**z;
+struct test { } x;
+struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } x;
+struct test { int a; struct another { int x,y,z; } one; } x;
+struct { int a,b,c; int z; } x;
 

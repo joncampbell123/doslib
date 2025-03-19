@@ -5101,6 +5101,45 @@ try_again_w_token:
 		}
 	};
 
+	struct struct_declarator_t {
+		direct_declarator_t ddecl;
+		std::vector<pointer_t> ptr;
+		ast_node_id_t bitfield_expr = ast_node_none;
+
+		struct_declarator_t() { }
+		struct_declarator_t(const struct_declarator_t &) = delete;
+		struct_declarator_t(struct_declarator_t &&) = delete;
+		struct_declarator_t &operator=(const struct_declarator_t &) = delete;
+		struct_declarator_t &operator=(struct_declarator_t &&) = delete;
+
+		~struct_declarator_t() {
+			if (bitfield_expr != ast_node_none)
+				ast_node(bitfield_expr).release();
+		}
+	};
+
+	struct struct_declaration_t {
+		declaration_specifiers_t		spec;
+		std::vector<struct_declarator_t*>	declor;
+
+		struct_declarator_t &new_declarator(void) {
+			struct_declarator_t *n = new struct_declarator_t();
+			declor.push_back(n);
+			return *n;
+		}
+
+		struct_declaration_t() { }
+		struct_declaration_t(const struct_declaration_t &) = delete;
+		struct_declaration_t(struct_declaration_t &&) = delete;
+		struct_declaration_t &operator=(const struct_declaration_t &) = delete;
+		struct_declaration_t &operator=(struct_declaration_t &&) = delete;
+
+		~struct_declaration_t() {
+			for (auto &i : declor) delete i;
+			declor.clear();
+		}
+	};
+
 	struct cc_state_t {
 		CIMCC::lgtok_state_t	lst;
 		CIMCC::pptok_state_t	pst;
@@ -5197,6 +5236,8 @@ try_again_w_token:
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
+		int struct_declaration_parse(struct_declaration_t &declion);
+		int struct_declarator_parse(struct_declarator_t &declor);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5421,6 +5462,22 @@ try_again_w_token:
 
 						if (tq_peek().type == token_type_t::identifier)
 							ds.type_identifier = std::move(tq_get());
+
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
+
+							do {
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+
+								struct_declaration_t declion;
+
+								if ((r=struct_declaration_parse(declion)) < 1)
+									return r;
+							} while(1);
+						}
 
 						continue;
 					}
@@ -5973,6 +6030,25 @@ try_again_w_token:
 
 		if ((r=direct_declarator_parse(declor.ddecl)) < 1)
 			return r;
+
+		return 1;
+	}
+
+	int cc_state_t::struct_declarator_parse(struct_declarator_t &declor) {
+		int r;
+
+		if ((r=pointer_parse(declor.ptr)) < 1)
+			return r;
+
+		if ((r=direct_declarator_parse(declor.ddecl)) < 1)
+			return r;
+
+		if (tq_peek().type == token_type_t::colon) {
+			tq_discard();
+
+			if ((r=conditional_expression(declor.bitfield_expr)) < 1)
+				return r;
+		}
 
 		return 1;
 	}
@@ -7433,6 +7509,60 @@ try_again_w_token:
 			if (declor.initval != ast_node_none) {
 				fprintf(stderr,"    init:\n");
 				debug_dump_ast("      ",declor.initval);
+			}
+		}
+#endif
+
+		if (tq_peek().type == token_type_t::semicolon) {
+			tq_discard();
+			return 1;
+		}
+
+		return errno_return(EINVAL);
+	}
+
+	int cc_state_t::struct_declaration_parse(struct_declaration_t &declion) {
+		int r,count = 0;
+
+#if 0//DEBUG
+		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
+#endif
+
+		if ((r=declaration_specifiers_parse(declion.spec)) < 1)
+			return r;
+		if ((r=chkerr()) < 1)
+			return r;
+
+		do {
+			struct_declarator_t &declor = declion.new_declarator();
+
+			if ((r=struct_declarator_parse(declor)) < 1)
+				return r;
+			if ((r=chkerr()) < 1)
+				return r;
+
+			count++;
+			if (tq_peek().type == token_type_t::comma) {
+				tq_discard();
+				continue;
+			}
+
+			break;
+		} while(1);
+
+#if 1//DEBUG
+		fprintf(stderr,"%s(line %d) end parsing\n",__FUNCTION__,__LINE__);
+		for (auto &declor_p : declion.declor) {
+			if (declor_p == NULL) continue;
+			auto &declor = *declor_p;
+			auto &ddecl = declor.ddecl;
+
+			if (ddecl.name.type == token_type_t::identifier)
+				fprintf(stderr,"  declor: '%s'\n",ddecl.name.v.strliteral.makestring().c_str());
+
+			if (declor.bitfield_expr != ast_node_none) {
+				fprintf(stderr,"    bitfield:\n");
+				debug_dump_ast("      ",declor.bitfield_expr);
 			}
 		}
 #endif
