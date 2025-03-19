@@ -4757,6 +4757,7 @@ try_again_w_token:
 		TSI_UNSIGNED,
 		TSI_LONGLONG,
 		TSI_ENUM,		// 10
+		TSI_STRUCT,
 
 		TSI__MAX
 	};
@@ -4772,7 +4773,8 @@ try_again_w_token:
 		"signed",
 		"unsigned",
 		"longlong",
-		"enum"			// 10
+		"enum",			// 10
+		"struct"
 	};
 
 	typedef unsigned int type_specifier_t;
@@ -4789,6 +4791,7 @@ try_again_w_token:
 	X(UNSIGNED);
 	X(LONGLONG);
 	X(ENUM);			// 10
+	X(STRUCT);
 #undef X
 
 	///////////////////////////////////////
@@ -5252,6 +5255,7 @@ try_again_w_token:
 			case token_type_t::r_restrict: return true;
 			case token_type_t::r_long: return true;
 			case token_type_t::r_enum: return true;
+			case token_type_t::r_struct: return true;
 			default: break;
 		};
 
@@ -5345,11 +5349,7 @@ try_again_w_token:
 
 						/* enum { list }
 						 * enum identifier { list }
-						 * enum identifier
-						 *
-						 * notice "enum" by itself is not allowed, because then
-						 * how would you tell between declaring an enum of x
-						 * vs a variable named "x" of type nameless enum? */
+						 * enum identifier */
 
 						if (tq_peek().type == token_type_t::identifier)
 							ds.type_identifier = std::move(tq_get());
@@ -5391,6 +5391,28 @@ try_again_w_token:
 								}
 							} while (1);
 						}
+
+						continue;
+					}
+					break;
+
+				case token_type_t::r_struct:
+					if (declspec&DECLSPEC_TYPE_SPEC) {
+						ds.count++;
+
+						if (ds.type_specifier & TS_STRUCT) {
+							CCerr(pos,"declarator specifier 'struct' already specified");
+							return errno_return(EINVAL);
+						}
+						ds.type_specifier |= TS_STRUCT;
+						tq_discard();
+
+						/* struct { list }
+						 * struct identifier { list }
+						 * struct identifier */
+
+						if (tq_peek().type == token_type_t::identifier)
+							ds.type_identifier = std::move(tq_get());
 
 						continue;
 					}
@@ -5451,7 +5473,7 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) {
 				CCerr(pos,"Multiple type specifiers (int/char/void)");
 				return errno_return(EINVAL);
