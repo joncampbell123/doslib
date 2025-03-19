@@ -4758,6 +4758,7 @@ try_again_w_token:
 		TSI_LONGLONG,
 		TSI_ENUM,		// 10
 		TSI_STRUCT,
+		TSI_UNION,
 
 		TSI__MAX
 	};
@@ -4774,7 +4775,8 @@ try_again_w_token:
 		"unsigned",
 		"longlong",
 		"enum",			// 10
-		"struct"
+		"struct",
+		"union"
 	};
 
 	typedef unsigned int type_specifier_t;
@@ -4792,6 +4794,7 @@ try_again_w_token:
 	X(LONGLONG);
 	X(ENUM);			// 10
 	X(STRUCT);
+	X(UNION);
 #undef X
 
 	///////////////////////////////////////
@@ -5336,6 +5339,7 @@ try_again_w_token:
 			case token_type_t::r_long: return true;
 			case token_type_t::r_enum: return true;
 			case token_type_t::r_struct: return true;
+			case token_type_t::r_union: return true;
 			default: break;
 		};
 
@@ -5483,6 +5487,45 @@ try_again_w_token:
 					}
 					break;
 
+				case token_type_t::r_union:
+					if (declspec&DECLSPEC_TYPE_SPEC) {
+						ds.count++;
+
+						if (ds.type_specifier & TS_UNION) {
+							CCerr(pos,"declarator specifier 'union' already specified");
+							return errno_return(EINVAL);
+						}
+						ds.type_specifier |= TS_UNION;
+						tq_discard();
+
+						/* union { list }
+						 * union identifier { list }
+						 * union identifier */
+						/* NTS: Unions are parsed the same as structs */
+
+						if (tq_peek().type == token_type_t::identifier)
+							ds.type_identifier = std::move(tq_get());
+
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
+
+							do {
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+
+								struct_declaration_t declion;
+
+								if ((r=struct_declaration_parse(declion)) < 1)
+									return r;
+							} while(1);
+						}
+
+						continue;
+					}
+					break;
+
 				default: break;
 			}
 #undef XCHK
@@ -5538,7 +5581,7 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t)) {
 				CCerr(pos,"Multiple type specifiers (int/char/void)");
 				return errno_return(EINVAL);
