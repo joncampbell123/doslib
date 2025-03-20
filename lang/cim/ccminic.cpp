@@ -811,6 +811,8 @@ namespace CCMiniC {
 		op_function_call,
 		op_array_define,
 		op_typecast,				// 270
+		op_dinit_array,
+		op_dinit_field,
 
 		__MAX__
 	};
@@ -1415,7 +1417,9 @@ namespace CCMiniC {
 		"op:none",
 		"op:function_call",
 		"op:array_define",
-		"op:typecast"				// 270
+		"op:typecast",				// 270
+		"op:dinit_array",
+		"op:dinit_field"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -7122,9 +7126,71 @@ try_again_w_token:
 				if (tq_peek().type == token_type_t::closecurlybracket)
 					break;
 
-				ast_node_id_t expr = ast_node_none;
-				if ((r=initializer(expr)) < 1)
-					return r;
+				ast_node_id_t expr = ast_node_none,s_expr = ast_node_none;
+				bool c99_dinit = false;
+
+				do {
+					if (tq_peek().type == token_type_t::opensquarebracket) {
+						tq_discard();
+
+						ast_node_id_t asq = ast_node_none;
+						if ((r=conditional_expression(asq)) < 1)
+							return r;
+
+						if (tq_get().type != token_type_t::closesquarebracket)
+							return errno_return(EINVAL);
+
+						ast_node_id_t op = ast_node_alloc(token_type_t::op_dinit_array);
+						ast_node(op).set_child(asq); ast_node(asq).release();
+
+						if (expr == ast_node_none) {
+							expr = op;
+						}
+						else {
+							ast_node(s_expr).set_next(op); ast_node(op).release();
+						}
+						s_expr = asq;
+
+						c99_dinit = true;
+					}
+					else if (tq_peek(0).type == token_type_t::period && tq_peek(1).type == token_type_t::identifier) {
+						tq_discard(); /* eat the '.' */
+
+						ast_node_id_t asq = ast_node_alloc(tq_get()); /* and then the ident */
+						ast_node_id_t op = ast_node_alloc(token_type_t::op_dinit_field);
+						ast_node(op).set_child(asq); ast_node(asq).release();
+
+						if (expr == ast_node_none) {
+							expr = op;
+						}
+						else {
+							ast_node(s_expr).set_next(op); ast_node(op).release();
+						}
+						s_expr = asq;
+
+						c99_dinit = true;
+					}
+					else {
+						break;
+					}
+				} while (1);
+
+				if (c99_dinit) {
+					if (tq_get().type != token_type_t::equal)
+						return errno_return(EINVAL);
+
+					ast_node_id_t i_expr = ast_node_none;
+					if ((r=initializer(i_expr)) < 1)
+						return r;
+
+					assert(expr != ast_node_none);
+					assert(s_expr != ast_node_none);
+					ast_node(s_expr).set_next(i_expr); ast_node(i_expr).release();
+				}
+				else {
+					if ((r=initializer(expr)) < 1)
+						return r;
+				}
 
 				if (nex == ast_node_none)
 					ast_node(aroot).set_child(expr);
