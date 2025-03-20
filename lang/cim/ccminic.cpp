@@ -2111,7 +2111,7 @@ private:
 				case 'x': {
 					int n;
 
-					buf.discardb(); v = 0;
+					v = 0;
 					while ((n=cc_parsedigit(buf.peekb(),16)) >= 0) {
 						v = int32_t(((unsigned int)v << 4u) | (unsigned int)n);
 						buf.discardb();
