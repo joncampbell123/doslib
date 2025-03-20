@@ -7636,7 +7636,7 @@ try_again_w_token:
 			return 1;
 		}
 
-		return errno_return(EINVAL);
+		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
 	}
 
 	int cc_state_t::struct_declaration_parse(struct_declaration_t &declion) {
