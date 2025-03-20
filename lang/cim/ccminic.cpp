@@ -5235,16 +5235,13 @@ try_again_w_token:
 			return 1;
 		}
 
-		static constexpr unsigned int DECLSPEC_STORAGE = 1u << 0u;
-		static constexpr unsigned int DECLSPEC_TYPE_SPEC = 1u << 1u;
-		static constexpr unsigned int DECLSPEC_TYPE_QUAL = 1u << 2u;
 		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
 
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
 
-		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL);
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
+		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
@@ -5363,172 +5360,150 @@ try_again_w_token:
 		do {
 			const token_t &t = tq_peek();
 
-#define XCHK(f,d,m) \
-	if (declspec&f) { \
-		if (d&m) { \
-			CCERR_RET(EINVAL,t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
-		} \
-		else { \
-			ds.count++; \
-			d|=m; \
-		} \
+#define XCHK(d,m) \
+	if (d&m) { \
+		CCERR_RET(EINVAL,t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
 	} \
 	else { \
-		break; \
+		ds.count++; \
+		d|=m; \
 	}
-#define X(f,d,m) \
+#define X(d,m) \
 	{ \
-		XCHK(f,d,m); \
+		XCHK(d,m); \
 		tq_discard(); \
 		continue; \
 	}
 
 			switch (t.type) {
-				case token_type_t::r_typedef:		X(DECLSPEC_STORAGE,ds.storage_class,SC_TYPEDEF);
-				case token_type_t::r_extern:		X(DECLSPEC_STORAGE,ds.storage_class,SC_EXTERN);
-				case token_type_t::r_static:		X(DECLSPEC_STORAGE,ds.storage_class,SC_STATIC);
-				case token_type_t::r_auto:		X(DECLSPEC_STORAGE,ds.storage_class,SC_AUTO);
-				case token_type_t::r_register:		X(DECLSPEC_STORAGE,ds.storage_class,SC_REGISTER);
-				case token_type_t::r_constexpr:		X(DECLSPEC_STORAGE,ds.storage_class,SC_CONSTEXPR);
-				case token_type_t::r_void:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_VOID);
-				case token_type_t::r_char:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_CHAR);
-				case token_type_t::r_short:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SHORT);
-				case token_type_t::r_int:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_INT);
-				case token_type_t::r_float:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_FLOAT);
-				case token_type_t::r_double:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_DOUBLE);
-				case token_type_t::r_signed:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_SIGNED);
-				case token_type_t::r_unsigned:		X(DECLSPEC_TYPE_SPEC,ds.type_specifier,TS_UNSIGNED);
-				case token_type_t::r_const:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_CONST);
-				case token_type_t::r_volatile:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_VOLATILE);
-				case token_type_t::r_near:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_NEAR);
-				case token_type_t::r_far:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_FAR);
-				case token_type_t::r_huge:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_HUGE);
-				case token_type_t::r_restrict:		X(DECLSPEC_TYPE_QUAL,ds.type_qualifier,TQ_RESTRICT);
+				case token_type_t::r_typedef:		X(ds.storage_class,SC_TYPEDEF);
+				case token_type_t::r_extern:		X(ds.storage_class,SC_EXTERN);
+				case token_type_t::r_static:		X(ds.storage_class,SC_STATIC);
+				case token_type_t::r_auto:		X(ds.storage_class,SC_AUTO);
+				case token_type_t::r_register:		X(ds.storage_class,SC_REGISTER);
+				case token_type_t::r_constexpr:		X(ds.storage_class,SC_CONSTEXPR);
+				case token_type_t::r_void:		X(ds.type_specifier,TS_VOID);
+				case token_type_t::r_char:		X(ds.type_specifier,TS_CHAR);
+				case token_type_t::r_short:		X(ds.type_specifier,TS_SHORT);
+				case token_type_t::r_int:		X(ds.type_specifier,TS_INT);
+				case token_type_t::r_float:		X(ds.type_specifier,TS_FLOAT);
+				case token_type_t::r_double:		X(ds.type_specifier,TS_DOUBLE);
+				case token_type_t::r_signed:		X(ds.type_specifier,TS_SIGNED);
+				case token_type_t::r_unsigned:		X(ds.type_specifier,TS_UNSIGNED);
+				case token_type_t::r_const:		X(ds.type_qualifier,TQ_CONST);
+				case token_type_t::r_volatile:		X(ds.type_qualifier,TQ_VOLATILE);
+				case token_type_t::r_near:		X(ds.type_qualifier,TQ_NEAR);
+				case token_type_t::r_far:		X(ds.type_qualifier,TQ_FAR);
+				case token_type_t::r_huge:		X(ds.type_qualifier,TQ_HUGE);
+				case token_type_t::r_restrict:		X(ds.type_qualifier,TQ_RESTRICT);
 
 				case token_type_t::r_long:
-					if (declspec&DECLSPEC_TYPE_SPEC) {
-						ds.count++;
+					ds.count++;
+					if (ds.type_specifier & TS_LONG) {
+						/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
+						if (ds.type_specifier & TS_LONGLONG)
+							CCERR_RET(EINVAL,pos,"declarator specifier 'long long' already specified");
 
-						if (ds.type_specifier & TS_LONG) {
-							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
-							if (ds.type_specifier & TS_LONGLONG)
-								CCERR_RET(EINVAL,pos,"declarator specifier 'long long' already specified");
-
-							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
-							tq_discard(); continue;
-						}
-						else {
-							if (ds.type_specifier & TS_LONG)
-								CCERR_RET(EINVAL,pos,"declarator specifier 'long' already specified");
-
-							ds.type_specifier |= TS_LONG;
-							tq_discard(); continue;
-						}
+						ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
+						tq_discard();
 					}
-					break;
+					else {
+						if (ds.type_specifier & TS_LONG)
+							CCERR_RET(EINVAL,pos,"declarator specifier 'long' already specified");
+
+						ds.type_specifier |= TS_LONG;
+						tq_discard();
+					}
+					continue;
 
 				case token_type_t::r_enum:
-					if (declspec&DECLSPEC_TYPE_SPEC) {
-						ds.count++;
+					ds.count++;
+					if (ds.type_specifier & TS_ENUM)
+						CCERR_RET(EINVAL,pos,"declarator specifier 'enum' already specified");
 
-						if (ds.type_specifier & TS_ENUM)
-							CCERR_RET(EINVAL,pos,"declarator specifier 'enum' already specified");
+					ds.type_specifier |= TS_ENUM;
+					tq_discard();
 
-						ds.type_specifier |= TS_ENUM;
+					/* enum { list }
+					 * enum identifier { list }
+					 * enum identifier */
+
+					if (tq_peek().type == token_type_t::identifier)
+						ds.type_identifier = std::move(tq_get());
+
+					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
 
-						/* enum { list }
-						 * enum identifier { list }
-						 * enum identifier */
-
-						if (tq_peek().type == token_type_t::identifier)
-							ds.type_identifier = std::move(tq_get());
-
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
-
-							if ((r=enumerator_list_parse(ds.enum_list)) < 1)
-								return r;
-						}
-
-						continue;
+						if ((r=enumerator_list_parse(ds.enum_list)) < 1)
+							return r;
 					}
-					break;
+					continue;
 
 				case token_type_t::r_struct:
-					if (declspec&DECLSPEC_TYPE_SPEC) {
-						ds.count++;
+					ds.count++;
+					if (ds.type_specifier & TS_STRUCT)
+						CCERR_RET(EINVAL,pos,"declarator specifier 'struct' already specified");
 
-						if (ds.type_specifier & TS_STRUCT)
-							CCERR_RET(EINVAL,pos,"declarator specifier 'struct' already specified");
+					ds.type_specifier |= TS_STRUCT;
+					tq_discard();
 
-						ds.type_specifier |= TS_STRUCT;
+					/* struct { list }
+					 * struct identifier { list }
+					 * struct identifier */
+
+					if (tq_peek().type == token_type_t::identifier)
+						ds.type_identifier = std::move(tq_get());
+
+					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
 
-						/* struct { list }
-						 * struct identifier { list }
-						 * struct identifier */
+						do {
+							if (tq_peek().type == token_type_t::closecurlybracket) {
+								tq_discard();
+								break;
+							}
 
-						if (tq_peek().type == token_type_t::identifier)
-							ds.type_identifier = std::move(tq_get());
+							struct_declaration_t declion;
 
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
-
-							do {
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
-									break;
-								}
-
-								struct_declaration_t declion;
-
-								if ((r=struct_declaration_parse(declion)) < 1)
-									return r;
-							} while(1);
-						}
-
-						continue;
+							if ((r=struct_declaration_parse(declion)) < 1)
+								return r;
+						} while(1);
 					}
-					break;
+					continue;
 
 				case token_type_t::r_union:
-					if (declspec&DECLSPEC_TYPE_SPEC) {
-						ds.count++;
+					ds.count++;
 
-						if (ds.type_specifier & TS_UNION)
-							CCERR_RET(EINVAL,pos,"declarator specifier 'union' already specified");
+					if (ds.type_specifier & TS_UNION)
+						CCERR_RET(EINVAL,pos,"declarator specifier 'union' already specified");
 
-						ds.type_specifier |= TS_UNION;
+					ds.type_specifier |= TS_UNION;
+					tq_discard();
+
+					/* union { list }
+					 * union identifier { list }
+					 * union identifier */
+					/* NTS: Unions are parsed the same as structs */
+
+					if (tq_peek().type == token_type_t::identifier)
+						ds.type_identifier = std::move(tq_get());
+
+					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
 
-						/* union { list }
-						 * union identifier { list }
-						 * union identifier */
-						/* NTS: Unions are parsed the same as structs */
+						do {
+							if (tq_peek().type == token_type_t::closecurlybracket) {
+								tq_discard();
+								break;
+							}
 
-						if (tq_peek().type == token_type_t::identifier)
-							ds.type_identifier = std::move(tq_get());
+							struct_declaration_t declion;
 
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
-
-							do {
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
-									break;
-								}
-
-								struct_declaration_t declion;
-
-								if ((r=struct_declaration_parse(declion)) < 1)
-									return r;
-							} while(1);
-						}
-
-						continue;
+							if ((r=struct_declaration_parse(declion)) < 1)
+								return r;
+						} while(1);
 					}
-					break;
+					continue;
 
 				default: break;
 			}
@@ -5544,7 +5519,7 @@ try_again_w_token:
 
 		/* unless asked not to parse type specifiers, it is an error not to specify one.
 		 * You can't say "static x" for example */
-		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0)
+		if (!(declspec & DECLSPEC_OPTIONAL) && ds.type_specifier == 0)
 			CCERR_RET(EINVAL,pos,"Type specifiers expected. Specify a type here");
 
 		/* sanity check */
@@ -5594,42 +5569,36 @@ try_again_w_token:
 #if 1//DEBUG
 		fprintf(stderr,"%s():\n",__FUNCTION__);
 
-		if (declspec & DECLSPEC_STORAGE) {
-			fprintf(stderr,"  storage class: 0x%lx",(unsigned long)ds.storage_class);
-			for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-			fprintf(stderr,"\n");
-		}
+		fprintf(stderr,"  storage class: 0x%lx",(unsigned long)ds.storage_class);
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		fprintf(stderr,"\n");
 
-		if (declspec & DECLSPEC_TYPE_SPEC) {
-			fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
-			for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-			if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
-			fprintf(stderr,"\n");
+		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
+		fprintf(stderr,"\n");
 
-			if (!ds.enum_list.empty()) {
-				fprintf(stderr,"    enum {\n");
-				for (auto &en : ds.enum_list) {
-					fprintf(stderr,"      ");
+		if (!ds.enum_list.empty()) {
+			fprintf(stderr,"    enum {\n");
+			for (auto &en : ds.enum_list) {
+				fprintf(stderr,"      ");
 
-					if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
-					else fprintf(stderr,"?");
-					fprintf(stderr,"\n");
+				if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
+				else fprintf(stderr,"?");
+				fprintf(stderr,"\n");
 
-					if (en.expr != ast_node_none) {
-						fprintf(stderr,"        expr:\n");
-						debug_dump_ast("          ",en.expr);
-					}
-
+				if (en.expr != ast_node_none) {
+					fprintf(stderr,"        expr:\n");
+					debug_dump_ast("          ",en.expr);
 				}
-				fprintf(stderr,"    }\n");
+
 			}
+			fprintf(stderr,"    }\n");
 		}
 
-		if (declspec & DECLSPEC_TYPE_QUAL) {
-			fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)ds.type_qualifier);
-			for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-			fprintf(stderr,"\n");
-		}
+		fprintf(stderr,"  type qualifier: 0x%lx",(unsigned long)ds.type_qualifier);
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+		fprintf(stderr,"\n");
 
 		fprintf(stderr,"\n");
 #endif
@@ -5659,7 +5628,7 @@ try_again_w_token:
 
 			tq_discard();
 
-			if ((r=declaration_specifiers_parse(ds,DECLSPEC_TYPE_QUAL|DECLSPEC_OPTIONAL)) < 1)
+			if ((r=declaration_specifiers_parse(ds,DECLSPEC_OPTIONAL)) < 1)
 				return r;
 
 			assert(ds.type_specifier == 0 && ds.storage_class == 0);
@@ -5792,7 +5761,7 @@ try_again_w_token:
 
 					parameter_t p;
 
-					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL|DECLSPEC_STORAGE|DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
 						return r;
 
 					if ((r=pointer_parse(p.ptr)) < 1)
@@ -6478,7 +6447,7 @@ try_again_w_token:
 
 				if ((r=chkerr()) < 1)
 					return r;
-				if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+				if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
 					return r;
 
 				declarator_t &declor = (*declion).new_declarator();
@@ -6527,7 +6496,7 @@ try_again_w_token:
 
 			if ((r=chkerr()) < 1)
 				return r;
-			if ((r=declaration_specifiers_parse((*declion).spec,DECLSPEC_TYPE_SPEC|DECLSPEC_TYPE_QUAL)) < 1)
+			if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
 				return r;
 
 			declarator_t &declor = (*declion).new_declarator();
