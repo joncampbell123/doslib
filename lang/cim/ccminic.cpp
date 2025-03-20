@@ -2164,18 +2164,11 @@ private:
 		return 1;
 	}
 
-	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
-		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral || t.type == token_type_t::anglestrliteral);
+	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator,ptrat* &p,ptrat* &f) {
 		const bool unicode = !(cslt == charstrliteral_t::type_t::CHAR);
-		ptrat *p,*f;
 		int32_t v;
 		int rr;
 
-		if (!t.v.strliteral.alloc(64))
-			return errno_return(ENOMEM);
-
-		p = (ptrat*)((char*)t.v.strliteral.data);
-		f = (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
 		do {
 			if (buf.peekb() == separator) {
 				buf.discardb();
@@ -2200,6 +2193,22 @@ private:
 			if ((rr=lgtok_strlit_wrch<cslt,ptrat>(p,f,v)) <= 0) CCERR_RET(rr,buf.pos,"invalid encoding for string");
 		} while(1);
 
+		return 1;
+	}
+
+	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
+		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral || t.type == token_type_t::anglestrliteral);
+		ptrat *p,*f;
+		int rr;
+
+		if (!t.v.strliteral.alloc(64))
+			return errno_return(ENOMEM);
+
+		p = (ptrat*)((char*)t.v.strliteral.data);
+		f = (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+
+		rr = lgtok_strlit_common_inner<cslt,ptrat>(buf,sfo,t,separator,p,f);
+
 		{
 			const size_t fo = size_t(p-((ptrat*)t.v.strliteral.data)) * sizeof(ptrat);
 			assert(fo <= t.v.strliteral.allocated);
@@ -2207,7 +2216,7 @@ private:
 			t.v.strliteral.shrinkfit();
 		}
 
-		return 1;
+		return rr;
 	}
 
 	bool is_hchar(unsigned char c) {
