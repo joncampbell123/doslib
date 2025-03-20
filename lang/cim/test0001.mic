@@ -283,3 +283,5 @@ union {
 };
 static const char *x = "hello\xff";
 static const char *x = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";
+struct test { int a, b, c; } x = { 1, 2, 3 };
+struct test { int a[3], b[5], c[7]; } x = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
