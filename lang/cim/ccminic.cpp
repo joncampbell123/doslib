@@ -4736,6 +4736,9 @@ try_again_w_token:
 		SCI_AUTO,
 		SCI_REGISTER,
 		SCI_CONSTEXPR,		// 5
+		SCI_INLINE,
+		SCI_CONSTEVAL,
+		SCI_CONSTINIT,
 
 		SCI__MAX
 	};
@@ -4746,7 +4749,10 @@ try_again_w_token:
 		"static",
 		"auto",
 		"register",
-		"constexpr"		// 5
+		"constexpr",		// 5
+		"inline",
+		"consteval",
+		"constinit"
 	};
 
 	typedef unsigned int storage_class_t;
@@ -4758,6 +4764,9 @@ try_again_w_token:
 	X(AUTO);
 	X(REGISTER);
 	X(CONSTEXPR);			// 5
+	X(INLINE);
+	X(CONSTEVAL);
+	X(CONSTINIT);
 #undef X
 
 	///////////////////////////////////////
@@ -5347,6 +5356,9 @@ try_again_w_token:
 			case token_type_t::r_enum: return true;
 			case token_type_t::r_struct: return true;
 			case token_type_t::r_union: return true;
+			case token_type_t::r_inline: return true;
+			case token_type_t::r_consteval: return true;
+			case token_type_t::r_constinit: return true;
 			default: break;
 		};
 
@@ -5382,6 +5394,9 @@ try_again_w_token:
 				case token_type_t::r_auto:		X(ds.storage_class,SC_AUTO);
 				case token_type_t::r_register:		X(ds.storage_class,SC_REGISTER);
 				case token_type_t::r_constexpr:		X(ds.storage_class,SC_CONSTEXPR);
+				case token_type_t::r_inline:		X(ds.storage_class,SC_INLINE);
+				case token_type_t::r_consteval:		X(ds.storage_class,SC_CONSTEVAL);
+				case token_type_t::r_constinit:		X(ds.storage_class,SC_CONSTINIT);
 				case token_type_t::r_void:		X(ds.type_specifier,TS_VOID);
 				case token_type_t::r_char:		X(ds.type_specifier,TS_CHAR);
 				case token_type_t::r_short:		X(ds.type_specifier,TS_SHORT);
@@ -5530,6 +5545,10 @@ try_again_w_token:
 
 			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
 			if (sc_t && !only_one_bit_set(sc_t))
+				CCERR_RET(EINVAL,pos,"Multiple storage classes specified");
+
+			const storage_class_t ce_t = ds.storage_class & (SC_CONSTEXPR|SC_CONSTEVAL|SC_CONSTINIT); /* only one of */
+			if (ce_t && !only_one_bit_set(ce_t))
 				CCERR_RET(EINVAL,pos,"Multiple storage classes specified");
 		}
 
