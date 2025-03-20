@@ -2878,15 +2878,9 @@ try_again:	t = token_t();
 					else if (buf.peekb() == '=') { t.type = token_type_t::pipeequals; buf.discardb(); } /* |= */
 					break;
 				case '.':
-					if (lst.flags & lgtok_state_t::FL_MSASM) {
-						/* ASM directives like .386p .flat, etc */
-						return lgtok_asm_text(lst,buf,sfo,t);
-					}
-					else {
-						t.type = token_type_t::period; buf.discardb();
-						if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
-						else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
-					}
+					t.type = token_type_t::period; buf.discardb();
+					if (buf.peekb() == '*') { t.type = token_type_t::periodstar; buf.discardb(); } /* .* */
+					else if (buf.peekb(0) == '.' && buf.peekb(1) == '.') { t.type = token_type_t::ellipsis; buf.discardb(2); } /* ... */
 					break;
 				case ',':
 					t.type = token_type_t::comma; buf.discardb();
@@ -2901,16 +2895,9 @@ try_again:	t = token_t();
 					break;
 				case '{':
 					t.type = token_type_t::opencurlybracket; buf.discardb();
-					if (lst.flags & lgtok_state_t::FL_MSASM) {
-						lst.curlies++;
-					}
 					break;
 				case '}':
 					t.type = token_type_t::closecurlybracket; buf.discardb();
-					if (lst.flags & lgtok_state_t::FL_MSASM) {
-						if (--lst.curlies == 0)
-							lst.flags &= ~lgtok_state_t::FL_MSASM;
-					}
 					break;
 				case '(':
 					t.type = token_type_t::openparenthesis; buf.discardb();
@@ -2981,10 +2968,6 @@ try_again:	t = token_t();
 					buf.discardb();
 					t.type = token_type_t::newline;
 					lst.flags |= lgtok_state_t::FL_NEWLINE;
-					if (lst.flags & lgtok_state_t::FL_MSASM) {
-						if (lst.curlies == 0)
-							lst.flags &= ~lgtok_state_t::FL_MSASM;
-					}
 					if (lst.flags & lgtok_state_t::FL_ARROWSTR) {
 						if (lst.curlies == 0)
 							lst.flags &= ~lgtok_state_t::FL_ARROWSTR;
