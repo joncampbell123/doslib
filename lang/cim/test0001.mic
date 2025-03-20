@@ -290,3 +290,8 @@ struct test { int a, test, b; } x = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
 struct test { int a, test, b; } x = { a: 5, b: 7*8, c: a*b };
 static inline int d() { return 3; }
 static constexpr inline int d() { return 4; }
+
+#define X(x) static int d(int y) { return y*x; }
+X(1);
+X(2);
+

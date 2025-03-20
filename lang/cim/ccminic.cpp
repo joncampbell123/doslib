@@ -3935,7 +3935,7 @@ try_again:	t = token_t();
 			return r;
 
 		if (t.type != token_type_t::identifier)
-			return errno_return(EINVAL);
+			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
 		/* if the next character is '(' (without a space), it's a parameter list.
@@ -3951,17 +3951,17 @@ try_again:	t = token_t();
 				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 				if (t.type == token_type_t::newline)
-					return errno_return(EINVAL);
+					CCERR_RET(EINVAL,t.pos,"Unexpected newline");
 				if (t.type == token_type_t::closeparenthesis)
 					break;
 				if (macro.flags & pptok_macro_t::FL_VARIADIC) /* you can't put additional params past the ... or even a comma */
-					return errno_return(EINVAL);
+					CCERR_RET(EINVAL,t.pos,"Cannot define macro parameters after variadic ellipsis");
 				if (t.type == token_type_t::ellipsis) {
 					macro.flags |= pptok_macro_t::FL_VARIADIC;
 					continue;
 				}
 				if (t.type != token_type_t::identifier)
-					return errno_return(EINVAL);
+					CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
 				eat_whitespace(buf,sfo);
 
@@ -3978,7 +3978,7 @@ try_again:	t = token_t();
 
 				if (buf.peekb() == ',') { buf.discardb(); }
 				else if (buf.peekb() == ')') { buf.discardb(); break; }
-				else return errno_return(EINVAL);
+				else CCERR_RET(EINVAL,buf.pos,"Unexpected characters in macro parameter list");
 			} while (1);
 		}
 
