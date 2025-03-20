@@ -5018,6 +5018,11 @@ try_again_w_token:
 		std::vector<enumerator_t>		enum_list;
 		unsigned int				count = 0;
 
+		bool empty(void) const {
+			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
+				type_identifier.type == token_type_t::none && enum_list.empty() && count == 0;
+		}
+
 		declaration_specifiers_t() { }
 		declaration_specifiers_t(const declaration_specifiers_t &) = delete;
 		declaration_specifiers_t &operator=(const declaration_specifiers_t &) = delete;
@@ -5818,7 +5823,7 @@ try_again_w_token:
 							/* if no declaration specifiers were given (just a bare identifier
 							 * aka the old 1980s syntax), then you shouldn't be allowed to define
 							 * a default value. */
-							if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+							if (p.spec.empty())
 								return errno_return(EINVAL);
 
 							tq_discard();
@@ -5858,7 +5863,7 @@ try_again_w_token:
 			int cls;
 
 			for (const auto &p : dd.parameters) {
-				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0)
+				if (p.spec.empty())
 					cls = 0;
 				else
 					cls = 1;
@@ -5935,8 +5940,7 @@ try_again_w_token:
 							}
 
 							parameter_t &fp = dd.parameters[i];
-							if (fp.spec.storage_class == 0 && fp.spec.type_specifier == 0 &&
-								fp.spec.type_qualifier == 0 && fp.ptr.empty()) {
+							if (fp.spec.empty() && fp.ptr.empty()) {
 								fp.spec = std::move(s_declion.spec);
 								fp.ptr = std::move(d.ptr);
 							}
@@ -6044,7 +6048,7 @@ try_again_w_token:
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
 			/* any parameter not yet described, is an error */
 			for (const auto &p : dd.parameters) {
-				if (p.spec.storage_class == 0 && p.spec.type_specifier == 0 && p.spec.type_qualifier == 0) {
+				if (p.spec.empty()) {
 					assert(p.ddecl != NULL);
 					assert(p.ddecl->name.type == token_type_t::identifier);
 					CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
