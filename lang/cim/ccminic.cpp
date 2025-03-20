@@ -2514,7 +2514,7 @@ private:
 				}
 				else if (r >= 8) {
 					/* uh, 0<digits> that isn't octal is invalid */
-					return errno_return(EINVAL);
+					CCERR_RET(EINVAL,buf.pos,"Invalid octal digit");
 				}
 				else {
 					/* it's just zero and nothing more */
