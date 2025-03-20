@@ -399,6 +399,7 @@ namespace CCMiniC {
 	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
 	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
 	static constexpr unicode_char_t unicode_nothing = unicode_char_t(-3l);
+	static constexpr unicode_char_t unicode_bad_escape = unicode_char_t(-4l);
 
 	void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
 		if (c < unicode_char_t(0)) {
@@ -2118,7 +2119,7 @@ private:
 					}
 					break; }
 				default:
-					return int32_t(-1);
+					return unicode_bad_escape;
 			}
 		}
 
@@ -2195,7 +2196,8 @@ private:
 
 			v = lgtok_cslitget(buf,sfo,unicode);
 			if (v == unicode_nothing) continue;
-			if ((rr=lgtok_strlit_wrch<cslt,ptrat>(p,f,v)) <= 0) return rr;
+			if (v == unicode_bad_escape) CCERR_RET(EINVAL,buf.pos,"Invalid escape");
+			if ((rr=lgtok_strlit_wrch<cslt,ptrat>(p,f,v)) <= 0) CCERR_RET(rr,buf.pos,"invalid encoding for string");
 		} while(1);
 
 		{
