@@ -6222,10 +6222,10 @@ try_again_w_token:
 				return r;
 
 			if (tq_get().type != token_type_t::closeparenthesis)
-				return errno_return(EINVAL);
+				CCERR_RET(EINVAL,tq_peek().pos,"Subexpression is missing closing parenthesis");
 		}
 		else {
-			return errno_return(EINVAL);
+			CCERR_RET(EINVAL,tq_peek().pos,"Expected primary expression");
 		}
 
 		return 1;
@@ -7261,7 +7261,7 @@ try_again_w_token:
 		 * Not C++ rules where you can just do it wherever. */
 		do {
 			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
-				return errno_return(EINVAL);
+				CCERR_RET(EINVAL,tq_peek().pos,"Missing closing curly brace } in compound statement");
 
 			if (tq_peek().type == token_type_t::semicolon)
 				break;
