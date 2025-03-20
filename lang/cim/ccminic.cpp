@@ -5407,18 +5407,16 @@ try_again_w_token:
 
 						if (ds.type_specifier & TS_LONG) {
 							/* second "long" promote to "long long" because GCC allows it too i.e. "long int long" is the same as "long long int" */
-							if (ds.type_specifier & TS_LONGLONG) {
-								CCerr(pos,"declarator specifier 'long long' already specified");
-								return errno_return(EINVAL);
-							}
+							if (ds.type_specifier & TS_LONGLONG)
+								CCERR_RET(EINVAL,pos,"declarator specifier 'long long' already specified");
+
 							ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
 							tq_discard(); continue;
 						}
 						else {
-							if (ds.type_specifier & TS_LONG) {
-								CCerr(pos,"declarator specifier 'long' already specified");
-								return errno_return(EINVAL);
-							}
+							if (ds.type_specifier & TS_LONG)
+								CCERR_RET(EINVAL,pos,"declarator specifier 'long' already specified");
+
 							ds.type_specifier |= TS_LONG;
 							tq_discard(); continue;
 						}
@@ -5429,10 +5427,9 @@ try_again_w_token:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
 						ds.count++;
 
-						if (ds.type_specifier & TS_ENUM) {
-							CCerr(pos,"declarator specifier 'enum' already specified");
-							return errno_return(EINVAL);
-						}
+						if (ds.type_specifier & TS_ENUM)
+							CCERR_RET(EINVAL,pos,"declarator specifier 'enum' already specified");
+
 						ds.type_specifier |= TS_ENUM;
 						tq_discard();
 
@@ -5458,10 +5455,9 @@ try_again_w_token:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
 						ds.count++;
 
-						if (ds.type_specifier & TS_STRUCT) {
-							CCerr(pos,"declarator specifier 'struct' already specified");
-							return errno_return(EINVAL);
-						}
+						if (ds.type_specifier & TS_STRUCT)
+							CCERR_RET(EINVAL,pos,"declarator specifier 'struct' already specified");
+
 						ds.type_specifier |= TS_STRUCT;
 						tq_discard();
 
@@ -5496,10 +5492,9 @@ try_again_w_token:
 					if (declspec&DECLSPEC_TYPE_SPEC) {
 						ds.count++;
 
-						if (ds.type_specifier & TS_UNION) {
-							CCerr(pos,"declarator specifier 'union' already specified");
-							return errno_return(EINVAL);
-						}
+						if (ds.type_specifier & TS_UNION)
+							CCERR_RET(EINVAL,pos,"declarator specifier 'union' already specified");
+
 						ds.type_specifier |= TS_UNION;
 						tq_discard();
 
@@ -5540,31 +5535,23 @@ try_again_w_token:
 		} while (1);
 
 		/* unless told otherwise, it is an error for this code not to parse any tokens */
-		if (!(declspec & DECLSPEC_OPTIONAL) && ds.count == 0) {
-			CCerr(pos,"Declaration specifiers expected");
-			return errno_return(EINVAL);
-		}
+		if (!(declspec & DECLSPEC_OPTIONAL) && ds.count == 0)
+			CCERR_RET(EINVAL,pos,"Declaration specifiers expected");
 
 		/* unless asked not to parse type specifiers, it is an error not to specify one.
 		 * You can't say "static x" for example */
-		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0) {
-			CCerr(pos,"Type specifiers expected. Specify a type here");
-			return errno_return(EINVAL);
-		}
+		if (!(declspec & DECLSPEC_OPTIONAL) && (declspec & DECLSPEC_TYPE_SPEC) && ds.type_specifier == 0)
+			CCERR_RET(EINVAL,pos,"Type specifiers expected. Specify a type here");
 
 		/* sanity check */
 		{
 			const type_qualifier_t mm_t = ds.type_qualifier & (TQ_NEAR|TQ_FAR|TQ_HUGE); /* only one of */
-			if (mm_t && !only_one_bit_set(mm_t)) {
-				CCerr(pos,"Multiple storage classes specified");
-				return errno_return(EINVAL);
-			}
+			if (mm_t && !only_one_bit_set(mm_t))
+				CCERR_RET(EINVAL,pos,"Multiple storage classes specified");
 
 			const storage_class_t sc_t = ds.storage_class & (SC_TYPEDEF|SC_EXTERN|SC_STATIC|SC_AUTO|SC_REGISTER); /* only one of */
-			if (sc_t && !only_one_bit_set(sc_t)) {
-				CCerr(pos,"Multiple storage classes specified");
-				return errno_return(EINVAL);
-			}
+			if (sc_t && !only_one_bit_set(sc_t))
+				CCERR_RET(EINVAL,pos,"Multiple storage classes specified");
 		}
 
 		/* "long int" -> "long"
@@ -5581,31 +5568,22 @@ try_again_w_token:
 
 		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
-			if (sign_t && !only_one_bit_set(sign_t)) {
-				CCerr(pos,"Multiple type specifiers (signed/unsigned)");
-				return errno_return(EINVAL);
-			}
+			if (sign_t && !only_one_bit_set(sign_t))
+				CCERR_RET(EINVAL,pos,"Multiple type specifiers (signed/unsigned)");
 
 			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION); /* only one of */
-			if (intlen_t && !only_one_bit_set(intlen_t)) {
-				CCerr(pos,"Multiple type specifiers (int/char/void)");
-				return errno_return(EINVAL);
-			}
+			if (intlen_t && !only_one_bit_set(intlen_t))
+				CCERR_RET(EINVAL,pos,"Multiple type specifiers (int/char/void)");
 
 			const type_specifier_t floattype_t = ds.type_specifier & (TS_FLOAT|TS_DOUBLE); /* only one of */
-			if (floattype_t && !only_one_bit_set(floattype_t)) {
-				CCerr(pos,"Multiple type specifiers (float)");
-				return errno_return(EINVAL);
-			}
+			if (floattype_t && !only_one_bit_set(floattype_t))
+				CCERR_RET(EINVAL,pos,"Multiple type specifiers (float)");
 
-			if (intlen_t && floattype_t) {
-				CCerr(pos,"Multiple type specifiers (float+int)");
-				return errno_return(EINVAL); /* float or integer/char, you can't have both */
-			}
-			if (floattype_t && sign_t) {
-				CCerr(pos,"Multiple type specifiers (float+signed/unsigned)");
-				return errno_return(EINVAL); /* float/double and signed/unsigned don't mix */
-			}
+			if (intlen_t && floattype_t)
+				CCERR_RET(EINVAL,pos,"Multiple type specifiers (float+int)");
+
+			if (floattype_t && sign_t)
+				CCERR_RET(EINVAL,pos,"Multiple type specifiers (float+signed/unsigned)");
 		}
 
 #if 1//DEBUG
