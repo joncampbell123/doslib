@@ -2266,7 +2266,7 @@ private:
 	}
 
 	struct lgtok_state_t {
-		unsigned int		flags = 0;
+		unsigned int		flags = FL_NEWLINE;
 		unsigned int		curlies = 0;
 
 		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
