@@ -2261,7 +2261,7 @@ private:
 			return 1;
 		}
 		else {
-			return errno_return(EINVAL);
+			abort();//should not happen
 		}
 	}
 
@@ -2298,12 +2298,12 @@ private:
 		if (buf.peekb() == '#') {
 			t.type = token_type_t::ppidentifier;
 			buf.discardb();
-			while (is_whitespace(buf.peekb())) {
-				if (is_newline(buf.peekb()))
-					return errno_return(EINVAL);
 
+			while (is_whitespace(buf.peekb()))
 				buf.discardb();
-			}
+
+			if (is_newline(buf.peekb()))
+				CCERR_RET(EINVAL,t.pos,"Preprocessor directive with no directive");
 		}
 		*p++ = buf.getb();
 		while (is_asm_text_char(buf.peekb())) {
@@ -2391,12 +2391,12 @@ private:
 		if (buf.peekb() == '#') {
 			t.type = token_type_t::ppidentifier;
 			buf.discardb();
-			while (is_whitespace(buf.peekb())) {
-				if (is_newline(buf.peekb()))
-					return errno_return(EINVAL);
 
+			while (is_whitespace(buf.peekb()))
 				buf.discardb();
-			}
+
+			if (is_newline(buf.peekb()))
+				CCERR_RET(EINVAL,t.pos,"Preprocessor directive with no directive");
 		}
 		*p++ = buf.getb();
 		while (is_identifier_char(buf.peekb())) {
