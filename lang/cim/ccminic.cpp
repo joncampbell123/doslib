@@ -1833,10 +1833,10 @@ namespace CCMiniC {
 	}
 
 #define CCERR_RET(code,pos,...) \
-	{ \
+	do { \
 		CCerr(pos,__VA_ARGS__); \
 		return errno_return(code); \
-	}
+	} while(0)
 
 	struct declaration_t;
 
@@ -5565,6 +5565,7 @@ try_again_w_token:
 				ds.type_specifier &= ~TS_INT;
 		}
 
+		/* skip type specifier checks if and only "long double" because "long double" would fail the below checks */
 		if (ds.type_specifier != (TS_LONG|TS_DOUBLE)) {
 			const type_specifier_t sign_t = ds.type_specifier & (TS_SIGNED|TS_UNSIGNED); /* only one of */
 			if (sign_t && !only_one_bit_set(sign_t))
@@ -5739,31 +5740,29 @@ try_again_w_token:
 		}
 
 		do {
-			while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
+			if (tq_peek().type == token_type_t::closeparenthesis) {
+				if (indent == 0) break;
 				tq_discard();
 				indent--;
 			}
+			else if (tq_peek().type == token_type_t::opensquarebracket) {
+				tq_discard();
 
-			do {
-				if (tq_peek().type == token_type_t::opensquarebracket) {
-					tq_discard();
-
-					/* NTS: "[]" is acceptable */
-					ast_node_id_t expr = ast_node_none;
-					if (tq_peek().type != token_type_t::closesquarebracket) {
-						if ((r=conditional_expression(expr)) < 1)
-							return r;
-					}
-
-					dd.arraydef.push_back(std::move(expr));
-					if (tq_get().type != token_type_t::closesquarebracket)
-						return errno_return(EINVAL);
+				/* NTS: "[]" is acceptable */
+				ast_node_id_t expr = ast_node_none;
+				if (tq_peek().type != token_type_t::closesquarebracket) {
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
 				}
-				else {
-					break;
-				}
-			} while(1);
-		} while (indent > 0);
+
+				dd.arraydef.push_back(std::move(expr));
+				if (tq_get().type != token_type_t::closesquarebracket)
+					return errno_return(EINVAL);
+			}
+			else {
+				break;
+			}
+		} while (1);
 
 		/* you are allowed ONE parameter list! ONE! */
 		if (tq_peek().type == token_type_t::openparenthesis) {
@@ -5839,7 +5838,7 @@ try_again_w_token:
 			}
 
 			if (tq_get().type != token_type_t::closeparenthesis)
-				return errno_return(EINVAL);
+				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
 		}
 
 		while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
@@ -5848,7 +5847,7 @@ try_again_w_token:
 		}
 
 		if (indent > 0)
-			return errno_return(EINVAL);
+			CCERR_RET(EINVAL,tq_peek().pos,"Missing closing parenthesis");
 
 		/* parameter validation:
 		 * you can have either all parameter_type parameters,
