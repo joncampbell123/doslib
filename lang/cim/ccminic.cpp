@@ -2798,8 +2798,7 @@ try_again:	t = token_t();
 					break;
 				case '#':
 					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-						fprintf(stderr,"Preprocessor directives not allowed in __asm blocks\n");
-						return errno_return(EINVAL); /* NO preprocessor directives allowed inside a __asm block. Open Watcom doesn't allow it either */
+						CCERR_RET(EINVAL,buf.pos,"Preprocessor directives not allowed in __asm blocks");
 					}
 					else {
 						t.type = token_type_t::pound; buf.discardb();
@@ -2821,7 +2820,7 @@ try_again:	t = token_t();
 					if (is_asm_text_first_char(buf.peekb()))
 						return lgtok_asm_text(lst,buf,sfo,t);
 					else
-						return errno_return(ESRCH);
+						CCERR_RET(ESRCH,buf.pos,"Unexpected symbol at");
 					break;
 			}
 		}
@@ -3001,7 +3000,7 @@ try_again:	t = token_t();
 						}
 					}
 					else {
-						return errno_return(ESRCH);
+						CCERR_RET(ESRCH,buf.pos,"Unexpected symbol at");
 					}
 					break;
 			}
