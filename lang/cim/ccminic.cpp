@@ -1814,6 +1814,25 @@ namespace CCMiniC {
 		bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
 	};
 
+	void CCerr(const position_t &pos,const char *fmt,...) {
+		va_list va;
+
+		fprintf(stderr,"Error");
+		if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
+		fprintf(stderr,": ");
+
+		va_start(va,fmt);
+		vfprintf(stderr,fmt,va);
+		va_end(va);
+		fprintf(stderr,"\n");
+	}
+
+#define CCERR_RET(code,pos,...) \
+	{ \
+		CCerr(pos,__VA_ARGS__); \
+		return errno_return(code); \
+	}
+
 	struct declaration_t;
 
 	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
@@ -5204,19 +5223,6 @@ try_again_w_token:
 			return tq[tq_tail++];
 		}
 
-		void CCerr(const position_t &pos,const char *fmt,...) {
-			va_list va;
-
-			fprintf(stderr,"Error");
-			if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
-			fprintf(stderr,": ");
-
-			va_start(va,fmt);
-			vfprintf(stderr,fmt,va);
-			va_end(va);
-			fprintf(stderr,"\n");
-		}
-
 		int chkerr(void) {
 			const token_t &t = tq_peek();
 			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
@@ -5356,8 +5362,7 @@ try_again_w_token:
 #define XCHK(f,d,m) \
 	if (declspec&f) { \
 		if (d&m) { \
-			CCerr(t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
-			return errno_return(EINVAL); \
+			CCERR_RET(EINVAL,t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
 		} \
 		else { \
 			ds.count++; \
@@ -5745,12 +5750,16 @@ try_again_w_token:
 				return r;
 		}
 
-		if (tq_peek().type == token_type_t::identifier && !(flags & DIRDECL_NO_IDENTIFIER))
+		if (tq_peek().type == token_type_t::identifier) {
+			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
 			dd.name = std::move(tq_get());
-		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier)
+		}
+		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier) {
 			dd.name = std::move(token_t(token_type_t::none));
-		else
-			return errno_return(EINVAL);
+		}
+		else {
+			CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
+		}
 
 		do {
 			while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
