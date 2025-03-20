@@ -282,3 +282,4 @@ union {
 	int a,b;
 };
 static const char *x = "hello\xff";
+static const char *x = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";

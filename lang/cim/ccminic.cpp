@@ -2110,13 +2110,15 @@ private:
 					}
 					break; }
 				case 'x': {
-					int n;
+					int n,count=0;
 
 					v = 0;
 					while ((n=cc_parsedigit(buf.peekb(),16)) >= 0) {
 						v = int32_t(((unsigned int)v << 4u) | (unsigned int)n);
 						buf.discardb();
+						count++;
 					}
+					if (count < 2) return unicode_eof;
 					break; }
 				default:
 					return unicode_bad_escape;
