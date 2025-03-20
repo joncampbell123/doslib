@@ -2324,7 +2324,7 @@ private:
 				const size_t wo = size_t(p-t.v.strliteral.as_binary());
 
 				if (wo >= 120)
-					return errno_return(ENAMETOOLONG);
+					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
 				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
 					return errno_return(ENOMEM);
@@ -2417,7 +2417,7 @@ private:
 				const size_t wo = size_t(p-t.v.strliteral.as_binary());
 
 				if (wo >= 120)
-					return errno_return(ENAMETOOLONG);
+					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
 				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
 					return errno_return(ENOMEM);
