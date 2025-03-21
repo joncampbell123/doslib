@@ -3231,7 +3231,7 @@ try_again:	t = token_t();
 			return r;
 
 		if (t.type != token_type_t::identifier)
-			return errno_return(EINVAL);
+			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
 		do {
@@ -3748,7 +3748,7 @@ try_again:	t = token_t();
 			return r;
 
 		if (t.type != token_type_t::identifier)
-			return errno_return(EINVAL);
+			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
 		do {
@@ -4094,10 +4094,8 @@ try_again:	t = token_t();
 		fprintf(stderr,"Hello macro '%s'\n",t.v.strliteral.to_str().c_str());
 #endif
 
-		if (pst.macro_expansion_counter > 1024) {
-			fprintf(stderr,"Too many macro expansions\n");
-			return errno_return(ELOOP);
-		}
+		if (pst.macro_expansion_counter > 1024)
+			CCERR_RET(ELOOP,buf.pos,"Too many macro expansions");
 
 		std::vector< std::vector<token_t> > params;
 		std::vector< rbuf > params_str;
@@ -5302,7 +5300,7 @@ try_again_w_token:
 			enumerator_t en;
 
 			if (tq_peek().type != token_type_t::identifier)
-				return errno_return(EINVAL);
+				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
 			en.name = std::move(tq_get());
 
