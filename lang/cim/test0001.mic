@@ -295,3 +295,21 @@ static constexpr inline int d() { return 4; }
 X(1);
 X(2);
 
+static int d(int x) {
+	static const int s = 50;
+	switch (x) {
+		case 0:
+			return 0;
+		case 1 ... 3:
+			return 1;
+		case 4 ... 19:
+			return 2;
+		case 20 ... s:
+			return 3;
+		default:
+			break;
+	};
+
+	return x;
+}
+

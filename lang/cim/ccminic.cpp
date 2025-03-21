@@ -813,6 +813,7 @@ namespace CCMiniC {
 		op_typecast,				// 270
 		op_dinit_array,
 		op_dinit_field,
+		op_gcc_range,
 
 		__MAX__
 	};
@@ -1419,7 +1420,8 @@ namespace CCMiniC {
 		"op:array_define",
 		"op:typecast",				// 270
 		"op:dinit_array",
-		"op:dinit_field"
+		"op:dinit_field",
+		"op:gcc-range"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -7429,8 +7431,29 @@ try_again_w_token:
 		else if (tq_peek().type == token_type_t::r_case) { /* case constant_expression : */
 			tq_discard();
 			ast_node_id_t expr = ast_node_none;
+
 			if ((r=conditional_expression(expr)) < 1)
 				return r;
+
+			if (tq_peek().type == token_type_t::ellipsis) {
+				/* GNU GCC extension: first ... last ranges */
+				/* valid in case statements:
+				 *   case 1 ... 3:
+				 * valid in designated initializers:
+				 *   int[] = { [1 ... 3] = 5 } */
+				tq_discard();
+
+				ast_node_id_t op1 = expr;
+				ast_node_id_t op2 = ast_node_none;
+				expr = ast_node_alloc(token_type_t::op_gcc_range);
+
+				if ((r=conditional_expression(op2)) < 1)
+					return r;
+
+				ast_node(expr).set_child(op1); ast_node(op1).release();
+				ast_node(op1).set_next(op2); ast_node(op2).release();
+			}
+
 			if (tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
