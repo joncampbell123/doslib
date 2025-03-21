@@ -7150,6 +7150,25 @@ try_again_w_token:
 							if ((r=conditional_expression(asq)) < 1)
 								return r;
 
+							if (tq_peek().type == token_type_t::ellipsis) {
+								/* GNU GCC extension: first ... last ranges */
+								/* valid in case statements:
+								 *   case 1 ... 3:
+								 * valid in designated initializers:
+								 *   int[] = { [1 ... 3] = 5 } */
+								tq_discard();
+
+								ast_node_id_t op1 = asq;
+								ast_node_id_t op2 = ast_node_none;
+								asq = ast_node_alloc(token_type_t::op_gcc_range);
+
+								if ((r=conditional_expression(op2)) < 1)
+									return r;
+
+								ast_node(asq).set_child(op1); ast_node(op1).release();
+								ast_node(op1).set_next(op2); ast_node(op2).release();
+							}
+
 							if (tq_get().type != token_type_t::closesquarebracket)
 								return errno_return(EINVAL);
 

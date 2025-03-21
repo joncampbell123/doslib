@@ -313,3 +313,4 @@ static int d(int x) {
 	return x;
 }
 
+static int x[] = { 2, 3, [5] = 4, [10 ... 19] = 5 };
