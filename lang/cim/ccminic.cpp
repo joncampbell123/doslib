@@ -7188,7 +7188,7 @@ try_again_w_token:
 
 					if (c99_dinit) {
 						if (tq_get().type != token_type_t::equal)
-							return errno_return(EINVAL);
+							CCERR_RET(EINVAL,tq_peek().pos,"Expected equal sign");
 
 						ast_node_id_t i_expr = ast_node_none;
 						if ((r=initializer(i_expr)) < 1)
