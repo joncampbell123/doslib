@@ -814,6 +814,7 @@ namespace CCMiniC {
 		op_dinit_array,
 		op_dinit_field,
 		op_gcc_range,
+		op_bitfield_range,
 
 		__MAX__
 	};
@@ -1421,7 +1422,8 @@ namespace CCMiniC {
 		"op:typecast",				// 270
 		"op:dinit_array",
 		"op:dinit_field",
-		"op:gcc-range"
+		"op:gcc-range",
+		"op:bitfield-range"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6072,8 +6074,44 @@ try_again_w_token:
 		if (tq_peek().type == token_type_t::colon) {
 			tq_discard();
 
-			if ((r=conditional_expression(declor.bitfield_expr)) < 1)
-				return r;
+			/* This compiler extension: Take the GCC range syntax and make our own
+			 * extension that allows specifying the explicit range of bits that make
+			 * up the bitfield, rather than just a length and having to count bits.
+			 *
+			 * [expr]     1-bit field at bit number (expr)
+			 * [a ... b]  bit field starting at a, extends to b inclusive.
+			 *            For example [ 4 ... 7 ] means a 4-bit field, LSB at bit 4,
+			 *            MSB at bit 7. */
+			if (tq_peek().type == token_type_t::opensquarebracket) {
+				tq_discard();
+
+				declor.bitfield_expr = ast_node_alloc(token_type_t::op_bitfield_range);
+
+				{
+					ast_node_id_t expr = ast_node_none;
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
+
+					ast_node(declor.bitfield_expr).set_child(expr); ast_node(expr).release();
+
+					if (tq_peek().type == token_type_t::ellipsis) {
+						tq_discard();
+
+						ast_node_id_t expr2 = ast_node_none;
+						if ((r=conditional_expression(expr2)) < 1)
+							return r;
+
+						ast_node(expr).set_next(expr2); ast_node(expr2).release();
+					}
+				}
+
+				if (tq_get().type != token_type_t::closesquarebracket)
+					CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
+			}
+			else {
+				if ((r=conditional_expression(declor.bitfield_expr)) < 1)
+					return r;
+			}
 		}
 
 		return 1;
