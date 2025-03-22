@@ -323,7 +323,8 @@ struct tt2 {
 	unsigned int	b:2;
 };
 
-/* This is our extension to the struct bitfield syntax that allows explicit bitfield length and starting bit */
+/* This is our extension to the struct bitfield syntax that allows explicit bitfield length and starting bit.
+   For consistency reasons, the syntax within the brackets are exactly the same as GCC's range syntax for case statements and designated init lists */
 struct tt3 {
 	unsigned int	x:[0 ... 3];
 	unsigned int	y:[4 ... 6];
