@@ -5060,7 +5060,6 @@ try_again_w_token:
 		declaration_specifiers_t		spec;
 		declarator_t*				decl = NULL; /* because this type isn't "complete" yet at this point */
 		std::vector<pointer_t>			ptr;
-		ast_node_id_t				initval = ast_node_none;
 
 		parameter_t() { }
 		parameter_t(const parameter_t &) = delete;
@@ -5851,16 +5850,12 @@ try_again_w_token:
 	parameter_t::~parameter_t() {
 		if (decl) delete decl;
 		decl = NULL;
-
-		if (initval != ast_node_none)
-			ast_node(initval).release();
 	}
 
 	void parameter_t::common_move(parameter_t &o) {
 		spec = std::move(o.spec);
 		ptr = std::move(o.ptr);
 		decl = o.decl; o.decl = NULL;
-		initval = o.initval; o.initval = ast_node_none;
 	}
 
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags) {
@@ -5990,7 +5985,7 @@ try_again_w_token:
 								return errno_return(EINVAL);
 
 							tq_discard();
-							if ((r=initializer(p.initval)) < 1)
+							if ((r=initializer(p.decl->initval)) < 1)
 								return r;
 						}
 					}
@@ -6195,11 +6190,11 @@ try_again_w_token:
 						if (expr != ast_node_none)
 							debug_dump_ast("        ",expr);
 					}
-				}
 
-				if (p.initval != ast_node_none) {
-					fprintf(stderr,"      init:\n");
-					debug_dump_ast("        ",p.initval);
+					if (p.decl->initval != ast_node_none) {
+						fprintf(stderr,"      init:\n");
+						debug_dump_ast("        ",p.decl->initval);
+					}
 				}
 			}
 			if (dd.flags & direct_declarator_t::FL_ELLIPSIS) {
@@ -6380,9 +6375,9 @@ try_again_w_token:
 										debug_dump_ast(prefix+"            ",expr);
 								}
 
-								if (p.initval != ast_node_none) {
+								if (p.decl->initval != ast_node_none) {
 									fprintf(stderr,"%s          init:\n",prefix.c_str());
-									debug_dump_ast(prefix+"            ",p.initval);
+									debug_dump_ast(prefix+"            ",p.decl->initval);
 								}
 							}
 
@@ -7847,6 +7842,12 @@ try_again_w_token:
 				/* start the new scope, tell compound_statement() we already did it,
 				 * so that we can register the function parameters as part of the new scope */
 				push_new_scope();
+
+				/* add it to the symbol table */
+				for (auto &p : declor.ddecl.parameters) {
+					if ((r=add_symbol(p.spec,*(p.decl))) < 1)
+						return r;
+				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
 				if ((r=compound_statement(fbroot,fbrootnext,COMPSDFL_ALREADY_ENTERED_SCOPE)) < 1)
