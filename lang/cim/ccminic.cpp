@@ -5316,6 +5316,9 @@ try_again_w_token:
 		}
 
 		void pop_scope(void) {
+#if 1//DEBUG
+			if (scope_stack.empty()) throw std::runtime_error("Attempt to pop scope stack when empty");
+#endif
 			scope_stack.pop_back();
 		}
 
@@ -5419,13 +5422,15 @@ try_again_w_token:
 			return 1;
 		}
 
+		static constexpr unsigned int COMPSDFL_ALREADY_ENTERED_SCOPE = 1u << 0u;
+
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
+		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags=0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
-		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
 		int struct_declaration_parse(struct_declaration_t &declion);
 		int multiplicative_expression(ast_node_id_t &aroot);
@@ -7757,7 +7762,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
+	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags) {
 		ast_node_id_t nxt;
 		int r;
 
@@ -7768,7 +7773,8 @@ try_again_w_token:
 		);
 
 		/* start a new scope */
-		push_new_scope();
+		if (!(flags & COMPSDFL_ALREADY_ENTERED_SCOPE))
+			push_new_scope();
 
 		/* caller already ate the { */
 
@@ -7801,7 +7807,7 @@ try_again_w_token:
 		} while (1);
 
 #if 1//DEBUG
-		fprintf(stderr,"compound declarator:\n");
+		fprintf(stderr,"compound declarator, scope %u:\n",(unsigned int)current_scope());
 		debug_dump_ast("  ",aroot);
 #endif
 
@@ -7838,8 +7844,12 @@ try_again_w_token:
 					return errno_return(EINVAL);
 				}
 
+				/* start the new scope, tell compound_statement() we already did it,
+				 * so that we can register the function parameters as part of the new scope */
+				push_new_scope();
+
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
-				if ((r=compound_statement(fbroot,fbrootnext)) < 1)
+				if ((r=compound_statement(fbroot,fbrootnext,COMPSDFL_ALREADY_ENTERED_SCOPE)) < 1)
 					return r;
 
 				/* once the compound statment ends, no more declarators.
