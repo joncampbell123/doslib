@@ -8,139 +8,139 @@ static int (x);
 static long ((y));
 static int* ((z));
 static int* ((*zz));
-static const int * const volatile ((* const zz));
-static near int x;
-static far int x;
-static huge int x;
-static restrict int x;
-static constexpr int x = 5;
-static int c,d;
-static long int c,*d;
-static long int *c,**d,e,f,g,h,i;
-static int c = 4;
+static const int * const volatile ((* const zzz));
+static near int x1;
+static far int x2;
+static huge int x3;
+static restrict int x4;
+static constexpr int x5 = 5;
+static int c0,d0;
+static long int c1,*d1;
+static long int *c2,**d2,e2,f2,g2,h2,i2;
+static int c6 = 4;
 static int cc = 4,d = 6,ee = 12.34,ff = cc;
-static const char *s = "Hello world";
-static int c = 6;;;
-static int d = 4 ? 2 : 1;
-static int d = 4 ? 3 ? 2 : 1 : 0;
-static int d = 4 ? 3,2 : 1;
-static int d = 8 ? 7,6,5,4,3,2 : 1;
-static int d = 7 || 3;
-static int d = 1 || 2 || 3;
-static int d = 1 || 2 || 3 || 4 || 5 || 6 || 7 || 8 || 9 || 10;
-static int d = 1 || 2 || 3 ? 4 || 5 : 6 || 7;
-static int d = 1 && 2;
-static int d = 1 && 2 && 3 && 4 && 5 && 6 && 7 && 8 && 9;
-static int d = 1 && 2 || 3 && 4;
-static int d = 1|2;
-static int d = 1|2|3|4|5|6|7|8;
-static int d = 1|2 && 3|4 || 5|6;
-static int d = 1^2;
-static int d = 1^2^3^4^5^6;
-static int d = 1^2|3^4;
-static int d = 1&2;
-static int d = 1&2&3&4&5&6&7&8;
-static int d = 1&2^3&4|5&6;
-static int d = 1 == 2;
-static int d = 1 != 2;
-static int d = 1 == 2 == 3;
-static int d = 1|2 == 3 && 4^5|6 != 7;
-static int d = 1 < 2;
-static int d = 1 > 2;
-static int d = 1 <= 2;
-static int d = 1 >= 2;
-static int d = 1 < 2 < 3 < 4 < 5;
-static int d = 1 < 2 > 3 <= 4 >= 5;
-static int d = 1 << 1;
-static int d = 1 >> 1;
-static int d = 1 << 2|3;
-static int d = 1 << 2 << 3 << 4 << 5 << 6;
-static int d = 1 >> 2 >> 3 >> 4 >> 5 >> 6;
-static int d = 1 << 2 >> 3 << 4 >> 5;
-static int d = 1 + 2;
-static int d = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
-static int d = 1 - 2;
-static int d = 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10;
-static int d = 1 + 2 - 3 + 4 - 5 + 6 - 7 + 8 - 9 + 10;
-static int d = 1 * 2;
-static int d = 1 * 2 * 3 * 4;
-static int d = 1 / 2;
-static int d = 1 / 2 / 3 / 4;
-static int d = 1 % 2;
-static int d = 1 % 2 % 3 % 4;
-static int d = 1 * 2 / 3 % 4;
-static int d = ++a;
-static int d = --a;
-static int d = ++ ++a;
-static int d = -- --a;
-static int d = &a;
-static int d = &&a;
-static int d = *a;
-static int d = **a;
-static int d = +a;
-static int d = -a;
-static int d = ~a;
-static int d = ~~a;
-static int d = !a;
-static int d = !!a;
-static int d = sizeof a;
-static int d = sizeof ~a;
-static int d = sizeof(a);
-static int d = sizeof(~a);
-static int d = a++;
-static int d = a++ ++;
-static int d = a--;
-static int d = a-- --;
-static int d = a.x;
-static int d = a.x.y.z;
-static int d = a->x;
-static int d = a->x->y->z;
-static int d = (a);
-static int d = (b*a)*c;
-static int d = (b+a)*c;
-static int d = b+a*c;
-static int d = (((a+b)*c)/d)+(e*f);
-static int d = a[5];
-static int d = a[b+c];
-static int d = a[3][5];
-static int d = a[b+c][4+d];
-static int d = (*(a+3))[b][c][d][e][f];
+static const char *sss = "Hello world";
+static int c8 = 6;;;
+static int d1a = 4 ? 2 : 1;
+static int d2a = 4 ? 3 ? 2 : 1 : 0;
+static int d3a = 4 ? 3,2 : 1;
+static int d4a = 8 ? 7,6,5,4,3,2 : 1;
+static int d5a = 7 || 3;
+static int d6a = 1 || 2 || 3;
+static int d7a = 1 || 2 || 3 || 4 || 5 || 6 || 7 || 8 || 9 || 10;
+static int d8a = 1 || 2 || 3 ? 4 || 5 : 6 || 7;
+static int d9a = 1 && 2;
+static int da = 1 && 2 && 3 && 4 && 5 && 6 && 7 && 8 && 9;
+static int db = 1 && 2 || 3 && 4;
+static int dc = 1|2;
+static int dd = 1|2|3|4|5|6|7|8;
+static int de = 1|2 && 3|4 || 5|6;
+static int df = 1^2;
+static int dg = 1^2^3^4^5^6;
+static int dh = 1^2|3^4;
+static int di = 1&2;
+static int dj = 1&2&3&4&5&6&7&8;
+static int dk = 1&2^3&4|5&6;
+static int dl = 1 == 2;
+static int dm = 1 != 2;
+static int dn = 1 == 2 == 3;
+static int doo = 1|2 == 3 && 4^5|6 != 7;
+static int dp = 1 < 2;
+static int dq = 1 > 2;
+static int dr = 1 <= 2;
+static int ds = 1 >= 2;
+static int dt = 1 < 2 < 3 < 4 < 5;
+static int du = 1 < 2 > 3 <= 4 >= 5;
+static int dv = 1 << 1;
+static int dw = 1 >> 1;
+static int dx = 1 << 2|3;
+static int dy = 1 << 2 << 3 << 4 << 5 << 6;
+static int dz = 1 >> 2 >> 3 >> 4 >> 5 >> 6;
+static int daa = 1 << 2 >> 3 << 4 >> 5;
+static int dab = 1 + 2;
+static int dac = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
+static int dad = 1 - 2;
+static int dae = 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10;
+static int daf = 1 + 2 - 3 + 4 - 5 + 6 - 7 + 8 - 9 + 10;
+static int dag = 1 * 2;
+static int dah = 1 * 2 * 3 * 4;
+static int dai = 1 / 2;
+static int daj = 1 / 2 / 3 / 4;
+static int dak = 1 % 2;
+static int dal = 1 % 2 % 3 % 4;
+static int dam = 1 * 2 / 3 % 4;
+static int dan = ++a;
+static int dao = --a;
+static int dap = ++ ++a;
+static int daq = -- --a;
+static int dar = &a;
+static int das = &&a;
+static int dat = *a;
+static int dau = **a;
+static int dav = +a;
+static int daw = -a;
+static int dax = ~a;
+static int day = ~~a;
+static int daz = !a;
+static int dba = !!a;
+static int dbb = sizeof a;
+static int dbc = sizeof ~a;
+static int dbd = sizeof(a);
+static int dbe = sizeof(~a);
+static int dbf = a++;
+static int dbg = a++ ++;
+static int dbh = a--;
+static int dbi = a-- --;
+static int dbj = a.x;
+static int dbk = a.x.y.z;
+static int dbl = a->x;
+static int dbm = a->x->y->z;
+static int dbn = (a);
+static int dbo = (b*a)*c;
+static int dbp = (b+a)*c;
+static int dbq = b+a*c;
+static int dbr = (((a+b)*c)/d)+(e*f);
+static int dbs = a[5];
+static int dbt = a[b+c];
+static int dbu = a[3][5];
+static int dbv = a[b+c][4+d];
+static int dbw = (*(a+3))[b][c][d][e][f];
 static int d[4];
-static int d[4][5][6][a];
-static int d[a+b*c][d+e][((f+g)*h)+5][g];
-static int d[];
-static int d[][][][];
-static int d();
-static int d(int x);
-static int d(int x,float y);
-static int d(int x,float y,int z,char *a,const char *b,const char * const c);
-static int d(int a,int b,...);
-static int d(int x=5,int y=x*3);
-static int d(a,b) int a; int b; { }
-static int d(a,b,c,d,e,f,g,h,i,j,k) int a,b,c; float d,e,f; double g,h; const char *i,*j,*k; { }
-static int d(a,b,c,...) int a; float b; const char c; { }
-static int d(int (*a),int (*b)(int c));
-static int d(int a,int b),e(int f,int g);
-static int d() { }
-static int e(int a) { }
-static int x = y = 5;
-static int x = (y=5);
-static int x = (y*=6);
-static int x = (y/=6);
-static int x = (y%=6);
-static int x = (y+=3);
-static int x = (y-=3);
-static int x = (y<<=2);
-static int x = (y>>=2);
-static int x = (y&=3);
-static int x = (y^=3);
-static int x = (y|=3);
-static int d(int a,int b) {
+static int dbz[4][5][6][a];
+static int dca[a+b*c][d+e][((f+g)*h)+5][g];
+static int dcb[];
+static int dcc[][][][];
+static int dcd();
+static int dce(int x);
+static int dcf(int x,float y);
+static int dcg(int x,float y,int z,char *a,const char *b,const char * const c);
+static int dch(int a,int b,...);
+static int dci(int x=5,int y=x*3);
+static int dcj(a,b) int a; int b; { }
+static int dck(a,b,c,d,e,f,g,h,i,j,k) int a,b,c; float d,e,f; double g,h; const char *i,*j,*k; { }
+static int dcl(a,b,c,...) int a; float b; const char c; { }
+static int dcm(int (*a),int (*b)(int c));
+static int dcn(int a,int b),e(int f,int g);
+static int dco() { }
+static int e0(int a) { }
+static int xaaa = y = 5;
+static int xaab = (y=5);
+static int xaac = (y*=6);
+static int xaad = (y/=6);
+static int xaae = (y%=6);
+static int xaaf = (y+=3);
+static int xaag = (y-=3);
+static int xaah = (y<<=2);
+static int xaai = (y>>=2);
+static int xaaj = (y&=3);
+static int xaak = (y^=3);
+static int xaal = (y|=3);
+static int daaa(int a,int b) {
 	int c = 3,x = 3;
 	long d = 5 + a*b+c+x,dd = d*d;
 	float fa = 3.3,fb = fa*3,fc = fa*3+fb,fd = 4.44;
-	double da = 2.22,db = 1.11,dc = 33.33,dd = 44.44;
-	const char *x,**y,* const * const z;
+	double fda = 2.22,fdb = 1.11,fdc = 33.33,fdd = 44.44;
+	const char *px,**py,* const * const pz;
 	char arr[5],arb[11];
 	int* (*func)(int x,int y,float z);
 	int* (* const *func1)(const int x,int z,int* (*xyz)(int a,int b),float** (* const abcd)(float z),char a[5][b+c],int xx=3,...);
@@ -212,7 +212,7 @@ static int d(int a) {
 	for (x=0;x < 5;x++,z++) z++;
 	return x;
 }
-static int d(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
+static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
 	roundto();
 	(*funcptr)();
 	func1()();
@@ -223,42 +223,42 @@ static int d(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) 
 	(*funcptr)(&a,a+5);
 	return 5;
 }
-static int x = sizeof(int);
-static int x = sizeof(int*);
-static int x = sizeof(const int* const*);
-static int x = sizeof(int[3]);
-static int x = sizeof(int[3][3]);
-static int x = sizeof(int*[3][3]);
-static int x = sizeof(const int);
-static int x[] = { 1 };
-static int x[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-static int x[] = { a, b, c+d, e*f, g*h+i };
-static int x[] = { a, b, { 1, 2, 3, 4 }, c, d };
-static int x[] = { a, b, { 1, 2, 3, 4, { x*x, y*y, z*z } }, c, d };
-static int d(int a) {
+static int x1a1a = sizeof(int);
+static int x1a1b = sizeof(int*);
+static int x1a1c = sizeof(const int* const*);
+static int x1a1d = sizeof(int[3]);
+static int x1a1e = sizeof(int[3][3]);
+static int x1a1f = sizeof(int*[3][3]);
+static int x1a1g = sizeof(const int);
+static int x1a1h[] = { 1 };
+static int x1a1i[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+static int x1a1j[] = { a, b, c+d, e*f, g*h+i };
+static int x1a1k[] = { a, b, { 1, 2, 3, 4 }, c, d };
+static int x1a1l[] = { a, b, { 1, 2, 3, 4, { x*x, y*y, z*z } }, c, d };
+static int daaba(int a) {
 	return (long)(a);
 }
-static int d(char a,char b) {
+static int daabb(char a,char b) {
 	return (long)(int)(a+b);
 }
-enum test x;
-enum test { A, B, C, D } x;
-enum test { A=1, B, C=100, D=A*400, E=A+B+C+D } x;
-enum { A, B, C, D } x;
-struct test x,*y,**z;
+enum test xoooo;
+enum test { A, B, C, D } xoooo2;
+enum test { A=1, B, C=100, D=A*400, E=A+B+C+D } xoooo3;
+enum { A, B, C, D } xoooo4;
+struct test xooo5,*y,**z;
 struct test { } x;
-struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } x;
-struct test { int a; struct another { int x,y,z; } one; } x;
-struct { int a,b,c; int z; } x;
-union test x;
-union test { } x;
-union test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } x;
-union { int a,b,c; int z; } x;
+struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
+struct test { int a; struct another { int x,y,z; } one; } xooo7;
+struct { int a,b,c; int z; } xooo8;
+union test xooo9;
+union test { } xooo10;
+union test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo11;
+union { int a,b,c; int z; } xooo12;
 struct test { int x; union { struct { int x,y; } i; struct { float a,b; } f; } un; } t;
 struct test {
 	int a;
 	int (*func1)(int a,int b);
-} x;
+} x00012;
 enum test;
 enum test {
 	A,
@@ -281,21 +281,20 @@ struct {
 union {
 	int a,b;
 };
-static const char *x = "hello\xff";
-static const char *x = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";
-struct test { int a, b, c; } x = { 1, 2, 3 };
-struct test { int a[3], b[5], c[7]; } x = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
-static int x[] = { 10, 20, [5] = 50, [50][5] = 500, [500][50][5] = 5000, 60, 70 };
-struct test { int a, test, b; } x = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
-struct test { int a, test, b; } x = { a: 5, b: 7*8, c: a*b };
-static inline int d() { return 3; }
-static constexpr inline int d() { return 4; }
+static const char *x00013 = "hello\xff";
+static const char *x00014 = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";
+struct test { int a, b, c; } x00015 = { 1, 2, 3 };
+struct test { int a[3], b[5], c[7]; } x00016 = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
+static int x00017[] = { 10, 20, [5] = 50, [50][5] = 500, [500][50][5] = 5000, 60, 70 };
+struct test { int a, test, b; } x00018 = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
+struct test { int a, test, b; } x00019 = { a: 5, b: 7*8, c: a*b };
+static inline int d00020() { return 3; }
+static constexpr inline int d00021() { return 4; }
 
-#define X(x) static int d(int y) { return y*x; }
+#define X(x) static int d000022(int y) { return y*x; }
 X(1);
-X(2);
 
-static int d(int x) {
+static int d000023(int x) {
 	static const int s = 50;
 	switch (x) {
 		case 0:
@@ -313,7 +312,7 @@ static int d(int x) {
 	return x;
 }
 
-static int x[] = { 2, 3, [5] = 4, [10 ... 19] = 5 };
+static int x00024[] = { 2, 3, [5] = 4, [10 ... 19] = 5 };
 
 struct tt2 {
 	unsigned int	x:4;

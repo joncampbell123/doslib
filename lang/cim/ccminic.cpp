@@ -5099,6 +5099,7 @@ try_again_w_token:
 		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
 		ast_node_id_t initval = ast_node_none;
+		ast_node_id_t function_body = ast_node_none;
 
 		declarator_t() { }
 		declarator_t(const declarator_t &) = delete;
@@ -5109,13 +5110,14 @@ try_again_w_token:
 		~declarator_t() {
 			if (initval != ast_node_none)
 				ast_node(initval).release();
+			if (function_body != ast_node_none)
+				ast_node(function_body).release();
 		}
 	};
 
 	struct declaration_t {
 		declaration_specifiers_t	spec;
 		std::vector<declarator_t*>	declor;
-		ast_node_id_t			function_body = ast_node_none;
 
 		declarator_t &new_declarator(void) {
 			declarator_t *n = new declarator_t();
@@ -5132,9 +5134,6 @@ try_again_w_token:
 		~declaration_t() {
 			for (auto &i : declor) delete i;
 			declor.clear();
-
-			if (function_body != ast_node_none)
-				ast_node(function_body).release();
 		}
 	};
 
@@ -5177,6 +5176,61 @@ try_again_w_token:
 		}
 	};
 
+	typedef size_t symbol_id_t;
+
+	static constexpr size_t symbol_none = ~size_t(0);
+
+	typedef unsigned int scope_id_t;
+
+	static constexpr unsigned int scope_none = ~((unsigned int)0u);
+	static constexpr unsigned int scope_global = 0u;
+	static constexpr unsigned int scope_first_local = 1u;
+
+	struct symbol_t {
+		enum type_t {
+			VARIABLE=0,
+			FUNCTION,
+			TYPEDEF,
+			STRUCT,
+			UNION,
+			ENUM
+		};
+
+		static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
+		static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
+		static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
+		static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
+		static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
+
+		declaration_specifiers_t		spec;
+		ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
+		scope_id_t				scope = scope_none;
+		enum type_t				sym_type = VARIABLE;
+		unsigned int				flags = 0;
+		token_t					identifier;
+
+		symbol_t() { }
+		symbol_t(const symbol_t &) = delete;
+		symbol_t &operator=(const symbol_t &) = delete;
+		symbol_t(symbol_t &&x) { common_move(x); }
+		symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
+
+		~symbol_t() {
+			if (expr != ast_node_none) {
+				ast_node(expr).release();
+				expr = ast_node_none;
+			}
+		}
+
+		void common_move(symbol_t &x) {
+			spec = std::move(x.spec);
+			expr = x.expr; x.expr = ast_node_none;
+			sym_type = x.sym_type;
+			flags = x.flags;
+			identifier = std::move(identifier);
+		}
+	};
+
 	struct cc_state_t {
 		CCMiniC::lgtok_state_t	lst;
 		CCMiniC::pptok_state_t	pst;
@@ -5186,6 +5240,9 @@ try_again_w_token:
 
 		std::vector<token_t>	tq;
 		size_t			tq_tail = 0;
+
+		std::vector<scope_id_t>	scope_stack;
+		scope_id_t		next_scope = scope_first_local;
 
 		bool			ignore_whitespace = true;
 
@@ -5250,6 +5307,117 @@ try_again_w_token:
 
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
+
+		std::vector<symbol_t> symbols;
+		size_t symbols_next = 0;
+
+		void push_new_scope(void) {
+			scope_stack.push_back(next_scope++);
+		}
+
+		void pop_scope(void) {
+			scope_stack.pop_back();
+		}
+
+		scope_id_t current_scope(void) {
+			if (!scope_stack.empty())
+				return scope_stack[scope_stack.size()-1u];
+			else
+				return scope_global;
+		}
+
+		/* symbols are never removed from the vector, and they are always added in increasing ID order */
+		symbol_id_t new_symbol(token_t &name) {
+			assert(symbols_next <= symbols.size());
+
+			if (symbols_next == symbols.size())
+				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
+
+			assert(symbols_next < symbols.size());
+			symbols[symbols_next].identifier = std::move(name);
+			return symbols_next++;
+		}
+
+		symbol_t &symbol(symbol_id_t &id) {
+#if 1//DEBUG
+			if (id < symbols.size())
+				return symbols[id];
+
+			throw std::out_of_range("symbol out of range");
+#else
+			return symbols[id];
+#endif
+		}
+
+		bool symbol_scope_check(scope_id_t s) {
+			if (s == scope_global)
+				return true;
+
+			for (const auto &chk_s : scope_stack)
+				if (chk_s == s)
+					return true;
+
+			return false;
+		}
+
+		/* this automatically uses the scope_stack and current_scope() return value */
+		symbol_id_t lookup_symbol(token_t &name) {
+			if (name.type != token_type_t::identifier)
+				return symbol_none;
+
+			/* search backwards to give recent local symbols priority */
+			if (!symbols.empty()) {
+				size_t si = symbols.size() - 1u;
+				do {
+					symbol_t &chk_s = symbols[si];
+
+					if (chk_s.identifier.type == token_type_t::identifier) {
+						if (name.v.strliteral == chk_s.identifier.v.strliteral) {
+							if (symbol_scope_check(chk_s.scope))
+								return symbol_id_t(si);
+						}
+					}
+
+					if ((si--) == 0) break;
+				} while (1);
+			}
+
+			return symbol_none;
+		}
+
+		/* this automatically uses the scope_stack and current_scope() return value */
+		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
+			symbol_id_t sid;
+
+			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
+				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
+				if (symbol(sid).scope == current_scope())
+					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",declor.ddecl.name.v.strliteral.makestring().c_str());
+				else
+					sid = symbol_none;
+			}
+
+			if (sid == symbol_none) {
+				sid = new_symbol(declor.ddecl.name);
+				symbol_t &sym = symbol(sid);
+				sym.spec = std::move(spec);
+				sym.scope = current_scope();
+				sym.flags = symbol_t::FL_DEFINED;
+
+				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
+					sym.sym_type = symbol_t::FUNCTION;
+					sym.expr = declor.function_body;
+					declor.function_body = ast_node_none;
+				}
+				else {
+					sym.sym_type = symbol_t::VARIABLE;
+					sym.expr = declor.initval;
+					declor.initval = ast_node_none;
+				}
+			}
+
+			return 1;
+		}
 
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
@@ -7334,6 +7502,15 @@ try_again_w_token:
 			else
 				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
 
+			/* add it to the symbol table */
+			for (auto &decl_p : (*declion).declor) {
+				assert(decl_p != NULL);
+				auto &decl = *decl_p;
+
+				if ((r=add_symbol((*declion).spec,decl)) < 1)
+					return r;
+			}
+
 			assert(ast_node(nxt).t.type == token_type_t::op_declaration);
 			ast_node(nxt).t.v.declaration = declion.release();
 
@@ -7590,6 +7767,9 @@ try_again_w_token:
 			(aroot != ast_node_none && nroot != ast_node_none)
 		);
 
+		/* start a new scope */
+		push_new_scope();
+
 		/* caller already ate the { */
 
 		if ((r=compound_statement_declarators(aroot,nroot)) < 1)
@@ -7625,6 +7805,7 @@ try_again_w_token:
 		debug_dump_ast("  ",aroot);
 #endif
 
+		pop_scope();
 		return 1;
 	}
 
@@ -7663,7 +7844,7 @@ try_again_w_token:
 
 				/* once the compound statment ends, no more declarators.
 				 * you can't do "int f() { },g() { }" */
-				declion.function_body = fbroot;
+				declor.function_body = fbroot;
 				return 1;
 			}
 
@@ -7778,6 +7959,15 @@ try_again_w_token:
 			return r;
 		if ((r=declaration_parse(declion)) < 1)
 			return r;
+
+		/* add it to the symbol table */
+		for (auto &decl_p : declion.declor) {
+			assert(decl_p != NULL);
+			auto &decl = *decl_p;
+
+			if ((r=add_symbol(declion.spec,decl)) < 1)
+				return r;
+		}
 
 		return 1;
 	}
