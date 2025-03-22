@@ -5054,11 +5054,11 @@ try_again_w_token:
 		type_qualifier_t			tq = 0;
 	};
 
-	struct direct_declarator_t;
+	struct declarator_t;
 
 	struct parameter_t {
 		declaration_specifiers_t		spec;
-		direct_declarator_t*			ddecl = NULL; /* because this type isn't "complete" yet at this point */
+		declarator_t*				decl = NULL; /* because this type isn't "complete" yet at this point */
 		std::vector<pointer_t>			ptr;
 		ast_node_id_t				initval = ast_node_none;
 
@@ -5849,8 +5849,8 @@ try_again_w_token:
 	}
 
 	parameter_t::~parameter_t() {
-		if (ddecl) delete ddecl;
-		ddecl = NULL;
+		if (decl) delete decl;
+		decl = NULL;
 
 		if (initval != ast_node_none)
 			ast_node(initval).release();
@@ -5859,7 +5859,7 @@ try_again_w_token:
 	void parameter_t::common_move(parameter_t &o) {
 		spec = std::move(o.spec);
 		ptr = std::move(o.ptr);
-		ddecl = o.ddecl; o.ddecl = NULL;
+		decl = o.decl; o.decl = NULL;
 		initval = o.initval; o.initval = ast_node_none;
 	}
 
@@ -5961,22 +5961,22 @@ try_again_w_token:
 					if ((r=pointer_parse(p.ptr)) < 1)
 						return r;
 
-					p.ddecl = new direct_declarator_t();
-					if ((r=direct_declarator_parse(p.spec,*(p.ddecl),DIRDECL_ALLOW_ABSTRACT)) < 1)
+					p.decl = new declarator_t();
+					if ((r=direct_declarator_parse(p.spec,p.decl->ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
-					if (!p.ddecl)
+					if (!p.decl)
 						return errno_return(EINVAL);
 
-					if (p.ddecl->name.type != token_type_t::none) {
-						if (p.ddecl->name.type != token_type_t::identifier)
+					if (p.decl->ddecl.name.type != token_type_t::none) {
+						if (p.decl->ddecl.name.type != token_type_t::identifier)
 							return errno_return(EINVAL);
 						for (const auto &chk_p : dd.parameters) {
-							assert(chk_p.ddecl != NULL);
-							if (chk_p.ddecl->name.type == token_type_t::identifier) {
-								if (chk_p.ddecl->name.v.strliteral == p.ddecl->name.v.strliteral) {
-									CCerr(pos,"Parameter '%s' already defined",p.ddecl->name.v.strliteral.makestring().c_str());
+							assert(chk_p.decl != NULL);
+							if (chk_p.decl->ddecl.name.type == token_type_t::identifier) {
+								if (chk_p.decl->ddecl.name.v.strliteral == p.decl->ddecl.name.v.strliteral) {
+									CCerr(pos,"Parameter '%s' already defined",p.decl->ddecl.name.v.strliteral.makestring().c_str());
 									return errno_return(EEXIST);
 								}
 							}
@@ -6086,11 +6086,11 @@ try_again_w_token:
 							while (i < dd.parameters.size()) {
 								parameter_t &chk_p = dd.parameters[i];
 
-								if (!chk_p.ddecl)
+								if (!chk_p.decl)
 									return errno_return(EINVAL);
-								if (chk_p.ddecl->name.type != token_type_t::identifier)
+								if (chk_p.decl->ddecl.name.type != token_type_t::identifier)
 									return errno_return(EINVAL);
-								if (d.ddecl.name.v.strliteral == chk_p.ddecl->name.v.strliteral)
+								if (d.ddecl.name.v.strliteral == chk_p.decl->ddecl.name.v.strliteral)
 									break;
 
 								i++;
@@ -6170,10 +6170,10 @@ try_again_w_token:
 					}
 				}
 
-				if (p.ddecl) {
-					const auto &name = p.ddecl->name;
+				if (p.decl) {
+					const auto &name = p.decl->ddecl.name;
 
-					for (auto i=p.ddecl->ptr.begin();i!=p.ddecl->ptr.end();i++) {
+					for (auto i=p.decl->ddecl.ptr.begin();i!=p.decl->ddecl.ptr.end();i++) {
 						fprintf(stderr," (*)");
 						for (unsigned int x=0;x < TQI__MAX;x++) {
 							if ((*i).tq&(1u<<x))
@@ -6189,8 +6189,8 @@ try_again_w_token:
 
 				fprintf(stderr,"\n");
 
-				if (p.ddecl) {
-					for (const auto &expr : p.ddecl->arraydef) {
+				if (p.decl) {
+					for (const auto &expr : p.decl->ddecl.arraydef) {
 						fprintf(stderr,"      arraydef:\n");
 						if (expr != ast_node_none)
 							debug_dump_ast("        ",expr);
@@ -6212,9 +6212,9 @@ try_again_w_token:
 			/* any parameter not yet described, is an error */
 			for (const auto &p : dd.parameters) {
 				if (p.spec.empty()) {
-					assert(p.ddecl != NULL);
-					assert(p.ddecl->name.type == token_type_t::identifier);
-					CCerr(pos,"Parameter '%s' is missing type",p.ddecl->name.v.strliteral.makestring().c_str());
+					assert(p.decl != NULL);
+					assert(p.decl->ddecl.name.type == token_type_t::identifier);
+					CCerr(pos,"Parameter '%s' is missing type",p.decl->ddecl.name.v.strliteral.makestring().c_str());
 					return errno_return(EINVAL);
 				}
 			}
@@ -6358,8 +6358,8 @@ try_again_w_token:
 									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 								}
 
-								assert(p.ddecl != NULL);
-								auto &p_declr = *(p.ddecl);
+								assert(p.decl != NULL);
+								auto &p_declr = p.decl->ddecl;
 
 								if (!p_declr.ptr.empty()) fprintf(stderr," (");
 
