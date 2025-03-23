@@ -4919,11 +4919,19 @@ try_again_w_token:
 		return *this;
 	}
 
+	void update_next_ast(ast_node_t *p) {
+		if (p >= &ast_nodes[0]) {
+			const size_t i = p - &ast_nodes[0];
+			if (i < ast_nodes.size()) ast_node_next = i;
+		}
+	}
+
 	ast_node_t &ast_node_t::clear_and_move_assign(token_t &tt) {
 		ref = 0;
 		t = std::move(tt);
 		set_next(ast_node_none);
 		set_child(ast_node_none);
+		update_next_ast(this);
 		return *this;
 	}
 
@@ -4932,6 +4940,7 @@ try_again_w_token:
 		t = token_t(tt);
 		set_next(ast_node_none);
 		set_child(ast_node_none);
+		update_next_ast(this);
 		return *this;
 	}
 
