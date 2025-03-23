@@ -5198,8 +5198,8 @@ try_again_w_token:
 		void common_move(symbol_t &x) {
 			spec = std::move(x.spec);
 			expr = x.expr; x.expr = ast_node_none;
-			sym_type = x.sym_type;
-			flags = x.flags;
+			sym_type = x.sym_type; x.sym_type = VARIABLE;
+			flags = x.flags; x.flags = 0;
 			identifier = std::move(identifier);
 		}
 	};
