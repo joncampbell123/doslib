@@ -1635,27 +1635,6 @@ namespace CCMiniC {
 			return true;
 		}
 
-		bool realloc(const size_t sz) {
-			if (data == NULL)
-				return alloc(sz);
-
-			/* NTS: GNU glibc realloc(data,0) frees the buffer */
-			if (sz == 0) {
-				free();
-			}
-			else if (sz > allocated) {
-				void *np = ::realloc(data,sz);
-				if (np == NULL)
-					return false;
-
-				data = np;
-				allocated = sz;
-			}
-
-			length = sz;
-			return true;
-		}
-
 		static std::string to_escape(const uint32_t c) {
 			char tmp[32];
 
@@ -2174,7 +2153,7 @@ private:
 		return 1;
 	}
 
-	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator,ptrat* &p,ptrat* &f) {
+	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,const unsigned char separator,ptrat* &p,ptrat* const &f) {
 		const bool unicode = !(cslt == charstrliteral_t::type_t::CHAR);
 		int32_t v;
 		int rr;
@@ -2185,17 +2164,8 @@ private:
 				break;
 			}
 
-			if ((p+16) >= f) {
-				const size_t wo = size_t(p-((ptrat*)t.v.strliteral.data));
-				const size_t ns = t.v.strliteral.units() + (t.v.strliteral.units() / 2u);
-				assert((t.v.strliteral.units()*sizeof(ptrat)) == t.v.strliteral.length);
-
-				if (!t.v.strliteral.realloc(ns*sizeof(ptrat)))
-					return errno_return(ENOMEM);
-
-				p = ((ptrat*)((char*)t.v.strliteral.data)) + wo;
-				f =  (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
-			}
+			if ((p+16) >= f)
+				CCERR_RET(ENAMETOOLONG,buf.pos,"String constant is too long");
 
 			v = lgtok_cslitget(buf,sfo,unicode);
 			if (v == unicode_nothing) continue;
@@ -2211,13 +2181,13 @@ private:
 		ptrat *p,*f;
 		int rr;
 
-		if (!t.v.strliteral.alloc(64))
+		if (!t.v.strliteral.alloc((4096+20)*sizeof(ptrat)))
 			return errno_return(ENOMEM);
 
 		p = (ptrat*)((char*)t.v.strliteral.data);
 		f = (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
 
-		rr = lgtok_strlit_common_inner<cslt,ptrat>(buf,sfo,t,separator,p,f);
+		rr = lgtok_strlit_common_inner<cslt,ptrat>(buf,sfo,separator,p,f);
 
 		{
 			const size_t fo = size_t(p-((ptrat*)t.v.strliteral.data)) * sizeof(ptrat);
