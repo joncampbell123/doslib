@@ -4960,10 +4960,18 @@ try_again_w_token:
 		ast_node_id_t				expr = ast_node_none;
 
 		enumerator_t() { }
-		enumerator_t(const enumerator_t &) = delete;
-		enumerator_t &operator=(const enumerator_t &) = delete;
+		enumerator_t(const enumerator_t &x) { common_copy(x); }
+		enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
 		enumerator_t(enumerator_t &&x) { common_move(x); }
 		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
+
+		void common_copy(const enumerator_t &o) {
+			name = o.name;
+
+			if (expr != ast_node_none) ast_node(expr).release();
+			expr = o.expr;
+			if (expr != ast_node_none) ast_node(expr).addref();
+		}
 
 		void common_move(enumerator_t &o) {
 			name = std::move(o.name);
@@ -4992,8 +5000,8 @@ try_again_w_token:
 		}
 
 		declaration_specifiers_t() { }
-		declaration_specifiers_t(const declaration_specifiers_t &) = delete;
-		declaration_specifiers_t &operator=(const declaration_specifiers_t &) = delete;
+		declaration_specifiers_t(const declaration_specifiers_t &x) { common_copy(x); }
+		declaration_specifiers_t &operator=(const declaration_specifiers_t &x) { common_copy(x); return *this; }
 		declaration_specifiers_t(declaration_specifiers_t &&x) { common_move(x); }
 		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
 
@@ -5004,6 +5012,15 @@ try_again_w_token:
 			type_identifier = std::move(o.type_identifier);
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
+		}
+
+		void common_copy(const declaration_specifiers_t &o) {
+			storage_class = o.storage_class;
+			type_specifier = o.type_specifier;
+			type_qualifier = o.type_qualifier;
+			type_identifier = o.type_identifier;
+			enum_list = o.enum_list;
+			count = o.count;
 		}
 	};
 
@@ -5359,7 +5376,7 @@ try_again_w_token:
 			if (sid == symbol_none) {
 				sid = new_symbol(declor.ddecl.name);
 				symbol_t &sym = symbol(sid);
-				sym.spec = std::move(spec);
+				sym.spec = spec;
 				sym.scope = current_scope();
 				sym.flags = symbol_t::FL_DEFINED;
 
@@ -5584,12 +5601,12 @@ try_again_w_token:
 							return r;
 
 						if (!ds.enum_list.empty()) {
-							for (const auto &e : ds.enum_list) {
-								declaration_specifiers_t spec;
-								declarator_t declor;
+							declaration_specifiers_t spec;
 
-								spec.count = 1;
-								spec.type_specifier = TS_INT;
+							spec.count = 1;
+							spec.type_specifier = TS_INT;
+							for (const auto &e : ds.enum_list) {
+								declarator_t declor;
 
 								declor.ddecl.name = e.name;
 								if ((r=add_symbol(spec,declor)) < 1)
