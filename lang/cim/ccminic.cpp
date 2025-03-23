@@ -2298,120 +2298,60 @@ private:
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
 
-		const position_t pos = t.pos;
+		unsigned char data[128];
+		unsigned char *p = data;
+		unsigned char *f = data + sizeof(data);
 
 		assert(t.type == token_type_t::none);
-		t.type = token_type_t::r___asm_text;
-		t.v.strliteral.init();
-		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-
-		if (!t.v.strliteral.alloc(32))
-			return errno_return(ENOMEM);
-
-		unsigned char *p,*f;
-
-		p = (unsigned char*)t.v.strliteral.data;
-		f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 
 		assert(p < f);
 		assert(is_asm_text_first_char(buf.peekb()) || buf.peekb() == '#');
 		rbuf_sfd_refill(buf,sfo);
-		if (buf.peekb() == '#') {
-			t.type = token_type_t::ppidentifier;
-			buf.discardb();
-
-			while (is_whitespace(buf.peekb()))
-				buf.discardb();
-
-			if (is_newline(buf.peekb()))
-				CCERR_RET(EINVAL,t.pos,"Preprocessor directive with no directive");
-		}
 		*p++ = buf.getb();
 		while (is_asm_text_char(buf.peekb())) {
-			if ((p+1) >= f) {
-				const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-				if (wo >= 120)
-					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
-
-				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
-					return errno_return(ENOMEM);
-
-				p = (unsigned char*)t.v.strliteral.data+wo;
-				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-			}
+			if ((p+1) >= f)
+				CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
 			assert((p+1) <= f);
 			*p++ = (unsigned char)buf.getb();
 			rbuf_sfd_refill(buf,sfo);
 		}
 
-		{
-			const size_t fo = size_t(p-t.v.strliteral.as_binary());
-			assert(fo <= t.v.strliteral.allocated);
-			t.v.strliteral.length = fo;
-			t.v.strliteral.shrinkfit();
-		}
-
-		/* but wait: if the identifier is followed by a quotation mark, and it's some specific sequence,
-		 * then it's actually a char/string literal i.e. L"blah" would be a wide char string. No space
-		 * allowed. */
-		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
-			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(token_type_t::none,pos,buf.source_file);
-				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
-			}
-			else if (t.v.strliteral.length == 1) {
-				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(token_type_t::none,pos,buf.source_file);
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
-				}
-				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(token_type_t::none,pos,buf.source_file);
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
-				}
-				else if (*((const char*)t.v.strliteral.data) == 'L') {
-					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
-					 *        Linux wide char is 32 bits. */
-					t = token_t(token_type_t::none,pos,buf.source_file);
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
-				}
-			}
-		}
+		const size_t length = size_t(p-data);
+		assert(length != 0);
 
 		/* it might be _asm or __asm */
-		if (	(t.v.strliteral.length == 4 && !memcmp(t.v.strliteral.data,"_asm",4)) ||
-			(t.v.strliteral.length == 5 && !memcmp(t.v.strliteral.data,"__asm",5))) {
-			t = token_t(token_type_t(token_type_t::r___asm),pos,buf.source_file);
+		if (	(length == 4 && !memcmp(data,"_asm",4)) ||
+			(length == 5 && !memcmp(data,"__asm",5))) {
+			t.type = token_type_t(token_type_t::r___asm);
 		}
 
+		t.type = token_type_t::r___asm_text;
+		t.v.strliteral.init();
+		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+		if (!t.v.strliteral.alloc(length)) return errno_return(ENOMEM);
+		assert(t.v.strliteral.data != NULL);
+		assert(t.v.strliteral.length >= length);
+		memcpy(t.v.strliteral.data,data,length);
 		return 1;
 	}
 
 	int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
 
-		const position_t pos = t.pos;
+		unsigned char data[128];
+		unsigned char *p = data;
+		unsigned char *f = data + sizeof(data);
+		bool pp = false;
 
 		assert(t.type == token_type_t::none);
-		t.type = token_type_t::identifier;
-		t.v.strliteral.init();
-		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-
-		if (!t.v.strliteral.alloc(32))
-			return errno_return(ENOMEM);
-
-		unsigned char *p,*f;
-
-		p = (unsigned char*)t.v.strliteral.data;
-		f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
 
 		assert(p < f);
 		assert(is_identifier_first_char(buf.peekb()) || buf.peekb() == '#');
 		rbuf_sfd_refill(buf,sfo);
 		if (buf.peekb() == '#') {
-			t.type = token_type_t::ppidentifier;
 			buf.discardb();
+			pp=true;
 
 			while (is_whitespace(buf.peekb()))
 				buf.discardb();
@@ -2421,63 +2361,45 @@ private:
 		}
 		*p++ = buf.getb();
 		while (is_identifier_char(buf.peekb())) {
-			if ((p+1) >= f) {
-				const size_t wo = size_t(p-t.v.strliteral.as_binary());
-
-				if (wo >= 120)
-					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
-
-				if (!t.v.strliteral.realloc(t.v.strliteral.length*2u))
-					return errno_return(ENOMEM);
-
-				p = (unsigned char*)t.v.strliteral.data+wo;
-				f = (unsigned char*)t.v.strliteral.data+t.v.strliteral.length;
-			}
+			if ((p+1) >= f)
+				CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
 			assert((p+1) <= f);
 			*p++ = (unsigned char)buf.getb();
 			rbuf_sfd_refill(buf,sfo);
 		}
 
-		{
-			const size_t fo = size_t(p-t.v.strliteral.as_binary());
-			assert(fo <= t.v.strliteral.allocated);
-			t.v.strliteral.length = fo;
-			t.v.strliteral.shrinkfit();
-		}
+		const size_t length = size_t(p-data);
+		assert(length != 0);
 
 		/* but wait: if the identifier is followed by a quotation mark, and it's some specific sequence,
 		 * then it's actually a char/string literal i.e. L"blah" would be a wide char string. No space
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
-			if (t.v.strliteral.length == 2 && !memcmp(t.v.strliteral.data,"u8",2)) {
-				t = token_t(token_type_t::none,pos,buf.source_file);
+			if (length == 2 && !memcmp(data,"u8",2)) {
 				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
 			}
-			else if (t.v.strliteral.length == 1) {
-				if (*((const char*)t.v.strliteral.data) == 'U') {
-					t = token_t(token_type_t::none,pos,buf.source_file);
+			else if (length == 1) {
+				if (*((const char*)data) == 'U') {
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
-				else if (*((const char*)t.v.strliteral.data) == 'u') {
-					t = token_t(token_type_t::none,pos,buf.source_file);
+				else if (*((const char*)data) == 'u') {
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
 				}
-				else if (*((const char*)t.v.strliteral.data) == 'L') {
+				else if (*((const char*)data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					t = token_t(token_type_t::none,pos,buf.source_file);
 					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
 				}
 			}
 		}
 
 		/* it might be a reserved keyword, check */
-		if (t.type == token_type_t::ppidentifier) {
+		if (pp) {
 			for (const ident2token_t *i2t=ppident2tok;i2t < (ppident2tok+ppident2tok_length);i2t++) {
-				if (t.v.strliteral.length == i2t->len) {
-					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token),pos,buf.source_file);
+				if (length == i2t->len) {
+					if (!memcmp(data,i2t->str,i2t->len)) {
+						t.type = token_type_t(i2t->token);
 						return 1;
 					}
 				}
@@ -2485,15 +2407,22 @@ private:
 		}
 		else {
 			for (const ident2token_t *i2t=ident2tok_pp;i2t < (ident2tok_pp+ident2tok_pp_length);i2t++) {
-				if (t.v.strliteral.length == i2t->len) {
-					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						t = token_t(token_type_t(i2t->token),pos,buf.source_file);
+				if (length == i2t->len) {
+					if (!memcmp(data,i2t->str,i2t->len)) {
+						t.type = token_type_t(i2t->token);
 						return 1;
 					}
 				}
 			}
 		}
 
+		t.type = token_type_t::identifier;
+		t.v.strliteral.init();
+		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
+		if (!t.v.strliteral.alloc(length)) return errno_return(ENOMEM);
+		assert(t.v.strliteral.data != NULL);
+		assert(t.v.strliteral.length >= length);
+		memcpy(t.v.strliteral.data,data,length);
 		return 1;
 	}
 
