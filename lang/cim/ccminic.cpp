@@ -3029,6 +3029,22 @@ try_again:	t = token_t();
 		static constexpr unsigned int	FL_VARIADIC = 1u << 1u;
 		static constexpr unsigned int	FL_NO_VA_ARGS = 1u << 2u; /* set if GNU args... used instead */
 		static constexpr unsigned int	FL_STRINGIFY = 1u << 3u; /* uses #parameter to stringify */
+
+		pptok_macro_t() { }
+		pptok_macro_t(const pptok_macro_t &) = delete;
+		pptok_macro_t &operator=(const pptok_macro_t &) = delete;
+		pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
+		pptok_macro_t &operator=(pptok_macro_t &&x) { common_move(x); return *this; }
+		~pptok_macro_t() {
+			for (const auto &pid : parameters) identifier(pid).release();
+			parameters.clear();
+		}
+
+		void common_move(pptok_macro_t &o) {
+			flags = o.flags; o.flags = 0;
+			tokens = std::move(o.tokens);
+			parameters = std::move(o.parameters);
+		}
 	};
 
 	struct pptok_state_t {
@@ -3277,6 +3293,7 @@ try_again:	t = token_t();
 #endif
 		}
 
+		identifier(s_id).release();
 		return 1;
 	}
 
@@ -3822,6 +3839,7 @@ try_again:	t = token_t();
 			}
 		}
 
+		identifier(s_id).release();
 		return 1;
 	}
 
@@ -4112,6 +4130,7 @@ try_again:	t = token_t();
 		if (!pst.create_macro(s_id,macro))
 			return errno_return(EEXIST);
 
+		identifier(s_id).release();
 		return 1;
 	}
 
