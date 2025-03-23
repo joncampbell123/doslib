@@ -5584,7 +5584,6 @@ try_again_w_token:
 							return r;
 
 						if (!ds.enum_list.empty()) {
-
 							for (const auto &e : ds.enum_list) {
 								declaration_specifiers_t spec;
 								declarator_t declor;
