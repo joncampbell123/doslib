@@ -559,7 +559,7 @@ namespace CCMiniC {
 		floating,
 		charliteral,
 		strliteral,
-		identifier,
+		old_identifier,
 		comma,					// 20
 		pipeequals,
 		caretequals,
@@ -596,7 +596,7 @@ namespace CCMiniC {
 		openparenthesis,
 		closeparenthesis,
 		coloncolon,				// 55
-		ppidentifier,
+		old__ppidentifier,
 		r_alignas,
 		r_alignof,
 		r_auto,
@@ -735,7 +735,7 @@ namespace CCMiniC {
 		r___declspec,
 		r_asm, /* GNU asm/__asm__ */
 		r___asm, /* MSVC/OpenWatcom _asm __asm */
-		r___asm_text,				// 195
+		old__r___asm_text,			// 195
 		newline,
 		pound,
 		poundpound,
@@ -815,6 +815,9 @@ namespace CCMiniC {
 		op_dinit_field,
 		op_gcc_range,
 		op_bitfield_range,
+		identifier,				// 275
+		ppidentifier,
+		r___asm_text,
 
 		__MAX__
 	};
@@ -1423,7 +1426,10 @@ namespace CCMiniC {
 		"op:dinit_array",
 		"op:dinit_field",
 		"op:gcc-range",
-		"op:bitfield-range"
+		"op:bitfield-range",
+		"identifier",				// 275
+		"ppidentifier",
+		"r___asm_text"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1754,6 +1760,21 @@ namespace CCMiniC {
 	struct identifier_str_t {
 		unsigned char*		data;
 		size_t			length;
+		unsigned int		refcount = 0;
+
+		void release(void) {
+			if (refcount == 0) {
+				throw std::runtime_error("identifier release when zero");
+			}
+			else {
+				if ((--refcount) == 0)
+					delete this;
+			}
+		}
+
+		void addref(void) {
+			refcount++;
+		}
 
 		identifier_str_t() : data(NULL), length(0) { }
 		identifier_str_t(const identifier_str_t &x) = delete;
@@ -1762,7 +1783,7 @@ namespace CCMiniC {
 		identifier_str_t(identifier_str_t &&x) { common_move(x); }
 		identifier_str_t &operator=(identifier_str_t &&x) { common_move(x); return *this; }
 
-		~identifier_str_t() { free(); }
+		~identifier_str_t() { if (refcount != 0) fprintf(stderr,"WARNING: identifier str free() while outstanding references\n"); free(); }
 
 		void free(void) {
 			if (data) { ::free(data); data = NULL; }
@@ -1772,6 +1793,20 @@ namespace CCMiniC {
 		void common_move(identifier_str_t &other) {
 			data = other.data; other.data = NULL;
 			length = other.length; other.length = 0;
+			refcount = other.refcount; other.refcount = 0;
+		}
+
+		bool copy_from(const unsigned char *in_data,const size_t in_length) {
+			free();
+
+			if (in_length != 0 && in_length < 4096) {
+				data = (unsigned char*)::malloc(in_length);
+				if (data == NULL) return false;
+				memcpy(data,in_data,in_length);
+				length = in_length;
+			}
+
+			return true;
 		}
 
 		void take_from(charstrliteral_t &l) {
@@ -1800,6 +1835,13 @@ namespace CCMiniC {
 			return true;
 		}
 		bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
+
+		bool operator==(const std::string &rhs) const {
+			if (length != rhs.length()) return false;
+			if (length != 0) return memcmp(data,rhs.data(),length) == 0;
+			return true;
+		}
+		inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
 	};
 
 	void CCerr(const position_t &pos,const char *fmt,...) {
@@ -1881,6 +1923,7 @@ namespace CCMiniC {
 			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
 			size_t			paramref; /* token_type_t::r_macro_paramref */
 			declaration_t*		declaration; /* token_type_t::op_declaration */
+			identifier_str_t*	identifier;
 			void*			general_ptr; /* for use in clearing general ppinter */
 		} v;
 
@@ -1896,9 +1939,9 @@ namespace CCMiniC {
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
+				case token_type_t::old_identifier:
+				case token_type_t::old__ppidentifier:
+				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
@@ -1907,6 +1950,12 @@ namespace CCMiniC {
 					sprintf(tmp,"(%u)",(unsigned int)v.paramref);
 					s += tmp;
 					break; }
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					assert(v.identifier != NULL);
+					s += "("; s += (*v.identifier).to_str(); s += ")";
+					break;
 				default:
 					break;
 			}
@@ -1919,14 +1968,20 @@ private:
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
+				case token_type_t::old_identifier:
+				case token_type_t::old__ppidentifier:
+				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.free();
 					break;
 				case token_type_t::op_declaration:
 					typ_delete(v.declaration);
+					break;
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					assert(v.identifier != NULL);
+					v.identifier->release();
 					break;
 				default:
 					break;
@@ -1945,9 +2000,9 @@ private:
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
+				case token_type_t::old_identifier:
+				case token_type_t::old__ppidentifier:
+				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					break;
@@ -1955,12 +2010,18 @@ private:
 					v.general_ptr = NULL;
 					static_assert( offsetof(v_t,general_ptr) == offsetof(v_t,declaration), "oops" );
 					break;
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					(v.identifier = new identifier_str_t())->addref();
+					break;
 				default:
 					break;
 			}
 		}
 
 		void common_copy(const token_t &x) {
+			assert(&x != this);
 			common_delete();
 			type = x.type;
 			pos = x.pos;
@@ -1970,15 +2031,21 @@ private:
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
+				case token_type_t::old_identifier:
+				case token_type_t::old__ppidentifier:
+				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					v.strliteral.copy_from(x.v.strliteral);
 					break;
 				case token_type_t::op_declaration:
 					throw std::runtime_error("Copy constructor not available");
+					break;
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					assert(x.v.identifier != NULL);
+					(v.identifier = x.v.identifier)->addref();
 					break;
 				default:
 					v = x.v;
@@ -2297,12 +2364,8 @@ private:
 		}
 
 		t.type = token_type_t::r___asm_text;
-		t.v.strliteral.init();
-		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-		if (!t.v.strliteral.alloc(length)) return errno_return(ENOMEM);
-		assert(t.v.strliteral.data != NULL);
-		assert(t.v.strliteral.length >= length);
-		memcpy(t.v.strliteral.data,data,length);
+		(t.v.identifier = new identifier_str_t())->addref();
+		if (!t.v.identifier->copy_from(data,length)) return errno_return(ENOMEM);
 		return 1;
 	}
 
@@ -2386,13 +2449,9 @@ private:
 			}
 		}
 
-		t.type = token_type_t::identifier;
-		t.v.strliteral.init();
-		t.v.strliteral.type = charstrliteral_t::type_t::CHAR;
-		if (!t.v.strliteral.alloc(length)) return errno_return(ENOMEM);
-		assert(t.v.strliteral.data != NULL);
-		assert(t.v.strliteral.length >= length);
-		memcpy(t.v.strliteral.data,data,length);
+		t.type = pp ? token_type_t::ppidentifier : token_type_t::identifier;
+		(t.v.identifier = new identifier_str_t())->addref();
+		if (!t.v.identifier->copy_from(data,length)) return errno_return(ENOMEM);
 		return 1;
 	}
 
@@ -3131,7 +3190,7 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::old_identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
@@ -3404,7 +3463,7 @@ try_again:	t = token_t();
 		/* line number */
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
-		if (t.type == token_type_t::identifier) {
+		if (t.type == token_type_t::old_identifier) {
 			const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
 			if (macro) {
 				if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
@@ -3472,7 +3531,7 @@ try_again:	t = token_t();
 				if (!msg.empty()) msg += " ";
 				msg += t.v.strliteral.makestring();
 			}
-			else if (t.type == token_type_t::identifier) {
+			else if (t.type == token_type_t::old_identifier) {
 				if (!msg.empty()) msg += " ";
 				msg += t.v.strliteral.makestring();
 			}
@@ -3521,7 +3580,7 @@ try_again:	t = token_t();
 				t.v.integer.init();
 				t.v.integer.v.u = (res > 0) ? 1 : 0;
 			}
-			else if (t.type == token_type_t::identifier) {
+			else if (t.type == token_type_t::old_identifier) {
 				if (t.v.strliteral == "defined") { /* defined(MACRO) */
 					int paren = 0;
 					int res = -1;
@@ -3538,7 +3597,7 @@ try_again:	t = token_t();
 							paren--;
 							if (paren == 0) break;
 						}
-						else if (t.type == token_type_t::identifier) {
+						else if (t.type == token_type_t::old_identifier) {
 							if (res >= 0) return errno_return(EINVAL);
 							res = (pst.lookup_macro(t.v.strliteral) != NULL) ? 1 : 0;
 						}
@@ -3648,7 +3707,7 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::old_identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
@@ -3837,7 +3896,7 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::old_identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 		s_id.take_from(t.v.strliteral);
 
@@ -3863,7 +3922,7 @@ try_again:	t = token_t();
 					macro.flags |= pptok_macro_t::FL_VARIADIC;
 					continue;
 				}
-				if (t.type != token_type_t::identifier)
+				if (t.type != token_type_t::old_identifier)
 					CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
 				eat_whitespace(buf,sfo);
@@ -3889,7 +3948,7 @@ try_again:	t = token_t();
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
-			if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+			if (t.type == token_type_t::old_identifier || t.type == token_type_t::old__r___asm_text) {
 				if (t.v.strliteral == "__VA_ARGS__") {
 					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
 						t = token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file);
@@ -3909,7 +3968,7 @@ try_again:	t = token_t();
 			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
 				macro.tokens.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
 			}
-			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+			else if (t.type == token_type_t::old_identifier || t.type == token_type_t::old__r___asm_text) {
 				/* if the identifier matches a paraemeter then put in a parameter reference,
 				 * else pass the identifier along. */
 
@@ -4580,8 +4639,8 @@ try_again_w_token:
 					goto try_again;
 				}
 				goto try_again_w_token; }
-			case token_type_t::identifier: /* macro substitution */
-			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
+			case token_type_t::old_identifier: /* macro substitution */
+			case token_type_t::old__r___asm_text: { /* to allow macros to work with assembly language */
 				if (!pst.condb_true())
 					goto try_again;
 
@@ -4613,7 +4672,7 @@ try_again_w_token:
 			return r;
 
 		/* it might be a reserved keyword, check */
-		if (t.type == token_type_t::identifier) {
+		if (t.type == token_type_t::old_identifier) {
 			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
 				if (t.v.strliteral.length == i2t->len) {
 					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
@@ -5272,7 +5331,7 @@ try_again_w_token:
 
 		/* this automatically uses the scope_stack and current_scope() return value */
 		symbol_id_t lookup_symbol(token_t &name) {
-			if (name.type != token_type_t::identifier)
+			if (name.type != token_type_t::old_identifier)
 				return symbol_none;
 
 			/* search backwards to give recent local symbols priority */
@@ -5281,7 +5340,7 @@ try_again_w_token:
 				do {
 					symbol_t &chk_s = symbols[si];
 
-					if (chk_s.identifier.type == token_type_t::identifier) {
+					if (chk_s.identifier.type == token_type_t::old_identifier) {
 						if (name.v.strliteral == chk_s.identifier.v.strliteral) {
 							if (symbol_scope_check(chk_s.scope))
 								return symbol_id_t(si);
@@ -5381,7 +5440,7 @@ try_again_w_token:
 
 			enumerator_t en;
 
-			if (tq_peek().type != token_type_t::identifier)
+			if (tq_peek().type != token_type_t::old_identifier)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
 			en.name = std::move(tq_get());
@@ -5525,7 +5584,7 @@ try_again_w_token:
 					 * enum identifier { list }
 					 * enum identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
+					if (tq_peek().type == token_type_t::old_identifier)
 						ds.type_identifier = std::move(tq_get());
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
@@ -5548,7 +5607,7 @@ try_again_w_token:
 					 * struct identifier { list }
 					 * struct identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
+					if (tq_peek().type == token_type_t::old_identifier)
 						ds.type_identifier = std::move(tq_get());
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
@@ -5582,7 +5641,7 @@ try_again_w_token:
 					 * union identifier */
 					/* NTS: Unions are parsed the same as structs */
 
-					if (tq_peek().type == token_type_t::identifier)
+					if (tq_peek().type == token_type_t::old_identifier)
 						ds.type_identifier = std::move(tq_get());
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
@@ -5676,7 +5735,7 @@ try_again_w_token:
 
 		fprintf(stderr,"  type specifier: 0x%lx",(unsigned long)ds.type_specifier);
 		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-		if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
+		if (ds.type_identifier.type == token_type_t::old_identifier) fprintf(stderr," '%s'",ds.type_identifier.v.strliteral.makestring().c_str());
 		fprintf(stderr,"\n");
 
 		if (!ds.enum_list.empty()) {
@@ -5684,7 +5743,7 @@ try_again_w_token:
 			for (auto &en : ds.enum_list) {
 				fprintf(stderr,"      ");
 
-				if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
+				if (en.name.type == token_type_t::old_identifier) fprintf(stderr,"'%s'",en.name.v.strliteral.makestring().c_str());
 				else fprintf(stderr,"?");
 				fprintf(stderr,"\n");
 
@@ -5799,7 +5858,7 @@ try_again_w_token:
 				return r;
 		}
 
-		if (tq_peek().type == token_type_t::identifier) {
+		if (tq_peek().type == token_type_t::old_identifier) {
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
 			dd.name = std::move(tq_get());
 		}
@@ -5873,11 +5932,11 @@ try_again_w_token:
 						return errno_return(EINVAL);
 
 					if (p.decl->ddecl.name.type != token_type_t::none) {
-						if (p.decl->ddecl.name.type != token_type_t::identifier)
+						if (p.decl->ddecl.name.type != token_type_t::old_identifier)
 							return errno_return(EINVAL);
 						for (const auto &chk_p : dd.parameters) {
 							assert(chk_p.decl != NULL);
-							if (chk_p.decl->ddecl.name.type == token_type_t::identifier) {
+							if (chk_p.decl->ddecl.name.type == token_type_t::old_identifier) {
 								if (chk_p.decl->ddecl.name.v.strliteral == p.decl->ddecl.name.v.strliteral) {
 									CCerr(pos,"Parameter '%s' already defined",p.decl->ddecl.name.v.strliteral.makestring().c_str());
 									return errno_return(EEXIST);
@@ -5981,7 +6040,7 @@ try_again_w_token:
 							assert(dp != NULL);
 							auto &d = *dp;
 
-							if (d.ddecl.name.type != token_type_t::identifier)
+							if (d.ddecl.name.type != token_type_t::old_identifier)
 								return errno_return(EINVAL);
 
 							/* the name must match a parameter and it must not already have been given it's type */
@@ -5991,7 +6050,7 @@ try_again_w_token:
 
 								if (!chk_p.decl)
 									return errno_return(EINVAL);
-								if (chk_p.decl->ddecl.name.type != token_type_t::identifier)
+								if (chk_p.decl->ddecl.name.type != token_type_t::old_identifier)
 									return errno_return(EINVAL);
 								if (d.ddecl.name.v.strliteral == chk_p.decl->ddecl.name.v.strliteral)
 									break;
@@ -6034,7 +6093,7 @@ try_again_w_token:
 
 #if 1//DEBUG
 		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
-		if (dd.name.type == token_type_t::identifier)
+		if (dd.name.type == token_type_t::old_identifier)
 			fprintf(stderr,"  identifier: %s\n",dd.name.v.strliteral.makestring().c_str());
 		else if (dd.name.type == token_type_t::none)
 			fprintf(stderr,"  identifier: (none)\n");
@@ -6084,7 +6143,7 @@ try_again_w_token:
 						}
 					}
 
-					if (name.type == token_type_t::identifier)
+					if (name.type == token_type_t::old_identifier)
 						fprintf(stderr," '%s'",name.v.strliteral.makestring().c_str());
 					else if (name.type == token_type_t::none)
 						fprintf(stderr," (none)");
@@ -6116,7 +6175,7 @@ try_again_w_token:
 			for (const auto &p : dd.parameters) {
 				if (p.spec.empty()) {
 					assert(p.decl != NULL);
-					assert(p.decl->ddecl.name.type == token_type_t::identifier);
+					assert(p.decl->ddecl.name.type == token_type_t::old_identifier);
 					CCerr(pos,"Parameter '%s' is missing type",p.decl->ddecl.name.v.strliteral.makestring().c_str());
 					return errno_return(EINVAL);
 				}
@@ -6230,7 +6289,7 @@ try_again_w_token:
 							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 						}
 
-						if (declr.ddecl.name.type == token_type_t::identifier)
+						if (declr.ddecl.name.type == token_type_t::old_identifier)
 							fprintf(stderr," %s",declr.ddecl.name.v.strliteral.makestring().c_str());
 
 						if (!declr.ddecl.ptr.empty()) fprintf(stderr," )");
@@ -6271,7 +6330,7 @@ try_again_w_token:
 									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
 								}
 
-								if (p_declr.name.type == token_type_t::identifier)
+								if (p_declr.name.type == token_type_t::old_identifier)
 									fprintf(stderr," %s",p_declr.name.v.strliteral.makestring().c_str());
 
 								if (!p_declr.ptr.empty()) fprintf(stderr," )");
@@ -6312,7 +6371,7 @@ try_again_w_token:
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
 		int r;
 
-		if (	tq_peek().type == token_type_t::identifier ||
+		if (	tq_peek().type == token_type_t::old_identifier ||
 			tq_peek().type == token_type_t::strliteral ||
 			tq_peek().type == token_type_t::charliteral ||
 			tq_peek().type == token_type_t::integer ||
@@ -7234,7 +7293,7 @@ try_again_w_token:
 				ast_node_id_t expr = ast_node_none,s_expr = ast_node_none;
 				bool c99_dinit = false;
 
-				if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+				if (tq_peek(0).type == token_type_t::old_identifier && tq_peek(1).type == token_type_t::colon) {
 					/* field: expression
 					 *
 					 * means the same as .field = expression but is an old GCC syntax */
@@ -7297,7 +7356,7 @@ try_again_w_token:
 
 							c99_dinit = true;
 						}
-						else if (tq_peek(0).type == token_type_t::period && tq_peek(1).type == token_type_t::identifier) {
+						else if (tq_peek(0).type == token_type_t::period && tq_peek(1).type == token_type_t::old_identifier) {
 							tq_discard(); /* eat the '.' */
 
 							ast_node_id_t asq = ast_node_alloc(tq_get()); /* and then the ident */
@@ -7558,7 +7617,7 @@ try_again_w_token:
 			ast_node(loopexpr).set_next(iterexpr); ast_node(iterexpr).release();
 			if (stmt != ast_node_none) { ast_node(iterexpr).set_next(stmt); ast_node(stmt).release(); }
 		}
-		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+		else if (tq_peek(0).type == token_type_t::old_identifier && tq_peek(1).type == token_type_t::colon) {
 			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */
 			aroot = ast_node_alloc(token_type_t::op_label);
 			ast_node(aroot).set_child(label); ast_node(label).release();
@@ -7609,7 +7668,7 @@ try_again_w_token:
 				aroot = ast_node_alloc(token_type_t::op_continue);
 				tq_discard();
 			}
-			else if (tq_peek(0).type == token_type_t::r_goto && tq_peek(1).type == token_type_t::identifier) {
+			else if (tq_peek(0).type == token_type_t::r_goto && tq_peek(1).type == token_type_t::old_identifier) {
 				tq_discard();
 				ast_node_id_t label = ast_node_alloc(tq_get());
 				aroot = ast_node_alloc(token_type_t::op_goto);
@@ -7790,7 +7849,7 @@ try_again_w_token:
 			auto &declor = *declor_p;
 			auto &ddecl = declor.ddecl;
 
-			if (ddecl.name.type == token_type_t::identifier)
+			if (ddecl.name.type == token_type_t::old_identifier)
 				fprintf(stderr,"  declor: '%s'\n",ddecl.name.v.strliteral.makestring().c_str());
 
 			if (declor.initval != ast_node_none) {
@@ -7844,7 +7903,7 @@ try_again_w_token:
 			auto &declor = *declor_p;
 			auto &ddecl = declor.ddecl;
 
-			if (ddecl.name.type == token_type_t::identifier)
+			if (ddecl.name.type == token_type_t::old_identifier)
 				fprintf(stderr,"  declor: '%s'\n",ddecl.name.v.strliteral.makestring().c_str());
 
 			if (declor.bitfield_expr != ast_node_none) {
