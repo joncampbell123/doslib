@@ -243,8 +243,8 @@ static int daabb(char a,char b) {
 }
 enum test xoooo;
 enum test { A, B, C, D } xoooo2;
-enum test { A=1, B, C=100, D=A*400, E=A+B+C+D } xoooo3;
-enum { A, B, C, D } xoooo4;
+enum test { AA=1, AB, AC=100, AD=A*400, AE=A+B+C+D } xoooo3;
+enum { BA, BB, BC, BD } xoooo4;
 struct test xooo5,*y,**z;
 struct test { } x;
 struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
@@ -261,11 +261,11 @@ struct test {
 } x00012;
 enum test;
 enum test {
-	A,
-	B,
-	C,
-	D,
-	E
+	CA,
+	CB,
+	CC,
+	CD,
+	CE
 };
 struct test;
 struct test {

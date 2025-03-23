@@ -5351,7 +5351,7 @@ try_again_w_token:
 			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope())
-					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",declor.ddecl.name.v.strliteral.makestring().c_str());
+					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",(*declor.ddecl.name.v.identifier).to_str().c_str());
 				else
 					sid = symbol_none;
 			}
@@ -5582,6 +5582,21 @@ try_again_w_token:
 
 						if ((r=enumerator_list_parse(ds.enum_list)) < 1)
 							return r;
+
+						if (!ds.enum_list.empty()) {
+
+							for (const auto &e : ds.enum_list) {
+								declaration_specifiers_t spec;
+								declarator_t declor;
+
+								spec.count = 1;
+								spec.type_specifier = TS_INT;
+
+								declor.ddecl.name = e.name;
+								if ((r=add_symbol(spec,declor)) < 1)
+									return r;
+							}
+						}
 					}
 					continue;
 
