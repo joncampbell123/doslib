@@ -1557,7 +1557,13 @@ namespace CCMiniC {
 		void init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 	};
 
-	struct charstrliteral_t {
+	///////////////////////////////////////////////////////
+
+	typedef size_t csliteral_id_t;
+	static constexpr csliteral_id_t csliteral_none = ~size_t(0u);
+	static csliteral_id_t csliteral_next = 0;
+
+	struct csliteral_t {
 		enum type_t {
 			CHAR=0,
 			UTF8, /* multibyte */
@@ -1567,15 +1573,25 @@ namespace CCMiniC {
 			__MAX__
 		};
 
-		type_t			type;
-		void*			data;
-		size_t			length; /* in bytes */
-		size_t			allocated;
+		type_t			type = CHAR;
+		void*			data = NULL;
+		size_t			length = 0; /* in bytes */
+		size_t			allocated = 0;
+		unsigned int		ref = 0;
 
-		void init(void) { type = type_t::CHAR; data = NULL; length = 0; allocated = 0; }
-		void free(void) { if (data) ::free(data); data = NULL; length = 0; allocated = 0; type = type_t::CHAR; }
+		csliteral_t &release(void);
+		csliteral_t &addref(void);
+		csliteral_t &clear(void);
 
-		bool copy_from(const charstrliteral_t &x) {
+		void free(void) {
+			if (data) ::free(data);
+			data = NULL;
+			length = 0;
+			allocated = 0;
+			type = type_t::CHAR;
+		}
+
+		bool copy_from(const csliteral_t &x) {
 			free();
 			type = x.type;
 			assert(data == NULL);
@@ -1601,7 +1617,7 @@ namespace CCMiniC {
 		const uint16_t *as_u16(void) const { return (const uint16_t*)data; }
 		const uint32_t *as_u32(void) const { return (const uint32_t*)data; }
 
-		bool operator==(const charstrliteral_t &rhs) const {
+		bool operator==(const csliteral_t &rhs) const {
 			if (length != rhs.length) return false;
 
 			if ((type == type_t::CHAR || type == type_t::UTF8) == (rhs.type == type_t::CHAR || rhs.type == type_t::UTF8)) { /* OK */ }
@@ -1609,7 +1625,7 @@ namespace CCMiniC {
 
 			return memcmp(data,rhs.data,length) == 0;
 		}
-		inline bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
+		inline bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
 
 		bool operator==(const std::string &rhs) const {
 			if (length != rhs.size() || !(type == type_t::CHAR || type == type_t::UTF8)) return false;
@@ -1751,6 +1767,79 @@ namespace CCMiniC {
 		}
 	};
 
+	static std::vector<csliteral_t>	csliterals;
+
+	csliteral_t &csliteral(const csliteral_id_t &id);
+
+	void update_next_csliteral(csliteral_t *p) {
+		if (p >= &csliterals[0]) {
+			const size_t i = p - &csliterals[0];
+			if (i < csliterals.size()) csliteral_next = i;
+		}
+	}
+
+	csliteral_t &csliteral_t::clear(void) {
+		free();
+		return *this;
+	}
+
+	csliteral_t &csliteral_t::addref(void) {
+		ref++;
+		return *this;
+	}
+
+	csliteral_t &csliteral_t::release(void) {
+		if (ref == 0) throw std::runtime_error("csliteral attempt to release when ref == 0");
+		if (--ref == 0) clear();
+		return *this;
+	}
+
+	void csliteral_refcount_check(void) {
+		for (size_t i=0;i < csliterals.size();i++) {
+			if (csliterals[i].ref != 0) {
+				fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
+					csliterals[i].ref,
+					csliterals[i].to_str().c_str());
+			}
+		}
+	}
+
+	csliteral_t &csliteral(const csliteral_id_t &id) {
+#if 1//DEBUG
+		if (id < csliterals.size()) {
+			if (csliterals[id].ref == 0)
+				throw std::out_of_range("csliteral not initialized");
+
+			return csliterals[id];
+		}
+
+		throw std::out_of_range("csliteral out of range");
+#else
+		return csliterals[id];
+#endif
+	}
+
+	static csliteral_t& __internal_csliteral_alloc() {
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+		while (csliteral_next < csliterals.size() && csliterals[csliteral_next].ref != 0)
+			csliteral_next++;
+#endif
+		if (csliteral_next == csliterals.size())
+			csliterals.resize(csliterals.size()+(csliterals.size()/2u)+16u);
+
+		assert(csliteral_next < csliterals.size());
+		assert(csliterals[csliteral_next].ref == 0);
+		return csliterals[csliteral_next];
+	}
+
+	csliteral_id_t csliteral_alloc(void) {
+		csliteral_t &a = __internal_csliteral_alloc();
+		a.clear().addref();
+		return csliteral_next++;
+	}
+
+	/////////////////////////////////////////////////
+
 	typedef size_t identifier_id_t;
 	static constexpr identifier_id_t identifier_none = ~size_t(0u);
 	static identifier_id_t identifier_next = 0;
@@ -1815,12 +1904,12 @@ namespace CCMiniC {
 		}
 		bool operator!=(const identifier_t &rhs) const { return !(*this == rhs); }
 
-		bool operator==(const charstrliteral_t &rhs) const {
+		bool operator==(const csliteral_t &rhs) const {
 			if (length != rhs.length) return false;
 			if (length != 0) return memcmp(data,rhs.data,length) == 0;
 			return true;
 		}
-		bool operator!=(const charstrliteral_t &rhs) const { return !(*this == rhs); }
+		bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
 
 		bool operator==(const std::string &rhs) const {
 			if (length != rhs.length()) return false;
@@ -1979,7 +2068,7 @@ namespace CCMiniC {
 		union v_t {
 			integer_value_t		integer; /* token_type_t::integer */
 			floating_value_t	floating; /* token_type_t::floating */
-			charstrliteral_t	strliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
+			csliteral_id_t		csliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
 			size_t			paramref; /* token_type_t::r_macro_paramref */
 			declaration_t*		declaration; /* token_type_t::op_declaration */
 			identifier_id_t		identifier;
@@ -1999,7 +2088,7 @@ namespace CCMiniC {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					s += "("; s += v.strliteral.to_str(); s += ")";
+					s += "("; s += csliteral(v.csliteral).to_str(); s += ")";
 					break;
 				case token_type_t::r_macro_paramref: {
 					char tmp[64];
@@ -2024,7 +2113,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					v.strliteral.free();
+					if (v.csliteral != csliteral_none) csliteral(v.csliteral).release();
 					break;
 				case token_type_t::op_declaration:
 					typ_delete(v.declaration);
@@ -2052,7 +2141,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					v.strliteral.init();
+					v.csliteral = csliteral_none;
 					break;
 				case token_type_t::op_declaration:
 					v.general_ptr = NULL;
@@ -2080,8 +2169,8 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					v.strliteral.init();
-					v.strliteral.copy_from(x.v.strliteral);
+					v.csliteral = x.v.csliteral;
+					if (v.csliteral != csliteral_none) csliteral(v.csliteral).addref();
 					break;
 				case token_type_t::op_declaration:
 					throw std::runtime_error("Copy constructor not available");
@@ -2227,9 +2316,9 @@ private:
 		return v;
 	}
 
-	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
+	template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
 
-	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::CHAR,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
+	template <> int lgtok_strlit_wrch<csliteral_t::type_t::CHAR,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
 		if (v < 0x00 || v > 0xFF)
 			return errno_return(EINVAL);
 
@@ -2238,7 +2327,7 @@ private:
 		return 1;
 	}
 
-	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UTF8,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
+	template <> int lgtok_strlit_wrch<csliteral_t::type_t::UTF8,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
 		if (v < 0x00)
 			return errno_return(EINVAL);
 
@@ -2247,7 +2336,7 @@ private:
 		return 1;
 	}
 
-	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UNICODE16,uint16_t>(uint16_t* &p,uint16_t* const f,const unicode_char_t v) {
+	template <> int lgtok_strlit_wrch<csliteral_t::type_t::UNICODE16,uint16_t>(uint16_t* &p,uint16_t* const f,const unicode_char_t v) {
 		if (v < 0x00l || v > 0x20FFFFl)
 			return errno_return(EINVAL);
 
@@ -2256,7 +2345,7 @@ private:
 		return 1;
 	}
 
-	template <> int lgtok_strlit_wrch<charstrliteral_t::type_t::UNICODE32,uint32_t>(uint32_t* &p,uint32_t* const f,const unicode_char_t v) {
+	template <> int lgtok_strlit_wrch<csliteral_t::type_t::UNICODE32,uint32_t>(uint32_t* &p,uint32_t* const f,const unicode_char_t v) {
 		if (v < 0x00)
 			return errno_return(EINVAL);
 
@@ -2265,8 +2354,8 @@ private:
 		return 1;
 	}
 
-	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,const unsigned char separator,ptrat* &p,ptrat* const &f) {
-		const bool unicode = !(cslt == charstrliteral_t::type_t::CHAR);
+	template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,const unsigned char separator,ptrat* &p,ptrat* const &f) {
+		const bool unicode = !(cslt == csliteral_t::type_t::CHAR);
 		int32_t v;
 		int rr;
 
@@ -2288,24 +2377,24 @@ private:
 		return 1;
 	}
 
-	template <const charstrliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
+	template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
 		assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral || t.type == token_type_t::anglestrliteral);
 		ptrat *p,*f;
 		int rr;
 
-		if (!t.v.strliteral.alloc((4096+20)*sizeof(ptrat)))
+		if (!csliteral(t.v.csliteral).alloc((4096+20)*sizeof(ptrat)))
 			return errno_return(ENOMEM);
 
-		p = (ptrat*)((char*)t.v.strliteral.data);
-		f = (ptrat*)((char*)t.v.strliteral.data+t.v.strliteral.length);
+		p = (ptrat*)((char*)csliteral(t.v.csliteral).data);
+		f = (ptrat*)((char*)csliteral(t.v.csliteral).data+csliteral(t.v.csliteral).length);
 
 		rr = lgtok_strlit_common_inner<cslt,ptrat>(buf,sfo,separator,p,f);
 
 		{
-			const size_t fo = size_t(p-((ptrat*)t.v.strliteral.data)) * sizeof(ptrat);
-			assert(fo <= t.v.strliteral.allocated);
-			t.v.strliteral.length = fo;
-			t.v.strliteral.shrinkfit();
+			const size_t fo = size_t(p-((ptrat*)csliteral(t.v.csliteral).data)) * sizeof(ptrat);
+			assert(fo <= csliteral(t.v.csliteral).allocated);
+			csliteral(t.v.csliteral).length = fo;
+			csliteral(t.v.csliteral).shrinkfit();
 		}
 
 		return rr;
@@ -2333,7 +2422,7 @@ private:
 		return true;
 	}
 
-	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const charstrliteral_t::type_t cslt=charstrliteral_t::type_t::CHAR) {
+	int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const csliteral_t::type_t cslt=csliteral_t::type_t::CHAR) {
 		unsigned char separator = buf.peekb();
 
 		if (separator == '\'' || separator == '\"' || separator == '<') {
@@ -2343,20 +2432,20 @@ private:
 			if (separator == '\"') t.type = token_type_t::strliteral;
 			else if (separator == '<') t.type = token_type_t::anglestrliteral;
 			else t.type = token_type_t::charliteral;
-			t.v.strliteral.init();
-			t.v.strliteral.type = cslt;
+			t.v.csliteral = csliteral_alloc();
+			csliteral(t.v.csliteral).type = cslt;
 
 			if (separator == '<') separator = '>';
 
 			switch (cslt) {
-				case charstrliteral_t::type_t::CHAR:
-					return lgtok_strlit_common<charstrliteral_t::type_t::CHAR,unsigned char>(buf,sfo,t,separator);
-				case charstrliteral_t::type_t::UTF8:
-					return lgtok_strlit_common<charstrliteral_t::type_t::UTF8,unsigned char>(buf,sfo,t,separator);
-				case charstrliteral_t::type_t::UNICODE16:
-					return lgtok_strlit_common<charstrliteral_t::type_t::UNICODE16,uint16_t>(buf,sfo,t,separator);
-				case charstrliteral_t::type_t::UNICODE32:
-					return lgtok_strlit_common<charstrliteral_t::type_t::UNICODE32,uint32_t>(buf,sfo,t,separator);
+				case csliteral_t::type_t::CHAR:
+					return lgtok_strlit_common<csliteral_t::type_t::CHAR,unsigned char>(buf,sfo,t,separator);
+				case csliteral_t::type_t::UTF8:
+					return lgtok_strlit_common<csliteral_t::type_t::UTF8,unsigned char>(buf,sfo,t,separator);
+				case csliteral_t::type_t::UNICODE16:
+					return lgtok_strlit_common<csliteral_t::type_t::UNICODE16,uint16_t>(buf,sfo,t,separator);
+				case csliteral_t::type_t::UNICODE32:
+					return lgtok_strlit_common<csliteral_t::type_t::UNICODE32,uint32_t>(buf,sfo,t,separator);
 				default:
 					break;
 			}
@@ -2455,19 +2544,19 @@ private:
 		 * allowed. */
 		if (buf.peekb() == '\'' || buf.peekb() == '\"') {
 			if (length == 2 && !memcmp(data,"u8",2)) {
-				return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UTF8);
+				return lgtok_charstrlit(buf,sfo,t,csliteral_t::type_t::UTF8);
 			}
 			else if (length == 1) {
 				if (*((const char*)data) == 'U') {
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					return lgtok_charstrlit(buf,sfo,t,csliteral_t::type_t::UNICODE32);
 				}
 				else if (*((const char*)data) == 'u') {
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE16);
+					return lgtok_charstrlit(buf,sfo,t,csliteral_t::type_t::UNICODE16);
 				}
 				else if (*((const char*)data) == 'L') {
 					/* FIXME: A "wide" char varies between targets i.e. Windows wide char is 16 bits,
 					 *        Linux wide char is 32 bits. */
-					return lgtok_charstrlit(buf,sfo,t,charstrliteral_t::type_t::UNICODE32);
+					return lgtok_charstrlit(buf,sfo,t,csliteral_t::type_t::UNICODE32);
 				}
 			}
 		}
@@ -3222,7 +3311,7 @@ try_again:	t = token_t();
 			return macro_hash_id(identifier(i));
 		}
 
-		static uint8_t macro_hash_id(const charstrliteral_t &i) {
+		static uint8_t macro_hash_id(const csliteral_t &i) {
 			return macro_hash_id((const unsigned char*)i.data,i.length);
 		}
 
@@ -3567,7 +3656,7 @@ try_again:	t = token_t();
 
 		/* optional quoted filename */
 		if (t.type == token_type_t::strliteral) {
-			name = t.v.strliteral.makestring();
+			name = csliteral(t.v.csliteral).makestring();
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
@@ -3611,7 +3700,7 @@ try_again:	t = token_t();
 			}
 			else if (t.type == token_type_t::strliteral) {
 				if (!msg.empty()) msg += " ";
-				msg += t.v.strliteral.makestring();
+				msg += csliteral(t.v.csliteral).makestring();
 			}
 			else if (t.type == token_type_t::identifier) {
 				if (!msg.empty()) msg += " ";
@@ -4352,14 +4441,14 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.set_source_file(rb.source_file);
-							st.v.strliteral.init();
+							st.v.csliteral = csliteral_alloc();
 							st.pos = rb.pos;
 
-							if (!st.v.strliteral.alloc(rb.data_avail()))
+							if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
 								return errno_return(ENOMEM);
 
-							assert(st.v.strliteral.length == rb.data_avail());
-							memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+							assert(csliteral(st.v.csliteral).length == rb.data_avail());
+							memcpy(csliteral(st.v.csliteral).data,rb.data,rb.data_avail());
 							out.push_back(std::move(st));
 						}
 
@@ -4376,14 +4465,14 @@ go_again:
 
 								st.type = token_type_t::strliteral;
 								st.set_source_file(rb.source_file);
-								st.v.strliteral.init();
+								st.v.csliteral = csliteral_alloc();
 								st.pos = rb.pos;
 
-								if (!st.v.strliteral.alloc(rb.data_avail()))
+								if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
 									return errno_return(ENOMEM);
 
-								assert(st.v.strliteral.length == rb.data_avail());
-								memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+								assert(csliteral(st.v.csliteral).length == rb.data_avail());
+								memcpy(csliteral(st.v.csliteral).data,rb.data,rb.data_avail());
 								out.push_back(std::move(st));
 							}
 
@@ -4437,14 +4526,14 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.set_source_file(rb.source_file);
-							st.v.strliteral.init();
+							st.v.csliteral = csliteral_alloc();
 							st.pos = rb.pos;
 
-							if (!st.v.strliteral.alloc(rb.data_avail()))
+							if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
 								return errno_return(ENOMEM);
 
-							assert(st.v.strliteral.length == rb.data_avail());
-							memcpy(st.v.strliteral.data,rb.data,rb.data_avail());
+							assert(csliteral(st.v.csliteral).length == rb.data_avail());
+							memcpy(csliteral(st.v.csliteral).data,rb.data,rb.data_avail());
 							out.push_back(std::move(st));
 						}
 					}
@@ -4528,7 +4617,7 @@ go_again:
 		CCMiniC::source_file_object *sfo = NULL;
 
 		if (fl & CBIS_USER_HEADER) {
-			std::string path = t.v.strliteral.makestring();	path_slash_translate(path);
+			std::string path = csliteral(t.v.csliteral).makestring(); path_slash_translate(path);
 			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
 				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
 				if (fd >= 0) {
@@ -4540,7 +4629,7 @@ go_again:
 		}
 
 		for (auto ipi=cb_include_search_paths.begin();ipi!=cb_include_search_paths.end();ipi++) {
-			std::string path = path_combine(*ipi,t.v.strliteral.makestring()); path_slash_translate(path);
+			std::string path = path_combine(*ipi,csliteral(t.v.csliteral).makestring()); path_slash_translate(path);
 			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
 				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
 				if (fd >= 0) {
@@ -4594,17 +4683,17 @@ try_again_w_token:
 				if (!pst.condb_true())
 					goto try_again;
 				t.type = token_type_t::strliteral;
-				t.v.strliteral.init();
+				t.v.csliteral = csliteral_alloc();
 				{
 					const char *name = sfo.getname();
 					if (name) {
 						const size_t l = strlen(name);
 
-						if (!t.v.strliteral.alloc(l))
+						if (!csliteral(t.v.csliteral).alloc(l))
 							return errno_return(ENOMEM);
 
-						assert(t.v.strliteral.length == l);
-						memcpy(t.v.strliteral.data,name,l);
+						assert(csliteral(t.v.csliteral).length == l);
+						memcpy(csliteral(t.v.csliteral).data,name,l);
 					}
 				}
 				break;
@@ -4685,7 +4774,7 @@ try_again_w_token:
 				if (t.type == token_type_t::strliteral) {
 					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
 					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include \"%s\"\n",t.v.strliteral.makestring().c_str());
+						fprintf(stderr,"Unable to #include \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
 						return errno_return(ENOENT);
 					}
 					pst.include_push(sfo);
@@ -4695,7 +4784,7 @@ try_again_w_token:
 					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
 					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
 					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include <%s>\n",t.v.strliteral.makestring().c_str());
+						fprintf(stderr,"Unable to #include <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
 						return errno_return(ENOENT);
 					}
 					pst.include_push(sfo);
@@ -4710,7 +4799,7 @@ try_again_w_token:
 				if (t.type == token_type_t::strliteral) {
 					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
 					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include_next \"%s\"\n",t.v.strliteral.makestring().c_str());
+						fprintf(stderr,"Unable to #include_next \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
 						return errno_return(ENOENT);
 					}
 					pst.include_push(sfo);
@@ -4720,7 +4809,7 @@ try_again_w_token:
 					CCMiniC::source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
 					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
 					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include_next <%s>\n",t.v.strliteral.makestring().c_str());
+						fprintf(stderr,"Unable to #include_next <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
 						return errno_return(ENOENT);
 					}
 					pst.include_push(sfo);
@@ -6179,7 +6268,7 @@ try_again_w_token:
 
 							/* no match---fail */
 							if (i == dd.parameters.size()) {
-								CCerr(pos,"No such parameter '%s' in identifier list",d.ddecl.name.v.strliteral.makestring().c_str());
+								CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name.v.csliteral).makestring().c_str());
 								return errno_return(ENOENT);
 							}
 
@@ -8373,6 +8462,7 @@ int main(int argc,char **argv) {
 
 	CCMiniC::source_file_refcount_check();
 	CCMiniC::identifier_refcount_check();
+	CCMiniC::csliteral_refcount_check();
 	CCMiniC::ast_node_refcount_check();
 
 	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
