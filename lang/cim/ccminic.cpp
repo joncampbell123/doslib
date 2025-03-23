@@ -5336,7 +5336,7 @@ try_again_w_token:
 				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
 
 			assert(symbols_next < symbols.size());
-			symbols[symbols_next].identifier = std::move(name);
+			symbols[symbols_next].identifier = name;
 			return symbols_next++;
 		}
 
