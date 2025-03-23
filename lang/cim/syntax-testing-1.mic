@@ -789,3 +789,12 @@ __asm inc edx
 #line 12345
 This should appear line 12345
 
+/* apparently GCC allows this */
+#define XYZ 123
+#line XYZ
+This should appear line 123
+
+/* FIXME: #line filename not supported yet though parsed */
+#line 123 "test1.mic"
+This should appear line 123 test1.mic
+

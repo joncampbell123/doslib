@@ -1758,46 +1758,49 @@ namespace CCMiniC {
 	};
 
 	struct identifier_str_t {
-		unsigned char*		data;
-		size_t			length;
+		unsigned char*		data = NULL;
+		size_t			length = 0;
 		unsigned int		refcount = 0;
 
 		void release(void) {
-			if (refcount == 0) {
-				throw std::runtime_error("identifier release when zero");
-			}
-			else {
-				if ((--refcount) == 0)
-					delete this;
-			}
+			if (refcount > 0)
+				refcount--;
+			if (refcount == 0)
+				delete this;
 		}
 
 		void addref(void) {
 			refcount++;
 		}
 
-		identifier_str_t() : data(NULL), length(0) { }
+		identifier_str_t() { }
 		identifier_str_t(const identifier_str_t &x) = delete;
 		identifier_str_t &operator=(const identifier_str_t &x) = delete;
 
 		identifier_str_t(identifier_str_t &&x) { common_move(x); }
 		identifier_str_t &operator=(identifier_str_t &&x) { common_move(x); return *this; }
 
-		~identifier_str_t() { if (refcount != 0) fprintf(stderr,"WARNING: identifier str free() while outstanding references\n"); free(); }
+		~identifier_str_t() { free(); }
 
-		void free(void) {
+		void free_data(void) {
 			if (data) { ::free(data); data = NULL; }
 			length = 0;
 		}
 
+		void free(void) {
+			if (refcount != 0) fprintf(stderr,"WARNING: identifier str free() to object with %u outstanding references\n",refcount);
+			refcount = 0;
+			free_data();
+		}
+
 		void common_move(identifier_str_t &other) {
+			free_data();
 			data = other.data; other.data = NULL;
 			length = other.length; other.length = 0;
-			refcount = other.refcount; other.refcount = 0;
 		}
 
 		bool copy_from(const unsigned char *in_data,const size_t in_length) {
-			free();
+			free_data();
 
 			if (in_length != 0 && in_length < 4096) {
 				data = (unsigned char*)::malloc(in_length);
@@ -3190,9 +3193,9 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::old_identifier)
+		if (t.type != token_type_t::identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id.take_from(t.v.strliteral);
+		s_id = std::move(*(t.v.identifier));
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3463,8 +3466,10 @@ try_again:	t = token_t();
 		/* line number */
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
-		if (t.type == token_type_t::old_identifier) {
-			const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+
+		/* canonical GCC behavior: The number parameter can be a macro */
+		if (t.type == token_type_t::identifier) {
+			const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(*t.v.identifier);
 			if (macro) {
 				if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
 					return r;
@@ -3474,6 +3479,7 @@ try_again:	t = token_t();
 					return r;
 			}
 		}
+
 		if (t.type != token_type_t::integer)
 			return errno_return(EINVAL);
 		if (t.v.integer.v.v < 0ll || t.v.integer.v.v > 0xFFFFll)
@@ -3490,6 +3496,8 @@ try_again:	t = token_t();
 			name = t.v.strliteral.makestring();
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
+
+			/* TODO: This needs to become the token source name */
 		}
 
 		do {
@@ -3531,9 +3539,9 @@ try_again:	t = token_t();
 				if (!msg.empty()) msg += " ";
 				msg += t.v.strliteral.makestring();
 			}
-			else if (t.type == token_type_t::old_identifier) {
+			else if (t.type == token_type_t::identifier) {
 				if (!msg.empty()) msg += " ";
-				msg += t.v.strliteral.makestring();
+				msg += (*t.v.identifier).to_str();
 			}
 			else {
 				if (!msg.empty()) msg += " ";
@@ -3580,8 +3588,8 @@ try_again:	t = token_t();
 				t.v.integer.init();
 				t.v.integer.v.u = (res > 0) ? 1 : 0;
 			}
-			else if (t.type == token_type_t::old_identifier) {
-				if (t.v.strliteral == "defined") { /* defined(MACRO) */
+			else if (t.type == token_type_t::identifier) {
+				if ((*t.v.identifier) == "defined") { /* defined(MACRO) */
 					int paren = 0;
 					int res = -1;
 
@@ -3597,9 +3605,9 @@ try_again:	t = token_t();
 							paren--;
 							if (paren == 0) break;
 						}
-						else if (t.type == token_type_t::old_identifier) {
+						else if (t.type == token_type_t::identifier) {
 							if (res >= 0) return errno_return(EINVAL);
-							res = (pst.lookup_macro(t.v.strliteral) != NULL) ? 1 : 0;
+							res = (pst.lookup_macro(*t.v.identifier) != NULL) ? 1 : 0;
 						}
 						else if (t.type == token_type_t::newline) {
 							pptok_lgtok_ungetch(pst,t);
@@ -3618,7 +3626,7 @@ try_again:	t = token_t();
 					t.v.integer.v.u = (res > 0) ? 1 : 0;
 				}
 				else {
-					const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+					const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(*t.v.identifier);
 					if (macro) {
 						if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
 							return r;
@@ -3707,9 +3715,9 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::old_identifier)
+		if (t.type != token_type_t::identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id.take_from(t.v.strliteral);
+		s_id = std::move(*(t.v.identifier));
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3896,9 +3904,9 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::old_identifier)
+		if (t.type != token_type_t::identifier)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id.take_from(t.v.strliteral);
+		s_id = std::move(*(t.v.identifier));
 
 		/* if the next character is '(' (without a space), it's a parameter list.
 		 * a space and then '(' doesn't count. that's how GCC behaves, anyway. */
@@ -3922,19 +3930,19 @@ try_again:	t = token_t();
 					macro.flags |= pptok_macro_t::FL_VARIADIC;
 					continue;
 				}
-				if (t.type != token_type_t::old_identifier)
+				if (t.type != token_type_t::identifier)
 					CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
 				eat_whitespace(buf,sfo);
 
 				/* GNU GCC arg... variadic macros that predate __VA_ARGS__ */
 				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
-					s_id_va_args_subst.take_from(t.v.strliteral);
+					s_id_va_args_subst = std::move(*(t.v.identifier));
 					macro.flags |= pptok_macro_t::FL_VARIADIC | pptok_macro_t::FL_NO_VA_ARGS;
 					buf.discardb(3);
 				}
 				else {
-					s_p.take_from(t.v.strliteral);
+					s_p = std::move(*(t.v.identifier));
 					macro.parameters.push_back(std::move(s_p));
 				}
 
@@ -3948,13 +3956,13 @@ try_again:	t = token_t();
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
-			if (t.type == token_type_t::old_identifier || t.type == token_type_t::old__r___asm_text) {
-				if (t.v.strliteral == "__VA_ARGS__") {
+			if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+				if ((*t.v.identifier) == "__VA_ARGS__") {
 					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
 						t = token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file);
 					}
 				}
-				else if (t.v.strliteral == "__VA_OPT__") {
+				else if ((*t.v.identifier) == "__VA_OPT__") {
 					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
 						t = token_t(token_type_t::r___VA_OPT__,t.pos,t.source_file);
 					}
@@ -3968,20 +3976,20 @@ try_again:	t = token_t();
 			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
 				macro.tokens.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
 			}
-			else if (t.type == token_type_t::old_identifier || t.type == token_type_t::old__r___asm_text) {
+			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
 				/* if the identifier matches a paraemeter then put in a parameter reference,
 				 * else pass the identifier along. */
 
 				if (!macro.tokens.empty() && macro.tokens[macro.tokens.size()-1u].type == token_type_t::pound)
 					macro.flags |= pptok_macro_t::FL_STRINGIFY;
 
-				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == t.v.strliteral) {
+				if (s_id_va_args_subst.length != 0 && s_id_va_args_subst == (*t.v.identifier)) {
 					/* GNU arg... variadic convert to __VA_ARGS__ */
 					macro.tokens.push_back(std::move(token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file)));
 				}
 				else {
 					for (auto pi=macro.parameters.begin();pi!=macro.parameters.end();pi++) {
-						if ((*pi) == t.v.strliteral) {
+						if ((*pi) == (*t.v.identifier)) {
 							t = token_t(token_type_t::r_macro_paramref);
 							t.v.paramref = size_t(pi - macro.parameters.begin());
 							break;
@@ -4639,12 +4647,12 @@ try_again_w_token:
 					goto try_again;
 				}
 				goto try_again_w_token; }
-			case token_type_t::old_identifier: /* macro substitution */
-			case token_type_t::old__r___asm_text: { /* to allow macros to work with assembly language */
+			case token_type_t::identifier: /* macro substitution */
+			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				if (!pst.condb_true())
 					goto try_again;
 
-				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.strliteral);
+				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(*t.v.identifier);
 				if (macro) {
 					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
 						return r;
