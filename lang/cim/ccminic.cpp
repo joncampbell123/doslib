@@ -559,7 +559,7 @@ namespace CCMiniC {
 		floating,
 		charliteral,
 		strliteral,
-		old_identifier,
+		identifier,
 		comma,					// 20
 		pipeequals,
 		caretequals,
@@ -596,7 +596,7 @@ namespace CCMiniC {
 		openparenthesis,
 		closeparenthesis,
 		coloncolon,				// 55
-		old__ppidentifier,
+		ppidentifier,
 		r_alignas,
 		r_alignof,
 		r_auto,
@@ -735,7 +735,7 @@ namespace CCMiniC {
 		r___declspec,
 		r_asm, /* GNU asm/__asm__ */
 		r___asm, /* MSVC/OpenWatcom _asm __asm */
-		old__r___asm_text,			// 195
+		r___asm_text,				// 195
 		newline,
 		pound,
 		poundpound,
@@ -815,9 +815,6 @@ namespace CCMiniC {
 		op_dinit_field,
 		op_gcc_range,
 		op_bitfield_range,
-		identifier,				// 275
-		ppidentifier,
-		r___asm_text,
 
 		__MAX__
 	};
@@ -1426,10 +1423,7 @@ namespace CCMiniC {
 		"op:dinit_array",
 		"op:dinit_field",
 		"op:gcc-range",
-		"op:bitfield-range",
-		"identifier",				// 275
-		"ppidentifier",
-		"r___asm_text"
+		"op:bitfield-range"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1942,9 +1936,6 @@ namespace CCMiniC {
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::old_identifier:
-				case token_type_t::old__ppidentifier:
-				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					s += "("; s += v.strliteral.to_str(); s += ")";
 					break;
@@ -1971,9 +1962,6 @@ private:
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::old_identifier:
-				case token_type_t::old__ppidentifier:
-				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.free();
 					break;
@@ -2003,9 +1991,6 @@ private:
 					break;
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::old_identifier:
-				case token_type_t::old__ppidentifier:
-				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					break;
@@ -2034,9 +2019,6 @@ private:
 			switch (type) {
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
-				case token_type_t::old_identifier:
-				case token_type_t::old__ppidentifier:
-				case token_type_t::old__r___asm_text:
 				case token_type_t::anglestrliteral:
 					v.strliteral.init();
 					v.strliteral.copy_from(x.v.strliteral);
