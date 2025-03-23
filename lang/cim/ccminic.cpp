@@ -4680,12 +4680,12 @@ try_again_w_token:
 			return r;
 
 		/* it might be a reserved keyword, check */
-		if (t.type == token_type_t::old_identifier) {
+		if (t.type == token_type_t::identifier) {
 			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
-				if (t.v.strliteral.length == i2t->len) {
-					if (!memcmp(t.v.strliteral.data,i2t->str,i2t->len)) {
-						const position_t pos = t.pos;
-						t = token_t(token_type_t(i2t->token)); t.pos = pos; t.set_source_file(buf.source_file);
+				if ((*t.v.identifier).length == i2t->len) {
+					if (!memcmp((*t.v.identifier).data,i2t->str,i2t->len)) {
+						t.v.identifier->release();
+						t.type = token_type_t(i2t->token);
 						return 1;
 					}
 				}
