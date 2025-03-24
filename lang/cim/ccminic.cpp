@@ -6479,15 +6479,14 @@ try_again_w_token:
 
 						fprintf(stderr,"%s  declaration:\n",prefix.c_str());
 						debug_dump_pointer(prefix+"    ",declr.ptr);
-						debug_dump_pointer(prefix+"    ",declr.ptr,"direct declarator");
+						debug_dump_pointer(prefix+"    ",declr.ddecl.ptr,"direct declarator");
 
 						if (declr.ddecl.name.type == token_type_t::identifier)
-							fprintf(stderr," %s",identifier(declr.ddecl.name.v.identifier).to_str().c_str());
+							fprintf(stderr,"%s    identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
 
 						for (const auto &expr : declr.ddecl.arraydef) {
-							fprintf(stderr,"%s    arraydef:\n",prefix.c_str());
-							if (expr != ast_node_none)
-								debug_dump_ast(prefix+"      ",expr);
+							fprintf(stderr,"%s    direct declarator arraydef:\n",prefix.c_str());
+							if (expr != ast_node_none) debug_dump_ast(prefix+"      ",expr);
 						}
 
 						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
