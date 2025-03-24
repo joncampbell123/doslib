@@ -6485,7 +6485,11 @@ try_again_w_token:
 						assert(declr_p != NULL);
 						auto &declr = *declr_p;
 
-						fprintf(stderr,"%s  declaration:\n",prefix.c_str());
+						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+							fprintf(stderr,"%s  function declaration:\n",prefix.c_str());
+						else
+							fprintf(stderr,"%s  declaration:\n",prefix.c_str());
+
 						debug_dump_pointer(prefix+"    ",declr.ptr);
 						debug_dump_pointer(prefix+"    ",declr.ddecl.ptr,"direct declarator");
 
@@ -6493,55 +6497,29 @@ try_again_w_token:
 							fprintf(stderr,"%s    identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
 
 						debug_dump_arraydef(prefix+"    ",declr.ddecl.arraydef,"direct declarator");
-						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
-							fprintf(stderr,"%s    function:\n",prefix.c_str());
-
+						{
 							for (auto &p : declr.ddecl.parameters) {
-								fprintf(stderr,"%s      parameter:\n",prefix.c_str());
-
-								fprintf(stderr,"%s        decl specifier:",prefix.c_str());
-								for (unsigned int i=0;i < SCI__MAX;i++) { if (p.spec.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-								for (unsigned int i=0;i < TSI__MAX;i++) { if (p.spec.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-								for (unsigned int i=0;i < TQI__MAX;i++) { if (p.spec.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-								fprintf(stderr,"\n");
-
-								fprintf(stderr,"%s        declr:",prefix.c_str());
-
-								for (auto i=p.ptr.begin();i!=p.ptr.end();i++) {
-									fprintf(stderr," *");
-									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-								}
-
 								assert(p.decl != NULL);
 								auto &p_declr = p.decl->ddecl;
 
-								if (!p_declr.ptr.empty()) fprintf(stderr," (");
-
-								for (auto i=p_declr.ptr.begin();i!=p_declr.ptr.end();i++) {
-									fprintf(stderr," *");
-									for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-								}
+								fprintf(stderr,"%s    parameter:\n",prefix.c_str());
+								debug_dump_declaration_specifiers(prefix+"      ",p.spec);
+								debug_dump_pointer(prefix+"      ",p.ptr);
+								debug_dump_pointer(prefix+"      ",p_declr.ptr,"direct declarator");
 
 								if (p_declr.name.type == token_type_t::identifier)
-									fprintf(stderr," %s",identifier(p_declr.name.v.identifier).to_str().c_str());
+									fprintf(stderr,"%s      identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
 
-								if (!p_declr.ptr.empty()) fprintf(stderr," )");
-								fprintf(stderr,"\n");
-
-								for (const auto &expr : p_declr.arraydef) {
-									fprintf(stderr,"%s          arraydef:\n",prefix.c_str());
-									if (expr != ast_node_none)
-										debug_dump_ast(prefix+"            ",expr);
-								}
+								debug_dump_arraydef(prefix+"      ",p_declr.arraydef,"direct declarator");
 
 								if (p.decl->initval != ast_node_none) {
-									fprintf(stderr,"%s          init:\n",prefix.c_str());
-									debug_dump_ast(prefix+"            ",p.decl->initval);
+									fprintf(stderr,"%s      init:\n",prefix.c_str());
+									debug_dump_ast(prefix+"        ",p.decl->initval);
 								}
 							}
 
-							if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
-								fprintf(stderr,"%s      ... elipsis\n",prefix.c_str());
+							if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+								fprintf(stderr,"%s    parameter ... (ellipsis)\n",prefix.c_str());
 						}
 
 						if (declr.initval != ast_node_none) {
