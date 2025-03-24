@@ -1990,6 +1990,23 @@ namespace CCMiniC {
 		return identifier_next++;
 	}
 
+	void identifier_assign(identifier_id_t &d,const identifier_id_t s) {
+		if (d != identifier_none) identifier(d).release();
+		d = s;
+		if (d != identifier_none) identifier(d).addref();
+	}
+
+	void identifier_assignmove(identifier_id_t &d,identifier_id_t &s) {
+		if (d != identifier_none) identifier(d).release();
+		d = s;
+		s = identifier_none;
+	}
+
+	void identifier_release(identifier_id_t &d) {
+		if (d != identifier_none) identifier(d).release();
+		d = identifier_none;
+	}
+
 	//////////////////////////////////////////////////////
 
 	void CCerr(const position_t &pos,const char *fmt,...) {
@@ -5140,6 +5157,23 @@ try_again_w_token:
 		return ast_node_next++;
 	}
 
+	void ast_node_assign(ast_node_id_t &d,const ast_node_id_t s) {
+		if (d != ast_node_none) ast_node(d).release();
+		d = s;
+		if (d != ast_node_none) ast_node(d).addref();
+	}
+
+	void ast_node_assignmove(ast_node_id_t &d,ast_node_id_t &s) {
+		if (d != ast_node_none) ast_node(d).release();
+		d = s;
+		s = ast_node_none;
+	}
+
+	void ast_node_release(ast_node_id_t &d) {
+		if (d != ast_node_none) ast_node(d).release();
+		d = ast_node_none;
+	}
+
 	struct enumerator_t {
 		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none;
@@ -5151,30 +5185,18 @@ try_again_w_token:
 		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const enumerator_t &o) {
-			if (name != identifier_none) identifier(name).release();
-			name = o.name;
-			if (name != identifier_none) identifier(name).addref();
-
-			if (expr != ast_node_none) ast_node(expr).release();
-			expr = o.expr;
-			if (expr != ast_node_none) ast_node(expr).addref();
+			identifier_assign(/*to*/name,/*from*/o.name);
+			ast_node_assign(/*to*/expr,/*from*/o.expr);
 		}
 
 		void common_move(enumerator_t &o) {
-			name = o.name; o.name = identifier_none;
-			expr = o.expr; o.expr = ast_node_none;
+			identifier_assignmove(/*to*/name,/*from*/o.name);
+			ast_node_assignmove(/*to*/expr,/*from*/o.expr);
 		}
 
 		~enumerator_t() {
-			if (name != identifier_none) {
-				identifier(name).release();
-				name = identifier_none;
-			}
-
-			if (expr != ast_node_none) {
-				ast_node(expr).release();
-				expr = ast_node_none;
-			}
+			identifier_release(name);
+			ast_node_release(expr);
 		}
 	};
 
@@ -5198,17 +5220,14 @@ try_again_w_token:
 		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
 
 		~declaration_specifiers_t() {
-			if (type_identifier != identifier_none) {
-				identifier(type_identifier).release();
-				type_identifier = identifier_none;
-			}
+			identifier_release(type_identifier);
 		}
 
 		void common_move(declaration_specifiers_t &o) {
 			storage_class = o.storage_class; o.storage_class = 0;
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
-			type_identifier = o.type_identifier; o.type_identifier = identifier_none;
+			identifier_assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5217,8 +5236,7 @@ try_again_w_token:
 			storage_class = o.storage_class;
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
-			type_identifier = o.type_identifier;
-			if (type_identifier != identifier_none) identifier(type_identifier).addref();
+			identifier_assign(/*to*/type_identifier,/*from*/o.type_identifier);
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -5263,13 +5281,9 @@ try_again_w_token:
 		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
 
 		~direct_declarator_t() {
-			for (auto &expr : arraydef) { if (expr != ast_node_none) ast_node(expr).release(); }
+			identifier_release(name);
+			for (auto &expr : arraydef) ast_node_release(expr);
 			arraydef.clear();
-
-			if (name != identifier_none) {
-				identifier(name).release();
-				name = identifier_none;
-			}
 		}
 	};
 
@@ -5287,12 +5301,9 @@ try_again_w_token:
 		declarator_t &operator=(declarator_t &&) = delete;
 
 		~declarator_t() {
-			if (initval != ast_node_none)
-				ast_node(initval).release();
-			if (bitfield_expr != ast_node_none)
-				ast_node(bitfield_expr).release();
-			if (function_body != ast_node_none)
-				ast_node(function_body).release();
+			ast_node_release(initval);
+			ast_node_release(bitfield_expr);
+			ast_node_release(function_body);
 		}
 	};
 
@@ -5358,22 +5369,16 @@ try_again_w_token:
 		symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
 
 		~symbol_t() {
-			if (expr != ast_node_none) {
-				ast_node(expr).release();
-				expr = ast_node_none;
-			}
-			if (name != identifier_none) {
-				identifier(name).release();
-				name = identifier_none;
-			}
+			ast_node_release(expr);
+			identifier_release(name);
 		}
 
 		void common_move(symbol_t &x) {
 			spec = std::move(x.spec);
-			expr = x.expr; x.expr = ast_node_none;
+			ast_node_assignmove(/*to*/expr,/*from*/x.expr);
+			identifier_assignmove(/*to*/name,/*from*/x.name);
 			sym_type = x.sym_type; x.sym_type = VARIABLE;
 			flags = x.flags; x.flags = 0;
-			name = x.name; x.name = identifier_none;
 		}
 	};
 
@@ -5639,8 +5644,7 @@ try_again_w_token:
 			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
-			en.name = tq_get().v.identifier;
-			identifier(en.name).addref();
+			identifier_assign(/*to*/en.name,/*from*/tq_get().v.identifier);
 
 			if (tq_peek().type == token_type_t::equal) {
 				tq_discard();
