@@ -5231,9 +5231,9 @@ try_again_w_token:
 	};
 
 	struct direct_declarator_t {
-		token_t name;
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
+		identifier_id_t name = identifier_none;
 
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
@@ -5250,6 +5250,11 @@ try_again_w_token:
 		~direct_declarator_t() {
 			for (auto &expr : arraydef) { if (expr != ast_node_none) ast_node(expr).release(); }
 			arraydef.clear();
+
+			if (name != identifier_none) {
+				identifier(name).release();
+				name = identifier_none;
+			}
 		}
 	};
 
@@ -5529,19 +5534,21 @@ try_again_w_token:
 		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
 			symbol_id_t sid;
 
-			if (declor.ddecl.name.type != token_type_t::identifier)
+			if (declor.ddecl.name == identifier_none)
+				return 1;
+			if (identifier(declor.ddecl.name).length == 0)
 				return 1;
 
-			if ((sid=lookup_symbol(declor.ddecl.name.v.identifier)) != symbol_none) {
+			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope())
-					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",identifier(declor.ddecl.name.v.identifier).to_str().c_str());
+					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
 				else
 					sid = symbol_none;
 			}
 
 			if (sid == symbol_none) {
-				sid = new_symbol(declor.ddecl.name.v.identifier);
+				sid = new_symbol(declor.ddecl.name);
 				symbol_t &sym = symbol(sid);
 				sym.spec = spec;
 				sym.scope = current_scope();
@@ -5775,7 +5782,8 @@ try_again_w_token:
 							for (const auto &e : ds.enum_list) {
 								declarator_t declor;
 
-								declor.ddecl.name = e.name;
+								declor.ddecl.name = e.name.v.identifier;
+								identifier(declor.ddecl.name).addref();
 								if ((r=add_symbol(spec,declor)) < 1)
 									return r;
 							}
@@ -6007,12 +6015,13 @@ try_again_w_token:
 				return r;
 		}
 
-		if (tq_peek().type == token_type_t::identifier) {
+		if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
-			dd.name = std::move(tq_get());
+			dd.name = tq_get().v.identifier;
+			identifier(dd.name).addref();
 		}
 		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier) {
-			dd.name = std::move(token_t(token_type_t::none));
+			dd.name = identifier_none;
 		}
 		else {
 			CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
@@ -6080,14 +6089,12 @@ try_again_w_token:
 					if (!p.decl)
 						return errno_return(EINVAL);
 
-					if (p.decl->ddecl.name.type != token_type_t::none) {
-						if (p.decl->ddecl.name.type != token_type_t::identifier)
-							return errno_return(EINVAL);
+					if (p.decl->ddecl.name != identifier_none) {
 						for (const auto &chk_p : dd.parameters) {
 							assert(chk_p.decl != NULL);
-							if (chk_p.decl->ddecl.name.type == token_type_t::identifier) {
-								if (identifier(chk_p.decl->ddecl.name.v.identifier) == identifier(p.decl->ddecl.name.v.identifier)) {
-									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl->ddecl.name.v.identifier).to_str().c_str());
+							if (chk_p.decl->ddecl.name != identifier_none) {
+								if (identifier(chk_p.decl->ddecl.name) == identifier(p.decl->ddecl.name)) {
+									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl->ddecl.name).to_str().c_str());
 									return errno_return(EEXIST);
 								}
 							}
@@ -6189,9 +6196,6 @@ try_again_w_token:
 							assert(dp != NULL);
 							auto &d = *dp;
 
-							if (d.ddecl.name.type != token_type_t::identifier)
-								return errno_return(EINVAL);
-
 							/* the name must match a parameter and it must not already have been given it's type */
 							size_t i=0;
 							while (i < dd.parameters.size()) {
@@ -6199,9 +6203,7 @@ try_again_w_token:
 
 								if (!chk_p.decl)
 									return errno_return(EINVAL);
-								if (chk_p.decl->ddecl.name.type != token_type_t::identifier)
-									return errno_return(EINVAL);
-								if (identifier(d.ddecl.name.v.identifier) == identifier(chk_p.decl->ddecl.name.v.identifier))
+								if (identifier(d.ddecl.name) == identifier(chk_p.decl->ddecl.name))
 									break;
 
 								i++;
@@ -6209,7 +6211,7 @@ try_again_w_token:
 
 							/* no match---fail */
 							if (i == dd.parameters.size()) {
-								CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name.v.csliteral).makestring().c_str());
+								CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name).makestring().c_str());
 								return errno_return(ENOENT);
 							}
 
@@ -6250,8 +6252,7 @@ try_again_w_token:
 			for (const auto &p : dd.parameters) {
 				if (p.spec.empty()) {
 					assert(p.decl != NULL);
-					assert(p.decl->ddecl.name.type == token_type_t::identifier);
-					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl->ddecl.name.v.identifier).to_str().c_str());
+					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl->ddecl.name).to_str().c_str());
 					return errno_return(EINVAL);
 				}
 			}
@@ -6387,8 +6388,8 @@ try_again_w_token:
 
 			debug_dump_pointer(prefix+"  ",p_declr.ptr,"direct declarator");
 
-			if (p_declr.name.type == token_type_t::identifier)
-				fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
+			if (p_declr.name != identifier_none)
+				fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name).to_str().c_str());
 
 			debug_dump_arraydef(prefix+"  ",p_declr.arraydef,"direct declarator");
 
@@ -6407,8 +6408,8 @@ try_again_w_token:
 
 		debug_dump_pointer(prefix+"  ",ddecl.ptr);
 
-		if (ddecl.name.type == token_type_t::identifier)
-			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name.v.identifier).to_str().c_str());
+		if (ddecl.name != identifier_none)
+			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
 
 		debug_dump_arraydef(prefix+"  ",ddecl.arraydef);
 
