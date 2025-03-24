@@ -2138,7 +2138,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
-					if (v.identifier != identifier_none) identifier(v.identifier).release();
+					identifier_release(v.identifier);
 					break;
 				default:
 					break;
@@ -2176,11 +2176,14 @@ private:
 
 		void common_copy(const token_t &x) {
 			assert(&x != this);
+
 			common_delete();
+
+			set_source_file(x.source_file);
 			type = x.type;
 			pos = x.pos;
 
-			set_source_file(x.source_file);
+			common_init();
 
 			switch (type) {
 				case token_type_t::charliteral:
@@ -2195,8 +2198,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
-					v.identifier = x.v.identifier;
-					if (v.identifier != identifier_none) identifier(v.identifier).addref();
+					identifier_assign(/*to*/v.identifier,/*from*/x.v.identifier);
 					break;
 				default:
 					v = x.v;
@@ -2206,10 +2208,30 @@ private:
 
 		void common_move(token_t &x) {
 			common_delete();
+
 			source_file = x.source_file; x.source_file = no_source_file;
 			type = x.type; x.type = token_type_t::none;
 			pos = x.pos; x.pos = position_t();
-			v = x.v; memset(&x.v,0,sizeof(x.v)); /* x.type == none so pointers no longer matter */
+
+			common_init();
+
+			switch (type) {
+				case token_type_t::charliteral:
+				case token_type_t::strliteral:
+				case token_type_t::anglestrliteral:
+					v.csliteral = x.v.csliteral;
+					x.v.csliteral = csliteral_none;
+					break;
+				case token_type_t::identifier:
+				case token_type_t::ppidentifier:
+				case token_type_t::r___asm_text:
+					identifier_assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
+					break;
+				default:
+					v = x.v;
+					memset(&x.v,0,sizeof(x.v)); /* x.type == none so pointers no longer matter */
+					break;
+			}
 		}
 	};
 
@@ -3142,7 +3164,7 @@ try_again:	t = token_t();
 		pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
 		pptok_macro_t &operator=(pptok_macro_t &&x) { common_move(x); return *this; }
 		~pptok_macro_t() {
-			for (const auto &pid : parameters) identifier(pid).release();
+			for (auto &pid : parameters) identifier_release(pid);
 			parameters.clear();
 		}
 
@@ -3165,8 +3187,7 @@ try_again:	t = token_t();
 			pptok_macro_ent_t(pptok_macro_ent_t &&) = delete;
 			pptok_macro_ent_t &operator=(pptok_macro_ent_t &&) = delete;
 			~pptok_macro_ent_t() {
-				if (name != identifier_none) identifier(name).release();
-				name = identifier_none;
+				identifier_release(name);
 			}
 		};
 		struct cond_block_t {
@@ -3270,7 +3291,7 @@ try_again:	t = token_t();
 
 			(*p) = new pptok_macro_ent_t;
 			(*p)->ment = std::move(m);
-			(*p)->name = i; identifier(i).addref();
+			identifier_assign(/*to*/(*p)->name,/*from*/i);
 			(*p)->next = NULL;
 			return true;
 		}
@@ -3371,10 +3392,10 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id = t.v.identifier;
-		identifier(s_id).addref();
+
+		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3399,7 +3420,7 @@ try_again:	t = token_t();
 #endif
 		}
 
-		identifier(s_id).release();
+		identifier_release(s_id);
 		return 1;
 	}
 
@@ -3895,10 +3916,10 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id = t.v.identifier;
-		identifier(s_id).addref();
+
+		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3945,7 +3966,7 @@ try_again:	t = token_t();
 			}
 		}
 
-		identifier(s_id).release();
+		identifier_release(s_id);
 		return 1;
 	}
 
@@ -4086,10 +4107,10 @@ try_again:	t = token_t();
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 			return r;
 
-		if (t.type != token_type_t::identifier)
+		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
-		s_id = t.v.identifier;
-		identifier(s_id).addref();
+
+		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		/* if the next character is '(' (without a space), it's a parameter list.
 		 * a space and then '(' doesn't count. that's how GCC behaves, anyway. */
@@ -4120,14 +4141,12 @@ try_again:	t = token_t();
 
 				/* GNU GCC arg... variadic macros that predate __VA_ARGS__ */
 				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
-					s_id_va_args_subst = t.v.identifier;
-					identifier(s_id_va_args_subst).addref();
+					identifier_assign(/*to*/s_id_va_args_subst,/*from*/t.v.identifier);
 					macro.flags |= pptok_macro_t::FL_VARIADIC | pptok_macro_t::FL_NO_VA_ARGS;
 					buf.discardb(3);
 				}
 				else {
-					s_p = t.v.identifier;
-					identifier(s_p).addref();
+					identifier_assign(/*to*/s_p,/*from*/t.v.identifier);
 					macro.parameters.push_back(s_p);
 				}
 
@@ -4236,7 +4255,8 @@ try_again:	t = token_t();
 		if (!pst.create_macro(s_id,macro))
 			return errno_return(EEXIST);
 
-		identifier(s_id).release();
+		identifier_release(s_id_va_args_subst);
+		identifier_release(s_id);
 		return 1;
 	}
 
@@ -4870,7 +4890,7 @@ try_again_w_token:
 			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
 				if (identifier(t.v.identifier).length == i2t->len) {
 					if (!memcmp(identifier(t.v.identifier).data,i2t->str,i2t->len)) {
-						identifier(t.v.identifier).release();
+						identifier_release(t.v.identifier); /* we're going to change token type, free existing first */
 						t.type = token_type_t(i2t->token);
 						return 1;
 					}
@@ -5498,8 +5518,7 @@ try_again_w_token:
 				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
 
 			assert(symbols_next < symbols.size());
-			symbols[symbols_next].name = name;
-			if (name != identifier_none) identifier(name).addref();
+			identifier_assign(/*to*/symbols[symbols_next].name,/*from*/name);
 			return symbols_next++;
 		}
 
@@ -5785,10 +5804,8 @@ try_again_w_token:
 					 * enum identifier { list }
 					 * enum identifier */
 
-					if (tq_peek().type == token_type_t::identifier) {
-						ds.type_identifier = tq_get().v.identifier;
-						identifier(ds.type_identifier).addref();
-					}
+					if (tq_peek().type == token_type_t::identifier)
+						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5804,9 +5821,7 @@ try_again_w_token:
 							for (const auto &e : ds.enum_list) {
 								declarator_t declor;
 
-								declor.ddecl.name = e.name;
-								identifier(declor.ddecl.name).addref();
-
+								identifier_assign(/*to*/declor.ddecl.name,/*from*/e.name);
 								if ((r=add_symbol(spec,declor)) < 1)
 									return r;
 							}
@@ -5826,10 +5841,8 @@ try_again_w_token:
 					 * struct identifier { list }
 					 * struct identifier */
 
-					if (tq_peek().type == token_type_t::identifier) {
-						ds.type_identifier = tq_get().v.identifier;
-						identifier(ds.type_identifier).addref();
-					}
+					if (tq_peek().type == token_type_t::identifier)
+						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5862,10 +5875,8 @@ try_again_w_token:
 					 * union identifier */
 					/* NTS: Unions are parsed the same as structs */
 
-					if (tq_peek().type == token_type_t::identifier) {
-						ds.type_identifier = tq_get().v.identifier;
-						identifier(ds.type_identifier).addref();
-					}
+					if (tq_peek().type == token_type_t::identifier)
+						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -6044,8 +6055,7 @@ try_again_w_token:
 
 		if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
-			dd.name = tq_get().v.identifier;
-			identifier(dd.name).addref();
+			identifier_assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
 		}
 		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier) {
 			dd.name = identifier_none;
