@@ -5392,6 +5392,7 @@ try_again_w_token:
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name);
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 
@@ -6475,6 +6476,28 @@ try_again_w_token:
 		}
 	}
 
+	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
+		fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
+		debug_dump_pointer(prefix+"  ",p.ptr);
+
+		if (p.decl != NULL) {
+			auto &p_declr = p.decl->ddecl;
+
+			debug_dump_pointer(prefix+"  ",p_declr.ptr,"direct declarator");
+
+			if (p_declr.name.type == token_type_t::identifier)
+				fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
+
+			debug_dump_arraydef(prefix+"  ",p_declr.arraydef,"direct declarator");
+
+			if (p.decl->initval != ast_node_none) {
+				fprintf(stderr,"%s  init:\n",prefix.c_str());
+				debug_dump_ast(prefix+"    ",p.decl->initval);
+			}
+		}
+	}
+
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
 		unsigned int count = 0;
 
@@ -6504,25 +6527,8 @@ try_again_w_token:
 
 						debug_dump_arraydef(prefix+"    ",declr.ddecl.arraydef,"direct declarator");
 
-						for (auto &p : declr.ddecl.parameters) {
-							assert(p.decl != NULL);
-							auto &p_declr = p.decl->ddecl;
-
-							fprintf(stderr,"%s    parameter:\n",prefix.c_str());
-							debug_dump_declaration_specifiers(prefix+"      ",p.spec);
-							debug_dump_pointer(prefix+"      ",p.ptr);
-							debug_dump_pointer(prefix+"      ",p_declr.ptr,"direct declarator");
-
-							if (p_declr.name.type == token_type_t::identifier)
-								fprintf(stderr,"%s      identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
-
-							debug_dump_arraydef(prefix+"      ",p_declr.arraydef,"direct declarator");
-
-							if (p.decl->initval != ast_node_none) {
-								fprintf(stderr,"%s      init:\n",prefix.c_str());
-								debug_dump_ast(prefix+"        ",p.decl->initval);
-							}
-						}
+						for (auto &p : declr.ddecl.parameters)
+							debug_dump_parameter(prefix+"    ",p);
 
 						if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
 							fprintf(stderr,"%s    parameter ... (ellipsis)\n",prefix.c_str());
