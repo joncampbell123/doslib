@@ -5393,6 +5393,7 @@ try_again_w_token:
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
+	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name);
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 
@@ -6498,6 +6499,32 @@ try_again_w_token:
 		}
 	}
 
+	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
+		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+			fprintf(stderr,"%s%s%sfunction declaration:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		else
+			fprintf(stderr,"%s%s%sdeclaration:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+		debug_dump_pointer(prefix+"  ",declr.ptr);
+		debug_dump_pointer(prefix+"  ",declr.ddecl.ptr,"direct declarator");
+
+		if (declr.ddecl.name.type == token_type_t::identifier)
+			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
+
+		debug_dump_arraydef(prefix+"  ",declr.ddecl.arraydef,"direct declarator");
+
+		for (auto &p : declr.ddecl.parameters)
+			debug_dump_parameter(prefix+"  ",p);
+
+		if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
+
+		if (declr.initval != ast_node_none) {
+			fprintf(stderr,"%s  init:\n",prefix.c_str());
+			debug_dump_ast(prefix+"  ",declr.initval);
+		}
+	}
+
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
 		unsigned int count = 0;
 
@@ -6512,31 +6539,7 @@ try_again_w_token:
 
 					for (auto &declr_p : n.t.v.declaration->declor) {
 						assert(declr_p != NULL);
-						auto &declr = *declr_p;
-
-						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
-							fprintf(stderr,"%s  function declaration:\n",prefix.c_str());
-						else
-							fprintf(stderr,"%s  declaration:\n",prefix.c_str());
-
-						debug_dump_pointer(prefix+"    ",declr.ptr);
-						debug_dump_pointer(prefix+"    ",declr.ddecl.ptr,"direct declarator");
-
-						if (declr.ddecl.name.type == token_type_t::identifier)
-							fprintf(stderr,"%s    identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
-
-						debug_dump_arraydef(prefix+"    ",declr.ddecl.arraydef,"direct declarator");
-
-						for (auto &p : declr.ddecl.parameters)
-							debug_dump_parameter(prefix+"    ",p);
-
-						if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-							fprintf(stderr,"%s    parameter ... (ellipsis)\n",prefix.c_str());
-
-						if (declr.initval != ast_node_none) {
-							fprintf(stderr,"%s    init:\n",prefix.c_str());
-							debug_dump_ast(prefix+"      ",declr.initval);
-						}
+						debug_dump_declarator(prefix+"  ",*declr_p);
 					}
 
 					fprintf(stderr,"%s  }\n",prefix.c_str());
