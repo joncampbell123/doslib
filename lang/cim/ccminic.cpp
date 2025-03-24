@@ -5140,8 +5140,6 @@ try_again_w_token:
 		return ast_node_next++;
 	}
 
-	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
-
 	struct enumerator_t {
 		token_t					name;
 		ast_node_id_t				expr = ast_node_none;
@@ -5390,6 +5388,10 @@ try_again_w_token:
 			identifier = std::move(identifier);
 		}
 	};
+
+	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 
 	struct cc_state_t {
 		CCMiniC::lgtok_state_t	lst;
@@ -5698,34 +5700,6 @@ try_again_w_token:
 		};
 
 		return false;
-	}
-
-	void debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
-		fprintf(stderr,"%s",prefix.c_str());
-
-		if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",identifier(en.name.v.identifier).to_str().c_str());
-		else fprintf(stderr,"?");
-		fprintf(stderr,"\n");
-
-		if (en.expr != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",en.expr);
-		}
-	}
-
-	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
-		fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",identifier(ds.type_identifier.v.identifier).to_str().c_str());
-		fprintf(stderr,"\n");
-
-		if (!ds.enum_list.empty()) {
-			fprintf(stderr,"%s  enum {\n",prefix.c_str());
-			for (auto &en : ds.enum_list) debug_dump_enumerator(prefix+"    ",en);
-			fprintf(stderr,"%s  }\n",prefix.c_str());
-		}
 	}
 
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
@@ -6454,6 +6428,34 @@ try_again_w_token:
 		}
 
 		return 1;
+	}
+
+	void debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
+		fprintf(stderr,"%s",prefix.c_str());
+
+		if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",identifier(en.name.v.identifier).to_str().c_str());
+		else fprintf(stderr,"?");
+		fprintf(stderr,"\n");
+
+		if (en.expr != ast_node_none) {
+			fprintf(stderr,"%s  expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",en.expr);
+		}
+	}
+
+	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
+		fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
+		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+		if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",identifier(ds.type_identifier.v.identifier).to_str().c_str());
+		fprintf(stderr,"\n");
+
+		if (!ds.enum_list.empty()) {
+			fprintf(stderr,"%s  enum {\n",prefix.c_str());
+			for (auto &en : ds.enum_list) debug_dump_enumerator(prefix+"    ",en);
+			fprintf(stderr,"%s  }\n",prefix.c_str());
+		}
 	}
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
