@@ -2124,6 +2124,10 @@ namespace CCMiniC {
 			return s;
 		}
 
+		void clear_v(void) {
+			common_delete();
+		}
+
 private:
 		void common_delete(void) {
 			switch (type) {
@@ -4890,7 +4894,7 @@ try_again_w_token:
 			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
 				if (identifier(t.v.identifier).length == i2t->len) {
 					if (!memcmp(identifier(t.v.identifier).data,i2t->str,i2t->len)) {
-						identifier_release(t.v.identifier); /* we're going to change token type, free existing first */
+						t.clear_v();
 						t.type = token_type_t(i2t->token);
 						return 1;
 					}
