@@ -5325,11 +5325,11 @@ try_again_w_token:
 		static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
 
 		declaration_specifiers_t		spec;
+		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 		scope_id_t				scope = scope_none;
 		enum type_t				sym_type = VARIABLE;
 		unsigned int				flags = 0;
-		token_t					identifier;
 
 		symbol_t() { }
 		symbol_t(const symbol_t &) = delete;
@@ -5342,6 +5342,10 @@ try_again_w_token:
 				ast_node(expr).release();
 				expr = ast_node_none;
 			}
+			if (name != identifier_none) {
+				identifier(name).release();
+				name = identifier_none;
+			}
 		}
 
 		void common_move(symbol_t &x) {
@@ -5349,7 +5353,7 @@ try_again_w_token:
 			expr = x.expr; x.expr = ast_node_none;
 			sym_type = x.sym_type; x.sym_type = VARIABLE;
 			flags = x.flags; x.flags = 0;
-			identifier = std::move(identifier);
+			name = x.name; x.name = identifier_none;
 		}
 	};
 
@@ -5462,14 +5466,15 @@ try_again_w_token:
 		}
 
 		/* symbols are never removed from the vector, and they are always added in increasing ID order */
-		symbol_id_t new_symbol(token_t &name) {
+		symbol_id_t new_symbol(const identifier_id_t name) {
 			assert(symbols_next <= symbols.size());
 
 			if (symbols_next == symbols.size())
 				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
 
 			assert(symbols_next < symbols.size());
-			symbols[symbols_next].identifier = name;
+			symbols[symbols_next].name = name;
+			if (name != identifier_none) identifier(name).addref();
 			return symbols_next++;
 		}
 
@@ -5496,8 +5501,8 @@ try_again_w_token:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		symbol_id_t lookup_symbol(token_t &name) {
-			if (name.type != token_type_t::identifier)
+		symbol_id_t lookup_symbol(const identifier_id_t name) {
+			if (name == identifier_none)
 				return symbol_none;
 
 			/* search backwards to give recent local symbols priority */
@@ -5506,8 +5511,8 @@ try_again_w_token:
 				do {
 					symbol_t &chk_s = symbols[si];
 
-					if (chk_s.identifier.type == token_type_t::identifier) {
-						if (identifier(name.v.identifier) == identifier(chk_s.identifier.v.identifier)) {
+					if (chk_s.name != identifier_none) {
+						if (identifier(name) == identifier(chk_s.name)) {
 							if (symbol_scope_check(chk_s.scope))
 								return symbol_id_t(si);
 						}
@@ -5524,7 +5529,10 @@ try_again_w_token:
 		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
 			symbol_id_t sid;
 
-			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
+			if (declor.ddecl.name.type != token_type_t::identifier)
+				return 1;
+
+			if ((sid=lookup_symbol(declor.ddecl.name.v.identifier)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope())
 					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",identifier(declor.ddecl.name.v.identifier).to_str().c_str());
@@ -5533,7 +5541,7 @@ try_again_w_token:
 			}
 
 			if (sid == symbol_none) {
-				sid = new_symbol(declor.ddecl.name);
+				sid = new_symbol(declor.ddecl.name.v.identifier);
 				symbol_t &sym = symbol(sid);
 				sym.spec = spec;
 				sym.scope = current_scope();
