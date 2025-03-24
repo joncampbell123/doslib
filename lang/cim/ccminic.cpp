@@ -6439,6 +6439,8 @@ try_again_w_token:
 	}
 
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
+		if (ds.empty()) return;
+
 		fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
 		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
 		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
@@ -6454,6 +6456,8 @@ try_again_w_token:
 	}
 
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
+		if (ptr.empty()) return;
+
 		fprintf(stderr,"%s%s%spointer(s):",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		for (auto i=ptr.begin();i!=ptr.end();i++) {
 			fprintf(stderr," *");
@@ -6463,6 +6467,8 @@ try_again_w_token:
 	}
 
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
+		if (arraydef.empty()) return;
+
 		fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		for (const auto &expr : arraydef) {
 			if (expr != ast_node_none) debug_dump_ast(prefix+"  ",expr);
@@ -6497,30 +6503,29 @@ try_again_w_token:
 							fprintf(stderr,"%s    identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
 
 						debug_dump_arraydef(prefix+"    ",declr.ddecl.arraydef,"direct declarator");
-						{
-							for (auto &p : declr.ddecl.parameters) {
-								assert(p.decl != NULL);
-								auto &p_declr = p.decl->ddecl;
 
-								fprintf(stderr,"%s    parameter:\n",prefix.c_str());
-								debug_dump_declaration_specifiers(prefix+"      ",p.spec);
-								debug_dump_pointer(prefix+"      ",p.ptr);
-								debug_dump_pointer(prefix+"      ",p_declr.ptr,"direct declarator");
+						for (auto &p : declr.ddecl.parameters) {
+							assert(p.decl != NULL);
+							auto &p_declr = p.decl->ddecl;
 
-								if (p_declr.name.type == token_type_t::identifier)
-									fprintf(stderr,"%s      identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
+							fprintf(stderr,"%s    parameter:\n",prefix.c_str());
+							debug_dump_declaration_specifiers(prefix+"      ",p.spec);
+							debug_dump_pointer(prefix+"      ",p.ptr);
+							debug_dump_pointer(prefix+"      ",p_declr.ptr,"direct declarator");
 
-								debug_dump_arraydef(prefix+"      ",p_declr.arraydef,"direct declarator");
+							if (p_declr.name.type == token_type_t::identifier)
+								fprintf(stderr,"%s      identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name.v.identifier).to_str().c_str());
 
-								if (p.decl->initval != ast_node_none) {
-									fprintf(stderr,"%s      init:\n",prefix.c_str());
-									debug_dump_ast(prefix+"        ",p.decl->initval);
-								}
+							debug_dump_arraydef(prefix+"      ",p_declr.arraydef,"direct declarator");
+
+							if (p.decl->initval != ast_node_none) {
+								fprintf(stderr,"%s      init:\n",prefix.c_str());
+								debug_dump_ast(prefix+"        ",p.decl->initval);
 							}
-
-							if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-								fprintf(stderr,"%s    parameter ... (ellipsis)\n",prefix.c_str());
 						}
+
+						if (declr.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+							fprintf(stderr,"%s    parameter ... (ellipsis)\n",prefix.c_str());
 
 						if (declr.initval != ast_node_none) {
 							fprintf(stderr,"%s    init:\n",prefix.c_str());
