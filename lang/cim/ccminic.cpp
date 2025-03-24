@@ -5175,13 +5175,13 @@ try_again_w_token:
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
-		token_t					type_identifier;
+		identifier_id_t				type_identifier = identifier_none;
 		std::vector<enumerator_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier.type == token_type_t::none && enum_list.empty() && count == 0;
+				type_identifier == identifier_none && enum_list.empty() && count == 0;
 		}
 
 		declaration_specifiers_t() { }
@@ -5190,11 +5190,18 @@ try_again_w_token:
 		declaration_specifiers_t(declaration_specifiers_t &&x) { common_move(x); }
 		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
 
+		~declaration_specifiers_t() {
+			if (type_identifier != identifier_none) {
+				identifier(type_identifier).release();
+				type_identifier = identifier_none;
+			}
+		}
+
 		void common_move(declaration_specifiers_t &o) {
-			storage_class = o.storage_class;
-			type_specifier = o.type_specifier;
-			type_qualifier = o.type_qualifier;
-			type_identifier = std::move(o.type_identifier);
+			storage_class = o.storage_class; o.storage_class = 0;
+			type_specifier = o.type_specifier; o.type_specifier = 0;
+			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
+			type_identifier = o.type_identifier; o.type_identifier = identifier_none;
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5204,6 +5211,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
 			type_identifier = o.type_identifier;
+			if (type_identifier != identifier_none) identifier(type_identifier).addref();
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -5765,8 +5773,10 @@ try_again_w_token:
 					 * enum identifier { list }
 					 * enum identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
-						ds.type_identifier = std::move(tq_get());
+					if (tq_peek().type == token_type_t::identifier) {
+						ds.type_identifier = tq_get().v.identifier;
+						identifier(ds.type_identifier).addref();
+					}
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5803,8 +5813,10 @@ try_again_w_token:
 					 * struct identifier { list }
 					 * struct identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
-						ds.type_identifier = std::move(tq_get());
+					if (tq_peek().type == token_type_t::identifier) {
+						ds.type_identifier = tq_get().v.identifier;
+						identifier(ds.type_identifier).addref();
+					}
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5837,8 +5849,10 @@ try_again_w_token:
 					 * union identifier */
 					/* NTS: Unions are parsed the same as structs */
 
-					if (tq_peek().type == token_type_t::identifier)
-						ds.type_identifier = std::move(tq_get());
+					if (tq_peek().type == token_type_t::identifier) {
+						ds.type_identifier = tq_get().v.identifier;
+						identifier(ds.type_identifier).addref();
+					}
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -6217,7 +6231,7 @@ try_again_w_token:
 
 							parameter_t &fp = dd.parameters[i];
 							if (fp.spec.empty() && fp.ptr.empty()) {
-								fp.spec = std::move(s_declion.spec);
+								fp.spec = s_declion.spec;
 								fp.ptr = std::move(d.ptr);
 							}
 							else {
@@ -6249,10 +6263,11 @@ try_again_w_token:
 
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
 			/* any parameter not yet described, is an error */
-			for (const auto &p : dd.parameters) {
+			for (auto &p : dd.parameters) {
 				if (p.spec.empty()) {
 					assert(p.decl != NULL);
 					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl->ddecl.name).to_str().c_str());
+					debug_dump_parameter("  ",p);
 					return errno_return(EINVAL);
 				}
 			}
@@ -6348,7 +6363,7 @@ try_again_w_token:
 		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
 		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
 		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		if (ds.type_identifier.type == token_type_t::identifier) fprintf(stderr," '%s'",identifier(ds.type_identifier.v.identifier).to_str().c_str());
+		if (ds.type_identifier != identifier_none) fprintf(stderr," '%s'",identifier(ds.type_identifier).to_str().c_str());
 		fprintf(stderr,"\n");
 
 		if (!ds.enum_list.empty()) {
