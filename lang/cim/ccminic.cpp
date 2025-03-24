@@ -5392,6 +5392,7 @@ try_again_w_token:
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name);
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 
 	struct cc_state_t {
@@ -6461,6 +6462,13 @@ try_again_w_token:
 		fprintf(stderr,"\n");
 	}
 
+	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
+		fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		for (const auto &expr : arraydef) {
+			if (expr != ast_node_none) debug_dump_ast(prefix+"  ",expr);
+		}
+	}
+
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
 		unsigned int count = 0;
 
@@ -6484,11 +6492,7 @@ try_again_w_token:
 						if (declr.ddecl.name.type == token_type_t::identifier)
 							fprintf(stderr,"%s    identifier: '%s'\n",prefix.c_str(),identifier(declr.ddecl.name.v.identifier).to_str().c_str());
 
-						for (const auto &expr : declr.ddecl.arraydef) {
-							fprintf(stderr,"%s    direct declarator arraydef:\n",prefix.c_str());
-							if (expr != ast_node_none) debug_dump_ast(prefix+"      ",expr);
-						}
-
+						debug_dump_arraydef(prefix+"    ",declr.ddecl.arraydef,"direct declarator");
 						if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
 							fprintf(stderr,"%s    function:\n",prefix.c_str());
 
