@@ -5359,6 +5359,7 @@ try_again_w_token:
 	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name);
+	void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 
 	struct cc_state_t {
@@ -6231,7 +6232,7 @@ try_again_w_token:
 		}
 
 #if 1//DEBUG
-		fprintf(stderr,"%s(line %d):\n",__FUNCTION__,__LINE__);
+		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 		if (dd.name.type == token_type_t::identifier)
 			fprintf(stderr,"  identifier: %s\n",identifier(dd.name.v.identifier).to_str().c_str());
 		else if (dd.name.type == token_type_t::none)
@@ -6465,9 +6466,9 @@ try_again_w_token:
 
 	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
 		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
-			fprintf(stderr,"%s%s%sfunction declaration:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+			fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
-			fprintf(stderr,"%s%s%sdeclaration:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+			fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
 		debug_dump_pointer(prefix+"  ",declr.ptr);
 		debug_dump_pointer(prefix+"  ",declr.ddecl.ptr,"direct declarator");
@@ -6494,6 +6495,18 @@ try_again_w_token:
 		}
 	}
 
+	void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
+		fprintf(stderr,"%s%s%sdeclaration:{\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		debug_dump_declaration_specifiers(prefix+"  ",decl.spec);
+
+		for (auto &declr_p : decl.declor) {
+			assert(declr_p != NULL);
+			debug_dump_declarator(prefix+"  ",*declr_p);
+		}
+
+		fprintf(stderr,"%s}\n",prefix.c_str());
+	}
+
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
 		unsigned int count = 0;
 
@@ -6502,17 +6515,8 @@ try_again_w_token:
 			fprintf(stderr,"%s%s[%u]\n",prefix.c_str(),n.t.to_str().c_str(),count);
 
 			if (n.t.type == token_type_t::op_declaration) {
-				if (n.t.v.declaration) {
-					fprintf(stderr,"%s  {\n",prefix.c_str());
-					debug_dump_declaration_specifiers(prefix+"  ",n.t.v.declaration->spec);
-
-					for (auto &declr_p : n.t.v.declaration->declor) {
-						assert(declr_p != NULL);
-						debug_dump_declarator(prefix+"  ",*declr_p);
-					}
-
-					fprintf(stderr,"%s  }\n",prefix.c_str());
-				}
+				if (n.t.v.declaration)
+					debug_dump_declaration(prefix+"  ",*n.t.v.declaration);
 			}
 
 			debug_dump_ast(prefix+"  ",n.child);
