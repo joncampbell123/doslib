@@ -5906,7 +5906,7 @@ try_again_w_token:
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (float+signed/unsigned)");
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 		debug_dump_declaration_specifiers("  ",ds);
 #endif
@@ -5946,7 +5946,7 @@ try_again_w_token:
 		}
 
 		if (!ptr.empty()) {
-#if 1//DEBUG
+#if 0//DEBUG
 			fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 			debug_dump_pointer("  ",ptr);
 #endif
@@ -6232,7 +6232,7 @@ try_again_w_token:
 			}
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 		debug_dump_direct_declarator("  ",dd);
 #endif
@@ -7513,7 +7513,7 @@ try_again_w_token:
 				return r;
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"init AST:\n");
 		debug_dump_ast("  ",aroot);
 #endif
@@ -7861,7 +7861,7 @@ try_again_w_token:
 			}
 		} while (1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"compound declarator, scope %u:\n",(unsigned int)current_scope());
 		debug_dump_ast("  ",aroot);
 #endif
