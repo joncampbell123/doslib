@@ -1594,7 +1594,7 @@ namespace CCMiniC {
 			void refcount_check(void) {
 				for (size_t i=0;i < pool.size();i++) {
 					if (pool[i].ref != 0) {
-						fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
+						fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
 							pool[i].ref,
 							pool[i].to_str().c_str());
 					}
@@ -1624,12 +1624,12 @@ namespace CCMiniC {
 #if 1//DEBUG
 				if (id < pool.size()) {
 					if (pool[id].ref == 0)
-						throw std::out_of_range("csliteral not initialized");
+						throw std::out_of_range("object not initialized");
 
 					return pool[id];
 				}
 
-				throw std::out_of_range("csliteral out of range");
+				throw std::out_of_range("object out of range");
 #else
 				return pool[id];
 #endif
@@ -1863,24 +1863,32 @@ namespace CCMiniC {
 
 	/////////////////////////////////////////////////
 
-	typedef size_t identifier_id_t;
-	static constexpr identifier_id_t identifier_none = ~size_t(0u);
-	static identifier_id_t identifier_next = 0;
-
 	struct identifier_t {
 		unsigned char*		data = NULL;
 		size_t			length = 0;
 		unsigned int		ref = 0;
 
-		identifier_t &release(void);
-		identifier_t &addref(void);
+		identifier_t &clear(void) {
+			free_data();
+			return *this;
+		}
+
+		identifier_t &addref(void) {
+			ref++;
+			return *this;
+		}
+
+		identifier_t &release(void) {
+			if (ref == 0) throw std::runtime_error("identifier attempt to release when ref == 0");
+			if (--ref == 0) clear();
+			return *this;
+		}
 
 		identifier_t() { }
 		identifier_t(const identifier_t &x) = delete;
 		identifier_t &operator=(const identifier_t &x) = delete;
 		identifier_t(identifier_t &&x) { common_move(x); }
 		identifier_t &operator=(identifier_t &&x) { common_move(x); return *this; }
-		identifier_t &clear(void);
 
 		~identifier_t() { free(); }
 
@@ -1942,93 +1950,9 @@ namespace CCMiniC {
 		inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
 	};
 
-	static std::vector<identifier_t>	identifiers;
-
-	identifier_t &identifier(const identifier_id_t &id);
-
-	void update_next_identifier(identifier_t *p) {
-		if (p >= &identifiers[0]) {
-			const size_t i = p - &identifiers[0];
-			if (i < identifiers.size()) identifier_next = i;
-		}
-	}
-
-	identifier_t &identifier_t::clear(void) {
-		free_data();
-		return *this;
-	}
-
-	identifier_t &identifier_t::addref(void) {
-		ref++;
-		return *this;
-	}
-
-	identifier_t &identifier_t::release(void) {
-		if (ref == 0) throw std::runtime_error("identifier attempt to release when ref == 0");
-		if (--ref == 0) clear();
-		return *this;
-	}
-
-	void identifier_refcount_check(void) {
-		for (size_t i=0;i < identifiers.size();i++) {
-			if (identifiers[i].ref != 0) {
-				fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
-					identifiers[i].ref,
-					identifiers[i].to_str().c_str());
-			}
-		}
-	}
-
-	identifier_t &identifier(const identifier_id_t &id) {
-#if 1//DEBUG
-		if (id < identifiers.size()) {
-			if (identifiers[id].ref == 0)
-				throw std::out_of_range("identifier not initialized");
-
-			return identifiers[id];
-		}
-
-		throw std::out_of_range("identifier out of range");
-#else
-		return identifiers[id];
-#endif
-	}
-
-	static identifier_t& __internal_identifier_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-		while (identifier_next < identifiers.size() && identifiers[identifier_next].ref != 0)
-			identifier_next++;
-#endif
-		if (identifier_next == identifiers.size())
-			identifiers.resize(identifiers.size()+(identifiers.size()/2u)+16u);
-
-		assert(identifier_next < identifiers.size());
-		assert(identifiers[identifier_next].ref == 0);
-		return identifiers[identifier_next];
-	}
-
-	identifier_id_t identifier_alloc(void) {
-		identifier_t &a = __internal_identifier_alloc();
-		a.clear().addref();
-		return identifier_next++;
-	}
-
-	void identifier_assign(identifier_id_t &d,const identifier_id_t s) {
-		if (d != identifier_none) identifier(d).release();
-		d = s;
-		if (d != identifier_none) identifier(d).addref();
-	}
-
-	void identifier_assignmove(identifier_id_t &d,identifier_id_t &s) {
-		if (d != identifier_none) identifier(d).release();
-		d = s;
-		s = identifier_none;
-	}
-
-	void identifier_release(identifier_id_t &d) {
-		if (d != identifier_none) identifier(d).release();
-		d = identifier_none;
-	}
+	typedef size_t identifier_id_t;
+	static constexpr identifier_id_t identifier_none = ~size_t(0u);
+	static obj_pool<identifier_t,identifier_id_t,identifier_none> identifier;
 
 	//////////////////////////////////////////////////////
 
@@ -2165,7 +2089,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
-					identifier_release(v.identifier);
+					identifier.release(v.identifier);
 					break;
 				default:
 					break;
@@ -2224,7 +2148,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
-					identifier_assign(/*to*/v.identifier,/*from*/x.v.identifier);
+					identifier.assign(/*to*/v.identifier,/*from*/x.v.identifier);
 					break;
 				default:
 					v = x.v;
@@ -2250,7 +2174,7 @@ private:
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
-					identifier_assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
+					identifier.assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
 					break;
 				default:
 					v = x.v;
@@ -2562,7 +2486,7 @@ private:
 		}
 
 		t.type = token_type_t::r___asm_text;
-		t.v.identifier = identifier_alloc();
+		t.v.identifier = identifier.alloc();
 		if (!identifier(t.v.identifier).copy_from(data,length)) return errno_return(ENOMEM);
 		return 1;
 	}
@@ -2648,7 +2572,7 @@ private:
 		}
 
 		t.type = pp ? token_type_t::ppidentifier : token_type_t::identifier;
-		t.v.identifier = identifier_alloc();
+		t.v.identifier = identifier.alloc();
 		if (!identifier(t.v.identifier).copy_from(data,length)) return errno_return(ENOMEM);
 		return 1;
 	}
@@ -3189,7 +3113,7 @@ try_again:	t = token_t();
 		pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
 		pptok_macro_t &operator=(pptok_macro_t &&x) { common_move(x); return *this; }
 		~pptok_macro_t() {
-			for (auto &pid : parameters) identifier_release(pid);
+			for (auto &pid : parameters) identifier.release(pid);
 			parameters.clear();
 		}
 
@@ -3212,7 +3136,7 @@ try_again:	t = token_t();
 			pptok_macro_ent_t(pptok_macro_ent_t &&) = delete;
 			pptok_macro_ent_t &operator=(pptok_macro_ent_t &&) = delete;
 			~pptok_macro_ent_t() {
-				identifier_release(name);
+				identifier.release(name);
 			}
 		};
 		struct cond_block_t {
@@ -3316,7 +3240,7 @@ try_again:	t = token_t();
 
 			(*p) = new pptok_macro_ent_t;
 			(*p)->ment = std::move(m);
-			identifier_assign(/*to*/(*p)->name,/*from*/i);
+			identifier.assign(/*to*/(*p)->name,/*from*/i);
 			(*p)->next = NULL;
 			return true;
 		}
@@ -3420,7 +3344,7 @@ try_again:	t = token_t();
 		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
-		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
+		identifier.assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3445,7 +3369,7 @@ try_again:	t = token_t();
 #endif
 		}
 
-		identifier_release(s_id);
+		identifier.release(s_id);
 		return 1;
 	}
 
@@ -3944,7 +3868,7 @@ try_again:	t = token_t();
 		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
-		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
+		identifier.assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		do {
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -3991,7 +3915,7 @@ try_again:	t = token_t();
 			}
 		}
 
-		identifier_release(s_id);
+		identifier.release(s_id);
 		return 1;
 	}
 
@@ -4135,7 +4059,7 @@ try_again:	t = token_t();
 		if (t.type != token_type_t::identifier || t.v.identifier == identifier_none)
 			CCERR_RET(EINVAL,t.pos,"Identifier expected");
 
-		identifier_assign(/*to*/s_id,/*from*/t.v.identifier);
+		identifier.assign(/*to*/s_id,/*from*/t.v.identifier);
 
 		/* if the next character is '(' (without a space), it's a parameter list.
 		 * a space and then '(' doesn't count. that's how GCC behaves, anyway. */
@@ -4166,12 +4090,12 @@ try_again:	t = token_t();
 
 				/* GNU GCC arg... variadic macros that predate __VA_ARGS__ */
 				if (buf.peekb(0) == '.' && buf.peekb(1) == '.' && buf.peekb(2) == '.') {
-					identifier_assign(/*to*/s_id_va_args_subst,/*from*/t.v.identifier);
+					identifier.assign(/*to*/s_id_va_args_subst,/*from*/t.v.identifier);
 					macro.flags |= pptok_macro_t::FL_VARIADIC | pptok_macro_t::FL_NO_VA_ARGS;
 					buf.discardb(3);
 				}
 				else {
-					identifier_assign(/*to*/s_p,/*from*/t.v.identifier);
+					identifier.assign(/*to*/s_p,/*from*/t.v.identifier);
 					macro.parameters.push_back(s_p);
 				}
 
@@ -4280,8 +4204,8 @@ try_again:	t = token_t();
 		if (!pst.create_macro(s_id,macro))
 			return errno_return(EEXIST);
 
-		identifier_release(s_id_va_args_subst);
-		identifier_release(s_id);
+		identifier.release(s_id_va_args_subst);
+		identifier.release(s_id);
 		return 1;
 	}
 
@@ -5230,17 +5154,17 @@ try_again_w_token:
 		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const enumerator_t &o) {
-			identifier_assign(/*to*/name,/*from*/o.name);
+			identifier.assign(/*to*/name,/*from*/o.name);
 			ast_node_assign(/*to*/expr,/*from*/o.expr);
 		}
 
 		void common_move(enumerator_t &o) {
-			identifier_assignmove(/*to*/name,/*from*/o.name);
+			identifier.assignmove(/*to*/name,/*from*/o.name);
 			ast_node_assignmove(/*to*/expr,/*from*/o.expr);
 		}
 
 		~enumerator_t() {
-			identifier_release(name);
+			identifier.release(name);
 			ast_node_release(expr);
 		}
 	};
@@ -5265,14 +5189,14 @@ try_again_w_token:
 		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
 
 		~declaration_specifiers_t() {
-			identifier_release(type_identifier);
+			identifier.release(type_identifier);
 		}
 
 		void common_move(declaration_specifiers_t &o) {
 			storage_class = o.storage_class; o.storage_class = 0;
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
-			identifier_assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
+			identifier.assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5281,7 +5205,7 @@ try_again_w_token:
 			storage_class = o.storage_class;
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
-			identifier_assign(/*to*/type_identifier,/*from*/o.type_identifier);
+			identifier.assign(/*to*/type_identifier,/*from*/o.type_identifier);
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -5326,7 +5250,7 @@ try_again_w_token:
 		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
 
 		~direct_declarator_t() {
-			identifier_release(name);
+			identifier.release(name);
 			for (auto &expr : arraydef) ast_node_release(expr);
 			arraydef.clear();
 		}
@@ -5415,13 +5339,13 @@ try_again_w_token:
 
 		~symbol_t() {
 			ast_node_release(expr);
-			identifier_release(name);
+			identifier.release(name);
 		}
 
 		void common_move(symbol_t &x) {
 			spec = std::move(x.spec);
 			ast_node_assignmove(/*to*/expr,/*from*/x.expr);
-			identifier_assignmove(/*to*/name,/*from*/x.name);
+			identifier.assignmove(/*to*/name,/*from*/x.name);
 			sym_type = x.sym_type; x.sym_type = VARIABLE;
 			flags = x.flags; x.flags = 0;
 		}
@@ -5543,7 +5467,7 @@ try_again_w_token:
 				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
 
 			assert(symbols_next < symbols.size());
-			identifier_assign(/*to*/symbols[symbols_next].name,/*from*/name);
+			identifier.assign(/*to*/symbols[symbols_next].name,/*from*/name);
 			return symbols_next++;
 		}
 
@@ -5688,7 +5612,7 @@ try_again_w_token:
 			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
-			identifier_assign(/*to*/en.name,/*from*/tq_get().v.identifier);
+			identifier.assign(/*to*/en.name,/*from*/tq_get().v.identifier);
 
 			if (tq_peek().type == token_type_t::equal) {
 				tq_discard();
@@ -5830,7 +5754,7 @@ try_again_w_token:
 					 * enum identifier */
 
 					if (tq_peek().type == token_type_t::identifier)
-						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5846,7 +5770,7 @@ try_again_w_token:
 							for (const auto &e : ds.enum_list) {
 								declarator_t declor;
 
-								identifier_assign(/*to*/declor.ddecl.name,/*from*/e.name);
+								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
 								if ((r=add_symbol(spec,declor)) < 1)
 									return r;
 							}
@@ -5867,7 +5791,7 @@ try_again_w_token:
 					 * struct identifier */
 
 					if (tq_peek().type == token_type_t::identifier)
-						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -5901,7 +5825,7 @@ try_again_w_token:
 					/* NTS: Unions are parsed the same as structs */
 
 					if (tq_peek().type == token_type_t::identifier)
-						identifier_assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
@@ -6080,7 +6004,7 @@ try_again_w_token:
 
 		if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
-			identifier_assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
+			identifier.assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
 		}
 		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier) {
 			dd.name = identifier_none;
@@ -8394,7 +8318,7 @@ int main(int argc,char **argv) {
 	}
 
 	CCMiniC::source_file_refcount_check();
-	CCMiniC::identifier_refcount_check();
+	CCMiniC::identifier.refcount_check();
 	CCMiniC::csliteral.refcount_check();
 	CCMiniC::ast_node_refcount_check();
 
