@@ -7936,20 +7936,8 @@ try_again_w_token:
 		} while(1);
 
 #if 1//DEBUG
-		fprintf(stderr,"%s(line %d) end parsing\n",__FUNCTION__,__LINE__);
-		for (auto &declor_p : declion.declor) {
-			if (declor_p == NULL) continue;
-			auto &declor = *declor_p;
-			auto &ddecl = declor.ddecl;
-
-			if (ddecl.name.type == token_type_t::identifier)
-				fprintf(stderr,"  declor: '%s'\n",identifier(ddecl.name.v.identifier).to_str().c_str());
-
-			if (declor.initval != ast_node_none) {
-				fprintf(stderr,"    init:\n");
-				debug_dump_ast("      ",declor.initval);
-			}
-		}
+		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+		debug_dump_declaration("  ",declion);
 #endif
 
 		if (tq_peek().type == token_type_t::semicolon) {
@@ -7990,20 +7978,8 @@ try_again_w_token:
 		} while(1);
 
 #if 1//DEBUG
-		fprintf(stderr,"%s(line %d) end parsing\n",__FUNCTION__,__LINE__);
-		for (auto &declor_p : declion.declor) {
-			if (declor_p == NULL) continue;
-			auto &declor = *declor_p;
-			auto &ddecl = declor.ddecl;
-
-			if (ddecl.name.type == token_type_t::identifier)
-				fprintf(stderr,"  declor: '%s'\n",identifier(ddecl.name.v.identifier).to_str().c_str());
-
-			if (declor.bitfield_expr != ast_node_none) {
-				fprintf(stderr,"    bitfield:\n");
-				debug_dump_ast("      ",declor.bitfield_expr);
-			}
-		}
+		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+		debug_dump_declaration("  ",declion);
 #endif
 
 		if (tq_peek().type == token_type_t::semicolon) {
