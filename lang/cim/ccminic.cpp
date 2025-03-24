@@ -1838,6 +1838,23 @@ namespace CCMiniC {
 		return csliteral_next++;
 	}
 
+	void csliteral_assign(csliteral_id_t &d,const csliteral_id_t s) {
+		if (d != csliteral_none) csliteral(d).release();
+		d = s;
+		if (d != csliteral_none) csliteral(d).addref();
+	}
+
+	void csliteral_assignmove(csliteral_id_t &d,csliteral_id_t &s) {
+		if (d != csliteral_none) csliteral(d).release();
+		d = s;
+		s = csliteral_none;
+	}
+
+	void csliteral_release(csliteral_id_t &d) {
+		if (d != csliteral_none) csliteral(d).release();
+		d = csliteral_none;
+	}
+
 	/////////////////////////////////////////////////
 
 	typedef size_t identifier_id_t;
@@ -2134,7 +2151,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					if (v.csliteral != csliteral_none) csliteral(v.csliteral).release();
+					csliteral_release(v.csliteral);
 					break;
 				case token_type_t::op_declaration:
 					typ_delete(v.declaration);
@@ -2193,8 +2210,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					v.csliteral = x.v.csliteral;
-					if (v.csliteral != csliteral_none) csliteral(v.csliteral).addref();
+					csliteral_assign(/*to*/v.csliteral,/*from*/x.v.csliteral);
 					break;
 				case token_type_t::op_declaration:
 					throw std::runtime_error("Copy constructor not available");
@@ -2223,8 +2239,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					v.csliteral = x.v.csliteral;
-					x.v.csliteral = csliteral_none;
+					csliteral_assignmove(/*to*/v.csliteral,/*from*/x.v.csliteral);
 					break;
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
