@@ -1559,6 +1559,88 @@ namespace CCMiniC {
 
 	///////////////////////////////////////////////////////
 
+	template <class obj_t,typename id_t,const id_t none> class obj_pool {
+		public:
+			obj_pool() { }
+			~obj_pool() { }
+		public:
+			obj_t &operator()(const id_t id) {
+				return _lookup(id);
+			}
+		public:
+			id_t alloc(void) {
+				obj_t &a = __internal_alloc();
+				a.clear().addref();
+				return next++;
+			}
+
+			void assign(id_t &d,const id_t s) {
+				if (d != none) _lookup(d).release();
+				d = s;
+				if (d != none) _lookup(d).addref();
+			}
+
+			void assignmove(id_t &d,id_t &s) {
+				if (d != none) _lookup(d).release();
+				d = s;
+				s = none;
+			}
+
+			void release(id_t &d) {
+				if (d != none) _lookup(d).release();
+				d = none;
+			}
+
+			void refcount_check(void) {
+				for (size_t i=0;i < pool.size();i++) {
+					if (pool[i].ref != 0) {
+						fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
+							pool[i].ref,
+							pool[i].to_str().c_str());
+					}
+				}
+			}
+		private:
+			void update_next(obj_t *p) {
+				if (p >= &pool[0]) {
+					const size_t i = p - &pool[0];
+					if (i < pool.size()) next = i;
+				}
+			}
+
+			obj_t& __internal_alloc() {
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+				while (next < pool.size() && pool[next].ref != 0)
+					next++;
+#endif
+				if (next == pool.size())
+					pool.resize(pool.size()+(pool.size()/2u)+16u);
+
+				assert(next < pool.size());
+				assert(pool[next].ref == 0);
+				return pool[next];
+			}
+			inline obj_t &_lookup(const id_t id) {
+#if 1//DEBUG
+				if (id < pool.size()) {
+					if (pool[id].ref == 0)
+						throw std::out_of_range("csliteral not initialized");
+
+					return pool[id];
+				}
+
+				throw std::out_of_range("csliteral out of range");
+#else
+				return pool[id];
+#endif
+			}
+		private:
+			id_t next = id_t(0);
+			std::vector<obj_t> pool;
+	};
+
+	///////////////////////////////////////////////////////
+
 	struct csliteral_t {
 		enum type_t {
 			CHAR=0,
@@ -1575,9 +1657,21 @@ namespace CCMiniC {
 		size_t			allocated = 0;
 		unsigned int		ref = 0;
 
-		csliteral_t &release(void);
-		csliteral_t &addref(void);
-		csliteral_t &clear(void);
+		csliteral_t &clear(void) {
+			free();
+			return *this;
+		}
+
+		csliteral_t &addref(void) {
+			ref++;
+			return *this;
+		}
+
+		csliteral_t &release(void) {
+			if (ref == 0) throw std::runtime_error("csliteral attempt to release when ref == 0");
+			if (--ref == 0) clear();
+			return *this;
+		}
 
 		void free(void) {
 			if (data) ::free(data);
@@ -1765,104 +1859,7 @@ namespace CCMiniC {
 
 	typedef size_t csliteral_id_t;
 	static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
-
-	class csliteral_pool {
-		public:
-			csliteral_pool() { }
-			~csliteral_pool() { }
-		public:
-			csliteral_t &operator()(const csliteral_id_t id) {
-				return _lookup(id);
-			}
-		public:
-			csliteral_id_t alloc(void) {
-				csliteral_t &a = __internal_alloc();
-				a.clear().addref();
-				return next++;
-			}
-
-			void assign(csliteral_id_t &d,const csliteral_id_t s) {
-				if (d != csliteral_none) _lookup(d).release();
-				d = s;
-				if (d != csliteral_none) _lookup(d).addref();
-			}
-
-			void assignmove(csliteral_id_t &d,csliteral_id_t &s) {
-				if (d != csliteral_none) _lookup(d).release();
-				d = s;
-				s = csliteral_none;
-			}
-
-			void release(csliteral_id_t &d) {
-				if (d != csliteral_none) _lookup(d).release();
-				d = csliteral_none;
-			}
-
-			void refcount_check(void) {
-				for (size_t i=0;i < pool.size();i++) {
-					if (pool[i].ref != 0) {
-						fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
-							pool[i].ref,
-							pool[i].to_str().c_str());
-					}
-				}
-			}
-		private:
-			void update_next(csliteral_t *p) {
-				if (p >= &pool[0]) {
-					const size_t i = p - &pool[0];
-					if (i < pool.size()) next = i;
-				}
-			}
-
-			csliteral_t& __internal_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-				while (next < pool.size() && pool[next].ref != 0)
-					next++;
-#endif
-				if (next == pool.size())
-					pool.resize(pool.size()+(pool.size()/2u)+16u);
-
-				assert(next < pool.size());
-				assert(pool[next].ref == 0);
-				return pool[next];
-			}
-			inline csliteral_t &_lookup(const csliteral_id_t id) {
-#if 1//DEBUG
-				if (id < pool.size()) {
-					if (pool[id].ref == 0)
-						throw std::out_of_range("csliteral not initialized");
-
-					return pool[id];
-				}
-
-				throw std::out_of_range("csliteral out of range");
-#else
-				return pool[id];
-#endif
-			}
-		private:
-			csliteral_id_t next = csliteral_id_t(0);
-			std::vector<csliteral_t> pool;
-	};
-
-	static csliteral_pool csliteral;
-
-	csliteral_t &csliteral_t::clear(void) {
-		free();
-		return *this;
-	}
-
-	csliteral_t &csliteral_t::addref(void) {
-		ref++;
-		return *this;
-	}
-
-	csliteral_t &csliteral_t::release(void) {
-		if (ref == 0) throw std::runtime_error("csliteral attempt to release when ref == 0");
-		if (--ref == 0) clear();
-		return *this;
-	}
+	static obj_pool<csliteral_t,csliteral_id_t,csliteral_none> csliteral;
 
 	/////////////////////////////////////////////////
 
