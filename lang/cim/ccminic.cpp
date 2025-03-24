@@ -5257,6 +5257,7 @@ try_again_w_token:
 		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
 		ast_node_id_t initval = ast_node_none;
+		ast_node_id_t bitfield_expr = ast_node_none;
 		ast_node_id_t function_body = ast_node_none;
 
 		declarator_t() { }
@@ -5268,6 +5269,8 @@ try_again_w_token:
 		~declarator_t() {
 			if (initval != ast_node_none)
 				ast_node(initval).release();
+			if (bitfield_expr != ast_node_none)
+				ast_node(bitfield_expr).release();
 			if (function_body != ast_node_none)
 				ast_node(function_body).release();
 		}
@@ -5290,45 +5293,6 @@ try_again_w_token:
 		declaration_t &operator=(declaration_t &&) = delete;
 
 		~declaration_t() {
-			for (auto &i : declor) delete i;
-			declor.clear();
-		}
-	};
-
-	struct struct_declarator_t {
-		direct_declarator_t ddecl;
-		std::vector<pointer_t> ptr;
-		ast_node_id_t bitfield_expr = ast_node_none;
-
-		struct_declarator_t() { }
-		struct_declarator_t(const struct_declarator_t &) = delete;
-		struct_declarator_t(struct_declarator_t &&) = delete;
-		struct_declarator_t &operator=(const struct_declarator_t &) = delete;
-		struct_declarator_t &operator=(struct_declarator_t &&) = delete;
-
-		~struct_declarator_t() {
-			if (bitfield_expr != ast_node_none)
-				ast_node(bitfield_expr).release();
-		}
-	};
-
-	struct struct_declaration_t {
-		declaration_specifiers_t		spec;
-		std::vector<struct_declarator_t*>	declor;
-
-		struct_declarator_t &new_declarator(void) {
-			struct_declarator_t *n = new struct_declarator_t();
-			declor.push_back(n);
-			return *n;
-		}
-
-		struct_declaration_t() { }
-		struct_declaration_t(const struct_declaration_t &) = delete;
-		struct_declaration_t(struct_declaration_t &&) = delete;
-		struct_declaration_t &operator=(const struct_declaration_t &) = delete;
-		struct_declaration_t &operator=(struct_declaration_t &&) = delete;
-
-		~struct_declaration_t() {
 			for (auto &i : declor) delete i;
 			declor.clear();
 		}
@@ -5593,12 +5557,12 @@ try_again_w_token:
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags=0);
-		int struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor);
+		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
-		int struct_declaration_parse(struct_declaration_t &declion);
+		int struct_declaration_parse(declaration_t &declion);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5833,7 +5797,7 @@ try_again_w_token:
 								break;
 							}
 
-							struct_declaration_t declion;
+							declaration_t declion;
 
 							if ((r=struct_declaration_parse(declion)) < 1)
 								return r;
@@ -5867,7 +5831,7 @@ try_again_w_token:
 								break;
 							}
 
-							struct_declaration_t declion;
+							declaration_t declion;
 
 							if ((r=struct_declaration_parse(declion)) < 1)
 								return r;
@@ -6372,7 +6336,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::struct_declarator_parse(declaration_specifiers_t &ds,struct_declarator_t &declor) {
+	int cc_state_t::struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
 		int r;
 
 		if ((r=pointer_parse(declor.ptr)) < 1)
@@ -6522,6 +6486,11 @@ try_again_w_token:
 		if (declr.initval != ast_node_none) {
 			fprintf(stderr,"%s  init:\n",prefix.c_str());
 			debug_dump_ast(prefix+"  ",declr.initval);
+		}
+
+		if (declr.bitfield_expr != ast_node_none) {
+			fprintf(stderr,"%s  bitfield:\n",prefix.c_str());
+			debug_dump_ast(prefix+"  ",declr.bitfield_expr);
 		}
 	}
 
@@ -8051,7 +8020,7 @@ try_again_w_token:
 		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
 	}
 
-	int cc_state_t::struct_declaration_parse(struct_declaration_t &declion) {
+	int cc_state_t::struct_declaration_parse(declaration_t &declion) {
 		int r,count = 0;
 
 #if 0//DEBUG
@@ -8064,7 +8033,7 @@ try_again_w_token:
 			return r;
 
 		do {
-			struct_declarator_t &declor = declion.new_declarator();
+			declarator_t &declor = declion.new_declarator();
 
 			if ((r=struct_declarator_parse(declion.spec,declor)) < 1)
 				return r;
