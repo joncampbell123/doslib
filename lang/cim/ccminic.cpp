@@ -5391,8 +5391,8 @@ try_again_w_token:
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
-	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 
 	struct cc_state_t {
 		CCMiniC::lgtok_state_t	lst;
@@ -6452,8 +6452,8 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr) {
-		fprintf(stderr,"%spointer(s):",prefix.c_str());
+	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
+		fprintf(stderr,"%s%s%spointer(s):",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		for (auto i=ptr.begin();i!=ptr.end();i++) {
 			fprintf(stderr," *");
 			for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
@@ -6477,25 +6477,12 @@ try_again_w_token:
 						assert(declr_p != NULL);
 						auto &declr = *declr_p;
 
-						fprintf(stderr,"%s  declr:",prefix.c_str());
-
-						for (auto i=declr.ptr.begin();i!=declr.ptr.end();i++) {
-							fprintf(stderr," *");
-							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-						}
-
-						if (!declr.ddecl.ptr.empty()) fprintf(stderr," (");
-
-						for (auto i=declr.ddecl.ptr.begin();i!=declr.ddecl.ptr.end();i++) {
-							fprintf(stderr," *");
-							for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-						}
+						fprintf(stderr,"%s  declaration:\n",prefix.c_str());
+						debug_dump_pointer(prefix+"    ",declr.ptr);
+						debug_dump_pointer(prefix+"    ",declr.ptr,"direct declarator");
 
 						if (declr.ddecl.name.type == token_type_t::identifier)
 							fprintf(stderr," %s",identifier(declr.ddecl.name.v.identifier).to_str().c_str());
-
-						if (!declr.ddecl.ptr.empty()) fprintf(stderr," )");
-						fprintf(stderr,"\n");
 
 						for (const auto &expr : declr.ddecl.arraydef) {
 							fprintf(stderr,"%s    arraydef:\n",prefix.c_str());
