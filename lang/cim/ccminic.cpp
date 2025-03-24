@@ -5391,6 +5391,7 @@ try_again_w_token:
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 
 	struct cc_state_t {
@@ -5976,16 +5977,9 @@ try_again_w_token:
 		}
 
 		if (!ptr.empty()) {
-#if 0//DEBUG
-			fprintf(stderr,"%s():\n",__FUNCTION__);
-
-			for (auto i=ptr.begin();i!=ptr.end();i++) {
-				fprintf(stderr,"  * ");
-				for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-				fprintf(stderr,"\n");
-			}
-
-			fprintf(stderr,"\n");
+#if 1//DEBUG
+			fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+			debug_dump_pointer("  ",ptr);
 #endif
 		}
 
@@ -6456,6 +6450,15 @@ try_again_w_token:
 			for (auto &en : ds.enum_list) debug_dump_enumerator(prefix+"    ",en);
 			fprintf(stderr,"%s  }\n",prefix.c_str());
 		}
+	}
+
+	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr) {
+		fprintf(stderr,"%spointer(s):",prefix.c_str());
+		for (auto i=ptr.begin();i!=ptr.end();i++) {
+			fprintf(stderr," *");
+			for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+		}
+		fprintf(stderr,"\n");
 	}
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
