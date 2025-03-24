@@ -1559,10 +1559,6 @@ namespace CCMiniC {
 
 	///////////////////////////////////////////////////////
 
-	typedef size_t csliteral_id_t;
-	static constexpr csliteral_id_t csliteral_none = ~size_t(0u);
-	static csliteral_id_t csliteral_next = 0;
-
 	struct csliteral_t {
 		enum type_t {
 			CHAR=0,
@@ -1767,16 +1763,90 @@ namespace CCMiniC {
 		}
 	};
 
-	static std::vector<csliteral_t>	csliterals;
+	typedef size_t csliteral_id_t;
+	static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
 
-	csliteral_t &csliteral(const csliteral_id_t &id);
+	class csliteral_pool {
+		public:
+			csliteral_pool() { }
+			~csliteral_pool() { }
+		public:
+			csliteral_t &operator()(const csliteral_id_t id) {
+				return _lookup(id);
+			}
+		public:
+			csliteral_id_t alloc(void) {
+				csliteral_t &a = __internal_alloc();
+				a.clear().addref();
+				return next++;
+			}
 
-	void update_next_csliteral(csliteral_t *p) {
-		if (p >= &csliterals[0]) {
-			const size_t i = p - &csliterals[0];
-			if (i < csliterals.size()) csliteral_next = i;
-		}
-	}
+			void assign(csliteral_id_t &d,const csliteral_id_t s) {
+				if (d != csliteral_none) _lookup(d).release();
+				d = s;
+				if (d != csliteral_none) _lookup(d).addref();
+			}
+
+			void assignmove(csliteral_id_t &d,csliteral_id_t &s) {
+				if (d != csliteral_none) _lookup(d).release();
+				d = s;
+				s = csliteral_none;
+			}
+
+			void release(csliteral_id_t &d) {
+				if (d != csliteral_none) _lookup(d).release();
+				d = csliteral_none;
+			}
+
+			void refcount_check(void) {
+				for (size_t i=0;i < pool.size();i++) {
+					if (pool[i].ref != 0) {
+						fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
+							pool[i].ref,
+							pool[i].to_str().c_str());
+					}
+				}
+			}
+		private:
+			void update_next(csliteral_t *p) {
+				if (p >= &pool[0]) {
+					const size_t i = p - &pool[0];
+					if (i < pool.size()) next = i;
+				}
+			}
+
+			csliteral_t& __internal_alloc() {
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+				while (next < pool.size() && pool[next].ref != 0)
+					next++;
+#endif
+				if (next == pool.size())
+					pool.resize(pool.size()+(pool.size()/2u)+16u);
+
+				assert(next < pool.size());
+				assert(pool[next].ref == 0);
+				return pool[next];
+			}
+			inline csliteral_t &_lookup(const csliteral_id_t id) {
+#if 1//DEBUG
+				if (id < pool.size()) {
+					if (pool[id].ref == 0)
+						throw std::out_of_range("csliteral not initialized");
+
+					return pool[id];
+				}
+
+				throw std::out_of_range("csliteral out of range");
+#else
+				return pool[id];
+#endif
+			}
+		private:
+			csliteral_id_t next = csliteral_id_t(0);
+			std::vector<csliteral_t> pool;
+	};
+
+	static csliteral_pool csliteral;
 
 	csliteral_t &csliteral_t::clear(void) {
 		free();
@@ -1792,67 +1862,6 @@ namespace CCMiniC {
 		if (ref == 0) throw std::runtime_error("csliteral attempt to release when ref == 0");
 		if (--ref == 0) clear();
 		return *this;
-	}
-
-	void csliteral_refcount_check(void) {
-		for (size_t i=0;i < csliterals.size();i++) {
-			if (csliterals[i].ref != 0) {
-				fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
-					csliterals[i].ref,
-					csliterals[i].to_str().c_str());
-			}
-		}
-	}
-
-	csliteral_t &csliteral(const csliteral_id_t &id) {
-#if 1//DEBUG
-		if (id < csliterals.size()) {
-			if (csliterals[id].ref == 0)
-				throw std::out_of_range("csliteral not initialized");
-
-			return csliterals[id];
-		}
-
-		throw std::out_of_range("csliteral out of range");
-#else
-		return csliterals[id];
-#endif
-	}
-
-	static csliteral_t& __internal_csliteral_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-		while (csliteral_next < csliterals.size() && csliterals[csliteral_next].ref != 0)
-			csliteral_next++;
-#endif
-		if (csliteral_next == csliterals.size())
-			csliterals.resize(csliterals.size()+(csliterals.size()/2u)+16u);
-
-		assert(csliteral_next < csliterals.size());
-		assert(csliterals[csliteral_next].ref == 0);
-		return csliterals[csliteral_next];
-	}
-
-	csliteral_id_t csliteral_alloc(void) {
-		csliteral_t &a = __internal_csliteral_alloc();
-		a.clear().addref();
-		return csliteral_next++;
-	}
-
-	void csliteral_assign(csliteral_id_t &d,const csliteral_id_t s) {
-		if (d != csliteral_none) csliteral(d).release();
-		d = s;
-		if (d != csliteral_none) csliteral(d).addref();
-	}
-
-	void csliteral_assignmove(csliteral_id_t &d,csliteral_id_t &s) {
-		if (d != csliteral_none) csliteral(d).release();
-		d = s;
-		s = csliteral_none;
-	}
-
-	void csliteral_release(csliteral_id_t &d) {
-		if (d != csliteral_none) csliteral(d).release();
-		d = csliteral_none;
 	}
 
 	/////////////////////////////////////////////////
@@ -2151,7 +2160,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					csliteral_release(v.csliteral);
+					csliteral.release(v.csliteral);
 					break;
 				case token_type_t::op_declaration:
 					typ_delete(v.declaration);
@@ -2210,7 +2219,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					csliteral_assign(/*to*/v.csliteral,/*from*/x.v.csliteral);
+					csliteral.assign(/*to*/v.csliteral,/*from*/x.v.csliteral);
 					break;
 				case token_type_t::op_declaration:
 					throw std::runtime_error("Copy constructor not available");
@@ -2239,7 +2248,7 @@ private:
 				case token_type_t::charliteral:
 				case token_type_t::strliteral:
 				case token_type_t::anglestrliteral:
-					csliteral_assignmove(/*to*/v.csliteral,/*from*/x.v.csliteral);
+					csliteral.assignmove(/*to*/v.csliteral,/*from*/x.v.csliteral);
 					break;
 				case token_type_t::identifier:
 				case token_type_t::ppidentifier:
@@ -2490,7 +2499,7 @@ private:
 			if (separator == '\"') t.type = token_type_t::strliteral;
 			else if (separator == '<') t.type = token_type_t::anglestrliteral;
 			else t.type = token_type_t::charliteral;
-			t.v.csliteral = csliteral_alloc();
+			t.v.csliteral = csliteral.alloc();
 			csliteral(t.v.csliteral).type = cslt;
 
 			if (separator == '<') separator = '>';
@@ -4497,7 +4506,7 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.set_source_file(rb.source_file);
-							st.v.csliteral = csliteral_alloc();
+							st.v.csliteral = csliteral.alloc();
 							st.pos = rb.pos;
 
 							if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
@@ -4521,7 +4530,7 @@ go_again:
 
 								st.type = token_type_t::strliteral;
 								st.set_source_file(rb.source_file);
-								st.v.csliteral = csliteral_alloc();
+								st.v.csliteral = csliteral.alloc();
 								st.pos = rb.pos;
 
 								if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
@@ -4582,7 +4591,7 @@ go_again:
 							token_t st;
 							st.type = token_type_t::strliteral;
 							st.set_source_file(rb.source_file);
-							st.v.csliteral = csliteral_alloc();
+							st.v.csliteral = csliteral.alloc();
 							st.pos = rb.pos;
 
 							if (!csliteral(st.v.csliteral).alloc(rb.data_avail()))
@@ -4739,7 +4748,7 @@ try_again_w_token:
 				if (!pst.condb_true())
 					goto try_again;
 				t.type = token_type_t::strliteral;
-				t.v.csliteral = csliteral_alloc();
+				t.v.csliteral = csliteral.alloc();
 				{
 					const char *name = sfo.getname();
 					if (name) {
@@ -8389,7 +8398,7 @@ int main(int argc,char **argv) {
 
 	CCMiniC::source_file_refcount_check();
 	CCMiniC::identifier_refcount_check();
-	CCMiniC::csliteral_refcount_check();
+	CCMiniC::csliteral.refcount_check();
 	CCMiniC::ast_node_refcount_check();
 
 	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
