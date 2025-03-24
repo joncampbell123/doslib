@@ -5141,7 +5141,7 @@ try_again_w_token:
 	}
 
 	struct enumerator_t {
-		token_t					name;
+		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none;
 
 		enumerator_t() { }
@@ -5151,7 +5151,9 @@ try_again_w_token:
 		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const enumerator_t &o) {
+			if (name != identifier_none) identifier(name).release();
 			name = o.name;
+			if (name != identifier_none) identifier(name).addref();
 
 			if (expr != ast_node_none) ast_node(expr).release();
 			expr = o.expr;
@@ -5159,11 +5161,16 @@ try_again_w_token:
 		}
 
 		void common_move(enumerator_t &o) {
-			name = std::move(o.name);
+			name = o.name; o.name = identifier_none;
 			expr = o.expr; o.expr = ast_node_none;
 		}
 
 		~enumerator_t() {
+			if (name != identifier_none) {
+				identifier(name).release();
+				name = identifier_none;
+			}
+
 			if (expr != ast_node_none) {
 				ast_node(expr).release();
 				expr = ast_node_none;
@@ -5629,10 +5636,11 @@ try_again_w_token:
 
 			enumerator_t en;
 
-			if (tq_peek().type != token_type_t::identifier)
+			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
-			en.name = std::move(tq_get());
+			en.name = tq_get().v.identifier;
+			identifier(en.name).addref();
 
 			if (tq_peek().type == token_type_t::equal) {
 				tq_discard();
@@ -5792,8 +5800,9 @@ try_again_w_token:
 							for (const auto &e : ds.enum_list) {
 								declarator_t declor;
 
-								declor.ddecl.name = e.name.v.identifier;
+								declor.ddecl.name = e.name;
 								identifier(declor.ddecl.name).addref();
+
 								if ((r=add_symbol(spec,declor)) < 1)
 									return r;
 							}
@@ -6346,7 +6355,7 @@ try_again_w_token:
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
 		fprintf(stderr,"%s",prefix.c_str());
 
-		if (en.name.type == token_type_t::identifier) fprintf(stderr,"'%s'",identifier(en.name.v.identifier).to_str().c_str());
+		if (en.name != identifier_none) fprintf(stderr,"'%s'",identifier(en.name).to_str().c_str());
 		else fprintf(stderr,"?");
 		fprintf(stderr,"\n");
 
