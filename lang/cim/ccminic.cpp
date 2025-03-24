@@ -6470,15 +6470,8 @@ try_again_w_token:
 
 			if (n.t.type == token_type_t::op_declaration) {
 				if (n.t.v.declaration) {
-					auto &ds = n.t.v.declaration->spec;
-
 					fprintf(stderr,"%s  {\n",prefix.c_str());
-
-					fprintf(stderr,"%s  decl specifier:",prefix.c_str());
-					for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-					for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-					for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-					fprintf(stderr,"\n");
+					debug_dump_declaration_specifiers(prefix+"  ",n.t.v.declaration->spec);
 
 					for (auto &declr_p : n.t.v.declaration->declor) {
 						assert(declr_p != NULL);
