@@ -5023,23 +5023,36 @@ try_again_w_token:
 		}
 	};
 
-	static obj_pool<ast_node_t,ast_node_id_t,ast_node_none> ast_node;
+	using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
+	class ast_node_pool : public ast_node_pool_t {
+		public:
+			using pool_t = ast_node_pool_t;
+		public:
+			ast_node_pool() : pool_t() { }
+			~ast_node_pool() { }
+		public:
+			ast_node_id_t alloc(token_type_t t=token_type_t::none) {
+				ast_node_t &a = __internal_alloc();
+				a.clear(t).addref();
+				return next++;
+			}
+
+			ast_node_id_t alloc(token_t &t) {
+				ast_node_t &a = __internal_alloc();
+				a.clear_and_move_assign(t).addref();
+				return next++;
+			}
+	};
+
+	static ast_node_pool ast_node;
 
 	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
-		if (child != n) {
-			if (child != ast_node_none) ast_node(child).release();
-			child = n;
-			if (child != ast_node_none) ast_node(child).addref();
-		}
+		if (child != n) ast_node.assign(/*to*/child,/*from*/n);
 		return *this;
 	}
 
 	ast_node_t &ast_node_t::set_next(const ast_node_id_t n) {
-		if (next != n) {
-			if (next != ast_node_none) ast_node(next).release();
-			next = n;
-			if (next != ast_node_none) ast_node(next).addref();
-		}
+		if (next != n) ast_node.assign(/*to*/next,/*from*/n);
 		return *this;
 	}
 
@@ -5070,18 +5083,6 @@ try_again_w_token:
 		if (ref == 0) throw std::runtime_error("ast_node attempt to release when ref == 0");
 		if (--ref == 0) clear(token_type_t::none);
 		return *this;
-	}
-
-	ast_node_id_t ast_node_alloc(token_type_t t=token_type_t::none) {
-		ast_node_t &a = ast_node.__internal_alloc();
-		a.clear(t).addref();
-		return ast_node.next++;
-	}
-
-	ast_node_id_t ast_node_alloc(token_t &t) {
-		ast_node_t &a = ast_node.__internal_alloc();
-		a.clear_and_move_assign(t).addref();
-		return ast_node.next++;
 	}
 
 	//////////////////////////////////////////////////
@@ -6226,7 +6227,7 @@ try_again_w_token:
 			if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
 
-				declor.bitfield_expr = ast_node_alloc(token_type_t::op_bitfield_range);
+				declor.bitfield_expr = ast_node.alloc(token_type_t::op_bitfield_range);
 
 				{
 					ast_node_id_t expr = ast_node_none;
@@ -6409,7 +6410,7 @@ try_again_w_token:
 			tq_peek().type == token_type_t::integer ||
 			tq_peek().type == token_type_t::floating) {
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(tq_get());
+			aroot = ast_node.alloc(tq_get());
 		}
 		else if (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
@@ -6441,7 +6442,7 @@ try_again_w_token:
 
 				ast_node_id_t expr = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_function_call);
+				aroot = ast_node.alloc(token_type_t::op_function_call);
 				ast_node(aroot).set_child(expr); ast_node(expr).release();
 
 				do {
@@ -6475,7 +6476,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_array_ref);
+				aroot = ast_node.alloc(token_type_t::op_array_ref);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6492,7 +6493,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_member_ref);
+				aroot = ast_node.alloc(token_type_t::op_member_ref);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6506,7 +6507,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_ptr_ref);
+				aroot = ast_node.alloc(token_type_t::op_ptr_ref);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6520,7 +6521,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_post_increment);
+				aroot = ast_node.alloc(token_type_t::op_post_increment);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 			}
 			else if (tq_peek().type == token_type_t::minusminus) {
@@ -6528,7 +6529,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_post_decrement);
+				aroot = ast_node.alloc(token_type_t::op_post_decrement);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 			}
 			else {
@@ -6547,7 +6548,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_pre_increment);
+			aroot = ast_node.alloc(token_type_t::op_pre_increment);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=unary_expression(expr)) < 1)
@@ -6559,7 +6560,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_pre_decrement);
+			aroot = ast_node.alloc(token_type_t::op_pre_decrement);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=unary_expression(expr)) < 1)
@@ -6571,7 +6572,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_address_of);
+			aroot = ast_node.alloc(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6583,9 +6584,9 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_address_of);
+			aroot = ast_node.alloc(token_type_t::op_address_of);
 
-			ast_node_id_t aroot2 = ast_node_alloc(token_type_t::op_address_of);
+			ast_node_id_t aroot2 = ast_node.alloc(token_type_t::op_address_of);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6598,7 +6599,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_pointer_deref);
+			aroot = ast_node.alloc(token_type_t::op_pointer_deref);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6617,7 +6618,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_negate);
+			aroot = ast_node.alloc(token_type_t::op_negate);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6629,7 +6630,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_binary_not);
+			aroot = ast_node.alloc(token_type_t::op_binary_not);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6641,7 +6642,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_logical_not);
+			aroot = ast_node.alloc(token_type_t::op_logical_not);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=cast_expression(expr)) < 1)
@@ -6656,7 +6657,7 @@ try_again_w_token:
 			tq_discard();
 
 			assert(aroot == ast_node_none);
-			aroot = ast_node_alloc(token_type_t::op_sizeof);
+			aroot = ast_node.alloc(token_type_t::op_sizeof);
 
 			if (tq_peek().type == token_type_t::openparenthesis) {
 				tq_discard();
@@ -6682,7 +6683,7 @@ try_again_w_token:
 				if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
-				ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
+				ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
 				assert(ast_node(decl).t.type == token_type_t::op_declaration);
 				ast_node(decl).t.v.declaration = declion.release();
 
@@ -6731,9 +6732,9 @@ try_again_w_token:
 			if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_typecast);
+			aroot = ast_node.alloc(token_type_t::op_typecast);
 
-			ast_node_id_t decl = ast_node_alloc(token_type_t::op_declaration);
+			ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
 			assert(ast_node(decl).t.type == token_type_t::op_declaration);
 			ast_node(decl).t.v.declaration = declion.release();
 
@@ -6770,7 +6771,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_multiply);
+				aroot = ast_node.alloc(token_type_t::op_multiply);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6784,7 +6785,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_divide);
+				aroot = ast_node.alloc(token_type_t::op_divide);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6798,7 +6799,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_modulus);
+				aroot = ast_node.alloc(token_type_t::op_modulus);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6828,7 +6829,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_add);
+				aroot = ast_node.alloc(token_type_t::op_add);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6842,7 +6843,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_subtract);
+				aroot = ast_node.alloc(token_type_t::op_subtract);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6872,7 +6873,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_leftshift);
+				aroot = ast_node.alloc(token_type_t::op_leftshift);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6886,7 +6887,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_rightshift);
+				aroot = ast_node.alloc(token_type_t::op_rightshift);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6916,7 +6917,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_lessthan);
+				aroot = ast_node.alloc(token_type_t::op_lessthan);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6930,7 +6931,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_greaterthan);
+				aroot = ast_node.alloc(token_type_t::op_greaterthan);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6944,7 +6945,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_lessthan_equals);
+				aroot = ast_node.alloc(token_type_t::op_lessthan_equals);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6958,7 +6959,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_greaterthan_equals);
+				aroot = ast_node.alloc(token_type_t::op_greaterthan_equals);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -6988,7 +6989,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_equals);
+				aroot = ast_node.alloc(token_type_t::op_equals);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -7002,7 +7003,7 @@ try_again_w_token:
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-				aroot = ast_node_alloc(token_type_t::op_not_equals);
+				aroot = ast_node.alloc(token_type_t::op_not_equals);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 				ast_node_id_t expr2 = ast_node_none;
@@ -7031,7 +7032,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_binary_and);
+			aroot = ast_node.alloc(token_type_t::op_binary_and);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7056,7 +7057,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_binary_xor);
+			aroot = ast_node.alloc(token_type_t::op_binary_xor);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7081,7 +7082,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_binary_or);
+			aroot = ast_node.alloc(token_type_t::op_binary_or);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7106,7 +7107,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_logical_and);
+			aroot = ast_node.alloc(token_type_t::op_logical_and);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7131,7 +7132,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_logical_or);
+			aroot = ast_node.alloc(token_type_t::op_logical_or);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7166,7 +7167,7 @@ try_again_w_token:
 			if ((r=conditional_expression(false_expr)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_ternary);
+			aroot = ast_node.alloc(token_type_t::op_ternary);
 			ast_node(aroot).set_child(cond_expr); ast_node(cond_expr).release();
 			ast_node(cond_expr).set_next(true_expr); ast_node(true_expr).release();
 			ast_node(true_expr).set_next(false_expr); ast_node(false_expr).release();
@@ -7188,7 +7189,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7196,7 +7197,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_multiply_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_multiply_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7204,7 +7205,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_divide_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_divide_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7212,7 +7213,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_modulus_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_modulus_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7220,7 +7221,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_add_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_add_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7228,7 +7229,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_subtract_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_subtract_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7236,7 +7237,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_leftshift_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_leftshift_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7244,7 +7245,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_rightshift_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_rightshift_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7252,7 +7253,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_and_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_and_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7260,7 +7261,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_xor_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_xor_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7268,7 +7269,7 @@ try_again_w_token:
 				tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
-				to = aroot; aroot = ast_node_alloc(token_type_t::op_or_assign);
+				to = aroot; aroot = ast_node.alloc(token_type_t::op_or_assign);
 				ast_node(aroot).set_child(to); ast_node(to).release();
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
@@ -7292,7 +7293,7 @@ try_again_w_token:
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
-			aroot = ast_node_alloc(token_type_t::op_comma);
+			aroot = ast_node.alloc(token_type_t::op_comma);
 			ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 
 			ast_node_id_t expr2 = ast_node_none;
@@ -7316,7 +7317,7 @@ try_again_w_token:
 			tq_discard();
 
 			ast_node_id_t nex = ast_node_none;
-			aroot = ast_node_alloc(token_type_t::op_array_define);
+			aroot = ast_node.alloc(token_type_t::op_array_define);
 
 			do {
 				if (tq_peek().type == token_type_t::closecurlybracket)
@@ -7329,8 +7330,8 @@ try_again_w_token:
 					/* field: expression
 					 *
 					 * means the same as .field = expression but is an old GCC syntax */
-					ast_node_id_t asq = ast_node_alloc(tq_get()); /* and then the ident */
-					ast_node_id_t op = ast_node_alloc(token_type_t::op_dinit_field);
+					ast_node_id_t asq = ast_node.alloc(tq_get()); /* and then the ident */
+					ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_field);
 					ast_node(op).set_child(asq); ast_node(asq).release();
 					tq_discard();
 					s_expr = asq;
@@ -7363,7 +7364,7 @@ try_again_w_token:
 
 								ast_node_id_t op1 = asq;
 								ast_node_id_t op2 = ast_node_none;
-								asq = ast_node_alloc(token_type_t::op_gcc_range);
+								asq = ast_node.alloc(token_type_t::op_gcc_range);
 
 								if ((r=conditional_expression(op2)) < 1)
 									return r;
@@ -7375,7 +7376,7 @@ try_again_w_token:
 							if (tq_get().type != token_type_t::closesquarebracket)
 								return errno_return(EINVAL);
 
-							ast_node_id_t op = ast_node_alloc(token_type_t::op_dinit_array);
+							ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_array);
 							ast_node(op).set_child(asq); ast_node(asq).release();
 
 							if (expr == ast_node_none) {
@@ -7391,8 +7392,8 @@ try_again_w_token:
 						else if (tq_peek(0).type == token_type_t::period && tq_peek(1).type == token_type_t::identifier) {
 							tq_discard(); /* eat the '.' */
 
-							ast_node_id_t asq = ast_node_alloc(tq_get()); /* and then the ident */
-							ast_node_id_t op = ast_node_alloc(token_type_t::op_dinit_field);
+							ast_node_id_t asq = ast_node.alloc(tq_get()); /* and then the ident */
+							ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_field);
 							ast_node(op).set_child(asq); ast_node(asq).release();
 
 							if (expr == ast_node_none) {
@@ -7495,7 +7496,7 @@ try_again_w_token:
 			if ((r=declaration_parse(*declion)) < 1)
 				return r;
 
-			nxt = ast_node_alloc(token_type_t::op_declaration);
+			nxt = ast_node.alloc(token_type_t::op_declaration);
 			if (aroot == ast_node_none)
 				aroot = nxt;
 			else
@@ -7526,7 +7527,7 @@ try_again_w_token:
 			return r;
 
 		if (aroot == ast_node_none)
-			aroot = ast_node_alloc(token_type_t::op_none);
+			aroot = ast_node.alloc(token_type_t::op_none);
 
 		return 1;
 	}
@@ -7549,7 +7550,7 @@ try_again_w_token:
 			if ((r=compound_statement(cur,curnxt)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_compound_statement);
+			aroot = ast_node.alloc(token_type_t::op_compound_statement);
 			ast_node(aroot).set_child(cur); ast_node(cur).release();
 		}
 		else if (tq_peek(0).type == token_type_t::r_switch && tq_peek(1).type == token_type_t::openparenthesis) {
@@ -7566,7 +7567,7 @@ try_again_w_token:
 			if ((r=statement(stmt)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_switch_statement);
+			aroot = ast_node.alloc(token_type_t::op_switch_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 		}
@@ -7584,7 +7585,7 @@ try_again_w_token:
 			if ((r=statement(stmt)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_if_statement);
+			aroot = ast_node.alloc(token_type_t::op_if_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 
@@ -7612,7 +7613,7 @@ try_again_w_token:
 			if ((r=statement(stmt)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_while_statement);
+			aroot = ast_node.alloc(token_type_t::op_while_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 		}
@@ -7635,7 +7636,7 @@ try_again_w_token:
 					return r;
 			}
 			if (iterexpr == ast_node_none)
-				iterexpr = ast_node_alloc(token_type_t::op_none);
+				iterexpr = ast_node.alloc(token_type_t::op_none);
 
 			if (tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
@@ -7643,20 +7644,20 @@ try_again_w_token:
 			if ((r=statement(stmt)) < 1)
 				return r;
 
-			aroot = ast_node_alloc(token_type_t::op_for_statement);
+			aroot = ast_node.alloc(token_type_t::op_for_statement);
 			ast_node(aroot).set_child(initexpr); ast_node(initexpr).release();
 			ast_node(initexpr).set_next(loopexpr); ast_node(loopexpr).release();
 			ast_node(loopexpr).set_next(iterexpr); ast_node(iterexpr).release();
 			if (stmt != ast_node_none) { ast_node(iterexpr).set_next(stmt); ast_node(stmt).release(); }
 		}
 		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
-			ast_node_id_t label = ast_node_alloc(tq_get()); /* eats tq_peek(0); */
-			aroot = ast_node_alloc(token_type_t::op_label);
+			ast_node_id_t label = ast_node.alloc(tq_get()); /* eats tq_peek(0); */
+			aroot = ast_node.alloc(token_type_t::op_label);
 			ast_node(aroot).set_child(label); ast_node(label).release();
 			tq_discard(); /* eats the ':' */
 		}
 		else if (tq_peek(0).type == token_type_t::r_default && tq_peek(1).type == token_type_t::colon) {
-			aroot = ast_node_alloc(token_type_t::op_default_label);
+			aroot = ast_node.alloc(token_type_t::op_default_label);
 			tq_discard(2);
 		}
 		else if (tq_peek().type == token_type_t::r_case) { /* case constant_expression : */
@@ -7676,7 +7677,7 @@ try_again_w_token:
 
 				ast_node_id_t op1 = expr;
 				ast_node_id_t op2 = ast_node_none;
-				expr = ast_node_alloc(token_type_t::op_gcc_range);
+				expr = ast_node.alloc(token_type_t::op_gcc_range);
 
 				if ((r=conditional_expression(op2)) < 1)
 					return r;
@@ -7688,22 +7689,22 @@ try_again_w_token:
 			if (tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
-			aroot = ast_node_alloc(token_type_t::op_case_statement);
+			aroot = ast_node.alloc(token_type_t::op_case_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else {
 			if (tq_peek().type == token_type_t::r_break) {
-				aroot = ast_node_alloc(token_type_t::op_break);
+				aroot = ast_node.alloc(token_type_t::op_break);
 				tq_discard();
 			}
 			else if (tq_peek().type == token_type_t::r_continue) {
-				aroot = ast_node_alloc(token_type_t::op_continue);
+				aroot = ast_node.alloc(token_type_t::op_continue);
 				tq_discard();
 			}
 			else if (tq_peek(0).type == token_type_t::r_goto && tq_peek(1).type == token_type_t::identifier) {
 				tq_discard();
-				ast_node_id_t label = ast_node_alloc(tq_get());
-				aroot = ast_node_alloc(token_type_t::op_goto);
+				ast_node_id_t label = ast_node.alloc(tq_get());
+				aroot = ast_node.alloc(token_type_t::op_goto);
 				ast_node(aroot).set_child(label); ast_node(label).release();
 			}
 			else if (tq_peek().type == token_type_t::r_do) {
@@ -7726,12 +7727,12 @@ try_again_w_token:
 				if (tq_get().type != token_type_t::closeparenthesis)
 					return errno_return(EINVAL);
 
-				aroot = ast_node_alloc(token_type_t::op_do_while_statement);
+				aroot = ast_node.alloc(token_type_t::op_do_while_statement);
 				ast_node(aroot).set_child(stmt); ast_node(stmt).release();
 				ast_node(stmt).set_next(expr); ast_node(expr).release();
 			}
 			else if (tq_peek().type == token_type_t::r_return) {
-				aroot = ast_node_alloc(token_type_t::op_return);
+				aroot = ast_node.alloc(token_type_t::op_return);
 				tq_discard();
 
 				if (tq_peek().type != token_type_t::semicolon) {
