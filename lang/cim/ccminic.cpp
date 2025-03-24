@@ -1600,7 +1600,7 @@ namespace CCMiniC {
 					}
 				}
 			}
-		private:
+
 			void update_next(obj_t *p) {
 				if (p >= &pool[0]) {
 					const size_t i = p - &pool[0];
@@ -1620,6 +1620,9 @@ namespace CCMiniC {
 				assert(pool[next].ref == 0);
 				return pool[next];
 			}
+		public:
+			id_t next = id_t(0);
+		private:
 			inline obj_t &_lookup(const id_t id) {
 #if 1//DEBUG
 				if (id < pool.size()) {
@@ -1635,7 +1638,6 @@ namespace CCMiniC {
 #endif
 			}
 		private:
-			id_t next = id_t(0);
 			std::vector<obj_t> pool;
 	};
 
@@ -4989,7 +4991,6 @@ try_again_w_token:
 
 	typedef size_t ast_node_id_t;
 	static constexpr ast_node_id_t ast_node_none = ~size_t(0u);
-	static ast_node_id_t ast_node_next = 0;
 
 	struct ast_node_t {
 		token_t			t;
@@ -5016,11 +5017,13 @@ try_again_w_token:
 			next = o.next; o.next = ast_node_none;
 			child = o.child; o.child = ast_node_none;
 		}
+
+		std::string to_str(void) const {
+			return std::string(); // TODO
+		}
 	};
 
-	static std::vector<ast_node_t>	ast_nodes;
-
-	ast_node_t &ast_node(const ast_node_id_t &id);
+	static obj_pool<ast_node_t,ast_node_id_t,ast_node_none> ast_node;
 
 	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
 		if (child != n) {
@@ -5040,19 +5043,12 @@ try_again_w_token:
 		return *this;
 	}
 
-	void update_next_ast(ast_node_t *p) {
-		if (p >= &ast_nodes[0]) {
-			const size_t i = p - &ast_nodes[0];
-			if (i < ast_nodes.size()) ast_node_next = i;
-		}
-	}
-
 	ast_node_t &ast_node_t::clear_and_move_assign(token_t &tt) {
 		ref = 0;
 		t = std::move(tt);
 		set_next(ast_node_none);
 		set_child(ast_node_none);
-		update_next_ast(this);
+		ast_node.update_next(this);
 		return *this;
 	}
 
@@ -5061,7 +5057,7 @@ try_again_w_token:
 		t = token_t(tt);
 		set_next(ast_node_none);
 		set_child(ast_node_none);
-		update_next_ast(this);
+		ast_node.update_next(this);
 		return *this;
 	}
 
@@ -5076,72 +5072,19 @@ try_again_w_token:
 		return *this;
 	}
 
-	void ast_node_refcount_check(void) {
-		for (size_t i=0;i < ast_nodes.size();i++) {
-			if (ast_nodes[i].ref != 0) {
-				fprintf(stderr,"Leftover refcount=%u for ast node '%s'\n",
-					ast_nodes[i].ref,
-					ast_nodes[i].t.to_str().c_str());
-			}
-		}
-	}
-
-	ast_node_t &ast_node(const ast_node_id_t &id) {
-#if 1//DEBUG
-		if (id < ast_nodes.size()) {
-			if (ast_nodes[id].ref == 0)
-				throw std::out_of_range("ast_node not initialized");
-
-			return ast_nodes[id];
-		}
-
-		throw std::out_of_range("ast_node out of range");
-#else
-		return ast_nodes[id];
-#endif
-	}
-
-	static ast_node_t& __internal_ast_node_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-		while (ast_node_next < ast_nodes.size() && ast_nodes[ast_node_next].ref != 0)
-			ast_node_next++;
-#endif
-		if (ast_node_next == ast_nodes.size())
-			ast_nodes.resize(ast_nodes.size()+(ast_nodes.size()/2u)+16u);
-
-		assert(ast_node_next < ast_nodes.size());
-		assert(ast_nodes[ast_node_next].ref == 0);
-		return ast_nodes[ast_node_next];
-	}
-
 	ast_node_id_t ast_node_alloc(token_type_t t=token_type_t::none) {
-		ast_node_t &a = __internal_ast_node_alloc();
+		ast_node_t &a = ast_node.__internal_alloc();
 		a.clear(t).addref();
-		return ast_node_next++;
+		return ast_node.next++;
 	}
 
 	ast_node_id_t ast_node_alloc(token_t &t) {
-		ast_node_t &a = __internal_ast_node_alloc();
+		ast_node_t &a = ast_node.__internal_alloc();
 		a.clear_and_move_assign(t).addref();
-		return ast_node_next++;
+		return ast_node.next++;
 	}
 
-	void ast_node_assign(ast_node_id_t &d,const ast_node_id_t s) {
-		if (d != ast_node_none) ast_node(d).release();
-		d = s;
-		if (d != ast_node_none) ast_node(d).addref();
-	}
-
-	void ast_node_assignmove(ast_node_id_t &d,ast_node_id_t &s) {
-		if (d != ast_node_none) ast_node(d).release();
-		d = s;
-		s = ast_node_none;
-	}
-
-	void ast_node_release(ast_node_id_t &d) {
-		if (d != ast_node_none) ast_node(d).release();
-		d = ast_node_none;
-	}
+	//////////////////////////////////////////////////
 
 	struct enumerator_t {
 		identifier_id_t				name = identifier_none;
@@ -5155,17 +5098,17 @@ try_again_w_token:
 
 		void common_copy(const enumerator_t &o) {
 			identifier.assign(/*to*/name,/*from*/o.name);
-			ast_node_assign(/*to*/expr,/*from*/o.expr);
+			ast_node.assign(/*to*/expr,/*from*/o.expr);
 		}
 
 		void common_move(enumerator_t &o) {
 			identifier.assignmove(/*to*/name,/*from*/o.name);
-			ast_node_assignmove(/*to*/expr,/*from*/o.expr);
+			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
 		}
 
 		~enumerator_t() {
 			identifier.release(name);
-			ast_node_release(expr);
+			ast_node.release(expr);
 		}
 	};
 
@@ -5251,7 +5194,7 @@ try_again_w_token:
 
 		~direct_declarator_t() {
 			identifier.release(name);
-			for (auto &expr : arraydef) ast_node_release(expr);
+			for (auto &expr : arraydef) ast_node.release(expr);
 			arraydef.clear();
 		}
 	};
@@ -5270,9 +5213,9 @@ try_again_w_token:
 		declarator_t &operator=(declarator_t &&) = delete;
 
 		~declarator_t() {
-			ast_node_release(initval);
-			ast_node_release(bitfield_expr);
-			ast_node_release(function_body);
+			ast_node.release(initval);
+			ast_node.release(bitfield_expr);
+			ast_node.release(function_body);
 		}
 	};
 
@@ -5338,13 +5281,13 @@ try_again_w_token:
 		symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
 
 		~symbol_t() {
-			ast_node_release(expr);
+			ast_node.release(expr);
 			identifier.release(name);
 		}
 
 		void common_move(symbol_t &x) {
 			spec = std::move(x.spec);
-			ast_node_assignmove(/*to*/expr,/*from*/x.expr);
+			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 			identifier.assignmove(/*to*/name,/*from*/x.name);
 			sym_type = x.sym_type; x.sym_type = VARIABLE;
 			flags = x.flags; x.flags = 0;
@@ -8320,7 +8263,7 @@ int main(int argc,char **argv) {
 	CCMiniC::source_file_refcount_check();
 	CCMiniC::identifier.refcount_check();
 	CCMiniC::csliteral.refcount_check();
-	CCMiniC::ast_node_refcount_check();
+	CCMiniC::ast_node.refcount_check();
 
 	if (test_mode == TEST_SFO || test_mode == TEST_LGTOK || test_mode == TEST_RBF ||
 		test_mode == TEST_RBFGC || test_mode == TEST_RBFGCNU || test_mode == TEST_LGTOK ||
