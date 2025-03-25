@@ -5540,6 +5540,9 @@ try_again_w_token:
 		int translation_unit(void);
 	};
 
+	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
+	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name=std::string());
+
 	int cc_state_t::enumerator_list_parse(std::vector<enumerator_t> &enum_list) {
 		int r;
 
@@ -6399,6 +6402,39 @@ try_again_w_token:
 			r = n.next;
 			count++;
 		}
+	}
+
+	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
+		fprintf(stderr,"%s%s%ssymbol",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		switch (sym.sym_type) {
+			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
+			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
+			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
+			case symbol_t::STRUCT: fprintf(stderr," struct"); break;
+			case symbol_t::UNION: fprintf(stderr," union"); break;
+			case symbol_t::ENUM: fprintf(stderr," enum"); break;
+			default: break;
+		};
+		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
+		if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
+		if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
+		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
+		if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
+		if (sym.flags & symbol_t::FL_OUT_OF_SCOPE) fprintf(stderr," OUTOFSCOPE");
+		if (sym.scope == scope_none) fprintf(stderr," scope:none");
+		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
+		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
+		fprintf(stderr,"\n");
+		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
+		if (sym.expr != ast_node_none) {
+			fprintf(stderr,"%s  expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",sym.expr);
+		}
+	}
+
+	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name) {
+		fprintf(stderr,"%s%s%ssymbol table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		for (auto &symbol : cst.symbols) debug_dump_symbol(prefix+"  ",symbol);
 	}
 
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
@@ -8251,6 +8287,8 @@ int main(int argc,char **argv) {
 			assert(rb.allocate());
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
+
+			CCMiniC::debug_dump_symbol_table("",ccst);
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
