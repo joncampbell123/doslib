@@ -5263,55 +5263,6 @@ try_again_w_token:
 	static constexpr unsigned int scope_global = 0u;
 	static constexpr unsigned int scope_first_local = 1u;
 
-	struct symbol_t {
-		enum type_t {
-			NONE=0,
-			VARIABLE,
-			FUNCTION,
-			TYPEDEF,
-			STRUCT,
-			UNION,
-			CONST,
-			ENUM
-		};
-
-		static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
-		static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
-		static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
-		static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
-		static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
-		static constexpr unsigned int FL_ELLIPSIS = 1u << 5; /* function has ellipsis param */
-
-		declaration_specifiers_t		spec;
-		std::vector<pointer_t>			ptr;
-		identifier_id_t				name = identifier_none;
-		ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
-		scope_id_t				scope = scope_none;
-		enum type_t				sym_type = NONE;
-		unsigned int				flags = 0;
-
-		symbol_t() { }
-		symbol_t(const symbol_t &) = delete;
-		symbol_t &operator=(const symbol_t &) = delete;
-		symbol_t(symbol_t &&x) { common_move(x); }
-		symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
-
-		~symbol_t() {
-			ast_node.release(expr);
-			identifier.release(name);
-		}
-
-		void common_move(symbol_t &x) {
-			spec = std::move(x.spec);
-			ptr = std::move(x.ptr);
-			identifier.assignmove(/*to*/name,/*from*/x.name);
-			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
-			scope = x.scope; x.scope = scope_none;
-			sym_type = x.sym_type; x.sym_type = NONE;
-			flags = x.flags; x.flags = 0;
-		}
-	};
-
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
@@ -5323,6 +5274,55 @@ try_again_w_token:
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 
 	struct cc_state_t {
+		struct symbol_t {
+			enum type_t {
+				NONE=0,
+				VARIABLE,
+				FUNCTION,
+				TYPEDEF,
+				STRUCT,
+				UNION,
+				CONST,
+				ENUM
+			};
+
+			static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
+			static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
+			static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
+			static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
+			static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
+			static constexpr unsigned int FL_ELLIPSIS = 1u << 5; /* function has ellipsis param */
+
+			declaration_specifiers_t		spec;
+			std::vector<pointer_t>			ptr;
+			identifier_id_t				name = identifier_none;
+			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
+			scope_id_t				scope = scope_none;
+			enum type_t				sym_type = NONE;
+			unsigned int				flags = 0;
+
+			symbol_t() { }
+			symbol_t(const symbol_t &) = delete;
+			symbol_t &operator=(const symbol_t &) = delete;
+			symbol_t(symbol_t &&x) { common_move(x); }
+			symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
+
+			~symbol_t() {
+				ast_node.release(expr);
+				identifier.release(name);
+			}
+
+			void common_move(symbol_t &x) {
+				spec = std::move(x.spec);
+				ptr = std::move(x.ptr);
+				identifier.assignmove(/*to*/name,/*from*/x.name);
+				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
+				scope = x.scope; x.scope = scope_none;
+				sym_type = x.sym_type; x.sym_type = NONE;
+				flags = x.flags; x.flags = 0;
+			}
+		};
+
 		CCMiniC::lgtok_state_t	lst;
 		CCMiniC::pptok_state_t	pst;
 		rbuf*			buf = NULL;
@@ -5578,7 +5578,7 @@ try_again_w_token:
 		int translation_unit(void);
 	};
 
-	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
+	void debug_dump_symbol(const std::string prefix,cc_state_t::symbol_t &sym,const std::string &name=std::string());
 	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name=std::string());
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec) {
@@ -6428,29 +6428,29 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
-		if (sym.sym_type == symbol_t::NONE)
+	void debug_dump_symbol(const std::string prefix,cc_state_t::symbol_t &sym,const std::string &name) {
+		if (sym.sym_type == cc_state_t::symbol_t::NONE)
 			return;
 
 		fprintf(stderr,"%s%s%ssymbol",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		switch (sym.sym_type) {
-			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
-			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
-			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
-			case symbol_t::STRUCT: fprintf(stderr," struct"); break;
-			case symbol_t::UNION: fprintf(stderr," union"); break;
-			case symbol_t::CONST: fprintf(stderr," const"); break;
-			case symbol_t::ENUM: fprintf(stderr," enum"); break;
+			case cc_state_t::symbol_t::VARIABLE: fprintf(stderr," variable"); break;
+			case cc_state_t::symbol_t::FUNCTION: fprintf(stderr," function"); break;
+			case cc_state_t::symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
+			case cc_state_t::symbol_t::STRUCT: fprintf(stderr," struct"); break;
+			case cc_state_t::symbol_t::UNION: fprintf(stderr," union"); break;
+			case cc_state_t::symbol_t::CONST: fprintf(stderr," const"); break;
+			case cc_state_t::symbol_t::ENUM: fprintf(stderr," enum"); break;
 			default: break;
 		};
 		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
 		else fprintf(stderr," <anon>");
-		if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
-		if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
-		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
-		if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
-		if (sym.flags & symbol_t::FL_OUT_OF_SCOPE) fprintf(stderr," OUTOFSCOPE");
-		if (sym.flags & symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
+		if (sym.flags & cc_state_t::symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
+		if (sym.flags & cc_state_t::symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
+		if (sym.flags & cc_state_t::symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
+		if (sym.flags & cc_state_t::symbol_t::FL_STACK) fprintf(stderr," STACK");
+		if (sym.flags & cc_state_t::symbol_t::FL_OUT_OF_SCOPE) fprintf(stderr," OUTOFSCOPE");
+		if (sym.flags & cc_state_t::symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
 		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
