@@ -322,6 +322,7 @@ struct tt2 {
 	unsigned int	z:1;
 	unsigned int	a:3;
 	unsigned int	b:2;
+	unsigned int	h:1,i:1,j:1;
 };
 
 /* This is our extension to the struct bitfield syntax that allows explicit bitfield length and starting bit.
@@ -333,6 +334,7 @@ struct tt3 {
 	unsigned int	z:[7];
 	unsigned int	a:[8 ... 10];
 	unsigned int	b:[11 ... 12];
+	unsigned int	h:[13],i:[14],j:[15];
 };
 
 #define BF(x) [((x)*5) ... (((x)*5)+4)]
