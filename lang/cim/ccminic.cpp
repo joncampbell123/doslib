@@ -5087,35 +5087,6 @@ try_again_w_token:
 
 	//////////////////////////////////////////////////
 
-	struct enumerator_t {
-		identifier_id_t				name = identifier_none;
-		ast_node_id_t				expr = ast_node_none;
-		position_t				pos;
-
-		enumerator_t() { }
-		enumerator_t(const enumerator_t &x) { common_copy(x); }
-		enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
-		enumerator_t(enumerator_t &&x) { common_move(x); }
-		enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
-
-		void common_copy(const enumerator_t &o) {
-			identifier.assign(/*to*/name,/*from*/o.name);
-			ast_node.assign(/*to*/expr,/*from*/o.expr);
-			pos = pos;
-		}
-
-		void common_move(enumerator_t &o) {
-			identifier.assignmove(/*to*/name,/*from*/o.name);
-			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-			pos = std::move(pos);
-		}
-
-		~enumerator_t() {
-			identifier.release(name);
-			ast_node.release(expr);
-		}
-	};
-
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
@@ -5264,7 +5235,6 @@ try_again_w_token:
 	static constexpr unsigned int scope_first_local = 1u;
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
-	void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
@@ -5274,6 +5244,35 @@ try_again_w_token:
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 
 	struct cc_state_t {
+		struct enumerator_t {
+			identifier_id_t				name = identifier_none;
+			ast_node_id_t				expr = ast_node_none;
+			position_t				pos;
+
+			enumerator_t() { }
+			enumerator_t(const enumerator_t &x) { common_copy(x); }
+			enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
+			enumerator_t(enumerator_t &&x) { common_move(x); }
+			enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
+
+			void common_copy(const enumerator_t &o) {
+				identifier.assign(/*to*/name,/*from*/o.name);
+				ast_node.assign(/*to*/expr,/*from*/o.expr);
+				pos = pos;
+			}
+
+			void common_move(enumerator_t &o) {
+				identifier.assignmove(/*to*/name,/*from*/o.name);
+				ast_node.assignmove(/*to*/expr,/*from*/o.expr);
+				pos = std::move(pos);
+			}
+
+			~enumerator_t() {
+				identifier.release(name);
+				ast_node.release(expr);
+			}
+		};
+
 		struct symbol_t {
 			enum type_t {
 				NONE=0,
@@ -5325,6 +5324,7 @@ try_again_w_token:
 
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
+		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 
 		CCMiniC::lgtok_state_t	lst;
 		CCMiniC::pptok_state_t	pst;
@@ -6298,7 +6298,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	void debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
+	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
 		fprintf(stderr,"%s",prefix.c_str());
 
 		if (en.name != identifier_none) fprintf(stderr,"'%s'",identifier(en.name).to_str().c_str());
