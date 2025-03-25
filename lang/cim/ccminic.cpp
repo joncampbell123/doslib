@@ -5393,7 +5393,8 @@ try_again_w_token:
 			return 1;
 		}
 
-		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 3u;
+		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
+		static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
 
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
@@ -5769,6 +5770,9 @@ try_again_w_token:
 						if (tq_peek().type == token_type_t::opencurlybracket) {
 							tq_discard();
 
+							if (!(declspec & DECLSPEC_ALLOW_DEF))
+								CCERR_RET(EINVAL,pos,"not allowed to define types here");
+
 							if ((r=enumerator_list_parse(eds)) < 1)
 								return r;
 						}
@@ -5792,6 +5796,9 @@ try_again_w_token:
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
+
+						if (!(declspec & DECLSPEC_ALLOW_DEF))
+							CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
 						do {
 							if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -5824,6 +5831,9 @@ try_again_w_token:
 
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
+
+						if (!(declspec & DECLSPEC_ALLOW_DEF))
+							CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
 						do {
 							if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -7892,7 +7902,7 @@ try_again_w_token:
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
-		if ((r=declaration_specifiers_parse(declion.spec)) < 1)
+		if ((r=declaration_specifiers_parse(declion.spec,DECLSPEC_ALLOW_DEF)) < 1)
 			return r;
 		if ((r=chkerr()) < 1)
 			return r;
@@ -7971,7 +7981,7 @@ try_again_w_token:
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
-		if ((r=declaration_specifiers_parse(spec)) < 1)
+		if ((r=declaration_specifiers_parse(spec,DECLSPEC_ALLOW_DEF)) < 1)
 			return r;
 		if ((r=chkerr()) < 1)
 			return r;
