@@ -5182,8 +5182,8 @@ try_again_w_token:
 
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
-		identifier_id_t name = identifier_none;
 		std::vector<parameter_t> parameters;
+		identifier_id_t name = identifier_none;
 		unsigned int flags = 0;
 
 		direct_declarator_t() { };
