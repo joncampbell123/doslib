@@ -5469,7 +5469,7 @@ try_again_w_token:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor,symbol_t::type_t symt=symbol_t::VARIABLE) {
+		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
 			symbol_id_t sid;
 
 			if (declor.ddecl.name == identifier_none)
@@ -5490,7 +5490,7 @@ try_again_w_token:
 				symbol_t &sym = symbol(sid);
 				sym.spec = spec;
 				sym.scope = current_scope();
-				sym.flags = symbol_t::FL_DEFINED;
+				sym.flags = symbol_t::FL_DEFINED | flags;
 				sym.ptr = declor.ptr;
 
 				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
@@ -5743,7 +5743,7 @@ try_again_w_token:
 								declarator_t declor;
 
 								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
-								if ((r=add_symbol(spec,declor,symbol_t::CONST)) < 1)
+								if ((r=add_symbol(spec,declor,0,symbol_t::CONST)) < 1)
 									return r;
 							}
 						}
@@ -7912,7 +7912,7 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : declor.ddecl.parameters) {
-					if ((r=add_symbol(p.spec,*(p.decl))) < 1)
+					if ((r=add_symbol(p.spec,*(p.decl),symbol_t::FL_PARAMETER)) < 1)
 						return r;
 				}
 
