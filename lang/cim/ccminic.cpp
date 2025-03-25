@@ -5118,12 +5118,11 @@ try_again_w_token:
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
 		identifier_id_t				type_identifier = identifier_none;
-		std::vector<enumerator_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier == identifier_none && enum_list.empty() && count == 0;
+				type_identifier == identifier_none && count == 0;
 		}
 
 		declaration_specifiers_t() { }
@@ -5141,7 +5140,6 @@ try_again_w_token:
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
 			identifier.assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
-			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
 
@@ -5150,7 +5148,6 @@ try_again_w_token:
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
 			identifier.assign(/*to*/type_identifier,/*from*/o.type_identifier);
-			enum_list = o.enum_list;
 			count = o.count;
 		}
 	};
@@ -5731,15 +5728,16 @@ try_again_w_token:
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
 
-						if ((r=enumerator_list_parse(ds.enum_list)) < 1)
+						std::vector<enumerator_t> enum_list;
+						if ((r=enumerator_list_parse(enum_list)) < 1)
 							return r;
 
-						if (!ds.enum_list.empty()) {
+						if (!enum_list.empty()) {
 							declaration_specifiers_t spec;
 
 							spec.count = 1;
 							spec.type_specifier = TS_INT;
-							for (const auto &e : ds.enum_list) {
+							for (const auto &e : enum_list) {
 								declarator_t declor;
 
 								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
@@ -6309,12 +6307,6 @@ try_again_w_token:
 		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
 		if (ds.type_identifier != identifier_none) fprintf(stderr," '%s'",identifier(ds.type_identifier).to_str().c_str());
 		fprintf(stderr,"\n");
-
-		if (!ds.enum_list.empty()) {
-			fprintf(stderr,"%s  enum {\n",prefix.c_str());
-			for (auto &en : ds.enum_list) debug_dump_enumerator(prefix+"    ",en);
-			fprintf(stderr,"%s  }\n",prefix.c_str());
-		}
 	}
 
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
