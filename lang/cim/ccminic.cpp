@@ -5479,11 +5479,6 @@ try_again_w_token:
 		int add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
 			symbol_id_t sid;
 
-			if (declor.ddecl.name == identifier_none)
-				return 1;
-			if (identifier(declor.ddecl.name).length == 0)
-				return 1;
-
 			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope())
@@ -6438,6 +6433,7 @@ try_again_w_token:
 			default: break;
 		};
 		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
+		else fprintf(stderr," <anon>");
 		if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
 		if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
 		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
