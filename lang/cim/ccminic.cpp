@@ -5254,7 +5254,8 @@ try_again_w_token:
 
 	struct symbol_t {
 		enum type_t {
-			VARIABLE=0,
+			NONE=0,
+			VARIABLE,
 			FUNCTION,
 			TYPEDEF,
 			STRUCT,
@@ -5274,7 +5275,7 @@ try_again_w_token:
 		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 		scope_id_t				scope = scope_none;
-		enum type_t				sym_type = VARIABLE;
+		enum type_t				sym_type = NONE;
 		unsigned int				flags = 0;
 
 		symbol_t() { }
@@ -5294,7 +5295,7 @@ try_again_w_token:
 			scope = x.scope; x.scope = scope_none;
 			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 			identifier.assignmove(/*to*/name,/*from*/x.name);
-			sym_type = x.sym_type; x.sym_type = VARIABLE;
+			sym_type = x.sym_type; x.sym_type = NONE;
 			flags = x.flags; x.flags = 0;
 		}
 	};
@@ -6426,6 +6427,7 @@ try_again_w_token:
 	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
 		fprintf(stderr,"%s%s%ssymbol",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		switch (sym.sym_type) {
+			case symbol_t::NONE: fprintf(stderr," none"); break;
 			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
 			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
 			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
