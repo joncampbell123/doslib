@@ -5204,15 +5204,6 @@ try_again_w_token:
 		}
 	};
 
-	typedef size_t symbol_id_t;
-
-	static constexpr size_t symbol_none = ~size_t(0);
-	typedef unsigned int scope_id_t;
-
-	static constexpr unsigned int scope_none = ~((unsigned int)0u);
-	static constexpr unsigned int scope_global = 0u;
-	static constexpr unsigned int scope_first_local = 1u;
-
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
@@ -5222,6 +5213,14 @@ try_again_w_token:
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 
 	struct cc_state_t {
+		typedef unsigned int scope_id_t;
+		static constexpr unsigned int scope_none = ~((unsigned int)0u);
+		static constexpr unsigned int scope_global = 0u;
+		static constexpr unsigned int scope_first_local = 1u;
+
+		typedef size_t symbol_id_t;
+		static constexpr size_t symbol_none = ~size_t(0);
+
 		struct enumerator_t {
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none;
