@@ -5182,7 +5182,6 @@ try_again_w_token:
 
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
-		std::vector<parameter_t> parameters;
 		identifier_id_t name = identifier_none;
 		unsigned int flags = 0;
 
@@ -5196,7 +5195,6 @@ try_again_w_token:
 			ptr = std::move(o.ptr); o.ptr.clear();
 			arraydef = std::move(o.arraydef); o.arraydef.clear();
 			identifier.assignmove(/*to*/name,/*from*/o.name);
-			parameters = std::move(o.parameters);
 			flags = o.flags; o.flags = 0;
 		}
 
@@ -5540,12 +5538,12 @@ try_again_w_token:
 
 		static constexpr unsigned int COMPSDFL_ALREADY_ENTERED_SCOPE = 1u << 0u;
 
-		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags=0);
+		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
+		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags=0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
-		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int enumerator_list_parse(declaration_specifiers_t &ds);
 		int struct_declaration_parse(const token_type_t &tt);
@@ -5972,7 +5970,7 @@ try_again_w_token:
 		decl = o.decl; o.decl = NULL;
 	}
 
-	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,unsigned int flags) {
+	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		int indent = 0;
 		int r;
@@ -6054,7 +6052,7 @@ try_again_w_token:
 						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
 
 						/* At least one paremter is required for ellipsis! */
-						if (dd.parameters.empty()) {
+						if (parameters.empty()) {
 							CCerr(pos,"Variadic functions must have at least one named parameter");
 							return errno_return(EINVAL);
 						}
@@ -6070,16 +6068,20 @@ try_again_w_token:
 					if ((r=pointer_parse(p.ptr)) < 1)
 						return r;
 
-					p.decl = new declarator_t();
-					if ((r=direct_declarator_parse(p.spec,p.decl->ddecl,DIRDECL_ALLOW_ABSTRACT)) < 1)
-						return r;
+					{
+						std::vector<parameter_t> dummy_param;
+
+						p.decl = new declarator_t();
+						if ((r=direct_declarator_parse(p.spec,p.decl->ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
+							return r;
+					}
 
 					/* do not allow using the same name again */
 					if (!p.decl)
 						return errno_return(EINVAL);
 
 					if (p.decl->ddecl.name != identifier_none) {
-						for (const auto &chk_p : dd.parameters) {
+						for (const auto &chk_p : parameters) {
 							assert(chk_p.decl != NULL);
 							if (chk_p.decl->ddecl.name != identifier_none) {
 								if (identifier(chk_p.decl->ddecl.name) == identifier(p.decl->ddecl.name)) {
@@ -6102,7 +6104,7 @@ try_again_w_token:
 						}
 					}
 
-					dd.parameters.push_back(std::move(p));
+					parameters.push_back(std::move(p));
 					if (tq_peek().type == token_type_t::comma) {
 						tq_discard();
 						continue;
@@ -6132,7 +6134,7 @@ try_again_w_token:
 			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
 			int cls;
 
-			for (const auto &p : dd.parameters) {
+			for (const auto &p : parameters) {
 				if (p.spec.empty())
 					cls = 0;
 				else
@@ -6184,8 +6186,8 @@ try_again_w_token:
 						for (auto &d : s_declion.declor) {
 							/* the name must match a parameter and it must not already have been given it's type */
 							size_t i=0;
-							while (i < dd.parameters.size()) {
-								parameter_t &chk_p = dd.parameters[i];
+							while (i < parameters.size()) {
+								parameter_t &chk_p = parameters[i];
 
 								if (!chk_p.decl)
 									return errno_return(EINVAL);
@@ -6196,12 +6198,12 @@ try_again_w_token:
 							}
 
 							/* no match---fail */
-							if (i == dd.parameters.size()) {
+							if (i == parameters.size()) {
 								CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name).makestring().c_str());
 								return errno_return(ENOENT);
 							}
 
-							parameter_t &fp = dd.parameters[i];
+							parameter_t &fp = parameters[i];
 							if (fp.spec.empty() && fp.ptr.empty()) {
 								fp.spec = s_declion.spec;
 								fp.ptr = std::move(d.ptr);
@@ -6220,7 +6222,7 @@ try_again_w_token:
 					}
 				} while (1);
 
-				if (tq_peek().type != token_type_t::opencurlybracket && !dd.parameters.empty()) {
+				if (tq_peek().type != token_type_t::opencurlybracket && !parameters.empty()) {
 					/* no body of the function? */
 					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
 					return errno_return(EINVAL);
@@ -6235,7 +6237,7 @@ try_again_w_token:
 
 		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
 			/* any parameter not yet described, is an error */
-			for (auto &p : dd.parameters) {
+			for (auto &p : parameters) {
 				if (p.spec.empty()) {
 					assert(p.decl != NULL);
 					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl->ddecl.name).to_str().c_str());
@@ -6248,25 +6250,26 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
+	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters) {
 		int r;
 
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(ds,declor.ddecl)) < 1)
+		if ((r=direct_declarator_parse(ds,declor.ddecl,parameters)) < 1)
 			return r;
 
 		return 1;
 	}
 
 	int cc_state_t::struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
+		std::vector<parameter_t> parameters;
 		int r;
 
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(ds,declor.ddecl)) < 1)
+		if ((r=direct_declarator_parse(ds,declor.ddecl,parameters)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::colon) {
@@ -6393,9 +6396,6 @@ try_again_w_token:
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
 
 		debug_dump_arraydef(prefix+"  ",ddecl.arraydef);
-
-		for (auto &p : ddecl.parameters)
-			debug_dump_parameter(prefix+"  ",p);
 
 		if (ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
@@ -6768,7 +6768,8 @@ try_again_w_token:
 				if ((r=pointer_parse(declor.ptr)) < 1)
 					return r;
 
-				if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+				std::vector<parameter_t> dummy_param;
+				if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
 				ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
@@ -6817,7 +6818,8 @@ try_again_w_token:
 			if ((r=pointer_parse(declor.ptr)) < 1)
 				return r;
 
-			if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+			std::vector<parameter_t> dummy_param;
+			if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
 			aroot = ast_node.alloc(token_type_t::op_typecast);
@@ -7909,9 +7911,10 @@ try_again_w_token:
 
 		do {
 			position_t pos = tq_peek().pos;
+			std::vector<parameter_t> parameters;
 			declarator_t &declor = declion.new_declarator();
 
-			if ((r=declarator_parse(declion.spec,declor)) < 1)
+			if ((r=declarator_parse(declion.spec,declor,parameters)) < 1)
 				return r;
 			if ((r=chkerr()) < 1)
 				return r;
@@ -7929,7 +7932,7 @@ try_again_w_token:
 				push_new_scope();
 
 				/* add it to the symbol table */
-				for (auto &p : declor.ddecl.parameters) {
+				for (auto &p : parameters) {
 					if (add_symbol(tq_peek().pos,p.spec,*(p.decl),symbol_t::FL_PARAMETER) == symbol_none)
 						return errno_return(EALREADY); /* already printed error */
 				}
