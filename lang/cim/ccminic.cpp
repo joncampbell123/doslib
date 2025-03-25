@@ -5476,15 +5476,18 @@ try_again_w_token:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		int add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
+		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
 			symbol_id_t sid;
 
 			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
-				if (symbol(sid).scope == current_scope())
-					CCERR_RET(EALREADY,pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
-				else
+				if (symbol(sid).scope == current_scope()) {
+					CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
+					return symbol_none;
+				}
+				else {
 					sid = symbol_none;
+				}
 			}
 
 			if (sid == symbol_none) {
@@ -5524,7 +5527,7 @@ try_again_w_token:
 				}
 			}
 
-			return 1;
+			return sid;
 		}
 
 		static constexpr unsigned int COMPSDFL_ALREADY_ENTERED_SCOPE = 1u << 0u;
@@ -5601,8 +5604,8 @@ try_again_w_token:
 				declarator_t declor;
 
 				identifier.assign(/*to*/declor.ddecl.name,/*from*/en.name);
-				if ((r=add_symbol(pos,spec,declor,0,symbol_t::CONST)) < 1)
-					return r;
+				if (add_symbol(pos,spec,declor,0,symbol_t::CONST) == symbol_none)
+					return errno_return(EALREADY); /* already printed error */
 			}
 
 			if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -7570,8 +7573,8 @@ try_again_w_token:
 
 			/* add it to the symbol table */
 			for (auto &decl : (*declion).declor) {
-				if ((r=add_symbol(tq_peek().pos,(*declion).spec,decl)) < 1)
-					return r;
+				if (add_symbol(tq_peek().pos,(*declion).spec,decl) == symbol_none)
+					return errno_return(EALREADY); /* already printed error */
 			}
 
 			assert(ast_node(nxt).t.type == token_type_t::op_declaration);
@@ -7908,8 +7911,8 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : declor.ddecl.parameters) {
-					if ((r=add_symbol(tq_peek().pos,p.spec,*(p.decl),symbol_t::FL_PARAMETER)) < 1)
-						return r;
+					if (add_symbol(tq_peek().pos,p.spec,*(p.decl),symbol_t::FL_PARAMETER) == symbol_none)
+						return errno_return(EALREADY); /* already printed error */
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -8018,8 +8021,8 @@ try_again_w_token:
 
 		/* add it to the symbol table */
 		for (auto &decl : declion.declor) {
-			if ((r=add_symbol(tq_peek().pos,declion.spec,decl)) < 1)
-				return r;
+			if (add_symbol(tq_peek().pos,declion.spec,decl) == symbol_none)
+				return errno_return(EALREADY); /* already printed error */
 		}
 
 		return 1;
