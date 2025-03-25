@@ -5234,6 +5234,7 @@ try_again_w_token:
 	};
 
 	struct parameter_t {
+		std::vector<parameter_t>		parameters;
 		declaration_specifiers_t		spec;
 		declarator_t				decl;
 		std::vector<pointer_t>			ptr;
@@ -5246,6 +5247,7 @@ try_again_w_token:
 		~parameter_t() { }
 
 		void common_move(parameter_t &o) {
+			parameters = std::move(o.parameters);
 			spec = std::move(o.spec);
 			decl = std::move(o.decl);
 			ptr = std::move(o.ptr);
@@ -6059,12 +6061,8 @@ try_again_w_token:
 					if ((r=pointer_parse(p.ptr)) < 1)
 						return r;
 
-					{
-						std::vector<parameter_t> dummy_param;
-
-						if ((r=direct_declarator_parse(p.spec,p.decl.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
-							return r;
-					}
+					if ((r=direct_declarator_parse(p.spec,p.decl.ddecl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
+						return r;
 
 					/* do not allow using the same name again */
 					if (p.decl.ddecl.name != identifier_none) {
@@ -6356,6 +6354,9 @@ try_again_w_token:
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.ddecl.name).to_str().c_str());
 
 		debug_dump_arraydef(prefix+"  ",p.decl.ddecl.arraydef,"direct declarator");
+
+		for (auto &pp : p.parameters)
+			debug_dump_parameter(prefix+"  ",pp);
 
 		if (p.decl.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
@@ -7933,6 +7934,14 @@ try_again_w_token:
 					return r;
 			}
 
+#if 1//DEBUG
+			fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+			debug_dump_declaration_specifiers("  ",declion.spec); // this is the only other param
+			debug_dump_declarator("  ",declor);
+			for (auto &p : parameters)
+				debug_dump_parameter("  ",p);
+#endif
+
 			count++;
 			if (tq_peek().type == token_type_t::comma) {
 				tq_discard();
@@ -7942,7 +7951,7 @@ try_again_w_token:
 			break;
 		} while(1);
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 		debug_dump_declaration("  ",declion);
 #endif
