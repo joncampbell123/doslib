@@ -18,7 +18,7 @@ static int c0,d0;
 static long int c1,*d1;
 static long int *c2,**d2,e2,f2,g2,h2,i2;
 static int c6 = 4;
-static int cc = 4,d = 6,ee = 12.34,ff = cc;
+static int cc = 4,ddd = 6,ee = 12.34,ff = cc;
 static const char *sss = "Hello world";
 static int c8 = 6;;;
 static int d1a = 4 ? 2 : 1;
@@ -105,7 +105,7 @@ static int dbt = a[b+c];
 static int dbu = a[3][5];
 static int dbv = a[b+c][4+d];
 static int dbw = (*(a+3))[b][c][d][e][f];
-static int d[4];
+static int ddda[4];
 static int dbz[4][5][6][a];
 static int dca[a+b*c][d+e][((f+g)*h)+5][g];
 static int dcb[];
@@ -197,7 +197,7 @@ static int daaa(int a,int b) {
 	return 3;
 	return (3+x)*y;
 }
-static int d(int a) {
+static int dddb(int a) {
 	int x = 1,y = 0,z = 0;
 	while (a-- > 0) x += x;
 	while (a-- > 0) { x += x; }
@@ -245,8 +245,8 @@ enum test xoooo;
 enum test { A, B, C, D } xoooo2;
 enum test { AA=1, AB, AC=100, AD=A*400, AE=A+B+C+D } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
-struct test xooo5,*y,**z;
-struct test { } x;
+struct test xooo5,*xxxxy,**xxxxxz;
+struct test { } xxxxxxx;
 struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
 struct test { int a; struct another { int x,y,z; } one; } xooo7;
 struct { int a,b,c; int z; } xooo8;

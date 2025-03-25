@@ -5291,6 +5291,7 @@ try_again_w_token:
 		void common_move(symbol_t &x) {
 			ptr = std::move(x.ptr);
 			spec = std::move(x.spec);
+			scope = x.scope; x.scope = scope_none;
 			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 			identifier.assignmove(/*to*/name,/*from*/x.name);
 			sym_type = x.sym_type; x.sym_type = VARIABLE;
