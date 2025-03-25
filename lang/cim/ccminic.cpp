@@ -5476,7 +5476,7 @@ try_again_w_token:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
+		int add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
 			symbol_id_t sid;
 
 			if (declor.ddecl.name == identifier_none)
@@ -5487,7 +5487,7 @@ try_again_w_token:
 			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope())
-					CCERR_RET(EALREADY,tq_peek().pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
+					CCERR_RET(EALREADY,pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
 				else
 					sid = symbol_none;
 			}
@@ -5590,6 +5590,7 @@ try_again_w_token:
 			}
 
 			enumerator_t en;
+			position_t pos = tq_peek().pos;
 
 			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
@@ -5608,7 +5609,7 @@ try_again_w_token:
 				declarator_t declor;
 
 				identifier.assign(/*to*/declor.ddecl.name,/*from*/en.name);
-				if ((r=add_symbol(spec,declor,0,symbol_t::CONST)) < 1)
+				if ((r=add_symbol(pos,spec,declor,0,symbol_t::CONST)) < 1)
 					return r;
 			}
 
@@ -7563,7 +7564,7 @@ try_again_w_token:
 
 			/* add it to the symbol table */
 			for (auto &decl : (*declion).declor) {
-				if ((r=add_symbol((*declion).spec,decl)) < 1)
+				if ((r=add_symbol(tq_peek().pos,(*declion).spec,decl)) < 1)
 					return r;
 			}
 
@@ -7901,7 +7902,7 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : declor.ddecl.parameters) {
-					if ((r=add_symbol(p.spec,*(p.decl),symbol_t::FL_PARAMETER)) < 1)
+					if ((r=add_symbol(tq_peek().pos,p.spec,*(p.decl),symbol_t::FL_PARAMETER)) < 1)
 						return r;
 				}
 
@@ -8005,7 +8006,7 @@ try_again_w_token:
 
 		/* add it to the symbol table */
 		for (auto &decl : declion.declor) {
-			if ((r=add_symbol(declion.spec,decl)) < 1)
+			if ((r=add_symbol(tq_peek().pos,declion.spec,decl)) < 1)
 				return r;
 		}
 
