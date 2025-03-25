@@ -6425,9 +6425,11 @@ try_again_w_token:
 	}
 
 	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
+		if (sym.sym_type == symbol_t::NONE)
+			return;
+
 		fprintf(stderr,"%s%s%ssymbol",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		switch (sym.sym_type) {
-			case symbol_t::NONE: fprintf(stderr," none"); break;
 			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
 			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
 			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
