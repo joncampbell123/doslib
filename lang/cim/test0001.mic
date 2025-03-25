@@ -356,3 +356,27 @@ struct tt4 {
 typedef unsigned int tdu1;
 typedef struct tdu2_t { int a; int b; } tdu2;
 
+enum :char {
+	DA,
+	DB,
+	DC,
+	DD,
+	DE
+} xe1;
+
+enum test:char {
+	EA,
+	EB,
+	EC,
+	ED,
+	EE
+} xe2;
+
+enum test:unsigned char {
+	FA,
+	FB,
+	FC,
+	FD,
+	FE
+} xe3;
+

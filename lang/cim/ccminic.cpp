@@ -5536,6 +5536,7 @@ try_again_w_token:
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
+		int enumerator_list_parse(declaration_specifiers_t &ds);
 		int struct_declaration_parse(const token_type_t &tt);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
@@ -5561,7 +5562,6 @@ try_again_w_token:
 		int initializer(ast_node_id_t &aroot);
 		int expression(ast_node_id_t &aroot);
 		int statement(ast_node_id_t &aroot);
-		int enumerator_list_parse(void);
 		int external_declaration(void);
 		int translation_unit(void);
 	};
@@ -5569,14 +5569,11 @@ try_again_w_token:
 	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name=std::string());
 
-	int cc_state_t::enumerator_list_parse(void) {
+	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec) {
 		std::vector<enumerator_t> enum_list;
-		declaration_specifiers_t spec;
 		int r;
 
 		/* caller already ate the { */
-		spec.count = 1;
-		spec.type_specifier = TS_INT;
 
 		do {
 			if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -5738,14 +5735,31 @@ try_again_w_token:
 					 * enum identifier { list }
 					 * enum identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
-						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+					{
+						declaration_specifiers_t eds;
 
-					if (tq_peek().type == token_type_t::opencurlybracket) {
-						tq_discard();
+						eds.count = 3;
+						eds.type_specifier = TS_INT;
+						eds.storage_class = SC_CONSTEXPR;
+						eds.type_qualifier = TQ_CONST;
 
-						if ((r=enumerator_list_parse()) < 1)
-							return r;
+						if (tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+
+						if (tq_peek().type == token_type_t::colon) {
+							tq_discard();
+
+							eds.type_specifier &= ~TS_INT;
+							if ((r=declaration_specifiers_parse(eds)) < 1)
+								return r;
+						}
+
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
+
+							if ((r=enumerator_list_parse(eds)) < 1)
+								return r;
+						}
 					}
 					continue;
 
