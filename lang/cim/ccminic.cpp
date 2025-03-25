@@ -5453,8 +5453,19 @@ try_again_w_token:
 			return false;
 		}
 
+		bool sym_match_type(const symbol_t::type_t at,const symbol_t::type_t bt) {
+			if (at == bt)
+				return true;
+
+			if (	(at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF) ==
+				(bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF))
+				return true;
+
+			return false;
+		}
+
 		/* this automatically uses the scope_stack and current_scope() return value */
-		symbol_id_t lookup_symbol(const identifier_id_t name) {
+		symbol_id_t lookup_symbol(const identifier_id_t name,const symbol_t::type_t st) {
 			if (name == identifier_none)
 				return symbol_none;
 
@@ -5465,7 +5476,7 @@ try_again_w_token:
 					symbol_t &chk_s = symbols[si];
 
 					if (chk_s.name != identifier_none) {
-						if (identifier(name) == identifier(chk_s.name)) {
+						if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st)) {
 							if (symbol_scope_check(chk_s.scope))
 								return symbol_id_t(si);
 						}
@@ -5478,11 +5489,27 @@ try_again_w_token:
 			return symbol_none;
 		}
 
+		symbol_t::type_t classify_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
+			if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+				return symbol_t::FUNCTION;
+			else if (spec.storage_class & SC_TYPEDEF)
+				return symbol_t::TYPEDEF;
+			else if (spec.type_specifier & TS_UNION)
+				return symbol_t::UNION;
+			else if (spec.type_specifier & TS_STRUCT)
+				return symbol_t::STRUCT;
+			else if (spec.type_specifier & TS_ENUM)
+				return symbol_t::ENUM;
+			else
+				return symbol_t::VARIABLE;
+		}
+
 		/* this automatically uses the scope_stack and current_scope() return value */
-		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::VARIABLE) {
+		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::NONE) {
+			symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
 			symbol_id_t sid;
 
-			if ((sid=lookup_symbol(declor.ddecl.name)) != symbol_none) {
+			if ((sid=lookup_symbol(declor.ddecl.name,st)) != symbol_none) {
 				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
 				if (symbol(sid).scope == current_scope()) {
 					CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
@@ -5500,34 +5527,11 @@ try_again_w_token:
 				sym.scope = current_scope();
 				sym.flags = symbol_t::FL_DEFINED | flags;
 				sym.ptr = declor.ptr;
+				sym.sym_type = st;
+				ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 
 				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
 					sym.flags |= symbol_t::FL_ELLIPSIS;
-
-				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
-					sym.sym_type = symbol_t::FUNCTION;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
-				else if (spec.storage_class & SC_TYPEDEF) {
-					sym.sym_type = symbol_t::TYPEDEF;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
-				else if (spec.type_specifier & TS_UNION) {
-					sym.sym_type = symbol_t::UNION;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
-				else if (spec.type_specifier & TS_STRUCT) {
-					sym.sym_type = symbol_t::STRUCT;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
-				else if (spec.type_specifier & TS_ENUM) {
-					sym.sym_type = symbol_t::ENUM;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
-				else {
-					sym.sym_type = symt;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-				}
 			}
 
 			return sid;
