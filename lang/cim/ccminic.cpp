@@ -7938,25 +7938,35 @@ try_again_w_token:
 	}
 
 	int cc_state_t::struct_declaration_parse(const token_type_t &tt) {
-		declaration_t declion;
+		declaration_specifiers_t spec;
 		int r,count = 0;
 
 #if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
 
-		if ((r=declaration_specifiers_parse(declion.spec)) < 1)
+		if ((r=declaration_specifiers_parse(spec)) < 1)
 			return r;
 		if ((r=chkerr()) < 1)
 			return r;
 
-		do {
-			declarator_t &declor = declion.new_declarator();
+#if 1//DEBUG
+		fprintf(stderr,"DEBUG %s:%d %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
+		debug_dump_declaration_specifiers("  ",spec);
+#endif
 
-			if ((r=struct_declarator_parse(declion.spec,declor)) < 1)
+		do {
+			declarator_t declor;
+
+			if ((r=struct_declarator_parse(spec,declor)) < 1)
 				return r;
 			if ((r=chkerr()) < 1)
 				return r;
+
+#if 1//DEBUG
+			fprintf(stderr,"DEBUG %s:%d field type %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
+			debug_dump_declarator("  ",declor);
+#endif
 
 			count++;
 			if (tq_peek().type == token_type_t::comma) {
@@ -7966,11 +7976,6 @@ try_again_w_token:
 
 			break;
 		} while(1);
-
-#if 1//DEBUG
-		fprintf(stderr,"DEBUG %s:%d type %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
-		debug_dump_declaration("  ",declion);
-#endif
 
 		if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
