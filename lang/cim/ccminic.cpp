@@ -5467,7 +5467,7 @@ try_again_w_token:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
+		int add_symbol(declaration_specifiers_t &spec,declarator_t &declor,symbol_t::type_t symt=symbol_t::VARIABLE) {
 			symbol_id_t sid;
 
 			if (declor.ddecl.name == identifier_none)
@@ -5499,10 +5499,21 @@ try_again_w_token:
 					sym.expr = declor.function_body;
 					declor.function_body = ast_node_none;
 				}
+				else if (spec.storage_class & SC_TYPEDEF) {
+					sym.sym_type = symbol_t::TYPEDEF;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+				}
+				else if (spec.type_specifier & TS_UNION) {
+					sym.sym_type = symbol_t::UNION;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+				}
+				else if (spec.type_specifier & TS_STRUCT) {
+					sym.sym_type = symbol_t::STRUCT;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+				}
 				else {
-					sym.sym_type = symbol_t::VARIABLE;
-					sym.expr = declor.initval;
-					declor.initval = ast_node_none;
+					sym.sym_type = symt;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
 				}
 			}
 
@@ -5726,7 +5737,7 @@ try_again_w_token:
 								declarator_t declor;
 
 								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
-								if ((r=add_symbol(spec,declor)) < 1)
+								if ((r=add_symbol(spec,declor,symbol_t::ENUM)) < 1)
 									return r;
 							}
 						}

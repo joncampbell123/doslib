@@ -345,3 +345,6 @@ struct tt4 {
 	unsigned int	b:BF(4);
 };
 
+typedef unsigned int tdu1;
+typedef struct tdu2_t { int a; int b; } tdu2;
+
