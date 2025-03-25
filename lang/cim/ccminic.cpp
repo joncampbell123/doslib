@@ -5090,6 +5090,7 @@ try_again_w_token:
 	struct enumerator_t {
 		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none;
+		position_t				pos;
 
 		enumerator_t() { }
 		enumerator_t(const enumerator_t &x) { common_copy(x); }
@@ -5100,11 +5101,13 @@ try_again_w_token:
 		void common_copy(const enumerator_t &o) {
 			identifier.assign(/*to*/name,/*from*/o.name);
 			ast_node.assign(/*to*/expr,/*from*/o.expr);
+			pos = pos;
 		}
 
 		void common_move(enumerator_t &o) {
 			identifier.assignmove(/*to*/name,/*from*/o.name);
 			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
+			pos = std::move(pos);
 		}
 
 		~enumerator_t() {
@@ -5585,8 +5588,8 @@ try_again_w_token:
 			}
 
 			enumerator_t en;
-			position_t pos = tq_peek().pos;
 
+			en.pos = tq_peek().pos;
 			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 
@@ -5599,15 +5602,7 @@ try_again_w_token:
 					return r;
 			}
 
-			/* register it in the symbol table */
-			{
-				declarator_t declor;
-
-				identifier.assign(/*to*/declor.ddecl.name,/*from*/en.name);
-				if (add_symbol(pos,spec,declor,0,symbol_t::CONST) == symbol_none)
-					return errno_return(EALREADY); /* already printed error */
-			}
-
+			enum_list.push_back(std::move(en));
 			if (tq_peek().type == token_type_t::closecurlybracket) {
 				tq_discard();
 				break;
@@ -5619,6 +5614,16 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 		} while (1);
+
+		/* register it in the symbol table */
+		for (auto &en : enum_list) {
+			declarator_t declor;
+
+			ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
+			identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
+			if (add_symbol(en.pos,spec,declor,0,symbol_t::CONST) == symbol_none)
+				return errno_return(EALREADY); /* already printed error */
+		}
 
 		return 1;
 	}
