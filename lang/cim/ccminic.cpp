@@ -5174,21 +5174,28 @@ try_again_w_token:
 	};
 
 	struct direct_declarator_t {
-		std::vector<pointer_t> ptr;
-		std::vector<ast_node_id_t> arraydef;
-		identifier_id_t name = identifier_none;
-
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
 
-		unsigned int flags = 0;
+		std::vector<pointer_t> ptr;
+		std::vector<ast_node_id_t> arraydef;
+		identifier_id_t name = identifier_none;
 		std::vector<parameter_t> parameters;
+		unsigned int flags = 0;
 
 		direct_declarator_t() { };
 		direct_declarator_t(const direct_declarator_t &) = delete;
 		direct_declarator_t &operator=(const direct_declarator_t &) = delete;
-		direct_declarator_t(direct_declarator_t &&) = delete;
-		direct_declarator_t &operator=(direct_declarator_t &&) = delete;
+		direct_declarator_t(direct_declarator_t &&x) { common_move(x); }
+		direct_declarator_t &operator=(direct_declarator_t &&x) { common_move(x); return *this; }
+
+		void common_move(direct_declarator_t &o) {
+			ptr = std::move(o.ptr); o.ptr.clear();
+			arraydef = std::move(o.arraydef); o.arraydef.clear();
+			identifier.assignmove(/*to*/name,/*from*/o.name);
+			parameters = std::move(o.parameters);
+			flags = o.flags; o.flags = 0;
+		}
 
 		~direct_declarator_t() {
 			identifier.release(name);
@@ -5206,9 +5213,17 @@ try_again_w_token:
 
 		declarator_t() { }
 		declarator_t(const declarator_t &) = delete;
-		declarator_t(declarator_t &&) = delete;
 		declarator_t &operator=(const declarator_t &) = delete;
-		declarator_t &operator=(declarator_t &&) = delete;
+		declarator_t(declarator_t &&x) { common_move(x); }
+		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
+
+		void common_move(declarator_t &o) {
+			ddecl = std::move(o.ddecl);
+			ptr = std::move(ptr); o.ptr.clear();
+			ast_node.assignmove(/*to*/initval,/*from*/o.initval);
+			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
+			ast_node.assignmove(/*to*/function_body,/*from*/o.function_body);
+		}
 
 		~declarator_t() {
 			ast_node.release(initval);
@@ -5219,12 +5234,12 @@ try_again_w_token:
 
 	struct declaration_t {
 		declaration_specifiers_t	spec;
-		std::vector<declarator_t*>	declor;
+		std::vector<declarator_t>	declor;
 
 		declarator_t &new_declarator(void) {
-			declarator_t *n = new declarator_t();
-			declor.push_back(n);
-			return *n;
+			const size_t i = declor.size();
+			declor.resize(i+1);
+			return declor[i];
 		}
 
 		declaration_t() { }
@@ -5234,8 +5249,6 @@ try_again_w_token:
 		declaration_t &operator=(declaration_t &&) = delete;
 
 		~declaration_t() {
-			for (auto &i : declor) delete i;
-			declor.clear();
 		}
 	};
 
@@ -6148,10 +6161,7 @@ try_again_w_token:
 							return r;
 
 						/* check */
-						for (auto &dp : s_declion.declor) {
-							assert(dp != NULL);
-							auto &d = *dp;
-
+						for (auto &d : s_declion.declor) {
 							/* the name must match a parameter and it must not already have been given it's type */
 							size_t i=0;
 							while (i < dd.parameters.size()) {
@@ -6395,10 +6405,8 @@ try_again_w_token:
 		fprintf(stderr,"%s%s%sdeclaration:{\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_declaration_specifiers(prefix+"  ",decl.spec);
 
-		for (auto &declr_p : decl.declor) {
-			assert(declr_p != NULL);
-			debug_dump_declarator(prefix+"  ",*declr_p);
-		}
+		for (auto &declr : decl.declor)
+			debug_dump_declarator(prefix+"  ",declr);
 
 		fprintf(stderr,"%s}\n",prefix.c_str());
 	}
@@ -7562,10 +7570,7 @@ try_again_w_token:
 				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
 
 			/* add it to the symbol table */
-			for (auto &decl_p : (*declion).declor) {
-				assert(decl_p != NULL);
-				auto &decl = *decl_p;
-
+			for (auto &decl : (*declion).declor) {
 				if ((r=add_symbol((*declion).spec,decl)) < 1)
 					return r;
 			}
@@ -8007,10 +8012,7 @@ try_again_w_token:
 			return r;
 
 		/* add it to the symbol table */
-		for (auto &decl_p : declion.declor) {
-			assert(decl_p != NULL);
-			auto &decl = *decl_p;
-
+		for (auto &decl : declion.declor) {
 			if ((r=add_symbol(declion.spec,decl)) < 1)
 				return r;
 		}
