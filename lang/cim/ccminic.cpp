@@ -5159,23 +5159,6 @@ try_again_w_token:
 		type_qualifier_t			tq = 0;
 	};
 
-	struct declarator_t;
-
-	struct parameter_t {
-		declaration_specifiers_t		spec;
-		declarator_t*				decl = NULL; /* because this type isn't "complete" yet at this point */
-		std::vector<pointer_t>			ptr;
-
-		parameter_t() { }
-		parameter_t(const parameter_t &) = delete;
-		parameter_t &operator=(const parameter_t &) = delete;
-		parameter_t(parameter_t &&x) { common_move(x); };
-		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
-		~parameter_t();
-
-		void common_move(parameter_t &o);
-	};
-
 	struct direct_declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
@@ -5247,6 +5230,25 @@ try_again_w_token:
 		declaration_t &operator=(declaration_t &&) = delete;
 
 		~declaration_t() {
+		}
+	};
+
+	struct parameter_t {
+		declaration_specifiers_t		spec;
+		declarator_t				decl;
+		std::vector<pointer_t>			ptr;
+
+		parameter_t() { }
+		parameter_t(const parameter_t &) = delete;
+		parameter_t &operator=(const parameter_t &) = delete;
+		parameter_t(parameter_t &&x) { common_move(x); };
+		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
+		~parameter_t() { }
+
+		void common_move(parameter_t &o) {
+			spec = std::move(o.spec);
+			decl = std::move(o.decl);
+			ptr = std::move(o.ptr);
 		}
 	};
 
@@ -5959,17 +5961,6 @@ try_again_w_token:
 		return 1;
 	}
 
-	parameter_t::~parameter_t() {
-		if (decl) delete decl;
-		decl = NULL;
-	}
-
-	void parameter_t::common_move(parameter_t &o) {
-		spec = std::move(o.spec);
-		ptr = std::move(o.ptr);
-		decl = o.decl; o.decl = NULL;
-	}
-
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		int indent = 0;
@@ -6071,21 +6062,16 @@ try_again_w_token:
 					{
 						std::vector<parameter_t> dummy_param;
 
-						p.decl = new declarator_t();
-						if ((r=direct_declarator_parse(p.spec,p.decl->ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
+						if ((r=direct_declarator_parse(p.spec,p.decl.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
 							return r;
 					}
 
 					/* do not allow using the same name again */
-					if (!p.decl)
-						return errno_return(EINVAL);
-
-					if (p.decl->ddecl.name != identifier_none) {
+					if (p.decl.ddecl.name != identifier_none) {
 						for (const auto &chk_p : parameters) {
-							assert(chk_p.decl != NULL);
-							if (chk_p.decl->ddecl.name != identifier_none) {
-								if (identifier(chk_p.decl->ddecl.name) == identifier(p.decl->ddecl.name)) {
-									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl->ddecl.name).to_str().c_str());
+							if (chk_p.decl.ddecl.name != identifier_none) {
+								if (identifier(chk_p.decl.ddecl.name) == identifier(p.decl.ddecl.name)) {
+									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl.ddecl.name).to_str().c_str());
 									return errno_return(EEXIST);
 								}
 							}
@@ -6099,7 +6085,7 @@ try_again_w_token:
 								return errno_return(EINVAL);
 
 							tq_discard();
-							if ((r=initializer(p.decl->expr)) < 1)
+							if ((r=initializer(p.decl.expr)) < 1)
 								return r;
 						}
 					}
@@ -6189,9 +6175,7 @@ try_again_w_token:
 							while (i < parameters.size()) {
 								parameter_t &chk_p = parameters[i];
 
-								if (!chk_p.decl)
-									return errno_return(EINVAL);
-								if (identifier(d.ddecl.name) == identifier(chk_p.decl->ddecl.name))
+								if (identifier(d.ddecl.name) == identifier(chk_p.decl.ddecl.name))
 									break;
 
 								i++;
@@ -6239,8 +6223,7 @@ try_again_w_token:
 			/* any parameter not yet described, is an error */
 			for (auto &p : parameters) {
 				if (p.spec.empty()) {
-					assert(p.decl != NULL);
-					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl->ddecl.name).to_str().c_str());
+					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl.ddecl.name).to_str().c_str());
 					debug_dump_parameter("  ",p);
 					return errno_return(EINVAL);
 				}
@@ -6367,20 +6350,16 @@ try_again_w_token:
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
 		debug_dump_pointer(prefix+"  ",p.ptr);
 
-		if (p.decl != NULL) {
-			auto &p_declr = p.decl->ddecl;
+		debug_dump_pointer(prefix+"  ",p.decl.ddecl.ptr,"direct declarator");
 
-			debug_dump_pointer(prefix+"  ",p_declr.ptr,"direct declarator");
+		if (p.decl.ddecl.name != identifier_none)
+			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.ddecl.name).to_str().c_str());
 
-			if (p_declr.name != identifier_none)
-				fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p_declr.name).to_str().c_str());
+		debug_dump_arraydef(prefix+"  ",p.decl.ddecl.arraydef,"direct declarator");
 
-			debug_dump_arraydef(prefix+"  ",p_declr.arraydef,"direct declarator");
-
-			if (p.decl->expr != ast_node_none) {
-				fprintf(stderr,"%s  expr:\n",prefix.c_str());
-				debug_dump_ast(prefix+"    ",p.decl->expr);
-			}
+		if (p.decl.expr != ast_node_none) {
+			fprintf(stderr,"%s  expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",p.decl.expr);
 		}
 	}
 
@@ -7933,7 +7912,7 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
-					if (add_symbol(tq_peek().pos,p.spec,*(p.decl),symbol_t::FL_PARAMETER) == symbol_none)
+					if (add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER) == symbol_none)
 						return errno_return(EALREADY); /* already printed error */
 				}
 
