@@ -5541,7 +5541,6 @@ try_again_w_token:
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
-		int enumerator_list_parse(std::vector<enumerator_t> &enum_list);
 		int struct_declaration_parse(declaration_t &declion);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
@@ -5567,6 +5566,7 @@ try_again_w_token:
 		int initializer(ast_node_id_t &aroot);
 		int expression(ast_node_id_t &aroot);
 		int statement(ast_node_id_t &aroot);
+		int enumerator_list_parse(void);
 		int external_declaration(void);
 		int translation_unit(void);
 	};
@@ -5574,10 +5574,14 @@ try_again_w_token:
 	void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name=std::string());
 
-	int cc_state_t::enumerator_list_parse(std::vector<enumerator_t> &enum_list) {
+	int cc_state_t::enumerator_list_parse(void) {
+		std::vector<enumerator_t> enum_list;
+		declaration_specifiers_t spec;
 		int r;
 
 		/* caller already ate the { */
+		spec.count = 1;
+		spec.type_specifier = TS_INT;
 
 		do {
 			if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -5599,7 +5603,14 @@ try_again_w_token:
 					return r;
 			}
 
-			enum_list.push_back(std::move(en));
+			/* register it in the symbol table */
+			{
+				declarator_t declor;
+
+				identifier.assign(/*to*/declor.ddecl.name,/*from*/en.name);
+				if ((r=add_symbol(spec,declor,0,symbol_t::CONST)) < 1)
+					return r;
+			}
 
 			if (tq_peek().type == token_type_t::closecurlybracket) {
 				tq_discard();
@@ -5737,23 +5748,8 @@ try_again_w_token:
 					if (tq_peek().type == token_type_t::opencurlybracket) {
 						tq_discard();
 
-						std::vector<enumerator_t> enum_list;
-						if ((r=enumerator_list_parse(enum_list)) < 1)
+						if ((r=enumerator_list_parse()) < 1)
 							return r;
-
-						if (!enum_list.empty()) {
-							declaration_specifiers_t spec;
-
-							spec.count = 1;
-							spec.type_specifier = TS_INT;
-							for (const auto &e : enum_list) {
-								declarator_t declor;
-
-								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
-								if ((r=add_symbol(spec,declor,0,symbol_t::CONST)) < 1)
-									return r;
-							}
-						}
 					}
 					continue;
 
