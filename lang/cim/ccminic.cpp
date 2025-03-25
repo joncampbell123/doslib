@@ -5207,9 +5207,8 @@ try_again_w_token:
 	struct declarator_t {
 		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
-		ast_node_id_t initval = ast_node_none;
+		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
 		ast_node_id_t bitfield_expr = ast_node_none;
-		ast_node_id_t function_body = ast_node_none;
 
 		declarator_t() { }
 		declarator_t(const declarator_t &) = delete;
@@ -5220,15 +5219,13 @@ try_again_w_token:
 		void common_move(declarator_t &o) {
 			ddecl = std::move(o.ddecl);
 			ptr = std::move(ptr); o.ptr.clear();
-			ast_node.assignmove(/*to*/initval,/*from*/o.initval);
+			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
 			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
-			ast_node.assignmove(/*to*/function_body,/*from*/o.function_body);
 		}
 
 		~declarator_t() {
-			ast_node.release(initval);
+			ast_node.release(expr);
 			ast_node.release(bitfield_expr);
-			ast_node.release(function_body);
 		}
 	};
 
@@ -5508,28 +5505,27 @@ try_again_w_token:
 
 				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
 					sym.sym_type = symbol_t::FUNCTION;
-					sym.expr = declor.function_body;
-					declor.function_body = ast_node_none;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 				else if (spec.storage_class & SC_TYPEDEF) {
 					sym.sym_type = symbol_t::TYPEDEF;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 				else if (spec.type_specifier & TS_UNION) {
 					sym.sym_type = symbol_t::UNION;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 				else if (spec.type_specifier & TS_STRUCT) {
 					sym.sym_type = symbol_t::STRUCT;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 				else if (spec.type_specifier & TS_ENUM) {
 					sym.sym_type = symbol_t::ENUM;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 				else {
 					sym.sym_type = symt;
-					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 				}
 			}
 
@@ -6077,7 +6073,7 @@ try_again_w_token:
 								return errno_return(EINVAL);
 
 							tq_discard();
-							if ((r=initializer(p.decl->initval)) < 1)
+							if ((r=initializer(p.decl->expr)) < 1)
 								return r;
 						}
 					}
@@ -6192,7 +6188,7 @@ try_again_w_token:
 							}
 
 							/* do not allow initializer for parameter type declaration */
-							if (d.initval != ast_node_none) {
+							if (d.expr != ast_node_none) {
 								CCerr(pos,"Initializer value not permitted here");
 								return errno_return(EINVAL);
 							}
@@ -6354,9 +6350,9 @@ try_again_w_token:
 
 			debug_dump_arraydef(prefix+"  ",p_declr.arraydef,"direct declarator");
 
-			if (p.decl->initval != ast_node_none) {
-				fprintf(stderr,"%s  init:\n",prefix.c_str());
-				debug_dump_ast(prefix+"    ",p.decl->initval);
+			if (p.decl->expr != ast_node_none) {
+				fprintf(stderr,"%s  expr:\n",prefix.c_str());
+				debug_dump_ast(prefix+"    ",p.decl->expr);
 			}
 		}
 	}
@@ -6390,14 +6386,14 @@ try_again_w_token:
 		debug_dump_pointer(prefix+"  ",declr.ptr);
 		debug_dump_direct_declarator(prefix+"  ",declr.ddecl);
 
-		if (declr.initval != ast_node_none) {
-			fprintf(stderr,"%s  init:\n",prefix.c_str());
-			debug_dump_ast(prefix+"  ",declr.initval);
+		if (declr.expr != ast_node_none) {
+			fprintf(stderr,"%s  expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",declr.expr);
 		}
 
 		if (declr.bitfield_expr != ast_node_none) {
 			fprintf(stderr,"%s  bitfield:\n",prefix.c_str());
-			debug_dump_ast(prefix+"  ",declr.bitfield_expr);
+			debug_dump_ast(prefix+"    ",declr.bitfield_expr);
 		}
 	}
 
@@ -7919,14 +7915,14 @@ try_again_w_token:
 
 				/* once the compound statment ends, no more declarators.
 				 * you can't do "int f() { },g() { }" */
-				declor.function_body = fbroot;
+				ast_node.assignmove(/*to*/declor.expr,/*from*/fbroot);
 				return 1;
 			}
 
 			if (tq_peek().type == token_type_t::equal) {
 				tq_discard();
 
-				if ((r=initializer(declor.initval)) < 1)
+				if ((r=initializer(declor.expr)) < 1)
 					return r;
 			}
 
