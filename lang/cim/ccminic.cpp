@@ -5267,8 +5267,10 @@ try_again_w_token:
 		static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
 		static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
 		static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
+		static constexpr unsigned int FL_ELLIPSIS = 1u << 5; /* function has ellipsis param */
 
 		declaration_specifiers_t		spec;
+		std::vector<pointer_t>			ptr;
 		identifier_id_t				name = identifier_none;
 		ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 		scope_id_t				scope = scope_none;
@@ -5287,6 +5289,7 @@ try_again_w_token:
 		}
 
 		void common_move(symbol_t &x) {
+			ptr = std::move(x.ptr);
 			spec = std::move(x.spec);
 			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 			identifier.assignmove(/*to*/name,/*from*/x.name);
@@ -5485,6 +5488,10 @@ try_again_w_token:
 				sym.spec = spec;
 				sym.scope = current_scope();
 				sym.flags = symbol_t::FL_DEFINED;
+				sym.ptr = declor.ptr;
+
+				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+					sym.flags |= symbol_t::FL_ELLIPSIS;
 
 				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION) {
 					sym.sym_type = symbol_t::FUNCTION;
@@ -6421,11 +6428,13 @@ try_again_w_token:
 		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
 		if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
 		if (sym.flags & symbol_t::FL_OUT_OF_SCOPE) fprintf(stderr," OUTOFSCOPE");
+		if (sym.flags & symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
 		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
 		fprintf(stderr,"\n");
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
+		debug_dump_pointer(prefix+"  ",sym.ptr);
 		if (sym.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
 			debug_dump_ast(prefix+"    ",sym.expr);
