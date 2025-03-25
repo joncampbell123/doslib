@@ -5204,27 +5204,6 @@ try_again_w_token:
 		}
 	};
 
-	struct parameter_t {
-		std::vector<parameter_t>		parameters;
-		declaration_specifiers_t		spec;
-		declarator_t				decl;
-		std::vector<pointer_t>			ptr;
-
-		parameter_t() { }
-		parameter_t(const parameter_t &) = delete;
-		parameter_t &operator=(const parameter_t &) = delete;
-		parameter_t(parameter_t &&x) { common_move(x); };
-		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
-		~parameter_t() { }
-
-		void common_move(parameter_t &o) {
-			parameters = std::move(o.parameters);
-			spec = std::move(o.spec);
-			decl = std::move(o.decl);
-			ptr = std::move(o.ptr);
-		}
-	};
-
 	typedef size_t symbol_id_t;
 
 	static constexpr size_t symbol_none = ~size_t(0);
@@ -5236,7 +5215,6 @@ try_again_w_token:
 
 	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
-	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 	void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
 	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
@@ -5270,6 +5248,27 @@ try_again_w_token:
 			~enumerator_t() {
 				identifier.release(name);
 				ast_node.release(expr);
+			}
+		};
+
+		struct parameter_t {
+			std::vector<parameter_t>		parameters;
+			declaration_specifiers_t		spec;
+			declarator_t				decl;
+			std::vector<pointer_t>			ptr;
+
+			parameter_t() { }
+			parameter_t(const parameter_t &) = delete;
+			parameter_t &operator=(const parameter_t &) = delete;
+			parameter_t(parameter_t &&x) { common_move(x); };
+			parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
+			~parameter_t() { }
+
+			void common_move(parameter_t &o) {
+				parameters = std::move(o.parameters);
+				spec = std::move(o.spec);
+				decl = std::move(o.decl);
+				ptr = std::move(o.ptr);
 			}
 		};
 
@@ -5322,6 +5321,7 @@ try_again_w_token:
 			}
 		};
 
+		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
@@ -6342,7 +6342,7 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
+	void cc_state_t::debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
 		fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
 		debug_dump_pointer(prefix+"  ",p.ptr);
