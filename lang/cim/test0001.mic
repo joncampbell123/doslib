@@ -316,6 +316,12 @@ static int d000023(int x) {
 
 static int x00024[] = { 2, 3, [5] = 4, [10 ... 19] = 5 };
 
+static int tt2af = 6;
+struct tt2a {
+	int	tt2af,x,y,z;
+	int	a,b,c;
+};
+
 struct tt2 {
 	unsigned int	x:4;
 	unsigned int	y:3;

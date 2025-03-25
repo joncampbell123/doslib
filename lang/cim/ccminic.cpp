@@ -5536,7 +5536,7 @@ try_again_w_token:
 		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
-		int struct_declaration_parse(declaration_t &declion);
+		int struct_declaration_parse(const token_type_t &tt);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -5773,9 +5773,7 @@ try_again_w_token:
 								break;
 							}
 
-							declaration_t declion;
-
-							if ((r=struct_declaration_parse(declion)) < 1)
+							if ((r=struct_declaration_parse(token_type_t::r_struct)) < 1)
 								return r;
 						} while(1);
 					}
@@ -5807,9 +5805,7 @@ try_again_w_token:
 								break;
 							}
 
-							declaration_t declion;
-
-							if ((r=struct_declaration_parse(declion)) < 1)
+							if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
 								return r;
 						} while(1);
 					}
@@ -7941,7 +7937,8 @@ try_again_w_token:
 		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
 	}
 
-	int cc_state_t::struct_declaration_parse(declaration_t &declion) {
+	int cc_state_t::struct_declaration_parse(const token_type_t &tt) {
+		declaration_t declion;
 		int r,count = 0;
 
 #if 0//DEBUG
@@ -7971,7 +7968,7 @@ try_again_w_token:
 		} while(1);
 
 #if 1//DEBUG
-		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+		fprintf(stderr,"DEBUG %s:%d type %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
 		debug_dump_declaration("  ",declion);
 #endif
 
