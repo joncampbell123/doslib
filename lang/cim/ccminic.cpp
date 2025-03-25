@@ -5323,6 +5323,9 @@ try_again_w_token:
 			}
 		};
 
+		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
+		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
+
 		CCMiniC::lgtok_state_t	lst;
 		CCMiniC::pptok_state_t	pst;
 		rbuf*			buf = NULL;
@@ -5577,9 +5580,6 @@ try_again_w_token:
 		int external_declaration(void);
 		int translation_unit(void);
 	};
-
-	void debug_dump_symbol(const std::string prefix,cc_state_t::symbol_t &sym,const std::string &name=std::string());
-	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name=std::string());
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec) {
 		std::vector<enumerator_t> enum_list;
@@ -6428,7 +6428,7 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_symbol(const std::string prefix,cc_state_t::symbol_t &sym,const std::string &name) {
+	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
 		if (sym.sym_type == cc_state_t::symbol_t::NONE)
 			return;
 
@@ -6463,9 +6463,9 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_symbol_table(const std::string prefix,cc_state_t &cst,const std::string &name) {
+	void cc_state_t::debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 		fprintf(stderr,"%s%s%ssymbol table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (auto &symbol : cst.symbols) debug_dump_symbol(prefix+"  ",symbol);
+		for (auto &symbol : symbols) debug_dump_symbol(prefix+"  ",symbol);
 	}
 
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
@@ -8330,7 +8330,7 @@ int main(int argc,char **argv) {
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
-			CCMiniC::debug_dump_symbol_table("",ccst);
+			ccst.debug_dump_symbol_table("");
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
