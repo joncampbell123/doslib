@@ -5257,7 +5257,6 @@ try_again_w_token:
 	typedef size_t symbol_id_t;
 
 	static constexpr size_t symbol_none = ~size_t(0);
-
 	typedef unsigned int scope_id_t;
 
 	static constexpr unsigned int scope_none = ~((unsigned int)0u);
@@ -5303,11 +5302,11 @@ try_again_w_token:
 		}
 
 		void common_move(symbol_t &x) {
-			ptr = std::move(x.ptr);
 			spec = std::move(x.spec);
-			scope = x.scope; x.scope = scope_none;
-			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
+			ptr = std::move(x.ptr);
 			identifier.assignmove(/*to*/name,/*from*/x.name);
+			ast_node.assignmove(/*to*/expr,/*from*/x.expr);
+			scope = x.scope; x.scope = scope_none;
 			sym_type = x.sym_type; x.sym_type = NONE;
 			flags = x.flags; x.flags = 0;
 		}
