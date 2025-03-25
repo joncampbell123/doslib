@@ -5260,6 +5260,7 @@ try_again_w_token:
 			TYPEDEF,
 			STRUCT,
 			UNION,
+			CONST,
 			ENUM
 		};
 
@@ -5512,6 +5513,10 @@ try_again_w_token:
 					sym.sym_type = symbol_t::STRUCT;
 					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
 				}
+				else if (spec.type_specifier & TS_ENUM) {
+					sym.sym_type = symbol_t::ENUM;
+					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
+				}
 				else {
 					sym.sym_type = symt;
 					ast_node.assign(/*to*/sym.expr,/*from*/declor.initval);
@@ -5738,7 +5743,7 @@ try_again_w_token:
 								declarator_t declor;
 
 								identifier.assign(/*to*/declor.ddecl.name,/*from*/e.name);
-								if ((r=add_symbol(spec,declor,symbol_t::ENUM)) < 1)
+								if ((r=add_symbol(spec,declor,symbol_t::CONST)) < 1)
 									return r;
 							}
 						}
@@ -6435,6 +6440,7 @@ try_again_w_token:
 			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
 			case symbol_t::STRUCT: fprintf(stderr," struct"); break;
 			case symbol_t::UNION: fprintf(stderr," union"); break;
+			case symbol_t::CONST: fprintf(stderr," const"); break;
 			case symbol_t::ENUM: fprintf(stderr," enum"); break;
 			default: break;
 		};
