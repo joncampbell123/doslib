@@ -5151,10 +5151,17 @@ try_again_w_token:
 		unsigned int flags = 0;
 
 		direct_declarator_t() { };
-		direct_declarator_t(const direct_declarator_t &) = delete;
-		direct_declarator_t &operator=(const direct_declarator_t &) = delete;
+		direct_declarator_t(const direct_declarator_t &x) { common_copy(x); }
+		direct_declarator_t &operator=(const direct_declarator_t &x) { common_copy(x); return *this; }
 		direct_declarator_t(direct_declarator_t &&x) { common_move(x); }
 		direct_declarator_t &operator=(direct_declarator_t &&x) { common_move(x); return *this; }
+
+		void common_copy(const direct_declarator_t &o) {
+			ptr = o.ptr;
+			arraydef = o.arraydef; for (auto &id : arraydef) ast_node(id).addref();
+			identifier.assign(/*to*/name,/*from*/o.name);
+			flags = o.flags;
+		}
 
 		void common_move(direct_declarator_t &o) {
 			ptr = std::move(o.ptr); o.ptr.clear();
@@ -5177,10 +5184,17 @@ try_again_w_token:
 		ast_node_id_t bitfield_expr = ast_node_none;
 
 		declarator_t() { }
-		declarator_t(const declarator_t &) = delete;
-		declarator_t &operator=(const declarator_t &) = delete;
+		declarator_t(const declarator_t &x) { common_copy(x); }
+		declarator_t &operator=(const declarator_t &x) { common_copy(x); return *this; }
 		declarator_t(declarator_t &&x) { common_move(x); }
 		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
+
+		void common_copy(const declarator_t &o) {
+			ddecl = o.ddecl;
+			ptr = o.ptr;
+			ast_node.assign(/*to*/expr,/*from*/o.expr);
+			ast_node.assign(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
+		}
 
 		void common_move(declarator_t &o) {
 			ddecl = std::move(o.ddecl);
@@ -5272,11 +5286,18 @@ try_again_w_token:
 			std::vector<pointer_t>			ptr;
 
 			parameter_t() { }
-			parameter_t(const parameter_t &) = delete;
-			parameter_t &operator=(const parameter_t &) = delete;
-			parameter_t(parameter_t &&x) { common_move(x); };
-			parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; };
+			parameter_t(const parameter_t &x) { common_copy(x); }
+			parameter_t &operator=(const parameter_t &x) { common_copy(x); return *this; }
+			parameter_t(parameter_t &&x) { common_move(x); }
+			parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; }
 			~parameter_t() { }
+
+			void common_copy(const parameter_t &o) {
+				parameters = o.parameters;
+				spec = o.spec;
+				decl = o.decl;
+				ptr = o.ptr;
+			}
 
 			void common_move(parameter_t &o) {
 				parameters = std::move(o.parameters);
@@ -5307,6 +5328,7 @@ try_again_w_token:
 
 			declaration_specifiers_t		spec;
 			std::vector<pointer_t>			ptr;
+			std::vector<parameter_t>		parameters;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 			scope_id_t				scope = scope_none;
@@ -5327,6 +5349,7 @@ try_again_w_token:
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
 				ptr = std::move(x.ptr);
+				parameters = std::move(x.parameters);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 				scope = x.scope; x.scope = scope_none;
@@ -6549,6 +6572,10 @@ try_again_w_token:
 		fprintf(stderr,"\n");
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
 		debug_dump_pointer(prefix+"  ",sym.ptr);
+
+		for (auto &p : sym.parameters)
+			debug_dump_parameter(prefix+"  ",p);
+
 		if (sym.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
 			debug_dump_ast(prefix+"    ",sym.expr);
@@ -7655,12 +7682,16 @@ try_again_w_token:
 			do {
 				std::vector<parameter_t> parameters;
 				declarator_t declor;
+				symbol_id_t sid;
 
 				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
 					return r;
 
-				if (add_symbol(tq_peek().pos,spec,declor) == symbol_none)
+				if ((sid=add_symbol(tq_peek().pos,spec,declor)) == symbol_none)
 					return errno_return(EALREADY); /* already printed error */
+
+				symbol_t &sym = symbol(sid);
+				sym.parameters = parameters;
 
 				scope_t::decl_t &sldef = sco.new_localdecl();
 				sldef.spec = spec;
