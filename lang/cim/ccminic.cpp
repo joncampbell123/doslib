@@ -5023,6 +5023,7 @@ try_again_w_token:
 		ast_node_t &operator=(ast_node_t &&x) { common_move(x); return *this; }
 
 		static void arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s);
+		static void arrayrelease(std::vector<ast_node_id_t> &d);
 
 		void common_move(ast_node_t &o) {
 			t = std::move(o.t);
@@ -5064,6 +5065,12 @@ try_again_w_token:
 		for (auto &id : d)
 			if (id != ast_node_none)
 				ast_node(id).addref();
+	}
+
+	void ast_node_t::arrayrelease(std::vector<ast_node_id_t> &d) {
+		for (auto &id : d)
+			if (id != ast_node_none)
+				ast_node(id).release();
 	}
 
 	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
@@ -5182,7 +5189,7 @@ try_again_w_token:
 
 		~direct_declarator_t() {
 			identifier.release(name);
-			for (auto &expr : arraydef) ast_node.release(expr);
+			ast_node_t::arrayrelease(arraydef);
 			arraydef.clear();
 		}
 	};
@@ -5355,7 +5362,7 @@ try_again_w_token:
 			~symbol_t() {
 				ast_node.release(expr);
 				identifier.release(name);
-				for (auto &id : arraydef) ast_node.release(id);
+				ast_node_t::arrayrelease(arraydef);
 				arraydef.clear();
 			}
 
