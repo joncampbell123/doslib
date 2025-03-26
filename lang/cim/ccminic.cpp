@@ -1981,12 +1981,7 @@ namespace CCMiniC {
 
 	typedef unsigned int scope_id_t;
 	static constexpr unsigned int scope_none = ~((unsigned int)0u);
-	static constexpr unsigned int scope_global = ~((unsigned int)1u);
-	static constexpr unsigned int scope_local_max = ~((unsigned int)15u);
-
-	static inline bool scope_readable(const scope_id_t x) {
-		return x <= scope_local_max;
-	}
+	static constexpr unsigned int scope_global = 0;
 
 	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
 	template <class T> void typ_delete(T *p);
@@ -5237,6 +5232,10 @@ try_again_w_token:
 		typedef size_t symbol_id_t;
 		static constexpr size_t symbol_none = ~size_t(0);
 
+		cc_state_t() {
+			scopes.resize(scope_global+1); // make sure global scope exists
+		}
+
 		struct enumerator_t {
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none;
@@ -5345,6 +5344,7 @@ try_again_w_token:
 
 			ast_node_id_t				root = ast_node_none;
 			std::vector<decl_t>			localdecl;
+			std::vector<symbol_id_t>		symbols;
 
 			scope_t() { }
 			scope_t(const scope_t &) = delete;
@@ -5365,6 +5365,7 @@ try_again_w_token:
 			void common_move(scope_t &x) {
 				ast_node.assignmove(/*to*/root,/*from*/x.root);
 				localdecl = std::move(x.localdecl);
+				symbols = std::move(x.symbols);
 			}
 		};
 
@@ -5593,6 +5594,7 @@ try_again_w_token:
 				symbol_t &sym = symbol(sid);
 				sym.spec = spec;
 				sym.scope = current_scope();
+				scope(sym.scope).symbols.push_back(sid);
 				sym.flags = symbol_t::FL_DEFINED | flags;
 				sym.ptr = declor.ptr;
 				sym.sym_type = st;
@@ -6492,6 +6494,11 @@ try_again_w_token:
 
 	void cc_state_t::debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name) {
 		fprintf(stderr,"%s%s%sscope:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+		for (auto sid : sco.symbols) {
+			symbol_t &sym = symbol(sid);
+			debug_dump_symbol(prefix+"  ",sym);
+		}
 
 		for (auto &decl : sco.localdecl) {
 			fprintf(stderr,"%s  decl:\n",prefix.c_str());
