@@ -5349,6 +5349,7 @@ try_again_w_token:
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 			scope_id_t				scope = scope_none;
+			scope_id_t				parent_of_scope = scope_none;
 			enum type_t				sym_type = NONE;
 			unsigned int				flags = 0;
 
@@ -5373,6 +5374,7 @@ try_again_w_token:
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 				scope = x.scope; x.scope = scope_none;
+				parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
 				sym_type = x.sym_type; x.sym_type = NONE;
 				flags = x.flags; x.flags = 0;
 			}
@@ -6654,10 +6656,15 @@ try_again_w_token:
 		if (sym.flags & cc_state_t::symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
 		if (sym.flags & cc_state_t::symbol_t::FL_STACK) fprintf(stderr," STACK");
 		if (sym.flags & cc_state_t::symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
+
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
 		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
+
+		if (sym.parent_of_scope != scope_none) fprintf(stderr," parent-of-scope:%lu",(unsigned long)sym.parent_of_scope);
+
 		fprintf(stderr,"\n");
+
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
 		debug_dump_pointer(prefix+"  ",sym.ptr);
 		debug_dump_arraydef(prefix+"  ",sym.arraydef);
@@ -8189,6 +8196,7 @@ try_again_w_token:
 					/* look it up again, compound_statement() could very well have added symbols
 					 * causing reallocation and the reference above would become invalid */
 					symbol_t &sym = symbol(sid);
+					sym.parent_of_scope = current_scope();
 
 					/* having a function body counts as being defined vs declared */
 					sym.flags |= symbol_t::FL_DEFINED;
