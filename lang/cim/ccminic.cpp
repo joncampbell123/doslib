@@ -5212,9 +5212,14 @@ try_again_w_token:
 
 		declaration_t() { }
 		declaration_t(const declaration_t &) = delete;
-		declaration_t(declaration_t &&) = delete;
 		declaration_t &operator=(const declaration_t &) = delete;
-		declaration_t &operator=(declaration_t &&) = delete;
+		declaration_t(declaration_t &&x) { common_move(x); }
+		declaration_t &operator=(declaration_t &&x) { common_move(x); return *this; }
+
+		void common_move(declaration_t &o) {
+			spec = std::move(o.spec);
+			declor = std::move(o.declor);
+		}
 
 		~declaration_t() {
 		}
@@ -5345,6 +5350,12 @@ try_again_w_token:
 				ast_node.release(root);
 			}
 
+			declaration_t &new_localdecl(void) {
+				const size_t r = localdecl.size();
+				localdecl.resize(r+1u);
+				return localdecl[r];
+			}
+
 			void common_move(scope_t &x) {
 				ast_node.assignmove(/*to*/root,/*from*/x.root);
 				localdecl = std::move(x.localdecl);
@@ -5354,6 +5365,8 @@ try_again_w_token:
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
+		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
+		void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 
 		CCMiniC::lgtok_state_t	lst;
@@ -5593,7 +5606,6 @@ try_again_w_token:
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags=0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
-		int compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int enumerator_list_parse(declaration_specifiers_t &ds);
 		int struct_declaration_parse(const token_type_t &tt);
@@ -5615,6 +5627,7 @@ try_again_w_token:
 		int shift_expression(ast_node_id_t &aroot);
 		int unary_expression(ast_node_id_t &aroot);
 		int cast_expression(ast_node_id_t &aroot);
+		int compound_statement_declarators(void);
 		int and_expression(ast_node_id_t &aroot);
 		int xor_expression(ast_node_id_t &aroot);
 		int or_expression(ast_node_id_t &aroot);
@@ -6470,6 +6483,24 @@ try_again_w_token:
 			r = n.next;
 			count++;
 		}
+	}
+
+	void cc_state_t::debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name) {
+		fprintf(stderr,"%s%s%sscope:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+		for (auto &decl : sco.localdecl)
+			debug_dump_declaration(prefix+"  ",decl);
+
+		if (sco.root != ast_node_none) {
+			fprintf(stderr,"%sexpr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"  ",sco.root);
+		}
+	}
+
+	void cc_state_t::debug_dump_scope_table(const std::string prefix,const std::string &name) {
+		fprintf(stderr,"%s%s%sscope table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		for (auto si=scopes.begin();si!=scopes.end();si++)
+			debug_dump_scope(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-scopes.begin())));
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
@@ -7574,15 +7605,10 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::compound_statement_declarators(ast_node_id_t &aroot,ast_node_id_t &nroot) {
-		ast_node_id_t nxt;
+	int cc_state_t::compound_statement_declarators(void) {
+		scope_id_t scope_id = current_scope();
+		scope_t &sco = scope(scope_id);
 		int r;
-
-		assert(
-			(aroot == ast_node_none && nroot == ast_node_none) ||
-			(aroot != ast_node_none && nroot == ast_node_none) ||
-			(aroot != ast_node_none && nroot != ast_node_none)
-		);
 
 		/* caller already ate the { */
 
@@ -7602,29 +7628,18 @@ try_again_w_token:
 			if (!declaration_specifiers_check())
 				break;
 
-			std::unique_ptr<declaration_t> declion(new declaration_t);
+			declaration_t &declion = sco.new_localdecl();
 
 			if ((r=chkerr()) < 1)
 				return r;
-			if ((r=declaration_parse(*declion)) < 1)
+			if ((r=declaration_parse(declion)) < 1)
 				return r;
 
-			nxt = ast_node.alloc(token_type_t::op_declaration);
-			if (aroot == ast_node_none)
-				aroot = nxt;
-			else
-				{ ast_node(nroot).set_next(nxt); ast_node(nxt).release(); }
-
 			/* add it to the symbol table */
-			for (auto &decl : (*declion).declor) {
-				if (add_symbol(tq_peek().pos,(*declion).spec,decl) == symbol_none)
+			for (auto &decl : declion.declor) {
+				if (add_symbol(tq_peek().pos,declion.spec,decl) == symbol_none)
 					return errno_return(EALREADY); /* already printed error */
 			}
-
-			assert(ast_node(nxt).t.type == token_type_t::op_declaration);
-			ast_node(nxt).t.v.declaration = declion.release();
-
-			nroot = nxt;
 		} while (1);
 
 		return 1;
@@ -7883,7 +7898,7 @@ try_again_w_token:
 
 		/* caller already ate the { */
 
-		if ((r=compound_statement_declarators(aroot,nroot)) < 1)
+		if ((r=compound_statement_declarators()) < 1)
 			return r;
 
 		/* OK, now statements */
@@ -8374,6 +8389,7 @@ int main(int argc,char **argv) {
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
+			ccst.debug_dump_scope_table("");
 			ccst.debug_dump_symbol_table("");
 
 			if (r < 0) {
