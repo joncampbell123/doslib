@@ -5158,7 +5158,12 @@ try_again_w_token:
 
 		void common_copy(const direct_declarator_t &o) {
 			ptr = o.ptr;
-			arraydef = o.arraydef; for (auto &id : arraydef) ast_node(id).addref();
+
+			arraydef = o.arraydef;
+			for (auto &id : arraydef)
+				if (id != ast_node_none)
+					ast_node(id).addref();
+
 			identifier.assign(/*to*/name,/*from*/o.name);
 			flags = o.flags;
 		}
@@ -6247,46 +6252,71 @@ try_again_w_token:
 						break;
 					}
 					else {
-						declaration_t s_declion;
+						declaration_specifiers_t s_spec;
 
-						if ((r=declaration_parse(s_declion)) < 1)
+						if ((r=declaration_specifiers_parse(s_spec)) < 1)
+							return r;
+						if ((r=chkerr()) < 1)
 							return r;
 
-						/* check */
-						for (auto &d : s_declion.declor) {
-							/* the name must match a parameter and it must not already have been given it's type */
-							size_t i=0;
-							while (i < parameters.size()) {
-								parameter_t &chk_p = parameters[i];
+						do {
+							std::vector<parameter_t> s_parameters;
+							declarator_t d;
 
-								if (identifier(d.ddecl.name) == identifier(chk_p.decl.ddecl.name))
-									break;
+							if ((r=declaration_inner_parse(s_spec,d,s_parameters)) < 1)
+								return r;
 
-								i++;
+							/* check */
+							{
+								/* the name must match a parameter and it must not already have been given it's type */
+								size_t i=0;
+								while (i < parameters.size()) {
+									parameter_t &chk_p = parameters[i];
+
+									if (identifier(d.ddecl.name) == identifier(chk_p.decl.ddecl.name))
+										break;
+
+									i++;
+								}
+
+								/* no match---fail */
+								if (i == parameters.size()) {
+									CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name).makestring().c_str());
+									return errno_return(ENOENT);
+								}
+
+								parameter_t &fp = parameters[i];
+								if (fp.spec.empty() && fp.ptr.empty()) {
+									fp.spec = s_spec;
+									fp.ptr = std::move(d.ptr);
+									fp.parameters = std::move(s_parameters);
+								}
+								else {
+									CCerr(pos,"Identifier already given type");
+									return errno_return(EALREADY);
+								}
+
+								/* do not allow initializer for parameter type declaration */
+								if (d.expr != ast_node_none) {
+									CCerr(pos,"Initializer value not permitted here");
+									return errno_return(EINVAL);
+								}
 							}
 
-							/* no match---fail */
-							if (i == parameters.size()) {
-								CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name).makestring().c_str());
-								return errno_return(ENOENT);
+							if (tq_peek().type == token_type_t::comma) {
+								tq_discard();
+								continue;
 							}
 
-							parameter_t &fp = parameters[i];
-							if (fp.spec.empty() && fp.ptr.empty()) {
-								fp.spec = s_declion.spec;
-								fp.ptr = std::move(d.ptr);
-							}
-							else {
-								CCerr(pos,"Identifier already given type");
-								return errno_return(EALREADY);
-							}
+							break;
+						} while(1);
 
-							/* do not allow initializer for parameter type declaration */
-							if (d.expr != ast_node_none) {
-								CCerr(pos,"Initializer value not permitted here");
-								return errno_return(EINVAL);
-							}
+						if (tq_peek().type == token_type_t::semicolon) {
+							tq_discard();
+							continue;
 						}
+
+						break;
 					}
 				} while (1);
 
@@ -8052,11 +8082,19 @@ try_again_w_token:
 			return r;
 
 		do {
+			symbol_id_t sid;
 			std::vector<parameter_t> parameters;
 			declarator_t &declor = declion.new_declarator();
 
 			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
 				return r;
+
+			/* add it to the symbol table */
+			if ((sid=add_symbol(tq_peek().pos,declion.spec,declor)) == symbol_none)
+				return errno_return(EALREADY); /* already printed error */
+
+			symbol_t &sym = symbol(sid);
+			sym.parameters = parameters;
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
@@ -8177,12 +8215,6 @@ try_again_w_token:
 			return r;
 		if ((r=declaration_parse(declion)) < 1)
 			return r;
-
-		/* add it to the symbol table */
-		for (auto &decl : declion.declor) {
-			if (add_symbol(tq_peek().pos,declion.spec,decl) == symbol_none)
-				return errno_return(EALREADY); /* already printed error */
-		}
 
 		return 1;
 	}

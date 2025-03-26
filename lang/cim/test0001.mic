@@ -380,3 +380,5 @@ enum test:unsigned char {
 	FE
 } xe3;
 
+static int funk1(funcytown) int (*funcytown)(int (*fu1)(int (*fu2)(int))); { }
+
