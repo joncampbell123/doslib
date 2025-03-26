@@ -5114,6 +5114,9 @@ try_again_w_token:
 
 	//////////////////////////////////////////////////
 
+	typedef size_t symbol_id_t;
+	static constexpr size_t symbol_none = ~size_t(0);
+
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
@@ -5251,18 +5254,7 @@ try_again_w_token:
 		}
 	};
 
-	void debug_dump_ast(const std::string prefix,ast_node_id_t r);
-	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
-	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
-	void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
-	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
-	void debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name=std::string());
-	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
-
 	struct cc_state_t {
-		typedef size_t symbol_id_t;
-		static constexpr size_t symbol_none = ~size_t(0);
-
 		cc_state_t() {
 			assert(scopes.empty());
 			assert(scope_global == scope_id_t(0));
@@ -5417,6 +5409,13 @@ try_again_w_token:
 			}
 		};
 
+		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
+		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
+		void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
+		void debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name=std::string());
+		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
@@ -6462,7 +6461,7 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
+	void cc_state_t::debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
 		if (ds.empty()) return;
 
 		fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
@@ -6473,7 +6472,7 @@ try_again_w_token:
 		fprintf(stderr,"\n");
 	}
 
-	void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
+	void cc_state_t::debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
 		if (ptr.empty()) return;
 
 		fprintf(stderr,"%s%s%spointer(s):",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -6484,7 +6483,7 @@ try_again_w_token:
 		fprintf(stderr,"\n");
 	}
 
-	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
+	void cc_state_t::debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
 		if (arraydef.empty()) return;
 
 		fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -6515,7 +6514,7 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name) {
+	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name) {
 		if (ddecl.flags & direct_declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
@@ -6532,7 +6531,7 @@ try_again_w_token:
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
 	}
 
-	void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
+	void cc_state_t::debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
 		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
@@ -6552,7 +6551,7 @@ try_again_w_token:
 		}
 	}
 
-	void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
+	void cc_state_t::debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
 		fprintf(stderr,"%s%s%sdeclaration:{\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_declaration_specifiers(prefix+"  ",decl.spec);
 
@@ -6562,7 +6561,7 @@ try_again_w_token:
 		fprintf(stderr,"%s}\n",prefix.c_str());
 	}
 
-	void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
+	void cc_state_t::debug_dump_ast(const std::string prefix,ast_node_id_t r) {
 		unsigned int count = 0;
 
 		while (r != ast_node_none) {
