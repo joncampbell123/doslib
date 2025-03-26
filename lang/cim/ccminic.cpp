@@ -5649,8 +5649,17 @@ try_again_w_token:
 				flags |= symbol_t::FL_DECLARED;
 			else {
 				flags |= symbol_t::FL_DECLARED;
-				if (st == symbol_t::VARIABLE)
-					flags |= symbol_t::FL_DEFINED;
+				switch (st) {
+					case symbol_t::VARIABLE:
+						flags |= symbol_t::FL_DEFINED;
+						break;
+					case symbol_t::ENUM:
+						if (!spec.enum_list.empty())
+							flags |= symbol_t::FL_DEFINED;
+						break;
+					default:
+						break;
+				}
 			}
 
 			if (st == symbol_t::FUNCTION) {
