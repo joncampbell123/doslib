@@ -5333,6 +5333,7 @@ try_again_w_token:
 
 			declaration_specifiers_t		spec;
 			std::vector<pointer_t>			ptr;
+			std::vector<ast_node_id_t>		arraydef;
 			std::vector<parameter_t>		parameters;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
@@ -5349,11 +5350,14 @@ try_again_w_token:
 			~symbol_t() {
 				ast_node.release(expr);
 				identifier.release(name);
+				for (auto &id : arraydef) ast_node.release(id);
+				arraydef.clear();
 			}
 
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
 				ptr = std::move(x.ptr);
+				arraydef = std::move(x.arraydef);
 				parameters = std::move(x.parameters);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
@@ -6603,6 +6607,7 @@ try_again_w_token:
 		fprintf(stderr,"\n");
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
 		debug_dump_pointer(prefix+"  ",sym.ptr);
+		debug_dump_arraydef(prefix+"  ",sym.arraydef);
 
 		for (auto &p : sym.parameters)
 			debug_dump_parameter(prefix+"  ",p);
@@ -7723,6 +7728,11 @@ try_again_w_token:
 
 				symbol_t &sym = symbol(sid);
 				sym.parameters = parameters;
+				sym.arraydef = declor.ddecl.arraydef;
+
+				for (auto &id : sym.arraydef)
+					if (id != ast_node_none)
+						ast_node(id).addref();
 
 				scope_t::decl_t &sldef = sco.new_localdecl();
 				sldef.spec = spec;
@@ -8096,6 +8106,11 @@ try_again_w_token:
 
 			symbol_t &sym = symbol(sid);
 			sym.parameters = parameters;
+			sym.arraydef = declor.ddecl.arraydef;
+
+			for (auto &id : sym.arraydef)
+				if (id != ast_node_none)
+					ast_node(id).addref();
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();

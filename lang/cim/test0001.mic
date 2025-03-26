@@ -386,4 +386,10 @@ static int funk3(funcytown) int (*funcytown)(int* (*)(int* (*)(int))); { }
 static int funk4(funcytown) int (*funcytown)(int* (*fu1[])(int* (*fu2[])(int))); { }
 static int funk5(funcytown) int (*funcytown)(int* (*fu1[5])(int* (*fu2[5])(int))); { }
 static int funk6(funcytown) int (*funcytown)(int* (*fu1[5][5])(int* (*fu2[5][5])(int))); { }
+static int (*funy1a[])();
+static int (*funy1b[5])();
+static int (*funy1c[5][3])();
+static int (*funy1d[5][3])(int* (*f1)(int* c[]));
+static int (*funy1e[5][3])(int* (*)(int* []));
+static int (*funy1f[5][3])(int* (*)(int* [10]));
 
