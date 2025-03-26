@@ -5264,7 +5264,12 @@ try_again_w_token:
 		static constexpr size_t symbol_none = ~size_t(0);
 
 		cc_state_t() {
+			assert(scopes.empty());
+			assert(scope_global == scope_id_t(0));
 			scopes.resize(scope_global+1); // make sure global scope exists
+
+			assert(scope_stack.empty());
+			scope_stack.push_back(scope_global);
 		}
 
 		struct enumerator_t {
@@ -5525,15 +5530,17 @@ try_again_w_token:
 		void pop_scope(void) {
 #if 1//DEBUG
 			if (scope_stack.empty()) throw std::runtime_error("Attempt to pop scope stack when empty");
+			if (scope_stack.size() == 1) throw std::runtime_error("Attempt to pop global scope");
+			assert(scope_stack[0] == scope_global);
 #endif
 			scope_stack.pop_back();
 		}
 
 		scope_id_t current_scope(void) {
-			if (!scope_stack.empty())
-				return scope_stack[scope_stack.size()-1u];
-			else
-				return scope_global;
+#if 1//DEBUG
+			assert(!scope_stack.empty());
+#endif
+			return scope_stack[scope_stack.size()-1u];
 		}
 
 		/* symbols are never removed from the vector, and they are always added in increasing ID order */
@@ -5570,8 +5577,8 @@ try_again_w_token:
 			if (at == bt)
 				return true;
 
-			if (	(at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF) ==
-				(bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF))
+			if (	(at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST) ==
+				(bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST))
 				return true;
 
 			return false;
