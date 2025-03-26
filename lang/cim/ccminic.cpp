@@ -5632,34 +5632,26 @@ try_again_w_token:
 
 		/* this automatically uses the scope_stack and current_scope() return value */
 		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::NONE) {
-			symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
-			symbol_id_t sid;
+			const symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
+			const scope_id_t cursco = current_scope();
 
-			if ((sid=lookup_symbol(declor.ddecl.name,st)) != symbol_none) {
-				/* existing symbol, however we'll ignore it if we're declaring a new variable in a different scope. */
-				if (symbol(sid).scope == current_scope()) {
-					CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
-					return symbol_none;
-				}
-				else {
-					sid = symbol_none;
-				}
+			if (lookup_symbol(scope(cursco),declor.ddecl.name,st) != symbol_none) {
+				CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
+				return symbol_none;
 			}
 
-			if (sid == symbol_none) {
-				sid = new_symbol(declor.ddecl.name);
-				symbol_t &sym = symbol(sid);
-				sym.spec = spec;
-				sym.scope = current_scope();
-				scope(sym.scope).symbols.push_back(sid);
-				sym.flags = symbol_t::FL_DEFINED | flags;
-				sym.ptr = declor.ptr;
-				sym.sym_type = st;
-				ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
+			const symbol_id_t sid = new_symbol(declor.ddecl.name);
+			symbol_t &sym = symbol(sid);
+			sym.spec = spec;
+			sym.scope = cursco;
+			scope(sym.scope).symbols.push_back(sid);
+			sym.flags = symbol_t::FL_DEFINED | flags;
+			sym.ptr = declor.ptr;
+			sym.sym_type = st;
+			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 
-				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-					sym.flags |= symbol_t::FL_ELLIPSIS;
-			}
+			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+				sym.flags |= symbol_t::FL_ELLIPSIS;
 
 			return sid;
 		}
