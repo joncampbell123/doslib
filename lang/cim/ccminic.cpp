@@ -5599,14 +5599,12 @@ try_again_w_token:
 			return sid;
 		}
 
-		static constexpr unsigned int COMPSDFL_ALREADY_ENTERED_SCOPE = 1u << 0u;
-
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
-		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags=0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
+		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int enumerator_list_parse(declaration_specifiers_t &ds);
 		int struct_declaration_parse(const token_type_t &tt);
 		int multiplicative_expression(ast_node_id_t &aroot);
@@ -7669,14 +7667,20 @@ try_again_w_token:
 		else if (tq_peek().type == token_type_t::opencurlybracket) {
 			tq_discard();
 
+			push_new_scope();
+
 			/* a compound statement within a compound statement */
 			ast_node_id_t cur = ast_node_none;
 			ast_node_id_t curnxt = ast_node_none;
-			if ((r=compound_statement(cur,curnxt)) < 1)
+			if ((r=compound_statement(cur,curnxt)) < 1) {
+				pop_scope();
 				return r;
+			}
 
 			aroot = ast_node.alloc(token_type_t::op_compound_statement);
 			ast_node(aroot).set_child(cur); ast_node(cur).release();
+
+			pop_scope();
 		}
 		else if (tq_peek(0).type == token_type_t::r_switch && tq_peek(1).type == token_type_t::openparenthesis) {
 			tq_discard(2);
@@ -7882,7 +7886,7 @@ try_again_w_token:
 		return 1;
 	}
 
-	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot,unsigned int flags) {
+	int cc_state_t::compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot) {
 		ast_node_id_t nxt;
 		int r;
 
@@ -7891,10 +7895,6 @@ try_again_w_token:
 			(aroot != ast_node_none && nroot == ast_node_none) ||
 			(aroot != ast_node_none && nroot != ast_node_none)
 		);
-
-		/* start a new scope */
-		if (!(flags & COMPSDFL_ALREADY_ENTERED_SCOPE))
-			push_new_scope();
 
 		/* caller already ate the { */
 
@@ -7931,7 +7931,6 @@ try_again_w_token:
 		debug_dump_ast("  ",aroot);
 #endif
 
-		pop_scope();
 		return 1;
 	}
 
@@ -7971,17 +7970,22 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
-					if (add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER) == symbol_none)
+					if (add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER) == symbol_none) {
+						pop_scope();
 						return errno_return(EALREADY); /* already printed error */
+					}
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
-				if ((r=compound_statement(fbroot,fbrootnext,COMPSDFL_ALREADY_ENTERED_SCOPE)) < 1)
+				if ((r=compound_statement(fbroot,fbrootnext)) < 1) {
+					pop_scope();
 					return r;
+				}
 
 				/* once the compound statment ends, no more declarators.
 				 * you can't do "int f() { },g() { }" */
 				ast_node.assignmove(/*to*/declor.expr,/*from*/fbroot);
+				pop_scope();
 				return 1;
 			}
 
