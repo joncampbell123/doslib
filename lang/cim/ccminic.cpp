@@ -6502,8 +6502,8 @@ try_again_w_token:
 		}
 
 		if (sco.root != ast_node_none) {
-			fprintf(stderr,"%sexpr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"  ",sco.root);
+			fprintf(stderr,"%s  expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",sco.root);
 		}
 	}
 
@@ -7926,6 +7926,9 @@ try_again_w_token:
 		ast_node_id_t nxt;
 		int r;
 
+		assert(current_scope() != scope_global);
+		assert(current_scope() != scope_none);
+
 		assert(
 			(aroot == ast_node_none && nroot == ast_node_none) ||
 			(aroot != ast_node_none && nroot == ast_node_none) ||
@@ -7961,6 +7964,8 @@ try_again_w_token:
 				nroot = nxt;
 			}
 		} while (1);
+
+		ast_node.assign(/*to*/scope(current_scope()).root,/*from*/aroot);
 
 #if 0//DEBUG
 		fprintf(stderr,"compound declarator, scope %u:\n",(unsigned int)current_scope());
