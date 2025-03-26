@@ -5337,8 +5337,14 @@ try_again_w_token:
 		};
 
 		struct scope_t {
+			struct decl_t {
+				declaration_specifiers_t	spec;
+				declarator_t			declor;
+				std::vector<parameter_t>	parameters;
+			};
+
 			ast_node_id_t				root = ast_node_none;
-			std::vector<declaration_t>		localdecl;
+			std::vector<decl_t>			localdecl;
 
 			scope_t() { }
 			scope_t(const scope_t &) = delete;
@@ -5350,7 +5356,7 @@ try_again_w_token:
 				ast_node.release(root);
 			}
 
-			declaration_t &new_localdecl(void) {
+			decl_t &new_localdecl(void) {
 				const size_t r = localdecl.size();
 				localdecl.resize(r+1u);
 				return localdecl[r];
@@ -6487,8 +6493,13 @@ try_again_w_token:
 	void cc_state_t::debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name) {
 		fprintf(stderr,"%s%s%sscope:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
-		for (auto &decl : sco.localdecl)
-			debug_dump_declaration(prefix+"  ",decl);
+		for (auto &decl : sco.localdecl) {
+			fprintf(stderr,"%s  decl:\n",prefix.c_str());
+			debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
+			debug_dump_declarator(prefix+"    ",decl.declor);
+			for (auto &p : decl.parameters)
+				debug_dump_parameter(prefix+"    ",p);
+		}
 
 		if (sco.root != ast_node_none) {
 			fprintf(stderr,"%sexpr:\n",prefix.c_str());
@@ -7627,18 +7638,42 @@ try_again_w_token:
 			if (!declaration_specifiers_check())
 				break;
 
-			declaration_t &declion = sco.new_localdecl();
+			declaration_specifiers_t spec;
 
 			if ((r=chkerr()) < 1)
 				return r;
-			if ((r=declaration_parse(declion)) < 1)
+			if ((r=declaration_specifiers_parse(spec,DECLSPEC_ALLOW_DEF)) < 1)
 				return r;
 
-			/* add it to the symbol table */
-			for (auto &decl : declion.declor) {
-				if (add_symbol(tq_peek().pos,declion.spec,decl) == symbol_none)
+			do {
+				std::vector<parameter_t> parameters;
+				declarator_t declor;
+
+				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
+					return r;
+
+				if (add_symbol(tq_peek().pos,spec,declor) == symbol_none)
 					return errno_return(EALREADY); /* already printed error */
+
+				scope_t::decl_t &sldef = sco.new_localdecl();
+				sldef.spec = spec;
+				sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
+				sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
+
+				if (tq_peek().type == token_type_t::comma) {
+					tq_discard();
+					continue;
+				}
+
+				break;
+			} while(1);
+
+			if (tq_peek().type == token_type_t::semicolon) {
+				tq_discard();
+				continue;
 			}
+
+			CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
 		} while (1);
 
 		return 1;
