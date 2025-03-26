@@ -5584,27 +5584,33 @@ try_again_w_token:
 			return false;
 		}
 
+		symbol_id_t lookup_symbol(scope_t &sco,const identifier_id_t name,const symbol_t::type_t st) {
+			if (name == identifier_none)
+				return symbol_none;
+
+			for (const auto &sid : sco.symbols) {
+				symbol_t &chk_s = symbol(sid);
+
+				if (chk_s.name != identifier_none) {
+					if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st)) {
+						if (symbol_scope_check(chk_s.scope))
+							return symbol_id_t(sid);
+					}
+				}
+			}
+
+			return symbol_none;
+		}
+
 		/* this automatically uses the scope_stack and current_scope() return value */
 		symbol_id_t lookup_symbol(const identifier_id_t name,const symbol_t::type_t st) {
 			if (name == identifier_none)
 				return symbol_none;
 
-			/* search backwards to give recent local symbols priority */
-			if (!symbols.empty()) {
-				size_t si = symbols.size() - 1u;
-				do {
-					symbol_t &chk_s = symbols[si];
-
-					if (chk_s.name != identifier_none) {
-						if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st)) {
-							if (symbol_scope_check(chk_s.scope))
-								return symbol_id_t(si);
-						}
-					}
-
-					if ((si--) == 0) break;
-				} while (1);
-			}
+			symbol_id_t sid;
+			for (auto i=scope_stack.rbegin();i!=scope_stack.rend();i++)
+				if ((sid=lookup_symbol(scope(*i),name,st)) != scope_none)
+					return sid;
 
 			return symbol_none;
 		}
