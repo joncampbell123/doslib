@@ -5657,6 +5657,10 @@ try_again_w_token:
 						if (!spec.enum_list.empty())
 							flags |= symbol_t::FL_DEFINED;
 						break;
+					case symbol_t::FUNCTION:
+						if (declor.expr != ast_node_none)
+							flags |= symbol_t::FL_DEFINED;
+						break;
 					default:
 						break;
 				}
@@ -8185,6 +8189,9 @@ try_again_w_token:
 					/* look it up again, compound_statement() could very well have added symbols
 					 * causing reallocation and the reference above would become invalid */
 					symbol_t &sym = symbol(sid);
+
+					/* having a function body counts as being defined vs declared */
+					sym.flags |= symbol_t::FL_DEFINED;
 
 					/* once the compound statment ends, no more declarators.
 					 * you can't do "int f() { },g() { }" */
