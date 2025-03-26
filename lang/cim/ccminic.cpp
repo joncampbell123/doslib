@@ -8117,9 +8117,11 @@ try_again_w_token:
 			if ((sid=add_symbol(tq_peek().pos,declion.spec,declor)) == symbol_none)
 				return errno_return(EALREADY); /* already printed error */
 
-			symbol_t &sym = symbol(sid);
-			sym.parameters = parameters;
-			ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+			{
+				symbol_t &sym = symbol(sid);
+				sym.parameters = parameters;
+				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+			}
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
@@ -8147,10 +8149,18 @@ try_again_w_token:
 					return r;
 				}
 
-				/* once the compound statment ends, no more declarators.
-				 * you can't do "int f() { },g() { }" */
-				ast_node.assignmove(/*to*/declor.expr,/*from*/fbroot);
-				pop_scope();
+				{
+					/* look it up again, compound_statement() could very well have added symbols
+					 * causing reallocation and the reference above would become invalid */
+					symbol_t &sym = symbol(sid);
+
+					/* once the compound statment ends, no more declarators.
+					 * you can't do "int f() { },g() { }" */
+					ast_node.assign(/*to*/declor.expr,/*from*/fbroot);
+					ast_node.assignmove(/*to*/sym.expr,/*from*/fbroot);
+					pop_scope();
+				}
+
 				return 1;
 			}
 
