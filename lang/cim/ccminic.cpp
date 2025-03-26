@@ -1979,6 +1979,11 @@ namespace CCMiniC {
 
 	struct declaration_t;
 
+	typedef unsigned int scope_id_t;
+	static constexpr unsigned int scope_none = ~((unsigned int)0u);
+	static constexpr unsigned int scope_global = 0u;
+	static constexpr unsigned int scope_first_local = 1u;
+
 	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
 	template <class T> void typ_delete(T *p);
 
@@ -2038,6 +2043,7 @@ namespace CCMiniC {
 			size_t			paramref; /* token_type_t::r_macro_paramref */
 			declaration_t*		declaration; /* token_type_t::op_declaration */
 			identifier_id_t		identifier;
+			scope_id_t		scope; /* token_type_t::op_compound_statement */
 			void*			general_ptr; /* for use in clearing general ppinter */
 		} v;
 
@@ -2122,6 +2128,9 @@ private:
 				case token_type_t::r___asm_text:
 					v.identifier = identifier_none;
 					break;
+				case token_type_t::op_compound_statement:
+					v.scope = scope_none;
+					break;
 				default:
 					break;
 			}
@@ -2177,6 +2186,9 @@ private:
 				case token_type_t::ppidentifier:
 				case token_type_t::r___asm_text:
 					identifier.assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
+					break;
+				case token_type_t::op_compound_statement:
+					v.scope = x.v.scope; x.v.scope = scope_none;
 					break;
 				default:
 					v = x.v;
@@ -5213,11 +5225,6 @@ try_again_w_token:
 	void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 
 	struct cc_state_t {
-		typedef unsigned int scope_id_t;
-		static constexpr unsigned int scope_none = ~((unsigned int)0u);
-		static constexpr unsigned int scope_global = 0u;
-		static constexpr unsigned int scope_first_local = 1u;
-
 		typedef size_t symbol_id_t;
 		static constexpr size_t symbol_none = ~size_t(0);
 
@@ -5337,6 +5344,15 @@ try_again_w_token:
 		std::vector<scope_id_t>	scope_stack;
 		scope_id_t		next_scope = scope_first_local;
 
+		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
+		static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
+
+		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
+		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
+
+		std::vector<symbol_t>	symbols;
+		size_t			symbols_next = 0;
+
 		bool			ignore_whitespace = true;
 
 		void tq_ft(void) {
@@ -5395,15 +5411,6 @@ try_again_w_token:
 
 			return 1;
 		}
-
-		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
-		static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
-
-		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
-		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
-
-		std::vector<symbol_t> symbols;
-		size_t symbols_next = 0;
 
 		void push_new_scope(void) {
 			scope_stack.push_back(next_scope++);
