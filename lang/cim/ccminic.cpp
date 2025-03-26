@@ -5022,6 +5022,8 @@ try_again_w_token:
 		ast_node_t(ast_node_t &&x) { common_move(x); }
 		ast_node_t &operator=(ast_node_t &&x) { common_move(x); return *this; }
 
+		static void arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s);
+
 		void common_move(ast_node_t &o) {
 			t = std::move(o.t);
 			ref = o.ref; o.ref = 0;
@@ -5056,6 +5058,13 @@ try_again_w_token:
 	};
 
 	static ast_node_pool ast_node;
+
+	void ast_node_t::arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s) {
+		d = s;
+		for (auto &id : d)
+			if (id != ast_node_none)
+				ast_node(id).addref();
+	}
 
 	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
 		if (child != n) ast_node.assign(/*to*/child,/*from*/n);
@@ -5159,11 +5168,7 @@ try_again_w_token:
 		void common_copy(const direct_declarator_t &o) {
 			ptr = o.ptr;
 
-			arraydef = o.arraydef;
-			for (auto &id : arraydef)
-				if (id != ast_node_none)
-					ast_node(id).addref();
-
+			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
 			identifier.assign(/*to*/name,/*from*/o.name);
 			flags = o.flags;
 		}
@@ -7728,11 +7733,7 @@ try_again_w_token:
 
 				symbol_t &sym = symbol(sid);
 				sym.parameters = parameters;
-				sym.arraydef = declor.ddecl.arraydef;
-
-				for (auto &id : sym.arraydef)
-					if (id != ast_node_none)
-						ast_node(id).addref();
+				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 
 				scope_t::decl_t &sldef = sco.new_localdecl();
 				sldef.spec = spec;
@@ -8106,11 +8107,7 @@ try_again_w_token:
 
 			symbol_t &sym = symbol(sid);
 			sym.parameters = parameters;
-			sym.arraydef = declor.ddecl.arraydef;
-
-			for (auto &id : sym.arraydef)
-				if (id != ast_node_none)
-					ast_node(id).addref();
+			ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
