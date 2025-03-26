@@ -2071,6 +2071,9 @@ namespace CCMiniC {
 				case token_type_t::r___asm_text:
 					s += "("; if (v.identifier != identifier_none) s += identifier(v.identifier).to_str(); s += ")";
 					break;
+				case token_type_t::op_compound_statement:
+					s += "("; if (v.scope != scope_none) s += std::string("scope #")+std::to_string((unsigned long)v.scope); s += ")";
+					break;
 				default:
 					break;
 			}
@@ -7850,6 +7853,7 @@ try_again_w_token:
 
 			aroot = ast_node.alloc(token_type_t::op_compound_statement);
 			ast_node(aroot).set_child(cur); ast_node(cur).release();
+			ast_node(aroot).t.v.scope = current_scope();
 
 			pop_scope();
 		}
