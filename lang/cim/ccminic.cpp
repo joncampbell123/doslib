@@ -1981,8 +1981,12 @@ namespace CCMiniC {
 
 	typedef unsigned int scope_id_t;
 	static constexpr unsigned int scope_none = ~((unsigned int)0u);
-	static constexpr unsigned int scope_global = 0u;
-	static constexpr unsigned int scope_first_local = 1u;
+	static constexpr unsigned int scope_global = ~((unsigned int)1u);
+	static constexpr unsigned int scope_local_max = ~((unsigned int)15u);
+
+	static inline bool scope_readable(const scope_id_t x) {
+		return x <= scope_local_max;
+	}
 
 	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
 	template <class T> void typ_delete(T *p);
@@ -5327,6 +5331,26 @@ try_again_w_token:
 			}
 		};
 
+		struct scope_t {
+			ast_node_id_t				root = ast_node_none;
+			std::vector<declaration_t>		localdecl;
+
+			scope_t() { }
+			scope_t(const scope_t &) = delete;
+			scope_t &operator=(const scope_t &) = delete;
+			scope_t(scope_t &&x) { common_move(x); }
+			scope_t &operator=(scope_t &&x) { common_move(x); return *this; }
+
+			~scope_t() {
+				ast_node.release(root);
+			}
+
+			void common_move(scope_t &x) {
+				ast_node.assignmove(/*to*/root,/*from*/x.root);
+				localdecl = std::move(x.localdecl);
+			}
+		};
+
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
@@ -5341,9 +5365,6 @@ try_again_w_token:
 		std::vector<token_t>	tq;
 		size_t			tq_tail = 0;
 
-		std::vector<scope_id_t>	scope_stack;
-		scope_id_t		next_scope = scope_first_local;
-
 		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
 		static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
 
@@ -5351,7 +5372,9 @@ try_again_w_token:
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
 
 		std::vector<symbol_t>	symbols;
-		size_t			symbols_next = 0;
+
+		std::vector<scope_t>	scopes;
+		std::vector<scope_id_t>	scope_stack;
 
 		bool			ignore_whitespace = true;
 
@@ -5412,8 +5435,27 @@ try_again_w_token:
 			return 1;
 		}
 
-		void push_new_scope(void) {
-			scope_stack.push_back(next_scope++);
+		scope_t &scope(scope_id_t id) {
+#if 1//DEBUG
+			if (id < scopes.size())
+				return scopes[id];
+
+			throw std::out_of_range("scope out of range");
+#else
+			return scopes[id];
+#endif
+		}
+
+		scope_id_t new_scope(void) {
+			const scope_id_t r = scopes.size();
+			scopes.resize(r+1u);
+			return r;
+		}
+
+		scope_id_t push_new_scope(void) {
+			const scope_id_t r = new_scope();
+			scope_stack.push_back(r);
+			return r;
 		}
 
 		void pop_scope(void) {
@@ -5432,17 +5474,13 @@ try_again_w_token:
 
 		/* symbols are never removed from the vector, and they are always added in increasing ID order */
 		symbol_id_t new_symbol(const identifier_id_t name) {
-			assert(symbols_next <= symbols.size());
-
-			if (symbols_next == symbols.size())
-				symbols.resize(symbols.size() + (symbols.size() / 2u) + 16);
-
-			assert(symbols_next < symbols.size());
-			identifier.assign(/*to*/symbols[symbols_next].name,/*from*/name);
-			return symbols_next++;
+			const symbol_id_t r = symbols.size();
+			symbols.resize(r+1u);
+			identifier.assign(/*to*/symbols[r].name,/*from*/name);
+			return r;
 		}
 
-		symbol_t &symbol(symbol_id_t &id) {
+		symbol_t &symbol(symbol_id_t id) {
 #if 1//DEBUG
 			if (id < symbols.size())
 				return symbols[id];
