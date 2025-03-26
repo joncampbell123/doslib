@@ -5600,6 +5600,7 @@ try_again_w_token:
 		}
 
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
+		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
@@ -7934,6 +7935,32 @@ try_again_w_token:
 		return 1;
 	}
 
+	int cc_state_t::declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters) {
+		int r;
+
+		if ((r=declarator_parse(spec,declor,parameters)) < 1)
+			return r;
+		if ((r=chkerr()) < 1)
+			return r;
+
+		if (tq_peek().type == token_type_t::equal) {
+			tq_discard();
+
+			if ((r=initializer(declor.expr)) < 1)
+				return r;
+		}
+
+#if 1//DEBUG
+		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
+		debug_dump_declaration_specifiers("  ",spec); // this is the only other param
+		debug_dump_declarator("  ",declor);
+		for (auto &p : parameters)
+			debug_dump_parameter("  ",p);
+#endif
+
+		return 1;
+	}
+
 	int cc_state_t::declaration_parse(declaration_t &declion) {
 		int r,count = 0;
 
@@ -7947,22 +7974,19 @@ try_again_w_token:
 			return r;
 
 		do {
-			position_t pos = tq_peek().pos;
 			std::vector<parameter_t> parameters;
 			declarator_t &declor = declion.new_declarator();
 
-			if ((r=declarator_parse(declion.spec,declor,parameters)) < 1)
-				return r;
-			if ((r=chkerr()) < 1)
+			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
 				return r;
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
 
-				if (count != 0) {
-					CCerr(pos,"Function body not permitted except if the function is the only declarator here");
-					return errno_return(EINVAL);
-				}
+				if (declor.expr != ast_node_none)
+					CCERR_RET(EINVAL,tq_peek().pos,"Function body cannot coexist with initializer expression");
+				if (count != 0)
+					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed here");
 
 				/* start the new scope, tell compound_statement() we already did it,
 				 * so that we can register the function parameters as part of the new scope */
@@ -7988,21 +8012,6 @@ try_again_w_token:
 				pop_scope();
 				return 1;
 			}
-
-			if (tq_peek().type == token_type_t::equal) {
-				tq_discard();
-
-				if ((r=initializer(declor.expr)) < 1)
-					return r;
-			}
-
-#if 1//DEBUG
-			fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
-			debug_dump_declaration_specifiers("  ",declion.spec); // this is the only other param
-			debug_dump_declarator("  ",declor);
-			for (auto &p : parameters)
-				debug_dump_parameter("  ",p);
-#endif
 
 			count++;
 			if (tq_peek().type == token_type_t::comma) {
