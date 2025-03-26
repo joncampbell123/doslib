@@ -382,4 +382,8 @@ enum test:unsigned char {
 
 static int funk1(funcytown) int (*funcytown)(int (*fu1)(int (*fu2)(int))); { }
 static int funk2(funcytown) int (*funcytown)(int* (*fu1)(int* (*fu2)(int))); { }
+static int funk3(funcytown) int (*funcytown)(int* (*)(int* (*)(int))); { }
+static int funk4(funcytown) int (*funcytown)(int* (*fu1[])(int* (*fu2[])(int))); { }
+static int funk5(funcytown) int (*funcytown)(int* (*fu1[5])(int* (*fu2[5])(int))); { }
+static int funk6(funcytown) int (*funcytown)(int* (*fu1[5][5])(int* (*fu2[5][5])(int))); { }
 

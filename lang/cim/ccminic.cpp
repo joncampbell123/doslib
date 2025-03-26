@@ -6456,6 +6456,7 @@ try_again_w_token:
 		fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		for (const auto &expr : arraydef) {
 			if (expr != ast_node_none) debug_dump_ast(prefix+"  ",expr);
+			else fprintf(stderr,"%s  <none>\n",prefix.c_str());
 		}
 	}
 
