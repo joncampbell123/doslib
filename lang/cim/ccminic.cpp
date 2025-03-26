@@ -5122,11 +5122,12 @@ try_again_w_token:
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
 		identifier_id_t				type_identifier = identifier_none;
+		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier == identifier_none && count == 0;
+				type_identifier == identifier_none && enum_list.empty() && count == 0;
 		}
 
 		declaration_specifiers_t() { }
@@ -5144,6 +5145,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
 			identifier.assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
+			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
 
@@ -5152,6 +5154,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
 			identifier.assign(/*to*/type_identifier,/*from*/o.type_identifier);
+			enum_list = o.enum_list;
 			count = o.count;
 		}
 	};
@@ -5671,10 +5674,10 @@ try_again_w_token:
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
+		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
-		int enumerator_list_parse(declaration_specifiers_t &ds);
 		int struct_declaration_parse(const token_type_t &tt);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
@@ -5705,8 +5708,8 @@ try_again_w_token:
 		int translation_unit(void);
 	};
 
-	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec) {
-		std::vector<enumerator_t> enum_list;
+	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
+		std::vector<enumerator_t> p_enum_list;
 		int r;
 
 		/* caller already ate the { */
@@ -5732,7 +5735,7 @@ try_again_w_token:
 					return r;
 			}
 
-			enum_list.push_back(std::move(en));
+			p_enum_list.push_back(std::move(en));
 			if (tq_peek().type == token_type_t::closecurlybracket) {
 				tq_discard();
 				break;
@@ -5746,13 +5749,16 @@ try_again_w_token:
 		} while (1);
 
 		/* register it in the symbol table */
-		for (auto &en : enum_list) {
+		for (auto &en : p_enum_list) {
 			declarator_t declor;
+			symbol_id_t sid;
 
 			ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
 			identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
-			if (add_symbol(en.pos,spec,declor,0,symbol_t::CONST) == symbol_none)
+			if ((sid=add_symbol(en.pos,spec,declor,0,symbol_t::CONST)) == symbol_none)
 				return errno_return(EALREADY); /* already printed error */
+
+			enum_list.push_back(sid);
 		}
 
 		return 1;
@@ -5898,7 +5904,7 @@ try_again_w_token:
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
-							if ((r=enumerator_list_parse(eds)) < 1)
+							if ((r=enumerator_list_parse(eds,ds.enum_list)) < 1)
 								return r;
 						}
 					}
@@ -6470,6 +6476,12 @@ try_again_w_token:
 		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
 		if (ds.type_identifier != identifier_none) fprintf(stderr," '%s'",identifier(ds.type_identifier).to_str().c_str());
 		fprintf(stderr,"\n");
+
+		if (!ds.enum_list.empty()) {
+			fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
+			for (auto &sid : ds.enum_list)
+				debug_dump_symbol(prefix+"    ",symbol(sid));
+		}
 	}
 
 	void cc_state_t::debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
