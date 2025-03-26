@@ -5345,8 +5345,7 @@ try_again_w_token:
 			static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
 			static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
 			static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
-			static constexpr unsigned int FL_OUT_OF_SCOPE = 1u << 4u; /* out of scope, do not look up */
-			static constexpr unsigned int FL_ELLIPSIS = 1u << 5; /* function has ellipsis param */
+			static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
 
 			declaration_specifiers_t		spec;
 			std::vector<pointer_t>			ptr;
@@ -5640,19 +5639,32 @@ try_again_w_token:
 				return symbol_none;
 			}
 
+			if (spec.storage_class & SC_TYPEDEF)
+				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
+			else if (st == symbol_t::CONST)
+				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
+			else if (spec.storage_class & SC_EXTERN)
+				flags |= symbol_t::FL_DECLARED;
+			else {
+				flags |= symbol_t::FL_DECLARED;
+				if (st == symbol_t::VARIABLE)
+					flags |= symbol_t::FL_DEFINED;
+			}
+
+			if (st == symbol_t::FUNCTION) {
+				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+					flags |= symbol_t::FL_ELLIPSIS;
+			}
+
 			const symbol_id_t sid = new_symbol(declor.ddecl.name);
 			symbol_t &sym = symbol(sid);
 			sym.spec = spec;
 			sym.scope = cursco;
 			scope(sym.scope).symbols.push_back(sid);
-			sym.flags = symbol_t::FL_DEFINED | flags;
+			sym.flags = flags;
 			sym.ptr = declor.ptr;
 			sym.sym_type = st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-
-			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-				sym.flags |= symbol_t::FL_ELLIPSIS;
-
 			return sid;
 		}
 
@@ -6154,6 +6166,7 @@ try_again_w_token:
 				do {
 					if (tq_peek().type == token_type_t::ellipsis) {
 						tq_discard();
+
 						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
 
 						/* At least one paremter is required for ellipsis! */
@@ -6616,7 +6629,6 @@ try_again_w_token:
 		if (sym.flags & cc_state_t::symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
 		if (sym.flags & cc_state_t::symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
 		if (sym.flags & cc_state_t::symbol_t::FL_STACK) fprintf(stderr," STACK");
-		if (sym.flags & cc_state_t::symbol_t::FL_OUT_OF_SCOPE) fprintf(stderr," OUTOFSCOPE");
 		if (sym.flags & cc_state_t::symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
