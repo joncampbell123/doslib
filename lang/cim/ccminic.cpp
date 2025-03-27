@@ -5656,12 +5656,7 @@ try_again_w_token:
 		/* this automatically uses the scope_stack and current_scope() return value */
 		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::NONE) {
 			const symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
-			const scope_id_t cursco = current_scope();
-
-			if (lookup_symbol(scope(cursco),declor.ddecl.name,st) != symbol_none) {
-				CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
-				return symbol_none;
-			}
+			scope_id_t cursco = current_scope();
 
 			if (spec.storage_class & SC_TYPEDEF)
 				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
@@ -5680,6 +5675,7 @@ try_again_w_token:
 							flags |= symbol_t::FL_DEFINED;
 						break;
 					case symbol_t::FUNCTION:
+						cursco = scope_global; /* All functions are global scope in C */
 						if (declor.expr != ast_node_none)
 							flags |= symbol_t::FL_DEFINED;
 						break;
@@ -5692,6 +5688,11 @@ try_again_w_token:
 				flags |= symbol_t::FL_FUNCTION_POINTER;
 			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
 				flags |= symbol_t::FL_ELLIPSIS;
+
+			if (lookup_symbol(scope(cursco),declor.ddecl.name,st) != symbol_none) {
+				CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
+				return symbol_none;
+			}
 
 			const symbol_id_t sid = new_symbol(declor.ddecl.name);
 			symbol_t &sym = symbol(sid);
