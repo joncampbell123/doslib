@@ -5186,6 +5186,7 @@ try_again_w_token:
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
 		identifier_id_t name = identifier_none;
+		symbol_id_t symbol = symbol_none;
 		unsigned int flags = 0;
 
 		direct_declarator_t() { };
@@ -5199,6 +5200,7 @@ try_again_w_token:
 
 			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
 			identifier.assign(/*to*/name,/*from*/o.name);
+			symbol = o.symbol;
 			flags = o.flags;
 		}
 
@@ -5206,6 +5208,7 @@ try_again_w_token:
 			ptr = std::move(o.ptr); o.ptr.clear();
 			arraydef = std::move(o.arraydef); o.arraydef.clear();
 			identifier.assignmove(/*to*/name,/*from*/o.name);
+			symbol = o.symbol; o.symbol = symbol_none;
 			flags = o.flags; o.flags = 0;
 		}
 
@@ -6573,6 +6576,9 @@ try_again_w_token:
 		if (ddecl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
 
+		if (ddecl.symbol != symbol_none)
+			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)ddecl.symbol);
+
 		debug_dump_arraydef(prefix+"  ",ddecl.arraydef);
 
 		if (ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
@@ -6661,7 +6667,7 @@ try_again_w_token:
 		if (sym.sym_type == cc_state_t::symbol_t::NONE)
 			return;
 
-		fprintf(stderr,"%s%s%ssymbol",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		fprintf(stderr,"%s%s%ssymbol#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&sym-&symbols[0]));
 		switch (sym.sym_type) {
 			case cc_state_t::symbol_t::VARIABLE: fprintf(stderr," variable"); break;
 			case cc_state_t::symbol_t::FUNCTION: fprintf(stderr," function"); break;
@@ -7829,6 +7835,7 @@ try_again_w_token:
 				sldef.spec = spec;
 				sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
 				sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
+				sldef.declor.ddecl.symbol = sid;
 
 				if (tq_peek().type == token_type_t::comma) {
 					tq_discard();
