@@ -5729,7 +5729,6 @@ try_again_w_token:
 	};
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
-		std::vector<enumerator_t> p_enum_list;
 		int r;
 
 		/* caller already ate the { */
@@ -5755,7 +5754,17 @@ try_again_w_token:
 					return r;
 			}
 
-			p_enum_list.push_back(std::move(en));
+			{
+				declarator_t declor;
+				symbol_id_t sid;
+
+				ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
+				identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
+				if ((sid=add_symbol(en.pos,spec,declor,0,symbol_t::CONST)) == symbol_none)
+					return errno_return(EALREADY); /* already printed error */
+
+				enum_list.push_back(sid);
+			}
 			if (tq_peek().type == token_type_t::closecurlybracket) {
 				tq_discard();
 				break;
@@ -5767,19 +5776,6 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 		} while (1);
-
-		/* register it in the symbol table */
-		for (auto &en : p_enum_list) {
-			declarator_t declor;
-			symbol_id_t sid;
-
-			ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
-			identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
-			if ((sid=add_symbol(en.pos,spec,declor,0,symbol_t::CONST)) == symbol_none)
-				return errno_return(EALREADY); /* already printed error */
-
-			enum_list.push_back(sid);
-		}
 
 		return 1;
 	}
