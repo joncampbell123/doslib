@@ -8202,15 +8202,6 @@ try_again_w_token:
 			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
 				return r;
 
-			/* add it to the symbol table */
-			if ((sid=add_symbol(tq_peek().pos,declion.spec,declor)) == symbol_none)
-				return errno_return(EALREADY); /* already printed error */
-
-			{
-				symbol_t &sym = symbol(sid);
-				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
-			}
-
 			/* if function, with an arraydef, and not a function pointer. GCC won't allow it, it doesn't make sense, neither will we */
 			if ((declor.ddecl.flags & (direct_declarator_t::FL_FUNCTION|direct_declarator_t::FL_FUNCTION_POINTER)) == direct_declarator_t::FL_FUNCTION && !declor.ddecl.arraydef.empty())
 				CCERR_RET(EINVAL,tq_peek().pos,"Not allowed to declare an array of functions");
@@ -8224,6 +8215,10 @@ try_again_w_token:
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body cannot coexist with initializer expression");
 				if (count != 0)
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed here");
+
+				/* add it to the symbol table */
+				if ((sid=add_symbol(tq_peek().pos,declion.spec,declor,symbol_t::FL_DEFINED)) == symbol_none)
+					return errno_return(EALREADY); /* already printed error */
 
 				/* start the new scope, tell compound_statement() we already did it,
 				 * so that we can register the function parameters as part of the new scope */
@@ -8249,9 +8244,7 @@ try_again_w_token:
 					symbol_t &sym = symbol(sid);
 					sym.parent_of_scope = current_scope();
 					sym.parameters = std::move(parameters);
-
-					/* having a function body counts as being defined vs declared */
-					sym.flags |= symbol_t::FL_DEFINED;
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 
 					/* once the compound statment ends, no more declarators.
 					 * you can't do "int f() { },g() { }" */
@@ -8263,11 +8256,16 @@ try_again_w_token:
 				return 1;
 			}
 
+			/* add it to the symbol table */
+			if ((sid=add_symbol(tq_peek().pos,declion.spec,declor)) == symbol_none)
+				return errno_return(EALREADY); /* already printed error */
+
 			/* not a function definition, therefore the parameters do not become symbols.
 			 * the identifiers in the parameter list are not even used. */
 			{
 				symbol_t &sym = symbol(sid);
 				sym.parameters = parameters;
+				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 			}
 
 			count++;
