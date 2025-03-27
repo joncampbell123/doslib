@@ -8183,6 +8183,10 @@ try_again_w_token:
 				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 			}
 
+			/* if function, with an arraydef, and not a function pointer. GCC won't allow it, it doesn't make sense, neither will we */
+			if ((declor.ddecl.flags & (direct_declarator_t::FL_FUNCTION|direct_declarator_t::FL_FUNCTION_POINTER)) == direct_declarator_t::FL_FUNCTION && !declor.ddecl.arraydef.empty())
+				CCERR_RET(EINVAL,tq_peek().pos,"Not allowed to declare an array of functions");
+
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
 
