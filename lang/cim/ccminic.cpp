@@ -6552,6 +6552,9 @@ try_again_w_token:
 		if (p.decl.ddecl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.ddecl.name).to_str().c_str());
 
+		if (p.decl.ddecl.symbol != symbol_none)
+			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.ddecl.symbol);
+
 		debug_dump_arraydef(prefix+"  ",p.decl.ddecl.arraydef,"direct declarator");
 
 		for (auto &pp : p.parameters)
@@ -8205,7 +8208,6 @@ try_again_w_token:
 
 			{
 				symbol_t &sym = symbol(sid);
-				sym.parameters = parameters;
 				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 			}
 
@@ -8229,7 +8231,7 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
-					if (add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER) == symbol_none) {
+					if ((p.decl.ddecl.symbol=add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER)) == symbol_none) {
 						pop_scope();
 						return errno_return(EALREADY); /* already printed error */
 					}
@@ -8246,6 +8248,7 @@ try_again_w_token:
 					 * causing reallocation and the reference above would become invalid */
 					symbol_t &sym = symbol(sid);
 					sym.parent_of_scope = current_scope();
+					sym.parameters = std::move(parameters);
 
 					/* having a function body counts as being defined vs declared */
 					sym.flags |= symbol_t::FL_DEFINED;
@@ -8254,10 +8257,17 @@ try_again_w_token:
 					 * you can't do "int f() { },g() { }" */
 					ast_node.assign(/*to*/declor.expr,/*from*/fbroot);
 					ast_node.assignmove(/*to*/sym.expr,/*from*/fbroot);
-					pop_scope();
 				}
 
+				pop_scope();
 				return 1;
+			}
+
+			/* not a function definition, therefore the parameters do not become symbols.
+			 * the identifiers in the parameter list are not even used. */
+			{
+				symbol_t &sym = symbol(sid);
+				sym.parameters = parameters;
 			}
 
 			count++;
