@@ -5705,7 +5705,31 @@ try_again_w_token:
 				 * function declaration re-declared, or perhaps a declaration turned into a definition with a function body.
 				 * that's fine. */
 				if (chk_s.sym_type == st) {
-					if (st == symbol_t::FUNCTION) {
+					if (st == symbol_t::VARIABLE) {
+						const unsigned int fl_chk =
+							symbol_t::FL_FUNCTION_POINTER|
+							symbol_t::FL_DECLARED|
+							symbol_t::FL_ELLIPSIS;
+
+						storage_class_t sc_chk = ~(SC_EXTERN);
+
+						if ((chk_s.flags&fl_chk) == (flags&fl_chk) &&
+							(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
+							chk_s.spec.type_specifier == spec.type_specifier &&
+							chk_s.spec.type_qualifier == spec.type_qualifier &&
+							chk_s.ptr == declor.ptr) {
+							/* you can change EXTERN to non-EXTERN, or just declare EXTERN again, that's it */
+							if (chk_s.spec.storage_class & SC_EXTERN) {
+								if ((spec.storage_class & SC_EXTERN) == 0)
+									chk_s.spec = spec;
+								if (flags & symbol_t::FL_DEFINED)
+									chk_s.flags |= symbol_t::FL_DEFINED;
+
+								return sid;
+							}
+						}
+					}
+					else if (st == symbol_t::FUNCTION) {
 						const unsigned int fl_chk =
 							symbol_t::FL_FUNCTION_POINTER|
 							symbol_t::FL_DECLARED|

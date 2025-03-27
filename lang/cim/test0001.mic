@@ -136,6 +136,8 @@ static int xaaj = (y&=3);
 static int xaak = (y^=3);
 static int xaal = (y|=3);
 extern int xaea;
+extern int xaea;
+int xaea;
 static int daaa(int a,int b) {
 	int c = 3,x = 3;
 	long d = 5 + a*b+c+x,dd = d*d;
