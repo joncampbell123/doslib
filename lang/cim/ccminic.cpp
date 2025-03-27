@@ -5168,7 +5168,8 @@ try_again_w_token:
 
 	struct direct_declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
-		static constexpr unsigned int FL_ELLIPSIS = 1u << 1u; /* we saw ellipsis ... in the parameter list */
+		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
+		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
 
 		std::vector<pointer_t> ptr;
 		std::vector<ast_node_id_t> arraydef;
@@ -5344,6 +5345,7 @@ try_again_w_token:
 			static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
 			static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
 			static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
+			static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
 
 			declaration_specifiers_t		spec;
 			std::vector<pointer_t>			ptr;
@@ -5622,7 +5624,7 @@ try_again_w_token:
 		}
 
 		symbol_t::type_t classify_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
-			if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+			if ((declor.ddecl.flags & (direct_declarator_t::FL_FUNCTION|direct_declarator_t::FL_FUNCTION_POINTER)) == direct_declarator_t::FL_FUNCTION)/* function, but not function pointer */
 				return symbol_t::FUNCTION;
 			else if (spec.storage_class & SC_TYPEDEF)
 				return symbol_t::TYPEDEF;
@@ -5671,10 +5673,10 @@ try_again_w_token:
 				}
 			}
 
-			if (st == symbol_t::FUNCTION) {
-				if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-					flags |= symbol_t::FL_ELLIPSIS;
-			}
+			if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+				flags |= symbol_t::FL_FUNCTION_POINTER;
+			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+				flags |= symbol_t::FL_ELLIPSIS;
 
 			const symbol_id_t sid = new_symbol(declor.ddecl.name);
 			symbol_t &sym = symbol(sid);
@@ -6130,6 +6132,7 @@ try_again_w_token:
 		 *   ( ) */
 
 		bool allowed_no_identifier = false;
+		bool identptr = false;
 
 		/* if the declaration specifier is an enum, struct, or union, then you're allowed not to specify an identifier */
 		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
@@ -6141,6 +6144,9 @@ try_again_w_token:
 
 			if ((r=pointer_parse(dd.ptr)) < 1)
 				return r;
+
+			if (!dd.ptr.empty())
+				identptr = true;
 		}
 
 		if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
@@ -6185,6 +6191,8 @@ try_again_w_token:
 
 			/* NTS: "()" is acceptable */
 			dd.flags |= direct_declarator_t::FL_FUNCTION;
+			if (identptr) dd.flags |= direct_declarator_t::FL_FUNCTION_POINTER;
+
 			if (tq_peek().type != token_type_t::closeparenthesis) {
 				do {
 					if (tq_peek().type == token_type_t::ellipsis) {
@@ -6545,7 +6553,9 @@ try_again_w_token:
 	}
 
 	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name) {
-		if (ddecl.flags & direct_declarator_t::FL_FUNCTION)
+		if (ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+			fprintf(stderr,"%s%s%sfunction pointer direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		else if (ddecl.flags & direct_declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
 			fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -6562,7 +6572,9 @@ try_again_w_token:
 	}
 
 	void cc_state_t::debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
-		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+			fprintf(stderr,"%s%s%sfunction pointer declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		else if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
 			fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -6659,6 +6671,7 @@ try_again_w_token:
 		if (sym.flags & cc_state_t::symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
 		if (sym.flags & cc_state_t::symbol_t::FL_STACK) fprintf(stderr," STACK");
 		if (sym.flags & cc_state_t::symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
+		if (sym.flags & cc_state_t::symbol_t::FL_FUNCTION_POINTER) fprintf(stderr," FUNCTION-POINTER");
 
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");

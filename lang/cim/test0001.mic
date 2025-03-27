@@ -212,6 +212,7 @@ static int dddb(int a) {
 	for (x=0;x < 5;x++,z++) z++;
 	return x;
 }
+static int (*dddb_p)(int a) = dddb;
 static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
 	roundto();
 	(*funcptr)();
