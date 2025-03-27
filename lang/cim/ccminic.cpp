@@ -815,6 +815,7 @@ namespace CCMiniC {
 		op_dinit_field,
 		op_gcc_range,
 		op_bitfield_range,
+		op_symbol,				// 275
 
 		__MAX__
 	};
@@ -1423,7 +1424,8 @@ namespace CCMiniC {
 		"op:dinit_array",
 		"op:dinit_field",
 		"op:gcc-range",
-		"op:bitfield-range"
+		"op:bitfield-range",
+		"op:symbol"				// 275
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -1983,6 +1985,9 @@ namespace CCMiniC {
 	static constexpr unsigned int scope_none = ~((unsigned int)0u);
 	static constexpr unsigned int scope_global = 0;
 
+	typedef size_t symbol_id_t;
+	static constexpr size_t symbol_none = ~size_t(0);
+
 	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
 	template <class T> void typ_delete(T *p);
 
@@ -2042,6 +2047,7 @@ namespace CCMiniC {
 			size_t			paramref; /* token_type_t::r_macro_paramref */
 			declaration_t*		declaration; /* token_type_t::op_declaration */
 			identifier_id_t		identifier;
+			symbol_id_t		symbol;/* token_type_t::op_symbol */
 			scope_id_t		scope; /* token_type_t::op_compound_statement */
 			void*			general_ptr; /* for use in clearing general ppinter */
 		} v;
@@ -2073,6 +2079,9 @@ namespace CCMiniC {
 					break;
 				case token_type_t::op_compound_statement:
 					s += "("; if (v.scope != scope_none) s += std::string("scope #")+std::to_string((unsigned long)v.scope); s += ")";
+					break;
+				case token_type_t::op_symbol:
+					s += "("; if (v.symbol != symbol_none) s += std::string("symbol #")+std::to_string((unsigned long)v.symbol); s += ")";
 					break;
 				default:
 					break;
@@ -2133,6 +2142,9 @@ private:
 				case token_type_t::op_compound_statement:
 					v.scope = scope_none;
 					break;
+				case token_type_t::op_symbol:
+					v.symbol = symbol_none;
+					break;
 				default:
 					break;
 			}
@@ -2191,6 +2203,9 @@ private:
 					break;
 				case token_type_t::op_compound_statement:
 					v.scope = x.v.scope; x.v.scope = scope_none;
+					break;
+				case token_type_t::op_symbol:
+					v.symbol = x.v.symbol; x.v.symbol = symbol_none;
 					break;
 				default:
 					v = x.v;
@@ -5116,9 +5131,6 @@ try_again_w_token:
 	}
 
 	//////////////////////////////////////////////////
-
-	typedef size_t symbol_id_t;
-	static constexpr size_t symbol_none = ~size_t(0);
 
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
