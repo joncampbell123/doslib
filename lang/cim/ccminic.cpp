@@ -6688,6 +6688,17 @@ try_again_w_token:
 		for (auto &p : sym.parameters)
 			debug_dump_parameter(prefix+"  ",p);
 
+		if (sym.parent_of_scope != scope_none) {
+			scope_t &sco = scope(sym.parent_of_scope);
+			for (auto &decl : sco.localdecl) {
+				fprintf(stderr,"%s  decl (as parent of scope):\n",prefix.c_str());
+				debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
+				debug_dump_declarator(prefix+"    ",decl.declor);
+				for (auto &p : decl.parameters)
+					debug_dump_parameter(prefix+"    ",p);
+			}
+		}
+
 		if (sym.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
 			debug_dump_ast(prefix+"    ",sym.expr);
