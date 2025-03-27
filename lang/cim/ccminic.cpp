@@ -8186,6 +8186,8 @@ try_again_w_token:
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
 				tq_discard();
 
+				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed for function pointers");
 				if (declor.expr != ast_node_none)
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body cannot coexist with initializer expression");
 				if (count != 0)
