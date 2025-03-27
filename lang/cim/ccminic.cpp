@@ -5176,6 +5176,14 @@ try_again_w_token:
 
 	struct pointer_t {
 		type_qualifier_t			tq = 0;
+
+		bool operator==(const pointer_t &o) const {
+			return tq == o.tq;
+		}
+
+		bool operator!=(const pointer_t &o) const {
+			return !(*this == o);
+		}
 	};
 
 	struct direct_declarator_t {
@@ -5657,25 +5665,25 @@ try_again_w_token:
 		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::NONE) {
 			const symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
 			scope_id_t cursco = current_scope();
+			symbol_id_t sid;
 
 			if (spec.storage_class & SC_TYPEDEF)
 				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
 			else if (st == symbol_t::CONST)
 				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
-			else if (spec.storage_class & SC_EXTERN)
-				flags |= symbol_t::FL_DECLARED;
 			else {
 				flags |= symbol_t::FL_DECLARED;
 				switch (st) {
 					case symbol_t::VARIABLE:
-						flags |= symbol_t::FL_DEFINED;
+						if (!(spec.storage_class & SC_EXTERN))
+							flags |= symbol_t::FL_DEFINED;
 						break;
 					case symbol_t::ENUM:
 						if (!spec.enum_list.empty())
 							flags |= symbol_t::FL_DEFINED;
 						break;
 					case symbol_t::FUNCTION:
-						cursco = scope_global; /* All functions are global scope in C */
+						cursco = scope_global; /* All functions are global scope in C. We're not a C++ compiler. */
 						if (declor.expr != ast_node_none)
 							flags |= symbol_t::FL_DEFINED;
 						break;
@@ -5689,12 +5697,38 @@ try_again_w_token:
 			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
 				flags |= symbol_t::FL_ELLIPSIS;
 
-			if (lookup_symbol(scope(cursco),declor.ddecl.name,st) != symbol_none) {
+			if ((sid=lookup_symbol(scope(cursco),declor.ddecl.name,st)) != symbol_none) {
+				symbol_t &chk_s = symbol(sid);
+
+				/* check for re-declaration of the same symbol with the same specification.
+				 * perhaps variables once declared extern that are re-declared non-extern (but not static).
+				 * function declaration re-declared, or perhaps a declaration turned into a definition with a function body.
+				 * that's fine. */
+				if (chk_s.sym_type == st) {
+					if (st == symbol_t::FUNCTION) {
+						const unsigned int fl_chk =
+							symbol_t::FL_FUNCTION_POINTER|
+							symbol_t::FL_DECLARED|
+							symbol_t::FL_ELLIPSIS;
+
+						if ((chk_s.flags&fl_chk) == (flags&fl_chk) &&
+							chk_s.spec.storage_class == spec.storage_class &&
+							chk_s.spec.type_specifier == spec.type_specifier &&
+							chk_s.spec.type_qualifier == spec.type_qualifier &&
+							chk_s.ptr == declor.ptr) {
+							if (flags & symbol_t::FL_DEFINED)
+								chk_s.flags |= symbol_t::FL_DEFINED;
+
+							return sid;
+						}
+					}
+				}
+
 				CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
 				return symbol_none;
 			}
 
-			const symbol_id_t sid = new_symbol(declor.ddecl.name);
+			sid = new_symbol(declor.ddecl.name);
 			symbol_t &sym = symbol(sid);
 			sym.spec = spec;
 			sym.scope = cursco;
