@@ -5651,12 +5651,6 @@ try_again_w_token:
 				return symbol_t::FUNCTION;
 			else if (spec.storage_class & SC_TYPEDEF)
 				return symbol_t::TYPEDEF;
-			else if (spec.type_specifier & TS_UNION)
-				return symbol_t::UNION;
-			else if (spec.type_specifier & TS_STRUCT)
-				return symbol_t::STRUCT;
-			else if (spec.type_specifier & TS_ENUM)
-				return symbol_t::ENUM;
 			else
 				return symbol_t::VARIABLE;
 		}
