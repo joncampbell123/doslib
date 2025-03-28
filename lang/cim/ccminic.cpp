@@ -6773,6 +6773,14 @@ exists:
 				if (n.t.v.declaration)
 					debug_dump_declaration(prefix+"  ",*n.t.v.declaration);
 			}
+			else if (n.t.type == token_type_t::op_symbol) {
+				if (n.t.v.symbol != symbol_none) {
+					symbol_t &sym = symbol(n.t.v.symbol);
+					fprintf(stderr,"%s  identifier: ",prefix.c_str());
+					if (sym.name != identifier_none) fprintf(stderr,"%s\n",identifier(sym.name).to_str().c_str());
+					else fprintf(stderr,"<anon>\n");
+				}
+			}
 
 			debug_dump_ast(prefix+"  ",n.child);
 			r = n.next;
@@ -6872,13 +6880,28 @@ exists:
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
 		int r;
 
-		if (	tq_peek().type == token_type_t::identifier ||
-			tq_peek().type == token_type_t::strliteral ||
+		if (	tq_peek().type == token_type_t::strliteral ||
 			tq_peek().type == token_type_t::charliteral ||
 			tq_peek().type == token_type_t::integer ||
 			tq_peek().type == token_type_t::floating) {
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(tq_get());
+		}
+		else if (tq_peek().type == token_type_t::identifier) {
+			/* if we can make it a symbol ref, do it */
+			symbol_id_t sid;
+
+			assert(aroot == ast_node_none);
+			if ((sid=lookup_symbol(tq_peek().v.identifier,symbol_t::VARIABLE)) != symbol_none) {
+				token_t srt = std::move(tq_get());
+				srt.clear_v();
+				srt.type = token_type_t::op_symbol;
+				srt.v.symbol = sid;
+				aroot = ast_node.alloc(srt);
+			}
+			else {
+				aroot = ast_node.alloc(tq_get());
+			}
 		}
 		else if (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
