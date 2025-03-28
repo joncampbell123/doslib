@@ -406,3 +406,11 @@ int forward_declaration_1(int a,int b) {
 	return a+b;
 }
 
+int fwd1(int a,int b);
+
+int fwd1(int a,int b) {
+	return a+b;
+}
+
+int fwd1(int a,int b);
+

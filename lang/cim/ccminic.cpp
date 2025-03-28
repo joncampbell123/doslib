@@ -5765,14 +5765,19 @@ try_again_w_token:
 						chk_s.spec.type_specifier == spec.type_specifier &&
 						chk_s.spec.type_qualifier == spec.type_qualifier &&
 						chk_s.ptr == declor.ptr) {
-						if (sl.flags & symbol_t::FL_DEFINED)
+						if (sl.flags & symbol_t::FL_DEFINED) {
+							if (chk_s.flags & symbol_t::FL_DEFINED) /* cannot define it again */
+								goto exists;
+
 							chk_s.flags |= symbol_t::FL_DEFINED;
+						}
 
 						return 1;
 					}
 				}
 			}
 
+exists:
 			CCERR_RET(EEXIST,sl.pos,"Symbol already exists");
 		}
 
@@ -8389,13 +8394,12 @@ try_again_w_token:
 				if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 					return r;
 			}
-			else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
-				return r;
-			}
+			else {
+				if ((r=add_symbol(sl,declion.spec,declor)) < 1)
+					return r;
 
-			/* not a function definition, therefore the parameters do not become symbols.
-			 * the identifiers in the parameter list are not even used. */
-			{
+				/* not a function definition, therefore the parameters do not become symbols.
+				 * the identifiers in the parameter list are not even used. */
 				symbol_t &sym = symbol(sl.sid);
 				sym.parameters = parameters;
 				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
