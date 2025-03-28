@@ -5613,7 +5613,7 @@ try_again_w_token:
 				symbol_t &chk_s = symbol(sid);
 
 				if (chk_s.name != identifier_none) {
-					if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st))
+					if (sym_match_type(chk_s.sym_type,st) && identifier(name) == identifier(chk_s.name))
 						return sid;
 				}
 			}
