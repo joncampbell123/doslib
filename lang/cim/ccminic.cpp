@@ -5327,7 +5327,6 @@ try_again_w_token:
 			std::vector<parameter_t>		parameters;
 			declaration_specifiers_t		spec;
 			declarator_t				decl;
-			std::vector<pointer_t>			ptr;
 
 			parameter_t() { }
 			parameter_t(const parameter_t &x) { common_copy(x); }
@@ -5340,14 +5339,12 @@ try_again_w_token:
 				parameters = o.parameters;
 				spec = o.spec;
 				decl = o.decl;
-				ptr = o.ptr;
 			}
 
 			void common_move(parameter_t &o) {
 				parameters = std::move(o.parameters);
 				spec = std::move(o.spec);
 				decl = std::move(o.decl);
-				ptr = std::move(o.ptr);
 			}
 		};
 
@@ -5734,7 +5731,13 @@ try_again_w_token:
 				if (sp1.spec.type_specifier != sp2.spec.type_specifier)
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.ptr.size() != sp2.ptr.size())
+				if (sp1.decl.ptr.size() != sp2.decl.ptr.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+				if (sp1.decl.ddecl.ptr.size() != sp2.decl.ddecl.ptr.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+				if (sp1.decl.ddecl.arraydef.size() != sp2.decl.ddecl.arraydef.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 			}
 
@@ -6364,7 +6367,7 @@ exists:
 					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
 						return r;
 
-					if ((r=pointer_parse(p.ptr)) < 1)
+					if ((r=pointer_parse(p.decl.ptr)) < 1)
 						return r;
 
 					if ((r=direct_declarator_parse(p.spec,p.decl.ddecl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
@@ -6501,9 +6504,9 @@ exists:
 								}
 
 								parameter_t &fp = parameters[i];
-								if (fp.spec.empty() && fp.ptr.empty()) {
+								if (fp.spec.empty() && fp.decl.ptr.empty()) {
 									fp.spec = s_spec;
-									fp.ptr = std::move(d.ptr);
+									fp.decl.ptr = std::move(d.ptr);
 									fp.parameters = std::move(s_parameters);
 								}
 								else {
@@ -6684,7 +6687,7 @@ exists:
 	void cc_state_t::debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
 		fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
-		debug_dump_pointer(prefix+"  ",p.ptr);
+		debug_dump_pointer(prefix+"  ",p.decl.ptr);
 
 		debug_dump_pointer(prefix+"  ",p.decl.ddecl.ptr,"direct declarator");
 
