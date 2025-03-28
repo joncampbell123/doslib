@@ -5661,31 +5661,37 @@ try_again_w_token:
 				return symbol_t::VARIABLE;
 		}
 
-		/* this automatically uses the scope_stack and current_scope() return value */
-		symbol_id_t add_symbol(const position_t &pos,declaration_specifiers_t &spec,declarator_t &declor,unsigned int flags=0,symbol_t::type_t symt=symbol_t::NONE) {
-			const symbol_t::type_t st = (symt == symbol_t::NONE) ? classify_symbol(spec,declor) : symt;
-			scope_id_t cursco = current_scope();
-			symbol_id_t sid;
+		struct symbol_lookup_t {
+			symbol_t::type_t st = symbol_t::NONE;
+			scope_id_t cursco = scope_none;
+			symbol_id_t sid = symbol_none;
+			unsigned int flags = 0;
+			position_t pos;
+		};
+
+		int prep_symbol_lookup(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+			if (sl.st == symbol_t::NONE) sl.st = classify_symbol(spec,declor);
+			sl.cursco = current_scope();
 
 			if (spec.storage_class & SC_TYPEDEF)
-				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
-			else if (st == symbol_t::CONST)
-				flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
+				sl.flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
+			else if (sl.st == symbol_t::CONST)
+				sl.flags |= symbol_t::FL_DECLARED | symbol_t::FL_DEFINED;
 			else {
-				flags |= symbol_t::FL_DECLARED;
-				switch (st) {
+				sl.flags |= symbol_t::FL_DECLARED;
+				switch (sl.st) {
 					case symbol_t::VARIABLE:
 						if (!(spec.storage_class & SC_EXTERN))
-							flags |= symbol_t::FL_DEFINED;
+							sl.flags |= symbol_t::FL_DEFINED;
 						break;
 					case symbol_t::ENUM:
 						if (!spec.enum_list.empty())
-							flags |= symbol_t::FL_DEFINED;
+							sl.flags |= symbol_t::FL_DEFINED;
 						break;
 					case symbol_t::FUNCTION:
-						cursco = scope_global; /* All functions are global scope in C. We're not a C++ compiler. */
+						sl.cursco = scope_global; /* All functions are global scope in C. We're not a C++ compiler. */
 						if (declor.expr != ast_node_none)
-							flags |= symbol_t::FL_DEFINED;
+							sl.flags |= symbol_t::FL_DEFINED;
 						break;
 					default:
 						break;
@@ -5693,75 +5699,96 @@ try_again_w_token:
 			}
 
 			if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
-				flags |= symbol_t::FL_FUNCTION_POINTER;
+				sl.flags |= symbol_t::FL_FUNCTION_POINTER;
 			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
-				flags |= symbol_t::FL_ELLIPSIS;
+				sl.flags |= symbol_t::FL_ELLIPSIS;
 
-			if ((sid=lookup_symbol(scope(cursco),declor.ddecl.name,st)) != symbol_none) {
-				symbol_t &chk_s = symbol(sid);
+			return 1;
+		}
 
-				/* check for re-declaration of the same symbol with the same specification.
-				 * perhaps variables once declared extern that are re-declared non-extern (but not static).
-				 * function declaration re-declared, or perhaps a declaration turned into a definition with a function body.
-				 * that's fine. */
-				if (chk_s.sym_type == st) {
-					if (st == symbol_t::VARIABLE) {
-						const unsigned int fl_chk =
-							symbol_t::FL_FUNCTION_POINTER|
-							symbol_t::FL_DECLARED|
-							symbol_t::FL_ELLIPSIS;
+		bool do_local_symbol_lookup(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+			(void)spec;
 
-						storage_class_t sc_chk = ~(SC_EXTERN);
+			assert(sl.sid == symbol_none);
+			assert(sl.st != symbol_t::NONE);
 
-						if ((chk_s.flags&fl_chk) == (flags&fl_chk) &&
-							(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
-							chk_s.spec.type_specifier == spec.type_specifier &&
-							chk_s.spec.type_qualifier == spec.type_qualifier &&
-							chk_s.ptr == declor.ptr) {
-							/* you can change EXTERN to non-EXTERN, or just declare EXTERN again, that's it */
-							if (chk_s.spec.storage_class & SC_EXTERN) {
-								if ((spec.storage_class & SC_EXTERN) == 0)
-									chk_s.spec = spec;
-								if (flags & symbol_t::FL_DEFINED)
-									chk_s.flags |= symbol_t::FL_DEFINED;
+			if ((sl.sid=lookup_symbol(scope(sl.cursco),declor.ddecl.name,sl.st)) != symbol_none)
+				return true;
 
-								return sid;
-							}
-						}
-					}
-					else if (st == symbol_t::FUNCTION) {
-						const unsigned int fl_chk =
-							symbol_t::FL_FUNCTION_POINTER|
-							symbol_t::FL_DECLARED|
-							symbol_t::FL_ELLIPSIS;
+			return false;
+		}
 
-						if ((chk_s.flags&fl_chk) == (flags&fl_chk) &&
-							chk_s.spec.storage_class == spec.storage_class &&
-							chk_s.spec.type_specifier == spec.type_specifier &&
-							chk_s.spec.type_qualifier == spec.type_qualifier &&
-							chk_s.ptr == declor.ptr) {
-							if (flags & symbol_t::FL_DEFINED)
+		int check_symbol_lookup_match(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+			assert(sl.sid != symbol_none);
+			assert(sl.st != symbol_t::NONE);
+
+			symbol_t &chk_s = symbol(sl.sid);
+
+			/* check for re-declaration of the same symbol with the same specification.
+			 * perhaps variables once declared extern that are re-declared non-extern (but not static).
+			 * function declaration re-declared, or perhaps a declaration turned into a definition with a function body.
+			 * that's fine. */
+			if (chk_s.sym_type == sl.st) {
+				if (sl.st == symbol_t::VARIABLE) {
+					const unsigned int fl_chk =
+						symbol_t::FL_FUNCTION_POINTER|
+						symbol_t::FL_DECLARED|
+						symbol_t::FL_ELLIPSIS;
+
+					const storage_class_t sc_chk =
+						~(SC_EXTERN);
+
+					if ((chk_s.flags&fl_chk) == (sl.flags&fl_chk) &&
+						(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
+						chk_s.spec.type_specifier == spec.type_specifier &&
+						chk_s.spec.type_qualifier == spec.type_qualifier &&
+						chk_s.ptr == declor.ptr) {
+						/* you can change EXTERN to non-EXTERN, or just declare EXTERN again, that's it */
+						if (chk_s.spec.storage_class & SC_EXTERN) {
+							if ((spec.storage_class & SC_EXTERN) == 0)
+								chk_s.spec = spec;
+							if (sl.flags & symbol_t::FL_DEFINED)
 								chk_s.flags |= symbol_t::FL_DEFINED;
 
-							return sid;
+							return 1;
 						}
 					}
 				}
+				else if (sl.st == symbol_t::FUNCTION) {
+					const unsigned int fl_chk =
+						symbol_t::FL_FUNCTION_POINTER|
+						symbol_t::FL_DECLARED|
+						symbol_t::FL_ELLIPSIS;
 
-				CCerr(pos,"Symbol '%s' already exists",identifier(declor.ddecl.name).to_str().c_str());
-				return symbol_none;
+					if ((chk_s.flags&fl_chk) == (sl.flags&fl_chk) &&
+						chk_s.spec.storage_class == spec.storage_class &&
+						chk_s.spec.type_specifier == spec.type_specifier &&
+						chk_s.spec.type_qualifier == spec.type_qualifier &&
+						chk_s.ptr == declor.ptr) {
+						if (sl.flags & symbol_t::FL_DEFINED)
+							chk_s.flags |= symbol_t::FL_DEFINED;
+
+						return 1;
+					}
+				}
 			}
 
-			sid = new_symbol(declor.ddecl.name);
-			symbol_t &sym = symbol(sid);
+			CCERR_RET(EEXIST,sl.pos,"Symbol already exists");
+		}
+
+		/* this automatically uses the scope_stack and current_scope() return value */
+		int add_symbol(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+			assert(sl.sid == symbol_none);
+			sl.sid = new_symbol(declor.ddecl.name);
+			symbol_t &sym = symbol(sl.sid);
 			sym.spec = spec;
-			sym.scope = cursco;
-			scope(sym.scope).symbols.push_back(sid);
-			sym.flags = flags;
+			sym.scope = sl.cursco;
+			scope(sym.scope).symbols.push_back(sl.sid);
+			sym.flags = sl.flags;
 			sym.ptr = declor.ptr;
-			sym.sym_type = st;
+			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
-			return sid;
+			return 1;
 		}
 
 		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
@@ -5830,14 +5857,23 @@ try_again_w_token:
 
 			{
 				declarator_t declor;
-				symbol_id_t sid;
+				symbol_lookup_t sl;
 
+				sl.pos = en.pos;
+				sl.st = symbol_t::CONST;
 				ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
 				identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
-				if ((sid=add_symbol(en.pos,spec,declor,0,symbol_t::CONST)) == symbol_none)
-					return errno_return(EALREADY); /* already printed error */
+				if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
+					return r;
+				if (do_local_symbol_lookup(sl,spec,declor)) {
+					if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
+						return r;
+				}
+				else if ((r=add_symbol(sl,spec,declor)) < 1) {
+					return r;
+				}
 
-				enum_list.push_back(sid);
+				enum_list.push_back(sl.sid);
 			}
 			if (tq_peek().type == token_type_t::closecurlybracket) {
 				tq_discard();
@@ -7881,15 +7917,21 @@ try_again_w_token:
 			do {
 				std::vector<parameter_t> parameters;
 				declarator_t declor;
-				symbol_id_t sid;
+				symbol_lookup_t sl;
 
 				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
 					return r;
+				if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
+					return r;
+				if (do_local_symbol_lookup(sl,spec,declor)) {
+					if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
+						return r;
+				}
+				else if ((r=add_symbol(sl,spec,declor)) < 1) {
+					return r;
+				}
 
-				if ((sid=add_symbol(tq_peek().pos,spec,declor)) == symbol_none)
-					return errno_return(EALREADY); /* already printed error */
-
-				symbol_t &sym = symbol(sid);
+				symbol_t &sym = symbol(sl.sid);
 				sym.parameters = parameters;
 				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 
@@ -7897,7 +7939,7 @@ try_again_w_token:
 				sldef.spec = spec;
 				sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
 				sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
-				sldef.declor.ddecl.symbol = sid;
+				sldef.declor.ddecl.symbol = sl.sid;
 
 				if (tq_peek().type == token_type_t::comma) {
 					tq_discard();
@@ -8254,7 +8296,7 @@ try_again_w_token:
 			return r;
 
 		do {
-			symbol_id_t sid;
+			symbol_lookup_t sl;
 			std::vector<parameter_t> parameters;
 			declarator_t &declor = declion.new_declarator();
 
@@ -8275,9 +8317,16 @@ try_again_w_token:
 				if (count != 0)
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed here");
 
-				/* add it to the symbol table */
-				if ((sid=add_symbol(tq_peek().pos,declion.spec,declor,symbol_t::FL_DEFINED)) == symbol_none)
-					return errno_return(EALREADY); /* already printed error */
+				sl.flags |= symbol_t::FL_DEFINED;
+				if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
+					return r;
+				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
+					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
+						return r;
+				}
+				else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
+					return r;
+				}
 
 				/* start the new scope, tell compound_statement() we already did it,
 				 * so that we can register the function parameters as part of the new scope */
@@ -8285,10 +8334,29 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
-					if ((p.decl.ddecl.symbol=add_symbol(tq_peek().pos,p.spec,p.decl,symbol_t::FL_PARAMETER)) == symbol_none) {
-						pop_scope();
-						return errno_return(EALREADY); /* already printed error */
+					symbol_lookup_t sl;
+
+					sl.flags |= symbol_t::FL_PARAMETER | symbol_t::FL_DEFINED;
+					if ((r=prep_symbol_lookup(sl,p.spec,p.decl)) < 1)
+						return r;
+					if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
+						if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
+							return r;
 					}
+					else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
+						return r;
+					}
+
+					p.decl.ddecl.symbol = sl.sid;
+				}
+
+				{
+					/* look it up again, compound_statement() could very well have added symbols
+					 * causing reallocation and the reference above would become invalid */
+					symbol_t &sym = symbol(sl.sid);
+					sym.parent_of_scope = current_scope();
+					sym.parameters = std::move(parameters);
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -8298,15 +8366,9 @@ try_again_w_token:
 				}
 
 				{
-					/* look it up again, compound_statement() could very well have added symbols
-					 * causing reallocation and the reference above would become invalid */
-					symbol_t &sym = symbol(sid);
-					sym.parent_of_scope = current_scope();
-					sym.parameters = std::move(parameters);
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
-
 					/* once the compound statment ends, no more declarators.
 					 * you can't do "int f() { },g() { }" */
+					symbol_t &sym = symbol(sl.sid);
 					ast_node.assign(/*to*/declor.expr,/*from*/fbroot);
 					ast_node.assignmove(/*to*/sym.expr,/*from*/fbroot);
 				}
@@ -8316,13 +8378,20 @@ try_again_w_token:
 			}
 
 			/* add it to the symbol table */
-			if ((sid=add_symbol(tq_peek().pos,declion.spec,declor)) == symbol_none)
-				return errno_return(EALREADY); /* already printed error */
+			if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
+				return r;
+			if (do_local_symbol_lookup(sl,declion.spec,declor)) {
+				if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
+					return r;
+			}
+			else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
+				return r;
+			}
 
 			/* not a function definition, therefore the parameters do not become symbols.
 			 * the identifiers in the parameter list are not even used. */
 			{
-				symbol_t &sym = symbol(sid);
+				symbol_t &sym = symbol(sl.sid);
 				sym.parameters = parameters;
 				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
 			}
