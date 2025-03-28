@@ -150,6 +150,7 @@ static int daaa(int a,int b) {
 	int (*func2)(int a=4,int b=2,int c=a+b,...);
 	int some_external_function(int x);
 
+	xaea = 4;
 	c = x + 4; c = (x)+(d/fa)*fb; c |= 3;
 	x |= c + x;
 

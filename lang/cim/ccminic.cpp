@@ -5590,17 +5590,6 @@ try_again_w_token:
 #endif
 		}
 
-		bool symbol_scope_check(scope_id_t s) {
-			if (s == scope_global)
-				return true;
-
-			for (const auto &chk_s : scope_stack)
-				if (chk_s == s)
-					return true;
-
-			return false;
-		}
-
 		bool sym_match_type(const symbol_t::type_t at,const symbol_t::type_t bt) {
 			if (at == bt)
 				return true;
@@ -5616,16 +5605,22 @@ try_again_w_token:
 			if (name == identifier_none)
 				return symbol_none;
 
+#if 0//DEBUG
+			fprintf(stderr,"lookup '%s' scope#%lu:\n",identifier(name).to_str().c_str(),(unsigned long)(&sco-&scopes[0]));
+#endif
+
 			for (const auto &sid : sco.symbols) {
 				symbol_t &chk_s = symbol(sid);
 
 				if (chk_s.name != identifier_none) {
-					if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st)) {
-						if (symbol_scope_check(chk_s.scope))
-							return symbol_id_t(sid);
-					}
+					if (identifier(name) == identifier(chk_s.name) && sym_match_type(chk_s.sym_type,st))
+						return sid;
 				}
 			}
+
+#if 0//DEBUG
+			fprintf(stderr,"lookup '%s' scope#%lu not found\n",identifier(name).to_str().c_str(),(unsigned long)(&sco-&scopes[0]));
+#endif
 
 			return symbol_none;
 		}
@@ -5635,9 +5630,17 @@ try_again_w_token:
 			if (name == identifier_none)
 				return symbol_none;
 
+#if 0//DEBUG
+			fprintf(stderr,"lookup '%s'\n",identifier(name).to_str().c_str());
+			fprintf(stderr,"scope:");
+			for (auto i=scope_stack.rbegin();i!=scope_stack.rend();i++)
+				fprintf(stderr," #%lu",(unsigned long)(*i));
+			fprintf(stderr,"\n");
+#endif
+
 			symbol_id_t sid;
 			for (auto i=scope_stack.rbegin();i!=scope_stack.rend();i++)
-				if ((sid=lookup_symbol(scope(*i),name,st)) != scope_none)
+				if ((sid=lookup_symbol(scope(*i),name,st)) != symbol_none)
 					return sid;
 
 			return symbol_none;
