@@ -5684,16 +5684,13 @@ try_again_w_token:
 						if (!(spec.storage_class & SC_EXTERN))
 							sl.flags |= symbol_t::FL_DEFINED;
 						break;
-					case symbol_t::ENUM:
-						if (!spec.enum_list.empty())
-							sl.flags |= symbol_t::FL_DEFINED;
-						break;
 					case symbol_t::FUNCTION:
 						sl.cursco = scope_global; /* All functions are global scope in C. We're not a C++ compiler. */
 						if (declor.expr != ast_node_none)
 							sl.flags |= symbol_t::FL_DEFINED;
 						break;
 					default:
+						sl.flags |= symbol_t::FL_DEFINED;
 						break;
 				}
 			}
