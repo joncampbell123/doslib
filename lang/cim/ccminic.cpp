@@ -8334,6 +8334,10 @@ try_again_w_token:
 
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
+					/* if a parameter was given without a name, don't register a symbol */
+					if (p.decl.ddecl.name == identifier_none)
+						continue;
+
 					symbol_lookup_t sl;
 
 					sl.flags |= symbol_t::FL_PARAMETER | symbol_t::FL_DEFINED;
