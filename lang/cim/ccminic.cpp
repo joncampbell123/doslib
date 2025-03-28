@@ -7927,19 +7927,20 @@ try_again_w_token:
 					if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
 						return r;
 				}
-				else if ((r=add_symbol(sl,spec,declor)) < 1) {
-					return r;
+				else {
+					if ((r=add_symbol(sl,spec,declor)) < 1)
+						return r;
+
+					symbol_t &sym = symbol(sl.sid);
+					sym.parameters = parameters;
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+
+					scope_t::decl_t &sldef = sco.new_localdecl();
+					sldef.spec = spec;
+					sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
+					sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
+					sldef.declor.ddecl.symbol = sl.sid;
 				}
-
-				symbol_t &sym = symbol(sl.sid);
-				sym.parameters = parameters;
-				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
-
-				scope_t::decl_t &sldef = sco.new_localdecl();
-				sldef.spec = spec;
-				sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
-				sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
-				sldef.declor.ddecl.symbol = sl.sid;
 
 				if (tq_peek().type == token_type_t::comma) {
 					tq_discard();
