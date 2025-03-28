@@ -5718,6 +5718,45 @@ try_again_w_token:
 			return false;
 		}
 
+		int check_symbol_param_match(symbol_lookup_t &sl,std::vector<parameter_t> &p1,std::vector<parameter_t> &p2) {
+			int r;
+
+			if (p1.size() != p2.size())
+				CCERR_RET(EINVAL,sl.pos,"Parameter list does not match");
+
+			for (size_t pi=0;pi < p1.size();pi++) {
+				parameter_t &sp1 = p1[pi];
+				parameter_t &sp2 = p2[pi];
+
+				if ((r=check_symbol_param_match(sl,sp1.parameters,sp2.parameters)) < 1)
+					return r;
+
+				if (sp1.spec.type_specifier != sp2.spec.type_specifier)
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+				if (sp1.ptr.size() != sp2.ptr.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+			}
+
+			return 1;
+		}
+
+		int check_symbol_param_match(symbol_lookup_t &sl,std::vector<parameter_t> &parameters) {
+			int r;
+
+			assert(sl.sid != symbol_none);
+
+			symbol_t &chk_s = symbol(sl.sid);
+
+			/* exception: if the function was without any parameters, and you specify parameters, then take the parameters */
+			if (chk_s.parameters.empty())
+				chk_s.parameters = parameters;
+			else if ((r=check_symbol_param_match(sl,chk_s.parameters,parameters)) < 1)
+				return r;
+
+			return 1;
+		}
+
 		int check_symbol_lookup_match(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
 			assert(sl.sid != symbol_none);
 			assert(sl.st != symbol_t::NONE);
@@ -7931,6 +7970,8 @@ exists:
 				if (do_local_symbol_lookup(sl,spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
 						return r;
+					if ((r=check_symbol_param_match(sl,parameters)) < 1)
+						return r;
 				}
 				else {
 					if ((r=add_symbol(sl,spec,declor)) < 1)
@@ -8329,6 +8370,8 @@ exists:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
+					if ((r=check_symbol_param_match(sl,parameters)) < 1)
+						return r;
 				}
 				else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
 					return r;
@@ -8351,6 +8394,8 @@ exists:
 						return r;
 					if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
 						if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
+							return r;
+						if ((r=check_symbol_param_match(sl,p.parameters)) < 1)
 							return r;
 					}
 					else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
@@ -8392,6 +8437,8 @@ exists:
 				return r;
 			if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 				if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
+					return r;
+				if ((r=check_symbol_param_match(sl,parameters)) < 1)
 					return r;
 			}
 			else {
