@@ -7994,27 +7994,30 @@ exists:
 
 				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
 					return r;
-				if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
-					return r;
-				if (do_local_symbol_lookup(sl,spec,declor)) {
-					if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
-						return r;
-					if ((r=check_symbol_param_match(sl,parameters)) < 1)
-						return r;
-				}
-				else {
-					if ((r=add_symbol(sl,spec,declor)) < 1)
-						return r;
 
-					symbol_t &sym = symbol(sl.sid);
-					sym.parameters = parameters;
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+				if (declor.ddecl.name != identifier_none) {
+					if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
+						return r;
+					if (do_local_symbol_lookup(sl,spec,declor)) {
+						if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
+							return r;
+						if ((r=check_symbol_param_match(sl,parameters)) < 1)
+							return r;
+					}
+					else {
+						if ((r=add_symbol(sl,spec,declor)) < 1)
+							return r;
 
-					scope_t::decl_t &sldef = sco.new_localdecl();
-					sldef.spec = spec;
-					sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
-					sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
-					sldef.declor.ddecl.symbol = sl.sid;
+						symbol_t &sym = symbol(sl.sid);
+						sym.parameters = parameters;
+						ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+
+						scope_t::decl_t &sldef = sco.new_localdecl();
+						sldef.spec = spec;
+						sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
+						sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
+						sldef.declor.ddecl.symbol = sl.sid;
+					}
 				}
 
 				if (tq_peek().type == token_type_t::comma) {
@@ -8462,23 +8465,25 @@ exists:
 			}
 
 			/* add it to the symbol table */
-			if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
-				return r;
-			if (do_local_symbol_lookup(sl,declion.spec,declor)) {
-				if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
+			if (declor.ddecl.name != identifier_none) {
+				if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
 					return r;
-				if ((r=check_symbol_param_match(sl,parameters)) < 1)
-					return r;
-			}
-			else {
-				if ((r=add_symbol(sl,declion.spec,declor)) < 1)
-					return r;
+				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
+					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
+						return r;
+					if ((r=check_symbol_param_match(sl,parameters)) < 1)
+						return r;
+				}
+				else {
+					if ((r=add_symbol(sl,declion.spec,declor)) < 1)
+						return r;
 
-				/* not a function definition, therefore the parameters do not become symbols.
-				 * the identifiers in the parameter list are not even used. */
-				symbol_t &sym = symbol(sl.sid);
-				sym.parameters = parameters;
-				ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+					/* not a function definition, therefore the parameters do not become symbols.
+					 * the identifiers in the parameter list are not even used. */
+					symbol_t &sym = symbol(sl.sid);
+					sym.parameters = parameters;
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+				}
 			}
 
 			count++;
