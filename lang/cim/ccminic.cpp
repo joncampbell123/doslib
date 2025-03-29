@@ -5594,7 +5594,7 @@ try_again_w_token:
 				return true;
 
 			if (	(at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST) ==
-				(bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST))
+				(bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF || bt == symbol_t::ENUM || bt == symbol_t::CONST))
 				return true;
 
 			return false;
@@ -6089,7 +6089,7 @@ exists:
 								return r;
 						}
 						else if (declor.ddecl.name != identifier_none) {
-							if ((sl.sid=lookup_symbol(declor.ddecl.name,symbol_t::ENUM)) == symbol_none)
+							if ((sl.sid=lookup_symbol(declor.ddecl.name,sl.st)) == symbol_none)
 								CCERR_RET(ENOENT,sl.pos,"No such enum");
 
 							ds.type_identifier_symbol = sl.sid;
