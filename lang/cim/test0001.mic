@@ -254,6 +254,7 @@ enum test2 { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
 struct test_declare;
 struct test;
+union test;
 struct test { } xxxxxxx;
 struct test xooo5,*xxxxy,**xxxxxz;
 struct test2 { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
