@@ -252,17 +252,19 @@ enum test { A, B, C, D } xoooo2;
 enum test xoooo;
 enum test2 { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
-struct test xooo5,*xxxxy,**xxxxxz;
+struct test_declare;
+struct test;
 struct test { } xxxxxxx;
-struct test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
-struct test { int a; struct another { int x,y,z; } one; } xooo7;
+struct test xooo5,*xxxxy,**xxxxxz;
+struct test2 { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
+struct test3 { int a; struct another { int x,y,z; } one; } xooo7;
 struct { int a,b,c; int z; } xooo8;
 union test xooo9;
 union test { } xooo10;
 union test { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo11;
 union { int a,b,c; int z; } xooo12;
-struct test { int x; union { struct { int x,y; } i; struct { float a,b; } f; } un; } t;
-struct test {
+struct test4 { int x; union { struct { int x,y; } i; struct { float a,b; } f; } un; } t;
+struct test5 {
 	int a;
 	int (*func1)(int a,int b);
 } x00012;
@@ -277,8 +279,8 @@ enum test3 {
 void enumcall1(enum test);
 void enumcall2(enum test2);
 void enumcall3(enum test3);
-struct test;
-struct test {
+struct test6;
+struct test6 {
 	int a;
 	int (*funct1)(int a,int b);
 };
@@ -295,11 +297,11 @@ static const char *x00013 = "hello\xff";
 static const char *x00014 = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";
 static const short *x00015a = u"Hello world\n";
 static const long *x00015b = U"Hello world\n";
-struct test { int a, b, c; } x00015 = { 1, 2, 3 };
-struct test { int a[3], b[5], c[7]; } x00016 = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
+struct test7 { int a, b, c; } x00015 = { 1, 2, 3 };
+struct test8 { int a[3], b[5], c[7]; } x00016 = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
 static int x00017[] = { 10, 20, [5] = 50, [50][5] = 500, [500][50][5] = 5000, 60, 70 };
-struct test { int a, test, b; } x00018 = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
-struct test { int a, test, b; } x00019 = { a: 5, b: 7*8, c: a*b };
+struct test9 { int a, test, b; } x00018 = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
+struct test10 { int a, test, b; } x00019 = { a: 5, b: 7*8, c: a*b };
 static inline int d00020() { return 3; }
 static constexpr inline int d00021() { return 4; }
 
