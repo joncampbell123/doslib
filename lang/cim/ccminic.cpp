@@ -6048,6 +6048,8 @@ exists:
 
 					{
 						declaration_specifiers_t eds;
+						declarator_t declor;
+						symbol_lookup_t sl;
 
 						eds.count = 3;
 						eds.type_specifier = TS_INT;
@@ -6070,6 +6072,20 @@ exists:
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
+
+							sl.pos = pos;
+							sl.st = symbol_t::ENUM;
+							sl.flags = symbol_t::FL_DEFINED|symbol_t::FL_DECLARED;
+							identifier.assign(/*to*/declor.ddecl.name,/*from*/ds.type_identifier);
+							if ((r=prep_symbol_lookup(sl,eds,declor)) < 1)
+								return r;
+							if (do_local_symbol_lookup(sl,eds,declor)) {
+								if ((r=check_symbol_lookup_match(sl,eds,declor)) < 1)
+									return r;
+							}
+							else if ((r=add_symbol(sl,eds,declor)) < 1) {
+								return r;
+							}
 
 							if ((r=enumerator_list_parse(eds,ds.enum_list)) < 1)
 								return r;

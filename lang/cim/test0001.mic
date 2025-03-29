@@ -250,7 +250,7 @@ static int daabb(char a,char b) {
 }
 enum test xoooo;
 enum test { A, B, C, D } xoooo2;
-enum test { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
+enum test2 { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
 struct test xooo5,*xxxxy,**xxxxxz;
 struct test { } xxxxxxx;
@@ -267,13 +267,16 @@ struct test {
 	int (*func1)(int a,int b);
 } x00012;
 enum test;
-enum test {
+enum test3 {
 	CA,
 	CB,
 	CC,
 	CD,
 	CE
 };
+void enumcall1(enum test);
+void enumcall2(enum test2);
+void enumcall3(enum test3);
 struct test;
 struct test {
 	int a;
@@ -385,7 +388,7 @@ enum :char {
 	DE
 } xe1;
 
-enum test:char {
+enum test4:char {
 	EA,
 	EB,
 	EC,
@@ -393,7 +396,7 @@ enum test:char {
 	EE
 } xe2;
 
-enum test:unsigned char {
+enum test5:unsigned char {
 	FA,
 	FB,
 	FC,
