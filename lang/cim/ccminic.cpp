@@ -6178,18 +6178,30 @@ exists:
 					 * union identifier */
 
 					{
-						declaration_specifiers_t eds;
 						declarator_t declor;
 						symbol_lookup_t sl;
 
 						if (tq_peek().type == token_type_t::identifier)
 							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
 
+						sl.pos = pos;
+						sl.st = symbol_t::UNION;
 						if (tq_peek().type == token_type_t::opencurlybracket) {
 							tq_discard();
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
+
+							sl.flags = symbol_t::FL_DEFINED|symbol_t::FL_DECLARED;
+							if ((r=prep_symbol_lookup(sl,ds,declor)) < 1)
+								return r;
+							if (do_local_symbol_lookup(sl,ds,declor)) {
+								if ((r=check_symbol_lookup_match(sl,ds,declor)) < 1)
+									return r;
+							}
+							else if ((r=add_symbol(sl,ds,declor)) < 1) {
+								return r;
+							}
 
 							do {
 								if (tq_peek().type == token_type_t::closecurlybracket) {
@@ -6200,6 +6212,20 @@ exists:
 								if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
 									return r;
 							} while(1);
+						}
+						else if (declor.ddecl.name != identifier_none) {
+							sl.flags = symbol_t::FL_DECLARED;
+							if ((r=prep_symbol_lookup(sl,ds,declor)) < 1)
+								return r;
+							if (do_local_symbol_lookup(sl,ds,declor)) {
+								if ((r=check_symbol_lookup_match(sl,ds,declor)) < 1)
+									return r;
+							}
+							else if ((r=add_symbol(sl,ds,declor)) < 1) {
+								return r;
+							}
+
+							ds.type_identifier_symbol = sl.sid;
 						}
 					}
 					continue;
