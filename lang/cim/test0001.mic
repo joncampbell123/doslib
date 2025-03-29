@@ -248,8 +248,8 @@ static int daaba(int a) {
 static int daabb(char a,char b) {
 	return (long)(int)(a+b);
 }
-enum test xoooo;
 enum test { A, B, C, D } xoooo2;
+enum test xoooo;
 enum test2 { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
 struct test xooo5,*xxxxy,**xxxxxz;

@@ -5136,13 +5136,13 @@ try_again_w_token:
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
-		identifier_id_t				type_identifier = identifier_none;
+		symbol_id_t				type_identifier_symbol = symbol_none;
 		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier == identifier_none && enum_list.empty() && count == 0;
+				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0;
 		}
 
 		declaration_specifiers_t() { }
@@ -5152,14 +5152,13 @@ try_again_w_token:
 		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
 
 		~declaration_specifiers_t() {
-			identifier.release(type_identifier);
 		}
 
 		void common_move(declaration_specifiers_t &o) {
 			storage_class = o.storage_class; o.storage_class = 0;
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
-			identifier.assignmove(/*to*/type_identifier,/*from*/o.type_identifier);
+			type_identifier_symbol = o.type_identifier_symbol;
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5168,7 +5167,7 @@ try_again_w_token:
 			storage_class = o.storage_class;
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
-			identifier.assign(/*to*/type_identifier,/*from*/o.type_identifier);
+			type_identifier_symbol = o.type_identifier_symbol;
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -6057,7 +6056,7 @@ exists:
 						eds.type_qualifier = TQ_CONST;
 
 						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
 
 						if (tq_peek().type == token_type_t::colon) {
 							tq_discard();
@@ -6067,16 +6066,15 @@ exists:
 								return r;
 						}
 
+						sl.pos = pos;
+						sl.st = symbol_t::ENUM;
 						if (tq_peek().type == token_type_t::opencurlybracket) {
 							tq_discard();
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
-							sl.pos = pos;
-							sl.st = symbol_t::ENUM;
 							sl.flags = symbol_t::FL_DEFINED|symbol_t::FL_DECLARED;
-							identifier.assign(/*to*/declor.ddecl.name,/*from*/ds.type_identifier);
 							if ((r=prep_symbol_lookup(sl,eds,declor)) < 1)
 								return r;
 							if (do_local_symbol_lookup(sl,eds,declor)) {
@@ -6089,6 +6087,12 @@ exists:
 
 							if ((r=enumerator_list_parse(eds,ds.enum_list)) < 1)
 								return r;
+						}
+						else if (declor.ddecl.name != identifier_none) {
+							if ((sl.sid=lookup_symbol(declor.ddecl.name,symbol_t::ENUM)) == symbol_none)
+								CCERR_RET(ENOENT,sl.pos,"No such enum");
+
+							ds.type_identifier_symbol = sl.sid;
 						}
 					}
 					continue;
@@ -6105,24 +6109,30 @@ exists:
 					 * struct identifier { list }
 					 * struct identifier */
 
-					if (tq_peek().type == token_type_t::identifier)
-						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+					{
+						declaration_specifiers_t eds;
+						declarator_t declor;
+						symbol_lookup_t sl;
 
-					if (tq_peek().type == token_type_t::opencurlybracket) {
-						tq_discard();
+						if (tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
 
-						if (!(declspec & DECLSPEC_ALLOW_DEF))
-							CCERR_RET(EINVAL,pos,"not allowed to define types here");
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
 
-						do {
-							if (tq_peek().type == token_type_t::closecurlybracket) {
-								tq_discard();
-								break;
-							}
+							if (!(declspec & DECLSPEC_ALLOW_DEF))
+								CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
-							if ((r=struct_declaration_parse(token_type_t::r_struct)) < 1)
-								return r;
-						} while(1);
+							do {
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+
+								if ((r=struct_declaration_parse(token_type_t::r_struct)) < 1)
+									return r;
+							} while(1);
+						}
 					}
 					continue;
 
@@ -6138,26 +6148,31 @@ exists:
 					/* union { list }
 					 * union identifier { list }
 					 * union identifier */
-					/* NTS: Unions are parsed the same as structs */
 
-					if (tq_peek().type == token_type_t::identifier)
-						identifier.assign(/*to*/ds.type_identifier,/*from*/tq_get().v.identifier);
+					{
+						declaration_specifiers_t eds;
+						declarator_t declor;
+						symbol_lookup_t sl;
 
-					if (tq_peek().type == token_type_t::opencurlybracket) {
-						tq_discard();
+						if (tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
 
-						if (!(declspec & DECLSPEC_ALLOW_DEF))
-							CCERR_RET(EINVAL,pos,"not allowed to define types here");
+						if (tq_peek().type == token_type_t::opencurlybracket) {
+							tq_discard();
 
-						do {
-							if (tq_peek().type == token_type_t::closecurlybracket) {
-								tq_discard();
-								break;
-							}
+							if (!(declspec & DECLSPEC_ALLOW_DEF))
+								CCERR_RET(EINVAL,pos,"not allowed to define types here");
 
-							if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
-								return r;
-						} while(1);
+							do {
+								if (tq_peek().type == token_type_t::closecurlybracket) {
+									tq_discard();
+									break;
+								}
+
+								if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
+									return r;
+							} while(1);
+						}
 					}
 					continue;
 
@@ -6663,7 +6678,14 @@ exists:
 		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
 		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
 		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		if (ds.type_identifier != identifier_none) fprintf(stderr," '%s'",identifier(ds.type_identifier).to_str().c_str());
+		if (ds.type_identifier_symbol != symbol_none) {
+			symbol_t &sym = symbol(ds.type_identifier_symbol);
+			fprintf(stderr," symbol#%lu",(unsigned long)ds.type_identifier_symbol);
+			if (sym.name != identifier_none)
+				fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
+			else
+				fprintf(stderr," <anon>");
+		}
 		fprintf(stderr,"\n");
 
 		if (!ds.enum_list.empty()) {
