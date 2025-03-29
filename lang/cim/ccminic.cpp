@@ -5018,8 +5018,8 @@ try_again_w_token:
 
 	///////////////////////////////////////
 
-	typedef size_t ast_node_id_t;
-	static constexpr ast_node_id_t ast_node_none = ~size_t(0u);
+	typedef unsigned int ast_node_id_t;
+	static constexpr ast_node_id_t ast_node_none = ~ast_node_id_t(0u);
 
 	struct ast_node_t {
 		token_t			t;
