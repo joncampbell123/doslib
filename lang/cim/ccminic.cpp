@@ -8512,7 +8512,7 @@ exists:
 				return r;
 		}
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
 		debug_dump_declaration_specifiers("  ",spec); // this is the only other param
 		debug_dump_declarator("  ",declor);
@@ -8673,6 +8673,8 @@ exists:
 		declaration_specifiers_t spec;
 		int r,count = 0;
 
+		(void)tt;
+
 #if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
@@ -8682,7 +8684,7 @@ exists:
 		if ((r=chkerr()) < 1)
 			return r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
 		debug_dump_declaration_specifiers("  ",spec);
 #endif
@@ -8695,7 +8697,7 @@ exists:
 			if ((r=chkerr()) < 1)
 				return r;
 
-#if 1//DEBUG
+#if 0//DEBUG
 			fprintf(stderr,"DEBUG %s:%d field type %s:\n",__FUNCTION__,__LINE__,token_type_t_str(tt));
 			debug_dump_declarator("  ",declor);
 #endif
