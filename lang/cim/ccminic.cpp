@@ -6073,7 +6073,17 @@ again:
 	}
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
+		integer_value_t iv;
 		int r;
+
+		iv.v.u = 0;
+		iv.flags = integer_value_t::FL_SIGNED;
+
+		if ((spec.type_specifier & (TS_INT|TS_LONG|TS_LONGLONG|TS_CHAR)) == 0)
+			CCERR_RET(EINVAL,tq_peek().pos,"Enumeration list must use integer type");
+
+		if (spec.type_specifier & TS_UNSIGNED)
+			iv.flags &= ~integer_value_t::FL_SIGNED;
 
 		/* caller already ate the { */
 
@@ -6106,7 +6116,22 @@ again:
 				fprintf(stderr,"enum expr for '%s' (reduced):\n",identifier(en.name).to_str().c_str());
 				debug_dump_ast("  ",en.expr);
 #endif
+
+				/* the expression must reduce to an integer, or else it's an error */
+				ast_node_t &an = ast_node(en.expr);
+				if (an.t.type == token_type_t::integer) {
+					iv.v = an.t.v.integer.v;
+				}
+				else {
+					CCERR_RET(EINVAL,en.pos,"Enumeration constant is not a constant integer expression");
+				}
 			}
+			else {
+				en.expr = ast_node.alloc(token_type_t::integer);
+				ast_node(en.expr).t.v.integer = iv;
+			}
+
+			iv.v.u++;
 
 			{
 				declarator_t declor;
