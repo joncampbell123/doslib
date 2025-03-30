@@ -6759,7 +6759,7 @@ exists:
 		sf.spec = ds;
 		sf.ptr = declor.ptr;
 		sf.ddptr = declor.ddecl.ptr;
-		sf.arraydef = declor.ddecl.arraydef;
+		ast_node_t::arraycopy(/*to*/sf.arraydef,/*from*/declor.ddecl.arraydef);
 		sf.parameters = parameters;
 		identifier.assign(/*to*/sf.name,/*from*/declor.ddecl.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
