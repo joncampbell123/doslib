@@ -5368,6 +5368,7 @@ try_again_w_token:
 
 			declaration_specifiers_t		spec;
 			std::vector<pointer_t>			ptr;
+			std::vector<pointer_t>			ddptr;
 			std::vector<ast_node_id_t>		arraydef;
 			std::vector<parameter_t>		parameters;
 			identifier_id_t				name = identifier_none;
@@ -5393,6 +5394,7 @@ try_again_w_token:
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
 				ptr = std::move(x.ptr);
+				ddptr = std::move(x.ddptr);
 				arraydef = std::move(x.arraydef);
 				parameters = std::move(x.parameters);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
@@ -5829,6 +5831,7 @@ exists:
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
 			sym.ptr = declor.ptr;
+			sym.ddptr = declor.ddecl.ptr;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
@@ -6940,7 +6943,8 @@ exists:
 		fprintf(stderr,"\n");
 
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
-		debug_dump_pointer(prefix+"  ",sym.ptr);
+		debug_dump_pointer(prefix+"  ",sym.ptr,"declaration specifier");
+		debug_dump_pointer(prefix+"  ",sym.ddptr,"direct declarator");
 		debug_dump_arraydef(prefix+"  ",sym.arraydef);
 
 		for (auto &p : sym.parameters)
