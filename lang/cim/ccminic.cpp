@@ -6147,6 +6147,8 @@ exists:
 								if ((r=struct_declaration_parse(token_type_t::r_struct)) < 1)
 									return r;
 							} while(1);
+
+							ds.type_identifier_symbol = sl.sid;
 						}
 						else if (declor.ddecl.name != identifier_none) {
 							sl.flags = symbol_t::FL_DECLARED;
@@ -6213,6 +6215,8 @@ exists:
 								if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
 									return r;
 							} while(1);
+
+							ds.type_identifier_symbol = sl.sid;
 						}
 						else if (declor.ddecl.name != identifier_none) {
 							sl.flags = symbol_t::FL_DECLARED;
