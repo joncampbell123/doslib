@@ -5347,6 +5347,38 @@ try_again_w_token:
 			}
 		};
 
+		struct structfield_t {
+			declaration_specifiers_t		spec;
+			std::vector<pointer_t>			ptr;
+			std::vector<pointer_t>			ddptr;
+			std::vector<ast_node_id_t>		arraydef;
+			std::vector<parameter_t>		parameters;
+			identifier_id_t				name = identifier_none;
+			ast_node_id_t				bitfield_expr = ast_node_none;
+
+			structfield_t() { }
+			structfield_t(const structfield_t &) = delete;
+			structfield_t &operator=(const structfield_t &) = delete;
+			structfield_t(structfield_t &&x) { common_move(x); }
+			structfield_t &operator=(structfield_t &&x) { common_move(x); return *this; }
+
+			~structfield_t() {
+				ast_node_t::arrayrelease(arraydef);
+				identifier.release(name);
+				ast_node.release(bitfield_expr);
+			}
+
+			void common_move(structfield_t &x) {
+				spec = std::move(x.spec);
+				ptr = std::move(x.ptr);
+				ddptr = std::move(x.ddptr);
+				arraydef = std::move(x.arraydef);
+				parameters = std::move(x.parameters);
+				identifier.assignmove(/*to*/name,/*from*/x.name);
+				ast_node.assignmove(/*to*/bitfield_expr,/*from*/x.bitfield_expr);
+			}
+		};
+
 		struct symbol_t {
 			enum type_t {
 				NONE=0,
@@ -5371,6 +5403,7 @@ try_again_w_token:
 			std::vector<pointer_t>			ddptr;
 			std::vector<ast_node_id_t>		arraydef;
 			std::vector<parameter_t>		parameters;
+			std::vector<structfield_t>		fields;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 			scope_id_t				scope = scope_none;
@@ -5397,6 +5430,7 @@ try_again_w_token:
 				ddptr = std::move(x.ddptr);
 				arraydef = std::move(x.arraydef);
 				parameters = std::move(x.parameters);
+				fields = std::move(x.fields);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 				scope = x.scope; x.scope = scope_none;
@@ -5448,6 +5482,7 @@ try_again_w_token:
 		void debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name=std::string());
 		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
+		void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
@@ -5842,10 +5877,10 @@ exists:
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
-		int struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
+		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
-		int struct_declaration_parse(const token_type_t &tt);
+		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -6147,7 +6182,7 @@ exists:
 									break;
 								}
 
-								if ((r=struct_declaration_parse(token_type_t::r_struct)) < 1)
+								if ((r=struct_declaration_parse(sl.sid,token_type_t::r_struct)) < 1)
 									return r;
 							} while(1);
 
@@ -6215,7 +6250,7 @@ exists:
 									break;
 								}
 
-								if ((r=struct_declaration_parse(token_type_t::r_union)) < 1)
+								if ((r=struct_declaration_parse(sl.sid,token_type_t::r_union)) < 1)
 									return r;
 							} while(1);
 
@@ -6664,7 +6699,7 @@ exists:
 		return 1;
 	}
 
-	int cc_state_t::struct_declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
+	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
 		std::vector<parameter_t> parameters;
 		int r;
 
@@ -6717,6 +6752,17 @@ exists:
 			}
 		}
 
+		symbol_t &sym = symbol(sid);
+		const size_t sfi = sym.fields.size();
+		sym.fields.resize(sfi + 1u);
+		structfield_t &sf = sym.fields[sfi];
+		sf.spec = ds;
+		sf.ptr = declor.ptr;
+		sf.ddptr = declor.ddecl.ptr;
+		sf.arraydef = declor.ddecl.arraydef;
+		sf.parameters = parameters;
+		identifier.assign(/*to*/sf.name,/*from*/declor.ddecl.name);
+		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
 		return 1;
 	}
 
@@ -6910,6 +6956,26 @@ exists:
 			debug_dump_scope(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-scopes.begin())));
 	}
 
+	void cc_state_t::debug_dump_structfield(const std::string prefix,structfield_t &field,const std::string &name) {
+		fprintf(stderr,"%s%s%sfield:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		if (field.name != identifier_none) fprintf(stderr," '%s'",identifier(field.name).to_str().c_str());
+		else fprintf(stderr," <anon>");
+		fprintf(stderr,"\n");
+
+		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
+		debug_dump_pointer(prefix+"  ",field.ptr,"declaration specifier");
+		debug_dump_pointer(prefix+"  ",field.ddptr,"direct declarator");
+		debug_dump_arraydef(prefix+"  ",field.arraydef);
+
+		for (auto &p : field.parameters)
+			debug_dump_parameter(prefix+"  ",p);
+
+		if (field.bitfield_expr != ast_node_none) {
+			fprintf(stderr,"%s  bitfield expr:\n",prefix.c_str());
+			debug_dump_ast(prefix+"    ",field.bitfield_expr);
+		}
+	}
+
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
 		if (sym.sym_type == cc_state_t::symbol_t::NONE)
 			return;
@@ -6949,6 +7015,9 @@ exists:
 
 		for (auto &p : sym.parameters)
 			debug_dump_parameter(prefix+"  ",p);
+
+		for (auto &f : sym.fields)
+			debug_dump_structfield(prefix+"  ",f);
 
 		if (sym.parent_of_scope != scope_none) {
 			scope_t &sco = scope(sym.parent_of_scope);
@@ -8600,7 +8669,7 @@ exists:
 		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
 	}
 
-	int cc_state_t::struct_declaration_parse(const token_type_t &tt) {
+	int cc_state_t::struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt) {
 		declaration_specifiers_t spec;
 		int r,count = 0;
 
@@ -8621,7 +8690,7 @@ exists:
 		do {
 			declarator_t declor;
 
-			if ((r=struct_declarator_parse(spec,declor)) < 1)
+			if ((r=struct_declarator_parse(sid,spec,declor)) < 1)
 				return r;
 			if ((r=chkerr()) < 1)
 				return r;

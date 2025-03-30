@@ -337,6 +337,7 @@ static int tt2af = 6;
 struct tt2a {
 	int	tt2af,x,y,z;
 	int	a,b,c;
+	int*	(* const funcptr)(int x,int y);
 };
 
 struct tt2 {
