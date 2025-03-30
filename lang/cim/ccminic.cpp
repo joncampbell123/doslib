@@ -5939,6 +5939,21 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_negate(token_t &r,token_t &op) {
+		/* TODO: type promotion/conversion */
+		switch (op.type) {
+			case token_type_t::integer:
+				r = op;
+				r.v.integer.v.v = -r.v.integer.v.v;
+				r.v.integer.flags |= integer_value_t::FL_SIGNED;
+				return true;
+			default:
+				break;
+		};
+
+		return false;
+	}
+
 	bool ast_constexpr_add(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
@@ -5996,6 +6011,20 @@ again:
 		/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
 		ast_node_t &erootnode = ast_node(eroot);
 		switch (erootnode.t.type) {
+			case token_type_t::op_negate:
+			{
+				ast_node_id_t op1 = erootnode.child;
+				if (is_ast_constexpr(ast_node(op1))) {
+					token_t result;
+
+					if (ast_constexpr_negate(result,ast_node(op1).t)) {
+						erootnode.set_child(ast_node_none);
+						erootnode.t = std::move(result);
+						goto again;
+					}
+				}
+				break;
+			}
 			case token_type_t::op_add:
 			{
 				ast_node_id_t op1 = erootnode.child;

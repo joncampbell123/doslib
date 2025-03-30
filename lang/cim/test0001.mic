@@ -434,3 +434,5 @@ int fwd1(int a,int b) {
 
 int fwd1(int a,int b);
 
+enum negatives { NA, NB, NC, ND=-5, NE, NF, NG, NH=-10000, NI };
+
