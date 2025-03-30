@@ -360,6 +360,13 @@ struct tt2b {
 	unsigned int	h:1,i:1,j:1;
 } tt2vb;
 
+struct tt2b2 {
+	unsigned int	cx:CB;
+	unsigned int	cy:CC;
+	unsigned int	cz:CD;
+	unsigned int	ca:CE;
+} tt2vb2;
+
 /* This is our extension to the struct bitfield syntax that allows explicit bitfield length and starting bit.
    For consistency reasons, the syntax within the brackets are exactly the same as GCC's range syntax for case statements and designated init lists.
    The syntax is [LSB bit position ... MSB bit position]. [4 ... 7] for example declares a 4-bit field starting at bit 4 with the MSB at bit 7. */
@@ -381,6 +388,13 @@ struct tt4 {
 	unsigned int	a:BF(3);
 	unsigned int	b:BF(4);
 };
+
+struct tt4b2 {
+	unsigned int	cx:[CA ... CB];
+	unsigned int	cy:[CB ... CC];
+	unsigned int	cz:[CC ... CD];
+	unsigned int	ca:[CD ... CE];
+} tt4vb2;
 
 typedef unsigned int tdu1;
 typedef struct tdu2_t { int a; int b; } tdu2;

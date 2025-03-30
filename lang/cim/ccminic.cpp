@@ -6956,6 +6956,7 @@ again:
 					if ((r=conditional_expression(expr)) < 1)
 						return r;
 
+					ast_node_reduce(expr);
 					ast_node(declor.bitfield_expr).set_child(expr); ast_node(expr).release();
 
 					if (tq_peek().type == token_type_t::ellipsis) {
@@ -6965,7 +6966,40 @@ again:
 						if ((r=conditional_expression(expr2)) < 1)
 							return r;
 
+						ast_node_reduce(expr2);
 						ast_node(expr).set_next(expr2); ast_node(expr2).release();
+
+						{
+							ast_node_t &an = ast_node(expr);
+							if (an.t.type == token_type_t::integer) {
+								if (an.t.v.integer.v.v < 0ll || an.t.v.integer.v.v > 255ll)
+									CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+							}
+							else {
+								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
+							}
+						}
+
+						{
+							ast_node_t &an = ast_node(expr2);
+							if (an.t.type == token_type_t::integer) {
+								if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
+									CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+							}
+							else {
+								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
+							}
+						}
+					}
+					else {
+						ast_node_t &an = ast_node(expr);
+						if (an.t.type == token_type_t::integer) {
+							if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
+								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+						}
+						else {
+							CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
+						}
 					}
 				}
 
@@ -6975,6 +7009,19 @@ again:
 			else {
 				if ((r=conditional_expression(declor.bitfield_expr)) < 1)
 					return r;
+
+				ast_node_reduce(declor.bitfield_expr);
+
+				{
+					ast_node_t &an = ast_node(declor.bitfield_expr);
+					if (an.t.type == token_type_t::integer) {
+						if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
+							CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+					}
+					else {
+						CCERR_RET(EINVAL,tq_peek().pos,"Bitfield is not a constant integer expression");
+					}
+				}
 			}
 		}
 
