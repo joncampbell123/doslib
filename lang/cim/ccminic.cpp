@@ -5884,6 +5884,7 @@ exists:
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
+		int struct_bitfield_validate(token_t &t,bool first_of_range=false);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
@@ -6925,6 +6926,18 @@ again:
 		return 1;
 	}
 
+	int cc_state_t::struct_bitfield_validate(token_t &t,bool first_of_range) {
+		if (t.type == token_type_t::integer) {
+			if (t.v.integer.v.v < (first_of_range ? 0ll : 1ll) || t.v.integer.v.v > 255ll)
+				CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+		}
+		else {
+			CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
 		std::vector<parameter_t> parameters;
 		int r;
@@ -6969,37 +6982,14 @@ again:
 						ast_node_reduce(expr2);
 						ast_node(expr).set_next(expr2); ast_node(expr2).release();
 
-						{
-							ast_node_t &an = ast_node(expr);
-							if (an.t.type == token_type_t::integer) {
-								if (an.t.v.integer.v.v < 0ll || an.t.v.integer.v.v > 255ll)
-									CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
-							}
-							else {
-								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
-							}
-						}
-
-						{
-							ast_node_t &an = ast_node(expr2);
-							if (an.t.type == token_type_t::integer) {
-								if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
-									CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
-							}
-							else {
-								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
-							}
-						}
+						if ((r=struct_bitfield_validate(ast_node(expr).t,true)) < 1)
+							return r;
+						if ((r=struct_bitfield_validate(ast_node(expr2).t)) < 1)
+							return r;
 					}
 					else {
-						ast_node_t &an = ast_node(expr);
-						if (an.t.type == token_type_t::integer) {
-							if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
-								CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
-						}
-						else {
-							CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
-						}
+						if ((r=struct_bitfield_validate(ast_node(expr).t)) < 1)
+							return r;
 					}
 				}
 
@@ -7012,16 +7002,8 @@ again:
 
 				ast_node_reduce(declor.bitfield_expr);
 
-				{
-					ast_node_t &an = ast_node(declor.bitfield_expr);
-					if (an.t.type == token_type_t::integer) {
-						if (an.t.v.integer.v.v < 1ll || an.t.v.integer.v.v > 255ll)
-							CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
-					}
-					else {
-						CCERR_RET(EINVAL,tq_peek().pos,"Bitfield is not a constant integer expression");
-					}
-				}
+				if ((r=struct_bitfield_validate(ast_node(declor.bitfield_expr).t)) < 1)
+					return r;
 			}
 		}
 
