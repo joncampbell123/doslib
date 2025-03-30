@@ -250,7 +250,7 @@ static int daabb(char a,char b) {
 }
 enum test { A, B, C, D } xoooo2;
 enum test xoooo;
-enum test2 { AA=1, AB, AC=100, AD=AA*400, AE=AA+AB+AC+AD } xoooo3;
+enum test2 { AA=1, AB=20, AC=100, AD=AA*400, AE=AA+AB+AC+AD, AF=1?AC:AB, AG=0?AC:AB, AH=1?1?AD:AC:AB } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
 struct test_declare;
 struct test;
