@@ -6056,6 +6056,27 @@ again:
 				}
 				break;
 			}
+
+			case token_type_t::op_comma:
+			{
+				ast_node_id_t op1 = erootnode.child;
+				ast_node_id_t op2 = ast_node(op1).next;
+				if (is_ast_constexpr(ast_node(op1))) {
+					ast_node_id_t nn = ast_node.returnmove(erootnode.next);
+					op1 = ast_node.returnmove(erootnode.child);
+					op2 = ast_node.returnmove(ast_node(op1).next);
+
+					ast_node.assignmove(eroot,op2);
+
+					ast_node(eroot).set_next(nn);
+					ast_node.release(op2);
+					ast_node.release(op1);
+					ast_node.release(nn);
+					goto again;
+				}
+				break;
+			}
+
 			case token_type_t::op_ternary:
 			{
 				if (is_ast_constexpr(ast_node(erootnode.child))) {
@@ -8367,6 +8388,16 @@ again:
 
 #if 0//DEBUG
 		fprintf(stderr,"init AST:\n");
+		debug_dump_ast("  ",aroot);
+#endif
+
+#if 1//DEBUG
+		fprintf(stderr,"init expr (fresh):\n");
+		debug_dump_ast("  ",aroot);
+#endif
+		ast_node_reduce(aroot);
+#if 1//DEBUG
+		fprintf(stderr,"init expr (reduced):\n");
 		debug_dump_ast("  ",aroot);
 #endif
 
