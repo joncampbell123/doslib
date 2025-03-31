@@ -5985,6 +5985,22 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					r.v.integer.v.u -= op2.v.integer.v.u;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
 	bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
@@ -6108,6 +6124,17 @@ again:
 						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_add(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+				case token_type_t::op_subtract:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_subtract(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
 								goto again;
 							}
