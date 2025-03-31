@@ -5720,6 +5720,20 @@ try_again_w_token:
 					case symbol_t::VARIABLE:
 						if (!(spec.storage_class & SC_EXTERN))
 							sl.flags |= symbol_t::FL_DEFINED;
+
+						/* if declared as const/constexpr/constinit and defined and the expression has been reduced to an integer, mark as const */
+						if (sl.flags & symbol_t::FL_DEFINED) {
+							if ((spec.storage_class & (SC_CONSTEXPR|SC_CONSTINIT|SC_CONSTEVAL)) != 0 || (spec.type_qualifier & TQ_CONST)) {
+								if (declor.expr != ast_node_none) {
+									ast_node_t &an = ast_node(declor.expr);
+									if (an.child == ast_node_none && an.next == ast_node_none) {
+										if (an.t.type == token_type_t::integer) {
+											sl.st = symbol_t::CONST;
+										}
+									}
+								}
+							}
+						}
 						break;
 					case symbol_t::FUNCTION:
 						sl.cursco = scope_global; /* All functions are global scope in C. We're not a C++ compiler. */
@@ -6818,6 +6832,16 @@ again:
 				if (tq_peek().type != token_type_t::closesquarebracket) {
 					if ((r=conditional_expression(expr)) < 1)
 						return r;
+
+#if 1//DEBUG
+					fprintf(stderr,"array cexpr (fresh):\n");
+					debug_dump_ast("  ",expr);
+#endif
+					ast_node_reduce(expr);
+#if 1//DEBUG
+					fprintf(stderr,"array cexpr (reduced):\n");
+					debug_dump_ast("  ",expr);
+#endif
 				}
 
 				dd.arraydef.push_back(std::move(expr));
@@ -8408,6 +8432,16 @@ again:
 							if ((r=conditional_expression(asq)) < 1)
 								return r;
 
+#if 1//DEBUG
+							fprintf(stderr,"array cexpr (fresh):\n");
+							debug_dump_ast("  ",asq);
+#endif
+							ast_node_reduce(asq);
+#if 1//DEBUG
+							fprintf(stderr,"array cexpr (reduced):\n");
+							debug_dump_ast("  ",asq);
+#endif
+
 							if (tq_peek().type == token_type_t::ellipsis) {
 								/* GNU GCC extension: first ... last ranges */
 								/* valid in case statements:
@@ -8422,6 +8456,16 @@ again:
 
 								if ((r=conditional_expression(op2)) < 1)
 									return r;
+
+#if 1//DEBUG
+								fprintf(stderr,"array cexpr2 (fresh):\n");
+								debug_dump_ast("  ",op2);
+#endif
+								ast_node_reduce(op2);
+#if 1//DEBUG
+								fprintf(stderr,"array cexpr2 (reduced):\n");
+								debug_dump_ast("  ",op2);
+#endif
 
 								ast_node(asq).set_child(op1); ast_node(op1).release();
 								ast_node(op1).set_next(op2); ast_node(op2).release();

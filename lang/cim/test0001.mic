@@ -457,3 +457,10 @@ int fwd1(int a,int b);
 
 enum negatives { NA, NB, NC, ND=-5, NE, NF, NG, NH=-10000, NI };
 
+const int constA = 5;
+const int constB = 5 * 5 + 3;
+constexpr int constC = constA*constB;
+const int constD = constA + constB + constC;
+
+static int fromConst1[constD];
+
