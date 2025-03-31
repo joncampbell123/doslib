@@ -8689,6 +8689,7 @@ again:
 				declarator_t declor;
 				symbol_lookup_t sl;
 
+				sl.pos = tq_peek().pos;
 				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
 					return r;
 
@@ -9076,6 +9077,7 @@ again:
 			std::vector<parameter_t> parameters;
 			declarator_t &declor = declion.new_declarator();
 
+			sl.pos = tq_peek().pos;
 			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
 				return r;
 
