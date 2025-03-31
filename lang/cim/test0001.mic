@@ -21,6 +21,7 @@ static int c6 = 4;
 static int cc = 4,ddd = 6,ee = 12.34,ff = cc;
 static const char *sss = "Hello world";
 static int c8 = 6;;;
+static int d0a = -4;
 static int d1a = 4 ? 2 : 1;
 static int d2a = 4 ? 3 ? 2 : 1 : 0;
 static int d3a = 4 ? 3,2 : 1;

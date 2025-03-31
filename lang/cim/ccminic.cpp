@@ -6069,6 +6069,11 @@ exists:
 	}
 
 	void cc_state_t::ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) { /* destructive reduce */
+#define OP_ONE_PARAM_TEVAL ast_node_id_t op1 = erootnode.child
+
+#define OP_TWO_PARAM_TEVAL ast_node_id_t op1 = erootnode.child; \
+                     ast_node_id_t op2 = ast_node(op1).next
+
 		if (eroot == ast_node_none)
 			return;
 
@@ -6089,7 +6094,7 @@ again:
 			switch (erootnode.t.type) {
 				case token_type_t::op_negate:
 					{
-						ast_node_id_t op1 = erootnode.child;
+						OP_ONE_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t)) {
 							if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6100,8 +6105,7 @@ again:
 					}
 				case token_type_t::op_add:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_add(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6112,8 +6116,7 @@ again:
 					}
 				case token_type_t::op_logical_or:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_logical_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6124,8 +6127,7 @@ again:
 					}
 				case token_type_t::op_binary_or:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_binary_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6136,8 +6138,7 @@ again:
 					}
 				case token_type_t::op_binary_xor:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_binary_xor(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6148,8 +6149,7 @@ again:
 					}
 				case token_type_t::op_binary_and:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_binary_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6160,8 +6160,7 @@ again:
 					}
 				case token_type_t::op_multiply:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 							if (ast_constexpr_multiply(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
@@ -6173,8 +6172,7 @@ again:
 
 				case token_type_t::op_comma:
 					{
-						ast_node_id_t op1 = erootnode.child;
-						ast_node_id_t op2 = ast_node(op1).next;
+						OP_TWO_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t)) {
 							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
 							op1 = ast_node.returnmove(erootnode.child);
@@ -6243,6 +6241,8 @@ again:
 			debug_dump_ast(prefix+"  ",eroot);
 		}
 #endif
+#undef OP_TWO_PARAM_TEVAL
+#undef OP_ONE_PARAM_TEVAL
 	}
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
