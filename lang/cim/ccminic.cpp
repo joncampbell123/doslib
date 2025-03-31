@@ -6091,11 +6091,8 @@ again:
 					{
 						ast_node_id_t op1 = erootnode.child;
 						if (is_ast_constexpr(ast_node(op1).t)) {
-							token_t result;
-
-							if (ast_constexpr_negate(result,ast_node(op1).t)) {
+							if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6106,11 +6103,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_add(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_add(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6121,11 +6115,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_logical_or(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_logical_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6136,11 +6127,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_binary_or(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_binary_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6151,11 +6139,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_binary_xor(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_binary_xor(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6166,11 +6151,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_binary_and(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_binary_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
@@ -6181,11 +6163,8 @@ again:
 						ast_node_id_t op1 = erootnode.child;
 						ast_node_id_t op2 = ast_node(op1).next;
 						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							token_t result;
-
-							if (ast_constexpr_multiply(result,ast_node(op1).t,ast_node(op2).t)) {
+							if (ast_constexpr_multiply(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
-								erootnode.t = std::move(result);
 								goto again;
 							}
 						}
