@@ -5943,10 +5943,14 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_to_bool(integer_value_t &iv) {
+		return iv.v.u != 0ull;
+	}
+
 	bool ast_constexpr_to_bool(token_t &t) {
 		switch (t.type) {
 			case token_type_t::integer:
-				return t.v.integer.v.u != 0ull;
+				return ast_constexpr_to_bool(t.v.integer);
 			default:
 				break;
 		};
@@ -6007,7 +6011,7 @@ exists:
 			switch (op1.type) {
 				case token_type_t::integer:
 					r = op1;
-					r.v.integer.v.u = (op1.v.integer.v.u != 0ull) || (op2.v.integer.v.u != 0ull);
+					r.v.integer.v.u = ast_constexpr_to_bool(op1.v.integer) || ast_constexpr_to_bool(op2.v.integer);
 					return true;
 				default:
 					break;
@@ -6055,7 +6059,7 @@ exists:
 			switch (op1.type) {
 				case token_type_t::integer:
 					r = op1;
-					r.v.integer.v.u = (op1.v.integer.v.u != 0ull) && (op2.v.integer.v.u != 0ull);
+					r.v.integer.v.u = ast_constexpr_to_bool(op1.v.integer) && ast_constexpr_to_bool(op2.v.integer);
 					return true;
 				default:
 					break;
