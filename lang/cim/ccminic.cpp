@@ -5971,6 +5971,22 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					r.v.integer.v.u = (op1.v.integer.v.u != 0ull) || (op2.v.integer.v.u != 0ull);
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
 	bool ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
@@ -6079,6 +6095,21 @@ again:
 					token_t result;
 
 					if (ast_constexpr_add(result,ast_node(op1).t,ast_node(op2).t)) {
+						erootnode.set_child(ast_node_none);
+						erootnode.t = std::move(result);
+						goto again;
+					}
+				}
+				break;
+			}
+			case token_type_t::op_logical_or:
+			{
+				ast_node_id_t op1 = erootnode.child;
+				ast_node_id_t op2 = ast_node(op1).next;
+				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+					token_t result;
+
+					if (ast_constexpr_logical_or(result,ast_node(op1).t,ast_node(op2).t)) {
 						erootnode.set_child(ast_node_none);
 						erootnode.t = std::move(result);
 						goto again;
