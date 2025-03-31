@@ -5898,6 +5898,7 @@ exists:
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
+		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
 		int struct_bitfield_validate(token_t &t,bool first_of_range=false);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
@@ -5919,7 +5920,6 @@ exists:
 		int primary_expression(ast_node_id_t &aroot);
 		int shift_expression(ast_node_id_t &aroot);
 		int unary_expression(ast_node_id_t &aroot);
-		void ast_node_reduce(ast_node_id_t &eroot);
 		int cast_expression(ast_node_id_t &aroot);
 		int compound_statement_declarators(void);
 		int and_expression(ast_node_id_t &aroot);
@@ -6068,194 +6068,202 @@ exists:
 		return false;
 	}
 
-	void cc_state_t::ast_node_reduce(ast_node_id_t &eroot) { /* destructive reduce */
+	void cc_state_t::ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) { /* destructive reduce */
 		if (eroot == ast_node_none)
 			return;
+
+#if 1//DEBUG
+		if (prefix.empty()) {
+			fprintf(stderr,"%senum expr (reducing node#%lu):\n",prefix.c_str(),(unsigned long)eroot);
+			debug_dump_ast(prefix+"  ",eroot);
+		}
+#endif
 
 again:
 		for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
-			ast_node_reduce(ast_node(n).child);
+			ast_node_reduce(ast_node(n).child,prefix+"  ");
 
-		if (eroot == ast_node_none)
-			return;
+		if (eroot != ast_node_none) {
+			/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
+			ast_node_t &erootnode = ast_node(eroot);
+			switch (erootnode.t.type) {
+				case token_type_t::op_negate:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						if (is_ast_constexpr(ast_node(op1).t)) {
+							token_t result;
 
-#if 0//DEBUG
-		fprintf(stderr,"enum expr (reducing):\n");
-		debug_dump_ast("  ",eroot);
-#endif
-
-		/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
-		ast_node_t &erootnode = ast_node(eroot);
-		switch (erootnode.t.type) {
-			case token_type_t::op_negate:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				if (is_ast_constexpr(ast_node(op1).t)) {
-					token_t result;
-
-					if (ast_constexpr_negate(result,ast_node(op1).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_negate(result,ast_node(op1).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_add:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_add:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_add(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_add(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_logical_or:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_logical_or:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_logical_or(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_logical_or(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_binary_or:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_binary_or:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_binary_or(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_binary_or(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_binary_xor:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_binary_xor:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_binary_xor(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_binary_xor(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_binary_and:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_binary_and:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_binary_and(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_binary_and(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
-			case token_type_t::op_multiply:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-					token_t result;
+				case token_type_t::op_multiply:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							token_t result;
 
-					if (ast_constexpr_multiply(result,ast_node(op1).t,ast_node(op2).t)) {
-						erootnode.set_child(ast_node_none);
-						erootnode.t = std::move(result);
-						goto again;
+							if (ast_constexpr_multiply(result,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								erootnode.t = std::move(result);
+								goto again;
+							}
+						}
+						break;
 					}
-				}
-				break;
-			}
 
-			case token_type_t::op_comma:
-			{
-				ast_node_id_t op1 = erootnode.child;
-				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1).t)) {
-					ast_node_id_t nn = ast_node.returnmove(erootnode.next);
-					op1 = ast_node.returnmove(erootnode.child);
-					op2 = ast_node.returnmove(ast_node(op1).next);
+				case token_type_t::op_comma:
+					{
+						ast_node_id_t op1 = erootnode.child;
+						ast_node_id_t op2 = ast_node(op1).next;
+						if (is_ast_constexpr(ast_node(op1).t)) {
+							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
+							op1 = ast_node.returnmove(erootnode.child);
+							op2 = ast_node.returnmove(ast_node(op1).next);
 
-					ast_node.assignmove(eroot,op2);
+							ast_node.assignmove(eroot,op2);
 
-					ast_node(eroot).set_next(nn);
-					ast_node.release(op2);
-					ast_node.release(op1);
-					ast_node.release(nn);
-					goto again;
-				}
-				break;
-			}
-
-			case token_type_t::op_ternary:
-			{
-				if (is_ast_constexpr(ast_node(erootnode.child).t)) {
-					ast_node_id_t nn = ast_node.returnmove(erootnode.next);
-					ast_node_id_t cn = ast_node.returnmove(erootnode.child);
-					ast_node_id_t tc = ast_node.returnmove(ast_node(cn).next);
-					ast_node_id_t fc = ast_node.returnmove(ast_node(tc).next);
-
-					if (ast_constexpr_to_bool(ast_node(cn).t))
-						ast_node.assignmove(eroot,tc);
-					else
-						ast_node.assignmove(eroot,fc);
-
-					ast_node(eroot).set_next(nn);
-					ast_node.release(fc);
-					ast_node.release(tc);
-					ast_node.release(cn);
-					ast_node.release(nn);
-					goto again;
-				}
-				break;
-			}
-			case token_type_t::op_symbol:
-			{
-				symbol_t &sym = symbol(ast_node(eroot).t.v.symbol);
-				if (sym.sym_type == symbol_t::CONST) {
-					if (sym.expr != ast_node_none) {
-						/* non-destructive copy the token from the symbol.
-						 * this will not work if the node has children or sibling (next) */
-						if (ast_node(sym.expr).child == ast_node_none && ast_node(sym.expr).next == ast_node_none) {
-							ast_node(eroot).t = ast_node(sym.expr).t;
+							ast_node(eroot).set_next(nn);
+							ast_node.release(op2);
+							ast_node.release(op1);
+							ast_node.release(nn);
 							goto again;
 						}
+						break;
 					}
-				}
-				break;
+
+				case token_type_t::op_ternary:
+					{
+						if (is_ast_constexpr(ast_node(erootnode.child).t)) {
+							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
+							ast_node_id_t cn = ast_node.returnmove(erootnode.child);
+							ast_node_id_t tc = ast_node.returnmove(ast_node(cn).next);
+							ast_node_id_t fc = ast_node.returnmove(ast_node(tc).next);
+
+							if (ast_constexpr_to_bool(ast_node(cn).t))
+								ast_node.assignmove(eroot,tc);
+							else
+								ast_node.assignmove(eroot,fc);
+
+							ast_node(eroot).set_next(nn);
+							ast_node.release(fc);
+							ast_node.release(tc);
+							ast_node.release(cn);
+							ast_node.release(nn);
+							goto again;
+						}
+						break;
+					}
+				case token_type_t::op_symbol:
+					{
+						symbol_t &sym = symbol(ast_node(eroot).t.v.symbol);
+						if (sym.sym_type == symbol_t::CONST) {
+							if (sym.expr != ast_node_none) {
+								/* non-destructive copy the token from the symbol.
+								 * this will not work if the node has children or sibling (next) */
+								if (ast_node(sym.expr).child == ast_node_none && ast_node(sym.expr).next == ast_node_none) {
+									ast_node(eroot).t = ast_node(sym.expr).t;
+									goto again;
+								}
+							}
+						}
+						break;
+					}
+				default:
+					{
+						for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
+							ast_node_reduce(ast_node(n).next,"  ");
+						break;
+					}
 			}
-			default:
-			{
-				for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
-					ast_node_reduce(ast_node(n).next);
-				break;
-			}
-		};
+		}
+
+#if 1//DEBUG
+		if (prefix.empty()) {
+			fprintf(stderr,"%senum expr (reduce-complete):\n",prefix.c_str());
+			debug_dump_ast(prefix+"  ",eroot);
+		}
+#endif
 	}
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
@@ -6293,15 +6301,7 @@ again:
 				if ((r=conditional_expression(en.expr)) < 1)
 					return r;
 
-#if 1//DEBUG
-				fprintf(stderr,"enum expr for '%s' (fresh):\n",identifier(en.name).to_str().c_str());
-				debug_dump_ast("  ",en.expr);
-#endif
 				ast_node_reduce(en.expr);
-#if 1//DEBUG
-				fprintf(stderr,"enum expr for '%s' (reduced):\n",identifier(en.name).to_str().c_str());
-				debug_dump_ast("  ",en.expr);
-#endif
 
 				/* the expression must reduce to an integer, or else it's an error */
 				ast_node_t &an = ast_node(en.expr);
@@ -6833,15 +6833,7 @@ again:
 					if ((r=conditional_expression(expr)) < 1)
 						return r;
 
-#if 1//DEBUG
-					fprintf(stderr,"array cexpr (fresh):\n");
-					debug_dump_ast("  ",expr);
-#endif
 					ast_node_reduce(expr);
-#if 1//DEBUG
-					fprintf(stderr,"array cexpr (reduced):\n");
-					debug_dump_ast("  ",expr);
-#endif
 				}
 
 				dd.arraydef.push_back(std::move(expr));
@@ -8432,15 +8424,7 @@ again:
 							if ((r=conditional_expression(asq)) < 1)
 								return r;
 
-#if 1//DEBUG
-							fprintf(stderr,"array cexpr (fresh):\n");
-							debug_dump_ast("  ",asq);
-#endif
 							ast_node_reduce(asq);
-#if 1//DEBUG
-							fprintf(stderr,"array cexpr (reduced):\n");
-							debug_dump_ast("  ",asq);
-#endif
 
 							if (tq_peek().type == token_type_t::ellipsis) {
 								/* GNU GCC extension: first ... last ranges */
@@ -8457,15 +8441,7 @@ again:
 								if ((r=conditional_expression(op2)) < 1)
 									return r;
 
-#if 1//DEBUG
-								fprintf(stderr,"array cexpr2 (fresh):\n");
-								debug_dump_ast("  ",op2);
-#endif
 								ast_node_reduce(op2);
-#if 1//DEBUG
-								fprintf(stderr,"array cexpr2 (reduced):\n");
-								debug_dump_ast("  ",op2);
-#endif
 
 								ast_node(asq).set_child(op1); ast_node(op1).release();
 								ast_node(op1).set_next(op2); ast_node(op2).release();
@@ -8556,15 +8532,7 @@ again:
 		debug_dump_ast("  ",aroot);
 #endif
 
-#if 1//DEBUG
-		fprintf(stderr,"init expr (fresh):\n");
-		debug_dump_ast("  ",aroot);
-#endif
 		ast_node_reduce(aroot);
-#if 1//DEBUG
-		fprintf(stderr,"init expr (reduced):\n");
-		debug_dump_ast("  ",aroot);
-#endif
 
 		return 1;
 	}
