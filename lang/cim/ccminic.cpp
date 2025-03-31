@@ -5918,8 +5918,8 @@ exists:
 		int translation_unit(void);
 	};
 
-	bool is_ast_constexpr(ast_node_t &an) {
-		switch (an.t.type) {
+	bool is_ast_constexpr(token_t &t) {
+		switch (t.type) {
 			case token_type_t::integer:
 				return true;
 			default:
@@ -5929,10 +5929,10 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_to_bool(ast_node_t &an) {
-		switch (an.t.type) {
+	bool ast_constexpr_to_bool(token_t &t) {
+		switch (t.type) {
 			case token_type_t::integer:
-				return an.t.v.integer.v.u != 0ull;
+				return t.v.integer.v.u != 0ull;
 			default:
 				break;
 		};
@@ -6076,7 +6076,7 @@ again:
 			case token_type_t::op_negate:
 			{
 				ast_node_id_t op1 = erootnode.child;
-				if (is_ast_constexpr(ast_node(op1))) {
+				if (is_ast_constexpr(ast_node(op1).t)) {
 					token_t result;
 
 					if (ast_constexpr_negate(result,ast_node(op1).t)) {
@@ -6091,7 +6091,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_add(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6106,7 +6106,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_logical_or(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6121,7 +6121,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_binary_or(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6136,7 +6136,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_binary_xor(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6151,7 +6151,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_binary_and(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6166,7 +6166,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1)) && is_ast_constexpr(ast_node(op2))) {
+				if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
 					token_t result;
 
 					if (ast_constexpr_multiply(result,ast_node(op1).t,ast_node(op2).t)) {
@@ -6182,7 +6182,7 @@ again:
 			{
 				ast_node_id_t op1 = erootnode.child;
 				ast_node_id_t op2 = ast_node(op1).next;
-				if (is_ast_constexpr(ast_node(op1))) {
+				if (is_ast_constexpr(ast_node(op1).t)) {
 					ast_node_id_t nn = ast_node.returnmove(erootnode.next);
 					op1 = ast_node.returnmove(erootnode.child);
 					op2 = ast_node.returnmove(ast_node(op1).next);
@@ -6200,13 +6200,13 @@ again:
 
 			case token_type_t::op_ternary:
 			{
-				if (is_ast_constexpr(ast_node(erootnode.child))) {
+				if (is_ast_constexpr(ast_node(erootnode.child).t)) {
 					ast_node_id_t nn = ast_node.returnmove(erootnode.next);
 					ast_node_id_t cn = ast_node.returnmove(erootnode.child);
 					ast_node_id_t tc = ast_node.returnmove(ast_node(cn).next);
 					ast_node_id_t fc = ast_node.returnmove(ast_node(tc).next);
 
-					if (ast_constexpr_to_bool(ast_node(cn)))
+					if (ast_constexpr_to_bool(ast_node(cn).t))
 						ast_node.assignmove(eroot,tc);
 					else
 						ast_node.assignmove(eroot,fc);
