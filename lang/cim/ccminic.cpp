@@ -5958,6 +5958,82 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = (op1.v.integer.v.v <= op2.v.integer.v.v) ? 1 : 0;
+					else
+						r.v.integer.v.u = (op1.v.integer.v.u <= op2.v.integer.v.u) ? 1 : 0;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
+	bool ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = (op1.v.integer.v.v >= op2.v.integer.v.v) ? 1 : 0;
+					else
+						r.v.integer.v.u = (op1.v.integer.v.u >= op2.v.integer.v.u) ? 1 : 0;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
+	bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = (op1.v.integer.v.v < op2.v.integer.v.v) ? 1 : 0;
+					else
+						r.v.integer.v.u = (op1.v.integer.v.u < op2.v.integer.v.u) ? 1 : 0;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
+	bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = (op1.v.integer.v.v > op2.v.integer.v.v) ? 1 : 0;
+					else
+						r.v.integer.v.u = (op1.v.integer.v.u > op2.v.integer.v.u) ? 1 : 0;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
 	bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
@@ -6211,6 +6287,54 @@ again:
 						OP_ONE_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t)) {
 							if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_lessthan_equals:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_lessthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_greaterthan_equals:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_greaterthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_lessthan:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_lessthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_greaterthan:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_greaterthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
 								goto again;
 							}
