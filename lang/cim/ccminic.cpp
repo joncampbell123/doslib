@@ -7594,6 +7594,18 @@ again:
 			}
 		}
 
+		/* No, you cannot typedef wihtin a C struct (but you can a C++ struct) */
+		if (ds.storage_class & SC_TYPEDEF)
+			CCERR_RET(EINVAL,tq_peek().pos,"Cannot typedef in a struct or union");
+
+		/* anon enums and unions are OK, GCC allows it */
+		if (declor.ddecl.name == identifier_none) {
+			if (ds.type_specifier & (TS_ENUM|TS_UNION))
+				return 1;
+
+			CCERR_RET(EINVAL,tq_peek().pos,"Anonymous struct field not allowed here");
+		}
+
 		symbol_t &sym = symbol(sid);
 		const size_t sfi = sym.fields.size();
 		sym.fields.resize(sfi + 1u);
