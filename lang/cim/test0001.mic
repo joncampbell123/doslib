@@ -64,6 +64,7 @@ static int dt = 1 < 2 < 3 < 4 < 5;
 static int du = 1 < 2 > 3 <= 4 >= 5;
 static int dv = 1 << 1;
 static int dw = 1 >> 1;
+static int dw2= 2 >> 1;
 static int dx = 1 << 2|3;
 static int dy = 1 << 2 << 3 << 4 << 5 << 6;
 static int dz = 1 >> 2 >> 3 >> 4 >> 5 >> 6;

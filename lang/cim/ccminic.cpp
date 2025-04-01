@@ -5958,6 +5958,62 @@ exists:
 		return false;
 	}
 
+	bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					/* negative or over-large shift? NOPE.
+					 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
+					 * the shift instructions only use the number of LSB bits relevent to the data
+					 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
+					 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
+					 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
+					if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
+						return false;
+
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = op1.v.integer.v.v << op2.v.integer.v.v;
+					else
+						r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
+	bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
+		/* TODO: type promotion/conversion */
+		if (op1.type == op2.type) {
+			switch (op1.type) {
+				case token_type_t::integer:
+					/* negative or over-large shift? NOPE.
+					 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
+					 * the shift instructions only use the number of LSB bits relevent to the data
+					 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
+					 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
+					 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
+					if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
+						return false;
+
+					r = op1;
+					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+						r.v.integer.v.u = op1.v.integer.v.v >> op2.v.integer.v.v;
+					else
+						r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
+					return true;
+				default:
+					break;
+			};
+		}
+
+		return false;
+	}
+
 	bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
@@ -6287,6 +6343,30 @@ again:
 						OP_ONE_PARAM_TEVAL;
 						if (is_ast_constexpr(ast_node(op1).t)) {
 							if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_leftshift:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_leftshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+								erootnode.set_child(ast_node_none);
+								goto again;
+							}
+						}
+						break;
+					}
+
+				case token_type_t::op_rightshift:
+					{
+						OP_TWO_PARAM_TEVAL;
+						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+							if (ast_constexpr_rightshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
 								erootnode.set_child(ast_node_none);
 								goto again;
 							}
