@@ -5444,6 +5444,19 @@ try_again_w_token:
 				sym_type = x.sym_type; x.sym_type = NONE;
 				flags = x.flags; x.flags = 0;
 			}
+
+			bool identifier_exists(const identifier_id_t &id) {
+				if (id != identifier_none) {
+					for (const auto &f : fields) {
+						if (f.name != identifier_none) {
+							if (identifier(f.name) == identifier(id))
+								return true;
+						}
+					}
+				}
+
+				return false;
+			}
 		};
 
 		struct scope_t {
@@ -7600,13 +7613,19 @@ again:
 
 		/* anon enums and unions are OK, GCC allows it */
 		if (declor.ddecl.name == identifier_none) {
-			if (ds.type_specifier & (TS_ENUM|TS_UNION))
+			if (ds.type_specifier & TS_ENUM)
 				return 1;
-
-			CCERR_RET(EINVAL,tq_peek().pos,"Anonymous struct field not allowed here");
+			else if (ds.type_specifier & TS_UNION)
+				{ /* None. Later stages of struct/union handling will merge anon union fields in and detect conflicts later. */ }
+			else
+				CCERR_RET(EINVAL,tq_peek().pos,"Anonymous struct field not allowed here");
 		}
 
 		symbol_t &sym = symbol(sid);
+
+		if (sym.identifier_exists(declor.ddecl.name))
+			CCERR_RET(EEXIST,tq_peek().pos,"Struct/union field already defined");
+
 		const size_t sfi = sym.fields.size();
 		sym.fields.resize(sfi + 1u);
 		structfield_t &sf = sym.fields[sfi];
