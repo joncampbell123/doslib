@@ -4946,6 +4946,7 @@ try_again_w_token:
 		TSI_ENUM,		// 10
 		TSI_STRUCT,
 		TSI_UNION,
+		TSI_MATCH_TYPEDEF,
 
 		TSI__MAX
 	};
@@ -4963,7 +4964,8 @@ try_again_w_token:
 		"longlong",
 		"enum",			// 10
 		"struct",
-		"union"
+		"union",
+		"matches-typedef"
 	};
 
 	typedef unsigned int type_specifier_t;
@@ -4982,6 +4984,7 @@ try_again_w_token:
 	X(ENUM);			// 10
 	X(STRUCT);
 	X(UNION);
+	X(MATCH_TYPEDEF);
 #undef X
 
 	///////////////////////////////////////
@@ -6899,6 +6902,26 @@ again:
 					}
 					continue;
 
+				case token_type_t::identifier:
+					if (ds.type_specifier & TS_MATCH_TYPEDEF)
+						break;
+
+					{
+						symbol_id_t sid;
+
+						if ((sid=lookup_symbol(t.v.identifier,symbol_t::TYPEDEF)) == symbol_none)
+							break;
+
+						if (symbol(sid).sym_type != symbol_t::TYPEDEF)
+							break;
+
+						ds.type_specifier |= TS_MATCH_TYPEDEF;
+						ds.type_identifier_symbol = sid;
+						tq_discard();
+						ds.count++;
+					}
+					break;
+
 				case token_type_t::r_enum:
 					ds.count++;
 					if (ds.type_specifier & TS_ENUM)
@@ -7150,7 +7173,7 @@ again:
 			if (sign_t && !only_one_bit_set(sign_t))
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (signed/unsigned)");
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION|TS_MATCH_TYPEDEF); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t))
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (int/char/void)");
 

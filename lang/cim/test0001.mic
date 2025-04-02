@@ -441,8 +441,23 @@ struct tt4b2 {
 	unsigned int	ca:[CD ... CE];
 } tt4vb2;
 
+typedef struct {
+	unsigned int	x,y;
+} tt5_t;
+
 typedef unsigned int tdu1;
 typedef struct tdu2_t { int a; int b; } tdu2;
+
+static tdu1 xyz123 = 3;
+static tt5_t xyzabc = { x: 4, y: 3 };
+
+tdu1 trf1() {
+	return 5;
+}
+
+tdu1 trf2(tdu1 x,tdu1 *y) {
+	return x + *y;
+}
 
 enum :char {
 	DA,
