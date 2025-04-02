@@ -7937,7 +7937,12 @@ again:
 				aroot = ast_node.alloc(srt);
 			}
 			else {
-				aroot = ast_node.alloc(tq_get());
+// If it's not in the symbol table, it's unknown, not defined
+// aroot = ast_node.alloc(tq_get());
+				if (tq_peek().v.identifier != identifier_none)
+					CCERR_RET(ENOENT,tq_peek().pos,"'%s' not declared in this scope",identifier(tq_peek().v.identifier).to_str().c_str());
+				else
+					CCERR_RET(ENOENT,tq_peek().pos,"<anon> not declared in this scope");
 			}
 		}
 		else if (tq_peek().type == token_type_t::openparenthesis) {

@@ -84,56 +84,58 @@ static int daj2=((4 * 4) / 2) + 5;
 static int dak = 1 % 2;
 static int dal = 1 % 2 % 3 % 4;
 static int dam = 4 * 4 / 3 % 4;
-static int dan = ++a;
-static int dao = --a;
-static int dap = ++ ++a;
-static int daq = -- --a;
-static int dar = &a;
-static int das = &&a;
-static int dat = *a;
-static int dau = **a;
-static int dav = +a;
-static int daw = -a;
+static int dan = ++dam;
+static int dao = --dam;
+static int dap = ++ ++dam;
+static int dap2= ++ dam ++;
+static int daq = -- --dam;
+static int daq2= -- dam --;
+static int dar = &daq;
+static int das = &&daq;
+static int dat = *daq;
+static int dau = **daq;
+static int dav = +daq;
+static int daw = -daq;
 static int daw2= -5;
 static int daw3= -(-5);
-static int dax = ~a;
+static int dax = ~daq;
 static int dax2= ~0;
 static int dax3= ~1;
 static int dax4= ~~0;
 static int dax5= ~~1;
-static int day = ~~a;
-static int daz = !a;
+static int day = ~~daq;
+static int daz = !daq;
 static int daz2= !0;
 static int daz3= !1;
 static int daz4= !!0;
 static int daz5= !!1;
 static int daz6= !!12345;
-static int dba = !!a;
-static int dbb = sizeof a;
-static int dbc = sizeof ~a;
-static int dbd = sizeof(a);
-static int dbe = sizeof(~a);
-static int dbf = a++;
-static int dbg = a++ ++;
-static int dbh = a--;
-static int dbi = a-- --;
-static int dbj = a.x;
-static int dbk = a.x.y.z;
-static int dbl = a->x;
-static int dbm = a->x->y->z;
-static int dbn = (a);
-static int dbo = (b*a)*c;
-static int dbp = (b+a)*c;
-static int dbq = b+a*c;
-static int dbr = (((a+b)*c)/d)+(e*f);
-static int dbs = a[5];
-static int dbt = a[b+c];
-static int dbu = a[3][5];
-static int dbv = a[b+c][4+d];
-static int dbw = (*(a+3))[b][c][d][e][f];
+static int dba = !!daq;
+static int dbb = sizeof daq;
+static int dbc = sizeof ~daq;
+static int dbd = sizeof(daq);
+static int dbe = sizeof(~daq);
+static int dbf = daq++;
+static int dbg = daq++ ++;
+static int dbh = daq--;
+static int dbi = daq-- --;
+static int dbj = daq.x;
+static int dbk = daq.x.y.z;
+static int dbl = daq->x;
+static int dbm = daq->x->y->z;
+static int dbn = (daq);
+static int dbo = (dax*day)*daz;
+static int dbp = (dax+day)*daz;
+static int dbq = dax+day*daz;
+static int dbr = (((dax+day)*daz)/dbf)+(dba*dbb);
+static int dbs = dba[5];
+static int dbt = dba[dbb+dbc];
+static int dbu = dba[3][5];
+static int dbv = dba[dbb+dbc][4+dbd];
+static int dbw = (*(dba+3))[dbb][dbc][dbd][dbe][dbf];
 static int ddda[4];
-static int dbz[4][5][6][a];
-static int dca[a+b*c][d+e][((f+g)*h)+5][g];
+static int dbz[4][5][6][dba];
+static int dca[dba+dbb*dbc][dbd+dbe][((dbf+dbg)*dbh)+5][dbg];
 static int dcb[];
 static int dcc[][][][];
 static int dcd();
@@ -248,9 +250,22 @@ static int dddb(int a) {
 	for (x=0;x < 5;x++,z++) z++;
 	return x;
 }
+static int roundto1(int x) {
+	x -= x % 5;
+	return x;
+}
+static int roundto(int x,int y) {
+	x -= x % y;
+	return x;
+}
+
+int printf(const char *fmt,...);
+
 static int (*dddb_p)(int a) = dddb;
 static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
-	roundto();
+	int* (*funcptr)();
+	int (*func1)();
+	roundto(9);
 	(*funcptr)();
 	func1()();
 	func1()()()()();
@@ -269,9 +284,9 @@ static int x1a1f = sizeof(int*[3][3]);
 static int x1a1g = sizeof(const int);
 static int x1a1h[] = { 1 };
 static int x1a1i[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-static int x1a1j[] = { a, b, c+d, e*f, g*h+i };
-static int x1a1k[] = { a, b, { 1, 2, 3, 4 }, c, d };
-static int x1a1l[] = { a, b, { 1, 2, 3, 4, { x*x, y*y, z*z } }, c, d };
+static int x1a1j[] = { dba, dbb, dbc+dbd, dbe*dbf, dbg*dbh+dbi };
+static int x1a1k[] = { dba, dbb, { 1, 2, 3, 4 }, c, d };
+static int x1a1l[] = { dba, dbb, { 1, 2, 3, 4, { dax*dax, day*day, daz*daz } }, dbc, dbd };
 static int daaba(int a) {
 	return (long)(a);
 }
@@ -333,7 +348,7 @@ struct test7 { int a, b, c; } x00015 = { 1, 2, 3 };
 struct test8 { int a[3], b[5], c[7]; } x00016 = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
 static int x00017[] = { 10, 20, [5] = 50, [50][5] = 500, [500][50][5] = 5000, 60, 70 };
 struct test9 { int a, test, b; } x00018 = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
-struct test10 { int a, test, b; } x00019 = { a: 5, b: 7*8, c: a*b };
+struct test10 { int a, test, b; } x00019 = { a: 5, b: 7*8, c: dba*dbb };
 static inline int d00020() { return 3; }
 static constexpr inline int d00021() { return 4; }
 
