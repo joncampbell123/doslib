@@ -6953,6 +6953,8 @@ again:
 
 							if ((r=enumerator_list_parse(eds,ds.enum_list)) < 1)
 								return r;
+
+							ds.type_identifier_symbol = sl.sid;
 						}
 						else if (declor.ddecl.name != identifier_none) {
 							if ((sl.sid=lookup_symbol(declor.ddecl.name,sl.st)) == symbol_none)
