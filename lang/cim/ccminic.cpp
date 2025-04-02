@@ -7222,6 +7222,7 @@ again:
 				return r;
 
 			assert(ds.type_specifier == 0 && ds.storage_class == 0);
+			assert(ds.type_identifier_symbol == symbol_none);
 			p.tq = ds.type_qualifier;
 
 			ptr.push_back(std::move(p));
