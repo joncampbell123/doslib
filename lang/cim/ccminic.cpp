@@ -5256,7 +5256,7 @@ try_again_w_token:
 
 		void common_move(declarator_t &o) {
 			ddecl = std::move(o.ddecl);
-			ptr = std::move(ptr); o.ptr.clear();
+			ptr = std::move(o.ptr);
 			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
 			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
