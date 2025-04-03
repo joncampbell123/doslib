@@ -5194,7 +5194,7 @@ try_again_w_token:
 		}
 	};
 
-	struct direct_declarator_t {
+	struct declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
 		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
@@ -5205,37 +5205,6 @@ try_again_w_token:
 		symbol_id_t symbol = symbol_none;
 		unsigned int flags = 0;
 
-		direct_declarator_t() { };
-		direct_declarator_t(const direct_declarator_t &x) { common_copy(x); }
-		direct_declarator_t &operator=(const direct_declarator_t &x) { common_copy(x); return *this; }
-		direct_declarator_t(direct_declarator_t &&x) { common_move(x); }
-		direct_declarator_t &operator=(direct_declarator_t &&x) { common_move(x); return *this; }
-
-		void common_copy(const direct_declarator_t &o) {
-			ddptr = o.ddptr;
-			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
-			identifier.assign(/*to*/name,/*from*/o.name);
-			symbol = o.symbol;
-			flags = o.flags;
-		}
-
-		void common_move(direct_declarator_t &o) {
-			ddptr = std::move(o.ddptr); o.ddptr.clear();
-			arraydef = std::move(o.arraydef); o.arraydef.clear();
-			identifier.assignmove(/*to*/name,/*from*/o.name);
-			symbol = o.symbol; o.symbol = symbol_none;
-			flags = o.flags; o.flags = 0;
-		}
-
-		~direct_declarator_t() {
-			identifier.release(name);
-			ast_node_t::arrayrelease(arraydef);
-			arraydef.clear();
-		}
-	};
-
-	struct declarator_t {
-		direct_declarator_t ddecl;
 		std::vector<pointer_t> ptr;
 		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
 		ast_node_id_t bitfield_expr = ast_node_none;
@@ -5247,20 +5216,31 @@ try_again_w_token:
 		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const declarator_t &o) {
-			ddecl = o.ddecl;
+			ddptr = o.ddptr;
+			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
+			identifier.assign(/*to*/name,/*from*/o.name);
+			symbol = o.symbol;
+			flags = o.flags;
 			ptr = o.ptr;
 			ast_node.assign(/*to*/expr,/*from*/o.expr);
 			ast_node.assign(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
 
 		void common_move(declarator_t &o) {
-			ddecl = std::move(o.ddecl);
+			ddptr = std::move(o.ddptr); o.ddptr.clear();
+			arraydef = std::move(o.arraydef); o.arraydef.clear();
+			identifier.assignmove(/*to*/name,/*from*/o.name);
+			symbol = o.symbol; o.symbol = symbol_none;
+			flags = o.flags; o.flags = 0;
 			ptr = std::move(o.ptr);
 			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
 			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
 
 		~declarator_t() {
+			identifier.release(name);
+			ast_node_t::arrayrelease(arraydef);
+			arraydef.clear();
 			ast_node.release(expr);
 			ast_node.release(bitfield_expr);
 		}
@@ -5500,7 +5480,7 @@ try_again_w_token:
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
 		void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
-		void debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name=std::string());
+		void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name=std::string());
 		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
@@ -5705,7 +5685,7 @@ try_again_w_token:
 		}
 
 		symbol_t::type_t classify_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
-			if ((declor.ddecl.flags & (direct_declarator_t::FL_FUNCTION|direct_declarator_t::FL_FUNCTION_POINTER)) == direct_declarator_t::FL_FUNCTION)/* function, but not function pointer */
+			if ((declor.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)/* function, but not function pointer */
 				return symbol_t::FUNCTION;
 			else if (spec.storage_class & SC_TYPEDEF)
 				return symbol_t::TYPEDEF;
@@ -5763,9 +5743,9 @@ try_again_w_token:
 				}
 			}
 
-			if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+			if (declor.flags & declarator_t::FL_FUNCTION_POINTER)
 				sl.flags |= symbol_t::FL_FUNCTION_POINTER;
-			if (declor.ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+			if (declor.flags & declarator_t::FL_ELLIPSIS)
 				sl.flags |= symbol_t::FL_ELLIPSIS;
 
 			return 1;
@@ -5777,7 +5757,7 @@ try_again_w_token:
 			assert(sl.sid == symbol_none);
 			assert(sl.st != symbol_t::NONE);
 
-			if ((sl.sid=lookup_symbol(scope(sl.cursco),declor.ddecl.name,sl.st)) != symbol_none)
+			if ((sl.sid=lookup_symbol(scope(sl.cursco),declor.name,sl.st)) != symbol_none)
 				return true;
 
 			return false;
@@ -5802,10 +5782,10 @@ try_again_w_token:
 				if (sp1.decl.ptr.size() != sp2.decl.ptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.decl.ddecl.ddptr.size() != sp2.decl.ddecl.ddptr.size())
+				if (sp1.decl.ddptr.size() != sp2.decl.ddptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.decl.ddecl.arraydef.size() != sp2.decl.ddecl.arraydef.size())
+				if (sp1.decl.arraydef.size() != sp2.decl.arraydef.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 			}
 
@@ -5894,20 +5874,20 @@ exists:
 		/* this automatically uses the scope_stack and current_scope() return value */
 		int add_symbol(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
 			assert(sl.sid == symbol_none);
-			sl.sid = new_symbol(declor.ddecl.name);
+			sl.sid = new_symbol(declor.name);
 			symbol_t &sym = symbol(sl.sid);
 			sym.spec = spec;
 			sym.scope = sl.cursco;
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
 			sym.ptr = declor.ptr;
-			sym.ddptr = declor.ddecl.ddptr;
+			sym.ddptr = declor.ddptr;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
 		}
 
-		int direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
+		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
@@ -6770,7 +6750,7 @@ again:
 				sl.pos = en.pos;
 				sl.st = symbol_t::CONST;
 				ast_node.assignmove(/*to*/declor.expr,/*from*/en.expr);
-				identifier.assignmove(/*to*/declor.ddecl.name,/*from*/en.name);
+				identifier.assignmove(/*to*/declor.name,/*from*/en.name);
 				if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
 					return r;
 				if (do_local_symbol_lookup(sl,spec,declor)) {
@@ -6944,7 +6924,7 @@ again:
 						eds.type_qualifier = TQ_CONST;
 
 						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
+							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
 
 						if (tq_peek().type == token_type_t::colon) {
 							tq_discard();
@@ -6978,8 +6958,8 @@ again:
 
 							ds.type_identifier_symbol = sl.sid;
 						}
-						else if (declor.ddecl.name != identifier_none) {
-							if ((sl.sid=lookup_symbol(declor.ddecl.name,sl.st)) == symbol_none)
+						else if (declor.name != identifier_none) {
+							if ((sl.sid=lookup_symbol(declor.name,sl.st)) == symbol_none)
 								CCERR_RET(ENOENT,sl.pos,"No such enum");
 
 							ds.type_identifier_symbol = sl.sid;
@@ -7004,7 +6984,7 @@ again:
 						symbol_lookup_t sl;
 
 						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
+							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
 
 						sl.pos = pos;
 						sl.st = symbol_t::STRUCT;
@@ -7037,7 +7017,7 @@ again:
 
 							ds.type_identifier_symbol = sl.sid;
 						}
-						else if (declor.ddecl.name != identifier_none) {
+						else if (declor.name != identifier_none) {
 							sl.flags = symbol_t::FL_DECLARED;
 							if ((r=prep_symbol_lookup(sl,ds,declor)) < 1)
 								return r;
@@ -7072,7 +7052,7 @@ again:
 						symbol_lookup_t sl;
 
 						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.ddecl.name,/*from*/tq_get().v.identifier);
+							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
 
 						sl.pos = pos;
 						sl.st = symbol_t::UNION;
@@ -7105,7 +7085,7 @@ again:
 
 							ds.type_identifier_symbol = sl.sid;
 						}
-						else if (declor.ddecl.name != identifier_none) {
+						else if (declor.name != identifier_none) {
 							sl.flags = symbol_t::FL_DECLARED;
 							if ((r=prep_symbol_lookup(sl,ds,declor)) < 1)
 								return r;
@@ -7237,7 +7217,7 @@ again:
 		return 1;
 	}
 
-	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,direct_declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
+	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		int indent = 0;
 		int r;
@@ -7317,15 +7297,15 @@ again:
 			tq_discard();
 
 			/* NTS: "()" is acceptable */
-			dd.flags |= direct_declarator_t::FL_FUNCTION;
-			if (identptr) dd.flags |= direct_declarator_t::FL_FUNCTION_POINTER;
+			dd.flags |= declarator_t::FL_FUNCTION;
+			if (identptr) dd.flags |= declarator_t::FL_FUNCTION_POINTER;
 
 			if (tq_peek().type != token_type_t::closeparenthesis) {
 				do {
 					if (tq_peek().type == token_type_t::ellipsis) {
 						tq_discard();
 
-						dd.flags |= direct_declarator_t::FL_ELLIPSIS;
+						dd.flags |= declarator_t::FL_ELLIPSIS;
 
 						/* At least one paremter is required for ellipsis! */
 						if (parameters.empty()) {
@@ -7344,15 +7324,15 @@ again:
 					if ((r=pointer_parse(p.decl.ptr)) < 1)
 						return r;
 
-					if ((r=direct_declarator_parse(p.spec,p.decl.ddecl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
+					if ((r=direct_declarator_parse(p.spec,p.decl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
-					if (p.decl.ddecl.name != identifier_none) {
+					if (p.decl.name != identifier_none) {
 						for (const auto &chk_p : parameters) {
-							if (chk_p.decl.ddecl.name != identifier_none) {
-								if (identifier(chk_p.decl.ddecl.name) == identifier(p.decl.ddecl.name)) {
-									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl.ddecl.name).to_str().c_str());
+							if (chk_p.decl.name != identifier_none) {
+								if (identifier(chk_p.decl.name) == identifier(p.decl.name)) {
+									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl.name).to_str().c_str());
 									return errno_return(EEXIST);
 								}
 							}
@@ -7397,7 +7377,7 @@ again:
 		 * you can have either all parameter_type parameters,
 		 * or identifier_list parameters.
 		 * Do not allow a mix of them. */
-		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
+		if (dd.flags & declarator_t::FL_FUNCTION) {
 			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
 			int cls;
 
@@ -7465,7 +7445,7 @@ again:
 								while (i < parameters.size()) {
 									parameter_t &chk_p = parameters[i];
 
-									if (identifier(d.ddecl.name) == identifier(chk_p.decl.ddecl.name))
+									if (identifier(d.name) == identifier(chk_p.decl.name))
 										break;
 
 									i++;
@@ -7473,7 +7453,7 @@ again:
 
 								/* no match---fail */
 								if (i == parameters.size()) {
-									CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.ddecl.name).makestring().c_str());
+									CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.name).makestring().c_str());
 									return errno_return(ENOENT);
 								}
 
@@ -7525,11 +7505,11 @@ again:
 		debug_dump_direct_declarator("  ",dd);
 #endif
 
-		if (dd.flags & direct_declarator_t::FL_FUNCTION) {
+		if (dd.flags & declarator_t::FL_FUNCTION) {
 			/* any parameter not yet described, is an error */
 			for (auto &p : parameters) {
 				if (p.spec.empty()) {
-					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl.ddecl.name).to_str().c_str());
+					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl.name).to_str().c_str());
 					debug_dump_parameter("  ",p);
 					return errno_return(EINVAL);
 				}
@@ -7545,7 +7525,7 @@ again:
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(ds,declor.ddecl,parameters)) < 1)
+		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
 			return r;
 
 		return 1;
@@ -7570,7 +7550,7 @@ again:
 		if ((r=pointer_parse(declor.ptr)) < 1)
 			return r;
 
-		if ((r=direct_declarator_parse(ds,declor.ddecl,parameters)) < 1)
+		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::colon) {
@@ -7637,7 +7617,7 @@ again:
 			CCERR_RET(EINVAL,tq_peek().pos,"Cannot typedef in a struct or union");
 
 		/* anon enums and unions are OK, GCC allows it */
-		if (declor.ddecl.name == identifier_none) {
+		if (declor.name == identifier_none) {
 			if (ds.type_specifier & TS_ENUM)
 				return 1;
 			else if (ds.type_specifier & TS_UNION)
@@ -7648,7 +7628,7 @@ again:
 
 		symbol_t &sym = symbol(sid);
 
-		if (sym.identifier_exists(declor.ddecl.name))
+		if (sym.identifier_exists(declor.name))
 			CCERR_RET(EEXIST,tq_peek().pos,"Struct/union field already defined");
 
 		const size_t sfi = sym.fields.size();
@@ -7656,10 +7636,10 @@ again:
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
 		sf.ptr = declor.ptr;
-		sf.ddptr = declor.ddecl.ddptr;
-		ast_node_t::arraycopy(/*to*/sf.arraydef,/*from*/declor.ddecl.arraydef);
+		sf.ddptr = declor.ddptr;
+		ast_node_t::arraycopy(/*to*/sf.arraydef,/*from*/declor.arraydef);
 		sf.parameters = parameters;
-		identifier.assign(/*to*/sf.name,/*from*/declor.ddecl.name);
+		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
 		return 1;
 	}
@@ -7727,15 +7707,15 @@ again:
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
 		debug_dump_pointer(prefix+"  ",p.decl.ptr);
 
-		debug_dump_pointer(prefix+"  ",p.decl.ddecl.ddptr,"direct declarator");
+		debug_dump_pointer(prefix+"  ",p.decl.ddptr,"direct declarator");
 
-		if (p.decl.ddecl.name != identifier_none)
-			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.ddecl.name).to_str().c_str());
+		if (p.decl.name != identifier_none)
+			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.name).to_str().c_str());
 
-		if (p.decl.ddecl.symbol != symbol_none)
-			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.ddecl.symbol);
+		if (p.decl.symbol != symbol_none)
+			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
 
-		debug_dump_arraydef(prefix+"  ",p.decl.ddecl.arraydef,"direct declarator");
+		debug_dump_arraydef(prefix+"  ",p.decl.arraydef,"direct declarator");
 
 		for (auto &pp : p.parameters)
 			debug_dump_parameter(prefix+"  ",pp);
@@ -7746,10 +7726,10 @@ again:
 		}
 	}
 
-	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,direct_declarator_t &ddecl,const std::string &name) {
-		if (ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name) {
+		if (ddecl.flags & declarator_t::FL_FUNCTION_POINTER)
 			fprintf(stderr,"%s%s%sfunction pointer direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else if (ddecl.flags & direct_declarator_t::FL_FUNCTION)
+		else if (ddecl.flags & declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
 			fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -7764,20 +7744,20 @@ again:
 
 		debug_dump_arraydef(prefix+"  ",ddecl.arraydef);
 
-		if (ddecl.flags & direct_declarator_t::FL_ELLIPSIS)
+		if (ddecl.flags & declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
 	}
 
 	void cc_state_t::debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
-		if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+		if (declr.flags & declarator_t::FL_FUNCTION_POINTER)
 			fprintf(stderr,"%s%s%sfunction pointer declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else if (declr.ddecl.flags & direct_declarator_t::FL_FUNCTION)
+		else if (declr.flags & declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		else
 			fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
 		debug_dump_pointer(prefix+"  ",declr.ptr);
-		debug_dump_direct_declarator(prefix+"  ",declr.ddecl);
+		debug_dump_direct_declarator(prefix+"  ",declr);
 
 		if (declr.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
@@ -8239,7 +8219,7 @@ again:
 					return r;
 
 				std::vector<parameter_t> dummy_param;
-				if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+				if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
 				ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
@@ -8289,7 +8269,7 @@ again:
 				return r;
 
 			std::vector<parameter_t> dummy_param;
-			if ((r=direct_declarator_parse((*declion).spec,declor.ddecl,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+			if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
 			aroot = ast_node.alloc(token_type_t::op_typecast);
@@ -9066,7 +9046,7 @@ again:
 				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
 					return r;
 
-				if (declor.ddecl.name != identifier_none) {
+				if (declor.name != identifier_none) {
 					if ((r=prep_symbol_lookup(sl,spec,declor)) < 1)
 						return r;
 					if (do_local_symbol_lookup(sl,spec,declor)) {
@@ -9081,13 +9061,13 @@ again:
 
 						symbol_t &sym = symbol(sl.sid);
 						sym.parameters = parameters;
-						ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+						ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 
 						scope_t::decl_t &sldef = sco.new_localdecl();
 						sldef.spec = spec;
 						sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
 						sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
-						sldef.declor.ddecl.symbol = sl.sid;
+						sldef.declor.symbol = sl.sid;
 					}
 				}
 
@@ -9455,13 +9435,13 @@ again:
 				return r;
 
 			/* if function, with an arraydef, and not a function pointer. GCC won't allow it, it doesn't make sense, neither will we */
-			if ((declor.ddecl.flags & (direct_declarator_t::FL_FUNCTION|direct_declarator_t::FL_FUNCTION_POINTER)) == direct_declarator_t::FL_FUNCTION && !declor.ddecl.arraydef.empty())
+			if ((declor.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION && !declor.arraydef.empty())
 				CCERR_RET(EINVAL,tq_peek().pos,"Not allowed to declare an array of functions");
 
-			if (tq_peek().type == token_type_t::opencurlybracket && (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION)) {
+			if (tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
 				tq_discard();
 
-				if (declor.ddecl.flags & direct_declarator_t::FL_FUNCTION_POINTER)
+				if (declor.flags & declarator_t::FL_FUNCTION_POINTER)
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed for function pointers");
 				if (declor.expr != ast_node_none)
 					CCERR_RET(EINVAL,tq_peek().pos,"Function body cannot coexist with initializer expression");
@@ -9488,7 +9468,7 @@ again:
 				/* add it to the symbol table */
 				for (auto &p : parameters) {
 					/* if a parameter was given without a name, don't register a symbol */
-					if (p.decl.ddecl.name == identifier_none)
+					if (p.decl.name == identifier_none)
 						continue;
 
 					symbol_lookup_t sl;
@@ -9506,7 +9486,7 @@ again:
 						return r;
 					}
 
-					p.decl.ddecl.symbol = sl.sid;
+					p.decl.symbol = sl.sid;
 				}
 
 				{
@@ -9515,7 +9495,7 @@ again:
 					symbol_t &sym = symbol(sl.sid);
 					sym.parent_of_scope = current_scope();
 					sym.parameters = std::move(parameters);
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -9537,7 +9517,7 @@ again:
 			}
 
 			/* add it to the symbol table */
-			if (declor.ddecl.name != identifier_none) {
+			if (declor.name != identifier_none) {
 				if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
 					return r;
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
@@ -9554,7 +9534,7 @@ again:
 					 * the identifiers in the parameter list are not even used. */
 					symbol_t &sym = symbol(sl.sid);
 					sym.parameters = parameters;
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.ddecl.arraydef);
+					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 				}
 			}
 
