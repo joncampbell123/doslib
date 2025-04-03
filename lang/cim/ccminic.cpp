@@ -7243,6 +7243,9 @@ again:
 		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
 			allowed_no_identifier = true;
 
+		if ((r=pointer_parse(dd.ptr)) < 1)
+			return r;
+
 		while (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 			indent++;
@@ -7319,9 +7322,6 @@ again:
 					parameter_t p;
 
 					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
-						return r;
-
-					if ((r=pointer_parse(p.decl.ptr)) < 1)
 						return r;
 
 					if ((r=direct_declarator_parse(p.spec,p.decl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
@@ -7522,9 +7522,6 @@ again:
 	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters) {
 		int r;
 
-		if ((r=pointer_parse(declor.ptr)) < 1)
-			return r;
-
 		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
 			return r;
 
@@ -7546,9 +7543,6 @@ again:
 	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
 		std::vector<parameter_t> parameters;
 		int r;
-
-		if ((r=pointer_parse(declor.ptr)) < 1)
-			return r;
 
 		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
 			return r;
@@ -8215,9 +8209,6 @@ again:
 
 				declarator_t &declor = (*declion).new_declarator();
 
-				if ((r=pointer_parse(declor.ptr)) < 1)
-					return r;
-
 				std::vector<parameter_t> dummy_param;
 				if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
@@ -8264,9 +8255,6 @@ again:
 				return r;
 
 			declarator_t &declor = (*declion).new_declarator();
-
-			if ((r=pointer_parse(declor.ptr)) < 1)
-				return r;
 
 			std::vector<parameter_t> dummy_param;
 			if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
