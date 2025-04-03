@@ -5199,7 +5199,7 @@ try_again_w_token:
 		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
 
-		std::vector<pointer_t> ptr;
+		std::vector<pointer_t> ddptr;
 		std::vector<ast_node_id_t> arraydef;
 		identifier_id_t name = identifier_none;
 		symbol_id_t symbol = symbol_none;
@@ -5212,8 +5212,7 @@ try_again_w_token:
 		direct_declarator_t &operator=(direct_declarator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const direct_declarator_t &o) {
-			ptr = o.ptr;
-
+			ddptr = o.ddptr;
 			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
 			identifier.assign(/*to*/name,/*from*/o.name);
 			symbol = o.symbol;
@@ -5221,7 +5220,7 @@ try_again_w_token:
 		}
 
 		void common_move(direct_declarator_t &o) {
-			ptr = std::move(o.ptr); o.ptr.clear();
+			ddptr = std::move(o.ddptr); o.ddptr.clear();
 			arraydef = std::move(o.arraydef); o.arraydef.clear();
 			identifier.assignmove(/*to*/name,/*from*/o.name);
 			symbol = o.symbol; o.symbol = symbol_none;
@@ -5803,7 +5802,7 @@ try_again_w_token:
 				if (sp1.decl.ptr.size() != sp2.decl.ptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.decl.ddecl.ptr.size() != sp2.decl.ddecl.ptr.size())
+				if (sp1.decl.ddecl.ddptr.size() != sp2.decl.ddecl.ddptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
 				if (sp1.decl.ddecl.arraydef.size() != sp2.decl.ddecl.arraydef.size())
@@ -5902,7 +5901,7 @@ exists:
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
 			sym.ptr = declor.ptr;
-			sym.ddptr = declor.ddecl.ptr;
+			sym.ddptr = declor.ddecl.ddptr;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
@@ -7268,10 +7267,10 @@ again:
 			tq_discard();
 			indent++;
 
-			if ((r=pointer_parse(dd.ptr)) < 1)
+			if ((r=pointer_parse(dd.ddptr)) < 1)
 				return r;
 
-			if (!dd.ptr.empty())
+			if (!dd.ddptr.empty())
 				identptr = true;
 		}
 
@@ -7657,7 +7656,7 @@ again:
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
 		sf.ptr = declor.ptr;
-		sf.ddptr = declor.ddecl.ptr;
+		sf.ddptr = declor.ddecl.ddptr;
 		ast_node_t::arraycopy(/*to*/sf.arraydef,/*from*/declor.ddecl.arraydef);
 		sf.parameters = parameters;
 		identifier.assign(/*to*/sf.name,/*from*/declor.ddecl.name);
@@ -7728,7 +7727,7 @@ again:
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
 		debug_dump_pointer(prefix+"  ",p.decl.ptr);
 
-		debug_dump_pointer(prefix+"  ",p.decl.ddecl.ptr,"direct declarator");
+		debug_dump_pointer(prefix+"  ",p.decl.ddecl.ddptr,"direct declarator");
 
 		if (p.decl.ddecl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.ddecl.name).to_str().c_str());
@@ -7755,7 +7754,7 @@ again:
 		else
 			fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
-		debug_dump_pointer(prefix+"  ",ddecl.ptr);
+		debug_dump_pointer(prefix+"  ",ddecl.ddptr);
 
 		if (ddecl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
