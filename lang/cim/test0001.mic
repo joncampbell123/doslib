@@ -493,6 +493,14 @@ static unsigned __int8 szi9 = 8;
 static unsigned __int16 szi10 = 8;
 static unsigned __int32 szi11 = 8;
 static unsigned __int64 szi12 = 8;
+static int8_t szi13 = 8;
+static int16_t szi14 = 8;
+static int32_t szi15 = 8;
+static int64_t szi16 = 8;
+static uint8_t szi17 = 8;
+static uint16_t szi18 = 8;
+static uint32_t szi19 = 8;
+static uint64_t szi20 = 8;
 
 tdu1 trf1() {
 	return 5;
