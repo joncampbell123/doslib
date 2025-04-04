@@ -475,6 +475,12 @@ static unsigned int xsz1 = sizeof(int);
 static unsigned int xsz2 = sizeof(tdu1);
 static unsigned int xyz121 = (unsigned int)5;
 static unsigned int xyz122 = (tdu1)5;
+static size_t sz1 = 8;
+static size_t sz2 = sizeof(size_t);
+static size_t sz3 = (size_t)8;
+static ssize_t sz4 = 8;
+static ssize_t sz5 = sizeof(ssize_t);
+static ssize_t sz6 = (ssize_t)8;
 
 tdu1 trf1() {
 	return 5;

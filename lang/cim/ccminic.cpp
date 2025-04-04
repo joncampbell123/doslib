@@ -4947,6 +4947,7 @@ try_again_w_token:
 		TSI_STRUCT,
 		TSI_UNION,
 		TSI_MATCH_TYPEDEF,
+		TSI_MATCH_BUILTIN,
 
 		TSI__MAX
 	};
@@ -4965,7 +4966,8 @@ try_again_w_token:
 		"enum",			// 10
 		"struct",
 		"union",
-		"matches-typedef"
+		"matches-typedef",
+		"matches-builtin"
 	};
 
 	typedef unsigned int type_specifier_t;
@@ -4985,6 +4987,7 @@ try_again_w_token:
 	X(STRUCT);
 	X(UNION);
 	X(MATCH_TYPEDEF);
+	X(MATCH_BUILTIN);
 #undef X
 
 	///////////////////////////////////////
@@ -7033,6 +7036,8 @@ again:
 			case token_type_t::r_inline: return true;
 			case token_type_t::r_consteval: return true;
 			case token_type_t::r_constinit: return true;
+			case token_type_t::r_size_t: return true;
+			case token_type_t::r_ssize_t: return true;
 
 			case token_type_t::identifier:
 				{
@@ -7054,6 +7059,7 @@ again:
 
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
 		const position_t pos = tq_peek().pos;
+		type_specifier_t builtin_ts = 0;
 		int r;
 
 		do {
@@ -7118,6 +7124,21 @@ again:
 					}
 					continue;
 
+				case token_type_t::r_size_t:
+					builtin_ts = data_types_ptr_data.dt_size_t.ts | TS_UNSIGNED;
+					goto common_builtin;
+				case token_type_t::r_ssize_t:
+					builtin_ts = data_types_ptr_data.dt_size_t.ts | TS_SIGNED;
+					goto common_builtin;
+				common_builtin:
+					if (ds.type_specifier & TS_MATCH_BUILTIN)
+						break;
+
+					ds.type_specifier |= TS_MATCH_BUILTIN;
+					tq_discard();
+					ds.count++;
+					continue;
+
 				case token_type_t::identifier:
 					if (ds.type_specifier & TS_MATCH_TYPEDEF)
 						break;
@@ -7136,7 +7157,7 @@ again:
 						tq_discard();
 						ds.count++;
 					}
-					break;
+					continue;
 
 				case token_type_t::r_enum:
 					ds.count++;
@@ -7389,7 +7410,7 @@ again:
 			if (sign_t && !only_one_bit_set(sign_t))
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (signed/unsigned)");
 
-			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION|TS_MATCH_TYPEDEF); /* only one of */
+			const type_specifier_t intlen_t = ds.type_specifier & (TS_VOID|TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG|TS_ENUM|TS_STRUCT|TS_UNION|TS_MATCH_TYPEDEF|TS_MATCH_BUILTIN); /* only one of */
 			if (intlen_t && !only_one_bit_set(intlen_t))
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (int/char/void)");
 
@@ -7402,6 +7423,10 @@ again:
 
 			if (floattype_t && sign_t)
 				CCERR_RET(EINVAL,pos,"Multiple type specifiers (float+signed/unsigned)");
+		}
+
+		if (ds.type_specifier & TS_MATCH_BUILTIN) {
+			ds.type_specifier = builtin_ts;
 		}
 
 #if 0//DEBUG
