@@ -5402,6 +5402,10 @@ try_again_w_token:
 		pa_pair_t(pa_pair_t &&x) { common_move(x); }
 		pa_pair_t &operator=(pa_pair_t &&x) { common_move(x); return *this; }
 
+		bool empty(void) const {
+			return ptr.empty() && arraydef.empty() && sub == NULL;
+		}
+
 		pa_pair_t* sub_init(void) {
 			if (sub == NULL) sub = new pa_pair_t();
 			return sub;
@@ -8044,7 +8048,7 @@ again:
 	}
 
 	void cc_state_t::debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name) {
-		if (pp.ptr.empty() && pp.arraydef.empty() && pp.sub == NULL)
+		if (pp.empty())
 			return;
 
 		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
