@@ -471,6 +471,10 @@ static tdu9 xyz117;
 static tdu10 xyz118;
 static tdu11 xyz119;
 static tdu12 xyz120;
+static unsigned int xsz1 = sizeof(int);
+static unsigned int xsz2 = sizeof(tdu1);
+static unsigned int xyz121 = (unsigned int)5;
+static unsigned int xyz122 = (tdu1)5;
 
 tdu1 trf1() {
 	return 5;

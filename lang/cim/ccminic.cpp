@@ -7024,6 +7024,19 @@ again:
 			case token_type_t::r_inline: return true;
 			case token_type_t::r_consteval: return true;
 			case token_type_t::r_constinit: return true;
+
+			case token_type_t::identifier:
+				{
+					symbol_id_t sid;
+
+					if ((sid=lookup_symbol(t.v.identifier,symbol_t::TYPEDEF)) == symbol_none)
+						return false;
+
+					if (symbol(sid).sym_type != symbol_t::TYPEDEF)
+						return false;
+				}
+				return true;
+
 			default: break;
 		};
 
