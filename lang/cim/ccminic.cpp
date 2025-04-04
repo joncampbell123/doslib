@@ -5406,6 +5406,11 @@ try_again_w_token:
 			return ptr.empty() && arraydef.empty() && sub == NULL;
 		}
 
+		void sub_free(void) {
+			if (sub) delete sub;
+			sub = NULL;
+		}
+
 		pa_pair_t* sub_init(void) {
 			if (sub == NULL) sub = new pa_pair_t();
 			return sub;
@@ -7576,6 +7581,9 @@ again:
 				pato = patost.top();
 				assert(pato != NULL);
 				patost.pop();
+
+				if (pato->sub && pato->sub->empty())
+					pato->sub_free();
 			}
 			else if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
@@ -7680,6 +7688,9 @@ again:
 				pato = patost.top();
 				assert(pato != NULL);
 				patost.pop();
+
+				if (pato->sub && pato->sub->empty())
+					pato->sub_free();
 			}
 			else if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
@@ -7701,6 +7712,9 @@ again:
 				break;
 			}
 		} while (1);
+
+		if (pato->sub && pato->sub->empty())
+			pato->sub_free();
 
 		if (indent > 0)
 			CCERR_RET(EINVAL,tq_peek().pos,"Missing closing parenthesis");
