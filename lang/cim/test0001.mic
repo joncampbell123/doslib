@@ -450,12 +450,27 @@ typedef struct tdu2_t { int a; int b; } tdu2;
 typedef unsigned int *tdu3;
 typedef tdu1 tdu4;
 typedef tdu1 *tdu5;
+typedef unsigned int tdu6[5];
+typedef tdu6 tdu7[3];
+typedef tdu7 tdu8[15];
+typedef tdu6 *tdu9[7];
+typedef tdu9 *tdu10[9];
+typedef tdu1* (*tdu11)(tdu1 *x,tdu10 *y);
+typedef tdu11 tdu12[4];
 
 static tdu1 xyz123 = 3;
 static tt5_t xyzabc = { x: 4, y: 3 };
+static tdu2 xyz110 = { a: 3, b: 5 };
 static tdu3 xyz111 = &xyz123;
 static tdu4 xyz112 = 123;
 static tdu5 xyz113 = &xyz123;
+static tdu6 xyz114 = { 1, 2, 3, 4, 5 };
+static tdu7 xyz115;
+static tdu8 xyz116;
+static tdu9 xyz117;
+static tdu10 xyz118;
+static tdu11 xyz119;
+static tdu12 xyz120;
 
 tdu1 trf1() {
 	return 5;
@@ -525,5 +540,8 @@ static int fromConst1[constD];
 
 static int* (* (*funcedup1[4])(int x,int y));
 static int**** (** (***funcedup2)[4][3])[2];
-static int (** (** (*funcedup3)[5])[5])[5];
+static int (** (** (*funcedup3)[5])[6])[7];
+
+typedef int (** (** (*funcedup4_t)[5])[6])[7];
+funcedup4_t funcedup4[4];
 

@@ -7307,6 +7307,38 @@ again:
 				identptr = true;
 		}
 
+		/* typedef substituion */
+		if (ds.type_specifier & TS_MATCH_TYPEDEF) {
+			symbol_t &tsym = symbol(ds.type_identifier_symbol);
+			assert(tsym.sym_type == symbol_t::TYPEDEF);
+
+			/* storage class remains unchanged */
+
+			/* copy type specifier */
+			ds.type_specifier = tsym.spec.type_specifier;
+
+			/* merge type qualifier */
+			ds.type_qualifier |= tsym.spec.type_qualifier & (TQ_CONST|TQ_VOLATILE|TQ_RESTRICT);
+			{
+				const type_qualifier_t msk = TQ_NEAR|TQ_FAR|TQ_HUGE;
+				if ((ds.type_qualifier & msk) == 0)
+					ds.type_qualifier |= (tsym.spec.type_qualifier & msk);
+			}
+
+			ds.type_identifier_symbol = tsym.spec.type_identifier_symbol;
+			ds.enum_list = tsym.spec.enum_list;
+			ds.count = tsym.spec.count;
+			parameters = tsym.parameters;
+
+			pa_pair_t *dst = pato;
+			pa_pair_t *src = &tsym.ptrarr;
+			if (src) {
+				dst->sub_init();
+				dst = dst->sub;
+				*dst = *src; /* copies info and sub info recursively */
+			}
+		}
+
 		if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
 			identifier.assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
@@ -7802,7 +7834,7 @@ again:
 	}
 
 	void cc_state_t::debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name) {
-		if (pp.ptr.empty() && pp.arraydef.empty())
+		if (pp.ptr.empty() && pp.arraydef.empty() && pp.sub == NULL)
 			return;
 
 		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
