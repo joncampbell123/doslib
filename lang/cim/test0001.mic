@@ -525,4 +525,5 @@ static int fromConst1[constD];
 
 static int* (* (*funcedup1[4])(int x,int y));
 static int**** (** (***funcedup2)[4][3])[2];
+static int (** (** (*funcedup3)[5])[5])[5];
 

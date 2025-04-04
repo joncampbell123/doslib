@@ -5247,7 +5247,6 @@ try_again_w_token:
 		symbol_id_t symbol = symbol_none;
 		unsigned int flags = 0;
 
-		std::vector<pointer_t> ptr;
 		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
 		ast_node_id_t bitfield_expr = ast_node_none;
 
@@ -5262,7 +5261,6 @@ try_again_w_token:
 			identifier.assign(/*to*/name,/*from*/o.name);
 			symbol = o.symbol;
 			flags = o.flags;
-			ptr = o.ptr;
 			ast_node.assign(/*to*/expr,/*from*/o.expr);
 			ast_node.assign(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
@@ -5272,7 +5270,6 @@ try_again_w_token:
 			identifier.assignmove(/*to*/name,/*from*/o.name);
 			symbol = o.symbol; o.symbol = symbol_none;
 			flags = o.flags; o.flags = 0;
-			ptr = std::move(o.ptr);
 			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
 			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
@@ -5421,7 +5418,6 @@ try_again_w_token:
 
 			declaration_specifiers_t		spec;
 			pa_pair_t				ptrarr;
-			std::vector<pointer_t>			ptr;
 			std::vector<parameter_t>		parameters;
 			std::vector<structfield_t>		fields;
 			identifier_id_t				name = identifier_none;
@@ -5445,7 +5441,6 @@ try_again_w_token:
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
 				ptrarr = std::move(x.ptrarr);
-				ptr = std::move(x.ptr);
 				parameters = std::move(x.parameters);
 				fields = std::move(x.fields);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
@@ -5809,7 +5804,7 @@ try_again_w_token:
 				if (sp1.spec.type_specifier != sp2.spec.type_specifier)
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.decl.ptr.size() != sp2.decl.ptr.size())
+				if (sp1.decl.ptrarr.ptr.size() != sp2.decl.ptrarr.ptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 			}
 
@@ -5856,7 +5851,7 @@ try_again_w_token:
 						(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
 						chk_s.spec.type_specifier == spec.type_specifier &&
 						chk_s.spec.type_qualifier == spec.type_qualifier &&
-						chk_s.ptr == declor.ptr) {
+						chk_s.ptrarr.ptr == declor.ptrarr.ptr) {
 						/* you can change EXTERN to non-EXTERN, or just declare EXTERN again, that's it */
 						if (chk_s.spec.storage_class & SC_EXTERN) {
 							if ((spec.storage_class & SC_EXTERN) == 0)
@@ -5878,7 +5873,7 @@ try_again_w_token:
 						chk_s.spec.storage_class == spec.storage_class &&
 						chk_s.spec.type_specifier == spec.type_specifier &&
 						chk_s.spec.type_qualifier == spec.type_qualifier &&
-						chk_s.ptr == declor.ptr) {
+						chk_s.ptrarr.ptr == declor.ptrarr.ptr) {
 						if (sl.flags & symbol_t::FL_DEFINED) {
 							if (chk_s.flags & symbol_t::FL_DEFINED) /* cannot define it again */
 								goto exists;
@@ -5904,7 +5899,6 @@ exists:
 			sym.scope = sl.cursco;
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
-			sym.ptr = declor.ptr;
 			sym.ptrarr = declor.ptrarr;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
@@ -7272,6 +7266,32 @@ again:
 		if ((r=pointer_parse(pato->ptr)) < 1)
 			return r;
 
+		/* pato:
+		 *   - going up: parse pointers if any
+		 *   - coming back down: parse the [array expr] if any
+		 *
+		 * This is necessary to handle anything from simple expressions like
+		 *
+		 * int a[5];
+		 *
+		 * to function pointers like
+		 *
+		 * int (*funcptr)(int x,int y)
+		 *
+		 * to ugly representations you normally don't see but your compiler handles internally if you nest typedefs like:
+		 *
+		 * int (** (* (*funcytown)[5])[45])[2]
+		 *
+		 * Yes, that is valid C! You might get that from:
+		 *
+		 * typedef int *fun1;
+		 * typedef fun1 *fun2[5];
+		 * typedef fun2 *fun3[45];
+		 * typedef fun3 **fun4[2];
+		 * fun4 funcytown;
+		 *
+		 * Even if I made mistakes in the above code snippet my general point stands. */
+
 		while (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 			indent++;
@@ -7524,9 +7544,9 @@ again:
 								}
 
 								parameter_t &fp = parameters[i];
-								if (fp.spec.empty() && fp.decl.ptr.empty()) {
+								if (fp.spec.empty() && fp.decl.ptrarr.ptr.empty()) {
 									fp.spec = s_spec;
-									fp.decl.ptr = std::move(d.ptr);
+									fp.decl.ptrarr = std::move(d.ptrarr);
 									fp.parameters = std::move(s_parameters);
 								}
 								else {
@@ -7763,7 +7783,6 @@ again:
 	void cc_state_t::debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
 		fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
-		debug_dump_pointer(prefix+"  ",p.decl.ptr);
 
 		if (p.decl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.name).to_str().c_str());
@@ -7821,7 +7840,6 @@ again:
 		else
 			fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
-		debug_dump_pointer(prefix+"  ",declr.ptr);
 		debug_dump_direct_declarator(prefix+"  ",declr);
 
 		if (declr.expr != ast_node_none) {
@@ -7951,7 +7969,6 @@ again:
 
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
 		debug_dump_pa_pair(prefix+"  ",sym.ptrarr);
-		debug_dump_pointer(prefix+"  ",sym.ptr,"declaration specifier");
 
 		for (auto &p : sym.parameters)
 			debug_dump_parameter(prefix+"  ",p);
