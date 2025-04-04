@@ -816,6 +816,10 @@ namespace CCMiniC {
 		op_gcc_range,
 		op_bitfield_range,
 		op_symbol,				// 275
+		r___int8,
+		r___int16,
+		r___int32,
+		r___int64,
 
 		__MAX__
 	};
@@ -963,6 +967,10 @@ namespace CCMiniC {
 	DEFB(elifndef);
 	DEFXUU(func);
 	DEFXUU(FUNCTION);
+	DEFX(__int8);
+	DEFX(__int16);
+	DEFX(__int32);
+	DEFX(__int64);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -1120,7 +1128,11 @@ namespace CCMiniC {
 		XAS(volatile,     volatile),
 		XAS(__volatile__, volatile),
 		XUU(func),
-		XUU(FUNCTION)
+		XUU(FUNCTION),
+		X(__int8),
+		X(__int16),
+		X(__int32),
+		X(__int64)
 	};
 	static constexpr size_t ident2tok_cc_length = sizeof(ident2tok_cc) / sizeof(ident2tok_cc[0]);
 
@@ -1425,7 +1437,11 @@ namespace CCMiniC {
 		"op:dinit_field",
 		"op:gcc-range",
 		"op:bitfield-range",
-		"op:symbol"				// 275
+		"op:symbol",				// 275
+		"__int8",
+		"__int16",
+		"__int32",
+		"__int64"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -4948,6 +4964,10 @@ try_again_w_token:
 		TSI_UNION,
 		TSI_MATCH_TYPEDEF,
 		TSI_MATCH_BUILTIN,
+		TSI_SZ8,		// 15
+		TSI_SZ16,
+		TSI_SZ32,
+		TSI_SZ64,
 
 		TSI__MAX
 	};
@@ -4967,7 +4987,11 @@ try_again_w_token:
 		"struct",
 		"union",
 		"matches-typedef",
-		"matches-builtin"
+		"matches-builtin",
+		"sz8",			// 15
+		"sz16",
+		"sz32",
+		"sz64"
 	};
 
 	typedef unsigned int type_specifier_t;
@@ -4988,6 +5012,10 @@ try_again_w_token:
 	X(UNION);
 	X(MATCH_TYPEDEF);
 	X(MATCH_BUILTIN);
+	X(SZ8);				// 15
+	X(SZ16);
+	X(SZ32);
+	X(SZ64);
 #undef X
 
 	///////////////////////////////////////
@@ -7038,6 +7066,10 @@ again:
 			case token_type_t::r_constinit: return true;
 			case token_type_t::r_size_t: return true;
 			case token_type_t::r_ssize_t: return true;
+			case token_type_t::r___int8: return true;
+			case token_type_t::r___int16: return true;
+			case token_type_t::r___int32: return true;
+			case token_type_t::r___int64: return true;
 
 			case token_type_t::identifier:
 				{
@@ -7130,7 +7162,19 @@ again:
 				case token_type_t::r_ssize_t:
 					builtin_ts = data_types_ptr_data.dt_size_t.ts | TS_SIGNED;
 					goto common_builtin;
-				common_builtin:
+				case token_type_t::r___int8:
+					builtin_ts = TS_INT | TS_SZ8;
+					goto common_builtin;
+				case token_type_t::r___int16:
+					builtin_ts = TS_INT | TS_SZ16;
+					goto common_builtin;
+				case token_type_t::r___int32:
+					builtin_ts = TS_INT | TS_SZ32;
+					goto common_builtin;
+				case token_type_t::r___int64:
+					builtin_ts = TS_INT | TS_SZ64;
+					goto common_builtin;
+common_builtin:
 					if (ds.type_specifier & TS_MATCH_BUILTIN)
 						break;
 
@@ -7426,6 +7470,9 @@ again:
 		}
 
 		if (ds.type_specifier & TS_MATCH_BUILTIN) {
+			if ((builtin_ts & (TS_UNSIGNED|TS_SIGNED)) == 0)
+				builtin_ts |= ds.type_specifier & (TS_UNSIGNED|TS_SIGNED);
+
 			ds.type_specifier = builtin_ts;
 		}
 

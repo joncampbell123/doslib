@@ -481,6 +481,18 @@ static size_t sz3 = (size_t)8;
 static ssize_t sz4 = 8;
 static ssize_t sz5 = sizeof(ssize_t);
 static ssize_t sz6 = (ssize_t)8;
+static __int8 szi1 = 8;
+static __int16 szi2 = 8;
+static __int32 szi3 = 8;
+static __int64 szi4 = 8;
+static signed __int8 szi5 = 8;
+static signed __int16 szi6 = 8;
+static signed __int32 szi7 = 8;
+static signed __int64 szi8 = 8;
+static unsigned __int8 szi9 = 8;
+static unsigned __int16 szi10 = 8;
+static unsigned __int32 szi11 = 8;
+static unsigned __int64 szi12 = 8;
 
 tdu1 trf1() {
 	return 5;
