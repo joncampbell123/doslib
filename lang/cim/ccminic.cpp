@@ -5375,9 +5375,7 @@ try_again_w_token:
 
 		struct structfield_t {
 			declaration_specifiers_t		spec;
-			std::vector<pointer_t>			ptr;
-			std::vector<pointer_t>			ddptr;
-			std::vector<ast_node_id_t>		arraydef;
+			pa_pair_t				ptrarr;
 			std::vector<parameter_t>		parameters;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				bitfield_expr = ast_node_none;
@@ -5389,16 +5387,13 @@ try_again_w_token:
 			structfield_t &operator=(structfield_t &&x) { common_move(x); return *this; }
 
 			~structfield_t() {
-				ast_node_t::arrayrelease(arraydef);
 				identifier.release(name);
 				ast_node.release(bitfield_expr);
 			}
 
 			void common_move(structfield_t &x) {
 				spec = std::move(x.spec);
-				ptr = std::move(x.ptr);
-				ddptr = std::move(x.ddptr);
-				arraydef = std::move(x.arraydef);
+				ptrarr = std::move(x.ptrarr);
 				parameters = std::move(x.parameters);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/bitfield_expr,/*from*/x.bitfield_expr);
@@ -7700,7 +7695,7 @@ again:
 		sym.fields.resize(sfi + 1u);
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
-		sf.ptr = declor.ptr;
+		sf.ptrarr = declor.ptrarr;
 		sf.parameters = parameters;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
@@ -7911,9 +7906,7 @@ again:
 		fprintf(stderr,"\n");
 
 		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
-		debug_dump_pointer(prefix+"  ",field.ptr,"declaration specifier");
-		debug_dump_pointer(prefix+"  ",field.ddptr,"direct declarator");
-		debug_dump_arraydef(prefix+"  ",field.arraydef);
+		debug_dump_pa_pair(prefix+"  ",field.ptrarr);
 
 		for (auto &p : field.parameters)
 			debug_dump_parameter(prefix+"  ",p);
