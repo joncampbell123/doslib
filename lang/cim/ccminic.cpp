@@ -5194,13 +5194,55 @@ try_again_w_token:
 		}
 	};
 
+	struct pa_pair_t {
+		std::vector<pointer_t>			ptr;
+		std::vector<ast_node_id_t>		arraydef;
+		pa_pair_t*				sub = NULL;
+
+		pa_pair_t() { }
+		pa_pair_t(const pa_pair_t &x) { common_copy(x); }
+		pa_pair_t &operator=(const pa_pair_t &x) { common_copy(x); return *this; }
+		pa_pair_t(pa_pair_t &&x) { common_move(x); }
+		pa_pair_t &operator=(pa_pair_t &&x) { common_move(x); return *this; }
+
+		pa_pair_t* sub_init(void) {
+			if (sub == NULL) sub = new pa_pair_t();
+			return sub;
+		}
+
+		void common_copy(const pa_pair_t &o) {
+			ptr = o.ptr;
+			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
+
+			if (o.sub) {
+				if (sub == NULL) sub = new pa_pair_t();
+				*sub = *o.sub;
+			}
+			else {
+				if (sub) delete sub;
+				sub = NULL;
+			}
+		}
+
+		void common_move(pa_pair_t &o) {
+			ptr = std::move(o.ptr);
+			arraydef = std::move(o.arraydef); o.arraydef.clear();
+			sub = o.sub; o.sub = NULL;
+		}
+
+		~pa_pair_t() {
+			if (sub) delete sub;
+			ast_node_t::arrayrelease(arraydef);
+			arraydef.clear();
+		}
+	};
+
 	struct declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
 		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
 
-		std::vector<pointer_t> ddptr;
-		std::vector<ast_node_id_t> arraydef;
+		pa_pair_t ptrarr;
 		identifier_id_t name = identifier_none;
 		symbol_id_t symbol = symbol_none;
 		unsigned int flags = 0;
@@ -5216,8 +5258,7 @@ try_again_w_token:
 		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const declarator_t &o) {
-			ddptr = o.ddptr;
-			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
+			ptrarr = o.ptrarr;
 			identifier.assign(/*to*/name,/*from*/o.name);
 			symbol = o.symbol;
 			flags = o.flags;
@@ -5227,8 +5268,7 @@ try_again_w_token:
 		}
 
 		void common_move(declarator_t &o) {
-			ddptr = std::move(o.ddptr); o.ddptr.clear();
-			arraydef = std::move(o.arraydef); o.arraydef.clear();
+			ptrarr = std::move(o.ptrarr);
 			identifier.assignmove(/*to*/name,/*from*/o.name);
 			symbol = o.symbol; o.symbol = symbol_none;
 			flags = o.flags; o.flags = 0;
@@ -5239,8 +5279,6 @@ try_again_w_token:
 
 		~declarator_t() {
 			identifier.release(name);
-			ast_node_t::arrayrelease(arraydef);
-			arraydef.clear();
 			ast_node.release(expr);
 			ast_node.release(bitfield_expr);
 		}
@@ -5387,9 +5425,8 @@ try_again_w_token:
 			static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
 
 			declaration_specifiers_t		spec;
+			pa_pair_t				ptrarr;
 			std::vector<pointer_t>			ptr;
-			std::vector<pointer_t>			ddptr;
-			std::vector<ast_node_id_t>		arraydef;
 			std::vector<parameter_t>		parameters;
 			std::vector<structfield_t>		fields;
 			identifier_id_t				name = identifier_none;
@@ -5408,15 +5445,12 @@ try_again_w_token:
 			~symbol_t() {
 				ast_node.release(expr);
 				identifier.release(name);
-				ast_node_t::arrayrelease(arraydef);
-				arraydef.clear();
 			}
 
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
+				ptrarr = std::move(x.ptrarr);
 				ptr = std::move(x.ptr);
-				ddptr = std::move(x.ddptr);
-				arraydef = std::move(x.arraydef);
 				parameters = std::move(x.parameters);
 				fields = std::move(x.fields);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
@@ -5484,6 +5518,7 @@ try_again_w_token:
 		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
+		void debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
@@ -5781,12 +5816,6 @@ try_again_w_token:
 
 				if (sp1.decl.ptr.size() != sp2.decl.ptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
-
-				if (sp1.decl.ddptr.size() != sp2.decl.ddptr.size())
-					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
-
-				if (sp1.decl.arraydef.size() != sp2.decl.arraydef.size())
-					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 			}
 
 			return 1;
@@ -5881,7 +5910,7 @@ exists:
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
 			sym.ptr = declor.ptr;
-			sym.ddptr = declor.ddptr;
+			sym.ptrarr = declor.ptrarr;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
@@ -7219,6 +7248,8 @@ again:
 
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
+		std::stack<pa_pair_t*> patost;
+		pa_pair_t *pato = &dd.ptrarr;
 		int indent = 0;
 		int r;
 
@@ -7243,17 +7274,21 @@ again:
 		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
 			allowed_no_identifier = true;
 
-		if ((r=pointer_parse(dd.ptr)) < 1)
+		if ((r=pointer_parse(pato->ptr)) < 1)
 			return r;
 
 		while (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 			indent++;
 
-			if ((r=pointer_parse(dd.ddptr)) < 1)
+			patost.push(pato);
+			pato->sub_init();
+			pato = pato->sub;
+
+			if ((r=pointer_parse(pato->ptr)) < 1)
 				return r;
 
-			if (!dd.ddptr.empty())
+			if (!pato->ptr.empty())
 				identptr = true;
 		}
 
@@ -7270,9 +7305,16 @@ again:
 
 		do {
 			if (tq_peek().type == token_type_t::closeparenthesis) {
-				if (indent == 0) break;
+				if (indent == 0)
+					break;
+
 				tq_discard();
 				indent--;
+
+				assert(!patost.empty());
+				pato = patost.top();
+				assert(pato != NULL);
+				patost.pop();
 			}
 			else if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
@@ -7286,7 +7328,7 @@ again:
 					ast_node_reduce(expr);
 				}
 
-				dd.arraydef.push_back(std::move(expr));
+				pato->arraydef.push_back(std::move(expr));
 				if (tq_get().type != token_type_t::closesquarebracket)
 					return errno_return(EINVAL);
 			}
@@ -7365,10 +7407,39 @@ again:
 				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
 		}
 
-		while (indent > 0 && tq_peek().type == token_type_t::closeparenthesis) {
-			tq_discard();
-			indent--;
-		}
+		do {
+			if (tq_peek().type == token_type_t::closeparenthesis) {
+				if (indent == 0)
+					break;
+
+				tq_discard();
+				indent--;
+
+				assert(!patost.empty());
+				pato = patost.top();
+				assert(pato != NULL);
+				patost.pop();
+			}
+			else if (tq_peek().type == token_type_t::opensquarebracket) {
+				tq_discard();
+
+				/* NTS: "[]" is acceptable */
+				ast_node_id_t expr = ast_node_none;
+				if (tq_peek().type != token_type_t::closesquarebracket) {
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
+
+					ast_node_reduce(expr);
+				}
+
+				pato->arraydef.push_back(std::move(expr));
+				if (tq_get().type != token_type_t::closesquarebracket)
+					return errno_return(EINVAL);
+			}
+			else {
+				break;
+			}
+		} while (1);
 
 		if (indent > 0)
 			CCERR_RET(EINVAL,tq_peek().pos,"Missing closing parenthesis");
@@ -7630,8 +7701,6 @@ again:
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
 		sf.ptr = declor.ptr;
-		sf.ddptr = declor.ddptr;
-		ast_node_t::arraycopy(/*to*/sf.arraydef,/*from*/declor.arraydef);
 		sf.parameters = parameters;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
@@ -7701,15 +7770,13 @@ again:
 		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
 		debug_dump_pointer(prefix+"  ",p.decl.ptr);
 
-		debug_dump_pointer(prefix+"  ",p.decl.ddptr,"direct declarator");
-
 		if (p.decl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.name).to_str().c_str());
 
 		if (p.decl.symbol != symbol_none)
 			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
 
-		debug_dump_arraydef(prefix+"  ",p.decl.arraydef,"direct declarator");
+		debug_dump_pa_pair(prefix+"  ",p.decl.ptrarr);
 
 		for (auto &pp : p.parameters)
 			debug_dump_parameter(prefix+"  ",pp);
@@ -7720,6 +7787,17 @@ again:
 		}
 	}
 
+	void cc_state_t::debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name) {
+		if (pp.ptr.empty() && pp.arraydef.empty())
+			return;
+
+		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		debug_dump_pointer(prefix+"  ",pp.ptr);
+		debug_dump_arraydef(prefix+"  ",pp.arraydef);
+
+		if (pp.sub) debug_dump_pa_pair(prefix+"  ",*pp.sub);
+	}
+
 	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name) {
 		if (ddecl.flags & declarator_t::FL_FUNCTION_POINTER)
 			fprintf(stderr,"%s%s%sfunction pointer direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
@@ -7728,15 +7806,13 @@ again:
 		else
 			fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
-		debug_dump_pointer(prefix+"  ",ddecl.ddptr);
-
 		if (ddecl.name != identifier_none)
 			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
 
 		if (ddecl.symbol != symbol_none)
 			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)ddecl.symbol);
 
-		debug_dump_arraydef(prefix+"  ",ddecl.arraydef);
+		debug_dump_pa_pair(prefix+"  ",ddecl.ptrarr);
 
 		if (ddecl.flags & declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
@@ -7881,9 +7957,8 @@ again:
 		fprintf(stderr,"\n");
 
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
+		debug_dump_pa_pair(prefix+"  ",sym.ptrarr);
 		debug_dump_pointer(prefix+"  ",sym.ptr,"declaration specifier");
-		debug_dump_pointer(prefix+"  ",sym.ddptr,"direct declarator");
-		debug_dump_arraydef(prefix+"  ",sym.arraydef);
 
 		for (auto &p : sym.parameters)
 			debug_dump_parameter(prefix+"  ",p);
@@ -9049,7 +9124,6 @@ again:
 
 						symbol_t &sym = symbol(sl.sid);
 						sym.parameters = parameters;
-						ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 
 						scope_t::decl_t &sldef = sco.new_localdecl();
 						sldef.spec = spec;
@@ -9422,10 +9496,6 @@ again:
 			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
 				return r;
 
-			/* if function, with an arraydef, and not a function pointer. GCC won't allow it, it doesn't make sense, neither will we */
-			if ((declor.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION && !declor.arraydef.empty())
-				CCERR_RET(EINVAL,tq_peek().pos,"Not allowed to declare an array of functions");
-
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
 				tq_discard();
 
@@ -9483,7 +9553,6 @@ again:
 					symbol_t &sym = symbol(sl.sid);
 					sym.parent_of_scope = current_scope();
 					sym.parameters = std::move(parameters);
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -9522,7 +9591,6 @@ again:
 					 * the identifiers in the parameter list are not even used. */
 					symbol_t &sym = symbol(sl.sid);
 					sym.parameters = parameters;
-					ast_node_t::arraycopy(/*to*/sym.arraydef,/*from*/declor.arraydef);
 				}
 			}
 
