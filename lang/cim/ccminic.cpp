@@ -6150,6 +6150,31 @@ exists:
 			return 1;
 		}
 
+		struct ddip_parse_t {
+			std::vector<pointer_t>		ptr;
+			std::vector<ast_node_id_t>	arr;
+			std::vector<parameter_t>	parameters;
+			unsigned int			dd_flags = 0;
+
+			ddip_parse_t() { }
+			ddip_parse_t(const ddip_parse_t &) = delete;
+			ddip_parse_t &operator=(const ddip_parse_t &) = delete;
+			ddip_parse_t(ddip_parse_t &&x) { common_move(x); }
+			ddip_parse_t &operator=(ddip_parse_t &&x) { common_move(x); return *this; }
+
+			~ddip_parse_t() {
+				ast_node_t::arrayrelease(arr);
+			}
+
+			void common_move(ddip_parse_t &o) {
+				ptr = std::move(o.ptr); o.ptr.clear();
+				arr = std::move(o.arr); o.arr.clear();
+				parameters = std::move(o.parameters); o.parameters.clear();
+				dd_flags = o.dd_flags; o.dd_flags = 0;
+			}
+		};
+
+		int direct_declarator_inner_parse(std::vector<ddip_parse_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
@@ -6957,6 +6982,7 @@ again:
 		integer_value_t iv;
 		int r;
 
+		iv.init();
 		iv.v.u = 0;
 		iv.flags = integer_value_t::FL_SIGNED;
 
@@ -7563,9 +7589,152 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::direct_declarator_inner_parse(std::vector<ddip_parse_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags) {
+		int r;
+
+		/* [*] identifier [arraydefs]
+		 * ( [*] identifier [arraydefs] )
+		 * ( [*] identifier ) [arraydefs]
+		 * ( [*] ( [*] identifier [arraydefs] ) )
+		 * ( [*] ( [*] identifier ) [arraydefs] )
+		 * ( [*] ( [*] identifier ) ) [arraydefs]
+		 *
+		 * This parses one level within parens.
+		 *
+		 * apparently postfix operators (arraydefs) within a layer take priority over the pointer.
+		 *
+		 * int *ar[4];     ar is an array of 4 pointers to int
+		 * int (*ar)[4];   ar is a pointer to an array of 4 ints */
+		const size_t dpi = dp.size(); dp.resize(dpi+1u);
+
+		if ((r=pointer_parse(dp[dpi].ptr)) < 1)
+			return r;
+
+		if (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
+
+			/* WARNING: pushes to vector which causes reallocation which will make references to array elements stale */
+			if ((r=direct_declarator_inner_parse(dp,dd,pos,flags)) < 1)
+				return r;
+
+			if (tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+		}
+		else {
+			assert(dd.name == identifier_none);
+			if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
+				if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
+				identifier.assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
+			}
+			else if (flags & DIRDECL_ALLOW_ABSTRACT) {
+				dd.name = identifier_none;
+			}
+			else {
+				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
+			}
+		}
+
+		/* no more changes to dp vector, so it is safe to use a reference to array elem now */
+		ddip_parse_t &tdp = dp[dpi];
+
+		while (tq_peek().type == token_type_t::opensquarebracket) {
+			tq_discard();
+
+			/* NTS: "[]" is acceptable */
+			ast_node_id_t expr = ast_node_none;
+			if (tq_peek().type != token_type_t::closesquarebracket) {
+				if ((r=conditional_expression(expr)) < 1)
+					return r;
+
+				ast_node_reduce(expr);
+			}
+
+			tdp.arr.push_back(std::move(expr));
+			if (tq_get().type != token_type_t::closesquarebracket)
+				CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
+		}
+
+		/* you are allowed ONE parameter list! ONE! */
+		if (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
+
+			/* NTS: "()" is acceptable */
+			tdp.dd_flags |= declarator_t::FL_FUNCTION;
+
+			/* if we're at the () in (*function)() then this is a function pointer */
+			if ((dpi+1u) < dp.size()) {
+				if (!dp[dpi+1u].ptr.empty())
+					tdp.dd_flags |= declarator_t::FL_FUNCTION_POINTER;
+			}
+
+			if (tq_peek().type != token_type_t::closeparenthesis) {
+				do {
+					if (tq_peek().type == token_type_t::ellipsis) {
+						tq_discard();
+
+						tdp.dd_flags |= declarator_t::FL_ELLIPSIS;
+
+						/* At least one paremter is required for ellipsis! */
+						if (tdp.parameters.empty()) {
+							CCerr(pos,"Variadic functions must have at least one named parameter");
+							return errno_return(EINVAL);
+						}
+
+						break;
+					}
+
+					parameter_t p;
+
+					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
+						return r;
+
+					if ((r=direct_declarator_parse(p.spec,p.decl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
+						return r;
+
+					/* do not allow using the same name again */
+					if (p.decl.name != identifier_none) {
+						for (const auto &chk_p : tdp.parameters) {
+							if (chk_p.decl.name != identifier_none) {
+								if (identifier(chk_p.decl.name) == identifier(p.decl.name)) {
+									CCerr(pos,"Parameter '%s' already defined",identifier(p.decl.name).to_str().c_str());
+									return errno_return(EEXIST);
+								}
+							}
+						}
+
+						if (tq_peek().type == token_type_t::equal) {
+							/* if no declaration specifiers were given (just a bare identifier
+							 * aka the old 1980s syntax), then you shouldn't be allowed to define
+							 * a default value. */
+							if (p.spec.empty())
+								return errno_return(EINVAL);
+
+							tq_discard();
+							if ((r=initializer(p.decl.expr)) < 1)
+								return r;
+						}
+					}
+
+					tdp.parameters.push_back(std::move(p));
+					if (tq_peek().type == token_type_t::comma) {
+						tq_discard();
+						continue;
+					}
+
+					break;
+				} while (1);
+			}
+
+			if (tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
-		std::stack<pa_pair_t*> patost;
+		std::vector<ddip_parse_t> dp;
 		pa_pair_t *pato = &dd.ptrarr;
 		int indent = 0;
 		int r;
@@ -7584,13 +7753,49 @@ common_error:
 		 *   ( identifier_list )                      <- the old C function syntax you'd see from 1980s code
 		 *   ( ) */
 
-		bool allowed_no_identifier = false;
 		bool identptr = false;
 
 		/* if the declaration specifier is an enum, struct, or union, then you're allowed not to specify an identifier */
 		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
-			allowed_no_identifier = true;
+			flags |= DIRDECL_ALLOW_ABSTRACT;
 
+		if ((r=direct_declarator_inner_parse(dp,dd,pos,flags)) < 1)
+			return r;
+
+		if (!dp.empty()) {
+			size_t dpi = dp.size() - 1u;
+
+			do {
+				ddip_parse_t &tdp = dp[dpi];
+
+				if (tdp.dd_flags & declarator_t::FL_FUNCTION) {
+					if (dd.flags & declarator_t::FL_FUNCTION)
+						CCERR_RET(EINVAL,pos,"No functions within functions");
+
+					dd.flags |= tdp.dd_flags;
+					parameters = std::move(tdp.parameters);
+				}
+				else {
+					if (!tdp.parameters.empty())
+						CCERR_RET(EINVAL,pos,"Non-function parameters?");
+				}
+
+				if (dpi < (dp.size() - 1u)) {
+					if (!pato->empty()) {
+						pato->sub_init();
+						pato = pato->sub;
+					}
+				}
+
+				assert(pato->ptr.empty());
+				pato->ptr = std::move(tdp.ptr);
+
+				assert(pato->arraydef.empty());
+				pato->arraydef = std::move(tdp.arr);
+			} while ((dpi--) != 0);
+		}
+
+#if 0
 		if ((r=pointer_parse(pato->ptr)) < 1)
 			return r;
 
@@ -7675,7 +7880,7 @@ common_error:
 			if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
 			identifier.assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
 		}
-		else if ((flags & DIRDECL_ALLOW_ABSTRACT) || allowed_no_identifier) {
+		else if (flags & DIRDECL_ALLOW_ABSTRACT) {
 			dd.name = identifier_none;
 		}
 		else {
@@ -7831,6 +8036,7 @@ common_error:
 
 		if (indent > 0)
 			CCERR_RET(EINVAL,tq_peek().pos,"Missing closing parenthesis");
+#endif
 
 		/* parameter validation:
 		 * you can have either all parameter_type parameters,
