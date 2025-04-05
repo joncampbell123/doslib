@@ -7759,7 +7759,9 @@ common_error:
 		if ((r=direct_declarator_inner_parse(dp,dd,pos,flags)) < 1)
 			return r;
 
-		if (!dp.empty()) {
+		/* it parses at least one, or errors out, there is no case where dp.empty() */
+		{
+			assert(!dp.empty());
 			size_t dpi = dp.size() - 1u;
 
 			do {
