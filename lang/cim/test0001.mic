@@ -467,6 +467,8 @@ static tdu5 xyz113 = &xyz123;
 static tdu6 xyz114 = { 1, 2, 3, 4, 5 };
 static tdu7 xyz115;
 static tdu8 xyz116;
+static tdu8* xyz116b;
+static unsigned int (*xyz116c)[15][3][5];
 static tdu9 xyz117;
 static tdu10 xyz118;
 static tdu11 xyz119;

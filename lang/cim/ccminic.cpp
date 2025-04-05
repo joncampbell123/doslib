@@ -7625,8 +7625,10 @@ common_error:
 			indent++;
 
 			patost.push(pato);
-			pato->sub_init();
-			pato = pato->sub;
+			if (!pato->ptr.empty()) {
+				pato->sub_init();
+				pato = pato->sub;
+			}
 
 			if ((r=pointer_parse(pato->ptr)) < 1)
 				return r;
@@ -7661,8 +7663,10 @@ common_error:
 			pa_pair_t *dst = pato;
 			pa_pair_t *src = &tsym.ptrarr;
 			if (src) {
-				dst->sub_init();
-				dst = dst->sub;
+				if (!dst->ptr.empty()) {
+					dst->sub_init();
+					dst = dst->sub;
+				}
 				*dst = *src; /* copies info and sub info recursively */
 			}
 		}
