@@ -501,6 +501,12 @@ static uint8_t szi17 = 8;
 static uint16_t szi18 = 8;
 static uint32_t szi19 = 8;
 static uint64_t szi20 = 8;
+static uintptr_t szi21 = 8;
+static intptr_t szi22 = 8;
+static uintptr_t szi23 = (uintptr_t)8;
+static intptr_t szi24 = (intptr_t)8;
+static uintptr_t szi25 = sizeof(uintptr_t);
+static intptr_t szi26 = sizeof(intptr_t);
 
 tdu1 trf1() {
 	return 5;

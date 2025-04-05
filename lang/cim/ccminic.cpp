@@ -5096,6 +5096,7 @@ try_again_w_token:
 		data_ptr_type_t			dt_ptr_far;
 		data_ptr_type_t			dt_ptr_huge;
 		data_var_type_t			dt_size_t;
+		data_var_type_t			dt_intptr_t;
 	};
 
 	struct data_type_set_t {
@@ -5125,11 +5126,12 @@ try_again_w_token:
 	};
 
 	const data_type_set_ptr_t data_ptr_types_default = {
-		{ { /*size*/sizeof(size_t),    /*align*/addrmask_make(alignof(size_t))    }, TQ_NEAR                 }, /* ptr */
-		{ { /*size*/sizeof(size_t),    /*align*/addrmask_make(alignof(size_t))    }, TQ_NEAR                 }, /* near ptr */
-		{ { /*size*/sizeof(size_t),    /*align*/addrmask_make(alignof(size_t))    }, TQ_NEAR                 }, /* far ptr */
-		{ { /*size*/sizeof(size_t),    /*align*/addrmask_make(alignof(size_t))    }, TQ_NEAR                 }, /* huge ptr */
-		{ { /*size*/sizeof(size_t),    /*align*/addrmask_make(alignof(size_t))    }, TS_LONG                 }  /* size_t/ssize_t */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* ptr */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* near ptr */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* far ptr */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* huge ptr */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }, /* size_t/ssize_t */
+		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
 	/* 16-bit segmented x86 (MS-DOS, Windows, OS/2, etc) */
@@ -5150,7 +5152,8 @@ try_again_w_token:
 		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_FAR                  }, /* far ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_HUGE                 }, /* huge ptr */
-		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TS_INT                  }  /* size_t/ssize_t */
+		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TS_INT                  }, /* size_t/ssize_t */
+		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TS_INT                  }  /* intptr_t/uintptr_t */
 	};
 
 	const data_type_set_ptr_t data_ptr_types_intel16_big = {
@@ -5158,7 +5161,8 @@ try_again_w_token:
 		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_FAR                  }, /* far ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_HUGE                 }, /* huge ptr */
-		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }, /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
 	const data_type_set_ptr_t data_ptr_types_intel16_huge = {
@@ -5166,7 +5170,8 @@ try_again_w_token:
 		{ { /*size*/2u,                /*align*/addrmask_make(2u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_FAR                  }, /* far ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_HUGE                 }, /* huge ptr */
-		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }, /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
 	/* Open Watcom definitions:
@@ -5200,7 +5205,8 @@ try_again_w_token:
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/6u,                /*align*/addrmask_make(8u)                 }, TQ_FAR                  }, /* far ptr */
 		{ { /*size*/6u,                /*align*/addrmask_make(8u)                 }, TQ_HUGE                 }, /* huge ptr */
-		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }, /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
 	/* 32-bit flat memory models such as Linux i386 where you do not need far pointers, EVER */
@@ -5209,7 +5215,8 @@ try_again_w_token:
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_NEAR                 }, /* far ptr */
 		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TQ_NEAR                 }, /* huge ptr */
-		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }, /* size_t/ssize_t */
+		{ { /*size*/4u,                /*align*/addrmask_make(4u)                 }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
 	/* 64-bit flat x86_64 (Linux, etc) */
@@ -5244,7 +5251,8 @@ try_again_w_token:
 		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TQ_NEAR                 }, /* near ptr */
 		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TQ_NEAR                 }, /* far ptr */
 		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TQ_NEAR                 }, /* huge ptr */
-		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TS_LONGLONG             }  /* size_t/ssize_t */
+		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TS_LONGLONG             }, /* size_t/ssize_t */
+		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TS_LONGLONG             }  /* intptr_t/uintptr_t */
 	};
 
 	/* data types */
@@ -7078,6 +7086,8 @@ again:
 			case token_type_t::r_uint16_t: return true;
 			case token_type_t::r_uint32_t: return true;
 			case token_type_t::r_uint64_t: return true;
+			case token_type_t::r_uintptr_t: return true;
+			case token_type_t::r_intptr_t: return true;
 
 			case token_type_t::identifier:
 				{
@@ -7193,6 +7203,11 @@ again:
 					builtin_ts = TS_INT | TS_SZ32; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
 				case token_type_t::r_uint64_t:
 					builtin_ts = TS_INT | TS_SZ64; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
+				case token_type_t::r_uintptr_t:
+					builtin_ts = data_types_ptr_data.dt_intptr_t.ts; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
+				case token_type_t::r_intptr_t:
+					builtin_ts = data_types_ptr_data.dt_intptr_t.ts; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
+
 #undef ONLYSPECALLOWED
 common_builtin:
 					if (ds.type_specifier & TS_MATCH_BUILTIN)
