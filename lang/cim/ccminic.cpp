@@ -7164,58 +7164,36 @@ again:
 					}
 					continue;
 
+#define ONLYSPECALLOWED if (ds.type_specifier != 0) goto common_error
 				case token_type_t::r_size_t:
-					builtin_ts = data_types_ptr_data.dt_size_t.ts; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_UNSIGNED;
-					goto common_builtin;
+					builtin_ts = data_types_ptr_data.dt_size_t.ts; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
 				case token_type_t::r_ssize_t:
-					builtin_ts = data_types_ptr_data.dt_size_t.ts; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_SIGNED;
-					goto common_builtin;
+					builtin_ts = data_types_ptr_data.dt_size_t.ts; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
 				case token_type_t::r___int8:
-					builtin_ts = TS_INT | TS_SZ8;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ8; goto common_builtin;
 				case token_type_t::r___int16:
-					builtin_ts = TS_INT | TS_SZ16;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ16; goto common_builtin;
 				case token_type_t::r___int32:
-					builtin_ts = TS_INT | TS_SZ32;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ32; goto common_builtin;
 				case token_type_t::r___int64:
-					builtin_ts = TS_INT | TS_SZ64;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ64; goto common_builtin;
 				case token_type_t::r_int8_t:
-					builtin_ts = TS_INT | TS_SZ8; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_SIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ8; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
 				case token_type_t::r_int16_t:
-					builtin_ts = TS_INT | TS_SZ16; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_SIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ16; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
 				case token_type_t::r_int32_t:
-					builtin_ts = TS_INT | TS_SZ32; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_SIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ32; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
 				case token_type_t::r_int64_t:
-					builtin_ts = TS_INT | TS_SZ64; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_SIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ64; ONLYSPECALLOWED; ds.type_specifier |= TS_SIGNED; goto common_builtin;
 				case token_type_t::r_uint8_t:
-					builtin_ts = TS_INT | TS_SZ8; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_UNSIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ8; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
 				case token_type_t::r_uint16_t:
-					builtin_ts = TS_INT | TS_SZ16; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_UNSIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ16; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
 				case token_type_t::r_uint32_t:
-					builtin_ts = TS_INT | TS_SZ32; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_UNSIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ32; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
 				case token_type_t::r_uint64_t:
-					builtin_ts = TS_INT | TS_SZ64; if (ds.type_specifier != 0) goto common_error;
-					ds.type_specifier |= TS_UNSIGNED;
-					goto common_builtin;
+					builtin_ts = TS_INT | TS_SZ64; ONLYSPECALLOWED; ds.type_specifier |= TS_UNSIGNED; goto common_builtin;
+#undef ONLYSPECALLOWED
 common_builtin:
 					if (ds.type_specifier & TS_MATCH_BUILTIN)
 						break;
