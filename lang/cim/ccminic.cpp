@@ -7775,7 +7775,7 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags) {
+	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &__remove_me_parameters,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		std::vector<ddip_parse_t> dp;
 		pa_pair_t *pato = &dd.ptrarr;
@@ -7831,14 +7831,6 @@ common_error:
 			} while ((dpi--) != 0);
 		}
 
-		{
-			const pa_pair_t *f = dd.ptrarr.funcparampair();
-			if (f) {
-				dd.flags |= f->dd_flags;
-				parameters = f->parameters;
-			}
-		}
-
 		/* typedef subst */
 		if (ds.type_specifier & TS_MATCH_TYPEDEF) {
 			symbol_t &sym = symbol(ds.type_identifier_symbol);
@@ -7873,13 +7865,6 @@ common_error:
 				}
 			}
 
-			if (!sym.parameters.empty()) {
-				if (!parameters.empty())
-					CCERR_RET(EEXIST,pos,"Parameter list conflicts with typedef");
-
-				parameters = sym.parameters;
-			}
-
 			if (!sym.ptrarr.empty()) {
 				if (pato->empty()) {
 					*pato = sym.ptrarr;
@@ -7902,8 +7887,24 @@ common_error:
 					*pato = sym.ptrarr;
 				}
 
+				if (!sym.parameters.empty()) {
+					if (!pato->parameters.empty())
+						CCERR_RET(EEXIST,pos,"Parameter list conflicts with typedef");
+
+					pato->parameters = sym.parameters;
+				}
+
 				while (pato->sub)
 					pato = pato->sub;
+			}
+		}
+
+		std::vector<parameter_t> *parameters = NULL;
+		{
+			pa_pair_t *f = dd.ptrarr.funcparampair();
+			if (f) {
+				dd.flags |= f->dd_flags;
+				parameters = &f->parameters;
 			}
 		}
 
@@ -7915,7 +7916,8 @@ common_error:
 			int type = -1; /* -1 = no spec  0 = old identifier only  1 = new parameter type */
 			int cls;
 
-			for (const auto &p : parameters) {
+			assert(parameters != NULL);
+			for (const auto &p : *parameters) {
 				if (p.spec.empty())
 					cls = 0;
 				else
@@ -7976,8 +7978,8 @@ common_error:
 							{
 								/* the name must match a parameter and it must not already have been given it's type */
 								size_t i=0;
-								while (i < parameters.size()) {
-									parameter_t &chk_p = parameters[i];
+								while (i < (*parameters).size()) {
+									parameter_t &chk_p = (*parameters)[i];
 
 									if (identifier(d.name) == identifier(chk_p.decl.name))
 										break;
@@ -7986,12 +7988,12 @@ common_error:
 								}
 
 								/* no match---fail */
-								if (i == parameters.size()) {
+								if (i == (*parameters).size()) {
 									CCerr(pos,"No such parameter '%s' in identifier list",csliteral(d.name).makestring().c_str());
 									return errno_return(ENOENT);
 								}
 
-								parameter_t &fp = parameters[i];
+								parameter_t &fp = (*parameters)[i];
 								if (fp.spec.empty() && fp.decl.ptrarr.ptr.empty()) {
 									fp.spec = s_spec;
 									fp.decl.ptrarr = std::move(d.ptrarr);
@@ -8025,7 +8027,7 @@ common_error:
 					}
 				} while (1);
 
-				if (tq_peek().type != token_type_t::opencurlybracket && !parameters.empty()) {
+				if (tq_peek().type != token_type_t::opencurlybracket && !(*parameters).empty()) {
 					/* no body of the function? */
 					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
 					return errno_return(EINVAL);
@@ -8040,7 +8042,8 @@ common_error:
 
 		if (dd.flags & declarator_t::FL_FUNCTION) {
 			/* any parameter not yet described, is an error */
-			for (auto &p : parameters) {
+			assert(parameters != NULL);
+			for (auto &p : *parameters) {
 				if (p.spec.empty()) {
 					CCerr(pos,"Parameter '%s' is missing type",identifier(p.decl.name).to_str().c_str());
 					debug_dump_parameter("  ",p);
@@ -8052,10 +8055,10 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters) {
+	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &__remove_me_parameters) {
 		int r;
 
-		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
+		if ((r=direct_declarator_parse(ds,declor,__remove_me_parameters)) < 1)
 			return r;
 
 		return 1;
@@ -8074,10 +8077,10 @@ common_error:
 	}
 
 	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
-		std::vector<parameter_t> parameters;
+		std::vector<parameter_t> dummy_param;
 		int r;
 
-		if ((r=direct_declarator_parse(ds,declor,parameters)) < 1)
+		if ((r=direct_declarator_parse(ds,declor,dummy_param)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::colon) {
@@ -9558,12 +9561,12 @@ common_error:
 				return r;
 
 			do {
-				std::vector<parameter_t> parameters;
+				std::vector<parameter_t> dummy_param;
 				declarator_t declor;
 				symbol_lookup_t sl;
 
 				sl.pos = tq_peek().pos;
-				if ((r=declaration_inner_parse(spec,declor,parameters)) < 1)
+				if ((r=declaration_inner_parse(spec,declor,dummy_param)) < 1)
 					return r;
 
 				if (declor.name != identifier_none) {
@@ -9572,7 +9575,7 @@ common_error:
 					if (do_local_symbol_lookup(sl,spec,declor)) {
 						if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
 							return r;
-						if ((r=check_symbol_param_match(sl,parameters)) < 1)
+						if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
 							return r;
 					}
 					else {
@@ -9580,7 +9583,7 @@ common_error:
 							return r;
 
 						symbol_t &sym = symbol(sl.sid);
-						sym.parameters = parameters;
+						sym.parameters = declor.ptrarr.funcparam();
 
 						scope_t::decl_t &sldef = sco.new_localdecl();
 						sldef.spec = spec;
@@ -9905,10 +9908,10 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters) {
+	int cc_state_t::declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &__remove_me_parameters) {
 		int r;
 
-		if ((r=declarator_parse(spec,declor,parameters)) < 1)
+		if ((r=declarator_parse(spec,declor,__remove_me_parameters)) < 1)
 			return r;
 		if ((r=chkerr()) < 1)
 			return r;
@@ -9945,11 +9948,11 @@ common_error:
 
 		do {
 			symbol_lookup_t sl;
-			std::vector<parameter_t> parameters;
+			std::vector<parameter_t> dummy_param;
 			declarator_t &declor = declion.new_declarator();
 
 			sl.pos = tq_peek().pos;
-			if ((r=declaration_inner_parse(declion.spec,declor,parameters)) < 1)
+			if ((r=declaration_inner_parse(declion.spec,declor,dummy_param)) < 1)
 				return r;
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
@@ -9968,7 +9971,7 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,parameters)) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
 						return r;
 				}
 				else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
@@ -9980,7 +9983,7 @@ common_error:
 				push_new_scope();
 
 				/* add it to the symbol table */
-				for (auto &p : parameters) {
+				for (auto &p : declor.ptrarr.funcparam()) {
 					/* if a parameter was given without a name, don't register a symbol */
 					if (p.decl.name == identifier_none)
 						continue;
@@ -10008,7 +10011,8 @@ common_error:
 					 * causing reallocation and the reference above would become invalid */
 					symbol_t &sym = symbol(sl.sid);
 					sym.parent_of_scope = current_scope();
-					sym.parameters = std::move(parameters);
+					sym.ptrarr = declor.ptrarr;
+					sym.parameters = declor.ptrarr.funcparam();
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -10036,7 +10040,7 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,parameters)) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
 						return r;
 				}
 				else {
@@ -10046,7 +10050,7 @@ common_error:
 					/* not a function definition, therefore the parameters do not become symbols.
 					 * the identifiers in the parameter list are not even used. */
 					symbol_t &sym = symbol(sl.sid);
-					sym.parameters = parameters;
+					sym.parameters = declor.ptrarr.funcparam();
 				}
 			}
 
