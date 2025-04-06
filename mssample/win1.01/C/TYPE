@@ -1,0 +1,10 @@
+type.res: type.rc type.ico type.h
+    rc -r type.rc
+
+type.obj: type.c type.h
+    cc -d -c -u -W2 -Asnw -Gsw -Os -Zpe type.c
+
+type.exe: type.obj type.res type.def
+    link4 type, type/align:16, type/map, slibw swlibc/NOD, type.def
+    mapsym type
+    rc type.res

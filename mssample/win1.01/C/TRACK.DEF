@@ -1,0 +1,15 @@
+NAME  Track
+
+DESCRIPTION 'Microsoft Windows GDI, Mouse, & Menu Sample Application'
+
+CODE    MOVEABLE
+DATA    MOVEABLE MULTIPLE
+
+STUB    'WINSTUB.EXE'
+
+HEAPSIZE  1024
+STACKSIZE 4096
+
+EXPORTS
+    TrackWndProc    @1
+    About           @2

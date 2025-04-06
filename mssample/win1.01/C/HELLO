@@ -1,0 +1,10 @@
+hello.res: hello.rc hello.ico hello.h
+    rc -r hello.rc
+
+hello.obj: hello.c hello.h
+    cc -d -c -u -W2 -Asnw -Gsw -Os -Zpe hello.c
+
+hello.exe: hello.obj hello.res hello.def
+    link4 hello, hello/align:16, hello/map, slibw swlibc/NOD, hello.def
+    mapsym hello
+    rc hello.res

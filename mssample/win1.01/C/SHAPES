@@ -1,0 +1,10 @@
+shapes.res: shapes.rc shapes.h shapes.ico
+    rc -r shapes.rc
+
+shapes.obj: shapes.c shapes.h
+    cc -d -c -u -W2 -Asnw -Gsw -Os -Zpe shapes.c
+
+shapes.exe: shapes.obj shapes.res shapes.def
+    link4 shapes, shapes/align:16, shapes/map, slibw swlibc/NOD, shapes.def
+    mapsym shapes
+    rc shapes.res

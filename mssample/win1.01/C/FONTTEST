@@ -1,0 +1,10 @@
+fonttest.res: fonttest.rc fonttest.h fonttest.ico
+    rc -r fonttest.rc
+
+fonttest.obj: fonttest.c fonttest.h
+    cc -d -c -u -Asnw -Gsw -Os -Zpe fonttest.c
+
+fonttest.exe: fonttest.obj fonttest.def fonttest.rc
+    link4 fonttest, /align:16, /map, slibw swlibc/NOD, fonttest.def
+    mapsym fonttest
+    rc fonttest.res

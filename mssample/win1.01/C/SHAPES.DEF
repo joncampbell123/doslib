@@ -1,0 +1,15 @@
+NAME    Shapes
+
+DESCRIPTION 'Microsoft Windows Simple GDI & Menu Sample Application'
+
+STUB    'WINSTUB.EXE'
+
+CODE    MOVEABLE
+DATA    MOVEABLE MULTIPLE
+
+HEAPSIZE    1024
+STACKSIZE   4096
+
+EXPORTS
+    ShapesWndProc   @1
+    About           @2

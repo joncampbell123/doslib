@@ -1,0 +1,16 @@
+NAME    FontTest
+
+DESCRIPTION 'Microsoft Windows Sample Font Manipulation Code'
+
+STUB 'WINSTUB.EXE'
+
+CODE    FIXED
+DATA    MULTIPLE FIXED
+
+HEAPSIZE    4096
+STACKSIZE   4096
+
+EXPORTS
+    FonttestWndProc     @1
+    ChangeOptions       @2
+    About               @3

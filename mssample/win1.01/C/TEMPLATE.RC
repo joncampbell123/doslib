@@ -1,0 +1,90 @@
+#include "windows.h"
+#include "template.h"
+
+#define TABGRP      WS_TABSTOP | WS_GROUP
+#define LBSTYLES    WS_VSCROLL | WS_BORDER | WS_VISIBLE | LBS_SORT | TABGRP
+#define HSCROLL     WS_VISIBLE | SBS_HORZ | SBS_TOPALIGN    | TABGRP
+#define VSCROLL     WS_VISIBLE | SBS_VERT | SBS_LEFTALIGN   | TABGRP
+#define BLACKRECT   SS_BLACKRECT  | WS_VISIBLE | WS_GROUP
+#define WHITEFRAME  SS_WHITEFRAME | WS_VISIBLE | WS_GROUP
+
+template ICON   template.ico
+
+template MENU
+BEGIN
+    MENUITEM "Flash!", IDMFLASH
+    POPUP "Commands"
+        BEGIN
+            MENUITEM "Color\t^C",          IDMCOLOR
+            MENUITEM "Black/white\t^B",    IDMBLACK
+            MENUITEM "Dialog box...\t^D",  IDMDIALOG
+            MENUITEM "Start Async\t^S",    IDMSTART
+            MENUITEM "End   Async\t^E",    IDMEND
+        END
+END
+
+template ACCELERATORS
+BEGIN
+    "^C", IDMCOLOR
+    "^B", IDMBLACK
+    "^D", IDMDIALOG
+    "^S", IDMSTART
+    "^E", IDMEND
+END
+
+STRINGTABLE
+BEGIN
+    IDSAPPNAME,     "template"
+    IDSTITLE,       "Template Application"
+    IDSABOUT,       "About ..."
+    IDSDEFAULT,     "Default"
+    IDSCONTENT,     "Text content"
+    IDSCLOSE        "Template: Close"
+    IDSOKCLOSE      "Ok to close window?"
+    IDSSAVE         "Template: End Session"
+    IDSOKSAVE,      "Save files before ending?"
+    IDSASYNC,       "Template: Async Message"
+    IDSOKASYNC,     "Async timer has gone off."
+    /* Sample strings: bodies of water in the Seattle/Bellevue area */
+    IDSSTR1,        "Washington"
+    IDSSTR2,        "Sammamish"
+    IDSSTR3,        "Shilshole"
+    IDSSTR4,        "Montlake"
+    IDSSTR5,        "Union"
+    IDSSTR6,        "Portage"
+    IDSSTR7,        "Elliott"
+END
+
+ABOUTDIALOG DIALOG 22, 17, 144, 75
+STYLE WS_POPUP | WS_DLGFRAME
+BEGIN
+    CTEXT "Microsoft Windows"                   -1, 37,  5, 68, 8
+    ICON  "template"                            -1,  9, 23,  0, 0
+    CTEXT "Template application"                -1,  0, 14,144, 8
+    CTEXT "Version 1.01"                        -1, 38, 34, 64, 8
+    CTEXT "Copyright © 1985, Microsoft Corp."   -1,  5, 47,132, 9
+    DEFPUSHBUTTON "Ok"                        IDOK, 53, 59, 32, 14, WS_GROUP
+END
+
+TEMPLATEDIALOG DIALOG 15,15,140,150
+STYLE  WS_POPUP | WS_DLGFRAME
+BEGIN
+    CTEXT         "Template Dialog Box", IDNULL,           2,  2, 138, 12
+    DEFPUSHBUTTON "Ok",                  IDOK,             2,  15, 40, 14, TABGRP
+    PUSHBUTTON    "Cancel",              IDCANCEL,        44,  15, 40, 14, TABGRP
+    PUSHBUTTON    "Defaults",            IDDDEFAULTS,     86,  15, 40, 14, TABGRP
+    LTEXT         "File:",               IDNULL,           2,  35, 24,  8
+    EDITTEXT                             IDDTEXT,         28,  31, 40, 12, TABGRP
+    CHECKBOX      "Check box",           IDDCHECKBOX,     82,  31, 48, 15, TABGRP
+    GROUPBOX      "Alignment",           IDDNULL,          2,  47, 54, 50, WS_GROUP
+    RADIOBUTTON   "Left",                IDDRBLEFT,        4,  58, 32, 12, TABGRP
+    RADIOBUTTON   "Right",               IDDRBRIGHT,       4,  70, 46, 12
+    RADIOBUTTON   "Centered",            IDDRBCENTER,      4,  82, 48, 12
+    LISTBOX                              IDDLISTBOX,      62,  51, 70, 40, LBSTYLES
+
+    CONTROL     "",IDDSBH, "ScrollBar", HSCROLL,           2, 134, 61,  0
+    CONTROL     "",IDDSBV, "ScrollBar", VSCROLL,          62, 100,  0, 35
+
+    CONTROL "Black Rect",  IDDNULL, "STATIC", BLACKRECT,  80, 100, 50, 30
+    CONTROL "White Frame", IDDNULL, "STATIC", WHITEFRAME, 90, 105, 30, 20
+END

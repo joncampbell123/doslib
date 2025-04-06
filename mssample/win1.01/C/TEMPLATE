@@ -1,0 +1,16 @@
+template.res: template.rc template.ico template.h
+    rc -r template.rc
+
+tempNRES.obj: tempNRES.c template.h
+    cc -d -c -u -AM -Gsw -Os -Zpe -NT _NRES tempNRES.c
+
+tempINIT.obj: tempINIT.c template.h
+    cc -d -c -u -AM -Gsw -Os -Zpe -NT _INIT tempINIT.c
+
+tempRES.obj: tempRES.c   template.h
+    cc -d -c -u -AM -Gsw -Os -Zpe -NT _RES  tempRES.c
+
+template.exe: template.def tempNRES.obj tempINIT.obj tempRES.obj template.res
+    link4 tempNRES tempINIT tempRES, template/align:16, /map, mlibw mwlibc/NOD, template.def
+    mapsym template
+    rc template.res

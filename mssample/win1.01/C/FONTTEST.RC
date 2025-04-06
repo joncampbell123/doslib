@@ -1,0 +1,92 @@
+#include "windows.h"
+#include "fonttest.h"
+
+#define TABGRP   WS_TABSTOP | WS_GROUP
+
+fonttest  ICON    FontTest.ico
+
+fonttest MENU
+BEGIN
+    POPUP "Commands"
+        BEGIN
+        MENUITEM "Sample\t^S",     IDMSAMPLE
+        MENUITEM "Clear\t^C" ,     IDMCLEAR
+        MENUITEM "Options...\t^O", IDMOPTIONS
+        END
+END
+
+fonttest ACCELERATORS
+BEGIN
+    "^S", IDMSAMPLE
+    "^C", IDMCLEAR
+    "^O", IDMOPTIONS
+END
+
+OPTIONSBOX DIALOG 50, 25, 199, 119
+STYLE WS_POPUP | WS_DLGFRAME
+BEGIN
+DEFPUSHBUTTON "Ok",          IDOK,                     5,  2, 30, 14, TABGRP
+PUSHBUTTON    "Cancel",      IDCANCEL,                37,  2, 30, 14, TABGRP
+
+CHECKBOX      "Italic"   ,   IDITALIC,                 5, 21, 50, 15, TABGRP
+CHECKBOX      "Underline",   IDUNDERLINE,              5, 36, 55, 15, TABGRP
+CHECKBOX      "StrikeOut",   IDSTRIKEOUT,              5, 51, 55, 15, TABGRP
+
+LTEXT         "Height",      IDNULL,                  60, 25, 30, 12
+EDITTEXT                     IDHEIGHT,                85, 22, 30, 12, TABGRP
+LTEXT         "",            IDTMHEIGHT,             118, 25, 20, 12
+
+LTEXT         "MapMode",     IDNULL,                 140, 25, 30, 12
+EDITTEXT                     IDMAPMODE,              172, 22, 25, 12, TABGRP
+
+LTEXT         "Width",       IDNULL,                  60, 40, 30, 12
+EDITTEXT                     IDWIDTH,                 85, 37, 30, 12, TABGRP
+LTEXT         "",            IDTMWIDTH,              118, 40, 20, 12
+
+LTEXT         "Weight",      IDNULL,                  60, 55, 30, 12
+EDITTEXT                     IDWEIGHT,                85, 52, 30, 12, TABGRP
+LTEXT         "",            IDTMWEIGHT,             118, 55, 20, 12
+
+LTEXT         "Escapement",  IDNULL ,                  5, 70, 40, 12
+EDITTEXT                     IDESCAPEMENT,            50, 67, 20, 12, TABGRP
+
+LTEXT         "Orientation", IDNULL,                   5, 85, 45, 12
+EDITTEXT                     IDORIENTATION,           50, 82, 20, 12, TABGRP
+
+LTEXT         "Char Set",    IDNULL,                  80, 70, 35, 12
+EDITTEXT                     IDCHARSET,              118, 67, 20, 12, TABGRP
+LTEXT         "",            IDTMCHARSET,            140, 70, 20, 12
+
+LTEXT         "Pitch",       IDNULL,                  80, 85, 30, 12
+EDITTEXT                     IDPITCH,                118, 82, 20, 12, TABGRP
+LTEXT         "",            IDTMPITCH,              140, 85, 20, 12
+
+CONTROL       "",            IDNULL, STATIC, SS_BLACKFRAME,  2,100, 195, 2
+
+LTEXT         "Av Char Width", IDNULL,                 5,105, 60, 12
+LTEXT         "",              IDAVCHARWIDTH,         65,105, 12, 12
+
+LTEXT         "Max Char Width", IDNULL,               80,105, 60, 12
+LTEXT         "",               IDMAXCHARWIDTH,      140,105, 12, 12
+END
+
+
+ABOUTBOX DIALOG 22, 17, 144, 75
+STYLE WS_POPUP | WS_DLGFRAME
+BEGIN
+    CTEXT "Microsoft Windows"                   -1, 37,  5, 68, 8
+    ICON  "FontTest"                            -1,  9, 23,  0, 0
+    CTEXT "FontTest application"                -1,  0, 14,144, 8
+    CTEXT "Version 1.01"                        -1, 38, 34, 64, 8
+    CTEXT "Copyright © 1985, Microsoft Corp."   -1,  5, 47,132, 9
+    DEFPUSHBUTTON "Ok"                        IDOK, 53, 59, 32, 14, WS_GROUP
+END
+
+
+STRINGTABLE
+BEGIN
+    IDSNAME,    "Fonttest"
+    IDSABOUT,   "About..."
+    IDSTITLE,   "Font Tester"
+    IDSALPHABET,"The quick brown fox etc.  ABCDE 0123 !@#$%(){}[];:<>?,."
+END

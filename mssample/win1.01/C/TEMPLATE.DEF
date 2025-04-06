@@ -1,0 +1,24 @@
+NAME    Template
+
+DESCRIPTION 'Microsoft Windows Application Template'
+
+STUB 'WINSTUB.EXE'
+
+CODE    MOVEABLE
+DATA    MOVEABLE MULTIPLE
+
+HEAPSIZE    1024        ; Must be non-zero to use Local memory manager
+STACKSIZE   4096        ; Must be non-zero for SS == DS
+                        ; suggest 4k as minimum stacksize
+
+SEGMENTS
+    _INIT   PRELOAD MOVEABLE DISCARDABLE
+    _NRES   PRELOAD MOVEABLE DISCARDABLE
+    _RES    PRELOAD MOVEABLE
+
+EXPORTS                 ; Must export all procedures called by Windows
+    TemplateWndProc  @1 ; (ordinal numbers use less resident memory)
+    TemplateAboutDlg @2
+    TemplateDlg      @3
+    TimerAsync       @4
+    TimerFlash       @5

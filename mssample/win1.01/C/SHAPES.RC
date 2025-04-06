@@ -1,0 +1,45 @@
+#include "windows.h"
+#include "shapes.h"
+
+shapes ICON    shapes.ico
+
+shapes MENU
+BEGIN
+    POPUP "Shape"
+        BEGIN
+            MENUITEM "Clear\t^C"    , IDDCLEAR
+            MENUITEM "Ellipse\t^E"  , IDDELLIPSE
+            MENUITEM "Rectangle\t^R", IDDRECT
+            MENUITEM "Star\t^S"     , IDDSTAR
+            MENUITEM "Triangle\t^T" , IDDTRIANGLE
+        END
+END
+
+shapes ACCELERATORS
+BEGIN
+    "^C", IDDCLEAR
+    "^E", IDDELLIPSE
+    "^R", IDDRECT
+    "^S", IDDSTAR
+    "^T", IDDTRIANGLE
+END
+
+
+ABOUTBOX DIALOG 22, 17, 144, 75
+STYLE WS_POPUP | WS_DLGFRAME
+BEGIN
+    CTEXT "Microsoft Windows"                   -1, 37,  5, 68, 8
+    ICON  "shapes"                              -1,  9, 23,  0, 0
+    CTEXT "Shapes application"                  -1,  0, 14,144, 8
+    CTEXT "Version 1.01"                        -1, 38, 34, 64, 8
+    CTEXT "Copyright © 1985, Microsoft Corp."   -1,  5, 47,132, 9
+    DEFPUSHBUTTON "Ok"                        IDOK, 53, 59, 32, 14, WS_GROUP
+END
+
+
+STRINGTABLE
+BEGIN
+    IDSNAME,    "Shapes"
+    IDSABOUT,   "About..."
+    IDSTITLE,   "Pick a Shape"
+END

@@ -1,0 +1,10 @@
+track.res: track.rc track.h track.ico
+    rc -r track.rc
+
+track.obj: track.c track.h
+    cc -d -c -u -W2 -Asnw -Gsw -Os -Zpe track.c
+
+track.exe: track.obj track.res track.def
+    link4 track, track/align:16, track/map, slibw swlibc/NOD, track.def
+    mapsym track
+    rc track.res
