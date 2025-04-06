@@ -3,6 +3,11 @@
     Windows Version 1.01
     Copyright (c) Microsoft 1985        */
 
+#if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)
+#else
+# error Win16 only
+#endif
+
 #include "windows.h"
 #include "hello.h"
 
