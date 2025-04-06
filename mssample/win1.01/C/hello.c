@@ -22,6 +22,8 @@ unsigned message;
 WORD wParam;
 LONG lParam;
 {
+    (void)wParam;
+    (void)lParam;
     if (message == WM_COMMAND) {
         EndDialog( hDlg, TRUE );
         return TRUE;
@@ -84,6 +86,8 @@ int cmdShow;
     MSG   msg;
     HWND  hWnd;
     HMENU hMenu;
+
+    (void)lpszCmdLine;
 
     if (!hPrevInstance) {
         /* Call initialization procedure if this is the first instance */
