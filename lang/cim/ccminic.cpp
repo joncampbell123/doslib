@@ -5707,7 +5707,6 @@ try_again_w_token:
 
 			declaration_specifiers_t		spec;
 			pa_pair_t				ptrarr;
-			std::vector<parameter_t>		parameters;
 			std::vector<structfield_t>		fields;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
@@ -5730,7 +5729,6 @@ try_again_w_token:
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
 				ptrarr = std::move(x.ptrarr);
-				parameters = std::move(x.parameters);
 				fields = std::move(x.fields);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
@@ -6076,30 +6074,43 @@ try_again_w_token:
 			return false;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,const std::vector<parameter_t> &p1,const std::vector<parameter_t> &p2) {
-			int r;
+		int check_symbol_param_match(symbol_lookup_t &sl,const pa_pair_t &p1,const pa_pair_t &p2) {
+			const pa_pair_t *ps1 = &p1,*ps2 = &p2;
 
-			if (p1.size() != p2.size())
-				CCERR_RET(EINVAL,sl.pos,"Parameter list does not match");
-
-			for (size_t pi=0;pi < p1.size();pi++) {
-				const parameter_t &sp1 = p1[pi];
-				const parameter_t &sp2 = p2[pi];
-
-				if ((r=check_symbol_param_match(sl,sp1.decl.ptrarr.funcparam(),sp2.decl.ptrarr.funcparam())) < 1)
-					return r;
-
-				if (sp1.spec.type_specifier != sp2.spec.type_specifier)
+			while (ps1 && ps2) {
+				if (ps1->ptr.size() != ps2->ptr.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+				if (ps1->ptr != ps2->ptr)
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (sp1.decl.ptrarr.ptr.size() != sp2.decl.ptrarr.ptr.size())
+				if (ps1->arraydef.size() != ps2->arraydef.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+				if (ps1->parameters.size() != ps2->parameters.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+				for (size_t ai=0;ai < ps1->arraydef.size();ai++) {
+					if ((ps1->arraydef[ai] == ast_node_none) != (ps2->arraydef[ai] == ast_node_none))
+						CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+
+					const ast_node_t &a1 = ast_node(ps1->arraydef[ai]);
+					const ast_node_t &a2 = ast_node(ps2->arraydef[ai]);
+
+					if (a1.t != a2.t)
+						CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+				}
+
+				ps1 = ps1->sub;
+				ps2 = ps2->sub;
 			}
+
+			if (ps1 || ps2)
+				CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
 			return 1;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,const std::vector<parameter_t> &parameters) {
+		int check_symbol_param_match(symbol_lookup_t &sl,const pa_pair_t &p) {
 			int r;
 
 			assert(sl.sid != symbol_none);
@@ -6107,9 +6118,9 @@ try_again_w_token:
 			symbol_t &chk_s = symbol(sl.sid);
 
 			/* exception: if the function was without any parameters, and you specify parameters, then take the parameters */
-			if (chk_s.parameters.empty())
-				chk_s.parameters = parameters;
-			else if ((r=check_symbol_param_match(sl,chk_s.parameters,parameters)) < 1)
+			if (chk_s.ptrarr.empty())
+				chk_s.ptrarr = p;
+			else if ((r=check_symbol_param_match(sl,chk_s.ptrarr,p)) < 1)
 				return r;
 
 			return 1;
@@ -7874,23 +7885,26 @@ common_error:
 						pato->arraydef.push_back(a);
 						ast_node(a).addref();
 					}
+
+					if (!pato->parameters.empty())
+						CCERR_RET(EINVAL,pos,"Typedef param conflict");
+
+					pato->parameters = sym.ptrarr.funcparam();
 				}
 				else if (pato->sub == NULL && !pato->ptr.empty() && pato->arraydef.empty() &&
 					sym.ptrarr.sub == NULL && !sym.ptrarr.ptr.empty() && sym.ptrarr.arraydef.empty()) {
 					for (auto &p : sym.ptrarr.ptr)
 						pato->ptr.push_back(p);
+
+					if (!pato->parameters.empty())
+						CCERR_RET(EINVAL,pos,"Typedef param conflict");
+
+					pato->parameters = sym.ptrarr.funcparam();
 				}
 				else {
 					pato->sub_init();
 					pato = pato->sub;
 					*pato = sym.ptrarr;
-				}
-
-				if (!sym.parameters.empty()) {
-					if (!pato->parameters.empty())
-						CCERR_RET(EEXIST,pos,"Parameter list conflicts with typedef");
-
-					pato->parameters = sym.parameters;
 				}
 
 				while (pato->sub)
@@ -8418,9 +8432,6 @@ common_error:
 
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
 		debug_dump_pa_pair(prefix+"  ",sym.ptrarr);
-
-		for (auto &p : sym.parameters)
-			debug_dump_parameter(prefix+"  ",p);
 
 		for (auto &f : sym.fields)
 			debug_dump_structfield(prefix+"  ",f);
@@ -9569,15 +9580,12 @@ common_error:
 					if (do_local_symbol_lookup(sl,spec,declor)) {
 						if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
 							return r;
-						if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
+						if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
 							return r;
 					}
 					else {
 						if ((r=add_symbol(sl,spec,declor)) < 1)
 							return r;
-
-						symbol_t &sym = symbol(sl.sid);
-						sym.parameters = declor.ptrarr.funcparam();
 
 						scope_t::decl_t &sldef = sco.new_localdecl();
 						sldef.spec = spec;
@@ -9964,7 +9972,7 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
 						return r;
 				}
 				else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
@@ -9989,7 +9997,7 @@ common_error:
 					if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
 						if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
 							return r;
-						if ((r=check_symbol_param_match(sl,p.decl.ptrarr.funcparam())) < 1)
+						if ((r=check_symbol_param_match(sl,p.decl.ptrarr)) < 1)
 							return r;
 					}
 					else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
@@ -10005,7 +10013,6 @@ common_error:
 					symbol_t &sym = symbol(sl.sid);
 					sym.parent_of_scope = current_scope();
 					sym.ptrarr = declor.ptrarr;
-					sym.parameters = declor.ptrarr.funcparam();
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -10033,17 +10040,12 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,declor.ptrarr.funcparam())) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
 						return r;
 				}
 				else {
 					if ((r=add_symbol(sl,declion.spec,declor)) < 1)
 						return r;
-
-					/* not a function definition, therefore the parameters do not become symbols.
-					 * the identifiers in the parameter list are not even used. */
-					symbol_t &sym = symbol(sl.sid);
-					sym.parameters = declor.ptrarr.funcparam();
 				}
 			}
 
