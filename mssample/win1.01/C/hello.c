@@ -14,7 +14,7 @@ int MessageLength;
 static HANDLE hInst;
 FARPROC lpprocAbout;
 
-long FAR PASCAL HelloWndProc(HWND, unsigned, WORD, LONG);
+long FAR PASCAL HelloWndProc(HWND, unsigned, unsigned, LONG);
 
 BOOL FAR PASCAL About( hDlg, message, wParam, lParam )
 HWND hDlg;
@@ -140,7 +140,7 @@ int cmdShow;
 long FAR PASCAL HelloWndProc( hWnd, message, wParam, lParam )
 HWND hWnd;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
     PAINTSTRUCT ps;
