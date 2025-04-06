@@ -5596,7 +5596,6 @@ try_again_w_token:
 	};
 
 	struct parameter_t {
-		std::vector<parameter_t>		parameters;
 		declaration_specifiers_t		spec;
 		declarator_t				decl;
 
@@ -5608,13 +5607,11 @@ try_again_w_token:
 		~parameter_t() { }
 
 		void common_copy(const parameter_t &o) {
-			parameters = o.parameters;
 			spec = o.spec;
 			decl = o.decl;
 		}
 
 		void common_move(parameter_t &o) {
-			parameters = std::move(o.parameters);
 			spec = std::move(o.spec);
 			decl = std::move(o.decl);
 		}
@@ -6087,7 +6084,7 @@ try_again_w_token:
 				const parameter_t &sp1 = p1[pi];
 				const parameter_t &sp2 = p2[pi];
 
-				if ((r=check_symbol_param_match(sl,sp1.parameters,sp2.parameters)) < 1)
+				if ((r=check_symbol_param_match(sl,sp1.decl.ptrarr.funcparam(),sp2.decl.ptrarr.funcparam())) < 1)
 					return r;
 
 				if (sp1.spec.type_specifier != sp2.spec.type_specifier)
@@ -7731,7 +7728,8 @@ common_error:
 					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
 						return r;
 
-					if ((r=direct_declarator_parse(p.spec,p.decl,p.parameters,DIRDECL_ALLOW_ABSTRACT)) < 1)
+					std::vector<parameter_t> dummy_param;
+					if ((r=direct_declarator_parse(p.spec,p.decl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
@@ -7966,10 +7964,10 @@ common_error:
 							return r;
 
 						do {
-							std::vector<parameter_t> s_parameters;
+							std::vector<parameter_t> dummy_param;
 							declarator_t d;
 
-							if ((r=declaration_inner_parse(s_spec,d,s_parameters)) < 1)
+							if ((r=declaration_inner_parse(s_spec,d,dummy_param)) < 1)
 								return r;
 
 							/* check */
@@ -7995,7 +7993,6 @@ common_error:
 								if (fp.spec.empty() && fp.decl.ptrarr.ptr.empty()) {
 									fp.spec = s_spec;
 									fp.decl.ptrarr = std::move(d.ptrarr);
-									fp.parameters = std::move(s_parameters);
 								}
 								else {
 									CCerr(pos,"Identifier already given type");
@@ -8239,9 +8236,6 @@ common_error:
 			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
 
 		debug_dump_pa_pair(prefix+"  ",p.decl.ptrarr);
-
-		for (auto &pp : p.parameters)
-			debug_dump_parameter(prefix+"  ",pp);
 
 		if (p.decl.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
@@ -10006,7 +10000,7 @@ common_error:
 					if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
 						if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
 							return r;
-						if ((r=check_symbol_param_match(sl,p.parameters)) < 1)
+						if ((r=check_symbol_param_match(sl,p.decl.ptrarr.funcparam())) < 1)
 							return r;
 					}
 					else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
