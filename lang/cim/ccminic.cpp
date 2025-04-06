@@ -5664,7 +5664,6 @@ try_again_w_token:
 		struct structfield_t {
 			declaration_specifiers_t		spec;
 			pa_pair_t				ptrarr;
-			std::vector<parameter_t>		parameters;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				bitfield_expr = ast_node_none;
 
@@ -5682,7 +5681,6 @@ try_again_w_token:
 			void common_move(structfield_t &x) {
 				spec = std::move(x.spec);
 				ptrarr = std::move(x.ptrarr);
-				parameters = std::move(x.parameters);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/bitfield_expr,/*from*/x.bitfield_expr);
 			}
@@ -8165,7 +8163,6 @@ common_error:
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
 		sf.ptrarr = declor.ptrarr;
-		sf.parameters = parameters;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
 		return 1;
@@ -8380,9 +8377,6 @@ common_error:
 
 		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
 		debug_dump_pa_pair(prefix+"  ",field.ptrarr);
-
-		for (auto &p : field.parameters)
-			debug_dump_parameter(prefix+"  ",p);
 
 		if (field.bitfield_expr != ast_node_none) {
 			fprintf(stderr,"%s  bitfield expr:\n",prefix.c_str());
