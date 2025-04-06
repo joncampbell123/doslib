@@ -7794,6 +7794,71 @@ common_error:
 			} while ((dpi--) != 0);
 		}
 
+		/* typedef subst */
+		if (ds.type_specifier & TS_MATCH_TYPEDEF) {
+			symbol_t &sym = symbol(ds.type_identifier_symbol);
+			assert(sym.sym_type == symbol_t::TYPEDEF);
+
+			/* do not replace storage_class */
+
+			/* copy type_specifier */
+			ds.type_specifier = sym.spec.type_specifier;
+
+			/* merge type_qualifier */
+			{
+				const type_qualifier_t msk = TQ_CONST|TQ_VOLATILE|TQ_RESTRICT;
+				ds.type_qualifier |= sym.spec.type_qualifier & msk;
+			}
+			{
+				const type_qualifier_t msk = TQ_NEAR|TQ_FAR|TQ_HUGE;
+				if ((ds.type_qualifier&msk) == 0)
+					ds.type_qualifier |= sym.spec.type_qualifier & msk;
+			}
+
+			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
+
+			if (ds.type_identifier_symbol != identifier_none) {
+				symbol_t &s_sym = symbol(ds.type_identifier_symbol);
+				assert(s_sym.sym_type != symbol_t::TYPEDEF);
+
+				if (s_sym.sym_type == symbol_t::FUNCTION) {
+					dd.flags |= declarator_t::FL_FUNCTION;
+					if (s_sym.flags & symbol_t::FL_FUNCTION_POINTER)
+						dd.flags |= declarator_t::FL_FUNCTION_POINTER;
+				}
+			}
+
+			if (!sym.parameters.empty()) {
+				if (!parameters.empty())
+					CCERR_RET(EEXIST,pos,"Parameter list conflicts with typedef");
+
+				parameters = sym.parameters;
+			}
+
+			if (!sym.ptrarr.empty()) {
+				if (pato->empty()) {
+					*pato = sym.ptrarr;
+				}
+				else if (pato->sub == NULL && pato->ptr.empty() && !pato->arraydef.empty() &&
+					sym.ptrarr.sub == NULL && sym.ptrarr.ptr.empty() && !sym.ptrarr.arraydef.empty()) {
+					for (auto &a : sym.ptrarr.arraydef) {
+						pato->arraydef.push_back(a);
+						ast_node(a).addref();
+					}
+				}
+				else if (pato->sub == NULL && !pato->ptr.empty() && pato->arraydef.empty() &&
+					sym.ptrarr.sub == NULL && !sym.ptrarr.ptr.empty() && sym.ptrarr.arraydef.empty()) {
+					for (auto &p : sym.ptrarr.ptr)
+						pato->ptr.push_back(p);
+				}
+				else {
+					pato->sub_init();
+					pato = pato->sub;
+					*pato = sym.ptrarr;
+				}
+			}
+		}
+
 		/* parameter validation:
 		 * you can have either all parameter_type parameters,
 		 * or identifier_list parameters.
