@@ -5439,7 +5439,11 @@ try_again_w_token:
 		pa_pair_t*				sub = NULL;
 		unsigned int				dd_flags = 0;
 
-		pa_pair_t* funcparam(void);
+		pa_pair_t* funcparampair(void);
+		const pa_pair_t* funcparampair(void) const;
+
+		std::vector<parameter_t> &funcparam(void);
+		const std::vector<parameter_t> &funcparam(void) const;
 
 		pa_pair_t() { }
 		pa_pair_t(const pa_pair_t &x) { common_copy(x); }
@@ -5538,12 +5542,32 @@ try_again_w_token:
 	};
 
 	/* return innermost function pair */
-	pa_pair_t* pa_pair_t::funcparam(void) {
+	pa_pair_t* pa_pair_t::funcparampair(void) {
 		for (pa_pair_t *scan=this;scan;scan=scan->sub)
 			if (scan->dd_flags & declarator_t::FL_FUNCTION)
 				return scan;
 
 		return NULL;
+	}
+
+	const pa_pair_t* pa_pair_t::funcparampair(void) const {
+		for (const pa_pair_t *scan=this;scan;scan=scan->sub)
+			if (scan->dd_flags & declarator_t::FL_FUNCTION)
+				return scan;
+
+		return NULL;
+	}
+
+	std::vector<parameter_t> &pa_pair_t::funcparam(void) {
+		pa_pair_t *fp = funcparampair();
+		if (fp) return fp->parameters;
+		return parameters;
+	}
+
+	const std::vector<parameter_t> &pa_pair_t::funcparam(void) const {
+		const pa_pair_t *fp = funcparampair();
+		if (fp) return fp->parameters;
+		return parameters;
 	}
 
 	struct declaration_t {
@@ -5974,7 +5998,7 @@ try_again_w_token:
 			return symbol_none;
 		}
 
-		symbol_t::type_t classify_symbol(declaration_specifiers_t &spec,declarator_t &declor) {
+		symbol_t::type_t classify_symbol(const declaration_specifiers_t &spec,const declarator_t &declor) {
 			if ((declor.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)/* function, but not function pointer */
 				return symbol_t::FUNCTION;
 			else if (spec.storage_class & SC_TYPEDEF)
@@ -5991,7 +6015,7 @@ try_again_w_token:
 			position_t pos;
 		};
 
-		int prep_symbol_lookup(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+		int prep_symbol_lookup(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor) {
 			if (sl.st == symbol_t::NONE) sl.st = classify_symbol(spec,declor);
 			sl.cursco = current_scope();
 
@@ -6041,7 +6065,7 @@ try_again_w_token:
 			return 1;
 		}
 
-		bool do_local_symbol_lookup(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+		bool do_local_symbol_lookup(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor) {
 			(void)spec;
 
 			assert(sl.sid == symbol_none);
@@ -6053,15 +6077,15 @@ try_again_w_token:
 			return false;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,std::vector<parameter_t> &p1,std::vector<parameter_t> &p2) {
+		int check_symbol_param_match(symbol_lookup_t &sl,const std::vector<parameter_t> &p1,const std::vector<parameter_t> &p2) {
 			int r;
 
 			if (p1.size() != p2.size())
 				CCERR_RET(EINVAL,sl.pos,"Parameter list does not match");
 
 			for (size_t pi=0;pi < p1.size();pi++) {
-				parameter_t &sp1 = p1[pi];
-				parameter_t &sp2 = p2[pi];
+				const parameter_t &sp1 = p1[pi];
+				const parameter_t &sp2 = p2[pi];
 
 				if ((r=check_symbol_param_match(sl,sp1.parameters,sp2.parameters)) < 1)
 					return r;
@@ -6076,7 +6100,7 @@ try_again_w_token:
 			return 1;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,std::vector<parameter_t> &parameters) {
+		int check_symbol_param_match(symbol_lookup_t &sl,const std::vector<parameter_t> &parameters) {
 			int r;
 
 			assert(sl.sid != symbol_none);
@@ -6092,7 +6116,7 @@ try_again_w_token:
 			return 1;
 		}
 
-		int check_symbol_lookup_match(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+		int check_symbol_lookup_match(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor) {
 			assert(sl.sid != symbol_none);
 			assert(sl.st != symbol_t::NONE);
 
@@ -6156,7 +6180,7 @@ exists:
 		}
 
 		/* this automatically uses the scope_stack and current_scope() return value */
-		int add_symbol(symbol_lookup_t &sl,declaration_specifiers_t &spec,declarator_t &declor) {
+		int add_symbol(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor) {
 			assert(sl.sid == symbol_none);
 			sl.sid = new_symbol(declor.name);
 			symbol_t &sym = symbol(sl.sid);
@@ -7808,7 +7832,7 @@ common_error:
 		}
 
 		{
-			pa_pair_t *f = dd.ptrarr.funcparam();
+			const pa_pair_t *f = dd.ptrarr.funcparampair();
 			if (f) {
 				dd.flags |= f->dd_flags;
 				parameters = f->parameters;
