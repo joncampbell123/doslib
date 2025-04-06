@@ -5439,6 +5439,8 @@ try_again_w_token:
 		pa_pair_t*				sub = NULL;
 		unsigned int				dd_flags = 0;
 
+		pa_pair_t* funcparam(void);
+
 		pa_pair_t() { }
 		pa_pair_t(const pa_pair_t &x) { common_copy(x); }
 		pa_pair_t &operator=(const pa_pair_t &x) { common_copy(x); return *this; }
@@ -5534,6 +5536,15 @@ try_again_w_token:
 			ast_node.release(bitfield_expr);
 		}
 	};
+
+	/* return innermost function pair */
+	pa_pair_t* pa_pair_t::funcparam(void) {
+		for (pa_pair_t *scan=this;scan;scan=scan->sub)
+			if (scan->dd_flags & declarator_t::FL_FUNCTION)
+				return scan;
+
+		return NULL;
+	}
 
 	struct declaration_t {
 		declaration_specifiers_t	spec;
@@ -7775,13 +7786,6 @@ common_error:
 			do {
 				ddip_parse_t &tdp = dp[dpi];
 
-				if (tdp.dd_flags & declarator_t::FL_FUNCTION) {
-					if (!(dd.flags & declarator_t::FL_FUNCTION)) {
-						dd.flags |= tdp.dd_flags;
-						parameters = tdp.parameters;
-					}
-				}
-
 				if (dpi < (dp.size() - 1u)) {
 					if (!pato->empty()) {
 						pato->sub_init();
@@ -7801,6 +7805,14 @@ common_error:
 				assert(pato->parameters.empty());
 				pato->parameters = std::move(tdp.parameters);
 			} while ((dpi--) != 0);
+		}
+
+		{
+			pa_pair_t *f = dd.ptrarr.funcparam();
+			if (f) {
+				dd.flags |= f->dd_flags;
+				parameters = f->parameters;
+			}
 		}
 
 		/* typedef subst */
