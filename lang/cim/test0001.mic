@@ -515,6 +515,13 @@ static intptr_t szi24 = (intptr_t)8;
 static uintptr_t szi25 = sizeof(uintptr_t);
 static intptr_t szi26 = sizeof(intptr_t);
 
+char *(*(nastyname)())[10] /* https://www.educative.io/blog/decoding-c-declarations */
+{
+	char *(*p)[10];
+
+	return p;
+}
+
 tdu1 trf1() {
 	return 5;
 }

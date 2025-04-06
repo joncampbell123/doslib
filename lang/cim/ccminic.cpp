@@ -5430,9 +5430,12 @@ try_again_w_token:
 		}
 	};
 
+	struct parameter_t;
+
 	struct pa_pair_t {
 		std::vector<pointer_t>			ptr;
 		std::vector<ast_node_id_t>		arraydef;
+		std::vector<parameter_t>		parameters;
 		pa_pair_t*				sub = NULL;
 
 		pa_pair_t() { }
@@ -5442,7 +5445,7 @@ try_again_w_token:
 		pa_pair_t &operator=(pa_pair_t &&x) { common_move(x); return *this; }
 
 		bool empty(void) const {
-			return ptr.empty() && arraydef.empty() && sub == NULL;
+			return ptr.empty() && arraydef.empty() && parameters.empty() && sub == NULL;
 		}
 
 		void sub_free(void) {
@@ -5458,6 +5461,7 @@ try_again_w_token:
 		void common_copy(const pa_pair_t &o) {
 			ptr = o.ptr;
 			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
+			parameters = o.parameters;
 
 			if (o.sub) {
 				if (sub == NULL) sub = new pa_pair_t();
@@ -5472,6 +5476,7 @@ try_again_w_token:
 		void common_move(pa_pair_t &o) {
 			ptr = std::move(o.ptr);
 			arraydef = std::move(o.arraydef); o.arraydef.clear();
+			parameters = std::move(o.parameters); o.parameters.clear();
 			sub = o.sub; o.sub = NULL;
 		}
 
@@ -5551,6 +5556,31 @@ try_again_w_token:
 		}
 	};
 
+	struct parameter_t {
+		std::vector<parameter_t>		parameters;
+		declaration_specifiers_t		spec;
+		declarator_t				decl;
+
+		parameter_t() { }
+		parameter_t(const parameter_t &x) { common_copy(x); }
+		parameter_t &operator=(const parameter_t &x) { common_copy(x); return *this; }
+		parameter_t(parameter_t &&x) { common_move(x); }
+		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; }
+		~parameter_t() { }
+
+		void common_copy(const parameter_t &o) {
+			parameters = o.parameters;
+			spec = o.spec;
+			decl = o.decl;
+		}
+
+		void common_move(parameter_t &o) {
+			parameters = std::move(o.parameters);
+			spec = std::move(o.spec);
+			decl = std::move(o.decl);
+		}
+	};
+
 	struct cc_state_t {
 		cc_state_t() {
 			assert(scopes.empty());
@@ -5587,31 +5617,6 @@ try_again_w_token:
 			~enumerator_t() {
 				identifier.release(name);
 				ast_node.release(expr);
-			}
-		};
-
-		struct parameter_t {
-			std::vector<parameter_t>		parameters;
-			declaration_specifiers_t		spec;
-			declarator_t				decl;
-
-			parameter_t() { }
-			parameter_t(const parameter_t &x) { common_copy(x); }
-			parameter_t &operator=(const parameter_t &x) { common_copy(x); return *this; }
-			parameter_t(parameter_t &&x) { common_move(x); }
-			parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; }
-			~parameter_t() { }
-
-			void common_copy(const parameter_t &o) {
-				parameters = o.parameters;
-				spec = o.spec;
-				decl = o.decl;
-			}
-
-			void common_move(parameter_t &o) {
-				parameters = std::move(o.parameters);
-				spec = std::move(o.spec);
-				decl = std::move(o.decl);
 			}
 		};
 
@@ -7772,7 +7777,7 @@ common_error:
 						CCERR_RET(EINVAL,pos,"No functions within functions");
 
 					dd.flags |= tdp.dd_flags;
-					parameters = std::move(tdp.parameters);
+					parameters = tdp.parameters;
 				}
 				else {
 					if (!tdp.parameters.empty())
@@ -7791,6 +7796,9 @@ common_error:
 
 				assert(pato->arraydef.empty());
 				pato->arraydef = std::move(tdp.arr);
+
+				assert(pato->parameters.empty());
+				pato->parameters = std::move(tdp.parameters);
 			} while ((dpi--) != 0);
 		}
 
@@ -8208,6 +8216,9 @@ common_error:
 		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_pointer(prefix+"  ",pp.ptr);
 		debug_dump_arraydef(prefix+"  ",pp.arraydef);
+
+		for (auto &ppp : pp.parameters)
+			debug_dump_parameter(prefix+"  ",ppp);
 
 		if (pp.sub) debug_dump_pa_pair(prefix+"  ",*pp.sub);
 	}
