@@ -6218,9 +6218,9 @@ exists:
 		};
 
 		int direct_declarator_inner_parse(std::vector<ddip_parse_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
-		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &parameters,unsigned int flags=0);
-		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &parameters);
-		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &parameters);
+		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
+		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
+		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
@@ -7730,8 +7730,7 @@ common_error:
 					if ((r=declaration_specifiers_parse(p.spec,DECLSPEC_OPTIONAL)) < 1)
 						return r;
 
-					std::vector<parameter_t> dummy_param;
-					if ((r=direct_declarator_parse(p.spec,p.decl,dummy_param,DIRDECL_ALLOW_ABSTRACT)) < 1)
+					if ((r=direct_declarator_parse(p.spec,p.decl,DIRDECL_ALLOW_ABSTRACT)) < 1)
 						return r;
 
 					/* do not allow using the same name again */
@@ -7775,7 +7774,7 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,std::vector<parameter_t> &__remove_me_parameters,unsigned int flags) {
+	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags) {
 		position_t pos = tq_peek().pos;
 		std::vector<ddip_parse_t> dp;
 		pa_pair_t *pato = &dd.ptrarr;
@@ -7968,10 +7967,9 @@ common_error:
 							return r;
 
 						do {
-							std::vector<parameter_t> dummy_param;
 							declarator_t d;
 
-							if ((r=declaration_inner_parse(s_spec,d,dummy_param)) < 1)
+							if ((r=declaration_inner_parse(s_spec,d)) < 1)
 								return r;
 
 							/* check */
@@ -8055,10 +8053,10 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor,std::vector<parameter_t> &__remove_me_parameters) {
+	int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &declor) {
 		int r;
 
-		if ((r=direct_declarator_parse(ds,declor,__remove_me_parameters)) < 1)
+		if ((r=direct_declarator_parse(ds,declor)) < 1)
 			return r;
 
 		return 1;
@@ -8077,10 +8075,9 @@ common_error:
 	}
 
 	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
-		std::vector<parameter_t> dummy_param;
 		int r;
 
-		if ((r=direct_declarator_parse(ds,declor,dummy_param)) < 1)
+		if ((r=direct_declarator_parse(ds,declor)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::colon) {
@@ -8744,8 +8741,7 @@ common_error:
 
 				declarator_t &declor = (*declion).new_declarator();
 
-				std::vector<parameter_t> dummy_param;
-				if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+				if ((r=direct_declarator_parse((*declion).spec,declor,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 					return r;
 
 				ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
@@ -8791,8 +8787,7 @@ common_error:
 
 			declarator_t &declor = (*declion).new_declarator();
 
-			std::vector<parameter_t> dummy_param;
-			if ((r=direct_declarator_parse((*declion).spec,declor,dummy_param,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+			if ((r=direct_declarator_parse((*declion).spec,declor,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
 				return r;
 
 			aroot = ast_node.alloc(token_type_t::op_typecast);
@@ -9561,12 +9556,11 @@ common_error:
 				return r;
 
 			do {
-				std::vector<parameter_t> dummy_param;
 				declarator_t declor;
 				symbol_lookup_t sl;
 
 				sl.pos = tq_peek().pos;
-				if ((r=declaration_inner_parse(spec,declor,dummy_param)) < 1)
+				if ((r=declaration_inner_parse(spec,declor)) < 1)
 					return r;
 
 				if (declor.name != identifier_none) {
@@ -9908,10 +9902,10 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor,std::vector<parameter_t> &__remove_me_parameters) {
+	int cc_state_t::declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor) {
 		int r;
 
-		if ((r=declarator_parse(spec,declor,__remove_me_parameters)) < 1)
+		if ((r=declarator_parse(spec,declor)) < 1)
 			return r;
 		if ((r=chkerr()) < 1)
 			return r;
@@ -9948,11 +9942,10 @@ common_error:
 
 		do {
 			symbol_lookup_t sl;
-			std::vector<parameter_t> dummy_param;
 			declarator_t &declor = declion.new_declarator();
 
 			sl.pos = tq_peek().pos;
-			if ((r=declaration_inner_parse(declion.spec,declor,dummy_param)) < 1)
+			if ((r=declaration_inner_parse(declion.spec,declor)) < 1)
 				return r;
 
 			if (tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
