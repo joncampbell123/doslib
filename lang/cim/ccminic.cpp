@@ -5324,7 +5324,12 @@ try_again_w_token:
 	static ast_node_pool ast_node;
 
 	void ast_node_t::arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s) {
+		for (auto &id : d)
+			if (id != ast_node_none)
+				ast_node(id).release();
+
 		d = s;
+
 		for (auto &id : d)
 			if (id != ast_node_none)
 				ast_node(id).addref();
@@ -5755,7 +5760,6 @@ try_again_w_token:
 			struct decl_t {
 				declaration_specifiers_t	spec;
 				declarator_t			declor;
-				std::vector<parameter_t>	parameters;
 			};
 
 			ast_node_id_t				root = ast_node_none;
@@ -8354,8 +8358,6 @@ common_error:
 			fprintf(stderr,"%s  decl:\n",prefix.c_str());
 			debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
 			debug_dump_declarator(prefix+"    ",decl.declor);
-			for (auto &p : decl.parameters)
-				debug_dump_parameter(prefix+"    ",p);
 		}
 
 		if (sco.root != ast_node_none) {
@@ -8435,8 +8437,6 @@ common_error:
 				fprintf(stderr,"%s  decl (as parent of scope):\n",prefix.c_str());
 				debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
 				debug_dump_declarator(prefix+"    ",decl.declor);
-				for (auto &p : decl.parameters)
-					debug_dump_parameter(prefix+"    ",p);
 			}
 		}
 
@@ -9591,7 +9591,6 @@ common_error:
 						scope_t::decl_t &sldef = sco.new_localdecl();
 						sldef.spec = spec;
 						sldef.declor = std::move(declor); /* this is the last time this function will use it, std::move it */
-						sldef.parameters = std::move(parameters); /* this is the last time this function will use it, std::move it */
 						sldef.declor.symbol = sl.sid;
 					}
 				}
