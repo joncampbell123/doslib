@@ -7663,7 +7663,6 @@ common_error:
 				CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
 		}
 
-		/* you are allowed ONE parameter list! ONE! */
 		if (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 
@@ -7866,6 +7865,9 @@ common_error:
 					pato = pato->sub;
 					*pato = sym.ptrarr;
 				}
+
+				while (pato->sub)
+					pato = pato->sub;
 			}
 		}
 
