@@ -5437,6 +5437,7 @@ try_again_w_token:
 		std::vector<ast_node_id_t>		arraydef;
 		std::vector<parameter_t>		parameters;
 		pa_pair_t*				sub = NULL;
+		unsigned int				dd_flags = 0;
 
 		pa_pair_t() { }
 		pa_pair_t(const pa_pair_t &x) { common_copy(x); }
@@ -5445,7 +5446,7 @@ try_again_w_token:
 		pa_pair_t &operator=(pa_pair_t &&x) { common_move(x); return *this; }
 
 		bool empty(void) const {
-			return ptr.empty() && arraydef.empty() && parameters.empty() && sub == NULL;
+			return ptr.empty() && arraydef.empty() && parameters.empty() && sub == NULL && dd_flags == 0;
 		}
 
 		void sub_free(void) {
@@ -5471,6 +5472,8 @@ try_again_w_token:
 				if (sub) delete sub;
 				sub = NULL;
 			}
+
+			dd_flags = o.dd_flags;
 		}
 
 		void common_move(pa_pair_t &o) {
@@ -5478,6 +5481,7 @@ try_again_w_token:
 			arraydef = std::move(o.arraydef); o.arraydef.clear();
 			parameters = std::move(o.parameters); o.parameters.clear();
 			sub = o.sub; o.sub = NULL;
+			dd_flags = o.dd_flags; o.dd_flags = 0;
 		}
 
 		~pa_pair_t() {
@@ -7791,6 +7795,9 @@ common_error:
 					}
 				}
 
+				assert(pato->dd_flags == 0);
+				pato->dd_flags = tdp.dd_flags;
+
 				assert(pato->ptr.empty());
 				pato->ptr = std::move(tdp.ptr);
 
@@ -8216,6 +8223,14 @@ common_error:
 		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		debug_dump_pointer(prefix+"  ",pp.ptr);
 		debug_dump_arraydef(prefix+"  ",pp.arraydef);
+
+		if (pp.dd_flags & declarator_t::FL_FUNCTION_POINTER)
+			fprintf(stderr,"%s  function pointer:\n",prefix.c_str());
+		else if (pp.dd_flags & declarator_t::FL_FUNCTION)
+			fprintf(stderr,"%s  function:\n",prefix.c_str());
+
+		if (pp.dd_flags & declarator_t::FL_ELLIPSIS)
+			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
 
 		for (auto &ppp : pp.parameters)
 			debug_dump_parameter(prefix+"  ",ppp);
