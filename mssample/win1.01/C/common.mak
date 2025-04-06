@@ -22,6 +22,7 @@ exe: $(HELLO_EXE) .symbolic
 
 !ifdef HELLO_RES
 $(HELLO_RES): hello.rc
+	../../../tool/icon1to3.pl hello.ico.win1 hello.ico
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)hello.res  $[@
 !endif
 
