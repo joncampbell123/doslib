@@ -7777,15 +7777,10 @@ common_error:
 				ddip_parse_t &tdp = dp[dpi];
 
 				if (tdp.dd_flags & declarator_t::FL_FUNCTION) {
-					if (dd.flags & declarator_t::FL_FUNCTION)
-						CCERR_RET(EINVAL,pos,"No functions within functions");
-
-					dd.flags |= tdp.dd_flags;
-					parameters = tdp.parameters;
-				}
-				else {
-					if (!tdp.parameters.empty())
-						CCERR_RET(EINVAL,pos,"Non-function parameters?");
+					if (!(dd.flags & declarator_t::FL_FUNCTION)) {
+						dd.flags |= tdp.dd_flags;
+						parameters = tdp.parameters;
+					}
 				}
 
 				if (dpi < (dp.size() - 1u)) {

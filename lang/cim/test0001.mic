@@ -522,6 +522,14 @@ char *(*(nastyname)())[10] /* https://www.educative.io/blog/decoding-c-declarati
 	return p;
 }
 
+int funcretfunc_sub(int x,int y) {
+	return x+y;
+}
+
+int (*(funcretfunc)(int x))(int,int) {
+	return &funcretfunc_sub;
+}
+
 tdu1 trf1() {
 	return 5;
 }
