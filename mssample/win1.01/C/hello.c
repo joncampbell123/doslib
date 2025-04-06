@@ -109,11 +109,23 @@ int cmdShow;
 
     hWnd = CreateWindow((LPSTR)szAppName,
                         (LPSTR)szMessage,
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20 /* Windows 2.0 or higher */
+                        /* this 1.01 sample was written before CW_USEDEFAULT was added in the Windows 2.0 SDK.
+                         * Windows 1.0 and 2.0 correctly respond to the below case as assumed by this SDK sample.
+                         * Windows 3.0 and higher respond to the 0s in the fields by showing a window at minimum size.
+                         * CW_USEDEFAULT is required for the window to show at an appropriate size */
+                        WS_OVERLAPPEDWINDOW,
+                        CW_USEDEFAULT,    /*  x */
+                        CW_USEDEFAULT,    /*  y */
+                        CW_USEDEFAULT,    /* cx */
+                        CW_USEDEFAULT,    /* cy */
+#else
                         WS_TILEDWINDOW,
                         0,    /*  x - ignored for tiled windows */
                         0,    /*  y - ignored for tiled windows */
                         0,    /* cx - ignored for tiled windows */
                         0,    /* cy - ignored for tiled windows */
+#endif
                         (HWND)NULL,        /* no parent */
                         (HMENU)NULL,       /* use class menu */
                         (HANDLE)hInstance, /* handle to window instance */
