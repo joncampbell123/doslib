@@ -27,7 +27,7 @@ POINT StarPoints[]= {
     100, 75
     };
 
-long FAR PASCAL TrackWndProc(HWND, unsigned, WORD, LONG);
+long FAR PASCAL TrackWndProc(HWND, unsigned, unsigned, LONG);
 
 BOOL FAR PASCAL About( hDlg, message, wParam, lParam )
 HWND hDlg;
@@ -35,6 +35,8 @@ unsigned message;
 WORD wParam;
 LONG lParam;
 {
+    (void)wParam;
+    (void)lParam;
     if (message == WM_COMMAND) {
         EndDialog( hDlg, TRUE );
         return TRUE;
@@ -98,6 +100,8 @@ PAINTSTRUCT *pps;
     HDC hDC = pps->hdc;
     HBRUSH  hbr, hbrOld;
     HPEN    hpen, hpenOld;
+
+    (void)hWnd;
 
     TrackSetupDC( hDC );
 
@@ -258,6 +262,8 @@ int cmdShow;
     HWND  hWnd;
     HMENU hMenu;
 
+    (void)lpszCmdLine;
+
     if (!hPrevInstance) {
         if (!TrackInit(hInstance))
             return FALSE;
@@ -306,7 +312,7 @@ int cmdShow;
 long FAR PASCAL TrackWndProc( hWnd, message, wParam, lParam )
 HWND hWnd;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
     PAINTSTRUCT ps;

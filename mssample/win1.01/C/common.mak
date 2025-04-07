@@ -64,7 +64,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 $(TRACK_EXE): $(SUBDIR)$(HPS)track.obj $(TRACK_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)track.obj
 !ifeq TARGET_MSDOS 16
-	%write tmp.cmd EXPORT HelloWndProc.1 PRIVATE RESIDENT
+	%write tmp.cmd EXPORT TrackWndProc.1 PRIVATE RESIDENT
 	%write tmp.cmd EXPORT About.2 PRIVATE RESIDENT
 # NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
 	%write tmp.cmd option DESCRIPTION 'Microsoft Windows GDI, Mouse, & Menu Sample Application'
