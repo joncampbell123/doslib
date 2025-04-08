@@ -42,13 +42,22 @@ HWND hWnd;
 {
     HDC hDC;
     TEXTMETRIC TM;
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    HGDIOBJ pFont;
+#endif
     int count;
 
     /* Get character width from textmetric of current font */
     hDC = GetDC( hWnd );
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    pFont = SelectObject( hDC, GetStockObject( SYSTEM_FIXED_FONT ) );
+#endif
     GetTextMetrics( hDC, (LPTEXTMETRIC)&TM );
     CharWidth = TM.tmAveCharWidth;
     CharHeight= TM.tmHeight + TM.tmExternalLeading;
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    SelectObject( hDC, pFont );
+#endif
     ReleaseDC( hWnd, hDC );
 
     /* Initialize text buffer */
@@ -90,9 +99,16 @@ char ch;
 {
     HDC hDC;
     DWORD lOld, lNew;
+    /* Windows 3.0 or higher need to select the SYSTEM_FIXED_FONT, the default font is a variable pitch that doesn't work with this sample */
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    HGDIOBJ pFont;
+#endif
     RECT rect;
 
     hDC = GetDC( hWnd );
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    pFont = SelectObject( hDC, GetStockObject( SYSTEM_FIXED_FONT ) );
+#endif
 
     /* Do TextOut in current system text color */
     SetBkMode( hDC, TRANSPARENT );
@@ -121,6 +137,9 @@ char ch;
         OneLine[0] = '\0';
         InvalidateRect( hWnd, (LPRECT) NULL, TRUE );
         }
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20
+    SelectObject( hDC, pFont );
+#endif
     SetBkMode( hDC, OPAQUE );
     ReleaseDC( hWnd, hDC );
 }
