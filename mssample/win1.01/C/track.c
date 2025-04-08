@@ -14,7 +14,9 @@ char szAbout[10];
 char szWindowTitle[35];
 HBRUSH hbrBlack;
 RECT rcPaintOutline;
-BOOL bMouseDown = FALSE;
+unsigned char bMouseDown = 0;
+#define BMD_LEFT 1
+#define BMD_RIGHT 2
 WORD cCurrentShape = IDDSTAR;
 HANDLE hAccelTable;
 POINT pOrigin, pOld;
@@ -163,12 +165,12 @@ POINT pt;
     case WM_MOUSEMOVE:
         if (!bMouseDown)
             return;
-            break;
+        break;
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
         if (bMouseDown)
             return;
-        bMouseDown = TRUE;
+        bMouseDown = (code == WM_RBUTTONDOWN) ? BMD_RIGHT : BMD_LEFT;
         SetCapture( hWnd );
         hDC = GetDC( hWnd );
         SelectObject( hDC, (HANDLE)hbrBlack );
@@ -177,9 +179,9 @@ POINT pt;
         break;
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
-        if (!bMouseDown)
+        if (bMouseDown != ((code == WM_RBUTTONUP) ? BMD_RIGHT : BMD_LEFT))
             return;
-        bMouseDown = FALSE;
+        bMouseDown = 0;
         ReleaseCapture();
         rcPaintOutline.left = pOrigin.x;
         rcPaintOutline.top = pOrigin.y;
@@ -265,14 +267,14 @@ int cmdShow;
     if (!hPrevInstance) {
         if (!TrackInit(hInstance))
             return FALSE;
-        }
+    }
     else {
         GetInstanceData( hPrevInstance, (PSTR)&hbrBlack, sizeof(hbrBlack) );
         GetInstanceData( hPrevInstance, (PSTR)&hAccelTable, sizeof(hAccelTable) );
         GetInstanceData( hPrevInstance, (PSTR)szAppName, 10 );
         GetInstanceData( hPrevInstance, (PSTR)szAbout, 10 );
         GetInstanceData( hPrevInstance, (PSTR)szWindowTitle, 35 );
-        }
+    }
 
     hWnd = CreateWindow( (LPSTR)szAppName,
                          (LPSTR)szWindowTitle,
@@ -311,8 +313,8 @@ int cmdShow;
         if (TranslateAccelerator(hWnd, hAccelTable, (LPMSG)&msg) == 0) {
             TranslateMessage( (LPMSG)&msg );
             DispatchMessage( (LPMSG)&msg );
-            }
         }
+    }
 
     return (int)msg.wParam;
 }
