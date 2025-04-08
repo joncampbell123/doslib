@@ -164,8 +164,6 @@ POINT pt;
         if (!bMouseDown)
             return;
             break;
-    case WM_LBUTTONDBLCLK:
-    case WM_RBUTTONDBLCLK:
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
         if (bMouseDown)
@@ -353,8 +351,6 @@ LONG lParam;
     case WM_RBUTTONDOWN:
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
-    case WM_LBUTTONDBLCLK:
-    case WM_RBUTTONDBLCLK:
         TrackMouse( hWnd, message, MAKEPOINT(lParam) );
         break;
 
