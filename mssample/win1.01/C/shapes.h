@@ -4,6 +4,7 @@
 #define IDDSTAR     0x0103
 #define IDDCLEAR    0x0104
 #define IDDRECT     0x0105
+#define IDSMILEY    0x0106
 
 /* String table constants */
 #define IDSNAME     100

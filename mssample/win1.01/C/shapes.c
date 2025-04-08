@@ -25,14 +25,16 @@ static POINT StarPoints[]=
     100, 75
     };
 
-long FAR PASCAL ShapesWndProc(HWND, unsigned, WORD, LONG);
+long FAR PASCAL ShapesWndProc(HWND, unsigned, unsigned, LONG);
 
 BOOL FAR PASCAL About( hDlg, message, wParam, lParam )
 HWND hDlg;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
+    (void)wParam;
+    (void)lParam;
     if (message == WM_COMMAND) {
         EndDialog( hDlg, TRUE );
         return TRUE;
@@ -71,6 +73,16 @@ void DrawStar( hDC )
 HDC hDC;
 {
     Polyline( hDC, StarPoints, 6 );
+}
+
+
+void DrawSmiley( hDC )
+HDC hDC;
+{
+    Ellipse( hDC, 0, 100, 100, 0 ); //face
+    Arc( hDC, 15, 15, 85, 85, 15, 35, 85, 35 ); //smile
+    Ellipse( hDC, 25, 70, 35, 60 ); //left eye
+    Ellipse( hDC, 65, 70, 75, 60 ); //right eye
 }
 
 
@@ -127,6 +139,9 @@ PAINTSTRUCT *pps;
         break;
     case IDDSTAR:
         DrawStar( hDC );
+        break;
+    case IDSMILEY:
+        DrawSmiley( hDC );
         break;
     }
     SelectObject( hDC, (HANDLE)hpenOld );
@@ -187,6 +202,8 @@ int cmdShow;
     HWND  hWnd;
     HMENU hMenu;
 
+    (void)lpszCmdLine;
+
     if (!hPrevInstance) {
         if (!ShapesInit( hInstance ))
             return FALSE;
@@ -201,11 +218,23 @@ int cmdShow;
 
     hWnd = CreateWindow( (LPSTR)szAppName,
                          (LPSTR)szWindowTitle,
+#if defined(CW_USEDEFAULT) && defined(WS_OVERLAPPEDWINDOW) && TARGET_WINDOWS >= 20 /* Windows 2.0 or higher */
+                         /* this 1.01 sample was written before CW_USEDEFAULT was added in the Windows 2.0 SDK.
+                          * Windows 1.0 and 2.0 correctly respond to the below case as assumed by this SDK sample.
+                          * Windows 3.0 and higher respond to the 0s in the fields by showing a window at minimum size.
+                          * CW_USEDEFAULT is required for the window to show at an appropriate size */
+                         WS_OVERLAPPEDWINDOW,
+                         CW_USEDEFAULT,    /*  x */
+                         CW_USEDEFAULT,    /*  y */
+                         CW_USEDEFAULT,    /* cx */
+                         CW_USEDEFAULT,    /* cy */
+#else
                          WS_TILEDWINDOW,
                          0,    /*  x - ignored for tiled windows */
                          0,    /*  y - ignored for tiled windows */
                          0,    /* cx - ignored for tiled windows */
                          0,    /* cy - ignored for tiled windows */
+#endif
                          (HWND)NULL,        /* no parent */
                          (HMENU)NULL,       /* use class menu */
                          (HANDLE)hInstance, /* handle to window instance */
@@ -235,7 +264,7 @@ int cmdShow;
 LONG FAR PASCAL ShapesWndProc( hWnd, message, wParam, lParam )
 HWND hWnd;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
     PAINTSTRUCT ps;
