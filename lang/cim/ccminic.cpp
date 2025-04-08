@@ -6204,31 +6204,31 @@ exists:
 			return 1;
 		}
 
-		struct ddip_parse_t {
+		struct ddip_t {
 			std::vector<pointer_t>		ptr;
-			std::vector<ast_node_id_t>	arr;
+			std::vector<ast_node_id_t>	arraydef;
 			std::vector<parameter_t>	parameters;
 			unsigned int			dd_flags = 0;
 
-			ddip_parse_t() { }
-			ddip_parse_t(const ddip_parse_t &) = delete;
-			ddip_parse_t &operator=(const ddip_parse_t &) = delete;
-			ddip_parse_t(ddip_parse_t &&x) { common_move(x); }
-			ddip_parse_t &operator=(ddip_parse_t &&x) { common_move(x); return *this; }
+			ddip_t() { }
+			ddip_t(const ddip_t &) = delete;
+			ddip_t &operator=(const ddip_t &) = delete;
+			ddip_t(ddip_t &&x) { common_move(x); }
+			ddip_t &operator=(ddip_t &&x) { common_move(x); return *this; }
 
-			~ddip_parse_t() {
-				ast_node_t::arrayrelease(arr);
+			~ddip_t() {
+				ast_node_t::arrayrelease(arraydef);
 			}
 
-			void common_move(ddip_parse_t &o) {
-				ptr = std::move(o.ptr); o.ptr.clear();
-				arr = std::move(o.arr); o.arr.clear();
-				parameters = std::move(o.parameters); o.parameters.clear();
+			void common_move(ddip_t &o) {
+				ptr = std::move(o.ptr);
+				arraydef = std::move(o.arraydef);
+				parameters = std::move(o.parameters);
 				dd_flags = o.dd_flags; o.dd_flags = 0;
 			}
 		};
 
-		int direct_declarator_inner_parse(std::vector<ddip_parse_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
+		int direct_declarator_inner_parse(std::vector<ddip_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
@@ -7643,7 +7643,7 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::direct_declarator_inner_parse(std::vector<ddip_parse_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags) {
+	int cc_state_t::direct_declarator_inner_parse(std::vector<ddip_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags) {
 		int r;
 
 		/* [*] identifier [arraydefs]
@@ -7689,7 +7689,7 @@ common_error:
 		}
 
 		/* no more changes to dp vector, so it is safe to use a reference to array elem now */
-		ddip_parse_t &tdp = dp[dpi];
+		ddip_t &tdp = dp[dpi];
 
 		while (tq_peek().type == token_type_t::opensquarebracket) {
 			tq_discard();
@@ -7703,7 +7703,7 @@ common_error:
 				ast_node_reduce(expr);
 			}
 
-			tdp.arr.push_back(std::move(expr));
+			tdp.arraydef.push_back(std::move(expr));
 			if (tq_get().type != token_type_t::closesquarebracket)
 				CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
 		}
@@ -7787,7 +7787,7 @@ common_error:
 
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags) {
 		position_t pos = tq_peek().pos;
-		std::vector<ddip_parse_t> dp;
+		std::vector<ddip_t> dp;
 		pa_pair_t *pato = &dd.ptrarr;
 		int r;
 
@@ -7818,7 +7818,7 @@ common_error:
 			size_t dpi = dp.size() - 1u;
 
 			do {
-				ddip_parse_t &tdp = dp[dpi];
+				ddip_t &tdp = dp[dpi];
 
 				if (dpi < (dp.size() - 1u)) {
 					if (!pato->empty()) {
@@ -7834,7 +7834,7 @@ common_error:
 				pato->ptr = std::move(tdp.ptr);
 
 				assert(pato->arraydef.empty());
-				pato->arraydef = std::move(tdp.arr);
+				pato->arraydef = std::move(tdp.arraydef);
 
 				assert(pato->parameters.empty());
 				pato->parameters = std::move(tdp.parameters);
