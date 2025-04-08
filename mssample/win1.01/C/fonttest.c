@@ -6,6 +6,8 @@
 #include "windows.h"
 #include "fonttest.h"
 
+#include <string.h>
+
 typedef BOOL FAR * LPBOOL;
 
 //extern long FAR PASCAL lstrcpy();
@@ -18,7 +20,6 @@ HANDLE        hAccelTable;  /* handle to accelerator table */
 int           FontYCoord;
 short         nMapMode;
 LOGFONT       LogFont;
-LPLOGFONT     lpLogFont;
 TEXTMETRIC    TM;
 LPTEXTMETRIC  lpTM = (LPTEXTMETRIC)&TM;
 
@@ -52,7 +53,7 @@ HDC hDC;
 {
     HANDLE hLogFont, hLogFontOld;
 
-    hLogFont = (HANDLE)CreateFontIndirect( lpLogFont );
+    hLogFont = (HANDLE)CreateFontIndirect( &LogFont );
     SetMapMode( hDC, nMapMode );
     hLogFontOld = SelectObject( hDC, hLogFont );
     GetTextMetrics( hDC, (LPTEXTMETRIC)lpTM );
@@ -68,25 +69,25 @@ HDC hDC;
 void InitDlg( hDlg )
 HWND hDlg;
 {
-    if (lpLogFont->lfUnderline)
+    if (LogFont.lfUnderline)
         CheckDlgButton( hDlg, IDUNDERLINE, TRUE );
-    if (lpLogFont->lfStrikeOut)
+    if (LogFont.lfStrikeOut)
         CheckDlgButton( hDlg, IDSTRIKEOUT, TRUE );
-    if (lpLogFont->lfItalic)
+    if (LogFont.lfItalic)
         CheckDlgButton( hDlg, IDITALIC, TRUE );
-    SetDlgItemInt( hDlg, IDHEIGHT, lpLogFont->lfHeight, FALSE );
+    SetDlgItemInt( hDlg, IDHEIGHT, LogFont.lfHeight, FALSE );
     SetDlgItemInt( hDlg, IDTMHEIGHT, lpTM->tmHeight, FALSE );
-    SetDlgItemInt( hDlg, IDWIDTH,  lpLogFont->lfWidth, FALSE );
+    SetDlgItemInt( hDlg, IDWIDTH,  LogFont.lfWidth, FALSE );
     SetDlgItemInt( hDlg, IDTMWIDTH,lpTM->tmAveCharWidth, FALSE );
-    SetDlgItemInt( hDlg, IDWEIGHT, lpLogFont->lfWeight, FALSE );
+    SetDlgItemInt( hDlg, IDWEIGHT, LogFont.lfWeight, FALSE );
     SetDlgItemInt( hDlg, IDTMWEIGHT, lpTM->tmWeight, FALSE );
     SetDlgItemInt( hDlg, IDAVCHARWIDTH, lpTM->tmAveCharWidth, FALSE );
     SetDlgItemInt( hDlg, IDMAXCHARWIDTH, lpTM->tmMaxCharWidth, FALSE );
-    SetDlgItemInt( hDlg, IDESCAPEMENT, lpLogFont->lfEscapement, FALSE );
-    SetDlgItemInt( hDlg, IDORIENTATION,lpLogFont->lfOrientation,FALSE );
-    SetDlgItemInt( hDlg, IDPITCH, lpLogFont->lfPitchAndFamily, FALSE );
+    SetDlgItemInt( hDlg, IDESCAPEMENT, LogFont.lfEscapement, FALSE );
+    SetDlgItemInt( hDlg, IDORIENTATION,LogFont.lfOrientation,FALSE );
+    SetDlgItemInt( hDlg, IDPITCH, LogFont.lfPitchAndFamily, FALSE );
     SetDlgItemInt( hDlg, IDTMPITCH, 1 + lpTM->tmPitchAndFamily, FALSE );
-    SetDlgItemInt( hDlg, IDCHARSET, lpLogFont->lfCharSet, FALSE );
+    SetDlgItemInt( hDlg, IDCHARSET, LogFont.lfCharSet, FALSE );
     SetDlgItemInt( hDlg, IDTMCHARSET, lpTM->tmCharSet, FALSE );
     SetDlgItemInt( hDlg, IDMAPMODE, nMapMode, FALSE );
 }
@@ -103,40 +104,40 @@ LONG lParam;
     switch (wParam)
     {
     case IDOK:
-        lpLogFont->lfItalic    = IsDlgButtonChecked( hDlg, IDITALIC )
+        LogFont.lfItalic    = IsDlgButtonChecked( hDlg, IDITALIC )
                                  ? 1 : 0;
-        lpLogFont->lfUnderline = IsDlgButtonChecked( hDlg, IDUNDERLINE )
+        LogFont.lfUnderline = IsDlgButtonChecked( hDlg, IDUNDERLINE )
                                  ? 1 : 0;
-        lpLogFont->lfStrikeOut = IsDlgButtonChecked( hDlg, IDSTRIKEOUT )
+        LogFont.lfStrikeOut = IsDlgButtonChecked( hDlg, IDSTRIKEOUT )
                                  ? 1 : 0;
-        lpLogFont->lfWeight = GetDlgItemInt( hDlg,
+        LogFont.lfWeight = GetDlgItemInt( hDlg,
                                              IDWEIGHT,
                                              (LPBOOL)&fValOK,
                                              FALSE );
-        lpLogFont->lfWidth  = GetDlgItemInt( hDlg,
+        LogFont.lfWidth  = GetDlgItemInt( hDlg,
                                              IDWIDTH,
                                              (LPBOOL)&fValOK,
                                              FALSE );
-        lpLogFont->lfHeight = GetDlgItemInt( hDlg,
+        LogFont.lfHeight = GetDlgItemInt( hDlg,
                                              IDHEIGHT,
                                              (LPBOOL)&fValOK,
                                              FALSE );
-        lpLogFont->lfEscapement = GetDlgItemInt
+        LogFont.lfEscapement = GetDlgItemInt
                                             ( hDlg,
                                               IDESCAPEMENT,
                                               (LPBOOL)&fValOK,
                                               FALSE );
-        lpLogFont->lfOrientation = GetDlgItemInt
+        LogFont.lfOrientation = GetDlgItemInt
                                             ( hDlg,
                                               IDORIENTATION,
                                               (LPBOOL)&fValOK,
                                               FALSE );
-        lpLogFont->lfPitchAndFamily = (BYTE)GetDlgItemInt
+        LogFont.lfPitchAndFamily = (BYTE)GetDlgItemInt
                                             ( hDlg,
                                               IDPITCH,
                                               (LPBOOL)&fValOK,
                                               FALSE );
-        lpLogFont->lfCharSet = (BYTE)GetDlgItemInt
+        LogFont.lfCharSet = (BYTE)GetDlgItemInt
                                             ( hDlg,
                                               IDCHARSET,
                                               (LPBOOL)&fValOK,
@@ -263,7 +264,7 @@ HANDLE hInstance;
 {
     PWNDCLASS   pTemplateClass;
 
-    lpLogFont = (LPLOGFONT)&LogFont;
+    _fmemset(&LogFont,0,sizeof(LogFont));
 
     /* Loading from string table */
     LoadString( hInstance, IDSNAME, (LPSTR)szAppName, 10 );
@@ -309,7 +310,6 @@ int cmdShow;
         }
     else {
         GetInstanceData( hPrev, (PSTR)&LogFont,     sizeof(LogFont) );
-        GetInstanceData( hPrev, (PSTR)&lpLogFont,   sizeof(lpLogFont) );
         GetInstanceData( hPrev, (PSTR)&hInst,       sizeof(hInst) );
         GetInstanceData( hPrev, (PSTR)&TM,          sizeof(TM) );
         GetInstanceData( hPrev, (PSTR)&lpTM,        sizeof(lpTM) );

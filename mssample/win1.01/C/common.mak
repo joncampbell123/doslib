@@ -179,8 +179,8 @@ $(FONTTEST_EXE): $(SUBDIR)$(HPS)fonttest.obj $(FONTTEST_RES)
 	%write tmp.cmd EXPORT About.2 PRIVATE RESIDENT
 # NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
 	%write tmp.cmd option DESCRIPTION 'Microsoft Windows Sample Font Manipulation Code'
-	%write tmp.cmd segment TYPE CODE MOVEABLE
-	%write tmp.cmd segment TYPE DATA MOVEABLE
+	%write tmp.cmd segment TYPE CODE FIXED
+	%write tmp.cmd segment TYPE DATA FIXED
 	%write tmp.cmd option HEAPSIZE=1024
 	%write tmp.cmd option STACK=4096
 !endif
