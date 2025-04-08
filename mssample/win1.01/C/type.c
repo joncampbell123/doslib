@@ -16,15 +16,17 @@ char szWindowTitle[30];
 HANDLE hInst;
 FARPROC lpprocAbout;
 
-long FAR PASCAL TypeWndProc(HWND, unsigned, WORD, LONG);
-int FAR PASCAL lstrlen( LPSTR );
+long FAR PASCAL TypeWndProc(HWND, unsigned, unsigned, LONG);
+//int FAR PASCAL lstrlen( LPSTR );
 
 BOOL FAR PASCAL About( hDlg, message, wParam, lParam )
 HWND hDlg;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
+    (void)wParam;
+    (void)lParam;
     if (message == WM_COMMAND) {
         EndDialog( hDlg, TRUE );
         return TRUE;
@@ -220,7 +222,7 @@ int cmdShow;
 long FAR PASCAL TypeWndProc( hWnd, message, wParam, lParam )
 HWND hWnd;
 unsigned message;
-WORD wParam;
+unsigned wParam;
 LONG lParam;
 {
     PAINTSTRUCT ps;
