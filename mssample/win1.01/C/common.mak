@@ -17,6 +17,9 @@ SHAPES_RES =  $(SUBDIR)$(HPS)shapes.res
 TYPE_EXE =  $(SUBDIR)$(HPS)type.exe
 TYPE_RES =  $(SUBDIR)$(HPS)type.res
 
+FONTTEST_EXE =  $(SUBDIR)$(HPS)fonttest.exe
+FONTTEST_RES =  $(SUBDIR)$(HPS)fonttest.res
+
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .c.obj:
@@ -27,7 +30,7 @@ all: lib exe
 
 lib: .symbolic
 
-exe: $(HELLO_EXE) $(TRACK_EXE) $(SHAPES_EXE) $(TYPE_EXE) .symbolic
+exe: $(HELLO_EXE) $(TRACK_EXE) $(SHAPES_EXE) $(TYPE_EXE) $(FONTTEST_EXE) .symbolic
 
 $(HELLO_RES): hello.rc
 	../../../tool/icon1to3.pl hello.ico.win1 hello.ico
@@ -44,6 +47,10 @@ $(SHAPES_RES): shapes.rc
 $(TYPE_RES): type.rc
 	../../../tool/icon1to3.pl type.ico.win1 type.ico
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)type.res  $[@
+
+$(FONTTEST_RES): fonttest.rc
+	../../../tool/icon1to3.pl fonttest.ico.win1 fonttest.ico
+	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)fonttest.res  $[@
 
 $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello.obj
@@ -163,6 +170,36 @@ $(TYPE_EXE): $(SUBDIR)$(HPS)type.obj $(TYPE_RES)
 !ifeq TARGET_WINDOWS 20
 	../../../tool/win2xhdrpatch.pl $(TYPE_EXE)
 	../../../tool/win2xstubpatch.pl $(TYPE_EXE)
+!endif
+
+$(FONTTEST_EXE): $(SUBDIR)$(HPS)fonttest.obj $(FONTTEST_RES)
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)fonttest.obj
+!ifeq TARGET_MSDOS 16
+	%write tmp.cmd EXPORT FonttestWndProc.1 PRIVATE RESIDENT
+	%write tmp.cmd EXPORT About.2 PRIVATE RESIDENT
+# NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
+	%write tmp.cmd option DESCRIPTION 'Microsoft Windows Sample Font Manipulation Code'
+	%write tmp.cmd segment TYPE CODE MOVEABLE
+	%write tmp.cmd segment TYPE DATA MOVEABLE
+	%write tmp.cmd option HEAPSIZE=1024
+	%write tmp.cmd option STACK=4096
+!endif
+	%write tmp.cmd option map=$(FONTTEST_EXE).map
+!ifdef FONTTEST_RES
+	%write tmp.cmd op resource=$(FONTTEST_RES) name $(FONTTEST_EXE)
+!endif
+	@wlink @tmp.cmd
+!ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(FONTTEST_EXE)
+	@wbind $(FONTTEST_EXE) -q -R $(FONTTEST_RES)
+!endif
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(FONTTEST_EXE)
+!endif
+!ifeq TARGET_WINDOWS 20
+	../../../tool/win2xhdrpatch.pl $(FONTTEST_EXE)
+	../../../tool/win2xstubpatch.pl $(FONTTEST_EXE)
 !endif
 
 clean: .SYMBOLIC

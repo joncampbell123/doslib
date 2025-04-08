@@ -3,7 +3,7 @@
 
 #define TABGRP   WS_TABSTOP | WS_GROUP
 
-fonttest  ICON    FontTest.ico
+fonttest  ICON    fonttest.ico
 
 fonttest MENU
 BEGIN

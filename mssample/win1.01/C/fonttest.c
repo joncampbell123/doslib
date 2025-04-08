@@ -8,8 +8,8 @@
 
 typedef BOOL FAR * LPBOOL;
 
-extern long FAR PASCAL lstrcpy();
-extern long FAR PASCAL lstrlen();
+//extern long FAR PASCAL lstrcpy();
+//extern long FAR PASCAL lstrlen();
 
 FARPROC       lpprocOptions;
 FARPROC       lpprocAbout;
@@ -27,6 +27,7 @@ char szAbout[10];
 char szWindowTitle[15];
 char szAlphabet[LF_FACESIZE+55];
 
+long FAR PASCAL FonttestWndProc(HWND, unsigned, unsigned, LONG);
 
 BOOL FAR PASCAL About( hDlg, message, wParam, lParam )
 HWND hDlg;
@@ -34,6 +35,8 @@ unsigned message;
 WORD wParam;
 LONG lParam;
 {
+    (void)wParam;
+    (void)lParam;
     if (message == WM_COMMAND) {
         EndDialog( hDlg, TRUE );
         return TRUE;
@@ -96,6 +99,7 @@ LONG lParam;
 {
     BOOL fValOK;
 
+    (void)lParam;
     switch (wParam)
     {
     case IDOK:
@@ -185,7 +189,6 @@ void FonttestCommand( hWindow, id )
 HWND hWindow;
 WORD id;
 {
-    int i;
     HDC hDC;
 
     switch (id)
@@ -211,11 +214,11 @@ WORD id;
 }
 
 
-long FAR PASCAL FonttestWndProc( hWnd, message,  wParam, lParam )
+long FAR PASCAL FonttestWndProc( hWnd, message, wParam, lParam )
 HWND hWnd;
-int  message;
-WORD wParam;
-long lParam;
+unsigned message;
+unsigned wParam;
+LONG lParam;
 {
     PAINTSTRUCT ps;
 
@@ -276,7 +279,7 @@ HANDLE hInstance;
     pTemplateClass->lpszClassName  = (LPSTR)szAppName;
     pTemplateClass->hbrBackground  = (HBRUSH)GetStockObject (WHITE_BRUSH);
     pTemplateClass->hInstance      = hInstance;
-    pTemplateClass->lpfnWndProc    = FonttestWndProc;
+    pTemplateClass->lpfnWndProc    = (WNDPROC)FonttestWndProc;
     pTemplateClass->style          = CS_VREDRAW | CS_HREDRAW;
 
     if (!RegisterClass((LPWNDCLASS)pTemplateClass))
@@ -297,6 +300,8 @@ int cmdShow;
     MSG msg;
     HWND hWnd;
     HMENU hMenu;
+
+    (void)lpszCmdLine;
 
     if (!hPrev) {
         if (!FonttestInit(hInstance))
