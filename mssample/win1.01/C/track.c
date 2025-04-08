@@ -95,6 +95,16 @@ HDC hDC;
 }
 
 
+void DrawSmiley( hDC )
+HDC hDC;
+{
+    Ellipse( hDC, 0, 100, 100, 0 ); //face
+    Arc( hDC, 15, 15, 85, 85, 15, 35, 85, 35 ); //smile
+    Ellipse( hDC, 25, 70, 35, 60 ); //left eye
+    Ellipse( hDC, 65, 70, 75, 60 ); //right eye
+}
+
+
 void TrackPaint( hWnd, pps )
 HWND hWnd;
 PAINTSTRUCT *pps;
@@ -132,6 +142,9 @@ PAINTSTRUCT *pps;
         break;
     case IDDSTAR:
         DrawStar( hDC );
+        break;
+    case IDSMILEY:
+        DrawSmiley( hDC );
         break;
     }
     SelectObject( hDC, (HANDLE)hpenOld );

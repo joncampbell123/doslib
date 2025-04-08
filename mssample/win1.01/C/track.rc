@@ -12,6 +12,7 @@ BEGIN
             MENUITEM "Rectangle\t^R", IDDRECT
             MENUITEM "Star\t^S"     , IDDSTAR
             MENUITEM "Triangle\t^T" , IDDTRIANGLE
+            MENUITEM "Smiley\t^L"   , IDSMILEY
         END
 END
 
@@ -22,6 +23,7 @@ BEGIN
     "^R", IDDRECT
     "^S", IDDSTAR
     "^T", IDDTRIANGLE
+    "^L", IDSMILEY
 END
 
 ABOUTBOX DIALOG 22, 17, 144, 75
