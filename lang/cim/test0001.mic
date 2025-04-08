@@ -474,6 +474,7 @@ static unsigned int (*xyz116c)[15][3][5];
 static unsigned int *xyz116d[4];
 static unsigned int (*xyz116e)[4];
 static unsigned int *(xyz116f)[4];
+static unsigned int* (*xyz116g)[4];
 static tdu9 xyz117;
 static tdu10 xyz118;
 static tdu11 xyz119;
@@ -602,4 +603,10 @@ static int (** (** (*funcedup3)[5])[6])[7];
 
 typedef int (** (** (*funcedup4_t)[5])[6])[7];
 funcedup4_t funcedup4[4];
+
+typedef int arrarr1_t[4][5][6][7];
+static arrarr1_t arrarr1a;
+static arrarr1_t arrarr1b[3];
+static arrarr1_t arrarr1c[2][3];
+static arrarr1_t arrarr1d[1][2][3];
 

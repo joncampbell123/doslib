@@ -5437,69 +5437,49 @@ try_again_w_token:
 
 	struct parameter_t;
 
-	struct pa_pair_t {
-		std::vector<pointer_t>			ptr;
-		std::vector<ast_node_id_t>		arraydef;
-		std::vector<parameter_t>		parameters;
-		pa_pair_t*				sub = NULL;
-		unsigned int				dd_flags = 0;
+	struct ddip_t {
+		std::vector<pointer_t>		ptr;
+		std::vector<ast_node_id_t>	arraydef;
+		std::vector<parameter_t>	parameters;
+		unsigned int			dd_flags = 0;
 
-		pa_pair_t* funcparampair(void);
-		const pa_pair_t* funcparampair(void) const;
+		ddip_t() { }
+		ddip_t(const ddip_t &x) { common_copy(x); }
+		ddip_t &operator=(const ddip_t &x) { common_copy(x); return *this; }
+		ddip_t(ddip_t &&x) { common_move(x); }
+		ddip_t &operator=(ddip_t &&x) { common_move(x); return *this; }
 
-		std::vector<parameter_t> &funcparam(void);
-		const std::vector<parameter_t> &funcparam(void) const;
-
-		pa_pair_t() { }
-		pa_pair_t(const pa_pair_t &x) { common_copy(x); }
-		pa_pair_t &operator=(const pa_pair_t &x) { common_copy(x); return *this; }
-		pa_pair_t(pa_pair_t &&x) { common_move(x); }
-		pa_pair_t &operator=(pa_pair_t &&x) { common_move(x); return *this; }
-
-		bool empty(void) const {
-			return ptr.empty() && arraydef.empty() && parameters.empty() && sub == NULL && dd_flags == 0;
+		~ddip_t() {
+			ast_node_t::arrayrelease(arraydef);
 		}
 
-		void sub_free(void) {
-			if (sub) delete sub;
-			sub = NULL;
-		}
-
-		pa_pair_t* sub_init(void) {
-			if (sub == NULL) sub = new pa_pair_t();
-			return sub;
-		}
-
-		void common_copy(const pa_pair_t &o) {
+		void common_copy(const ddip_t &o) {
 			ptr = o.ptr;
-			ast_node_t::arraycopy(/*to*/arraydef,/*from*/o.arraydef);
+			ast_node_t::arraycopy(arraydef,o.arraydef);
 			parameters = o.parameters;
-
-			if (o.sub) {
-				if (sub == NULL) sub = new pa_pair_t();
-				*sub = *o.sub;
-			}
-			else {
-				if (sub) delete sub;
-				sub = NULL;
-			}
-
 			dd_flags = o.dd_flags;
 		}
 
-		void common_move(pa_pair_t &o) {
+		void common_move(ddip_t &o) {
 			ptr = std::move(o.ptr);
-			arraydef = std::move(o.arraydef); o.arraydef.clear();
-			parameters = std::move(o.parameters); o.parameters.clear();
-			sub = o.sub; o.sub = NULL;
+			arraydef = std::move(o.arraydef);
+			parameters = std::move(o.parameters);
 			dd_flags = o.dd_flags; o.dd_flags = 0;
 		}
 
-		~pa_pair_t() {
-			if (sub) delete sub;
-			ast_node_t::arrayrelease(arraydef);
-			arraydef.clear();
+		bool empty(void) const {
+			return ptr.empty() && arraydef.empty() && parameters.empty() && dd_flags == 0;
 		}
+	};
+
+	class ddip_list_t : public std::vector<ddip_t> {
+	public:
+		using BT = std::vector<ddip_t>;
+	public:
+		ddip_list_t() : BT() { }
+		~ddip_list_t() { }
+	public:
+		ddip_t *funcparampair(void);
 	};
 
 	struct declarator_t {
@@ -5507,7 +5487,7 @@ try_again_w_token:
 		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
 		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
 
-		pa_pair_t ptrarr;
+		ddip_list_t ddip;
 		identifier_id_t name = identifier_none;
 		symbol_id_t symbol = symbol_none;
 		unsigned int flags = 0;
@@ -5522,7 +5502,7 @@ try_again_w_token:
 		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
 
 		void common_copy(const declarator_t &o) {
-			ptrarr = o.ptrarr;
+			ddip = o.ddip;
 			identifier.assign(/*to*/name,/*from*/o.name);
 			symbol = o.symbol;
 			flags = o.flags;
@@ -5531,7 +5511,7 @@ try_again_w_token:
 		}
 
 		void common_move(declarator_t &o) {
-			ptrarr = std::move(o.ptrarr);
+			ddip = std::move(o.ddip);
 			identifier.assignmove(/*to*/name,/*from*/o.name);
 			symbol = o.symbol; o.symbol = symbol_none;
 			flags = o.flags; o.flags = 0;
@@ -5546,33 +5526,17 @@ try_again_w_token:
 		}
 	};
 
-	/* return innermost function pair */
-	pa_pair_t* pa_pair_t::funcparampair(void) {
-		for (pa_pair_t *scan=this;scan;scan=scan->sub)
-			if (scan->dd_flags & declarator_t::FL_FUNCTION)
-				return scan;
+	ddip_t *ddip_list_t::funcparampair(void) {
+		if (!empty()) {
+			size_t si = size() - 1u;
+			do {
+				ddip_t &p = (*this)[si];
+				if (p.dd_flags & declarator_t::FL_FUNCTION)
+					return &p;
+			} while ((si--) != 0u);
+		}
 
 		return NULL;
-	}
-
-	const pa_pair_t* pa_pair_t::funcparampair(void) const {
-		for (const pa_pair_t *scan=this;scan;scan=scan->sub)
-			if (scan->dd_flags & declarator_t::FL_FUNCTION)
-				return scan;
-
-		return NULL;
-	}
-
-	std::vector<parameter_t> &pa_pair_t::funcparam(void) {
-		pa_pair_t *fp = funcparampair();
-		if (fp) return fp->parameters;
-		return parameters;
-	}
-
-	const std::vector<parameter_t> &pa_pair_t::funcparam(void) const {
-		const pa_pair_t *fp = funcparampair();
-		if (fp) return fp->parameters;
-		return parameters;
 	}
 
 	struct declaration_t {
@@ -5663,7 +5627,7 @@ try_again_w_token:
 
 		struct structfield_t {
 			declaration_specifiers_t		spec;
-			pa_pair_t				ptrarr;
+			ddip_list_t				ddip;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				bitfield_expr = ast_node_none;
 
@@ -5680,7 +5644,7 @@ try_again_w_token:
 
 			void common_move(structfield_t &x) {
 				spec = std::move(x.spec);
-				ptrarr = std::move(x.ptrarr);
+				ddip = std::move(x.ddip);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/bitfield_expr,/*from*/x.bitfield_expr);
 			}
@@ -5706,7 +5670,7 @@ try_again_w_token:
 			static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
 
 			declaration_specifiers_t		spec;
-			pa_pair_t				ptrarr;
+			ddip_list_t				ddip;
 			std::vector<structfield_t>		fields;
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
@@ -5728,7 +5692,7 @@ try_again_w_token:
 
 			void common_move(symbol_t &x) {
 				spec = std::move(x.spec);
-				ptrarr = std::move(x.ptrarr);
+				ddip = std::move(x.ddip);
 				fields = std::move(x.fields);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
@@ -5794,7 +5758,8 @@ try_again_w_token:
 		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
 		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
 		void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
-		void debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name=std::string());
+		void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name=std::string());
+		void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name=std::string());
 		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
@@ -6074,43 +6039,37 @@ try_again_w_token:
 			return false;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,const pa_pair_t &p1,const pa_pair_t &p2) {
-			const pa_pair_t *ps1 = &p1,*ps2 = &p2;
+		int check_symbol_param_match(symbol_lookup_t &sl,const ddip_list_t &p1,const ddip_list_t &p2) {
+			if (p1.size() != p2.size())
+				CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-			while (ps1 && ps2) {
-				if (ps1->ptr.size() != ps2->ptr.size())
+			for (size_t pi=0;pi < p1.size();pi++) {
+				auto &e1 = p1[pi];
+				auto &e2 = p2[pi];
+
+				if (e1.ptr.size() != e2.ptr.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
-				if (ps1->ptr != ps2->ptr)
+				if (e1.arraydef.size() != e2.arraydef.size())
+					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
+				if (e1.parameters.size() != e2.parameters.size())
 					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-				if (ps1->arraydef.size() != ps2->arraydef.size())
-					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
-
-				if (ps1->parameters.size() != ps2->parameters.size())
-					CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
-
-				for (size_t ai=0;ai < ps1->arraydef.size();ai++) {
-					if ((ps1->arraydef[ai] == ast_node_none) != (ps2->arraydef[ai] == ast_node_none))
+				for (size_t ai=0;ai < e1.arraydef.size();ai++) {
+					if ((e1.arraydef[ai] == ast_node_none) != (e2.arraydef[ai] == ast_node_none))
 						CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
-					const ast_node_t &a1 = ast_node(ps1->arraydef[ai]);
-					const ast_node_t &a2 = ast_node(ps2->arraydef[ai]);
+					const ast_node_t &a1 = ast_node(e1.arraydef[ai]);
+					const ast_node_t &a2 = ast_node(e2.arraydef[ai]);
 
 					if (a1.t != a2.t)
 						CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 				}
-
-				ps1 = ps1->sub;
-				ps2 = ps2->sub;
 			}
-
-			if (ps1 || ps2)
-				CCERR_RET(EINVAL,sl.pos,"Parameter type does not match");
 
 			return 1;
 		}
 
-		int check_symbol_param_match(symbol_lookup_t &sl,const pa_pair_t &p) {
+		int check_symbol_param_match(symbol_lookup_t &sl,const ddip_list_t &p) {
 			int r;
 
 			assert(sl.sid != symbol_none);
@@ -6118,9 +6077,9 @@ try_again_w_token:
 			symbol_t &chk_s = symbol(sl.sid);
 
 			/* exception: if the function was without any parameters, and you specify parameters, then take the parameters */
-			if (chk_s.ptrarr.empty())
-				chk_s.ptrarr = p;
-			else if ((r=check_symbol_param_match(sl,chk_s.ptrarr,p)) < 1)
+			if (chk_s.ddip.empty())
+				chk_s.ddip = p;
+			else if ((r=check_symbol_param_match(sl,chk_s.ddip,p)) < 1)
 				return r;
 
 			return 1;
@@ -6131,6 +6090,8 @@ try_again_w_token:
 			assert(sl.st != symbol_t::NONE);
 
 			symbol_t &chk_s = symbol(sl.sid);
+
+			(void)declor;
 
 			/* check for re-declaration of the same symbol with the same specification.
 			 * perhaps variables once declared extern that are re-declared non-extern (but not static).
@@ -6149,8 +6110,7 @@ try_again_w_token:
 					if ((chk_s.flags&fl_chk) == (sl.flags&fl_chk) &&
 						(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
 						chk_s.spec.type_specifier == spec.type_specifier &&
-						chk_s.spec.type_qualifier == spec.type_qualifier &&
-						chk_s.ptrarr.ptr == declor.ptrarr.ptr) {
+						chk_s.spec.type_qualifier == spec.type_qualifier) {
 						/* you can change EXTERN to non-EXTERN, or just declare EXTERN again, that's it */
 						if (chk_s.spec.storage_class & SC_EXTERN) {
 							if ((spec.storage_class & SC_EXTERN) == 0)
@@ -6171,8 +6131,7 @@ try_again_w_token:
 					if ((chk_s.flags&fl_chk) == (sl.flags&fl_chk) &&
 						chk_s.spec.storage_class == spec.storage_class &&
 						chk_s.spec.type_specifier == spec.type_specifier &&
-						chk_s.spec.type_qualifier == spec.type_qualifier &&
-						chk_s.ptrarr.ptr == declor.ptrarr.ptr) {
+						chk_s.spec.type_qualifier == spec.type_qualifier) {
 						if (sl.flags & symbol_t::FL_DEFINED) {
 							if (chk_s.flags & symbol_t::FL_DEFINED) /* cannot define it again */
 								goto exists;
@@ -6198,37 +6157,13 @@ exists:
 			sym.scope = sl.cursco;
 			scope(sym.scope).symbols.push_back(sl.sid);
 			sym.flags = sl.flags;
-			sym.ptrarr = declor.ptrarr;
+			sym.ddip = declor.ddip;
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
 		}
 
-		struct ddip_t {
-			std::vector<pointer_t>		ptr;
-			std::vector<ast_node_id_t>	arraydef;
-			std::vector<parameter_t>	parameters;
-			unsigned int			dd_flags = 0;
-
-			ddip_t() { }
-			ddip_t(const ddip_t &) = delete;
-			ddip_t &operator=(const ddip_t &) = delete;
-			ddip_t(ddip_t &&x) { common_move(x); }
-			ddip_t &operator=(ddip_t &&x) { common_move(x); return *this; }
-
-			~ddip_t() {
-				ast_node_t::arrayrelease(arraydef);
-			}
-
-			void common_move(ddip_t &o) {
-				ptr = std::move(o.ptr);
-				arraydef = std::move(o.arraydef);
-				parameters = std::move(o.parameters);
-				dd_flags = o.dd_flags; o.dd_flags = 0;
-			}
-		};
-
-		int direct_declarator_inner_parse(std::vector<ddip_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
+		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
 		int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
@@ -7643,7 +7578,7 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::direct_declarator_inner_parse(std::vector<ddip_t> &dp,declarator_t &dd,position_t &pos,unsigned int flags) {
+	int cc_state_t::direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags) {
 		int r;
 
 		/* [*] identifier [arraydefs]
@@ -7673,6 +7608,8 @@ common_error:
 
 			if (tq_get().type != token_type_t::closeparenthesis)
 				CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+			assert(dpi < dp.size());
 		}
 		else {
 			assert(dd.name == identifier_none);
@@ -7782,13 +7719,21 @@ common_error:
 				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
 		}
 
+		/* check */
+		assert(dpi < dp.size());
+		assert(&tdp == &dp[dpi]);
+
+		/* drop the element if empty */
+		if ((dpi+1u) == dp.size() && tdp.empty())
+			dp.pop_back(); /* WARNING: may invalidate tdp */
+
+		/* done */
+		assert(dpi <= dp.size());
 		return 1;
 	}
 
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags) {
 		position_t pos = tq_peek().pos;
-		std::vector<ddip_t> dp;
-		pa_pair_t *pato = &dd.ptrarr;
 		int r;
 
 		/* direct declarator
@@ -7809,37 +7754,8 @@ common_error:
 		if (ds.type_specifier & (TS_ENUM|TS_STRUCT|TS_UNION))
 			flags |= DIRDECL_ALLOW_ABSTRACT;
 
-		if ((r=direct_declarator_inner_parse(dp,dd,pos,flags)) < 1)
+		if ((r=direct_declarator_inner_parse(dd.ddip,dd,pos,flags)) < 1)
 			return r;
-
-		/* it parses at least one, or errors out, there is no case where dp.empty() */
-		{
-			assert(!dp.empty());
-			size_t dpi = dp.size() - 1u;
-
-			do {
-				ddip_t &tdp = dp[dpi];
-
-				if (dpi < (dp.size() - 1u)) {
-					if (!pato->empty()) {
-						pato->sub_init();
-						pato = pato->sub;
-					}
-				}
-
-				assert(pato->dd_flags == 0);
-				pato->dd_flags = tdp.dd_flags;
-
-				assert(pato->ptr.empty());
-				pato->ptr = std::move(tdp.ptr);
-
-				assert(pato->arraydef.empty());
-				pato->arraydef = std::move(tdp.arraydef);
-
-				assert(pato->parameters.empty());
-				pato->parameters = std::move(tdp.parameters);
-			} while ((dpi--) != 0);
-		}
 
 		/* typedef subst */
 		if (ds.type_specifier & TS_MATCH_TYPEDEF) {
@@ -7864,57 +7780,13 @@ common_error:
 
 			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
 
-			if (ds.type_identifier_symbol != identifier_none) {
-				symbol_t &s_sym = symbol(ds.type_identifier_symbol);
-				assert(s_sym.sym_type != symbol_t::TYPEDEF);
-
-				if (s_sym.sym_type == symbol_t::FUNCTION) {
-					dd.flags |= declarator_t::FL_FUNCTION;
-					if (s_sym.flags & symbol_t::FL_FUNCTION_POINTER)
-						dd.flags |= declarator_t::FL_FUNCTION_POINTER;
-				}
-			}
-
-			if (!sym.ptrarr.empty()) {
-				if (pato->empty()) {
-					*pato = sym.ptrarr;
-				}
-				else if (pato->sub == NULL && pato->ptr.empty() && !pato->arraydef.empty() &&
-					sym.ptrarr.sub == NULL && sym.ptrarr.ptr.empty() && !sym.ptrarr.arraydef.empty()) {
-					for (auto &a : sym.ptrarr.arraydef) {
-						pato->arraydef.push_back(a);
-						ast_node(a).addref();
-					}
-
-					if (!pato->parameters.empty())
-						CCERR_RET(EINVAL,pos,"Typedef param conflict");
-
-					pato->parameters = sym.ptrarr.funcparam();
-				}
-				else if (pato->sub == NULL && !pato->ptr.empty() && pato->arraydef.empty() &&
-					sym.ptrarr.sub == NULL && !sym.ptrarr.ptr.empty() && sym.ptrarr.arraydef.empty()) {
-					for (auto &p : sym.ptrarr.ptr)
-						pato->ptr.push_back(p);
-
-					if (!pato->parameters.empty())
-						CCERR_RET(EINVAL,pos,"Typedef param conflict");
-
-					pato->parameters = sym.ptrarr.funcparam();
-				}
-				else {
-					pato->sub_init();
-					pato = pato->sub;
-					*pato = sym.ptrarr;
-				}
-
-				while (pato->sub)
-					pato = pato->sub;
-			}
+			for (auto &tde : sym.ddip)
+				dd.ddip.push_back(tde);
 		}
 
 		std::vector<parameter_t> *parameters = NULL;
 		{
-			pa_pair_t *f = dd.ptrarr.funcparampair();
+			ddip_t *f = dd.ddip.funcparampair();
 			if (f) {
 				dd.flags |= f->dd_flags;
 				parameters = &f->parameters;
@@ -8006,9 +7878,9 @@ common_error:
 								}
 
 								parameter_t &fp = (*parameters)[i];
-								if (fp.spec.empty() && fp.decl.ptrarr.ptr.empty()) {
+								if (fp.spec.empty() && fp.decl.ddip.empty()) {
 									fp.spec = s_spec;
-									fp.decl.ptrarr = std::move(d.ptrarr);
+									fp.decl.ddip = std::move(d.ddip);
 								}
 								else {
 									CCerr(pos,"Identifier already given type");
@@ -8176,7 +8048,7 @@ common_error:
 		sym.fields.resize(sfi + 1u);
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
-		sf.ptrarr = declor.ptrarr;
+		sf.ddip = declor.ddip;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
 		return 1;
@@ -8250,7 +8122,7 @@ common_error:
 		if (p.decl.symbol != symbol_none)
 			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
 
-		debug_dump_pa_pair(prefix+"  ",p.decl.ptrarr);
+		debug_dump_ddip(prefix+"  ",p.decl.ddip);
 
 		if (p.decl.expr != ast_node_none) {
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
@@ -8258,26 +8130,30 @@ common_error:
 		}
 	}
 
-	void cc_state_t::debug_dump_pa_pair(const std::string prefix,pa_pair_t &pp,const std::string &name) {
-		if (pp.empty())
-			return;
-
+	void cc_state_t::debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name) {
 		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_pointer(prefix+"  ",pp.ptr);
-		debug_dump_arraydef(prefix+"  ",pp.arraydef);
+		debug_dump_pointer(prefix+"  ",ddip.ptr);
+		debug_dump_arraydef(prefix+"  ",ddip.arraydef);
 
-		if (pp.dd_flags & declarator_t::FL_FUNCTION_POINTER)
+		if (ddip.dd_flags & declarator_t::FL_FUNCTION_POINTER)
 			fprintf(stderr,"%s  function pointer:\n",prefix.c_str());
-		else if (pp.dd_flags & declarator_t::FL_FUNCTION)
+		else if (ddip.dd_flags & declarator_t::FL_FUNCTION)
 			fprintf(stderr,"%s  function:\n",prefix.c_str());
 
-		if (pp.dd_flags & declarator_t::FL_ELLIPSIS)
+		if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
 
-		for (auto &ppp : pp.parameters)
+		for (auto &ppp : ddip.parameters)
 			debug_dump_parameter(prefix+"  ",ppp);
+	}
 
-		if (pp.sub) debug_dump_pa_pair(prefix+"  ",*pp.sub);
+	void cc_state_t::debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name) {
+		if (ddip.empty())
+			return;
+
+		fprintf(stderr,"%s%s%sptr/array pairs:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		for (auto &sdip : ddip)
+			debug_dump_ddip(prefix+"  ",sdip);
 	}
 
 	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name) {
@@ -8294,7 +8170,7 @@ common_error:
 		if (ddecl.symbol != symbol_none)
 			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)ddecl.symbol);
 
-		debug_dump_pa_pair(prefix+"  ",ddecl.ptrarr);
+		debug_dump_ddip(prefix+"  ",ddecl.ddip);
 
 		if (ddecl.flags & declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
@@ -8390,7 +8266,7 @@ common_error:
 		fprintf(stderr,"\n");
 
 		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
-		debug_dump_pa_pair(prefix+"  ",field.ptrarr);
+		debug_dump_ddip(prefix+"  ",field.ddip);
 
 		if (field.bitfield_expr != ast_node_none) {
 			fprintf(stderr,"%s  bitfield expr:\n",prefix.c_str());
@@ -8431,7 +8307,7 @@ common_error:
 		fprintf(stderr,"\n");
 
 		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
-		debug_dump_pa_pair(prefix+"  ",sym.ptrarr);
+		debug_dump_ddip(prefix+"  ",sym.ddip);
 
 		for (auto &f : sym.fields)
 			debug_dump_structfield(prefix+"  ",f);
@@ -9580,7 +9456,7 @@ common_error:
 					if (do_local_symbol_lookup(sl,spec,declor)) {
 						if ((r=check_symbol_lookup_match(sl,spec,declor)) < 1)
 							return r;
-						if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
+						if ((r=check_symbol_param_match(sl,declor.ddip)) < 1)
 							return r;
 					}
 					else {
@@ -9972,7 +9848,7 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ddip)) < 1)
 						return r;
 				}
 				else if ((r=add_symbol(sl,declion.spec,declor)) < 1) {
@@ -9984,27 +9860,33 @@ common_error:
 				push_new_scope();
 
 				/* add it to the symbol table */
-				for (auto &p : declor.ptrarr.funcparam()) {
-					/* if a parameter was given without a name, don't register a symbol */
-					if (p.decl.name == identifier_none)
-						continue;
+				{
+					ddip_t *fp = declor.ddip.funcparampair();
 
-					symbol_lookup_t sl;
+					if (fp) {
+						for (auto &p : fp->parameters) {
+							/* if a parameter was given without a name, don't register a symbol */
+							if (p.decl.name == identifier_none)
+								continue;
 
-					sl.flags |= symbol_t::FL_PARAMETER | symbol_t::FL_DEFINED;
-					if ((r=prep_symbol_lookup(sl,p.spec,p.decl)) < 1)
-						return r;
-					if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
-						if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
-							return r;
-						if ((r=check_symbol_param_match(sl,p.decl.ptrarr)) < 1)
-							return r;
+							symbol_lookup_t sl;
+
+							sl.flags |= symbol_t::FL_PARAMETER | symbol_t::FL_DEFINED;
+							if ((r=prep_symbol_lookup(sl,p.spec,p.decl)) < 1)
+								return r;
+							if (do_local_symbol_lookup(sl,p.spec,p.decl)) {
+								if ((r=check_symbol_lookup_match(sl,p.spec,p.decl)) < 1)
+									return r;
+								if ((r=check_symbol_param_match(sl,p.decl.ddip)) < 1)
+									return r;
+							}
+							else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
+								return r;
+							}
+
+							p.decl.symbol = sl.sid;
+						}
 					}
-					else if ((r=add_symbol(sl,p.spec,p.decl)) < 1) {
-						return r;
-					}
-
-					p.decl.symbol = sl.sid;
 				}
 
 				{
@@ -10012,7 +9894,7 @@ common_error:
 					 * causing reallocation and the reference above would become invalid */
 					symbol_t &sym = symbol(sl.sid);
 					sym.parent_of_scope = current_scope();
-					sym.ptrarr = declor.ptrarr;
+					sym.ddip = declor.ddip;
 				}
 
 				ast_node_id_t fbroot = ast_node_none,fbrootnext = ast_node_none;
@@ -10040,7 +9922,7 @@ common_error:
 				if (do_local_symbol_lookup(sl,declion.spec,declor)) {
 					if ((r=check_symbol_lookup_match(sl,declion.spec,declor)) < 1)
 						return r;
-					if ((r=check_symbol_param_match(sl,declor.ptrarr)) < 1)
+					if ((r=check_symbol_param_match(sl,declor.ddip)) < 1)
 						return r;
 				}
 				else {
