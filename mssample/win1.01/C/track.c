@@ -320,6 +320,7 @@ int cmdShow;
     ChangeMenu( hMenu, 0, (LPSTR)szAbout, IDSABOUT, MF_APPEND | MF_STRING );
 
     ShowWindow( hWnd, cmdShow );
+    GetClientRect( hWnd, &rcPaintOutline );
     UpdateWindow( hWnd );
 
     while (GetMessage((LPMSG)&msg, NULL, 0, 0)) {
