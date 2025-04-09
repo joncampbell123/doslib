@@ -5482,7 +5482,6 @@ try_again_w_token:
 		void addcombine(ddip_t &&x);
 		void addcombine(const ddip_t &x);
 		ddip_t *funcparampair(void);
-		std::string to_str(void);
 	};
 
 	struct declarator_t {
@@ -5540,48 +5539,6 @@ try_again_w_token:
 		}
 
 		return NULL;
-	}
-
-	std::string ddip_list_t::to_str(void) {
-		std::string r;
-		size_t i=0;
-
-		if (!empty()) {
-			while (i < size()) {
-				if (i != 0)
-					r += "(";
-
-				const auto &e = (*this)[i++];
-				for (const auto &p : e.ptr) {
-					r += "*";
-					for (unsigned int x=0;x < TQI__MAX;x++) { if (p.tq&(1u<<x)) r += std::string(" ") + type_qualifier_idx_t_str[x]; }
-					if (p.tq) r += " ";
-				}
-			}
-
-			assert(i != 0u);
-
-			do {
-				const auto &e = (*this)[--i];
-
-				for (const auto &a : e.arraydef) {
-					r += "[";
-					if (a != ast_node_none) {
-						ast_node_t &an = ast_node(a);
-						if (an.t.type == token_type_t::integer)
-							r += std::to_string(an.t.v.integer.v.v);
-						else
-							r += "<expr>";
-					}
-					r += "]";
-				}
-
-				if (i != 0)
-					r += ")";
-			} while (i != 0u);
-		}
-
-		return r;
 	}
 
 	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
@@ -5884,6 +5841,84 @@ try_again_w_token:
 		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
 		void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+
+		std::string ddip_list_to_str(const ddip_list_t &dl) {
+			std::string r;
+			size_t i=0;
+
+			if (!dl.empty()) {
+				while (i < dl.size()) {
+					if (i != 0)
+						r += "(";
+
+					const auto &e = dl[i++];
+					for (const auto &p : e.ptr) {
+						r += "*";
+						for (unsigned int x=0;x < TQI__MAX;x++) { if (p.tq&(1u<<x)) r += std::string(" ") + type_qualifier_idx_t_str[x]; }
+						if (p.tq) r += " ";
+					}
+				}
+
+				assert(i != 0u);
+
+				do {
+					const auto &e = dl[--i];
+
+					if (e.dd_flags & declarator_t::FL_FUNCTION) {
+						if (!r.empty()) r += " ";
+						r += "(";
+						for (size_t pi=0;pi < e.parameters.size();pi++) {
+							auto &p = e.parameters[pi];
+							std::string sr;
+
+							for (unsigned int i=0;i < TSI__MAX;i++) {
+								if (p.spec.type_specifier&(1u<<i)) {
+									if (!sr.empty()) sr += " ";
+									sr += type_specifier_idx_t_str[i];
+								}
+							}
+							for (unsigned int i=0;i < TQI__MAX;i++) {
+								if (p.spec.type_qualifier&(1u<<i)) {
+									if (!sr.empty()) sr += " ";
+									sr += type_qualifier_idx_t_str[i];
+								}
+							}
+							if (p.spec.type_identifier_symbol != symbol_none) {
+								symbol_t &sym = symbol(p.spec.type_identifier_symbol);
+								if (!sr.empty()) sr += " ";
+								if (sym.name != identifier_none)
+									sr += identifier(sym.name).to_str();
+								else
+									sr += "<anon>";
+							}
+
+							sr += ddip_list_to_str(p.decl.ddip);
+
+							if (pi != 0) r += ",";
+							r += sr;
+						}
+						r += ")";
+					}
+
+					for (const auto &a : e.arraydef) {
+						r += "[";
+						if (a != ast_node_none) {
+							ast_node_t &an = ast_node(a);
+							if (an.t.type == token_type_t::integer)
+								r += std::to_string(an.t.v.integer.v.v);
+							else
+								r += "<expr>";
+						}
+						r += "]";
+					}
+
+					if (i != 0)
+						r += ")";
+				} while (i != 0u);
+			}
+
+			return r;
+		}
 
 		CCMiniC::lgtok_state_t	lst;
 		CCMiniC::pptok_state_t	pst;
@@ -8262,7 +8297,7 @@ common_error:
 		fprintf(stderr,"%s%s%sptr/array pairs:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 
 		if (!ddip.empty())
-			fprintf(stderr,"%s  representation: %s\n",prefix.c_str(),ddip.to_str().c_str());
+			fprintf(stderr,"%s  representation: %s\n",prefix.c_str(),ddip_list_to_str(ddip).c_str());
 
 		for (auto &sdip : ddip)
 			debug_dump_ddip(prefix+"  ",sdip);
