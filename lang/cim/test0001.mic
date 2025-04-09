@@ -262,6 +262,7 @@ static int roundto(int x,int y) {
 int printf(const char *fmt,...);
 
 static int (*dddb_p)(int a) = dddb;
+static int (*dddb_p2[3])(int a);
 static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
 	int* (*funcptr)();
 	int (*func1)();
@@ -276,6 +277,10 @@ static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][
 	return 5;
 }
 static int x1a1a = sizeof(int);
+static int x1a1a2= sizeof(short);
+static int x1a1a3= sizeof(char);
+static int x1a1a4= sizeof(long);
+static int x1a1a5= sizeof(long long);
 static int x1a1b = sizeof(int*);
 static int x1a1c = sizeof(const int* const*);
 static int x1a1d = sizeof(int[3]);

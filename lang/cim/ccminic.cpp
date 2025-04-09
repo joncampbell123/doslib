@@ -5126,10 +5126,10 @@ try_again_w_token:
 	};
 
 	const data_type_set_ptr_t data_ptr_types_default = {
-		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* ptr */
-		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* near ptr */
-		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* far ptr */
-		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TQ_NEAR                 }, /* huge ptr */
+		{ { /*size*/sizeof(void*),     /*align*/addrmask_make(alignof(void*))     }, TQ_NEAR                 }, /* ptr */
+		{ { /*size*/sizeof(void*),     /*align*/addrmask_make(alignof(void*))     }, TQ_NEAR                 }, /* near ptr */
+		{ { /*size*/sizeof(void*),     /*align*/addrmask_make(alignof(void*))     }, TQ_NEAR                 }, /* far ptr */
+		{ { /*size*/sizeof(void*),     /*align*/addrmask_make(alignof(void*))     }, TQ_NEAR                 }, /* huge ptr */
 		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }, /* size_t/ssize_t */
 		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
@@ -6317,6 +6317,8 @@ exists:
 			return 1;
 		}
 
+		bool ast_constexpr_sizeof(token_t &r,token_t &op);
+		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
@@ -6377,6 +6379,106 @@ exists:
 		switch (t.type) {
 			case token_type_t::integer:
 				return ast_constexpr_to_bool(t.v.integer);
+			default:
+				break;
+		};
+
+		return false;
+	}
+
+	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl) {
+		if (decl.flags & declarator_t::FL_FUNCTION)
+			return data_size_none;
+
+		data_size_t data_tsz = data_size_none;
+		data_size_t count,data_calcsz;
+
+		if (spec.type_specifier & TS_CHAR)
+			data_tsz = data_types.dt_char.t.size;
+		else if (spec.type_specifier & TS_SHORT)
+			data_tsz = data_types.dt_short.t.size;
+		else if (spec.type_specifier & TS_INT)
+			data_tsz = data_types.dt_int.t.size;
+		else if (spec.type_specifier & TS_LONG)
+			data_tsz = data_types.dt_long.t.size;
+		else if (spec.type_specifier & TS_LONGLONG)
+			data_tsz = data_types.dt_longlong.t.size;
+		else if (spec.type_specifier & TS_FLOAT)
+			data_tsz = data_types.dt_float.t.size;
+		else if (spec.type_specifier & TS_DOUBLE)
+			data_tsz = data_types.dt_double.t.size;
+		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
+			data_tsz = data_types.dt_longdouble.t.size;
+
+		count = 1;
+		data_calcsz = data_tsz;
+
+		if (!decl.ddip.empty()) {
+			size_t i = decl.ddip.size() - 1u;
+			do {
+				auto &ent = decl.ddip[i];
+
+				if (ent.dd_flags & declarator_t::FL_FUNCTION)
+					return data_size_none;
+
+				if (data_calcsz != data_size_none)
+					data_calcsz *= count;
+
+				count = 1;
+				if (!ent.ptr.empty())
+					data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+
+#if 0
+				fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
+				debug_dump_ddip("  ",ent);
+#endif
+
+				if (!ent.arraydef.empty()) {
+					for (const auto &a : ent.arraydef) {
+						if (a == ast_node_none)
+							return data_size_none;
+
+						const auto &an = ast_node(a);
+						if (an.t.type != token_type_t::integer)
+							return data_size_none;
+						if (an.t.v.integer.v.v < 1ll)
+							return data_size_none;
+						if (an.t.v.integer.v.u >= (0x8000000000000000ull / count))
+							return data_size_none;
+
+						count *= an.t.v.integer.v.u;
+					}
+				}
+			} while ((i--) != 0u);
+		}
+
+#if 0
+		fprintf(stderr,"dbg final: calcsz=%zu count=%zu\n",data_calcsz,count);
+#endif
+
+		if (data_calcsz != data_size_none)
+			return data_calcsz * count;
+
+		return data_size_none;
+	}
+
+	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op) {
+		switch (op.type) {
+			case token_type_t::op_declaration:
+			{
+				declaration_t *decl = op.v.declaration;
+				assert(decl != NULL);
+
+				if (decl->declor.size() == 1) {
+					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0]);
+					if (sz != data_size_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+			}
 			default:
 				break;
 		};
@@ -6792,6 +6894,16 @@ again:
 			/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
 			ast_node_t &erootnode = ast_node(eroot);
 			switch (erootnode.t.type) {
+				case token_type_t::op_sizeof:
+					{
+						OP_ONE_PARAM_TEVAL;
+						if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+						break;
+					}
+
 				case token_type_t::op_negate:
 					{
 						OP_ONE_PARAM_TEVAL;
