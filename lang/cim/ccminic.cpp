@@ -5482,6 +5482,7 @@ try_again_w_token:
 		void addcombine(ddip_t &&x);
 		void addcombine(const ddip_t &x);
 		ddip_t *funcparampair(void);
+		std::string to_str(void);
 	};
 
 	struct declarator_t {
@@ -5539,6 +5540,48 @@ try_again_w_token:
 		}
 
 		return NULL;
+	}
+
+	std::string ddip_list_t::to_str(void) {
+		std::string r;
+		size_t i=0;
+
+		if (!empty()) {
+			while (i < size()) {
+				if (i != 0)
+					r += "(";
+
+				const auto &e = (*this)[i++];
+				for (const auto &p : e.ptr) {
+					r += "*";
+					for (unsigned int x=0;x < TQI__MAX;x++) { if (p.tq&(1u<<x)) r += std::string(" ") + type_qualifier_idx_t_str[x]; }
+					if (p.tq) r += " ";
+				}
+			}
+
+			assert(i != 0u);
+
+			do {
+				const auto &e = (*this)[--i];
+
+				for (const auto &a : e.arraydef) {
+					r += "[";
+					if (a != ast_node_none) {
+						ast_node_t &an = ast_node(a);
+						if (an.t.type == token_type_t::integer)
+							r += std::to_string(an.t.v.integer.v.v);
+						else
+							r += "<expr>";
+					}
+					r += "]";
+				}
+
+				if (i != 0)
+					r += ")";
+			} while (i != 0u);
+		}
+
+		return r;
 	}
 
 	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
@@ -8217,6 +8260,10 @@ common_error:
 			return;
 
 		fprintf(stderr,"%s%s%sptr/array pairs:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+		if (!ddip.empty())
+			fprintf(stderr,"%s  representation: %s\n",prefix.c_str(),ddip.to_str().c_str());
+
 		for (auto &sdip : ddip)
 			debug_dump_ddip(prefix+"  ",sdip);
 	}
