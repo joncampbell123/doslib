@@ -299,6 +299,8 @@ static int daabb(char a,char b) {
 	return (long)(int)(a+b);
 }
 enum test { A, B, C, D } xoooo2;
+static int xoooo2sz = sizeof(xoooo2);
+static int xoooo2sz2 = sizeof(enum test);
 enum test xoooo;
 enum test2 { AA=1, AB, AC=100, AD=AA*400, AD2, AD3, AE=AA+AB+AC+AD, AF=1?AC:AB, AG=0?AC:AB, AH=1?1?AD:AC:AB } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;

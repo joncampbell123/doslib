@@ -6318,6 +6318,7 @@ exists:
 		}
 
 		bool ast_constexpr_sizeof(token_t &r,token_t &op);
+		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
@@ -6386,10 +6387,7 @@ exists:
 		return false;
 	}
 
-	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl) {
-		if (decl.flags & declarator_t::FL_FUNCTION)
-			return data_size_none;
-
+	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip) {
 		data_size_t data_tsz = data_size_none;
 		data_size_t count,data_calcsz;
 
@@ -6413,10 +6411,10 @@ exists:
 		count = 1;
 		data_calcsz = data_tsz;
 
-		if (!decl.ddip.empty()) {
-			size_t i = decl.ddip.size() - 1u;
+		if (!ddip.empty()) {
+			size_t i = ddip.size() - 1u;
 			do {
-				auto &ent = decl.ddip[i];
+				auto &ent = ddip[i];
 
 				if (ent.dd_flags & declarator_t::FL_FUNCTION)
 					return data_size_none;
@@ -6462,8 +6460,32 @@ exists:
 		return data_size_none;
 	}
 
+	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl) {
+		if (decl.flags & declarator_t::FL_FUNCTION)
+			return data_size_none;
+
+		return calc_sizeof(spec,decl.ddip);
+	}
+
 	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op) {
 		switch (op.type) {
+			case token_type_t::op_symbol:
+			{
+				if (op.v.symbol != symbol_none) {
+					auto &sym = symbol(op.v.symbol);
+					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+						return false;
+
+					data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+					if (sz != data_size_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
 			case token_type_t::op_declaration:
 			{
 				declaration_t *decl = op.v.declaration;
@@ -6478,6 +6500,7 @@ exists:
 						return true;
 					}
 				}
+				break;
 			}
 			default:
 				break;
