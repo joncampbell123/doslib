@@ -6407,6 +6407,14 @@ exists:
 			data_tsz = data_types.dt_double.t.size;
 		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
 			data_tsz = data_types.dt_longdouble.t.size;
+		else if (spec.type_specifier & (TS_ENUM|TS_MATCH_TYPEDEF|TS_STRUCT|TS_UNION)) {
+			if (spec.type_identifier_symbol == symbol_none)
+				return data_size_none;
+
+			symbol_t &sym = symbol(spec.type_identifier_symbol);
+			if ((data_tsz=calc_sizeof(sym.spec,sym.ddip)) == symbol_none)
+				return data_size_none;
+		}
 
 		count = 1;
 		data_calcsz = data_tsz;
