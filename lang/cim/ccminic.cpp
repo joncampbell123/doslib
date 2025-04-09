@@ -820,6 +820,7 @@ namespace CCMiniC {
 		r___int16,
 		r___int32,
 		r___int64,
+		op_alignof,				// 280
 
 		__MAX__
 	};
@@ -1441,7 +1442,8 @@ namespace CCMiniC {
 		"__int8",
 		"__int16",
 		"__int32",
-		"__int64"
+		"__int64",
+		"op:alignof"				// 280
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -6317,9 +6319,13 @@ exists:
 			return 1;
 		}
 
+		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op);
+		bool ast_constexpr_alignof(token_t &r,token_t &op);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl);
+		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip);
+		addrmask_t calc_alignof(declaration_specifiers_t &spec,declarator_t &decl);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
@@ -6385,6 +6391,67 @@ exists:
 		};
 
 		return false;
+	}
+
+	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip) {
+		addrmask_t data_talign = addrmask_none;
+		addrmask_t data_calcalign;
+
+		if (spec.type_specifier & TS_CHAR)
+			data_talign = data_types.dt_char.t.align;
+		else if (spec.type_specifier & TS_SHORT)
+			data_talign = data_types.dt_short.t.align;
+		else if (spec.type_specifier & TS_INT)
+			data_talign = data_types.dt_int.t.align;
+		else if (spec.type_specifier & TS_LONG)
+			data_talign = data_types.dt_long.t.align;
+		else if (spec.type_specifier & TS_LONGLONG)
+			data_talign = data_types.dt_longlong.t.align;
+		else if (spec.type_specifier & TS_FLOAT)
+			data_talign = data_types.dt_float.t.align;
+		else if (spec.type_specifier & TS_DOUBLE)
+			data_talign = data_types.dt_double.t.align;
+		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
+			data_talign = data_types.dt_longdouble.t.align;
+		else if (spec.type_specifier & (TS_ENUM|TS_MATCH_TYPEDEF|TS_STRUCT|TS_UNION)) {
+			if (spec.type_identifier_symbol == symbol_none)
+				return addrmask_none;
+
+			symbol_t &sym = symbol(spec.type_identifier_symbol);
+			if ((data_talign=calc_alignof(sym.spec,sym.ddip)) == symbol_none)
+				return addrmask_none;
+		}
+
+		data_calcalign = data_talign;
+
+		if (!ddip.empty()) {
+			size_t i = ddip.size() - 1u;
+			do {
+				auto &ent = ddip[i];
+
+				if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
+					return addrmask_none;
+
+				if (!ent.ptr.empty())
+					data_calcalign = data_types_ptr_data.dt_ptr.t.align;
+			} while ((i--) != 0u);
+		}
+
+#if 0
+		fprintf(stderr,"dbg final: calcalign=%zu count=%zu\n",data_calcalign,count);
+#endif
+
+		if (data_calcalign != addrmask_none)
+			return (~data_calcalign) + addrmask_t(1u);
+
+		return addrmask_none;
+	}
+
+	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,declarator_t &decl) {
+		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
+			return addrmask_none;
+
+		return calc_alignof(spec,decl.ddip);
 	}
 
 	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip) {
@@ -6502,6 +6569,48 @@ exists:
 				if (decl->declor.size() == 1) {
 					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0]);
 					if (sz != data_size_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+		};
+
+		return false;
+	}
+
+	bool cc_state_t::ast_constexpr_alignof(token_t &r,token_t &op) {
+		switch (op.type) {
+			case token_type_t::op_symbol:
+			{
+				if (op.v.symbol != symbol_none) {
+					auto &sym = symbol(op.v.symbol);
+					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+						return false;
+
+					addrmask_t sz = calc_alignof(sym.spec,sym.ddip);
+					if (sz != addrmask_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+			case token_type_t::op_declaration:
+			{
+				declaration_t *decl = op.v.declaration;
+				assert(decl != NULL);
+
+				if (decl->declor.size() == 1) {
+					addrmask_t sz = calc_alignof(decl->spec,decl->declor[0]);
+					if (sz != addrmask_none) {
 						r = token_t(token_type_t::integer);
 						r.v.integer.v.u = sz;
 						r.v.integer.flags = 0;
@@ -6929,6 +7038,16 @@ again:
 					{
 						OP_ONE_PARAM_TEVAL;
 						if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+						break;
+					}
+
+				case token_type_t::op_alignof:
+					{
+						OP_ONE_PARAM_TEVAL;
+						if (ast_constexpr_alignof(erootnode.t,ast_node(op1).t)) {
 							erootnode.set_child(ast_node_none);
 							goto again;
 						}
@@ -8781,6 +8900,54 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::typeid_or_expr_parse(ast_node_id_t &aroot) {
+		bool typespec = false;
+		int depth = 0;
+		int r;
+
+		if (tq_peek().type == token_type_t::openparenthesis) {
+			tq_discard();
+			depth++;
+		}
+
+		if (depth == 1)
+			typespec = declaration_specifiers_check();
+
+		if (typespec) {
+			std::unique_ptr<declaration_t> declion(new declaration_t);
+
+			if ((r=chkerr()) < 1)
+				return r;
+			if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
+				return r;
+
+			declarator_t &declor = (*declion).new_declarator();
+
+			if ((r=direct_declarator_parse((*declion).spec,declor,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
+				return r;
+
+			ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
+			assert(ast_node(decl).t.type == token_type_t::op_declaration);
+			ast_node(decl).t.v.declaration = declion.release();
+
+			ast_node(aroot).set_child(decl); ast_node(decl).release();
+		}
+		else {
+			ast_node_id_t expr = ast_node_none;
+			if ((r=unary_expression(expr)) < 1)
+				return r;
+
+			ast_node(aroot).set_child(expr); ast_node(expr).release();
+		}
+
+		while (depth > 0 && tq_peek().type == token_type_t::closeparenthesis) {
+			tq_discard();
+			depth--;
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::unary_expression(ast_node_id_t &aroot) {
 #define nextexpr postfix_expression
 		int r;
@@ -8892,53 +9059,24 @@ common_error:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else if (tq_peek().type == token_type_t::r_sizeof) {
-			bool typespec = false;
-			int depth = 0;
 
 			tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_sizeof);
 
-			if (tq_peek().type == token_type_t::openparenthesis) {
-				tq_discard();
-				depth++;
-			}
+			if ((r=typeid_or_expr_parse(aroot)) < 1)
+				return r;
+		}
+		else if (tq_peek().type == token_type_t::r_alignof) {
 
-			if (depth == 1)
-				typespec = declaration_specifiers_check();
+			tq_discard();
 
-			if (typespec) {
-				std::unique_ptr<declaration_t> declion(new declaration_t);
+			assert(aroot == ast_node_none);
+			aroot = ast_node.alloc(token_type_t::op_alignof);
 
-				if ((r=chkerr()) < 1)
-					return r;
-				if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
-					return r;
-
-				declarator_t &declor = (*declion).new_declarator();
-
-				if ((r=direct_declarator_parse((*declion).spec,declor,DIRDECL_ALLOW_ABSTRACT|DIRDECL_NO_IDENTIFIER)) < 1)
-					return r;
-
-				ast_node_id_t decl = ast_node.alloc(token_type_t::op_declaration);
-				assert(ast_node(decl).t.type == token_type_t::op_declaration);
-				ast_node(decl).t.v.declaration = declion.release();
-
-				ast_node(aroot).set_child(decl); ast_node(decl).release();
-			}
-			else {
-				ast_node_id_t expr = ast_node_none;
-				if ((r=unary_expression(expr)) < 1)
-					return r;
-
-				ast_node(aroot).set_child(expr); ast_node(expr).release();
-			}
-
-			while (depth > 0 && tq_peek().type == token_type_t::closeparenthesis) {
-				tq_discard();
-				depth--;
-			}
+			if ((r=typeid_or_expr_parse(aroot)) < 1)
+				return r;
 		}
 		else {
 			if ((r=nextexpr(aroot)) < 1)

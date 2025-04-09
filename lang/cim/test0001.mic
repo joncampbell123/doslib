@@ -114,6 +114,7 @@ static int dba = !!daq;
 static int dbb = sizeof daq;
 static int dbc = sizeof ~daq;
 static int dbd = sizeof(daq);
+static int dbda = alignof(daq);
 static int dbe = sizeof(~daq);
 static int dbf = daq++;
 static int dbg = daq++ ++;
@@ -263,6 +264,7 @@ int printf(const char *fmt,...);
 
 static int (*dddb_p)(int a) = dddb;
 static int (*dddb_p2[3])(int a);
+static int dddb_p2sz = sizeof(dddb_p2);
 static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
 	int* (*funcptr)();
 	int (*func1)();
@@ -276,13 +278,22 @@ static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][
 	(*funcptr)(&a,a+5);
 	return 5;
 }
+static int xld1s = sizeof(long double);
+static int xld1a = alignof(long double);
 static int x1a1a = sizeof(int);
+static int x1a1aa = alignof(int);
 static int x1a1a2= sizeof(short);
+static int x1a1a2a= alignof(short);
 static int x1a1a3= sizeof(char);
+static int x1a1a3a= alignof(char);
 static int x1a1a4= sizeof(long);
+static int x1a1a4a= alignof(long);
 static int x1a1a5= sizeof(long long);
+static int x1a1a5a= alignof(long long);
 static int x1a1b = sizeof(int*);
+static int x1a1ba= alignof(int*);
 static int x1a1c = sizeof(const int* const*);
+static int x1a1ca= alignof(const int* const*);
 static int x1a1d = sizeof(int[3]);
 static int x1a1e = sizeof(int[3][3]);
 static int x1a1f = sizeof(int*[3][3]);
@@ -467,6 +478,7 @@ typedef tdu1* (*tdu11)(tdu1 *x,tdu10 *y);
 typedef tdu11 tdu12[4];
 
 static int tdu12sz = sizeof(tdu12);
+static int tdu12sa = alignof(tdu12);
 
 static tdu1 xyz123 = 3;
 static tt5_t xyzabc = { x: 4, y: 3 };
@@ -489,14 +501,18 @@ static tdu10 xyz118;
 static tdu11 xyz119;
 static tdu12 xyz120;
 static unsigned int xsz1 = sizeof(int);
+static unsigned int xsz1a = alignof(int);
 static unsigned int xsz2 = sizeof(tdu1);
+static unsigned int xsz2a = alignof(tdu1);
 static unsigned int xyz121 = (unsigned int)5;
 static unsigned int xyz122 = (tdu1)5;
 static size_t sz1 = 8;
 static size_t sz2 = sizeof(size_t);
+static size_t sz2a = alignof(size_t);
 static size_t sz3 = (size_t)8;
 static ssize_t sz4 = 8;
 static ssize_t sz5 = sizeof(ssize_t);
+static ssize_t sz5a = alignof(ssize_t);
 static ssize_t sz6 = (ssize_t)8;
 static __int8 szi1 = 8;
 static __int16 szi2 = 8;
@@ -523,7 +539,9 @@ static intptr_t szi22 = 8;
 static uintptr_t szi23 = (uintptr_t)8;
 static intptr_t szi24 = (intptr_t)8;
 static uintptr_t szi25 = sizeof(uintptr_t);
+static uintptr_t szi25a = alignof(uintptr_t);
 static intptr_t szi26 = sizeof(intptr_t);
+static intptr_t szi26a = alignof(intptr_t);
 
 char *(*(nastyname)())[10] /* https://www.educative.io/blog/decoding-c-declarations */
 {
