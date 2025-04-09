@@ -577,6 +577,12 @@ static int (*funy1e[5][3])(int* (*)(int* []));
 static int (*funy1f[5][3])(int* (*)(int* [10]));
 static int ((funy1g[5]));
 static int ((funy1h)[5]);
+static int* (*funy1i);
+static int* ((*funy1ia));
+static int* ((((*funy1ib))));
+static int* (*funy1j[5]);
+static int (*funy1k)[5];
+static int* funy1kb[5];
 
 int forward_declaration_1(int a,int b) {
 	return a+b;

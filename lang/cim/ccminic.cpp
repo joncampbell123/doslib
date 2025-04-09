@@ -5479,6 +5479,8 @@ try_again_w_token:
 		ddip_list_t() : BT() { }
 		~ddip_list_t() { }
 	public:
+		void addcombine(ddip_t &&x);
+		void addcombine(const ddip_t &x);
 		ddip_t *funcparampair(void);
 	};
 
@@ -5537,6 +5539,80 @@ try_again_w_token:
 		}
 
 		return NULL;
+	}
+
+	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
+		if (!to.parameters.empty() || !from.parameters.empty())
+			return false;
+		if (!to.arraydef.empty() || !from.arraydef.empty())
+			return false;
+		if (to.dd_flags != 0 || from.dd_flags != 0)
+			return false;
+
+		if (!to.ptr.empty() || !from.ptr.empty())
+			return true;
+
+		return false;
+	}
+
+	bool arraymergeable(const ddip_t &to,const ddip_t &from) {
+		if (!to.parameters.empty() || !from.parameters.empty())
+			return false;
+		if (!to.ptr.empty() || !from.ptr.empty())
+			return false;
+		if (to.dd_flags != 0 || from.dd_flags != 0)
+			return false;
+
+		if (!to.arraydef.empty() || !from.arraydef.empty())
+			return true;
+
+		return false;
+	}
+
+	void ddip_list_t::addcombine(ddip_t &&x) {
+		if (x.empty())
+			return;
+
+		if (!empty()) {
+			ddip_t &top = back();
+			if (ptrmergeable(top,x)) {
+				for (auto &p : x.ptr)
+					top.ptr.push_back(std::move(p));
+				return;
+			}
+			if (arraymergeable(top,x)) {
+				for (auto &a : x.arraydef) {
+					top.arraydef.push_back(a);
+					a = ast_node_none;
+				}
+				return;
+			}
+		}
+
+		push_back(std::move(x));
+	}
+
+	void ddip_list_t::addcombine(const ddip_t &x) {
+		if (x.empty())
+			return;
+
+		if (!empty()) {
+			ddip_t &top = back();
+			if (ptrmergeable(top,x)) {
+				for (const auto &p : x.ptr)
+					top.ptr.push_back(p);
+				return;
+			}
+			if (arraymergeable(top,x)) {
+				for (const auto &a : x.arraydef) {
+					top.arraydef.push_back(a);
+					if (a != ast_node_none) ast_node(a).addref();
+				}
+				return;
+			}
+		}
+
+		push_back(x);
 	}
 
 	struct declaration_t {
@@ -7714,12 +7790,9 @@ common_error:
 				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
 		}
 
-		if (!tdp.empty())
-			dp.push_back(std::move(tdp));
-
+		dp.addcombine(std::move(tdp));
 		for (auto &s : sdp)
-			if (!s.empty())
-				dp.push_back(std::move(s));
+			dp.addcombine(std::move(s));
 
 		return 1;
 	}
@@ -7773,7 +7846,7 @@ common_error:
 			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
 
 			for (auto &tde : sym.ddip)
-				dd.ddip.push_back(tde);
+				dd.ddip.addcombine(tde);
 		}
 
 		std::vector<parameter_t> *parameters = NULL;
