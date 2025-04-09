@@ -466,6 +466,8 @@ typedef tdu9 *tdu10[9];
 typedef tdu1* (*tdu11)(tdu1 *x,tdu10 *y);
 typedef tdu11 tdu12[4];
 
+static int tdu12sz = sizeof(tdu12);
+
 static tdu1 xyz123 = 3;
 static tt5_t xyzabc = { x: 4, y: 3 };
 static tdu2 xyz110 = { a: 3, b: 5 };

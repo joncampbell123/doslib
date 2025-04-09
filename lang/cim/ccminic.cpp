@@ -6424,7 +6424,7 @@ exists:
 			do {
 				auto &ent = ddip[i];
 
-				if (ent.dd_flags & declarator_t::FL_FUNCTION)
+				if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 					return data_size_none;
 
 				if (data_calcsz != data_size_none)
@@ -6469,7 +6469,7 @@ exists:
 	}
 
 	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl) {
-		if (decl.flags & declarator_t::FL_FUNCTION)
+		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 			return data_size_none;
 
 		return calc_sizeof(spec,decl.ddip);
