@@ -7594,22 +7594,21 @@ common_error:
 		 *
 		 * int *ar[4];     ar is an array of 4 pointers to int
 		 * int (*ar)[4];   ar is a pointer to an array of 4 ints */
-		const size_t dpi = dp.size(); dp.resize(dpi+1u);
+		ddip_list_t sdp;
+		ddip_t tdp;
 
-		if ((r=pointer_parse(dp[dpi].ptr)) < 1)
+		if ((r=pointer_parse(tdp.ptr)) < 1)
 			return r;
 
 		if (tq_peek().type == token_type_t::openparenthesis) {
 			tq_discard();
 
 			/* WARNING: pushes to vector which causes reallocation which will make references to array elements stale */
-			if ((r=direct_declarator_inner_parse(dp,dd,pos,flags)) < 1)
+			if ((r=direct_declarator_inner_parse(sdp,dd,pos,flags)) < 1)
 				return r;
 
 			if (tq_get().type != token_type_t::closeparenthesis)
 				CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
-
-			assert(dpi < dp.size());
 		}
 		else {
 			assert(dd.name == identifier_none);
@@ -7624,9 +7623,6 @@ common_error:
 				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
 			}
 		}
-
-		/* no more changes to dp vector, so it is safe to use a reference to array elem now */
-		ddip_t &tdp = dp[dpi];
 
 		while (tq_peek().type == token_type_t::opensquarebracket) {
 			tq_discard();
@@ -7652,10 +7648,9 @@ common_error:
 			tdp.dd_flags |= declarator_t::FL_FUNCTION;
 
 			/* if we're at the () in (*function)() then this is a function pointer */
-			if ((dpi+1u) < dp.size()) {
-				if (!dp[dpi+1u].ptr.empty())
+			if (sdp.size() == 1)
+				if (!sdp[0].ptr.empty())
 					tdp.dd_flags |= declarator_t::FL_FUNCTION_POINTER;
-			}
 
 			if (tq_peek().type != token_type_t::closeparenthesis) {
 				do {
@@ -7719,16 +7714,13 @@ common_error:
 				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
 		}
 
-		/* check */
-		assert(dpi < dp.size());
-		assert(&tdp == &dp[dpi]);
+		if (!tdp.empty())
+			dp.push_back(std::move(tdp));
 
-		/* drop the element if empty */
-		if ((dpi+1u) == dp.size() && tdp.empty())
-			dp.pop_back(); /* WARNING: may invalidate tdp */
+		for (auto &s : sdp)
+			if (!s.empty())
+				dp.push_back(std::move(s));
 
-		/* done */
-		assert(dpi <= dp.size());
 		return 1;
 	}
 
