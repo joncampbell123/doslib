@@ -7694,8 +7694,17 @@ common_error:
 
 							ds.align = ~(align - addrmask_t(1u));
 						}
-						else {
-							abort();
+						else if (an.t.type == token_type_t::op_symbol) {
+							assert(an.t.v.symbol != symbol_none);
+							auto &sym = symbol(an.t.v.symbol);
+							if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+								CCERR_RET(EINVAL,pos,"alignas for function or none");
+
+							addrmask_t align = calc_alignof(sym.spec,sym.ddip);
+							if (align == addrmask_none)
+								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
+
+							ds.align = ~(align - addrmask_t(1u));
 						}
 
 						ast_node(expr).release();
