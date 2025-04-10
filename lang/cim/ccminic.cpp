@@ -5389,13 +5389,14 @@ try_again_w_token:
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
 		symbol_id_t				type_identifier_symbol = symbol_none;
+		data_size_t				size = data_size_none;
 		addrmask_t				align = addrmask_none;
 		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 && align == addrmask_none;
+				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 && align == addrmask_none && size == data_size_none;
 		}
 
 		declaration_specifiers_t() { }
@@ -5412,6 +5413,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
 			type_identifier_symbol = o.type_identifier_symbol;
+			size = o.size; o.size = data_size_none;
 			align = o.align; o.align = addrmask_none;
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
@@ -5422,6 +5424,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
 			type_identifier_symbol = o.type_identifier_symbol;
+			size = o.size;
 			align = o.align;
 			enum_list = o.enum_list;
 			count = o.count;
@@ -6402,6 +6405,14 @@ exists:
 
 		if (spec.align != addrmask_none)
 			data_talign = spec.align;
+		else if (spec.type_specifier & TS_SZ8)
+			data_talign = addrmask_make(1);
+		else if (spec.type_specifier & TS_SZ16)
+			data_talign = addrmask_make(2);
+		else if (spec.type_specifier & TS_SZ32)
+			data_talign = addrmask_make(4);
+		else if (spec.type_specifier & TS_SZ64)
+			data_talign = addrmask_make(8);
 		else if (spec.type_specifier & TS_CHAR)
 			data_talign = data_types.dt_char.t.align;
 		else if (spec.type_specifier & TS_SHORT)
@@ -6463,7 +6474,17 @@ exists:
 		data_size_t data_tsz = data_size_none;
 		data_size_t count,data_calcsz;
 
-		if (spec.type_specifier & TS_CHAR)
+		if (spec.size != data_size_none)
+			data_tsz = spec.size;
+		else if (spec.type_specifier & TS_SZ8)
+			data_tsz = 1;
+		else if (spec.type_specifier & TS_SZ16)
+			data_tsz = 2;
+		else if (spec.type_specifier & TS_SZ32)
+			data_tsz = 4;
+		else if (spec.type_specifier & TS_SZ64)
+			data_tsz = 8;
+		else if (spec.type_specifier & TS_CHAR)
 			data_tsz = data_types.dt_char.t.size;
 		else if (spec.type_specifier & TS_SHORT)
 			data_tsz = data_types.dt_short.t.size;
@@ -8554,6 +8575,9 @@ common_error:
 
 		if (ds.align != addrmask_none)
 			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~ds.align) + 1ull,(unsigned long long)(~ds.align) + 1ull);
+
+		if (ds.size != data_size_none)
+			fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)ds.size,(unsigned long long)ds.size);
 
 		if (!ds.enum_list.empty()) {
 			fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
