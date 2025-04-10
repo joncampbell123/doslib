@@ -7525,6 +7525,7 @@ again:
 			case token_type_t::r_uintptr_t: return true;
 			case token_type_t::r_intptr_t: return true;
 			case token_type_t::r_alignas: return true;
+			case token_type_t::r__Alignas: return true;
 
 			case token_type_t::identifier:
 				{
@@ -7658,6 +7659,7 @@ common_error:
 					CCERR_RET(EINVAL,pos,"Extra specifiers for builtin type");
 
 				case token_type_t::r_alignas:
+				case token_type_t::r__Alignas:
 					tq_discard();
 					ds.count++;
 

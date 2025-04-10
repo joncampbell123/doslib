@@ -656,3 +656,6 @@ static alignas(int) uint16_t align4;
 static alignas(long long) uint16_t align5;
 static alignas(alignof(align3)) int align6;
 static alignas(align3) int align7;
+static _Alignas(4) uint16_t align8;
+static _Alignas(512) uint16_t align9;
+
