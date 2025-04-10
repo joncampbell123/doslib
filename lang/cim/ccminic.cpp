@@ -5389,12 +5389,13 @@ try_again_w_token:
 		type_specifier_t			type_specifier = 0;
 		type_qualifier_t			type_qualifier = 0;
 		symbol_id_t				type_identifier_symbol = symbol_none;
+		addrmask_t				align = addrmask_none;
 		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0;
+				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 && align == addrmask_none;
 		}
 
 		declaration_specifiers_t() { }
@@ -5411,6 +5412,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier; o.type_specifier = 0;
 			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
 			type_identifier_symbol = o.type_identifier_symbol;
+			align = o.align; o.align = addrmask_none;
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5420,6 +5422,7 @@ try_again_w_token:
 			type_specifier = o.type_specifier;
 			type_qualifier = o.type_qualifier;
 			type_identifier_symbol = o.type_identifier_symbol;
+			align = o.align;
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -6397,7 +6400,9 @@ exists:
 		addrmask_t data_talign = addrmask_none;
 		addrmask_t data_calcalign;
 
-		if (spec.type_specifier & TS_CHAR)
+		if (spec.align != addrmask_none)
+			data_talign = spec.align;
+		else if (spec.type_specifier & TS_CHAR)
 			data_talign = data_types.dt_char.t.align;
 		else if (spec.type_specifier & TS_SHORT)
 			data_talign = data_types.dt_short.t.align;
@@ -7519,6 +7524,7 @@ again:
 			case token_type_t::r_uint64_t: return true;
 			case token_type_t::r_uintptr_t: return true;
 			case token_type_t::r_intptr_t: return true;
+			case token_type_t::r_alignas: return true;
 
 			case token_type_t::identifier:
 				{
@@ -7650,6 +7656,52 @@ common_builtin:
 					continue;
 common_error:
 					CCERR_RET(EINVAL,pos,"Extra specifiers for builtin type");
+
+				case token_type_t::r_alignas:
+					tq_discard();
+					ds.count++;
+
+					if (ds.align != addrmask_none)
+						CCERR_RET(EINVAL,pos,"Alignas already specified");
+
+					{
+						ast_node_id_t expr = ast_node_none;
+
+						if ((r=typeid_or_expr_parse(expr)) < 1)
+							return r;
+
+						ast_node_reduce(expr);
+
+						ast_node_t &an = ast_node(expr);
+						if (an.t.type == token_type_t::integer) {
+							if (an.t.v.integer.v.u != 0) {
+								if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+									CCERR_RET(EINVAL,pos,"Alignas expression not a power of 2");
+
+								ds.align = addrmask_make(an.t.v.integer.v.u);
+							}
+						}
+						else if (an.t.type == token_type_t::op_declaration) {
+							declaration_t *decl = an.t.v.declaration;
+
+							assert(decl != NULL);
+							if (decl->declor.size() != 1)
+								CCERR_RET(EINVAL,pos,"Unexpected number of declor");
+
+							addrmask_t align = calc_alignof(decl->spec,decl->declor[0]);
+							if (align == addrmask_none)
+								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
+
+							ds.align = ~(align - addrmask_t(1u));
+						}
+						else {
+							abort();
+						}
+
+						ast_node(expr).release();
+					}
+
+					continue;
 
 				case token_type_t::identifier:
 					if (ds.type_specifier & TS_MATCH_TYPEDEF)
@@ -8489,6 +8541,9 @@ common_error:
 		}
 		fprintf(stderr,"\n");
 
+		if (ds.align != addrmask_none)
+			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~ds.align) + 1ull,(unsigned long long)(~ds.align) + 1ull);
+
 		if (!ds.enum_list.empty()) {
 			fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
 			for (auto &sid : ds.enum_list)
@@ -8930,14 +8985,24 @@ common_error:
 			assert(ast_node(decl).t.type == token_type_t::op_declaration);
 			ast_node(decl).t.v.declaration = declion.release();
 
-			ast_node(aroot).set_child(decl); ast_node(decl).release();
+			if (aroot == ast_node_none) {
+				aroot = decl;
+			}
+			else {
+				ast_node(aroot).set_child(decl); ast_node(decl).release();
+			}
 		}
 		else {
 			ast_node_id_t expr = ast_node_none;
 			if ((r=unary_expression(expr)) < 1)
 				return r;
 
-			ast_node(aroot).set_child(expr); ast_node(expr).release();
+			if (aroot == ast_node_none) {
+				aroot = expr;
+			}
+			else {
+				ast_node(aroot).set_child(expr); ast_node(expr).release();
+			}
 		}
 
 		while (depth > 0 && tq_peek().type == token_type_t::closeparenthesis) {
@@ -9059,7 +9124,6 @@ common_error:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else if (tq_peek().type == token_type_t::r_sizeof) {
-
 			tq_discard();
 
 			assert(aroot == ast_node_none);

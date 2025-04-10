@@ -648,3 +648,11 @@ static arrarr1_t arrarr1b[3];
 static arrarr1_t arrarr1c[2][3];
 static arrarr1_t arrarr1d[1][2][3];
 
+static alignas(0) uint16_t align1;
+static alignas(4) uint16_t align2;
+static alignas(256) uint16_t align3;
+static int alignt1 = alignof(int);
+static alignas(int) uint16_t align4;
+static alignas(long long) uint16_t align5;
+static alignas(alignof(align3)) int align6;
+
