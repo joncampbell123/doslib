@@ -6456,10 +6456,30 @@ exists:
 					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 						return addrmask_none;
 
-					if (!ent.ptr.empty())
+					if (!ent.ptr.empty()) {
 						data_calcalign = data_types_ptr_data.dt_ptr.t.align;
+						if (ptr_deref != 0u) {
+							if (ptr_deref > ent.ptr.size()) { /* dereferencing more than what is in this level, process as a pointer, continue on */
+								ptr_deref -= ent.ptr.size();
+								continue;
+							}
+							else if (ptr_deref == ent.ptr.size()) { /* dereferencing exactly what is in this level, return a pointer and count, and stop */
+								data_calcalign = data_talign;
+								ptr_deref = 0;
+								i = 0; /* break out of the loop at the end by setting i == 0 */
+							}
+							else { /* dereferencing less than this level, return a pointer, but not the count */
+								ptr_deref = 0;
+								break; /* break out of the loop now */
+							}
+						}
+					}
 				} while ((i--) != 0u);
 			}
+
+			/* if dereferncing too much, return no size */
+			if (ptr_deref != 0u)
+				return addrmask_none;
 		}
 
 #if 0
