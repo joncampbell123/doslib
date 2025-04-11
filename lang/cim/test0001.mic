@@ -707,4 +707,15 @@ static int ptrdef6a = sizeof(ptrdef6);
 static int ptrdef6b = sizeof(*ptrdef6);
 static int ptrdef6c = sizeof(**ptrdef6);
 static int ptrdef6d = sizeof(***ptrdef6);
+typedef int **ptrdef7_t;
+static ptrdef7_t ptrdef7[4];
+static int ptrdef7a = sizeof(ptrdef7);
+static int ptrdef7b = sizeof(*ptrdef7);
+static int ptrdef7c = sizeof(**ptrdef7);
+static int ptrdef7d = sizeof(***ptrdef7);
+static int **ptrdef8[4];
+static int ptrdef8a = sizeof(ptrdef8);
+static int ptrdef8b = sizeof(*ptrdef8);
+static int ptrdef8c = sizeof(**ptrdef8);
+static int ptrdef8d = sizeof(***ptrdef8);
 
