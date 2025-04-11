@@ -5552,7 +5552,7 @@ try_again_w_token:
 	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
 		if (!to.parameters.empty() || !from.parameters.empty())
 			return false;
-		if (!to.arraydef.empty() || !from.arraydef.empty())
+		if (!to.arraydef.empty())
 			return false;
 		if (to.dd_flags != 0 || from.dd_flags != 0)
 			return false;
@@ -5586,6 +5586,10 @@ try_again_w_token:
 			if (ptrmergeable(top,x)) {
 				for (auto &p : x.ptr)
 					top.ptr.push_back(std::move(p));
+				for (auto &a : x.arraydef) {
+					top.arraydef.push_back(a);
+					ast_node(a).addref();
+				}
 				return;
 			}
 			if (arraymergeable(top,x)) {
