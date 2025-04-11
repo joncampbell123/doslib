@@ -6325,6 +6325,9 @@ exists:
 			return 1;
 		}
 
+		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
+		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
+
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
@@ -6440,20 +6443,26 @@ exists:
 
 		data_calcalign = data_talign;
 
-		if (ptr_deref > ddip.size())
-			return addrmask_none;
+		if (ptr_deref == ptr_deref_sizeof_addressof) {
+			/* & address of? That's a pointer, unconditionally */
+			data_calcalign = data_types_ptr_data.dt_ptr.t.size;
+		}
+		else {
+			if (ptr_deref > ddip.size())
+				return addrmask_none;
 
-		if (ptr_deref < ddip.size()) {
-			size_t i = ddip.size() - 1u;
-			do {
-				auto &ent = ddip[i];
+			if (ptr_deref < ddip.size()) {
+				size_t i = ddip.size() - 1u;
+				do {
+					auto &ent = ddip[i];
 
-				if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
-					return addrmask_none;
+					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
+						return addrmask_none;
 
-				if (!ent.ptr.empty())
-					data_calcalign = data_types_ptr_data.dt_ptr.t.align;
-			} while ((i--) != ptr_deref);
+					if (!ent.ptr.empty())
+						data_calcalign = data_types_ptr_data.dt_ptr.t.align;
+				} while ((i--) != ptr_deref);
+			}
 		}
 
 #if 0
@@ -6515,46 +6524,52 @@ exists:
 		count = 1;
 		data_calcsz = data_tsz;
 
-		if (ptr_deref > ddip.size())
-			return addrmask_none;
+		if (ptr_deref == ptr_deref_sizeof_addressof) {
+			/* & address of? That's a pointer, unconditionally */
+			data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+		}
+		else {
+			if (ptr_deref > ddip.size())
+				return addrmask_none;
 
-		if (ptr_deref < ddip.size()) {
-			size_t i = ddip.size() - 1u;
-			do {
-				auto &ent = ddip[i];
+			if (ptr_deref < ddip.size()) {
+				size_t i = ddip.size() - 1u;
+				do {
+					auto &ent = ddip[i];
 
-				if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
-					return data_size_none;
+					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
+						return data_size_none;
 
-				if (data_calcsz != data_size_none)
-					data_calcsz *= count;
+					if (data_calcsz != data_size_none)
+						data_calcsz *= count;
 
-				count = 1;
-				if (!ent.ptr.empty())
-					data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+					count = 1;
+					if (!ent.ptr.empty())
+						data_calcsz = data_types_ptr_data.dt_ptr.t.size;
 
 #if 0
-				fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
-				debug_dump_ddip("  ",ent);
+					fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
+					debug_dump_ddip("  ",ent);
 #endif
 
-				if (!ent.arraydef.empty()) {
-					for (const auto &a : ent.arraydef) {
-						if (a == ast_node_none)
-							return data_size_none;
+					if (!ent.arraydef.empty()) {
+						for (const auto &a : ent.arraydef) {
+							if (a == ast_node_none)
+								return data_size_none;
 
-						const auto &an = ast_node(a);
-						if (an.t.type != token_type_t::integer)
-							return data_size_none;
-						if (an.t.v.integer.v.v < 1ll)
-							return data_size_none;
-						if (an.t.v.integer.v.u >= (0x8000000000000000ull / count))
-							return data_size_none;
+							const auto &an = ast_node(a);
+							if (an.t.type != token_type_t::integer)
+								return data_size_none;
+							if (an.t.v.integer.v.v < 1ll)
+								return data_size_none;
+							if (an.t.v.integer.v.u >= (0x8000000000000000ull / count))
+								return data_size_none;
 
-						count *= an.t.v.integer.v.u;
+							count *= an.t.v.integer.v.u;
+						}
 					}
-				}
-			} while ((i--) != ptr_deref);
+				} while ((i--) != ptr_deref);
+			}
 		}
 
 #if 0
@@ -7081,6 +7096,15 @@ again:
 								op1 = an.child;
 								ptrdref++;
 							}
+							else if (an.t.type == token_type_t::op_address_of) {
+								op1 = an.child;
+								ptrdref = ptr_deref_sizeof_addressof;
+
+								while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
+									op1 = ast_node(op1).child;
+
+								break;
+							}
 							else {
 								break;
 							}
@@ -7106,6 +7130,15 @@ again:
 							else if (an.t.type == token_type_t::op_pointer_deref) {
 								op1 = an.child;
 								ptrdref++;
+							}
+							else if (an.t.type == token_type_t::op_address_of) {
+								op1 = an.child;
+								ptrdref = ptr_deref_sizeof_addressof;
+
+								while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
+									op1 = ast_node(op1).child;
+
+								break;
 							}
 							else {
 								break;
