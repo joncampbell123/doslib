@@ -6538,8 +6538,24 @@ exists:
 						data_calcsz *= count;
 
 					count = 1;
-					if (!ent.ptr.empty())
+					if (!ent.ptr.empty()) {
 						data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+						if (ptr_deref != 0u) {
+							if (ptr_deref > ent.ptr.size()) { /* dereferencing more than what is in this level, process as a pointer, continue on */
+								ptr_deref -= ent.ptr.size();
+								continue;
+							}
+							else if (ptr_deref == ent.ptr.size()) { /* dereferencing exactly what is in this level, return a pointer and count, and stop */
+								data_calcsz = data_tsz;
+								ptr_deref = 0;
+								i = 0; /* break out of the loop at the end by setting i == 0 */
+							}
+							else { /* dereferencing less than this level, return a pointer, but not the count */
+								ptr_deref = 0;
+								break; /* break out of the loop now */
+							}
+						}
+					}
 
 #if 0
 					fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
@@ -6564,6 +6580,10 @@ exists:
 					}
 				} while ((i--) != 0u);
 			}
+
+			/* if dereferncing too much, return no size */
+			if (ptr_deref != 0u)
+				return data_size_none;
 		}
 
 #if 0
