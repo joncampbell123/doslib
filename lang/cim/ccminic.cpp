@@ -6326,12 +6326,12 @@ exists:
 		}
 
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
-		bool ast_constexpr_sizeof(token_t &r,token_t &op);
-		bool ast_constexpr_alignof(token_t &r,token_t &op);
-		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip);
-		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl);
-		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip);
-		addrmask_t calc_alignof(declaration_specifiers_t &spec,declarator_t &decl);
+		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
+		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
+		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
+		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref=0);
+		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
+		addrmask_t calc_alignof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref=0);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
@@ -6399,7 +6399,7 @@ exists:
 		return false;
 	}
 
-	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip) {
+	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
 		addrmask_t data_talign = addrmask_none;
 		addrmask_t data_calcalign;
 
@@ -6440,7 +6440,10 @@ exists:
 
 		data_calcalign = data_talign;
 
-		if (!ddip.empty()) {
+		if (ptr_deref > ddip.size())
+			return addrmask_none;
+
+		if (ptr_deref < ddip.size()) {
 			size_t i = ddip.size() - 1u;
 			do {
 				auto &ent = ddip[i];
@@ -6450,7 +6453,7 @@ exists:
 
 				if (!ent.ptr.empty())
 					data_calcalign = data_types_ptr_data.dt_ptr.t.align;
-			} while ((i--) != 0u);
+			} while ((i--) != ptr_deref);
 		}
 
 #if 0
@@ -6463,14 +6466,14 @@ exists:
 		return addrmask_none;
 	}
 
-	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,declarator_t &decl) {
+	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref) {
 		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 			return addrmask_none;
 
-		return calc_alignof(spec,decl.ddip);
+		return calc_alignof(spec,decl.ddip,ptr_deref);
 	}
 
-	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip) {
+	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
 		data_size_t data_tsz = data_size_none;
 		data_size_t count,data_calcsz;
 
@@ -6512,7 +6515,10 @@ exists:
 		count = 1;
 		data_calcsz = data_tsz;
 
-		if (!ddip.empty()) {
+		if (ptr_deref > ddip.size())
+			return addrmask_none;
+
+		if (ptr_deref < ddip.size()) {
 			size_t i = ddip.size() - 1u;
 			do {
 				auto &ent = ddip[i];
@@ -6548,7 +6554,7 @@ exists:
 						count *= an.t.v.integer.v.u;
 					}
 				}
-			} while ((i--) != 0u);
+			} while ((i--) != ptr_deref);
 		}
 
 #if 0
@@ -6561,14 +6567,14 @@ exists:
 		return data_size_none;
 	}
 
-	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl) {
+	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref) {
 		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 			return data_size_none;
 
-		return calc_sizeof(spec,decl.ddip);
+		return calc_sizeof(spec,decl.ddip,ptr_deref);
 	}
 
-	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op) {
+	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref) {
 		switch (op.type) {
 			case token_type_t::op_symbol:
 			{
@@ -6577,7 +6583,7 @@ exists:
 					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
 						return false;
 
-					data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+					data_size_t sz = calc_sizeof(sym.spec,sym.ddip,ptr_deref);
 					if (sz != data_size_none) {
 						r = token_t(token_type_t::integer);
 						r.v.integer.v.u = sz;
@@ -6610,7 +6616,7 @@ exists:
 		return false;
 	}
 
-	bool cc_state_t::ast_constexpr_alignof(token_t &r,token_t &op) {
+	bool cc_state_t::ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref) {
 		switch (op.type) {
 			case token_type_t::op_symbol:
 			{
@@ -6619,7 +6625,7 @@ exists:
 					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
 						return false;
 
-					addrmask_t sz = calc_alignof(sym.spec,sym.ddip);
+					addrmask_t sz = calc_alignof(sym.spec,sym.ddip,ptr_deref);
 					if (sz != addrmask_none) {
 						r = token_t(token_type_t::integer);
 						r.v.integer.v.u = sz;
@@ -7062,8 +7068,24 @@ again:
 			switch (erootnode.t.type) {
 				case token_type_t::op_sizeof:
 					{
+						size_t ptrdref = 0;
 						OP_ONE_PARAM_TEVAL;
-						if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t)) {
+						do {
+							assert(op1 != ast_node_none);
+							ast_node_t &an = ast_node(op1);
+
+							if (an.t.type == token_type_t::op_binary_not) {
+								op1 = an.child;
+							}
+							else if (an.t.type == token_type_t::op_pointer_deref) {
+								op1 = an.child;
+								ptrdref++;
+							}
+							else {
+								break;
+							}
+						} while(1);
+						if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t,ptrdref)) {
 							erootnode.set_child(ast_node_none);
 							goto again;
 						}
@@ -7072,8 +7094,24 @@ again:
 
 				case token_type_t::op_alignof:
 					{
+						size_t ptrdref = 0;
 						OP_ONE_PARAM_TEVAL;
-						if (ast_constexpr_alignof(erootnode.t,ast_node(op1).t)) {
+						do {
+							assert(op1 != ast_node_none);
+							ast_node_t &an = ast_node(op1);
+
+							if (an.t.type == token_type_t::op_binary_not) {
+								op1 = an.child;
+							}
+							else if (an.t.type == token_type_t::op_pointer_deref) {
+								op1 = an.child;
+								ptrdref++;
+							}
+							else {
+								break;
+							}
+						} while(1);
+						if (ast_constexpr_alignof(erootnode.t,ast_node(op1).t,ptrdref)) {
 							erootnode.set_child(ast_node_none);
 							goto again;
 						}

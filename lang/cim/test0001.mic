@@ -660,3 +660,13 @@ static alignas(align3) int align7;
 static _Alignas(4) uint16_t align8;
 static _Alignas(512) uint16_t align9;
 
+static int *ptrdef1;
+static int ptrdef1b = *ptrdef1;
+static int ptrdef1c = sizeof(ptrdef1);
+static int ptrdef1d = sizeof(*ptrdef1);
+static int ptrdef1e = sizeof(ptrdef1b);
+static int ptrdef1f = alignof(ptrdef1);
+static int ptrdef1g = alignof(*ptrdef1);
+static int ptrdef1h = alignof(ptrdef1b);
+static int ptrdef1i = sizeof(int[4]);
+
