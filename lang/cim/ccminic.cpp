@@ -6448,10 +6448,7 @@ exists:
 			data_calcalign = data_types_ptr_data.dt_ptr.t.size;
 		}
 		else {
-			if (ptr_deref > ddip.size())
-				return addrmask_none;
-
-			if (ptr_deref < ddip.size()) {
+			if (!ddip.empty()) {
 				size_t i = ddip.size() - 1u;
 				do {
 					auto &ent = ddip[i];
@@ -6461,7 +6458,7 @@ exists:
 
 					if (!ent.ptr.empty())
 						data_calcalign = data_types_ptr_data.dt_ptr.t.align;
-				} while ((i--) != ptr_deref);
+				} while ((i--) != 0u);
 			}
 		}
 
@@ -6529,10 +6526,7 @@ exists:
 			data_calcsz = data_types_ptr_data.dt_ptr.t.size;
 		}
 		else {
-			if (ptr_deref > ddip.size())
-				return addrmask_none;
-
-			if (ptr_deref < ddip.size()) {
+			if (!ddip.empty()) {
 				size_t i = ddip.size() - 1u;
 				do {
 					auto &ent = ddip[i];
@@ -6568,7 +6562,7 @@ exists:
 							count *= an.t.v.integer.v.u;
 						}
 					}
-				} while ((i--) != ptr_deref);
+				} while ((i--) != 0u);
 			}
 		}
 
