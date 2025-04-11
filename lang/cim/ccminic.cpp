@@ -6460,30 +6460,10 @@ exists:
 					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 						return addrmask_none;
 
-					if (!ent.ptr.empty()) {
+					if (!ent.ptr.empty())
 						data_calcalign = data_types_ptr_data.dt_ptr.t.align;
-						if (ptr_deref != 0u) {
-							if (ptr_deref > ent.ptr.size()) { /* dereferencing more than what is in this level, process as a pointer, continue on */
-								ptr_deref -= ent.ptr.size();
-								continue;
-							}
-							else if (ptr_deref == ent.ptr.size()) { /* dereferencing exactly what is in this level, return a pointer and count, and stop */
-								data_calcalign = data_talign;
-								ptr_deref = 0;
-								i = 0; /* break out of the loop at the end by setting i == 0 */
-							}
-							else { /* dereferencing less than this level, return a pointer, but not the count */
-								ptr_deref = 0;
-								break; /* break out of the loop now */
-							}
-						}
-					}
 				} while ((i--) != 0u);
 			}
-
-			/* if dereferncing too much, return no size */
-			if (ptr_deref != 0u)
-				return addrmask_none;
 		}
 
 #if 0
@@ -6554,42 +6534,29 @@ exists:
 				size_t i = ddip.size() - 1u;
 				do {
 					auto &ent = ddip[i];
+					size_t pi = 0;
 
 					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
 						return data_size_none;
 
+					if (data_calcsz >= (0x8000000000000000ull / count))
+						return data_size_none;
 					if (data_calcsz != data_size_none)
 						data_calcsz *= count;
 
 					count = 1;
-					if (!ent.ptr.empty()) {
-						data_calcsz = data_types_ptr_data.dt_ptr.t.size;
-						if (ptr_deref != 0u) {
-							if (ptr_deref > ent.ptr.size()) { /* dereferencing more than what is in this level, process as a pointer, continue on */
-								ptr_deref -= ent.ptr.size();
-								continue;
-							}
-							else if (ptr_deref == ent.ptr.size()) { /* dereferencing exactly what is in this level, return a pointer and count, and stop */
-								data_calcsz = data_tsz;
-								ptr_deref = 0;
-								i = 0; /* break out of the loop at the end by setting i == 0 */
-							}
-							else { /* dereferencing less than this level, return a pointer, but not the count */
-								ptr_deref = 0;
-								break; /* break out of the loop now */
-							}
-						}
-					}
-
-#if 0
-					fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
-					debug_dump_ddip("  ",ent);
-#endif
-
 					if (!ent.arraydef.empty()) {
 						for (const auto &a : ent.arraydef) {
 							if (a == ast_node_none)
 								return data_size_none;
+
+							if (ptr_deref != 0) {
+								ptr_deref--;
+								continue;
+							}
+
+							if (pi != 0)
+								break;
 
 							const auto &an = ast_node(a);
 							if (an.t.type != token_type_t::integer)
@@ -6602,13 +6569,71 @@ exists:
 							count *= an.t.v.integer.v.u;
 						}
 					}
+
+					for (pi=0;pi < ent.ptr.size();pi++) {
+						if (ptr_deref != 0) {
+							ptr_deref--;
+							continue;
+						}
+
+						data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+						break;
+					}
+
+#if 0
+					fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
+					debug_dump_ddip("  ",ent);
+#endif
+
 				} while ((i--) != 0u);
 			}
 
-			/* if dereferncing too much, return no size */
-			if (ptr_deref != 0u)
+			if (ptr_deref != 0)
 				return data_size_none;
 		}
+
+#if 0//test => 8, 8, 16, 4
+		int (**xyz)[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int)*4, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 8, 8, 32, 8, 8, 4
+		int **(**xyz)[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 32, 8, 8, 8, 8, 4
+		int ****xyz[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 96, 24, 8, 8, 8, 4
+		int ****xyz[4][3];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4*3, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*)*3, "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int), "oops" );
+#endif
 
 #if 0
 		fprintf(stderr,"dbg final: calcsz=%zu count=%zu\n",data_calcsz,count);

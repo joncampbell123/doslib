@@ -477,6 +477,8 @@ typedef tdu9 *tdu10[9];
 typedef tdu1* (*tdu11)(tdu1 *x,tdu10 *y);
 typedef tdu11 tdu12[4];
 
+static int tdu8sz = sizeof(tdu8);
+static int tdu10sz = sizeof(tdu10);
 static int tdu12sz = sizeof(tdu12);
 static int tdu12sa = alignof(tdu12);
 
@@ -685,16 +687,24 @@ static int ptrdef3b = sizeof(*ptrdef3);
 static int ptrdef3c = sizeof(**ptrdef3);
 static int ptrdef3d = sizeof(***ptrdef3);
 static int ptrdef3e = sizeof(****ptrdef3);
+static int ptrdef3f = sizeof(*****ptrdef3);
 static int **(**ptrdef4[4]);
 static int ptrdef4a = sizeof(ptrdef4);
 static int ptrdef4b = sizeof(*ptrdef4);
 static int ptrdef4c = sizeof(**ptrdef4);
 static int ptrdef4d = sizeof(***ptrdef4);
 static int ptrdef4e = sizeof(****ptrdef4);
+static int ptrdef4f = sizeof(*****ptrdef4);
 static int ****ptrdef5[4];
 static int ptrdef5a = sizeof(ptrdef5);
 static int ptrdef5b = sizeof(*ptrdef5);
 static int ptrdef5c = sizeof(**ptrdef5);
 static int ptrdef5d = sizeof(***ptrdef5);
 static int ptrdef5e = sizeof(****ptrdef5);
+static int ptrdef5f = sizeof(*****ptrdef5);
+static int (**ptrdef6)[4];
+static int ptrdef6a = sizeof(ptrdef6);
+static int ptrdef6b = sizeof(*ptrdef6);
+static int ptrdef6c = sizeof(**ptrdef6);
+static int ptrdef6d = sizeof(***ptrdef6);
 
