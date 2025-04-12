@@ -6660,6 +6660,19 @@ exists:
 		static_assert( sizeof(***xyz) == sizeof(int), "oops" );
 #endif
 
+#if 1//test => 8, 8, 96, 32, 8, 8, 4
+		int **((**xyz[5])[4])[3];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*5, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*)*4*3, "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*)*3, "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*******xyz) == sizeof(int), "oops" );
+#endif
+
 #if 0//test => 8, 8, 96, 32, 8, 8, 4
 		int **((**xyz)[4])[3];
 
