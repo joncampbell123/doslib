@@ -6455,13 +6455,38 @@ exists:
 			if (!ddip.empty()) {
 				size_t i = ddip.size() - 1u;
 				do {
+					bool ptrstop = false;
 					auto &ent = ddip[i];
+					size_t pi = 0;
 
 					if ((ent.dd_flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
-						return addrmask_none;
+						return data_size_none;
 
-					if (!ent.ptr.empty())
+					if (!ent.arraydef.empty()) {
+						for (const auto &a : ent.arraydef) {
+							if (a == ast_node_none)
+								return data_size_none;
+
+							if (ptr_deref != 0) {
+								ptr_deref--;
+								continue;
+							}
+						}
+					}
+
+					for (pi=0;pi < ent.ptr.size();pi++) {
+						if (ptr_deref != 0) {
+							ptr_deref--;
+							continue;
+						}
+
 						data_calcalign = data_types_ptr_data.dt_ptr.t.align;
+						ptrstop = true;
+						break;
+					}
+
+					if (ptrstop)
+						break;
 				} while ((i--) != 0u);
 			}
 		}
@@ -6548,9 +6573,6 @@ exists:
 								ptr_deref--;
 								continue;
 							}
-
-							if (pi != 0)
-								break;
 
 							const auto &an = ast_node(a);
 							if (an.t.type != token_type_t::integer)
