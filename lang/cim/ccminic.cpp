@@ -6599,6 +6599,17 @@ exists:
 		static_assert( sizeof(***xyz) == sizeof(int), "oops" );
 #endif
 
+#if 0//test => 256, 32, 8, 8, 4
+		typedef int **xyz_t[4];
+		xyz_t xyz[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4*4, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int), "oops" );
+#endif
+
 #if 0//test => 32, 8, 8, 4
 		typedef int (**xyz_t);
 		xyz_t xyz[4];
@@ -6607,6 +6618,17 @@ exists:
 		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(***xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 32, 8, 8, 16, 4
+		typedef int (**xyz_t)[4];
+		xyz_t xyz[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int)*4, "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int), "oops" );
 #endif
 
 #if 0//test => 8, 8, 16, 4
