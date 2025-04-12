@@ -6532,6 +6532,7 @@ exists:
 				size_t i = ddip.size() - 1u;
 				do {
 					data_size_t count = 1;
+					bool ptrstop = false;
 					auto &ent = ddip[i];
 					size_t pi = 0;
 
@@ -6570,6 +6571,7 @@ exists:
 						}
 
 						data_calcsz = data_types_ptr_data.dt_ptr.t.size;
+						ptrstop = true;
 						break;
 					}
 
@@ -6577,6 +6579,9 @@ exists:
 						return data_size_none;
 					if (data_calcsz != data_size_none)
 						data_calcsz *= count;
+
+					if (ptrstop)
+						break;
 
 #if 0
 					fprintf(stderr,"dbg: calcsz=%zu count=%zu\n",data_calcsz,count);
@@ -6760,6 +6765,17 @@ exists:
 		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(**xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 32, 8, 8, 8, 8, 4
+		int **(**xyz[4]);
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
 		static_assert( sizeof(*****xyz) == sizeof(int), "oops" );
