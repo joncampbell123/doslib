@@ -6660,6 +6660,30 @@ exists:
 		static_assert( sizeof(***xyz) == sizeof(int), "oops" );
 #endif
 
+#if 0//test => 8, 8, 96, 32, 8, 8, 4
+		int **((**xyz)[4])[3];
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*)*4*3, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*)*3, "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 8, 8, 32, 8, 8, 12, 4
+		int (**(**xyz)[4])[3];
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int)*3, "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int), "oops" );
+#endif
+
 #if 0//test => 32, 8, 8, 8, 8, 4
 		typedef int **(**xyz_t);
 		xyz_t xyz[4];
