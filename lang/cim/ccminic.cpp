@@ -9230,8 +9230,12 @@ common_error:
 				fprintf(stderr," start=%u",field.bf_start);
 			if (field.bf_length != bitfield_pos_none)
 				fprintf(stderr," length=%u",field.bf_length);
-			if (field.bf_start != bitfield_pos_none && field.bf_length != bitfield_pos_none)
-				fprintf(stderr," [%u...%u]",field.bf_start,field.bf_start+field.bf_length-1);
+			if (field.bf_start != bitfield_pos_none && field.bf_length != bitfield_pos_none) {
+				if (field.bf_length > 1)
+					fprintf(stderr," [%u...%u]",field.bf_start,field.bf_start+field.bf_length-1);
+				else
+					fprintf(stderr," [%u]",field.bf_start);
+			}
 
 			fprintf(stderr,"\n");
 		}
@@ -10978,9 +10982,21 @@ common_error:
 			/* alignment of struct member affects alignment of struct */
 			align &= al;
 
+			/* bit field counter */
+			unsigned int bit_start = 0;
+
 			do {
 				assert(fi != sym.fields.end());
 				(*fi).offset = pos;
+
+				if ((*fi).bf_length != bitfield_pos_none) {
+					if ((*fi).bf_start != bitfield_pos_none)
+						bit_start = (*fi).bf_start;
+					else
+						(*fi).bf_start = bit_start;
+
+					bit_start += (*fi).bf_length;
+				}
 
 #if 0//DEBUG
 				fprintf(stderr,"struct field pos=%lu align=%lx\n",(unsigned long)pos,(unsigned long)al);
@@ -11000,11 +11016,8 @@ common_error:
 					break;
 				if (((*fi).spec.type_specifier&m_fi.spec.type_specifier&(TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG)) == 0)
 					break;
-				if (m_fi.bf_start == bitfield_pos_none && m_fi.bf_length == bitfield_pos_none)
+				if (m_fi.bf_length == bitfield_pos_none || (*fi).bf_length == bitfield_pos_none)
 					break;
-				if ((*fi).bf_start == bitfield_pos_none && (*fi).bf_length == bitfield_pos_none)
-					break;
-
 				if (!(*fi).ddip.empty() || !m_fi.ddip.empty())
 					break;
 				if ((*fi).spec.type_specifier != m_fi.spec.type_specifier)
