@@ -10984,6 +10984,7 @@ common_error:
 
 			/* bit field counter */
 			unsigned int bit_start = 0;
+			unsigned int bits_allowed = (unsigned int)sz * 8u;
 
 			do {
 				assert(fi != sym.fields.end());
@@ -10996,6 +10997,9 @@ common_error:
 						(*fi).bf_start = bit_start;
 
 					bit_start += (*fi).bf_length;
+
+					if ((*fi).bf_start >= bits_allowed || ((*fi).bf_start+(*fi).bf_length) > bits_allowed)
+						CCERR_RET(ERANGE,tq_peek().pos,"bitfield range does not fit in data type");
 				}
 
 #if 0//DEBUG
