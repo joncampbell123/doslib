@@ -5116,15 +5116,15 @@ try_again_w_token:
 
 	/* default */
 	const data_type_set_t data_types_default = {
-		{ { /*size*/sizeof(char),      /*align*/addrmask_make(alignof(char))      }, TS_CHAR                 }, /* bool */
-		{ { /*size*/sizeof(char),      /*align*/addrmask_make(alignof(char))      }, TS_CHAR                 }, /* char */
-		{ { /*size*/sizeof(short),     /*align*/addrmask_make(alignof(short))     }, TS_SHORT                }, /* short */
-		{ { /*size*/sizeof(int),       /*align*/addrmask_make(alignof(int))       }, TS_INT                  }, /* int */
-		{ { /*size*/sizeof(long),      /*align*/addrmask_make(alignof(long))      }, TS_LONG                 }, /* long */
-		{ { /*size*/sizeof(long long), /*align*/addrmask_make(alignof(long long)) }, TS_LONGLONG             }, /* longlong */
-		{ { /*size*/sizeof(float),     /*align*/addrmask_make(alignof(float))     }, TS_FLOAT                }, /* float */
-		{ { /*size*/sizeof(double),    /*align*/addrmask_make(alignof(double))    }, TS_DOUBLE               }, /* double */
-		{ { /*size*/sizeof(double),    /*align*/addrmask_make(alignof(double))    }, TS_DOUBLE               }  /* longdouble */
+		{ { /*size*/sizeof(char),       /*align*/addrmask_make(alignof(char))        }, TS_CHAR                 }, /* bool */
+		{ { /*size*/sizeof(char),       /*align*/addrmask_make(alignof(char))        }, TS_CHAR                 }, /* char */
+		{ { /*size*/sizeof(short),      /*align*/addrmask_make(alignof(short))       }, TS_SHORT                }, /* short */
+		{ { /*size*/sizeof(int),        /*align*/addrmask_make(alignof(int))         }, TS_INT                  }, /* int */
+		{ { /*size*/sizeof(long),       /*align*/addrmask_make(alignof(long))        }, TS_LONG                 }, /* long */
+		{ { /*size*/sizeof(long long),  /*align*/addrmask_make(alignof(long long))   }, TS_LONGLONG             }, /* longlong */
+		{ { /*size*/sizeof(float),      /*align*/addrmask_make(alignof(float))       }, TS_FLOAT                }, /* float */
+		{ { /*size*/sizeof(double),     /*align*/addrmask_make(alignof(double))      }, TS_DOUBLE               }, /* double */
+		{ { /*size*/sizeof(long double),/*align*/addrmask_make(alignof(long double)) }, TS_DOUBLE               }  /* longdouble */
 	};
 
 	const data_type_set_ptr_t data_ptr_types_default = {
@@ -6418,6 +6418,8 @@ exists:
 
 		if (spec.align != addrmask_none)
 			data_talign = spec.align;
+		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
+			data_talign = data_types.dt_longdouble.t.align;
 		else if (spec.type_specifier & TS_SZ8)
 			data_talign = addrmask_make(1);
 		else if (spec.type_specifier & TS_SZ16)
@@ -6440,8 +6442,6 @@ exists:
 			data_talign = data_types.dt_float.t.align;
 		else if (spec.type_specifier & TS_DOUBLE)
 			data_talign = data_types.dt_double.t.align;
-		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
-			data_talign = data_types.dt_longdouble.t.align;
 		else if (spec.type_specifier & (TS_ENUM|TS_MATCH_TYPEDEF|TS_STRUCT|TS_UNION)) {
 			if (spec.type_identifier_symbol == symbol_none)
 				return addrmask_none;
@@ -6521,6 +6521,8 @@ exists:
 
 		if (spec.size != data_size_none)
 			data_tsz = spec.size;
+		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
+			data_tsz = data_types.dt_longdouble.t.size;
 		else if (spec.type_specifier & TS_SZ8)
 			data_tsz = 1;
 		else if (spec.type_specifier & TS_SZ16)
@@ -6543,8 +6545,6 @@ exists:
 			data_tsz = data_types.dt_float.t.size;
 		else if (spec.type_specifier & TS_DOUBLE)
 			data_tsz = data_types.dt_double.t.size;
-		else if ((spec.type_specifier & (TS_LONG|TS_DOUBLE)) == (TS_LONG|TS_DOUBLE))
-			data_tsz = data_types.dt_longdouble.t.size;
 		else if (spec.type_specifier & (TS_ENUM|TS_MATCH_TYPEDEF|TS_STRUCT|TS_UNION)) {
 			if (spec.type_identifier_symbol == symbol_none)
 				return data_size_none;
