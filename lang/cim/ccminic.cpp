@@ -5588,7 +5588,7 @@ try_again_w_token:
 					top.ptr.push_back(std::move(p));
 				for (auto &a : x.arraydef) {
 					top.arraydef.push_back(a);
-					ast_node(a).addref();
+					a = ast_node_none;
 				}
 				return;
 			}
@@ -5613,6 +5613,10 @@ try_again_w_token:
 			if (ptrmergeable(top,x)) {
 				for (const auto &p : x.ptr)
 					top.ptr.push_back(p);
+				for (const auto &a : x.arraydef) {
+					top.arraydef.push_back(a);
+					ast_node(a).addref();
+				}
 				return;
 			}
 			if (arraymergeable(top,x)) {
