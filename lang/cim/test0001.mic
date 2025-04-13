@@ -726,3 +726,5 @@ static int ptrdef8b = sizeof(*ptrdef8);
 static int ptrdef8c = sizeof(**ptrdef8);
 static int ptrdef8d = sizeof(***ptrdef8);
 
+union uni1_t { char a; int b; long c; float d; double e; long long f; long double g; } uni1;
+

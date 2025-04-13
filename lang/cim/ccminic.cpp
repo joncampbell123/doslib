@@ -10950,7 +10950,7 @@ common_error:
 
 	int cc_state_t::struct_field_layout(symbol_id_t sid) {
 		addrmask_t align = addrmask_make(1);
-		data_offset_t pos = 0;
+		data_offset_t pos = 0,unsz = 0;
 
 		symbol_t &sym = symbol(sid);
 
@@ -10972,8 +10972,10 @@ common_error:
 			if (sz == data_size_none || sz == 0)
 				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine size of field ")+name).c_str());
 
-			/* align */
-			pos = (pos + (~al)) & al;
+			/* in a union, fields overlap each other */
+			/* in a struct, fields follow one another. */
+			if (sym.sym_type != symbol_t::UNION)
+				pos = (pos + (~al)) & al;
 
 			/* store the spec, this code may loop over bitfield entries of the same type.
 			 * this ref will not change even when fi is later incremented, by design. */
@@ -11031,11 +11033,13 @@ common_error:
 			} while(1);
 
 			/* advance */
-			pos += sz;
+			if (sym.sym_type == symbol_t::UNION) {
+				if (unsz < sz) unsz = sz;
+			}
+			else {
+				pos += sz;
+			}
 		}
-
-		/* final pos */
-		pos = (pos + (~align)) & align;
 
 #if 0//DEBUG
 		fprintf(stderr,"struct field final pos=%lu align=%lx\n",(unsigned long)pos,(unsigned long)align);
@@ -11047,7 +11051,15 @@ common_error:
 		else
 			sym.spec.align &= align;
 
-		sym.spec.size = pos;
+		if (sym.sym_type == symbol_t::UNION) {
+			unsz = (unsz + (~align)) & align;
+			sym.spec.size = unsz;
+		}
+		else {
+			pos = (pos + (~align)) & align;
+			sym.spec.size = pos;
+		}
+
 		return 1;
 	}
 
