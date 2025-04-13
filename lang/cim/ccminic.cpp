@@ -8673,29 +8673,35 @@ common_error:
 
 			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
 
-			{
-				auto dip = sym.ddip.begin();
+			if (!sym.ddip.empty()) {
+				ddip_list_t saved = std::move(dd.ddip);
+				dd.ddip.clear();
 
-				if (dip != sym.ddip.end() && !dd.ddip.empty()) {
+				for (const auto &d : sym.ddip)
+					dd.ddip.push_back(d);
+
+				auto svi = saved.begin();
+
+				if (svi != saved.end() && !dd.ddip.empty()) {
 					auto &lent = dd.ddip.back();
 
-					for (auto &p : dip->ptr)
+					for (auto &p : svi->ptr)
 						lent.ptr.push_back(p);
 
-					for (auto &a : dip->arraydef) {
+					for (auto &a : svi->arraydef) {
 						lent.arraydef.push_back(a);
 						if (a != ast_node_none)
 							ast_node(a).addref();
 					}
 
-					if (!lent.parameters.empty() && !dip->parameters.empty())
+					if (!lent.parameters.empty() && !svi->parameters.empty())
 						CCERR_RET(EALREADY,pos,"Attempt to apply parameters to typedef with parameters");
 
-					dip++;
+					svi++;
 				}
 
-				for (;dip != sym.ddip.end();dip++)
-					dd.ddip.addcombine(*dip);
+				for (;svi != saved.end();svi++)
+					dd.ddip.addcombine(*svi);
 			}
 		}
 
