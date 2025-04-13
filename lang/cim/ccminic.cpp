@@ -8674,8 +8674,8 @@ common_error:
 			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
 
 			if (!sym.ddip.empty()) {
-				ddip_list_t saved = std::move(dd.ddip);
-				dd.ddip.clear();
+				ddip_list_t saved;
+				std::swap(saved,dd.ddip);
 
 				for (const auto &d : sym.ddip)
 					dd.ddip.push_back(d);
@@ -8689,8 +8689,7 @@ common_error:
 						lent.ptr.push_back(p);
 
 					std::vector<ast_node_id_t> savearr;
-					savearr = std::move(lent.arraydef);
-					lent.arraydef.clear();
+					std::swap(savearr,lent.arraydef);
 
 					for (auto &a : svi->arraydef) {
 						lent.arraydef.push_back(a);
