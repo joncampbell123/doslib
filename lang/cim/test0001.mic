@@ -646,6 +646,11 @@ funcedup4_t funcedup4l;
 funcedup4_t *funcedup4p;
 funcedup4_t funcedup4[4];
 
+static int funcedup4sz1 = sizeof(funcedup4_t);
+static int funcedup4sz2 = sizeof(funcedup4l);
+static int funcedup4sz3 = sizeof(funcedup4p);
+static int funcedup4sz4 = sizeof(funcedup4);
+
 typedef int arrarr1_t[4][5][6][7];
 static arrarr1_t arrarr1a;
 static arrarr1_t arrarr1b[3];

@@ -6848,6 +6848,59 @@ exists:
 		static_assert( sizeof(******xyz) == sizeof(int), "oops" );
 #endif
 
+#if 0//test => 1680
+		typedef int (** (** (*xyz)[5])[6])[7];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*5*6*7, "oops" );
+#endif
+
+#if 0//test => 8, 40, 8, 8, 48, 8, 8, 28, 4
+		typedef int (** (** (*xyz_t)[5])[6])[7];
+		xyz_t xyz;
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*)*5, "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*)*6, "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*******xyz) == sizeof(int)*7, "oops" );
+		static_assert( sizeof(********xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 96, 24, 8, 8, 8, 4
+		typedef int (** (** (*xyz_t)[5])[6])[7];
+		xyz_t *xyz;
+
+		static_assert( sizeof(xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*)*5, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*)*6, "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(********xyz) == sizeof(int)*7, "oops" );
+		static_assert( sizeof(*********xyz) == sizeof(int), "oops" );
+#endif
+
+#if 0//test => 96, 24, 8, 8, 8, 4
+		typedef int (** (** (*xyz_t)[5])[6])[7];
+		xyz_t xyz[4];
+
+		static_assert( sizeof(xyz) == sizeof(int*)*4, "oops" );
+		static_assert( sizeof(*xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(**xyz) == sizeof(int*)*5, "oops" );
+		static_assert( sizeof(***xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(****xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*****xyz) == sizeof(int*)*6, "oops" );
+		static_assert( sizeof(******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(*******xyz) == sizeof(int*), "oops" );
+		static_assert( sizeof(********xyz) == sizeof(int)*7, "oops" );
+		static_assert( sizeof(*********xyz) == sizeof(int), "oops" );
+#endif
+
 #if 0
 		fprintf(stderr,"dbg final: calcsz=%zu count=%zu\n",data_calcsz,count);
 #endif
