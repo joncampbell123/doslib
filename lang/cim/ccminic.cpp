@@ -10999,7 +10999,9 @@ common_error:
 					bit_start += (*fi).bf_length;
 
 					if ((*fi).bf_start >= bits_allowed || ((*fi).bf_start+(*fi).bf_length) > bits_allowed)
-						CCERR_RET(ERANGE,tq_peek().pos,"bitfield range does not fit in data type");
+						CCERR_RET(ERANGE,tq_peek().pos,
+							"bitfield range [%u...%u] does not fit in data type [0...%u]",
+							(*fi).bf_start,(*fi).bf_start+(*fi).bf_length-1,bits_allowed-1);
 				}
 
 #if 0//DEBUG
