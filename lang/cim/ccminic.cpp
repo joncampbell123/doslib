@@ -8688,11 +8688,19 @@ common_error:
 					for (auto &p : svi->ptr)
 						lent.ptr.push_back(p);
 
+					std::vector<ast_node_id_t> savearr;
+					savearr = std::move(lent.arraydef);
+					lent.arraydef.clear();
+
 					for (auto &a : svi->arraydef) {
 						lent.arraydef.push_back(a);
 						if (a != ast_node_none)
 							ast_node(a).addref();
 					}
+
+					/* these were already in lent.arraydev and do not need addref() */
+					for (auto &a : savearr)
+						lent.arraydef.push_back(a);
 
 					if (!lent.parameters.empty() && !svi->parameters.empty())
 						CCERR_RET(EALREADY,pos,"Attempt to apply parameters to typedef with parameters");
