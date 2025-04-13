@@ -5503,7 +5503,6 @@ try_again_w_token:
 		unsigned int flags = 0;
 
 		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
-		ast_node_id_t bitfield_expr = ast_node_none;
 
 		declarator_t() { }
 		declarator_t(const declarator_t &x) { common_copy(x); }
@@ -5517,7 +5516,6 @@ try_again_w_token:
 			symbol = o.symbol;
 			flags = o.flags;
 			ast_node.assign(/*to*/expr,/*from*/o.expr);
-			ast_node.assign(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
 
 		void common_move(declarator_t &o) {
@@ -5526,13 +5524,11 @@ try_again_w_token:
 			symbol = o.symbol; o.symbol = symbol_none;
 			flags = o.flags; o.flags = 0;
 			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-			ast_node.assignmove(/*to*/bitfield_expr,/*from*/o.bitfield_expr);
 		}
 
 		~declarator_t() {
 			identifier.release(name);
 			ast_node.release(expr);
-			ast_node.release(bitfield_expr);
 		}
 	};
 
@@ -5717,11 +5713,14 @@ try_again_w_token:
 			}
 		};
 
+		typedef unsigned char bitfield_pos_t;
+		static constexpr bitfield_pos_t bitfield_pos_none = bitfield_pos_t(0xFFu);
+
 		struct structfield_t {
 			declaration_specifiers_t		spec;
 			ddip_list_t				ddip;
 			identifier_id_t				name = identifier_none;
-			ast_node_id_t				bitfield_expr = ast_node_none;
+			bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
 
 			structfield_t() { }
 			structfield_t(const structfield_t &) = delete;
@@ -5731,14 +5730,14 @@ try_again_w_token:
 
 			~structfield_t() {
 				identifier.release(name);
-				ast_node.release(bitfield_expr);
 			}
 
 			void common_move(structfield_t &x) {
 				spec = std::move(x.spec);
 				ddip = std::move(x.ddip);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
-				ast_node.assignmove(/*to*/bitfield_expr,/*from*/x.bitfield_expr);
+				bf_start = x.bf_start;
+				bf_length = x.bf_length;
 			}
 		};
 
@@ -6351,7 +6350,7 @@ exists:
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
-		int struct_bitfield_validate(token_t &t,bool first_of_range=false);
+		int struct_bitfield_validate(token_t &t);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
@@ -8876,9 +8875,9 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::struct_bitfield_validate(token_t &t,bool first_of_range) {
+	int cc_state_t::struct_bitfield_validate(token_t &t) {
 		if (t.type == token_type_t::integer) {
-			if (t.v.integer.v.v < (first_of_range ? 0ll : 1ll) || t.v.integer.v.v > 255ll)
+			if (t.v.integer.v.v < 0ll || t.v.integer.v.v >= 255ll)
 				CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
 		}
 		else {
@@ -8889,6 +8888,7 @@ common_error:
 	}
 
 	int cc_state_t::struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor) {
+		bitfield_pos_t bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
 		int r;
 
 		if ((r=direct_declarator_parse(ds,declor)) < 1)
@@ -8908,48 +8908,56 @@ common_error:
 			if (tq_peek().type == token_type_t::opensquarebracket) {
 				tq_discard();
 
-				declor.bitfield_expr = ast_node.alloc(token_type_t::op_bitfield_range);
+				bf_length = 1;
 
-				{
-					ast_node_id_t expr = ast_node_none;
-					if ((r=conditional_expression(expr)) < 1)
+				ast_node_id_t expr1 = ast_node_none;
+				if ((r=conditional_expression(expr1)) < 1)
+					return r;
+
+				ast_node_reduce(expr1);
+				ast_node_t &ean1 = ast_node(expr1);
+				if ((r=struct_bitfield_validate(ean1.t)) < 1)
+					return r;
+
+				assert(ean1.t.type == token_type_t::integer);
+				bf_start = bitfield_pos_t(ean1.t.v.integer.v.u);
+				ast_node(expr1).release();
+
+				if (tq_peek().type == token_type_t::ellipsis) {
+					tq_discard();
+
+					ast_node_id_t expr2 = ast_node_none;
+					if ((r=conditional_expression(expr2)) < 1)
 						return r;
 
-					ast_node_reduce(expr);
-					ast_node(declor.bitfield_expr).set_child(expr); ast_node(expr).release();
+					ast_node_reduce(expr2);
+					ast_node_t &ean2 = ast_node(expr2);
+					if ((r=struct_bitfield_validate(ean2.t)) < 1)
+						return r;
 
-					if (tq_peek().type == token_type_t::ellipsis) {
-						tq_discard();
-
-						ast_node_id_t expr2 = ast_node_none;
-						if ((r=conditional_expression(expr2)) < 1)
-							return r;
-
-						ast_node_reduce(expr2);
-						ast_node(expr).set_next(expr2); ast_node(expr2).release();
-
-						if ((r=struct_bitfield_validate(ast_node(expr).t,true)) < 1)
-							return r;
-						if ((r=struct_bitfield_validate(ast_node(expr2).t)) < 1)
-							return r;
-					}
-					else {
-						if ((r=struct_bitfield_validate(ast_node(expr).t)) < 1)
-							return r;
-					}
+					assert(ean2.t.type == token_type_t::integer);
+					bf_length = bitfield_pos_t(ean2.t.v.integer.v.u) + 1u;
+					if (bf_length <= bf_start) CCERR_RET(EINVAL,tq_peek().pos,"Invalid bitfield range");
+					bf_length -= bf_start;
+					ast_node(expr2).release();
 				}
 
 				if (tq_get().type != token_type_t::closesquarebracket)
 					CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
 			}
 			else {
-				if ((r=conditional_expression(declor.bitfield_expr)) < 1)
+				ast_node_id_t expr = ast_node_none;
+				if ((r=conditional_expression(expr)) < 1)
 					return r;
 
-				ast_node_reduce(declor.bitfield_expr);
-
-				if ((r=struct_bitfield_validate(ast_node(declor.bitfield_expr).t)) < 1)
+				ast_node_reduce(expr);
+				ast_node_t &ean = ast_node(expr);
+				if ((r=struct_bitfield_validate(ean.t)) < 1)
 					return r;
+
+				assert(ean.t.type == token_type_t::integer);
+				bf_length = bitfield_pos_t(ean.t.v.integer.v.u);
+				ast_node(expr).release();
 			}
 		}
 
@@ -8977,8 +8985,9 @@ common_error:
 		structfield_t &sf = sym.fields[sfi];
 		sf.spec = ds;
 		sf.ddip = declor.ddip;
+		sf.bf_start = bf_start;
+		sf.bf_length = bf_length;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
-		ast_node.assign(/*to*/sf.bitfield_expr,/*from*/declor.bitfield_expr);
 		return 1;
 	}
 
@@ -9128,11 +9137,6 @@ common_error:
 			fprintf(stderr,"%s  expr:\n",prefix.c_str());
 			debug_dump_ast(prefix+"    ",declr.expr);
 		}
-
-		if (declr.bitfield_expr != ast_node_none) {
-			fprintf(stderr,"%s  bitfield:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",declr.bitfield_expr);
-		}
 	}
 
 	void cc_state_t::debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
@@ -9206,9 +9210,17 @@ common_error:
 		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
 		debug_dump_ddip(prefix+"  ",field.ddip);
 
-		if (field.bitfield_expr != ast_node_none) {
-			fprintf(stderr,"%s  bitfield expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",field.bitfield_expr);
+		if (field.bf_start != bitfield_pos_none || field.bf_length != bitfield_pos_none) {
+			fprintf(stderr,"%sbitfield:",prefix.c_str());
+
+			if (field.bf_start != bitfield_pos_none)
+				fprintf(stderr," start=%u",field.bf_start);
+			if (field.bf_length != bitfield_pos_none)
+				fprintf(stderr," length=%u",field.bf_length);
+			if (field.bf_start != bitfield_pos_none && field.bf_length != bitfield_pos_none)
+				fprintf(stderr," [%u...%u]",field.bf_start,field.bf_start+field.bf_length-1);
+
+			fprintf(stderr,"\n");
 		}
 	}
 
