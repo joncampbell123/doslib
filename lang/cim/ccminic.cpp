@@ -8616,8 +8616,30 @@ common_error:
 
 			ds.type_identifier_symbol = sym.spec.type_identifier_symbol;
 
-			for (auto &tde : sym.ddip)
-				dd.ddip.addcombine(tde);
+			{
+				auto dip = sym.ddip.begin();
+
+				if (dip != sym.ddip.end() && !dd.ddip.empty()) {
+					auto &lent = dd.ddip.back();
+
+					for (auto &p : dip->ptr)
+						lent.ptr.push_back(p);
+
+					for (auto &a : dip->arraydef) {
+						lent.arraydef.push_back(a);
+						if (a != ast_node_none)
+							ast_node(a).addref();
+					}
+
+					if (!lent.parameters.empty() && !dip->parameters.empty())
+						CCERR_RET(EALREADY,pos,"Attempt to apply parameters to typedef with parameters");
+
+					dip++;
+				}
+
+				for (;dip != sym.ddip.end();dip++)
+					dd.ddip.addcombine(*dip);
+			}
 		}
 
 		std::vector<parameter_t> *parameters = NULL;
