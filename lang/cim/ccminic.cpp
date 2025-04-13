@@ -5720,6 +5720,7 @@ try_again_w_token:
 			declaration_specifiers_t		spec;
 			ddip_list_t				ddip;
 			identifier_id_t				name = identifier_none;
+			data_offset_t				offset = data_offset_none;
 			bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
 
 			structfield_t() { }
@@ -5736,6 +5737,7 @@ try_again_w_token:
 				spec = std::move(x.spec);
 				ddip = std::move(x.ddip);
 				identifier.assignmove(/*to*/name,/*from*/x.name);
+				offset = x.offset;
 				bf_start = x.bf_start;
 				bf_length = x.bf_length;
 			}
@@ -6351,6 +6353,7 @@ exists:
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
 		int struct_bitfield_validate(token_t &t);
+		int struct_field_layout(symbol_id_t sid);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
@@ -6444,12 +6447,13 @@ exists:
 				return addrmask_none;
 
 			symbol_t &sym = symbol(spec.type_identifier_symbol);
-			if ((data_talign=calc_alignof(sym.spec,sym.ddip)) == symbol_none)
+			if ((data_talign=calc_alignof(sym.spec,sym.ddip)) == addrmask_none)
 				return addrmask_none;
+
+			data_talign = (~data_talign) + addrmask_t(1u);
 		}
 
 		data_calcalign = data_talign;
-
 		if (ptr_deref == ptr_deref_sizeof_addressof) {
 			/* & address of? That's a pointer, unconditionally */
 			data_calcalign = data_types_ptr_data.dt_ptr.t.size;
@@ -8272,6 +8276,9 @@ common_error:
 									return r;
 							} while(1);
 
+							if ((r=struct_field_layout(sl.sid)) < 1)
+								return r;
+
 							ds.type_identifier_symbol = sl.sid;
 						}
 						else if (declor.name != identifier_none) {
@@ -8339,6 +8346,9 @@ common_error:
 								if ((r=struct_declaration_parse(sl.sid,token_type_t::r_union)) < 1)
 									return r;
 							} while(1);
+
+							if ((r=struct_field_layout(sl.sid)) < 1)
+								return r;
 
 							ds.type_identifier_symbol = sl.sid;
 						}
@@ -9210,8 +9220,11 @@ common_error:
 		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
 		debug_dump_ddip(prefix+"  ",field.ddip);
 
+		if (field.offset != data_offset_none)
+			fprintf(stderr,"%s  offset: %lu\n",prefix.c_str(),(unsigned long)field.offset);
+
 		if (field.bf_start != bitfield_pos_none || field.bf_length != bitfield_pos_none) {
-			fprintf(stderr,"%sbitfield:",prefix.c_str());
+			fprintf(stderr,"%s  bitfield:",prefix.c_str());
 
 			if (field.bf_start != bitfield_pos_none)
 				fprintf(stderr," start=%u",field.bf_start);
@@ -10929,6 +10942,94 @@ common_error:
 		}
 
 		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
+	}
+
+	int cc_state_t::struct_field_layout(symbol_id_t sid) {
+		addrmask_t align = addrmask_make(1);
+		data_offset_t pos = 0;
+
+		symbol_t &sym = symbol(sid);
+
+		auto fi = sym.fields.begin();
+		while (fi != sym.fields.end()) {
+			std::string name;
+
+			if ((*fi).name != identifier_none)
+				name = identifier((*fi).name).to_str();
+			else
+				name = "<anon>";
+
+			addrmask_t al = calc_alignof((*fi).spec,(*fi).ddip);
+			if (al == addrmask_none || al == 0)
+				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine alignment of field ")+name).c_str());
+			al = (~al) + addrmask_t(1u);
+
+			data_size_t sz = calc_sizeof((*fi).spec,(*fi).ddip);
+			if (sz == data_size_none || sz == 0)
+				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine size of field ")+name).c_str());
+
+			/* align */
+			pos = (pos + (~al)) & al;
+
+			/* store the spec, this code may loop over bitfield entries of the same type.
+			 * this ref will not change even when fi is later incremented, by design. */
+			auto &m_fi = (*fi);
+
+			/* alignment of struct member affects alignment of struct */
+			align &= al;
+
+			do {
+				assert(fi != sym.fields.end());
+				(*fi).offset = pos;
+
+#if 0//DEBUG
+				fprintf(stderr,"struct field pos=%lu align=%lx\n",(unsigned long)pos,(unsigned long)al);
+#endif
+
+				/* update the field, looping over similar bitfields if any */
+				if ((*fi).spec.align == addrmask_none)
+					(*fi).spec.align = al;
+				else
+					(*fi).spec.align &= al;
+
+				if ((*fi).spec.size == data_size_none)
+					(*fi).spec.size = sz;
+
+				fi++;
+				if (fi == sym.fields.end())
+					break;
+				if (((*fi).spec.type_specifier&m_fi.spec.type_specifier&(TS_CHAR|TS_SHORT|TS_INT|TS_LONG|TS_LONGLONG)) == 0)
+					break;
+				if (m_fi.bf_start == bitfield_pos_none && m_fi.bf_length == bitfield_pos_none)
+					break;
+				if ((*fi).bf_start == bitfield_pos_none && (*fi).bf_length == bitfield_pos_none)
+					break;
+
+				if (!(*fi).ddip.empty() || !m_fi.ddip.empty())
+					break;
+				if ((*fi).spec.type_specifier != m_fi.spec.type_specifier)
+					break;
+			} while(1);
+
+			/* advance */
+			pos += sz;
+		}
+
+		/* final pos */
+		pos = (pos + (~align)) & align;
+
+#if 0//DEBUG
+		fprintf(stderr,"struct field final pos=%lu align=%lx\n",(unsigned long)pos,(unsigned long)align);
+#endif
+
+		/* update struct */
+		if (sym.spec.align == addrmask_none)
+			sym.spec.align = align;
+		else
+			sym.spec.align &= align;
+
+		sym.spec.size = pos;
+		return 1;
 	}
 
 	int cc_state_t::struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt) {
