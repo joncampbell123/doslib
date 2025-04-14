@@ -6341,7 +6341,6 @@ exists:
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
-		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref=0);
 		addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
@@ -6911,13 +6910,6 @@ exists:
 		return data_size_none;
 	}
 
-	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref) {
-		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
-			return data_size_none;
-
-		return calc_sizeof(spec,decl.ddip,ptr_deref);
-	}
-
 	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref) {
 		switch (op.type) {
 			case token_type_t::op_symbol:
@@ -6943,7 +6935,7 @@ exists:
 				assert(decl != NULL);
 
 				if (decl->declor.size() == 1) {
-					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0]);
+					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0].ddip);
 					if (sz != data_size_none) {
 						r = token_t(token_type_t::integer);
 						r.v.integer.v.u = sz;
