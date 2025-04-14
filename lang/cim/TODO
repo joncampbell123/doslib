@@ -1,0 +1,22 @@
+NEXT TO DO:
+
+alignas(x)         Allow increasing alignment, but by C++ standard, you cannot decrease alignment below natural alignment of data type. [https://en.cppreference.com/w/cpp/language/alignas]
+                   GCC behavior: You can specify a smaller alignas() but GCC will not allow alignas() below natural alignment.
+                   GCC behavior: The __attribute__((aligned(x))) GCC-specific attribute behaves the same. [https://www.gnu.org/software/c-intro-and-ref/manual/html_node/Attributes.html]
+
+alignas(x)         alignas() with struct requires a specific ordering that will require changes to struct and union declaration specifier parsing.
+
+                   alignas(x) struct test { ... } var;                 alignas() applies to var, has no effect on struct. no effect on sizeof().
+                   struct alignas(x) test { ... } var;                 alignas() applies to struct, has no effect on var. also affects sizeof().
+                   alignas(x) struct alignas(y) test { ... } var;      alignas(x) applies to var, alignas(y) applies to struct. also affects sizeof() to accomodate y.
+                   struct test alignas() { ... } var;                  syntax error
+
+#pragma pack(...)  Allow forcing a smaller struct packing. This is the only way to force alignment below natural alignment.
+                   Microsoft C++ extension, initially at least [https://learn.microsoft.com/en-us/cpp/preprocessor/pack?view=msvc-170]
+                   Microsoft C++ suggests that structure alignment is always capped to some default according to the platform or by the /Zp option.
+                   GCC behavior: When pack(push,n) is in effect, alignment larger than n is limited to n. If "8" is in effect, alignment larger than 8 is capped to 8 bytes.
+                                 pack(push,1) is often used to byte pack the structure members together to eliminate padding, no questions asked.
+                                 If not in use, GCC will apply alignment as large as necessary for the data types involved.
+                   Question: What does #pragma pack combined with alignas() do? If I used a #pragma pack to enforce a 4-byte alignment can alignas() still use a larger alignment?
+                             Is that possible with GCC? Microsoft C/C++? Open Watcom C/C++?
+
