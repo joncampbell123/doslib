@@ -6342,8 +6342,8 @@ exists:
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref=0);
+		addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
-		addrmask_t calc_alignof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref=0);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
 		int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
 		int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
@@ -6412,7 +6412,7 @@ exists:
 		return false;
 	}
 
-	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
+	addrmask_t cc_state_t::calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
 		addrmask_t data_talign = addrmask_none;
 		addrmask_t data_calcalign;
 
@@ -6447,10 +6447,8 @@ exists:
 				return addrmask_none;
 
 			symbol_t &sym = symbol(spec.type_identifier_symbol);
-			if ((data_talign=calc_alignof(sym.spec,sym.ddip)) == addrmask_none)
+			if ((data_talign=calc_alignofmask(sym.spec,sym.ddip)) == addrmask_none)
 				return addrmask_none;
-
-			data_talign = (~data_talign) + addrmask_t(1u);
 		}
 
 		data_calcalign = data_talign;
@@ -6498,21 +6496,16 @@ exists:
 			}
 		}
 
-#if 0
-		fprintf(stderr,"dbg final: calcalign=%zu count=%zu\n",data_calcalign,count);
-#endif
-
-		if (data_calcalign != addrmask_none)
-			return (~data_calcalign) + addrmask_t(1u);
-
-		return addrmask_none;
+		return data_calcalign;
 	}
 
-	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,declarator_t &decl,size_t ptr_deref) {
-		if ((decl.flags & (declarator_t::FL_FUNCTION|declarator_t::FL_FUNCTION_POINTER)) == declarator_t::FL_FUNCTION)
-			return addrmask_none;
+	addrmask_t cc_state_t::calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
+		const addrmask_t r = calc_alignofmask(spec,ddip,ptr_deref);
 
-		return calc_alignof(spec,decl.ddip,ptr_deref);
+		if (r != addrmask_none)
+			return (~r) + addrmask_t(1u);
+
+		return addrmask_none;
 	}
 
 	data_size_t cc_state_t::calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref) {
@@ -6992,7 +6985,7 @@ exists:
 				assert(decl != NULL);
 
 				if (decl->declor.size() == 1) {
-					addrmask_t sz = calc_alignof(decl->spec,decl->declor[0]);
+					addrmask_t sz = calc_alignof(decl->spec,decl->declor[0].ddip);
 					if (sz != addrmask_none) {
 						r = token_t(token_type_t::integer);
 						r.v.integer.v.u = sz;
@@ -8118,11 +8111,11 @@ common_error:
 							if (decl->declor.size() != 1)
 								CCERR_RET(EINVAL,pos,"Unexpected number of declor");
 
-							addrmask_t align = calc_alignof(decl->spec,decl->declor[0]);
+							addrmask_t align = calc_alignofmask(decl->spec,decl->declor[0].ddip);
 							if (align == addrmask_none)
 								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
 
-							ds.align = ~(align - addrmask_t(1u));
+							ds.align = align;
 						}
 						else if (an.t.type == token_type_t::op_symbol) {
 							assert(an.t.v.symbol != symbol_none);
@@ -8130,11 +8123,11 @@ common_error:
 							if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
 								CCERR_RET(EINVAL,pos,"alignas for function or none");
 
-							addrmask_t align = calc_alignof(sym.spec,sym.ddip);
+							addrmask_t align = calc_alignofmask(sym.spec,sym.ddip);
 							if (align == addrmask_none)
 								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
 
-							ds.align = ~(align - addrmask_t(1u));
+							ds.align = align;
 						}
 
 						ast_node(expr).release();
@@ -10963,10 +10956,9 @@ common_error:
 			else
 				name = "<anon>";
 
-			addrmask_t al = calc_alignof((*fi).spec,(*fi).ddip);
-			if (al == addrmask_none || al == 0)
+			addrmask_t al = calc_alignofmask((*fi).spec,(*fi).ddip);
+			if (al == addrmask_none)
 				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine alignment of field ")+name).c_str());
-			al = (~al) + addrmask_t(1u);
 
 			data_size_t sz = calc_sizeof((*fi).spec,(*fi).ddip);
 			if (sz == data_size_none || sz == 0)
