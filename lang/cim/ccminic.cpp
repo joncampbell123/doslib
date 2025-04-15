@@ -7964,9 +7964,6 @@ again:
 		type_specifier_t builtin_ts = 0;
 		int r;
 
-		do {
-			const token_t &t = tq_peek();
-
 #define XCHK(d,m) \
 	if (d&m) { \
 		CCERR_RET(EINVAL,t.pos,"declarator specifier '%s' already specified",token_type_t_str(t.type)); \
@@ -7982,6 +7979,9 @@ again:
 		continue; \
 	}
 
+		do {
+			const token_t &t = tq_peek();
+
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(ds.storage_class,SC_TYPEDEF);
 				case token_type_t::r_extern:		X(ds.storage_class,SC_EXTERN);
@@ -7992,6 +7992,16 @@ again:
 				case token_type_t::r_inline:		X(ds.storage_class,SC_INLINE);
 				case token_type_t::r_consteval:		X(ds.storage_class,SC_CONSTEVAL);
 				case token_type_t::r_constinit:		X(ds.storage_class,SC_CONSTINIT);
+				default: break;
+			}
+
+			break;
+		} while (1);
+
+		do {
+			const token_t &t = tq_peek();
+
+			switch (t.type) {
 				case token_type_t::r_void:		X(ds.type_specifier,TS_VOID);
 				case token_type_t::r_char:		X(ds.type_specifier,TS_CHAR);
 				case token_type_t::r_short:		X(ds.type_specifier,TS_SHORT);
