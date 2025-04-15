@@ -6078,8 +6078,8 @@ try_again_w_token:
 			if (at == bt)
 				return true;
 
-			const bool atf = (at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST);
-			const bool btf = (bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF || bt == symbol_t::ENUM || bt == symbol_t::CONST);
+			const bool atf = (at == symbol_t::FUNCTION || at == symbol_t::VARIABLE || at == symbol_t::TYPEDEF || at == symbol_t::ENUM || at == symbol_t::CONST || at == symbol_t::STRUCT || at == symbol_t::UNION);
+			const bool btf = (bt == symbol_t::FUNCTION || bt == symbol_t::VARIABLE || bt == symbol_t::TYPEDEF || bt == symbol_t::ENUM || bt == symbol_t::CONST || bt == symbol_t::STRUCT || bt == symbol_t::UNION);
 			if ((atf || btf) && atf == btf)
 				return true;
 

@@ -316,11 +316,11 @@ enum test xoooo;
 enum test2 { AA=1, AB, AC=100, AD=AA*400, AD2, AD3, AE=AA+AB+AC+AD, AF=1?AC:AB, AG=0?AC:AB, AH=1?1?AD:AC:AB } xoooo3;
 enum { BA, BB, BC, BD } xoooo4;
 struct test_declare;
-struct test;
-union test;
-struct test { } xxxxxxx;
-struct test xooo5,*xxxxy,**xxxxxz;
-struct test2 { char cc; int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
+struct tests;
+union testu;
+struct tests { } xxxxxxx;
+struct tests xooo5,*xxxxy,**xxxxxz;
+struct test2s { char cc; int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
 struct test3 { char cc; int a; struct another { int x,y,z; } one; } xooo7;
 struct { char cc; int a,b,c; int z; } xooo8;
 union utest_declr;
@@ -334,7 +334,7 @@ struct test5 {
 	int (*func1)(int a,int b);
 } x00012;
 enum test;
-enum test3 {
+enum test3e {
 	CA,
 	CB,
 	CC,
@@ -343,7 +343,7 @@ enum test3 {
 };
 void enumcall1(enum test);
 void enumcall2(enum test2);
-void enumcall3(enum test3);
+void enumcall3(enum test3e);
 struct test6;
 struct test6 {
 	int a;
@@ -580,7 +580,7 @@ enum :char {
 	DE
 } xe1;
 
-enum test4:char {
+enum test4e:char {
 	EA,
 	EB,
 	EC,
@@ -588,7 +588,7 @@ enum test4:char {
 	EE
 } xe2;
 
-enum test5:unsigned char {
+enum test5e:unsigned char {
 	FA,
 	FB,
 	FC,
@@ -596,7 +596,7 @@ enum test5:unsigned char {
 	FE
 } xe3;
 
-typedef enum test6 {
+typedef enum test6e {
 	GA,
 	GB,
 	GC
