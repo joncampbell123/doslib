@@ -8315,6 +8315,16 @@ common_error:
 
 							identifier.assignmove(/*to*/s_declor.name,/*from*/name);
 
+							if (ds.type_identifier_symbol != symbol_none) {
+								symbol_t &sym = symbol(ds.type_identifier_symbol);
+								sym.spec.storage_class &= ~SC_TYPEDEF;
+							}
+
+							{/*alignas() is ignored for typedef....right? */
+								ddip_list_t dummy;
+								s_ds.align = calc_alignofmask(ds,dummy);
+							}
+
 							s_sl.pos = pos;
 							s_sl.st = symbol_t::TYPEDEF;
 							s_sl.flags = symbol_t::FL_DEFINED|symbol_t::FL_DECLARED;
