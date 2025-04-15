@@ -772,3 +772,10 @@ static stalign1b_t stalign1ba;
 static alignas(64) stalign1b_t stalign1bb;
 static alignas(256) stalign1b_t stalign1bc;
 
+alignas(128) struct stalign2a_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2a;
+
