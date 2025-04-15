@@ -8240,11 +8240,15 @@ common_error:
 					 * struct identifier */
 
 					{
+						identifier_id_t name = identifier_none;
 						declarator_t declor;
 						symbol_lookup_t sl;
 
 						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
+							identifier.assign(/*to*/name,/*from*/tq_get().v.identifier);
+
+						if (!(ds.storage_class & SC_TYPEDEF))
+							identifier.assignmove(/*to*/declor.name,/*from*/name);
 
 						sl.pos = pos;
 						sl.st = symbol_t::STRUCT;
@@ -8294,6 +8298,39 @@ common_error:
 
 							ds.type_identifier_symbol = sl.sid;
 						}
+
+						if ((ds.storage_class & SC_TYPEDEF) && name != identifier_none) {
+							declaration_specifiers_t s_ds;
+							declarator_t s_declor;
+							symbol_lookup_t s_sl;
+
+							if (!(declspec & DECLSPEC_ALLOW_DEF))
+								CCERR_RET(EINVAL,pos,"not allowed to define types here");
+
+							identifier.assignmove(/*to*/s_declor.name,/*from*/name);
+
+							s_sl.pos = pos;
+							s_sl.st = symbol_t::TYPEDEF;
+							s_sl.flags = symbol_t::FL_DEFINED|symbol_t::FL_DECLARED;
+							s_ds.storage_class = SC_TYPEDEF;
+							s_ds.type_identifier_symbol = ds.type_identifier_symbol;
+							ds.type_identifier_symbol = symbol_none;
+
+							if ((r=prep_symbol_lookup(s_sl,s_ds,s_declor)) < 1)
+								return r;
+							if (do_local_symbol_lookup(s_sl,s_ds,s_declor)) {
+								if ((r=check_symbol_lookup_match(s_sl,s_ds,s_declor)) < 1)
+									return r;
+							}
+							else if ((r=add_symbol(s_sl,s_ds,s_declor)) < 1) {
+								return r;
+							}
+
+							ds.type_identifier_symbol = s_sl.sid;
+						}
+
+						/* remove the typedef flag */
+						ds.storage_class &= ~SC_TYPEDEF;
 					}
 					continue;
 

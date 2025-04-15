@@ -487,8 +487,8 @@ static int tdu12sz = sizeof(tdu12);
 static int tdu12sa = alignof(tdu12);
 
 static tdu1 xyz123 = 3;
-static tt5b xyzabc = { x: 4, y: 3 };
-static tdu2 xyz110 = { a: 3, b: 5 };
+static tt5b_t xyzabc = { x: 4, y: 3 };
+static tdu2_t xyz110 = { a: 3, b: 5 };
 static tdu3 xyz111 = &xyz123;
 static tdu3b xyz111b = &xyz111;
 static tdu4 xyz112 = 123;
