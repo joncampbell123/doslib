@@ -746,14 +746,25 @@ static int ptrdef8d = sizeof(***ptrdef8);
 
 union uni1_t { char a; int b; long c; float d; double e; long long f; long double g; } uni1;
 
-typedef struct stalign1_t {
+struct stalign1a_t {
 	alignas(4) char		a,b;
 	alignas(4) short	c,d;
 	alignas(2) int		e,f;
 	alignas(32) long long	g,h;
 };
 
-static stalign1_t stalign1a;
-static alignas(64) stalign1_t stalign1b;
-static alignas(256) stalign1_t stalign1c;
+typedef struct stalign1b_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+};
+
+static stalign1b_t stalign1ba;
+static alignas(64) stalign1b_t stalign1bb;
+static alignas(256) stalign1b_t stalign1bc;
+
+struct stalign1a_t stalign1aa;
+alignas(64) struct stalign1a_t stalign1ab;
+alignas(256) struct stalign1a_t stalign1ac;
 
