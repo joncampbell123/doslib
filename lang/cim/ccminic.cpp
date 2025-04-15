@@ -6343,6 +6343,7 @@ exists:
 		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
+		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
@@ -7963,6 +7964,61 @@ again:
 		return false;
 	}
 
+	int cc_state_t::declspec_alignas(addrmask_t &ds_align,const position_t &pos) {
+		int r;
+
+		if (ds_align != addrmask_none)
+			CCERR_RET(EINVAL,pos,"Alignas already specified");
+
+		{
+			ast_node_id_t expr = ast_node_none;
+
+			if ((r=typeid_or_expr_parse(expr)) < 1)
+				return r;
+
+			ast_node_reduce(expr);
+
+			ast_node_t &an = ast_node(expr);
+			if (an.t.type == token_type_t::integer) {
+				if (an.t.v.integer.v.u != 0) {
+					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+						CCERR_RET(EINVAL,pos,"Alignas expression not a power of 2");
+
+					ds_align = addrmask_make(an.t.v.integer.v.u);
+				}
+			}
+			else if (an.t.type == token_type_t::op_declaration) {
+				declaration_t *decl = an.t.v.declaration;
+
+				assert(decl != NULL);
+				if (decl->declor.size() != 1)
+					CCERR_RET(EINVAL,pos,"Unexpected number of declor");
+
+				addrmask_t align = calc_alignofmask(decl->spec,decl->declor[0].ddip);
+				if (align == addrmask_none)
+					CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
+
+				ds_align = align;
+			}
+			else if (an.t.type == token_type_t::op_symbol) {
+				assert(an.t.v.symbol != symbol_none);
+				auto &sym = symbol(an.t.v.symbol);
+				if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+					CCERR_RET(EINVAL,pos,"alignas for function or none");
+
+				addrmask_t align = calc_alignofmask(sym.spec,sym.ddip);
+				if (align == addrmask_none)
+					CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
+
+				ds_align = align;
+			}
+
+			ast_node(expr).release();
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
 		const position_t pos = tq_peek().pos;
 		addrmask_t ds_align = addrmask_none;
@@ -8003,54 +8059,8 @@ again:
 					tq_discard();
 					ds.count++;
 
-					if (ds_align != addrmask_none)
-						CCERR_RET(EINVAL,pos,"Alignas already specified");
-
-					{
-						ast_node_id_t expr = ast_node_none;
-
-						if ((r=typeid_or_expr_parse(expr)) < 1)
-							return r;
-
-						ast_node_reduce(expr);
-
-						ast_node_t &an = ast_node(expr);
-						if (an.t.type == token_type_t::integer) {
-							if (an.t.v.integer.v.u != 0) {
-								if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
-									CCERR_RET(EINVAL,pos,"Alignas expression not a power of 2");
-
-								ds_align = addrmask_make(an.t.v.integer.v.u);
-							}
-						}
-						else if (an.t.type == token_type_t::op_declaration) {
-							declaration_t *decl = an.t.v.declaration;
-
-							assert(decl != NULL);
-							if (decl->declor.size() != 1)
-								CCERR_RET(EINVAL,pos,"Unexpected number of declor");
-
-							addrmask_t align = calc_alignofmask(decl->spec,decl->declor[0].ddip);
-							if (align == addrmask_none)
-								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
-
-							ds_align = align;
-						}
-						else if (an.t.type == token_type_t::op_symbol) {
-							assert(an.t.v.symbol != symbol_none);
-							auto &sym = symbol(an.t.v.symbol);
-							if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
-								CCERR_RET(EINVAL,pos,"alignas for function or none");
-
-							addrmask_t align = calc_alignofmask(sym.spec,sym.ddip);
-							if (align == addrmask_none)
-								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
-
-							ds_align = align;
-						}
-
-						ast_node(expr).release();
-					}
+					if ((r=declspec_alignas(ds_align,pos)) < 1)
+						return r;
 
 					continue;
 
