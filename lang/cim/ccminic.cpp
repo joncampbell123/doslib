@@ -8163,6 +8163,9 @@ common_error:
 					if (ds.type_specifier & TS_ENUM)
 						CCERR_RET(EINVAL,pos,"declarator specifier 'enum' already specified");
 
+					/* typedef is ignored here */
+					ds.storage_class &= ~SC_TYPEDEF;
+
 					ds.type_specifier |= TS_ENUM;
 					tq_discard();
 
