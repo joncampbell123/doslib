@@ -753,3 +753,7 @@ typedef struct stalign1_t {
 	alignas(32) long long	g,h;
 };
 
+static stalign1_t stalign1a;
+static alignas(64) stalign1_t stalign1b;
+static alignas(256) stalign1_t stalign1c;
+
