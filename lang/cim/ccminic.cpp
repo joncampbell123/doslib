@@ -7960,6 +7960,7 @@ again:
 
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
 		const position_t pos = tq_peek().pos;
+		addrmask_t ds_align = addrmask_none;
 		type_specifier_t builtin_ts = 0;
 		int r;
 
@@ -8076,7 +8077,7 @@ common_error:
 					tq_discard();
 					ds.count++;
 
-					if (ds.align != addrmask_none)
+					if (ds_align != addrmask_none)
 						CCERR_RET(EINVAL,pos,"Alignas already specified");
 
 					{
@@ -8093,7 +8094,7 @@ common_error:
 								if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
 									CCERR_RET(EINVAL,pos,"Alignas expression not a power of 2");
 
-								ds.align = addrmask_make(an.t.v.integer.v.u);
+								ds_align = addrmask_make(an.t.v.integer.v.u);
 							}
 						}
 						else if (an.t.type == token_type_t::op_declaration) {
@@ -8107,7 +8108,7 @@ common_error:
 							if (align == addrmask_none)
 								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
 
-							ds.align = align;
+							ds_align = align;
 						}
 						else if (an.t.type == token_type_t::op_symbol) {
 							assert(an.t.v.symbol != symbol_none);
@@ -8119,7 +8120,7 @@ common_error:
 							if (align == addrmask_none)
 								CCERR_RET(EINVAL,pos,"Unable to determine alignof for alignas");
 
-							ds.align = align;
+							ds_align = align;
 						}
 
 						ast_node(expr).release();
@@ -8425,6 +8426,15 @@ common_error:
 
 			ds.type_specifier = builtin_ts;
 		}
+
+		/* first compute the natural alignment */
+		{
+			ddip_list_t dummy;
+			ds.align = calc_alignofmask(ds,dummy);
+		}
+
+		if (ds.align != addrmask_none && ds_align != addrmask_none)
+			ds.align &= ds_align;
 
 #if 0//DEBUG
 		fprintf(stderr,"DEBUG %s:%d:\n",__FUNCTION__,__LINE__);
