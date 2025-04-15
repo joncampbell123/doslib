@@ -760,11 +760,15 @@ typedef struct stalign1b_t {
 	alignas(32) long long	g,h;
 };
 
-static stalign1b_t stalign1ba;
-static alignas(64) stalign1b_t stalign1bb;
-static alignas(256) stalign1b_t stalign1bc;
-
 struct stalign1a_t stalign1aa;
 alignas(64) struct stalign1a_t stalign1ab;
 alignas(256) struct stalign1a_t stalign1ac;
+
+static struct stalign1a_t stalign1aa1;
+static alignas(64) struct stalign1a_t stalign1ab1;
+static alignas(256) struct stalign1a_t stalign1ac1;
+
+static stalign1b_t stalign1ba;
+static alignas(64) stalign1b_t stalign1bb;
+static alignas(256) stalign1b_t stalign1bc;
 

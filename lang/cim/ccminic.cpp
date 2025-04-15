@@ -6298,9 +6298,14 @@ try_again_w_token:
 						symbol_t::FL_FUNCTION_POINTER|
 						symbol_t::FL_DECLARED|
 						symbol_t::FL_ELLIPSIS;
+					unsigned int sc_chk =
+						~0u;
+
+					if (sl.st == symbol_t::STRUCT || sl.st == symbol_t::UNION)
+						sc_chk &= ~SC_STATIC;
 
 					if ((chk_s.flags&fl_chk) == (sl.flags&fl_chk) &&
-						chk_s.spec.storage_class == spec.storage_class &&
+						(chk_s.spec.storage_class&sc_chk) == (spec.storage_class&sc_chk) &&
 						chk_s.spec.type_specifier == spec.type_specifier &&
 						chk_s.spec.type_qualifier == spec.type_qualifier) {
 						if (sl.flags & symbol_t::FL_DEFINED) {
