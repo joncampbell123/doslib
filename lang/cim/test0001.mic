@@ -779,3 +779,10 @@ alignas(128) struct stalign2a_t {
 	alignas(32) long long	g,h;
 } stalign2a;
 
+struct alignas(128) stalign2b_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2b;
+

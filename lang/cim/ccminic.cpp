@@ -8251,20 +8251,43 @@ common_error:
 					ds.type_specifier |= TS_STRUCT;
 					tq_discard();
 
-					/* struct { list }
-					 * struct identifier { list }
-					 * struct identifier */
-
 					{
+						addrmask_t struct_align = addrmask_none;
 						identifier_id_t name = identifier_none;
 						declarator_t declor;
 						symbol_lookup_t sl;
+
+						/* struct { list }
+						 * struct identifier { list }
+						 * struct identifier */
+						do {
+							switch (tq_peek().type) {
+								case token_type_t::r_alignas:
+								case token_type_t::r__Alignas:
+									tq_discard();
+									ds.count++;
+
+									if ((r=declspec_alignas(struct_align,pos)) < 1)
+										return r;
+
+									continue;
+								default:
+									break;
+							}
+
+							break;
+						} while(1);
 
 						if (tq_peek().type == token_type_t::identifier)
 							identifier.assign(/*to*/name,/*from*/tq_get().v.identifier);
 
 						if (!(ds.storage_class & SC_TYPEDEF))
 							identifier.assignmove(/*to*/declor.name,/*from*/name);
+
+						if (ds.align == addrmask_none)
+							ds.align = struct_align;
+						else
+							ds.align &= struct_align;
 
 						sl.pos = pos;
 						sl.st = symbol_t::STRUCT;
@@ -8314,6 +8337,9 @@ common_error:
 
 							ds.type_identifier_symbol = sl.sid;
 						}
+
+						/* remove align */
+						ds.align = addrmask_none;
 
 						if ((ds.storage_class & SC_TYPEDEF) && name != identifier_none) {
 							declaration_specifiers_t s_ds;
