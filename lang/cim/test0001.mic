@@ -786,3 +786,14 @@ struct alignas(128) stalign2b_t {
 	alignas(32) long long	g,h;
 } stalign2b;
 
+static __declspec(align(8)) char msalign1;
+static __declspec( align(1024) ) short msalign2;
+static __declspec( align( ((2*4)<<1) ) ) short msalign3; /* Microsoft C/C++ probably doesn't support expressions there, but we do */
+static _declspec(align(8)) char msalign4;
+static _declspec( align(1024) ) short msalign5;
+static _declspec( align( ((2*4)<<1) ) ) short msalign6; /* Microsoft C/C++ probably doesn't support expressions there, but we do */
+static __declspec(deprecated) int msdeprecated1;
+static __declspec(dllimport) int msdllimport1;
+static __declspec(dllexport) int msdllexport1;
+static __declspec(naked) int msnaked1;
+

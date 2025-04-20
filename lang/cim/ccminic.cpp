@@ -821,6 +821,7 @@ namespace CCMiniC {
 		r___int32,
 		r___int64,
 		op_alignof,				// 280
+		r__declspec,
 
 		__MAX__
 	};
@@ -972,6 +973,7 @@ namespace CCMiniC {
 	DEFX(__int16);
 	DEFX(__int32);
 	DEFX(__int64);
+	DEFX(_declspec);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -1122,6 +1124,7 @@ namespace CCMiniC {
 		X(__fortran),
 		X(__attribute__),
 		X(__declspec),
+		X(_declspec),
 		XAS(inline,       inline),
 		XAS(_inline,      inline),
 		XAS(__inline,     inline),
@@ -1443,7 +1446,8 @@ namespace CCMiniC {
 		"__int16",
 		"__int32",
 		"__int64",
-		"op:alignof"				// 280
+		"op:alignof",				// 280
+		str__declspec
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -5384,6 +5388,17 @@ try_again_w_token:
 
 	//////////////////////////////////////////////////
 
+	/* declspec flags */
+	static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
+	static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
+	static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
+	static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
+
+	struct declspec_t { // parsing results of __declspec()
+		addrmask_t				align = addrmask_none;
+		unsigned int				dcs_flags = 0;
+	};
+
 	struct declaration_specifiers_t {
 		storage_class_t				storage_class = 0;
 		type_specifier_t			type_specifier = 0;
@@ -5391,12 +5406,14 @@ try_again_w_token:
 		symbol_id_t				type_identifier_symbol = symbol_none;
 		data_size_t				size = data_size_none;
 		addrmask_t				align = addrmask_none;
+		unsigned int				dcs_flags = 0;
 		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
 		bool empty(void) const {
 			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 && align == addrmask_none && size == data_size_none;
+				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 &&
+				align == addrmask_none && dcs_flags == 0 && size == data_size_none;
 		}
 
 		declaration_specifiers_t() { }
@@ -5415,6 +5432,7 @@ try_again_w_token:
 			type_identifier_symbol = o.type_identifier_symbol;
 			size = o.size; o.size = data_size_none;
 			align = o.align; o.align = addrmask_none;
+			dcs_flags = o.dcs_flags; o.dcs_flags = 0;
 			enum_list = std::move(o.enum_list);
 			count = o.count; o.count = 0;
 		}
@@ -5426,6 +5444,7 @@ try_again_w_token:
 			type_identifier_symbol = o.type_identifier_symbol;
 			size = o.size;
 			align = o.align;
+			dcs_flags = o.dcs_flags;
 			enum_list = o.enum_list;
 			count = o.count;
 		}
@@ -5846,6 +5865,7 @@ try_again_w_token:
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
+		void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
 		void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
 		void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name=std::string());
 		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
@@ -6343,6 +6363,7 @@ exists:
 		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
+		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
 		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
@@ -7964,6 +7985,79 @@ again:
 		return false;
 	}
 
+	int cc_state_t::ms_declspec_parse(declspec_t &dsc,const position_t &pos) {
+		int r;
+
+		(void)pos;
+
+		// __declspec has already been taken, we should be at the open parens
+		if (tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+		do {
+			if (tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(tq_get());
+				assert(w.type == token_type_t::identifier);
+
+				if (identifier(w.v.identifier) == "align") {
+					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
+					 * but our extension is to allow an expression here */
+					if (tq_get().type != token_type_t::openparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+					ast_node_id_t expr = ast_node_none;
+
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
+
+					ast_node_reduce(expr);
+
+					ast_node_t &an = ast_node(expr);
+					if (an.t.type != token_type_t::integer)
+						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
+
+					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
+
+					dsc.align = addrmask_make(an.t.v.integer.v.u);
+
+					if (tq_get().type != token_type_t::closeparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+					ast_node.release(expr);
+				}
+				else if (identifier(w.v.identifier) == "deprecated") {
+					dsc.dcs_flags |= DCS_FL_DEPRECATED;
+				}
+				else if (identifier(w.v.identifier) == "dllimport") {
+					dsc.dcs_flags |= DCS_FL_DLLIMPORT;
+				}
+				else if (identifier(w.v.identifier) == "dllexport") {
+					dsc.dcs_flags |= DCS_FL_DLLEXPORT;
+				}
+				else if (identifier(w.v.identifier) == "naked") {
+					dsc.dcs_flags |= DCS_FL_NAKED;
+				}
+				else {
+					/* should we ignore unknown ones? Does Microsoft C/C++ ignore unknown ones? */
+					CCERR_RET(EINVAL,tq_peek().pos,"Unknown __declspec");
+				}
+			}
+			else if (tq_peek().type == token_type_t::closeparenthesis) {
+				break;
+			}
+			else {
+				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __declspec");
+			}
+		} while(1);
+
+		// closing parens expected
+		if (tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+		return 1;
+	}
+
 	int cc_state_t::declspec_alignas(addrmask_t &ds_align,const position_t &pos) {
 		int r;
 
@@ -8063,6 +8157,31 @@ again:
 						return r;
 
 					continue;
+
+				case token_type_t::r__declspec:
+				case token_type_t::r___declspec:
+					{
+						declspec_t dcl;
+
+						tq_discard();
+						ds.count++;
+
+						if ((r=ms_declspec_parse(dcl,pos)) < 1)
+							return r;
+
+						if (dcl.align != addrmask_none) {
+							if (ds_align != addrmask_none)
+								CCERR_RET(EINVAL,pos,"align already specified");
+
+							ds_align = dcl.align;
+						}
+
+						if (ds.dcs_flags & dcl.dcs_flags)
+							CCERR_RET(EINVAL,pos,"one or more __declspec items have been already specified");
+
+						ds.dcs_flags |= dcl.dcs_flags;
+						continue;
+					}
 
 				default: break;
 			}
@@ -9111,6 +9230,17 @@ common_error:
 		}
 	}
 
+	void cc_state_t::debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name) {
+		if (flags != 0) {
+			fprintf(stderr,"%s%s%sdeclspec:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+			if (flags & DCS_FL_DEPRECATED) fprintf(stderr," deprecated");
+			if (flags & DCS_FL_DLLIMPORT) fprintf(stderr," dllimport");
+			if (flags & DCS_FL_DLLEXPORT) fprintf(stderr," dllexport");
+			if (flags & DCS_FL_NAKED) fprintf(stderr," naked");
+			fprintf(stderr,"\n");
+		}
+	}
+
 	void cc_state_t::debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
 		if (ds.empty()) return;
 
@@ -9133,6 +9263,8 @@ common_error:
 
 		if (ds.size != data_size_none)
 			fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)ds.size,(unsigned long long)ds.size);
+
+		debug_dump_declaration_specifier_flags(prefix+"  ",ds.dcs_flags);
 
 		if (!ds.enum_list.empty()) {
 			fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
