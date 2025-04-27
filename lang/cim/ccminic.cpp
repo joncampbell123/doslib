@@ -5694,6 +5694,12 @@ try_again_w_token:
 	};
 
 	struct cc_state_t {
+		enum cpp11attr_namespace_t {
+			CPP11ATTR_NS_NONE=0,
+			CPP11ATTR_NS_GNU,
+			CPP11ATTR_NS_UNKNOWN
+		};
+
 		cc_state_t() {
 			assert(scopes.empty());
 			assert(scope_global == scope_id_t(0));
@@ -6365,9 +6371,11 @@ exists:
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
 		int gnu_attribute_parse(declspec_t &dsc,const position_t &pos);
+		int cpp11_attribute_parse(declspec_t &dsc,const position_t &pos);
 		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
+		cpp11attr_namespace_t cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
@@ -7986,12 +7994,137 @@ again:
 		return false;
 	}
 
+	cc_state_t::cpp11attr_namespace_t cc_state_t::cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv) {
+		if (nsv.empty()) {
+			return CPP11ATTR_NS_NONE;
+		}
+		else if (nsv.size() == 1) {
+			if (identifier(nsv[0]) == "gnu")
+				return CPP11ATTR_NS_GNU;
+		}
+
+		return CPP11ATTR_NS_UNKNOWN;
+	}
+
+	int cc_state_t::cpp11_attribute_parse(declspec_t &dsc,const position_t &pos) {
+		cc_state_t::cpp11attr_namespace_t ns = CPP11ATTR_NS_NONE;
+		bool nsv_using = false;
+		int r;
+
+		(void)pos;
+
+		// [[ has already been taken, we should be at the open parens
+
+		do {
+			if (tq_peek().type == token_type_t::coloncolon) {
+				if (nsv_using)
+					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
+
+				tq_discard();
+				if (tq_peek().type != token_type_t::identifier)
+					CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
+			}
+
+			if (nsv_using) {
+				if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon)
+					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
+			}
+			else {
+				std::vector<identifier_id_t> nsv;
+				while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
+					identifier_id_t idv = identifier_none;
+					identifier.assign(idv,tq_peek(0).v.identifier);
+					nsv.push_back(idv);
+					tq_discard(2);
+				}
+
+				if (!nsv_using)
+					ns = cpp11_attribute_identify_namespace(nsv);
+
+				for (auto &i : nsv)
+					identifier.release(i);
+			}
+
+			if (tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(tq_get());
+				assert(w.type == token_type_t::identifier);
+
+				if (identifier(w.v.identifier) == "aligned" && ns == CPP11ATTR_NS_GNU) {
+					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
+					 * but our extension is to allow an expression here */
+					if (tq_get().type != token_type_t::openparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+					ast_node_id_t expr = ast_node_none;
+
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
+
+					ast_node_reduce(expr);
+
+					ast_node_t &an = ast_node(expr);
+					if (an.t.type != token_type_t::integer)
+						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
+
+					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
+
+					dsc.align = addrmask_make(an.t.v.integer.v.u);
+
+					if (tq_get().type != token_type_t::closeparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+					ast_node.release(expr);
+				}
+				else if (identifier(w.v.identifier) == "deprecated" && (ns == CPP11ATTR_NS_NONE || ns == CPP11ATTR_NS_GNU)) {
+					dsc.dcs_flags |= DCS_FL_DEPRECATED;
+				}
+				else if (identifier(w.v.identifier) == "dllimport" && ns == CPP11ATTR_NS_GNU) {
+					dsc.dcs_flags |= DCS_FL_DLLIMPORT;
+				}
+				else if (identifier(w.v.identifier) == "dllexport" && ns == CPP11ATTR_NS_GNU) {
+					dsc.dcs_flags |= DCS_FL_DLLEXPORT;
+				}
+				else if (identifier(w.v.identifier) == "naked" && ns == CPP11ATTR_NS_GNU) {
+					dsc.dcs_flags |= DCS_FL_NAKED;
+				}
+				else {
+					CCERR_RET(EINVAL,tq_peek().pos,"Unknown [[attribute]] %s",identifier(w.v.identifier).to_str().c_str());
+				}
+
+				if (tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
+					/* OK */
+				}
+				else if (tq_peek().type == token_type_t::comma) {
+					tq_discard();
+					/* good */
+				}
+				else {
+					CCERR_RET(EINVAL,tq_peek().pos,"comma or closing paran expected");
+				}
+			}
+			else if (tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
+				break;
+			}
+			else {
+				// FIXME: Unknown attributes are supposed to be ignored
+				CCERR_RET(EINVAL,tq_peek().pos,"error parsing [[attribute]]");
+			}
+		} while(1);
+
+		// closing parens expected
+		if (tq_get().type != token_type_t::closesquarebracketclosesquarebracket)
+			CCERR_RET(EINVAL,tq_peek().pos,"Closing ]] expected");
+
+		return 1;
+	}
+
 	int cc_state_t::gnu_attribute_parse(declspec_t &dsc,const position_t &pos) {
 		int r;
 
 		(void)pos;
 
-		// __declspec has already been taken, we should be at the open parens
+		// __attribute__ has already been taken, we should be at the open parens
 		if (tq_get().type != token_type_t::openparenthesis)
 			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
 		if (tq_get().type != token_type_t::openparenthesis)
@@ -8060,7 +8193,7 @@ again:
 				break;
 			}
 			else {
-				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __declspec");
+				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __attribute__");
 			}
 		} while(1);
 
@@ -8279,6 +8412,30 @@ again:
 						ds.count++;
 
 						if ((r=gnu_attribute_parse(dcl,pos)) < 1)
+							return r;
+
+						if (dcl.align != addrmask_none) {
+							if (ds_align != addrmask_none)
+								CCERR_RET(EINVAL,pos,"align already specified");
+
+							ds_align = dcl.align;
+						}
+
+						if (ds.dcs_flags & dcl.dcs_flags)
+							CCERR_RET(EINVAL,pos,"one or more __declspec items have been already specified");
+
+						ds.dcs_flags |= dcl.dcs_flags;
+						continue;
+					}
+
+				case token_type_t::opensquarebracketopensquarebracket:
+					{
+						declspec_t dcl;
+
+						tq_discard();
+						ds.count++;
+
+						if ((r=cpp11_attribute_parse(dcl,pos)) < 1)
 							return r;
 
 						if (dcl.align != addrmask_none) {
@@ -8545,6 +8702,25 @@ common_error:
 									}
 
 									continue;
+
+								case token_type_t::opensquarebracketopensquarebracket:
+									{
+										declspec_t dcl;
+
+										tq_discard();
+										ds.count++;
+
+										if ((r=cpp11_attribute_parse(dcl,pos)) < 1)
+											return r;
+
+										if (dcl.align != addrmask_none) {
+											if (struct_align != addrmask_none)
+												CCERR_RET(EINVAL,pos,"align already specified");
+
+											struct_align = dcl.align;
+										}
+										continue;
+									}
 
 								default:
 									break;

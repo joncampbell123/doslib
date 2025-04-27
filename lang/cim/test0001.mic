@@ -829,3 +829,22 @@ struct __attribute__(( aligned(128) )) stgnualign5_t {
 	alignas(32) long long	g,h;
 } stalign5b;
 
+static [[ ::gnu::aligned(32) ]] int cpp11align1;
+static [[ deprecated ]] int cpp11align2;
+static [[ gnu::naked ]] int cpp11align3;
+static [[ gnu::naked, gnu::deprecated, gnu::aligned(64) ]] int cpp11align4;
+
+ [[ gnu::aligned(128) ]] struct stcpp11align4_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign4acpp11;
+
+struct [[ gnu::aligned(128) ]] stcpp11align5_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign5bcpp11;
+
