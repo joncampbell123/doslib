@@ -8044,6 +8044,17 @@ again:
 				else {
 					CCERR_RET(EINVAL,tq_peek().pos,"Unknown __attribute__");
 				}
+
+				if (tq_peek().type == token_type_t::closeparenthesis) {
+					/* OK */
+				}
+				else if (tq_peek().type == token_type_t::comma) {
+					tq_discard();
+					/* good */
+				}
+				else {
+					CCERR_RET(EINVAL,tq_peek().pos,"comma or closing paran expected");
+				}
 			}
 			else if (tq_peek().type == token_type_t::closeparenthesis) {
 				break;
@@ -8491,6 +8502,50 @@ common_error:
 										return r;
 
 									continue;
+
+								case token_type_t::r__declspec:
+								case token_type_t::r___declspec:
+									{
+										declspec_t dcl;
+
+										tq_discard();
+										ds.count++;
+
+										if ((r=ms_declspec_parse(dcl,pos)) < 1)
+											return r;
+
+										if (dcl.align != addrmask_none) {
+											if (struct_align != addrmask_none)
+												CCERR_RET(EINVAL,pos,"align already specified");
+
+											struct_align = dcl.align;
+										}
+										continue;
+									}
+
+									continue;
+
+								case token_type_t::r___attribute__:
+									{
+										declspec_t dcl;
+
+										tq_discard();
+										ds.count++;
+
+										if ((r=gnu_attribute_parse(dcl,pos)) < 1)
+											return r;
+
+										if (dcl.align != addrmask_none) {
+											if (struct_align != addrmask_none)
+												CCERR_RET(EINVAL,pos,"align already specified");
+
+											struct_align = dcl.align;
+										}
+										continue;
+									}
+
+									continue;
+
 								default:
 									break;
 							}

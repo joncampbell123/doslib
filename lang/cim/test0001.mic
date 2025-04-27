@@ -799,4 +799,33 @@ static __declspec(naked) int msnaked1;
 static __attribute__(( aligned(32) )) int gnualign1;
 static __attribute__(( deprecated )) int gnualign2;
 static __attribute__(( naked )) int gnualign3;
+static __attribute__(( naked, deprecated, aligned(64) )) int gnualign4;
+
+__declspec(align(128)) struct stalign2am_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2am;
+
+struct __declspec(align(128)) stalign2bm_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2bm;
+
+ __attribute__(( aligned(128) )) struct stgnualign4_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign4a;
+
+struct __attribute__(( aligned(128) )) stgnualign5_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign5b;
 
