@@ -6368,6 +6368,7 @@ exists:
 		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
 		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
+		int parse_declspec_align(addrmask_t &align);
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
 		int gnu_attribute_parse(declspec_t &dsc,const position_t &pos);
@@ -8030,6 +8031,37 @@ again:
 		return 1;
 	}
 
+	int cc_state_t::parse_declspec_align(addrmask_t &align) {
+		int r;
+
+		/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
+		 * but our extension is to allow an expression here */
+		if (tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+		ast_node_id_t expr = ast_node_none;
+
+		if ((r=conditional_expression(expr)) < 1)
+			return r;
+
+		ast_node_reduce(expr);
+
+		ast_node_t &an = ast_node(expr);
+		if (an.t.type != token_type_t::integer)
+			CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
+
+		if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+			CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
+
+		align = addrmask_make(an.t.v.integer.v.u);
+
+		if (tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+		ast_node.release(expr);
+		return 1;
+	}
+
 	int cc_state_t::cpp11_attribute_parse(declspec_t &dsc,const position_t &pos) {
 		cc_state_t::cpp11attr_namespace_t ns = CPP11ATTR_NS_NONE;
 		std::vector<identifier_id_t> nsv;
@@ -8087,29 +8119,8 @@ again:
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned" && ns == CPP11ATTR_NS_GNU) {
-					if (tq_get().type != token_type_t::openparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
-
-					ast_node_id_t expr = ast_node_none;
-
-					if ((r=conditional_expression(expr)) < 1)
+					if ((r=parse_declspec_align(/*&*/dsc.align)) < 1)
 						return r;
-
-					ast_node_reduce(expr);
-
-					ast_node_t &an = ast_node(expr);
-					if (an.t.type != token_type_t::integer)
-						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
-
-					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
-						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
-
-					dsc.align = addrmask_make(an.t.v.integer.v.u);
-
-					if (tq_get().type != token_type_t::closeparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
-
-					ast_node.release(expr);
 				}
 				else if (identifier(w.v.identifier) == "deprecated" && (ns == CPP11ATTR_NS_NONE || ns == CPP11ATTR_NS_GNU)) {
 					dsc.dcs_flags |= DCS_FL_DEPRECATED;
@@ -8171,29 +8182,8 @@ again:
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned") {
-					if (tq_get().type != token_type_t::openparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
-
-					ast_node_id_t expr = ast_node_none;
-
-					if ((r=conditional_expression(expr)) < 1)
+					if ((r=parse_declspec_align(/*&*/dsc.align)) < 1)
 						return r;
-
-					ast_node_reduce(expr);
-
-					ast_node_t &an = ast_node(expr);
-					if (an.t.type != token_type_t::integer)
-						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
-
-					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
-						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
-
-					dsc.align = addrmask_make(an.t.v.integer.v.u);
-
-					if (tq_get().type != token_type_t::closeparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
-
-					ast_node.release(expr);
 				}
 				else if (identifier(w.v.identifier) == "deprecated") {
 					dsc.dcs_flags |= DCS_FL_DEPRECATED;
@@ -8256,31 +8246,8 @@ again:
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "align") {
-					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
-					 * but our extension is to allow an expression here */
-					if (tq_get().type != token_type_t::openparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
-
-					ast_node_id_t expr = ast_node_none;
-
-					if ((r=conditional_expression(expr)) < 1)
+					if ((r=parse_declspec_align(/*&*/dsc.align)) < 1)
 						return r;
-
-					ast_node_reduce(expr);
-
-					ast_node_t &an = ast_node(expr);
-					if (an.t.type != token_type_t::integer)
-						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
-
-					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
-						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
-
-					dsc.align = addrmask_make(an.t.v.integer.v.u);
-
-					if (tq_get().type != token_type_t::closeparenthesis)
-						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
-
-					ast_node.release(expr);
 				}
 				else if (identifier(w.v.identifier) == "deprecated") {
 					dsc.dcs_flags |= DCS_FL_DEPRECATED;
