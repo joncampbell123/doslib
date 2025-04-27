@@ -8087,8 +8087,6 @@ again:
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned" && ns == CPP11ATTR_NS_GNU) {
-					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
-					 * but our extension is to allow an expression here */
 					if (tq_get().type != token_type_t::openparenthesis)
 						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
 
@@ -8173,8 +8171,6 @@ again:
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned") {
-					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
-					 * but our extension is to allow an expression here */
 					if (tq_get().type != token_type_t::openparenthesis)
 						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
 
@@ -8230,6 +8226,8 @@ again:
 				break;
 			}
 			else {
+				// FIXME: Unknown attributes are supposed to be ignored
+				//        GCC issues a warning for unknown attributes
 				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __attribute__");
 			}
 		} while(1);
