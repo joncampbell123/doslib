@@ -8015,6 +8015,43 @@ again:
 
 		// [[ has already been taken, we should be at the open parens
 
+		if (tq_peek().type == token_type_t::r_using) {
+			tq_discard();
+
+			if (tq_peek().type == token_type_t::coloncolon) {
+				if (nsv_using)
+					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
+
+				tq_discard();
+				if (tq_peek().type != token_type_t::identifier)
+					CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
+			}
+
+			std::vector<identifier_id_t> nsv;
+			while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
+				identifier_id_t idv = identifier_none;
+				identifier.assign(idv,tq_peek(0).v.identifier);
+				nsv.push_back(idv);
+				tq_discard(2);
+			}
+
+			if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+				identifier_id_t idv = identifier_none;
+				identifier.assign(idv,tq_peek(0).v.identifier);
+				nsv.push_back(idv);
+				tq_discard(2);
+			}
+			else {
+				CCERR_RET(EINVAL,tq_peek().pos,"Expected final identifier: at the end of using");
+			}
+
+			ns = cpp11_attribute_identify_namespace(nsv);
+			nsv_using = true;
+
+			for (auto &i : nsv)
+				identifier.release(i);
+		}
+
 		do {
 			if (tq_peek().type == token_type_t::coloncolon) {
 				if (nsv_using)

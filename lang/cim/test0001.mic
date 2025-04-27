@@ -848,3 +848,9 @@ struct [[ gnu::aligned(128) ]] stcpp11align5_t {
 	alignas(32) long long	g,h;
 } stalign5bcpp11;
 
+
+static [[ using gnu: aligned(32) ]] int cpp11align1g;
+static [[ using gnu: deprecated ]] int cpp11align2g;
+static [[ using gnu: naked ]] int cpp11align3g;
+static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
+
