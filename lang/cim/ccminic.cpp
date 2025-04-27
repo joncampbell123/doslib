@@ -5697,6 +5697,8 @@ try_again_w_token:
 		enum cpp11attr_namespace_t {
 			CPP11ATTR_NS_NONE=0,
 			CPP11ATTR_NS_GNU,
+			CPP11ATTR_NS_GSL,
+			CPP11ATTR_NS_MSVC,
 			CPP11ATTR_NS_UNKNOWN
 		};
 
@@ -8003,6 +8005,10 @@ again:
 		else if (nsv.size() == 1) {
 			if (identifier(nsv[0]) == "gnu")
 				return CPP11ATTR_NS_GNU;
+			if (identifier(nsv[0]) == "gsl")
+				return CPP11ATTR_NS_GSL;
+			if (identifier(nsv[0]) == "msvc")
+				return CPP11ATTR_NS_MSVC;
 		}
 
 		return CPP11ATTR_NS_UNKNOWN;
