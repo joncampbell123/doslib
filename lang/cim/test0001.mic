@@ -796,4 +796,7 @@ static __declspec(deprecated) int msdeprecated1;
 static __declspec(dllimport) int msdllimport1;
 static __declspec(dllexport) int msdllexport1;
 static __declspec(naked) int msnaked1;
+static __attribute__(( aligned(32) )) int gnualign1;
+static __attribute__(( deprecated )) int gnualign2;
+static __attribute__(( naked )) int gnualign3;
 

@@ -6364,6 +6364,7 @@ exists:
 
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
+		int gnu_attribute_parse(declspec_t &dsc,const position_t &pos);
 		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
@@ -7985,6 +7986,82 @@ again:
 		return false;
 	}
 
+	int cc_state_t::gnu_attribute_parse(declspec_t &dsc,const position_t &pos) {
+		int r;
+
+		(void)pos;
+
+		// __declspec has already been taken, we should be at the open parens
+		if (tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+		if (tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+		do {
+			if (tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(tq_get());
+				assert(w.type == token_type_t::identifier);
+
+				if (identifier(w.v.identifier) == "aligned") {
+					/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
+					 * but our extension is to allow an expression here */
+					if (tq_get().type != token_type_t::openparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+
+					ast_node_id_t expr = ast_node_none;
+
+					if ((r=conditional_expression(expr)) < 1)
+						return r;
+
+					ast_node_reduce(expr);
+
+					ast_node_t &an = ast_node(expr);
+					if (an.t.type != token_type_t::integer)
+						CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
+
+					if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
+						CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
+
+					dsc.align = addrmask_make(an.t.v.integer.v.u);
+
+					if (tq_get().type != token_type_t::closeparenthesis)
+						CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+					ast_node.release(expr);
+				}
+				else if (identifier(w.v.identifier) == "deprecated") {
+					dsc.dcs_flags |= DCS_FL_DEPRECATED;
+				}
+				else if (identifier(w.v.identifier) == "dllimport") {
+					dsc.dcs_flags |= DCS_FL_DLLIMPORT;
+				}
+				else if (identifier(w.v.identifier) == "dllexport") {
+					dsc.dcs_flags |= DCS_FL_DLLEXPORT;
+				}
+				else if (identifier(w.v.identifier) == "naked") {
+					dsc.dcs_flags |= DCS_FL_NAKED;
+				}
+				else {
+					CCERR_RET(EINVAL,tq_peek().pos,"Unknown __attribute__");
+				}
+			}
+			else if (tq_peek().type == token_type_t::closeparenthesis) {
+				break;
+			}
+			else {
+				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __declspec");
+			}
+		} while(1);
+
+		// closing parens expected
+		if (tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+		if (tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+
+		return 1;
+	}
+
 	int cc_state_t::ms_declspec_parse(declspec_t &dsc,const position_t &pos) {
 		int r;
 
@@ -8167,6 +8244,30 @@ again:
 						ds.count++;
 
 						if ((r=ms_declspec_parse(dcl,pos)) < 1)
+							return r;
+
+						if (dcl.align != addrmask_none) {
+							if (ds_align != addrmask_none)
+								CCERR_RET(EINVAL,pos,"align already specified");
+
+							ds_align = dcl.align;
+						}
+
+						if (ds.dcs_flags & dcl.dcs_flags)
+							CCERR_RET(EINVAL,pos,"one or more __declspec items have been already specified");
+
+						ds.dcs_flags |= dcl.dcs_flags;
+						continue;
+					}
+
+				case token_type_t::r___attribute__:
+					{
+						declspec_t dcl;
+
+						tq_discard();
+						ds.count++;
+
+						if ((r=gnu_attribute_parse(dcl,pos)) < 1)
 							return r;
 
 						if (dcl.align != addrmask_none) {
