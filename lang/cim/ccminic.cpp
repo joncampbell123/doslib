@@ -6375,6 +6375,7 @@ exists:
 		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
 		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
+		int cpp11_attribute_namespace_parse(bool &nsv_using,std::vector<identifier_id_t> &nsv);
 		cpp11attr_namespace_t cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv);
 		data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 		addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
@@ -8006,8 +8007,32 @@ again:
 		return CPP11ATTR_NS_UNKNOWN;
 	}
 
+	int cc_state_t::cpp11_attribute_namespace_parse(bool &nsv_using,std::vector<identifier_id_t> &nsv) {
+		if (tq_peek().type == token_type_t::coloncolon) {
+			if (nsv_using)
+				CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
+
+			tq_discard();
+			if (tq_peek().type != token_type_t::identifier)
+				CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
+		}
+
+		while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
+			if (nsv_using)
+				CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
+
+			identifier_id_t idv = identifier_none;
+			identifier.assign(idv,tq_peek(0).v.identifier);
+			nsv.push_back(idv);
+			tq_discard(2);
+		}
+
+		return 1;
+	}
+
 	int cc_state_t::cpp11_attribute_parse(declspec_t &dsc,const position_t &pos) {
 		cc_state_t::cpp11attr_namespace_t ns = CPP11ATTR_NS_NONE;
+		std::vector<identifier_id_t> nsv;
 		bool nsv_using = false;
 		int r;
 
@@ -8018,22 +8043,9 @@ again:
 		if (tq_peek().type == token_type_t::r_using) {
 			tq_discard();
 
-			if (tq_peek().type == token_type_t::coloncolon) {
-				if (nsv_using)
-					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
-
-				tq_discard();
-				if (tq_peek().type != token_type_t::identifier)
-					CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
-			}
-
 			std::vector<identifier_id_t> nsv;
-			while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
-				identifier_id_t idv = identifier_none;
-				identifier.assign(idv,tq_peek(0).v.identifier);
-				nsv.push_back(idv);
-				tq_discard(2);
-			}
+			if ((r=cpp11_attribute_namespace_parse(nsv_using,nsv)) < 1)
+				return r;
 
 			if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
 				identifier_id_t idv = identifier_none;
@@ -8053,31 +8065,19 @@ again:
 		}
 
 		do {
-			if (tq_peek().type == token_type_t::coloncolon) {
-				if (nsv_using)
-					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
-
-				tq_discard();
-				if (tq_peek().type != token_type_t::identifier)
-					CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
-			}
+			nsv.clear();
 
 			if (nsv_using) {
-				if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon)
-					CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace: in [[attribute]]");
+				if ((r=cpp11_attribute_namespace_parse(nsv_using,nsv)) < 1)
+					return r;
+				for (auto &i : nsv)
+					identifier.release(i);
 			}
 			else {
-				std::vector<identifier_id_t> nsv;
-				while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
-					identifier_id_t idv = identifier_none;
-					identifier.assign(idv,tq_peek(0).v.identifier);
-					nsv.push_back(idv);
-					tq_discard(2);
-				}
+				if ((r=cpp11_attribute_namespace_parse(nsv_using,nsv)) < 1)
+					return r;
 
-				if (!nsv_using)
-					ns = cpp11_attribute_identify_namespace(nsv);
-
+				ns = cpp11_attribute_identify_namespace(nsv);
 				for (auto &i : nsv)
 					identifier.release(i);
 			}
