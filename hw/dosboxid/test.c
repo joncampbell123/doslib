@@ -62,6 +62,22 @@ int main(int argc,char **argv,char **envp) {
 		printf("DOSBox version: %04u.%02u.%02u\n",(unsigned int)major,(unsigned int)minor,(unsigned int)sub);
 	}
 
+	{
+		uint32_t t;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_DOSBOX_PLATFORM_TYPE);
+		t = dosbox_id_read_data();
+		printf("Platform type code: 0x%08lx\n",(unsigned long)t);
+	}
+
+	{
+		uint32_t t;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_DOSBOX_MACHINE_TYPE);
+		t = dosbox_id_read_data();
+		printf("Machine type code: 0x%08lx\n",(unsigned long)t);
+	}
+
 	dosbox_id_debug_message("This is a debug message\n");
 	dosbox_id_debug_message("This is a multi-line debug message\n(second line here)\n");
 
