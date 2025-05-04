@@ -21,18 +21,18 @@
 #endif
 
 int main(int argc,char **argv,char **envp) {
-    uint32_t newval = 0;
+	uint32_t newval = 0;
 
-    if (argc > 1)
-        newval = (uint32_t)strtoul(argv[1],NULL,0);
+	if (argc > 1)
+		newval = (uint32_t)strtoul(argv[1],NULL,0);
 
 	probe_dos();
 	detect_windows();
 
-    if (windows_mode == WINDOWS_NT) {
-        printf("This program is not compatible with Windows NT\n");
-        return 1;
-    }
+	if (windows_mode == WINDOWS_NT) {
+		printf("This program is not compatible with Windows NT\n");
+		return 1;
+	}
 
 	if (!probe_dosbox_id()) {
 		printf("DOSBox integration device not found\n");
@@ -40,13 +40,13 @@ int main(int argc,char **argv,char **envp) {
 	}
 	printf("DOSBox integration device found at I/O port %xh\n",dosbox_id_baseio);
 
-    if (newval != 0ul)
-        printf("Setting watchdog timer to %lums\n",(unsigned long)newval);
-    else
-        printf("Clearing watchdog timer\n");
+	if (newval != 0ul)
+		printf("Setting watchdog timer to %lums\n",(unsigned long)newval);
+	else
+		printf("Clearing watchdog timer\n");
 
-    dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_WATCHDOG);
-    dosbox_id_write_data(newval);
+	dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_WATCHDOG);
+	dosbox_id_write_data(newval);
 
 	return 0;
 }
