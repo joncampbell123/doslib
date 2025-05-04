@@ -1,4 +1,6 @@
 
+/* this header is copied to/from the doslib.h copy */
+
 #ifndef __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 #define __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 
@@ -6,17 +8,19 @@
 extern "C" {
 #endif
 
-/* In order to be usable as part of a VxD, code must be combined with data.
- * In Watcom C we can do this by declaring all global variables __based on _CODE. */
-#ifdef TARGET_VXD
-# define DOSBOXID_VAR __based( __segname("_CODE") )
-#else
-# define DOSBOXID_VAR
-#endif
+#ifndef DOSBOX_INCLUDE
+  /* In order to be usable as part of a VxD, code must be combined with data.
+   * In Watcom C we can do this by declaring all global variables __based on _CODE. */
+# ifdef TARGET_VXD
+#  define DOSBOXID_VAR __based( __segname("_CODE") )
+# else
+#  define DOSBOXID_VAR
+# endif
 
 extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 
-#define DOSBOX_IDPORT(x)                                (dosbox_id_baseio+(x))
+# define DOSBOX_IDPORT(x)                                (dosbox_id_baseio+(x))
+#endif
 
 #define DOSBOX_ID_INDEX                                 (0U)
 #define DOSBOX_ID_DATA                                  (1U)
@@ -148,6 +152,7 @@ extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 /* return value of DOSBOX_ID_REG_IDENTIFY */
 #define DOSBOX_ID_IDENTIFICATION                        (0xD05B0740UL)
 
+#ifndef DOSBOX_INCLUDE
 static inline void dosbox_id_reset_latch() {
 	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_RESET_LATCH);
 }
@@ -195,6 +200,7 @@ int probe_dosbox_id_version_string(char *buf,size_t len);
 void dosbox_id_write_data_nrl(const uint32_t val);
 void dosbox_id_write_data(const uint32_t val);
 void dosbox_id_debug_message(const char *str);
+#endif
 
 #ifdef __cplusplus
 }
