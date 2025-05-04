@@ -78,6 +78,19 @@ int main(int argc,char **argv,char **envp) {
 		printf("Machine type code: 0x%08lx\n",(unsigned long)t);
 	}
 
+	{
+		uint32_t t;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_RELEASE_MOUSE_CAPTURE);
+		t = dosbox_id_read_data();
+		printf("Mouse capture:");
+		if (t & DOSBOX_ID_REG_RELEASE_MOUSE_CAPTURE_FL_CAPTURED)
+			printf(" [Captured]");
+		else
+			printf(" [Not captured]");
+		printf("\n");
+	}
+
 	dosbox_id_debug_message("This is a debug message\n");
 	dosbox_id_debug_message("This is a multi-line debug message\n(second line here)\n");
 
