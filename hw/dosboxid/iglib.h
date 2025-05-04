@@ -55,8 +55,13 @@ extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 
 /* DOSBOX_ID_INDEX */
 #define DOSBOX_ID_REG_IDENTIFY                          (0x00000000UL)
+#define DOSBOX_ID_REG_TEST                              (0x00000001UL)
 #define DOSBOX_ID_REG_VERSION_STRING                    (0x00000002UL)
+#define DOSBOX_ID_REG_VERSION_NUMBER                    (0x00000003UL)
 #define DOSBOX_ID_REG_READ_EMTIME                       (0x00000004UL)
+#define DOSBOX_ID_REG_DOSBOX_VERSION_MAJOR              (0x00000005UL)
+#define DOSBOX_ID_REG_DOSBOX_VERSION_MINOR              (0x00000006UL)
+#define DOSBOX_ID_REG_DOSBOX_VERSION_SUB                (0x00000007UL)
 
 #define DOSBOX_ID_REG_DEBUG_OUT                         (0x0000DEB0UL)
 #define DOSBOX_ID_REG_DEBUG_CLEAR                       (0x0000DEB1UL)

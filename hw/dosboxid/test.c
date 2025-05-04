@@ -47,6 +47,21 @@ int main(int argc,char **argv,char **envp) {
 	else
 		printf("DOSBox version string N/A\n");
 
+	{
+		uint32_t major,minor,sub;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_DOSBOX_VERSION_MAJOR);
+		major = dosbox_id_read_data();
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_DOSBOX_VERSION_MINOR);
+		minor = dosbox_id_read_data();
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_DOSBOX_VERSION_SUB);
+		sub = dosbox_id_read_data();
+
+		printf("DOSBox version: %04u.%02u.%02u\n",(unsigned int)major,(unsigned int)minor,(unsigned int)sub);
+	}
+
 	dosbox_id_debug_message("This is a debug message\n");
 	dosbox_id_debug_message("This is a multi-line debug message\n(second line here)\n");
 
