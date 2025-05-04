@@ -50,7 +50,7 @@ int main(int argc,char **argv,char **envp) {
 	else
 		printf("Clearing watchdog timer\n");
 
-	dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_WATCHDOG);
+	dosbox_id_write_regsel(DOSBOX_ID_REG_SET_WATCHDOG);
 	dosbox_id_write_data(newval);
 
 	return 0;
