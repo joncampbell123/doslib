@@ -28,9 +28,6 @@ ISADMA_EXE =  $(SUBDIR)$(HPS)isadma.$(EXEEXT)
 IRQ_EXE =	  $(SUBDIR)$(HPS)irq.$(EXEEXT)
 NMI_EXE =	  $(SUBDIR)$(HPS)nmi.$(EXEEXT)
 IRQINFO_EXE = $(SUBDIR)$(HPS)irqinfo.$(EXEEXT)
-MIXC_EXE    = $(SUBDIR)$(HPS)mixc.$(EXEEXT)
-VGAC_EXE    = $(SUBDIR)$(HPS)vgac.$(EXEEXT)
-VGAC2_EXE   = $(SUBDIR)$(HPS)vgac2.$(EXEEXT)
 !endif
 
 OBJS = &
@@ -129,7 +126,7 @@ all: $(SUBDIR) $(OMFSEGDG) lib exe
 
 lib: $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DRV) $(HW_DOSBOXID_LIB_DRVN) .symbolic
 
-exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) $(ISADMA_EXE) $(IRQ_EXE) $(NMI_EXE) $(IRQINFO_EXE) $(MIXC_EXE) $(VGAC_EXE) $(VGAC2_EXE) $(EMTIME_EXE) $(WATCHDOG_EXE) .symbolic
+exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) $(ISADMA_EXE) $(IRQ_EXE) $(NMI_EXE) $(IRQINFO_EXE) $(EMTIME_EXE) $(WATCHDOG_EXE) .symbolic
 
 LINK_EXE_DEPENDENCIES = $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(HW_8237_LIB) $(HW_8237_LIB_DEPENDENCIES)
 LINK_EXE_LIBS = $(HW_DOSBOXID_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8237_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES)
@@ -209,24 +206,6 @@ $(IRQ_EXE): $(SUBDIR_CON) $(SUBDIR_CON)$(HPS)irq.obj $(LINK_EXE_DEPENDENCIES)
 !ifdef NMI_EXE
 $(NMI_EXE): $(SUBDIR_CON) $(SUBDIR_CON)$(HPS)nmi.obj $(LINK_EXE_DEPENDENCIES)
 	@*wlink option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR_CON)$(HPS)nmi.obj $(LINK_EXE_LIBS) name $(NMI_EXE) option map=$(NMI_EXE).map
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
-!endif
-
-!ifdef MIXC_EXE
-$(MIXC_EXE): $(SUBDIR_CON) $(SUBDIR_CON)$(HPS)mixc.obj $(LINK_EXE_DEPENDENCIES)
-	@*wlink option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR_CON)$(HPS)mixc.obj $(LINK_EXE_LIBS) name $(MIXC_EXE) option map=$(MIXC_EXE).map
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
-!endif
-
-!ifdef VGAC_EXE
-$(VGAC_EXE): $(SUBDIR_CON) $(SUBDIR_CON)$(HPS)vgac.obj $(LINK_EXE_DEPENDENCIES)
-	@*wlink option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR_CON)$(HPS)vgac.obj $(LINK_EXE_LIBS) name $(VGAC_EXE) option map=$(VGAC_EXE).map
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
-!endif
-
-!ifdef VGAC2_EXE
-$(VGAC2_EXE): $(SUBDIR_CON) $(SUBDIR_CON)$(HPS)vgac2.obj $(LINK_EXE_DEPENDENCIES)
-	@*wlink option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR_CON)$(HPS)vgac2.obj $(LINK_EXE_LIBS) name $(VGAC2_EXE) option map=$(VGAC2_EXE).map
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
