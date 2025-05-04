@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -31,6 +32,10 @@ int main(int argc,char **argv,char **envp) {
 	unsigned char xlat=0;
 	uint32_t kbstat;
 	int c;
+
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
 	probe_dos();
 	detect_windows();

@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -91,6 +92,10 @@ void write_frame(void) {
 int main(int argc,char **argv,char **envp) {
     int x,y,w,h; // allow signed to test whether DOSBox-X validates coordinates or not
     uint32_t tmp;
+
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
     if (argc < 5) {
         printf("VGAC x y w h\n");
@@ -193,7 +198,7 @@ int main(int argc,char **argv,char **envp) {
         uint32_t tmp;
 
         dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_VGA_CAPTURE_STATE);
-        tmp = dosbox_id_read_data(0UL) & (~DOSBOX_VGA_CAPTURE_ENABLE);
+        tmp = dosbox_id_read_data() & (~DOSBOX_VGA_CAPTURE_ENABLE);
 
         dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_VGA_CAPTURE_STATE);
         dosbox_id_write_data(tmp); // write it back (minus enable) to clear error bits

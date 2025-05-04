@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -22,6 +23,10 @@
 
 int main(int argc,char **argv,char **envp) {
 	uint32_t newval = 0;
+
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
 	if (argc > 1)
 		newval = (uint32_t)strtoul(argv[1],NULL,0);

@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -93,6 +94,10 @@ int main(int argc,char **argv,char **envp) {
     unsigned int parts = 2;
     unsigned int part;
     uint32_t tmp;
+
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
     if (argc < 6) {
         printf("VGAC x y w h parts\n");
@@ -197,7 +202,7 @@ int main(int argc,char **argv,char **envp) {
         uint32_t tmp;
 
         dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_VGA_CAPTURE_STATE);
-        tmp = dosbox_id_read_data(0UL) & (~DOSBOX_VGA_CAPTURE_ENABLE);
+        tmp = dosbox_id_read_data() & (~DOSBOX_VGA_CAPTURE_ENABLE);
 
         dosbox_id_write_regsel(DOSBOX_ID_CMD_SET_VGA_CAPTURE_STATE);
         dosbox_id_write_data(tmp); // write it back (minus enable) to clear error bits

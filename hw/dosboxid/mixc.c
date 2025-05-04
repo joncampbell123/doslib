@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -27,6 +28,10 @@ uint32_t sample_rate = 0;
 uint16_t channel_count = 0;
 
 int main(int argc,char **argv,char **envp) {
+	(void)argc;
+	(void)argv;
+	(void)envp;
+
 	probe_dos();
     cpu_probe();
 	detect_windows();

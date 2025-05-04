@@ -3,6 +3,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <malloc.h>
 #include <ctype.h>
@@ -27,6 +28,10 @@ int main(int argc,char **argv,char **envp) {
     unsigned short tmpr[8];
     unsigned int ch;
     unsigned int i;
+
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
     if (argc < 2) {
         printf("ISADMA <channel>\n");
