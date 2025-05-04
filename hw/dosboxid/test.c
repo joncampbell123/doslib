@@ -31,10 +31,10 @@ int main(int argc,char **argv,char **envp) {
 	probe_dos();
 	detect_windows();
 
-    if (windows_mode == WINDOWS_NT) {
-        printf("This program is not compatible with Windows NT\n");
-        return 1;
-    }
+	if (windows_mode == WINDOWS_NT) {
+		printf("This program is not compatible with Windows NT\n");
+		return 1;
+	}
 
 	if (!probe_dosbox_id()) {
 		printf("DOSBox integration device not found\n");
@@ -50,28 +50,28 @@ int main(int argc,char **argv,char **envp) {
 	dosbox_id_debug_message("This is a debug message\n");
 	dosbox_id_debug_message("This is a multi-line debug message\n(second line here)\n");
 
-    {
-        uint32_t mixq;
+	{
+		uint32_t mixq;
 
 		dosbox_id_write_regsel(DOSBOX_ID_REG_MIXER_QUERY);
 		mixq = dosbox_id_read_data();
 
-        printf("Mixer: %u-channel %luHz mute=%u sound=%u swapstereo=%u\n",
-            (unsigned int)((mixq >> 20ul) & 0xFul),
-            (unsigned long)(mixq & 0xFFFFFul),
-            (unsigned int)((mixq >> 30ul) & 1ul),
-            ((unsigned int)((mixq >> 31ul) & 1ul)) ^ 1,
-            (unsigned int)((mixq >> 29ul) & 1ul));
-    }
-    {
-        uint32_t vgainfo;
+		printf("Mixer: %u-channel %luHz mute=%u sound=%u swapstereo=%u\n",
+				(unsigned int)((mixq >> 20ul) & 0xFul),
+				(unsigned long)(mixq & 0xFFFFFul),
+				(unsigned int)((mixq >> 30ul) & 1ul),
+				((unsigned int)((mixq >> 31ul) & 1ul)) ^ 1,
+				(unsigned int)((mixq >> 29ul) & 1ul));
+	}
+	{
+		uint32_t vgainfo;
 
-        dosbox_id_write_regsel(DOSBOX_ID_CMD_GET_VGA_SIZE);
-        vgainfo = dosbox_id_read_data();
-        printf("VGA: %u x %u\n",
-            (unsigned int)(vgainfo & 0xFFFFUL),
-            (unsigned int)(vgainfo >> 16UL));
-    }
+		dosbox_id_write_regsel(DOSBOX_ID_CMD_GET_VGA_SIZE);
+		vgainfo = dosbox_id_read_data();
+		printf("VGA: %u x %u\n",
+				(unsigned int)(vgainfo & 0xFFFFUL),
+				(unsigned int)(vgainfo >> 16UL));
+	}
 
 	return 0;
 }
