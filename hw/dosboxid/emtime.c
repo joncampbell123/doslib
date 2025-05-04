@@ -31,10 +31,10 @@ int main(int argc,char **argv,char **envp) {
 	probe_dos();
 	detect_windows();
 
-    if (windows_mode == WINDOWS_NT) {
-        printf("This program is not compatible with Windows NT\n");
-        return 1;
-    }
+	if (windows_mode == WINDOWS_NT) {
+		printf("This program is not compatible with Windows NT\n");
+		return 1;
+	}
 
 	if (!probe_dosbox_id()) {
 		printf("DOSBox integration device not found\n");
@@ -47,23 +47,23 @@ int main(int argc,char **argv,char **envp) {
 	else
 		printf("DOSBox version string N/A\n");
 
-    while (1) {
-        uint32_t ft1616time;
+	while (1) {
+		uint32_t ft1616time;
 
-        if (kbhit()) {
-            int c = getch();
-            if (c == 27) break;
-        }
+		if (kbhit()) {
+			int c = getch();
+			if (c == 27) break;
+		}
 
-        /* NTS: Time is in milliseconds << 16.
-         *      It will roll over every 65.536 seconds. */
-		dosbox_id_write_regsel(DOSBOX_ID_CMD_READ_EMTIME);
+		/* NTS: Time is in milliseconds << 16.
+		 *      It will roll over every 65.536 seconds. */
+		dosbox_id_write_regsel(DOSBOX_ID_REG_READ_EMTIME);
 		ft1616time = dosbox_id_read_data();
 
-        printf("\x0D" "%.6f ",(double)ft1616time / (0x10000UL * 1000UL));
-        fflush(stdout);
-    }
-    printf("\n");
+		printf("\x0D" "%.6f ",(double)ft1616time / (0x10000UL * 1000UL));
+		fflush(stdout);
+	}
+	printf("\n");
 
 	return 0;
 }
