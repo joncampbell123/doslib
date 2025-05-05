@@ -110,7 +110,7 @@ int main(int argc,char **argv,char **envp) {
 	{
 		uint32_t vgainfo;
 
-		dosbox_id_write_regsel(DOSBOX_ID_CMD_GET_VGA_SIZE);
+		dosbox_id_write_regsel(DOSBOX_ID_REG_GET_VGA_SIZE);
 		vgainfo = dosbox_id_read_data();
 		printf("VGA: %u x %u\n",
 				(unsigned int)(vgainfo & 0xFFFFUL),

@@ -52,7 +52,7 @@ int main(int argc,char **argv,char **envp) {
 		dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR);
 		t = dosbox_id_read_data();
 
-		dosbox_id_write_regsel(DOSBOX_ID_CMD_GET_WINDOW_SIZE);
+		dosbox_id_write_regsel(DOSBOX_ID_REG_GET_WINDOW_SIZE);
 		tw = dosbox_id_read_data();
 
 		if (t != pt || tw != ptw) {
