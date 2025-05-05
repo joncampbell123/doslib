@@ -81,13 +81,13 @@ int main(int argc,char **argv,char **envp) {
 	{
 		uint32_t t;
 
-		dosbox_id_write_regsel(DOSBOX_ID_REG_RELEASE_MOUSE_CAPTURE);
+		dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_STATUS);
 		t = dosbox_id_read_data();
-		printf("Mouse capture:");
-		if (t & DOSBOX_ID_REG_RELEASE_MOUSE_CAPTURE_FL_CAPTURED)
+		printf("Mouse status:");
+		if (t & (1ul << 0ul))
+			printf(" [User capture lock]");
+		if (t & (1ul << 1ul))
 			printf(" [Captured]");
-		else
-			printf(" [Not captured]");
 		printf("\n");
 	}
 
