@@ -116,6 +116,34 @@ int main(int argc,char **argv,char **envp) {
 				(unsigned int)(vgainfo & 0xFFFFUL),
 				(unsigned int)(vgainfo >> 16UL));
 	}
+	{
+		uint32_t cycles,percent,info;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES);
+		cycles = dosbox_id_read_data();
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
+		percent = dosbox_id_read_data();
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
+		info = dosbox_id_read_data();
+
+		printf("CPU: cycles=%lu percent=%lu",(unsigned long)cycles,(unsigned long)percent);
+		switch (info & DOSBOX_ID_REG_CPU_CYCLES_INFO_MODE_MASK) {
+			case DOSBOX_ID_REG_CPU_CYCLES_INFO_FIXED:
+				printf(" FIXED");
+				break;
+			case DOSBOX_ID_REG_CPU_CYCLES_INFO_MAX:
+				printf(" MAX");
+				break;
+			case DOSBOX_ID_REG_CPU_CYCLES_INFO_AUTO:
+				printf(" AUTO");
+				break;
+			default:
+				break;
+		};
+		printf("\n");
+	}
 
 	return 0;
 }
