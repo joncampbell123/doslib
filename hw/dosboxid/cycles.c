@@ -89,63 +89,53 @@ int main(int argc,char **argv,char **envp) {
 	dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
 	t = dosbox_id_read_data();
 
-	if (mode == MODE_CURRENT) {
-		switch(t & DOSBOX_ID_REG_CPU_CYCLES_INFO_MODE_MASK) {
-			case DOSBOX_ID_REG_CPU_CYCLES_INFO_MAX:
-				mode = MODE_MAX;
-				break;
-			case DOSBOX_ID_REG_CPU_CYCLES_INFO_AUTO:
-				mode = MODE_AUTO;
-				break;
-			case DOSBOX_ID_REG_CPU_CYCLES_INFO_FIXED:
-				mode = MODE_FIXED;
-				break;
-			default:
-				printf("Unable to determine current mode\n");
-				return 1;
-		};
-	}
-
 	/* does not take effect until write to CPU_CYCLES_INFO */
 	switch (mode) {
+		case MODE_CURRENT:
+			switch (t & DOSBOX_ID_REG_CPU_CYCLES_INFO_MODE_MASK) {
+				case DOSBOX_ID_REG_CPU_CYCLES_INFO_FIXED:
+					printf("fixed cycles ");
+					dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES);
+					t = dosbox_id_read_data();
+					printf("%lu",(unsigned long)t);
+					break;
+				case DOSBOX_ID_REG_CPU_CYCLES_INFO_AUTO:
+					printf("auto ");
+					dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
+					t = dosbox_id_read_data();
+					printf("percent %lu",(unsigned long)t);
+					break;
+				case DOSBOX_ID_REG_CPU_CYCLES_INFO_MAX:
+					printf("max ");
+					dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
+					t = dosbox_id_read_data();
+					printf("percent %lu",(unsigned long)t);
+					break;
+				default:
+					printf("? ");
+					break;
+			};
+			printf("\n");
+			break;
 		case MODE_FIXED:
-			if (val == 0) {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES);
-				val = dosbox_id_read_data();
-				printf("Fixed cycle count %lu\n",(unsigned long)val);
-			}
-			else {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES);
-				dosbox_id_write_data((uint32_t)val);
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
-				dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_FIXED);
-			}
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES);
+			dosbox_id_write_data((uint32_t)val);
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
+			dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_FIXED);
 			break;
 		case MODE_AUTO:
-			if (val == 0) {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
-				val = dosbox_id_read_data();
-				printf("Auto cycles percent %lu\n",(unsigned long)val);
-			}
-			else {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
-				dosbox_id_write_data((uint32_t)val);
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
-				dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_AUTO);
-			}
+			if (val == 0) val = 100;
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
+			dosbox_id_write_data((uint32_t)val);
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
+			dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_AUTO);
 			break;
 		case MODE_MAX:
-			if (val == 0) {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
-				val = dosbox_id_read_data();
-				printf("Max cycles percent %lu\n",(unsigned long)val);
-			}
-			else {
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
-				dosbox_id_write_data((uint32_t)val);
-				dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
-				dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_MAX);
-			}
+			if (val == 0) val = 100;
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_MAX_PERCENT);
+			dosbox_id_write_data((uint32_t)val);
+			dosbox_id_write_regsel(DOSBOX_ID_REG_CPU_CYCLES_INFO);
+			dosbox_id_write_data(DOSBOX_ID_REG_CPU_CYCLES_INFO_MAX);
 			break;
 		default:
 			break;
