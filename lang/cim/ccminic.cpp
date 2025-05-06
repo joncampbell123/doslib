@@ -4712,6 +4712,25 @@ try_again:
 		return 1;
 	}
 
+	/* returns <= 1 as normal, > 1 if it handled the pragma by itself */
+	int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
+		(void)pragma;
+		(void)pst;
+		(void)lst;
+
+		if (pragma.empty())
+			return 1;
+
+		if (pragma[0].type == token_type_t::identifier) {
+			if (identifier(pragma[0].v.identifier) == "once") {
+				// TODO
+				return 2;
+			}
+		}
+
+		return 1;
+	}
+
 	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		int r;
 
@@ -4873,6 +4892,7 @@ try_again_w_token:
 				goto try_again_w_token; }
 			case token_type_t::r_pppragma: {
 					std::vector<token_t> pragma;
+					token_t pp = std::move(t);
 
 					/* eh, no, we're not going to directly support substitution here
 					 *
@@ -4880,7 +4900,6 @@ try_again_w_token:
 					 * #pragma ... \
 					 *         ... \
 					 *         ... */
-					pragma.push_back(std::move(t));
 					do {
 						if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
 							return r;
@@ -4896,6 +4915,21 @@ try_again_w_token:
 							pragma.push_back(std::move(t));
 						}
 					} while (1);
+
+					if (!pst.condb_true())
+						goto try_again;
+
+					if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+						return r;
+
+					/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+					if (r == 1) {
+						for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+							pst.macro_expansion.push_front(std::move(*i));
+
+						t = std::move(pp);
+						return 1;
+					}
 
 					goto try_again;
 				}

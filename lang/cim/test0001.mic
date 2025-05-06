@@ -854,3 +854,12 @@ static [[ using gnu: deprecated ]] int cpp11align2g;
 static [[ using gnu: naked ]] int cpp11align3g;
 static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
 
+#pragma once
+#pragma twice
+#pragma twice again
+#define PR1 again
+#pragma twice PR1 PR1
+#pragma multiple lines \
+        twice PR1 \
+        PR1 (PR1)
+
