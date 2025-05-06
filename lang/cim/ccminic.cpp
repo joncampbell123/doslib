@@ -4690,14 +4690,8 @@ go_again:
 
 	cb_include_search_t cb_include_search = cb_include_search_default;
 
-	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		int r;
-
-#define TRY_AGAIN \
-		if (t.type != token_type_t::none) \
-			goto try_again_w_token; \
-		else \
-			goto try_again;
 
 try_again:
 		if (!pst.include_stk.empty()) {
@@ -4714,6 +4708,22 @@ try_again:
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 		}
+
+		return 1;
+	}
+
+	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		int r;
+
+#define TRY_AGAIN \
+		if (t.type != token_type_t::none) \
+			goto try_again_w_token; \
+		else \
+			goto try_again;
+
+try_again:
+		if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+			return r;
 
 try_again_w_token:
 		switch (t.type) {
