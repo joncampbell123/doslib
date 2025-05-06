@@ -4871,6 +4871,34 @@ try_again_w_token:
 					goto try_again;
 				}
 				goto try_again_w_token; }
+			case token_type_t::r_pppragma: {
+					std::vector<token_t> pragma;
+
+					/* eh, no, we're not going to directly support substitution here
+					 *
+					 * #pragma ...
+					 * #pragma ... \
+					 *         ... \
+					 *         ... */
+					pragma.push_back(std::move(t));
+					do {
+						if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+							return r;
+
+						if (t.type == token_type_t::newline) {
+							t = token_t();
+							break;
+						}
+						else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+							pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+						}
+						else {
+							pragma.push_back(std::move(t));
+						}
+					} while (1);
+
+					goto try_again;
+				}
 			case token_type_t::identifier: /* macro substitution */
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				if (!pst.condb_true())
