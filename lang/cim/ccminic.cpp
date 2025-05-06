@@ -823,6 +823,7 @@ namespace CCMiniC {
 		op_alignof,				// 280
 		r__declspec,
 		r___pragma,
+		op_pragma,
 
 		__MAX__
 	};
@@ -1451,7 +1452,8 @@ namespace CCMiniC {
 		"__int64",
 		"op:alignof",				// 280
 		str__declspec,
-		str___pragma
+		str___pragma,
+		"op:pragma"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -4949,6 +4951,7 @@ try_again_w_token:
 					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
 						pst.macro_expansion.push_front(std::move(*i));
 
+					pp.type = token_type_t::op_pragma;
 					t = std::move(pp);
 					return 1;
 				}
@@ -5002,6 +5005,7 @@ try_again_w_token:
 					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
 						pst.macro_expansion.push_front(std::move(*i));
 
+					pp.type = token_type_t::op_pragma;
 					t = std::move(pp);
 					return 1;
 				}
