@@ -4893,6 +4893,7 @@ try_again_w_token:
 			case token_type_t::r_pppragma: {
 					std::vector<token_t> pragma;
 					token_t pp = std::move(t);
+					int parens = 0;
 
 					/* eh, no, we're not going to directly support substitution here
 					 *
@@ -4912,9 +4913,19 @@ try_again_w_token:
 							pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
 						}
 						else {
+							if (t.type == token_type_t::openparenthesis)
+								parens++;
+							else if (t.type == token_type_t::closeparenthesis)
+								parens--;
+
 							pragma.push_back(std::move(t));
 						}
 					} while (1);
+
+					if (parens != 0) {
+						fprintf(stderr,"Parenthesis mismatch in pragma\n");
+						return errno_return(EINVAL);
+					}
 
 					if (!pst.condb_true())
 						goto try_again;
