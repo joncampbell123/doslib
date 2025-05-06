@@ -822,6 +822,7 @@ namespace CCMiniC {
 		r___int64,
 		op_alignof,				// 280
 		r__declspec,
+		r___pragma,
 
 		__MAX__
 	};
@@ -974,6 +975,7 @@ namespace CCMiniC {
 	DEFX(__int32);
 	DEFX(__int64);
 	DEFX(_declspec);
+	DEFX(__pragma);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -1005,7 +1007,8 @@ namespace CCMiniC {
 		XAS(asm,      asm),
 		XAS(__asm__,  asm),
 		XAS(_asm,     __asm),
-		XAS(__asm,    __asm)
+		XAS(__asm,    __asm),
+		X(__pragma)
 	};
 	static constexpr size_t ident2tok_pp_length = sizeof(ident2tok_pp) / sizeof(ident2tok_pp[0]);
 
@@ -1447,7 +1450,8 @@ namespace CCMiniC {
 		"__int32",
 		"__int64",
 		"op:alignof",				// 280
-		str__declspec
+		str__declspec,
+		str___pragma
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -4890,60 +4894,119 @@ try_again_w_token:
 					goto try_again;
 				}
 				goto try_again_w_token; }
-			case token_type_t::r_pppragma: {
-					std::vector<token_t> pragma;
-					token_t pp = std::move(t);
-					int parens = 0;
+			case token_type_t::r___pragma: { /* MIcrosoft C/C++ __pragma() */
+				std::vector<token_t> pragma;
+				token_t pp = std::move(t);
+				int parens = 1;
 
-					/* eh, no, we're not going to directly support substitution here
-					 *
-					 * #pragma ...
-					 * #pragma ... \
-					 *         ... \
-					 *         ... */
-					do {
-						if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
-							return r;
+				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					return r;
 
-						if (t.type == token_type_t::newline) {
-							t = token_t();
-							break;
-						}
-						else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
-							pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
-						}
-						else {
-							if (t.type == token_type_t::openparenthesis)
-								parens++;
-							else if (t.type == token_type_t::closeparenthesis)
-								parens--;
+				/* if it is not __pragma(...) then pass the tokens directly down */
+				if (t.type != token_type_t::openparenthesis) {
+					pptok_lgtok_ungetch(pst,t);
+					t = std::move(pp);
+					return 1;
+				}
 
-							pragma.push_back(std::move(t));
-						}
-					} while (1);
-
-					if (parens != 0) {
-						fprintf(stderr,"Parenthesis mismatch in pragma\n");
-						return errno_return(EINVAL);
-					}
-
-					if (!pst.condb_true())
-						goto try_again;
-
-					if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+				do {
+					/* allow substitution as we work */
+					if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
 						return r;
 
-					/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
-					if (r == 1) {
-						for (auto i=pragma.rbegin();i!=pragma.rend();i++)
-							pst.macro_expansion.push_front(std::move(*i));
-
-						t = std::move(pp);
-						return 1;
+					if (t.type == token_type_t::newline) {
+						pragma.push_back(std::move(t));
 					}
+					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+					}
+					else {
+						if (t.type == token_type_t::openparenthesis) {
+							parens++;
+						}
+						else if (t.type == token_type_t::closeparenthesis) {
+							parens--;
+							if (parens == 0) break;
+						}
 
-					goto try_again;
+						pragma.push_back(std::move(t));
+					}
+				} while (1);
+
+				if (parens != 0) {
+					fprintf(stderr,"Parenthesis mismatch in pragma\n");
+					return errno_return(EINVAL);
 				}
+
+				if (!pst.condb_true())
+					goto try_again;
+
+				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+					return r;
+
+				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+				if (r == 1) {
+					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+						pst.macro_expansion.push_front(std::move(*i));
+
+					t = std::move(pp);
+					return 1;
+				}
+
+				goto try_again; }
+			case token_type_t::r_pppragma: { /* Standard #pragma */
+				std::vector<token_t> pragma;
+				token_t pp = std::move(t);
+				int parens = 0;
+
+				/* eh, no, we're not going to directly support substitution here
+				 *
+				 * #pragma ...
+				 * #pragma ... \
+				 *         ... \
+				 *         ... */
+				do {
+					if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+						return r;
+
+					if (t.type == token_type_t::newline) {
+						t = token_t();
+						break;
+					}
+					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+					}
+					else {
+						if (t.type == token_type_t::openparenthesis)
+							parens++;
+						else if (t.type == token_type_t::closeparenthesis)
+							parens--;
+
+						pragma.push_back(std::move(t));
+					}
+				} while (1);
+
+				if (parens != 0) {
+					fprintf(stderr,"Parenthesis mismatch in pragma\n");
+					return errno_return(EINVAL);
+				}
+
+				if (!pst.condb_true())
+					goto try_again;
+
+				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+					return r;
+
+				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+				if (r == 1) {
+					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+						pst.macro_expansion.push_front(std::move(*i));
+
+					t = std::move(pp);
+					return 1;
+				}
+
+				goto try_again; }
 			case token_type_t::identifier: /* macro substitution */
 			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
 				if (!pst.condb_true())

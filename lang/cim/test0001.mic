@@ -867,4 +867,11 @@ static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
 #pragma multiple lines \
         twice PR1 \
         PR1 (PR1)
+__pragma(once)
+__pragma(twice)
+__pragma(twice again)
+__pragma(twice PR1 PR1)
+__pragma(multiple lines \
+        twice PR1 \
+        PR1 (PR1))
 
