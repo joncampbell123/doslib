@@ -854,6 +854,7 @@ static [[ using gnu: deprecated ]] int cpp11align2g;
 static [[ using gnu: naked ]] int cpp11align3g;
 static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
 
+/* Standard C */
 #pragma once
 #pragma once \
         once \
@@ -867,6 +868,7 @@ static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
 #pragma multiple lines \
         twice PR1 \
         PR1 (PR1)
+/* Microsoft C/C++ */
 __pragma(once)
 __pragma(twice)
 __pragma(twice again)
@@ -874,4 +876,10 @@ __pragma(twice PR1 PR1)
 __pragma(multiple lines \
         twice PR1 \
         PR1 (PR1))
+/* Newer C */
+_Pragma("once")
+_Pragma("twice")
+_Pragma("twice again")
+_Pragma("once(\"hey\") \\ hello")
+_Pragma("multiple lines\ntwice again\nagain\nagain")
 

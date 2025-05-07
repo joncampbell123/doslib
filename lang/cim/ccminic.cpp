@@ -157,6 +157,19 @@ namespace CCMiniC {
 		}
 	}
 
+	//////////////////////////////////////////////////////////////
+
+	struct source_null_file : public source_file_object {
+		virtual const char*		getname(void) { return "null"; }
+		virtual ssize_t			read(void *buffer,size_t count) { return 0; }
+		virtual void			close(void) { }
+
+						source_null_file() { }
+		virtual				~source_null_file() { }
+
+						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_null_file);
+	};
+
 	////////////////////////////////////////////////////////////////////
 
 	struct source_file_t {
@@ -824,6 +837,7 @@ namespace CCMiniC {
 		r__declspec,
 		r___pragma,
 		op_pragma,
+		r__Pragma,
 
 		__MAX__
 	};
@@ -977,6 +991,7 @@ namespace CCMiniC {
 	DEFX(__int64);
 	DEFX(_declspec);
 	DEFX(__pragma);
+	DEFX(_Pragma);
 // asm, _asm, __asm, __asm__
 	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
 	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
@@ -1009,7 +1024,8 @@ namespace CCMiniC {
 		XAS(__asm__,  asm),
 		XAS(_asm,     __asm),
 		XAS(__asm,    __asm),
-		X(__pragma)
+		X(__pragma),
+		X(_Pragma)
 	};
 	static constexpr size_t ident2tok_pp_length = sizeof(ident2tok_pp) / sizeof(ident2tok_pp[0]);
 
@@ -1453,7 +1469,8 @@ namespace CCMiniC {
 		"op:alignof",				// 280
 		str__declspec,
 		str___pragma,
-		"op:pragma"
+		"op:pragma",
+		str__Pragma
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
