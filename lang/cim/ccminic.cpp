@@ -4968,6 +4968,9 @@ try_again_w_token:
 					else if (r < 0)
 						return r;
 
+					/* offsets from our own parseme buf don't make sense in the context of the source file */
+					t.pos = pp.pos;
+
 					if (t.type == token_type_t::newline) {
 						pragma.push_back(std::move(t));
 					}
