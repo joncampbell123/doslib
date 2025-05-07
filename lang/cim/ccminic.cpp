@@ -4950,6 +4950,10 @@ try_again_w_token:
 					fprintf(stderr,"_Pragma missing string literal\n");
 					return errno_return(ENOENT);
 				}
+				if (t.length != t.units()) {
+					fprintf(stderr,"_Pragma string literal cannot be wide char format\n");
+					return errno_return(ENOENT);
+				}
 
 				source_null_file sfonull;
 				rbuf parseme;
