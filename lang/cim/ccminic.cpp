@@ -4280,7 +4280,7 @@ try_again:	t = token_t();
 		} while (1);
 
 #if 0//DEBUG
-		fprintf(stderr,"MACRO '%s'",s_id.to_str().c_str());
+		fprintf(stderr,"MACRO '%s'",identifier(s_id).to_str().c_str());
 		if (macro.flags & pptok_macro_t::FL_PARENTHESIS) fprintf(stderr," PARENTHESIS");
 		if (macro.flags & pptok_macro_t::FL_VARIADIC) fprintf(stderr," VARIADIC");
 		if (macro.flags & pptok_macro_t::FL_NO_VA_ARGS) fprintf(stderr," NO_VA_ARGS");
@@ -4288,7 +4288,7 @@ try_again:	t = token_t();
 		fprintf(stderr,"\n");
 		fprintf(stderr,"  parameters:\n");
 		for (auto i=macro.parameters.begin();i!=macro.parameters.end();i++)
-			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
+			fprintf(stderr,"    > %s\n",identifier(*i).to_str().c_str());
 		fprintf(stderr,"  tokens:\n");
 		for (auto i=macro.tokens.begin();i!=macro.tokens.end();i++)
 			fprintf(stderr,"    > %s\n",(*i).to_str().c_str());
@@ -4966,7 +4966,7 @@ try_again_w_token:
 
 				do {
 					/* allow substitution as we work */
-					r = pptok(pst,lst,parseme,sfonull,t);
+					r = pptok_nexttok(pst,lst,parseme,sfonull,t);
 					if (r == 0)/*eof*/
 						break;
 					else if (r < 0)
@@ -5040,7 +5040,7 @@ try_again_w_token:
 
 				do {
 					/* allow substitution as we work */
-					if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+					if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
 						return r;
 
 					if (t.type == token_type_t::newline) {
