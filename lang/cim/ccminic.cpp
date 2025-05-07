@@ -161,7 +161,7 @@ namespace CCMiniC {
 
 	struct source_null_file : public source_file_object {
 		virtual const char*		getname(void) { return "null"; }
-		virtual ssize_t			read(void *buffer,size_t count) { return 0; }
+		virtual ssize_t			read(void *,size_t) { return 0; }
 		virtual void			close(void) { }
 
 						source_null_file() { }
@@ -4913,6 +4913,102 @@ try_again_w_token:
 					goto try_again;
 				}
 				goto try_again_w_token; }
+			case token_type_t::r__Pragma: { /* Newer C _Pragma("") */
+				std::vector<token_t> pragma;
+				token_t pp = std::move(t);
+				int parens = 0;
+
+				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type != token_type_t::openparenthesis) {
+					fprintf(stderr,"_Pragma missing open parens\n");
+					return errno_return(ENOENT);
+				}
+
+				/* TODO: Can you use _Pragma with "strings" " pasted" " together"? */
+				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type != token_type_t::strliteral) {
+					fprintf(stderr,"_Pragma missing string literal\n");
+					return errno_return(ENOENT);
+				}
+
+				rbuf parseme;
+				source_null_file sfonull;
+				{
+					csliteral_t &cslit = csliteral(t.v.csliteral);
+					if (cslit.units() != cslit.length) {
+						fprintf(stderr,"_Pragma string literal must not be wide char\n");
+						return errno_return(ENOENT);
+					}
+
+					if (!parseme.allocate(cslit.length+80))
+						return errno_return(ENOMEM);
+
+					if (cslit.length != 0) {
+						memcpy(parseme.data,cslit.data,cslit.length);
+						parseme.end = parseme.data + cslit.length;
+					}
+					parseme.source_file = t.source_file;
+					parseme.pos = t.pos;
+				}
+
+				do {
+					/* allow substitution as we work */
+					r = pptok(pst,lst,parseme,sfonull,t);
+					if (r == 0)/*eof*/
+						break;
+					else if (r < 0)
+						return r;
+
+					if (t.type == token_type_t::newline) {
+						pragma.push_back(std::move(t));
+					}
+					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+					}
+					else {
+						if (t.type == token_type_t::openparenthesis)
+							parens++;
+						else if (t.type == token_type_t::closeparenthesis)
+							parens--;
+
+						pragma.push_back(std::move(t));
+					}
+				} while (1);
+
+				if (parens != 0) {
+					fprintf(stderr,"Parenthesis mismatch in pragma\n");
+					return errno_return(EINVAL);
+				}
+
+				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+				if (t.type != token_type_t::closeparenthesis) {
+					fprintf(stderr,"_Pragma missing close parens\n");
+					return errno_return(ENOENT);
+				}
+
+				if (!pst.condb_true())
+					goto try_again;
+
+				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+					return r;
+
+				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+				if (r == 1) {
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
+					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+						pst.macro_expansion.push_front(std::move(*i));
+
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
+					pp.type = token_type_t::op_pragma;
+					t = std::move(pp);
+					return 1;
+				}
+
+				goto try_again; }
 			case token_type_t::r___pragma: { /* MIcrosoft C/C++ __pragma() */
 				std::vector<token_t> pragma;
 				token_t pp = std::move(t);

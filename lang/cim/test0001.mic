@@ -880,6 +880,7 @@ __pragma(multiple lines \
 _Pragma("once")
 _Pragma("twice")
 _Pragma("twice again")
+_Pragma("twice again (and again)")
 _Pragma("once(\"hey\") \\ hello")
 _Pragma("multiple lines\ntwice again\nagain\nagain")
 
