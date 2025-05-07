@@ -4943,8 +4943,9 @@ try_again_w_token:
 					return errno_return(ENOENT);
 				}
 
+				/* Allow macro string substitution */
 				/* TODO: Can you use _Pragma with "strings" " pasted" " together"? */
-				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 				if (t.type != token_type_t::strliteral) {
 					fprintf(stderr,"_Pragma missing string literal\n");
@@ -4996,7 +4997,7 @@ try_again_w_token:
 					return errno_return(EINVAL);
 				}
 
-				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 				if (t.type != token_type_t::closeparenthesis) {
 					fprintf(stderr,"_Pragma missing close parens\n");
@@ -5040,7 +5041,7 @@ try_again_w_token:
 
 				do {
 					/* allow substitution as we work */
-					if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
 						return r;
 
 					if (t.type == token_type_t::newline) {

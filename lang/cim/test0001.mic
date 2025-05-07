@@ -892,4 +892,8 @@ PRAG1
 PRAG2
 PRAG3
 PRAG4
+#define PRAG5 "twice(well,5)"
+#define PRAG6 twice(well,77)
+_Pragma(PRAG5)
+__pragma(PRAG6)
 
