@@ -6654,6 +6654,7 @@ exists:
 		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
 		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
+		int check_for_pragma(void);
 		int parse_declspec_align(addrmask_t &align);
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
@@ -6675,6 +6676,7 @@ exists:
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
+		int do_pragma(const std::vector<token_t> &pragma);
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
@@ -11349,11 +11351,78 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::do_pragma(const std::vector<token_t> &pragma) {
+		(void)pragma;
+
+#if 0//DEBUG
+		fprintf(stderr,"CC pragma:\n");
+		for (auto &t : pragma)
+			fprintf(stderr,"    %s\n",t.to_str().c_str());
+#endif
+
+		return 1;
+	}
+
+	int cc_state_t::check_for_pragma(void) {
+		int r;
+
+		do {
+			if (tq_peek().type == token_type_t::op_pragma) {
+				tq_discard();
+
+				const bool p_ignore_whitespace = ignore_whitespace;
+				ignore_whitespace = false;
+
+				if (tq_get().type != token_type_t::openparenthesis)
+					CCERR_RET(EBADF,tq_peek().pos,"op pragma without open parens");
+
+				std::vector<token_t> pragma;
+				int parens = 1;
+
+				do {
+					const auto &t = tq_peek();
+
+					if (t.type == token_type_t::eof || t.type == token_type_t::none) {
+						CCERR_RET(EBADF,tq_peek().pos,"op pragma unexpected end");
+					}
+					else if (t.type == token_type_t::openparenthesis) {
+						parens++;
+						pragma.push_back(std::move(tq_get()));
+					}
+					else if (t.type == token_type_t::closeparenthesis) {
+						parens--;
+						if (parens == 0) break;
+						pragma.push_back(std::move(tq_get()));
+					}
+					else {
+						pragma.push_back(std::move(tq_get()));
+					}
+				} while(1);
+
+				ignore_whitespace = p_ignore_whitespace;
+
+				if ((r=do_pragma(pragma)) < 1)
+					return r;
+
+				if (tq_get().type != token_type_t::closeparenthesis)
+					CCERR_RET(EBADF,tq_peek().pos,"op pragma without close parens");
+			}
+			else {
+				break;
+			}
+		} while (1);
+
+		return 1;
+	}
+
 	int cc_state_t::statement(ast_node_id_t &aroot) {
 		int r;
 
 		if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
 			return errno_return(EINVAL);
+
+		if ((r=check_for_pragma()) < 1)
+			return r;
 
 		if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
@@ -11666,6 +11735,8 @@ common_error:
 #if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
+		if ((r=check_for_pragma()) < 1)
+			return r;
 
 		if ((r=declaration_specifiers_parse(declion.spec,DECLSPEC_ALLOW_DEF)) < 1)
 			return r;
@@ -11972,6 +12043,9 @@ common_error:
 #if 0//DEBUG
 		fprintf(stderr,"%s(line %d) begin parsing\n",__FUNCTION__,__LINE__);
 #endif
+
+		if ((r=check_for_pragma()) < 1)
+			return r;
 
 		if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
