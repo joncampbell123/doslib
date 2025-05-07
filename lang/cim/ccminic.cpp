@@ -1916,6 +1916,24 @@ namespace CCMiniC {
 	static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
 	static obj_pool<csliteral_t,csliteral_id_t,csliteral_none> csliteral;
 
+	int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
+		dbuf.free();
+
+		if (csid == csliteral_none)
+			return 1;
+
+		csliteral_t &cslit = csliteral(csid);
+		if (cslit.length == 0)
+			return 1;
+
+		if (!dbuf.allocate(std::max(cslit.length,size_t(128)))) /*allocate will reject small amounts*/
+			return errno_return(ENOMEM);
+
+		memcpy(dbuf.data,cslit.data,cslit.length);
+		dbuf.end = dbuf.data + cslit.length;
+		return 1;
+	}
+
 	/////////////////////////////////////////////////
 
 	struct identifier_t {
@@ -4933,25 +4951,14 @@ try_again_w_token:
 					return errno_return(ENOENT);
 				}
 
-				rbuf parseme;
 				source_null_file sfonull;
-				{
-					csliteral_t &cslit = csliteral(t.v.csliteral);
-					if (cslit.units() != cslit.length) {
-						fprintf(stderr,"_Pragma string literal must not be wide char\n");
-						return errno_return(ENOENT);
-					}
+				rbuf parseme;
 
-					if (!parseme.allocate(cslit.length+80))
-						return errno_return(ENOMEM);
+				if ((r=rbuf_copy_csliteral(parseme,t.v.csliteral)) < 1)
+					return errno_return(ENOMEM);
 
-					if (cslit.length != 0) {
-						memcpy(parseme.data,cslit.data,cslit.length);
-						parseme.end = parseme.data + cslit.length;
-					}
-					parseme.source_file = t.source_file;
-					parseme.pos = t.pos;
-				}
+				parseme.source_file = t.source_file;
+				parseme.pos = t.pos;
 
 				do {
 					/* allow substitution as we work */
