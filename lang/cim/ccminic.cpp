@@ -5424,6 +5424,8 @@ try_again_w_token:
 		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
+	const addrmask_t align_packing_default = addrmask_none; /* no limit */
+
 	/* 16-bit segmented x86 (MS-DOS, Windows, OS/2, etc) */
 	const data_type_set_t data_types_intel16 = {
 		{ { /*size*/1u,                /*align*/addrmask_make(1u)                 }, TS_CHAR                 }, /* bool */
@@ -5550,6 +5552,9 @@ try_again_w_token:
 	data_type_set_ptr_t			data_types_ptr_code = data_ptr_types_default;
 	data_type_set_ptr_t			data_types_ptr_data = data_ptr_types_default;
 	data_type_set_ptr_t			data_types_ptr_stack = data_ptr_types_default;
+
+	/* default alignment */
+	addrmask_t				align_packing = align_packing_default;
 
 	///////////////////////////////////////
 
@@ -5978,6 +5983,14 @@ try_again_w_token:
 	};
 
 	struct cc_state_t {
+		struct pack_state_t {
+			addrmask_t				align_limit;
+			std::string				identifier;
+		};
+
+		addrmask_t					current_packing;
+		std::vector<pack_state_t>			packing_stack; /* #pragma pack */
+
 		enum cpp11attr_namespace_t {
 			CPP11ATTR_NS_NONE=0,
 			CPP11ATTR_NS_GNU,
@@ -5993,6 +6006,10 @@ try_again_w_token:
 
 			assert(scope_stack.empty());
 			scope_stack.push_back(scope_global);
+
+			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
+			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
+			current_packing = align_packing;
 		}
 
 		struct enumerator_t {
@@ -6654,6 +6671,7 @@ exists:
 		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
 		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
+		int do_pragma(void);
 		int check_for_pragma(void);
 		int parse_declspec_align(addrmask_t &align);
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
@@ -6676,7 +6694,6 @@ exists:
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
-		int do_pragma(const std::vector<token_t> &pragma);
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
@@ -11351,15 +11368,7 @@ common_error:
 		return 1;
 	}
 
-	int cc_state_t::do_pragma(const std::vector<token_t> &pragma) {
-		(void)pragma;
-
-#if 0//DEBUG
-		fprintf(stderr,"CC pragma:\n");
-		for (auto &t : pragma)
-			fprintf(stderr,"    %s\n",t.to_str().c_str());
-#endif
-
+	int cc_state_t::do_pragma(void) {
 		return 1;
 	}
 
@@ -11368,16 +11377,16 @@ common_error:
 
 		do {
 			if (tq_peek().type == token_type_t::op_pragma) {
+				/* whatever is not parsed, read and discard.
+				 * assume parsing code has counted parenthesis properly */
+				int parens = 1;
+
 				tq_discard();
-
-				const bool p_ignore_whitespace = ignore_whitespace;
-				ignore_whitespace = false;
-
 				if (tq_get().type != token_type_t::openparenthesis)
 					CCERR_RET(EBADF,tq_peek().pos,"op pragma without open parens");
 
-				std::vector<token_t> pragma;
-				int parens = 1;
+				if ((r=do_pragma()) < 1)
+					return r;
 
 				do {
 					const auto &t = tq_peek();
@@ -11386,26 +11395,18 @@ common_error:
 						CCERR_RET(EBADF,tq_peek().pos,"op pragma unexpected end");
 					}
 					else if (t.type == token_type_t::openparenthesis) {
+						tq_discard();
 						parens++;
-						pragma.push_back(std::move(tq_get()));
 					}
 					else if (t.type == token_type_t::closeparenthesis) {
+						tq_discard();
 						parens--;
 						if (parens == 0) break;
-						pragma.push_back(std::move(tq_get()));
 					}
 					else {
-						pragma.push_back(std::move(tq_get()));
+						tq_discard();
 					}
 				} while(1);
-
-				ignore_whitespace = p_ignore_whitespace;
-
-				if ((r=do_pragma(pragma)) < 1)
-					return r;
-
-				if (tq_get().type != token_type_t::closeparenthesis)
-					CCERR_RET(EBADF,tq_peek().pos,"op pragma without close parens");
 			}
 			else {
 				break;
@@ -11895,14 +11896,43 @@ common_error:
 			if (sz == data_size_none || sz == 0)
 				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine size of field ")+name).c_str());
 
+			/* store the spec, this code may loop over bitfield entries of the same type.
+			 * this ref will not change even when fi is later incremented, by design. */
+			auto &m_fi = (*fi);
+
+			/* #pragma pack acts like a limiter to alignment */
+			/* NTS: Testing with GCC shows that #pragma pack has no effect on a struct unless
+			 *      it is in effect during the END of the struct.
+			 *
+			 *      Affects packing:
+			 *
+			 *      struct abc {
+			 *           char a;
+			 *           short b,
+			 *           long c;
+			 *      #pragma pack(push,1)
+			 *      };
+			 *      #pragma pack(pop)
+			 *
+			 *      Does not affect packing:
+			 *
+			 *      struct abc {
+			 *      #pragma pack(push,1)
+			 *           char a;
+			 *           short b,
+			 *           long c;
+			 *      #pragma pack(pop)
+			 *      };
+			 *
+			 *      See the difference?
+			 *      The best way to ensure it affects the entire struct no matter the compiler is to just wrap the struct in #pragma pack */
+			if (current_packing != addrmask_none)
+				al |= current_packing;
+
 			/* in a union, fields overlap each other */
 			/* in a struct, fields follow one another. */
 			if (sym.sym_type != symbol_t::UNION)
 				pos = (pos + (~al)) & al;
-
-			/* store the spec, this code may loop over bitfield entries of the same type.
-			 * this ref will not change even when fi is later incremented, by design. */
-			auto &m_fi = (*fi);
 
 			/* alignment of struct member affects alignment of struct */
 			align &= al;
