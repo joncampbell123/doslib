@@ -5984,7 +5984,7 @@ try_again_w_token:
 
 	struct cc_state_t {
 		struct pack_state_t {
-			addrmask_t				align_limit;
+			addrmask_t				align_limit = addrmask_none;
 			std::string				identifier;
 		};
 
@@ -6673,6 +6673,7 @@ exists:
 
 		int do_pragma(void);
 		int check_for_pragma(void);
+		int do_pragma_comma_or_closeparens(void);
 		int parse_declspec_align(addrmask_t &align);
 		int typeid_or_expr_parse(ast_node_id_t &aroot);
 		int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
@@ -11368,7 +11369,143 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::do_pragma_comma_or_closeparens(void) {
+		if (tq_peek().type == token_type_t::comma)
+			tq_discard();
+		else if (tq_peek().type == token_type_t::closeparenthesis)
+			return 1;
+		else
+			CCERR_RET(EINVAL,tq_peek().pos,"Expected comma");
+
+		return 1;
+	}
+
 	int cc_state_t::do_pragma(void) {
+		int r;
+
+		if (tq_peek().type == token_type_t::identifier) {
+			identifier_id_t id = identifier_none;
+			identifier.assign(id,tq_peek().v.identifier);
+			tq_discard();
+
+			if (identifier(id) == "pack") {
+				enum todo_t {
+					DO_NONE=0,
+					DO_PUSH,
+					DO_POP
+				};
+				std::string idname;
+				todo_t todo = DO_NONE;
+				addrmask_t pack = addrmask_none;
+
+				identifier.assign(id,identifier_none);
+
+				if (tq_peek().type != token_type_t::openparenthesis)
+					CCERR_RET(EINVAL,tq_peek().pos,"Open parens expected");
+				tq_discard();
+
+				if (tq_peek().type == token_type_t::identifier) {
+					identifier_id_t id = identifier_none;
+					identifier.assign(id,tq_peek().v.identifier);
+
+					if (identifier(id) == "push") {
+						todo = DO_PUSH;
+						tq_discard();
+						if ((r=do_pragma_comma_or_closeparens()) < 1)
+							return r;
+					}
+					else if (identifier(id) == "pop") {
+						todo = DO_POP;
+						tq_discard();
+						if ((r=do_pragma_comma_or_closeparens()) < 1)
+							return r;
+					}
+
+					identifier.assign(id,identifier_none);
+				}
+
+				if (tq_peek().type == token_type_t::identifier) {
+					idname = identifier(tq_peek().v.identifier).to_str();
+					tq_discard();
+					if ((r=do_pragma_comma_or_closeparens()) < 1)
+						return r;
+				}
+
+				if (tq_peek().type == token_type_t::integer) {
+					if (tq_peek().v.integer.v.v < 1)
+						CCERR_RET(EINVAL,tq_peek().pos,"Invalid packing value");
+
+					const unsigned long long n = tq_peek().v.integer.v.u;
+					tq_discard();
+
+					if (n & (n - 1u))
+						CCERR_RET(EINVAL,tq_peek().pos,"Packing value not a power of 2");
+
+					pack = addrmask_make(n);
+					if ((r=do_pragma_comma_or_closeparens()) < 1)
+						return r;
+				}
+
+#if 1//DEBUG
+				fprintf(stderr,"PRAGMA PACK: todo=%u ident='%s' packalign=%lu\n",
+					todo,idname.c_str(),
+					(pack != addrmask_none) ? ((~pack) + 1ul) : 0ul);
+#endif
+
+				if (tq_peek().type != token_type_t::closeparenthesis)
+					CCERR_RET(EINVAL,tq_peek().pos,"Close parens expected");
+				tq_discard();
+
+				if (todo == DO_PUSH) {
+					pack_state_t p;
+					p.identifier = idname;
+					p.align_limit = current_packing;
+					packing_stack.push_back(std::move(p));
+				}
+				else if (todo == DO_POP) {
+					if (packing_stack.empty())
+						return 1; /* ignored */
+
+					if (!idname.empty()) {
+						size_t ent = packing_stack.size() - 1u;
+						do {
+							if (packing_stack[ent].identifier == idname) {
+								packing_stack.resize(ent+1u); /* pop everything else off above it */
+								break;
+							}
+
+							if (ent == 0)
+								return 1; /* ignored */
+
+							ent--;
+						} while (1);
+					}
+
+					assert(!packing_stack.empty());
+					auto &r = packing_stack.back();
+					current_packing = r.align_limit;
+					packing_stack.pop_back();
+				}
+				else {
+					/* Our extension: Microsoft documentation says "pack( [n] )" which suggests that pack() might be valid.
+					 * We'll accept that here to mean default packing */
+					if (pack == addrmask_none)
+						current_packing = addrmask_none;
+				}
+
+				if (pack != addrmask_none)
+					current_packing = pack;
+
+#if 1//DEBUG
+				fprintf(stderr,"Current packing: %lu\n",
+					(current_packing != addrmask_none) ? ((~current_packing) + 1ul) : 0ul);
+#endif
+			}
+			else {
+				identifier.assign(id,identifier_none);
+			}
+		}
+
 		return 1;
 	}
 
