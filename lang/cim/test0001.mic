@@ -933,3 +933,25 @@ __pragma(PRAG6)
 #pragma pack(4)
 #pragma pack() /* uhm, so Microsoft's site implies that [n] is optional, so, we're going to allow pack() to mean default packing */
 
+struct packstruct1a {
+	char	c;
+	short	s;
+	long	l;
+};
+
+#pragma pack(push,2)
+struct packstruct1b {
+	char	c;
+	short	s;
+	long	l;
+};
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct packstruct1c {
+	char	c;
+	short	s;
+	long	l;
+};
+#pragma pack(pop)
+

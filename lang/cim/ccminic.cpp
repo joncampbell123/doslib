@@ -11446,7 +11446,7 @@ common_error:
 						return r;
 				}
 
-#if 1//DEBUG
+#if 0//DEBUG
 				fprintf(stderr,"PRAGMA PACK: todo=%u ident='%s' packalign=%lu\n",
 					todo,idname.c_str(),
 					(pack != addrmask_none) ? ((~pack) + 1ul) : 0ul);
@@ -11496,7 +11496,7 @@ common_error:
 				if (pack != addrmask_none)
 					current_packing = pack;
 
-#if 1//DEBUG
+#if 0//DEBUG
 				fprintf(stderr,"Current packing: %lu\n",
 					(current_packing != addrmask_none) ? ((~current_packing) + 1ul) : 0ul);
 #endif
@@ -12103,6 +12103,8 @@ common_error:
 				/* update the field, looping over similar bitfields if any */
 				if ((*fi).spec.align == addrmask_none)
 					(*fi).spec.align = al;
+				else if (current_packing != addrmask_none)
+					(*fi).spec.align = ((*fi).spec.align & al) | current_packing;
 				else
 					(*fi).spec.align &= al;
 
