@@ -4948,9 +4948,12 @@ try_again_w_token:
 
 				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
 				if (r == 1) {
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
 					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
 						pst.macro_expansion.push_front(std::move(*i));
 
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
 					pp.type = token_type_t::op_pragma;
 					t = std::move(pp);
 					return 1;
@@ -5002,9 +5005,12 @@ try_again_w_token:
 
 				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
 				if (r == 1) {
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
 					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
 						pst.macro_expansion.push_front(std::move(*i));
 
+					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
 					pp.type = token_type_t::op_pragma;
 					t = std::move(pp);
 					return 1;
