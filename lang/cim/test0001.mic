@@ -886,8 +886,10 @@ _Pragma("multiple lines\ntwice again\nagain\nagain")
 /* You're supposed to be able to use __pragma and _Pragma in macros, where that was impossible with #pragma */
 #define PRAG1 __pragma(twice)
 #define PRAG2 __pragma(twice(well))
-#define PRAG3 _Pragma("hello")
+#define PRAG3 _Pragma("twice")
+#define PRAG4 _Pragma("twice(well)")
 PRAG1
 PRAG2
 PRAG3
+PRAG4
 

@@ -4965,8 +4965,8 @@ try_again_w_token:
 				parseme.pos = t.pos;
 
 				do {
-					/* allow substitution as we work */
-					r = pptok_nexttok(pst,lst,parseme,sfonull,t);
+					/* no substitution here */
+					r = lgtok(lst,parseme,sfonull,t);
 					if (r == 0)/*eof*/
 						break;
 					else if (r < 0)
