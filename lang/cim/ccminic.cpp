@@ -4950,7 +4950,7 @@ try_again_w_token:
 					fprintf(stderr,"_Pragma missing string literal\n");
 					return errno_return(ENOENT);
 				}
-				if (t.length != t.units()) {
+				if (csliteral(t.v.csliteral).length != csliteral(t.v.csliteral).units()) {
 					fprintf(stderr,"_Pragma string literal cannot be wide char format\n");
 					return errno_return(ENOENT);
 				}
@@ -5023,7 +5023,7 @@ try_again_w_token:
 				}
 
 				goto try_again; }
-			case token_type_t::r___pragma: { /* MIcrosoft C/C++ __pragma() */
+			case token_type_t::r___pragma: { /* Microsoft C/C++ __pragma() */
 				std::vector<token_t> pragma;
 				token_t pp = std::move(t);
 				int parens = 1;
