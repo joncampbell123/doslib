@@ -11496,7 +11496,36 @@ common_error:
 		if ((r=check_for_pragma()) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::semicolon) {
+		if (tq_peek().type == token_type_t::r___asm) {
+			/* Any tokens from here to the next __asm or op_end_asm is asm_text() and other tokens
+			 * that are to be passed to an inline assembly language library and ignored by this
+			 * compiler. For 386 and 8086 targets the library would emulate Microsoft C/C++ MASM-style
+			 * or Open Watcom C/C++ inline assembly processing for example. */
+			std::vector<token_t> asm_tokens; /* pass THIS to the assembler handler */
+
+			tq_discard();
+			do {
+				const token_t &t = tq_peek();
+
+				if (t.type == token_type_t::eof || t.type == token_type_t::none || t.type == token_type_t::r___asm)
+					break;
+
+				if (t.type == token_type_t::op_end_asm) {
+					tq_discard();
+					break;
+				}
+
+				asm_tokens.push_back(std::move(tq_get()));
+			} while(1);
+
+#if 0//DEBUG
+			fprintf(stderr,"__asm inline assembly block:\n");
+			for (auto &t : asm_tokens)
+				fprintf(stderr,"    %s\n",t.to_str().c_str());
+			fprintf(stderr,"END ASM\n");
+#endif
+		}
+		else if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
 		}
 		else if (tq_peek().type == token_type_t::opencurlybracket) {
