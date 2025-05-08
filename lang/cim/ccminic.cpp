@@ -12202,11 +12202,17 @@ common_error:
 	}
 
 	int cc_state_t::translation_unit(void) {
-		const token_t &t = tq_peek();
 		int r;
 
-		if (t.type == token_type_t::none || t.type == token_type_t::eof)
+		if (tq_peek().type == token_type_t::none || tq_peek().type == token_type_t::eof)
 			return err; /* 0 or negative */
+
+		if (tq_peek().type == token_type_t::r___asm) {
+			ast_node_id_t aroot = ast_node_none;
+
+			if ((r=msasm_statement(aroot)) < 1)
+				return r;
+		}
 
 		if ((r=external_declaration()) < 1)
 			return r;

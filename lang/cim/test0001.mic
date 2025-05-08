@@ -964,3 +964,12 @@ __declspec(naked) void asmfunc1() {
 	}
 	__asm nop __asm nop __asm ret ; with comments
 }
+
+__asm {
+global_level:
+	nop
+	cli
+	sti
+	ret
+}
+
