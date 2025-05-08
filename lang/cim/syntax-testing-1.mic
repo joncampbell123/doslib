@@ -266,6 +266,7 @@ __asm {
 	.386p
 	.flat
 	nop
+	mov	eax,0x12345678
 	mov	ax,@fardata
 }
 #define X1 something \

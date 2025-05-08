@@ -2337,6 +2337,14 @@ private:
 		return is_asm_text_char(c);
 	}
 
+	bool is_asm_other_text_char(unsigned char c) {
+		return c == '.' || isdigit(c);
+	}
+
+	bool is_asm_other_text_first_char(unsigned char c) {
+		return is_asm_other_text_char(c);
+	}
+
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
 		int32_t v;
 
@@ -2567,12 +2575,23 @@ private:
 		assert(t.type == token_type_t::none);
 
 		const bool is_ident = is_identifier_first_char(buf.peekb());
-		const bool is_asmtext = !is_ident && is_asm_text_first_char(buf.peekb());
-		assert(is_asmtext || is_ident);
+		const bool is_asmother = !is_ident && is_asm_other_text_first_char(buf.peekb());
+		const bool is_asmtext = !is_ident && !is_asmother && is_asm_text_first_char(buf.peekb());
+		assert(is_asmtext || is_ident || is_asmother);
 
 		rbuf_sfd_refill(buf,sfo);
 		*p++ = buf.getb();
-		if (is_asmtext) {
+		if (is_asmother) {
+			while (is_asm_other_text_char(buf.peekb()) || is_identifier_char(buf.peekb())) {
+				if ((p+1) >= f)
+					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
+
+				assert((p+1) <= f);
+				*p++ = (unsigned char)buf.getb();
+				rbuf_sfd_refill(buf,sfo);
+			}
+		}
+		else if (is_asmtext) {
 			while (is_asm_text_char(buf.peekb()) && !is_identifier_char(buf.peekb())) {
 				if ((p+1) >= f)
 					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
