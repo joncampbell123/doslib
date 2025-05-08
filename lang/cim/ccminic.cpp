@@ -6629,12 +6629,14 @@ exists:
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
+		int asm_statement(ast_node_id_t &aroot);
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
 		int msasm_statement(ast_node_id_t &aroot);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
+		int asm_statement_gcc_colon_section(std::vector<token_t> &tokens,int &parens);
 		int multiplicative_expression(ast_node_id_t &aroot);
 		int exclusive_or_expression(ast_node_id_t &aroot);
 		int inclusive_or_expression(ast_node_id_t &aroot);
@@ -11488,6 +11490,187 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::asm_statement_gcc_colon_section(std::vector<token_t> &tokens,int &parens) {
+		if (tq_get().type != token_type_t::colon)
+			CCERR_RET(EINVAL,tq_peek().pos,"colon expected");
+
+		do {
+			const token_t &t = tq_peek();
+
+			if (t.type == token_type_t::eof || t.type == token_type_t::none)
+				CCERR_RET(EINVAL,t.pos,"Unexpected end");
+
+			if (t.type == token_type_t::openparenthesis) {
+				parens++;
+				tokens.push_back(std::move(tq_get()));
+			}
+			else if (t.type == token_type_t::closeparenthesis) {
+				assert(parens > 0);
+				if (--parens == 0) {
+					tq_discard();
+					break;
+				}
+
+				tokens.push_back(std::move(tq_get()));
+			}
+			else if (t.type == token_type_t::colon && parens == 1) {
+				break;
+			}
+			else {
+				tokens.push_back(std::move(tq_get()));
+			}
+		} while(1);
+
+		assert(parens <= 1);
+		return 1;
+	}
+
+	int cc_state_t::asm_statement(ast_node_id_t &aroot) {
+		int r;
+
+		/* asm("")
+		 * asm inline ("")
+		 * asm __inline__ ("")
+		 * __asm__ __volatile__ ("")
+		 *
+		 * GNU style:
+		 * __asm__ __volatile__ ("" : output : input : clobber) */
+		std::vector<token_t> asm_tokens; /* pass THIS to the assembler handler, which will be string constants or else (TODO: Perhaps we should just construct one big csliteral from it?) */
+		std::vector<token_t> input_tokens;
+		std::vector<token_t> output_tokens;
+		std::vector<token_t> clobber_tokens;
+		std::vector<token_t> gotolabel_tokens;
+
+		unsigned int flags = 0;
+		static constexpr unsigned int FL_INLINE = 1u << 0u;
+		static constexpr unsigned int FL_VOLATILE = 1u << 1u;
+		static constexpr unsigned int FL_GOTO = 1u << 2u;
+
+		int parens;
+
+		(void)aroot;
+
+		tq_discard(); /* discard asm */
+
+		do {
+			const token_t &t = tq_peek();
+
+			if (t.type == token_type_t::r_inline) {
+				flags |= FL_INLINE;
+				tq_discard();
+			}
+			else if (t.type == token_type_t::r_volatile) {
+				flags |= FL_VOLATILE;
+				tq_discard();
+			}
+			else if (t.type == token_type_t::r_goto) {
+				flags |= FL_GOTO;
+				tq_discard();
+			}
+			else {
+				break;
+			}
+		} while(1);
+
+		if (tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,tq_peek().pos,"Expected open parenthesis");
+
+		parens = 1;
+		do {
+			const token_t &t = tq_peek();
+
+			if (t.type == token_type_t::eof || t.type == token_type_t::none)
+				CCERR_RET(EINVAL,t.pos,"Unexpected end");
+
+			if (t.type == token_type_t::openparenthesis) {
+				parens++;
+				asm_tokens.push_back(std::move(tq_get()));
+			}
+			else if (t.type == token_type_t::closeparenthesis) {
+				assert(parens > 0);
+				if (--parens == 0) {
+					tq_discard();
+					break;
+				}
+
+				asm_tokens.push_back(std::move(tq_get()));
+			}
+			else if (t.type == token_type_t::colon && parens == 1) {
+				break;
+			}
+			else if (t.type == token_type_t::strliteral) {
+				csliteral_t &cst = csliteral(t.v.csliteral);
+
+				if (cst.length != cst.units())
+					CCERR_RET(EINVAL,t.pos,"asm() may not contain wide character strings");
+
+				asm_tokens.push_back(std::move(tq_get()));
+			}
+			else {
+				CCERR_RET(EINVAL,t.pos,"Unexpected token");
+			}
+		} while(1);
+
+		assert(parens <= 1);
+
+		if (parens == 1) {
+			if ((r=asm_statement_gcc_colon_section(output_tokens,parens)) < 1)
+				return r;
+		}
+
+		if (parens == 1) {
+			if ((r=asm_statement_gcc_colon_section(input_tokens,parens)) < 1)
+				return r;
+		}
+
+		if (parens == 1) {
+			if ((r=asm_statement_gcc_colon_section(clobber_tokens,parens)) < 1)
+				return r;
+		}
+
+		if (parens == 1 && (flags & FL_GOTO)) {
+			if ((r=asm_statement_gcc_colon_section(gotolabel_tokens,parens)) < 1)
+				return r;
+		}
+
+		if (parens == 1) {
+			if (tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,tq_peek().pos,"expected closing parenthesis");
+
+			parens--;
+		}
+
+		assert(parens == 0);
+
+#if 0//DEBUG
+		fprintf(stderr,"asm inline assembly block:\n");
+		if (flags & FL_INLINE)
+			fprintf(stderr,"  INLINE\n");
+		if (flags & FL_VOLATILE)
+			fprintf(stderr,"  VOLATILE\n");
+		if (flags & FL_GOTO)
+			fprintf(stderr,"  GOTO\n");
+		fprintf(stderr,"    asm:\n");
+		for (auto &t : asm_tokens)
+			fprintf(stderr,"        %s\n",t.to_str().c_str());
+		fprintf(stderr,"    output:\n");
+		for (auto &t : output_tokens)
+			fprintf(stderr,"        %s\n",t.to_str().c_str());
+		fprintf(stderr,"    input:\n");
+		for (auto &t : input_tokens)
+			fprintf(stderr,"        %s\n",t.to_str().c_str());
+		fprintf(stderr,"    clobber:\n");
+		for (auto &t : clobber_tokens)
+			fprintf(stderr,"        %s\n",t.to_str().c_str());
+		fprintf(stderr,"    gotolabel:\n");
+		for (auto &t : gotolabel_tokens)
+			fprintf(stderr,"        %s\n",t.to_str().c_str());
+		fprintf(stderr,"END ASM\n");
+#endif
+
+		return 1;
+	}
+
 	int cc_state_t::msasm_statement(ast_node_id_t &aroot) {
 		/* Any tokens from here to the next __asm or op_end_asm is asm_text() and other tokens
 		 * that are to be passed to an inline assembly language library and ignored by this
@@ -11533,6 +11716,10 @@ common_error:
 
 		if (tq_peek().type == token_type_t::r___asm) {
 			if ((r=msasm_statement(aroot)) < 1)
+				return r;
+		}
+		else if (tq_peek().type == token_type_t::r_asm) {
+			if ((r=asm_statement(aroot)) < 1)
 				return r;
 		}
 		else if (tq_peek().type == token_type_t::semicolon) {
@@ -12211,6 +12398,12 @@ common_error:
 			ast_node_id_t aroot = ast_node_none;
 
 			if ((r=msasm_statement(aroot)) < 1)
+				return r;
+		}
+		else if (tq_peek().type == token_type_t::r_asm) {
+			ast_node_id_t aroot = ast_node_none;
+
+			if ((r=asm_statement(aroot)) < 1)
 				return r;
 		}
 
