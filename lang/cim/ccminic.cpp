@@ -2594,6 +2594,13 @@ private:
 		const size_t length = size_t(p-data);
 		assert(length != 0);
 
+		if (	(length == 3 && !memcmp(data,"asm",3)) ||
+			(length == 4 && !memcmp(data,"_asm",4)) ||
+			(length == 5 && !memcmp(data,"__asm",5))) {
+			t.type = token_type_t::r___asm;
+			return 1;
+		}
+
 		t.type = token_type_t::r___asm_text;
 		t.v.identifier = identifier.alloc();
 		if (!identifier(t.v.identifier).copy_from(data,length)) return errno_return(ENOMEM);
