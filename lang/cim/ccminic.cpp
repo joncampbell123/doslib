@@ -838,6 +838,7 @@ namespace CCMiniC {
 		r___pragma,
 		op_pragma,
 		r__Pragma,
+		op_end_asm,				// 285
 
 		__MAX__
 	};
@@ -1470,7 +1471,8 @@ namespace CCMiniC {
 		str__declspec,
 		str___pragma,
 		"op:pragma",
-		str__Pragma
+		str__Pragma,
+		"op:end-asm"				// 285
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2903,8 +2905,10 @@ try_again:	t = token_t();
 					buf.discardb();
 					t.type = token_type_t::newline;
 					lst.flags |= lgtok_state_t::FL_NEWLINE;
-					if (lst.curlies == 0)
+					if (lst.curlies == 0) {
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
+						t.type = token_type_t::op_end_asm;
+					}
 					break;
 				case '{':
 					buf.discardb();
@@ -2914,8 +2918,11 @@ try_again:	t = token_t();
 					buf.discardb();
 					if (lst.curlies == 0)
 						return errno_return(EINVAL);
-					if (--lst.curlies == 0)
+					if (--lst.curlies == 0) {
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
+						t.type = token_type_t::op_end_asm;
+						return 1;
+					}
 					goto try_again;
 				case '\'':
 				case '\"':
