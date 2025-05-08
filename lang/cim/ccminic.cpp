@@ -2327,12 +2327,12 @@ private:
 		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 	}
 
-	bool is_asm_text_first_char(unsigned char c) {
-		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+	bool is_asm_text_char(unsigned char c) {
+		return !(c == '{' || c == '}' || c == '\n' || c == '\'' || c == '\"' || is_whitespace(c));
 	}
 
-	bool is_asm_text_char(unsigned char c) {
-		return (c == '_' || c == '.' || c == '@') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+	bool is_asm_text_first_char(unsigned char c) {
+		return is_asm_text_char(c);
 	}
 
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
@@ -2561,29 +2561,38 @@ private:
 		unsigned char *p = data;
 		unsigned char *f = data + sizeof(data);
 
+		assert(p < f);
 		assert(t.type == token_type_t::none);
 
-		assert(p < f);
-		assert(is_asm_text_first_char(buf.peekb()) || buf.peekb() == '#');
+		const bool is_ident = is_identifier_first_char(buf.peekb());
+		const bool is_asmtext = !is_ident && is_asm_text_first_char(buf.peekb());
+		assert(is_asmtext || is_ident);
+
 		rbuf_sfd_refill(buf,sfo);
 		*p++ = buf.getb();
-		while (is_asm_text_char(buf.peekb())) {
-			if ((p+1) >= f)
-				CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
+		if (is_asmtext) {
+			while (is_asm_text_char(buf.peekb()) && !is_identifier_char(buf.peekb())) {
+				if ((p+1) >= f)
+					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
-			assert((p+1) <= f);
-			*p++ = (unsigned char)buf.getb();
-			rbuf_sfd_refill(buf,sfo);
+				assert((p+1) <= f);
+				*p++ = (unsigned char)buf.getb();
+				rbuf_sfd_refill(buf,sfo);
+			}
+		}
+		else {
+			while (is_identifier_char(buf.peekb())) {
+				if ((p+1) >= f)
+					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
+
+				assert((p+1) <= f);
+				*p++ = (unsigned char)buf.getb();
+				rbuf_sfd_refill(buf,sfo);
+			}
 		}
 
 		const size_t length = size_t(p-data);
 		assert(length != 0);
-
-		/* it might be _asm or __asm */
-		if (	(length == 4 && !memcmp(data,"_asm",4)) ||
-			(length == 5 && !memcmp(data,"__asm",5))) {
-			t.type = token_type_t(token_type_t::r___asm);
-		}
 
 		t.type = token_type_t::r___asm_text;
 		t.v.identifier = identifier.alloc();
@@ -2879,119 +2888,6 @@ try_again:	t = token_t();
 
 		if (lst.flags & lgtok_state_t::FL_MSASM) {
 			switch (buf.peekb()) {
-				case '+':
-					t.type = token_type_t::plus; buf.discardb();
-					break;
-				case '-':
-					t.type = token_type_t::minus; buf.discardb();
-					break;
-				case '*':
-					t.type = token_type_t::star; buf.discardb();
-					break;
-				case '/':
-					t.type = token_type_t::forwardslash; buf.discardb();
-					break;
-				case '%':
-					t.type = token_type_t::percent; buf.discardb();
-					break;
-				case '!':
-					t.type = token_type_t::exclamation; buf.discardb();
-					break;
-				case '=':
-					t.type = token_type_t::equal; buf.discardb();
-					break;
-				case ';':
-					t.type = token_type_t::semicolon; buf.discardb();
-					break;
-				case '~':
-					t.type = token_type_t::tilde; buf.discardb();
-					break;
-				case '?':
-					t.type = token_type_t::question; buf.discardb();
-					break;
-				case ':':
-					t.type = token_type_t::colon; buf.discardb();
-					break;
-				case '^':
-					t.type = token_type_t::caret; buf.discardb();
-					break;
-				case '&':
-					t.type = token_type_t::ampersand; buf.discardb();
-					break;
-				case '|':
-					t.type = token_type_t::pipe; buf.discardb();
-					break;
-				case '.':
-					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-						/* ASM directive i.e. .386p */
-						goto asm_directive;
-					}
-					else {
-						t.type = token_type_t::period; buf.discardb();
-					}
-					break;
-				case ',':
-					t.type = token_type_t::comma; buf.discardb();
-					break;
-				case '[':
-					t.type = token_type_t::opensquarebracket; buf.discardb();
-					break;
-				case ']':
-					t.type = token_type_t::closesquarebracket; buf.discardb();
-					break;
-				case '{':
-					t.type = token_type_t::opencurlybracket; buf.discardb();
-					lst.curlies++;
-					break;
-				case '}':
-					t.type = token_type_t::closecurlybracket; buf.discardb();
-					if (lst.curlies == 0)
-						return errno_return(EINVAL);
-					if (--lst.curlies == 0)
-						lst.flags &= ~lgtok_state_t::FL_MSASM;
-					break;
-				case '(':
-					t.type = token_type_t::openparenthesis; buf.discardb();
-					break;
-				case ')':
-					t.type = token_type_t::closeparenthesis; buf.discardb();
-					break;
-				case '<':
-					t.type = token_type_t::lessthan; buf.discardb();
-					break;
-				case '>':
-					t.type = token_type_t::greaterthan; buf.discardb();
-					break;
-				case '\'':
-				case '\"':
-					return lgtok_charstrlit(buf,sfo,t);
-				case '\\':
-					if (is_newline(buf.peekb(1))) {
-						/* stop and switch back to normal tokenizing.
-						 * as far as I know you're not allowed to \n
-						 * __asm blocks like this even within scope.
-						 * doing this allows \n escapes in a #define
-						 * macro */
-						if (lst.curlies == 0) {
-							lst.flags &= ~lgtok_state_t::FL_MSASM;
-							goto try_again;
-						}
-
-						t.type = token_type_t::backslashnewline;
-						buf.discardb(2); /* the '\\' and the newline */
-						return 1;
-					}
-
-					t.type = token_type_t::backslash; buf.discardb();
-					break;
-				case '#':
-					if (lst_was_flags & lgtok_state_t::FL_NEWLINE) {
-						CCERR_RET(EINVAL,buf.pos,"Preprocessor directives not allowed in __asm blocks");
-					}
-					else {
-						t.type = token_type_t::pound; buf.discardb();
-					}
-					break;
 				case '\r':
 					buf.discardb();
 					if (buf.peekb() != '\n') break;
@@ -3003,8 +2899,21 @@ try_again:	t = token_t();
 					if (lst.curlies == 0)
 						lst.flags &= ~lgtok_state_t::FL_MSASM;
 					break;
+				case '{':
+					buf.discardb();
+					lst.curlies++;
+					goto try_again;
+				case '}':
+					buf.discardb();
+					if (lst.curlies == 0)
+						return errno_return(EINVAL);
+					if (--lst.curlies == 0)
+						lst.flags &= ~lgtok_state_t::FL_MSASM;
+					goto try_again;
+				case '\'':
+				case '\"':
+					return lgtok_charstrlit(buf,sfo,t);
 				default:
-				asm_directive:
 					if (is_asm_text_first_char(buf.peekb()))
 						return lgtok_asm_text(lst,buf,sfo,t);
 					else
@@ -4311,6 +4220,7 @@ try_again:	t = token_t();
 
 	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* caller just parsed the identifier token */
+		const bool asm_expand = (t.type == token_type_t::r___asm_text);
 		int r;
 
 #if 0//DEBUG
@@ -4324,6 +4234,8 @@ try_again:	t = token_t();
 		std::vector< rbuf > params_str;
 
 		if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
+			if (asm_expand)
+				CCERR_RET(EINVAL,buf.pos,"Parameter macro expansion within __asm not permitted");
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::openparenthesis)

@@ -741,16 +741,31 @@ XYZ6("a\tb\nc",b)
 #define AAA 69
 __asm mov eax,AAA __asm mov eax,[esi+AAA-4]
 
-#define BBB(c) c
+/* parameter macro expansio not allowed in __asm anymore, but we do allow simple macro substitution */
+#define BBB funcy
 __asm mov eax,BBB(5) __asm mov eax,BBB([esi+4])
 
-#define BBA(a,b) a,b
+/* parameter macro expansio not allowed in __asm anymore, but we do allow simple macro substitution */
+#define BBA codethis
 __asm mov BBA(eax,BBB(5)) __asm mov BBA([esi+BBB(ebx+5)],BBB(99+3))
 
 #ifdef AAA
 __asm {
 	inc	eax
 	dec	eax
+}
+__asm {
+	mov	al,'x'
+	inc	al
+}
+__asm {
+	db	"testing 123"
+}
+__asm {
+	mov	al,'y'
+	{
+		nop
+	}
 }
 #endif
 
