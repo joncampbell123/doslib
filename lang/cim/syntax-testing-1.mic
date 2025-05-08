@@ -267,6 +267,10 @@ __asm {
 	.flat
 	nop
 	mov	eax,0x12345678
+	mov	eax,12345678h
+	mov	eax,1234AB55h
+	mov	eax,0ABCDEF1h
+	mov	eax,ABCDEF01h
 	mov	ax,@fardata
 }
 #define X1 something \
