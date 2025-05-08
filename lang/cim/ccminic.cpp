@@ -6631,6 +6631,7 @@ exists:
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
+		int msasm_statement(ast_node_id_t &aroot);
 		bool declaration_specifiers_check(const unsigned int token_offset=0);
 		int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
 		int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
@@ -11487,6 +11488,40 @@ common_error:
 		return 1;
 	}
 
+	int cc_state_t::msasm_statement(ast_node_id_t &aroot) {
+		/* Any tokens from here to the next __asm or op_end_asm is asm_text() and other tokens
+		 * that are to be passed to an inline assembly language library and ignored by this
+		 * compiler. For 386 and 8086 targets the library would emulate Microsoft C/C++ MASM-style
+		 * or Open Watcom C/C++ inline assembly processing for example. */
+		std::vector<token_t> asm_tokens; /* pass THIS to the assembler handler */
+
+		(void)aroot;
+
+		tq_discard();
+		do {
+			const token_t &t = tq_peek();
+
+			if (t.type == token_type_t::eof || t.type == token_type_t::none || t.type == token_type_t::r___asm)
+				break;
+
+			if (t.type == token_type_t::op_end_asm) {
+				tq_discard();
+				break;
+			}
+
+			asm_tokens.push_back(std::move(tq_get()));
+		} while(1);
+
+#if 0//DEBUG
+		fprintf(stderr,"__asm inline assembly block:\n");
+		for (auto &t : asm_tokens)
+			fprintf(stderr,"    %s\n",t.to_str().c_str());
+		fprintf(stderr,"END ASM\n");
+#endif
+
+		return 1;
+	}
+
 	int cc_state_t::statement(ast_node_id_t &aroot) {
 		int r;
 
@@ -11497,33 +11532,8 @@ common_error:
 			return r;
 
 		if (tq_peek().type == token_type_t::r___asm) {
-			/* Any tokens from here to the next __asm or op_end_asm is asm_text() and other tokens
-			 * that are to be passed to an inline assembly language library and ignored by this
-			 * compiler. For 386 and 8086 targets the library would emulate Microsoft C/C++ MASM-style
-			 * or Open Watcom C/C++ inline assembly processing for example. */
-			std::vector<token_t> asm_tokens; /* pass THIS to the assembler handler */
-
-			tq_discard();
-			do {
-				const token_t &t = tq_peek();
-
-				if (t.type == token_type_t::eof || t.type == token_type_t::none || t.type == token_type_t::r___asm)
-					break;
-
-				if (t.type == token_type_t::op_end_asm) {
-					tq_discard();
-					break;
-				}
-
-				asm_tokens.push_back(std::move(tq_get()));
-			} while(1);
-
-#if 0//DEBUG
-			fprintf(stderr,"__asm inline assembly block:\n");
-			for (auto &t : asm_tokens)
-				fprintf(stderr,"    %s\n",t.to_str().c_str());
-			fprintf(stderr,"END ASM\n");
-#endif
+			if ((r=msasm_statement(aroot)) < 1)
+				return r;
 		}
 		else if (tq_peek().type == token_type_t::semicolon) {
 			tq_discard();
