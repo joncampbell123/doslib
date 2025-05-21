@@ -91,11 +91,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
             reg += E2_incr_table[regi][8];
             if ((++regi) == 4) regi = 0;
 
-            if (d8237_read_count(ch) == 1) {
-                /* nothing happened, no terminal count */
-                break;
-            }
-            else if (dma->lin[0] == reg) {
+            if (d8237_read_count(ch) != 1 && dma->lin[0] == reg) {
                 /* match */
             }
             else {
