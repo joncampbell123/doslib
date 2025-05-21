@@ -32,7 +32,7 @@ static const unsigned char E2_incr_table[4][9] = {
  * it's the Sound Blaster by matching it on our end when it comes back via DMA. This is weird
  * and convoluted enough that I don't expect SB clones to implement it properly if at all, but it
  * is an option. */
-static const unsigned char      try_dma[] = {1,3};
+static const unsigned char      try_dma[] = {0,1,3};
 
 void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
     struct dma_8237_allocation *dma = NULL; /* DMA buffer */

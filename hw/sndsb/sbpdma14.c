@@ -12,7 +12,7 @@
 /* Try to detect DMA channel, by playing silent audio blocks via DMA and
  * watching whether or not the DMA pointer moves. This method is most likely
  * to work on both Creative hardware and SB clones. */
-static const unsigned char      try_dma[] = {1,3};
+static const unsigned char      try_dma[] = {0,1,3};
 
 void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
     struct dma_8237_allocation *dma = NULL; /* DMA buffer */
