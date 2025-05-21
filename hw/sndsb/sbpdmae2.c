@@ -63,7 +63,15 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
             outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
             test_byte = (uint8_t)read_8254_ncli(0);
-            dma->lin[0] = 0x00;
+
+            /* predict the value being returned */
+            for (i=0;i < 8;i++) {
+                if ((test_byte >> i) & 1) reg += E2_incr_table[regi][i];
+            }
+            reg += E2_incr_table[regi][8];
+            if ((++regi) == 4) regi = 0;
+
+            dma->lin[0] = ~reg;
 
             outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
                     D8237_MODER_CHANNEL(ch) | D8237_MODER_TRANSFER(D8237_MODER_XFER_WRITE) | D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
@@ -84,12 +92,10 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 
             outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
-            /* predict the value being returned */
-            for (i=0;i < 8;i++) {
-                if ((test_byte >> i) & 1) reg += E2_incr_table[regi][i];
-            }
-            reg += E2_incr_table[regi][8];
-            if ((++regi) == 4) regi = 0;
+#if 0//DEBUG
+            fprintf(stderr,"count=%lu lin=%02x exp=%02x changed=%s ch=%u it=%u\n",
+                (unsigned long)d8237_read_count(ch),dma->lin[0],reg,dma->lin[0]==((~reg)&0xFFu)?"no":"yes",ch,iter);
+#endif
 
             if (d8237_read_count(ch) != 1 && dma->lin[0] == reg) {
                 /* match */
