@@ -839,6 +839,7 @@ namespace CCMiniC {
 		op_pragma,
 		r__Pragma,
 		op_end_asm,				// 285
+		whitespace,
 
 		__MAX__
 	};
@@ -1472,7 +1473,8 @@ namespace CCMiniC {
 		str___pragma,
 		"op:pragma",
 		str__Pragma,
-		"op:end-asm"				// 285
+		"op:end-asm",				// 285
+		"whitespace"
 	};
 
 	static const char *token_type_t_str(const token_type_t t) {
@@ -2296,12 +2298,16 @@ private:
 		return b == ' ' || b == '\t';
 	}
 
-	void eat_whitespace(rbuf &buf,source_file_object &sfo) {
+	bool eat_whitespace(rbuf &buf,source_file_object &sfo) {
+		bool r = false;
+
 		do {
 			if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-			if (is_whitespace(buf.peekb())) buf.discardb();
+			if (is_whitespace(buf.peekb())) { r = true; buf.discardb(); }
 			else break;
 		} while (1);
+
+		return r;
 	}
 
 	void eat_newline(rbuf &buf,source_file_object &sfo) {
@@ -2886,11 +2892,12 @@ private:
 	 *      #define X (y,z)                         X (no parameters) expands to y,z
 	 *      #define X(x,y)                          X (parameters x, z) expands to nothing */
 	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+		bool wspc;
 		int r;
 
 try_again:	t = token_t();
 		t.set_source_file(buf.source_file);
-		eat_whitespace(buf,sfo);
+		wspc = eat_whitespace(buf,sfo);
 		t.pos = buf.pos;
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
@@ -2904,6 +2911,11 @@ try_again:	t = token_t();
 		lst.flags &= ~lst_was_flags;
 
 		if (lst.flags & lgtok_state_t::FL_MSASM) {
+			if (wspc) {
+				t.type = token_type_t::whitespace;
+				return 1;
+			}
+
 			switch (buf.peekb()) {
 				case '\r':
 					buf.discardb();
