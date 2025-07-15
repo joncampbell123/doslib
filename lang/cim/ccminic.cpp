@@ -2348,7 +2348,7 @@ private:
 	}
 
 	bool is_asm_ident_text_first_char(unsigned char c) {
-		return is_asm_ident_text_char(c);
+		return is_asm_ident_text_char(c) && !isdigit(c);
 	}
 
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
