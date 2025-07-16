@@ -2565,6 +2565,7 @@ private:
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
 
+		unsigned char c;
 		unsigned char data[1024];
 		unsigned char *p = data;
 		unsigned char *f = data + sizeof(data);
@@ -2573,37 +2574,39 @@ private:
 		assert(t.type == token_type_t::none);
 
 		rbuf_sfd_refill(buf,sfo);
-		*p++ = buf.getb();
-		if (is_asm_ident_text_char(buf.peekb())) {
-			while (is_asm_ident_text_char(buf.peekb())) {
-				if ((p+1) >= f)
-					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
-				assert((p+1) <= f);
-				*p++ = (unsigned char)buf.getb();
-				rbuf_sfd_refill(buf,sfo);
-			}
-		}
-		else {
-			while (is_asm_non_ident_text_char(buf.peekb())) {
-				if ((p+1) >= f)
-					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
+		while (1) {
+			c = buf.peekb();
+			if (is_newline(c) || c == 0 || c == '{' || c == '}' || c == '\'' || c == '\"') break;
 
-				assert((p+1) <= f);
-				*p++ = (unsigned char)buf.getb();
-				rbuf_sfd_refill(buf,sfo);
+			/* check for _asm or __asm */
+			if (c == '_') {
+				size_t i = 1;
+				if (buf.peekb(i) == '_') i++;
+				if (buf.peekb(i) == 'a' && buf.peekb(i+1) == 's' && buf.peekb(i+2) == 'm') {
+					if (p == data) {
+						t.type = token_type_t::r___asm;
+						buf.discardb(i+3);
+						return 1;
+					}
+					else {
+						break;
+					}
+				}
 			}
+
+			if ((p+1) >= f)
+				CCERR_RET(ENAMETOOLONG,t.pos,"asm text too long");
+
+			assert((p+1) <= f);
+			*p++ = (unsigned char)buf.getb();
+			rbuf_sfd_refill(buf,sfo);
 		}
+
+		while (p > data && is_whitespace(*(p-1))) p--;
 
 		const size_t length = size_t(p-data);
 		assert(length != 0);
-
-		if (	(length == 3 && !memcmp(data,"asm",3)) ||
-			(length == 4 && !memcmp(data,"_asm",4)) ||
-			(length == 5 && !memcmp(data,"__asm",5))) {
-			t.type = token_type_t::r___asm;
-			return 1;
-		}
 
 		t.type = token_type_t::r___asm_text;
 		t.v.identifier = identifier.alloc();
@@ -2880,12 +2883,11 @@ private:
 	 *      #define X (y,z)                         X (no parameters) expands to y,z
 	 *      #define X(x,y)                          X (parameters x, z) expands to nothing */
 	int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-		bool wspc;
 		int r;
 
 try_again:	t = token_t();
 		t.set_source_file(buf.source_file);
-		wspc = eat_whitespace(buf,sfo);
+		eat_whitespace(buf,sfo);
 		t.pos = buf.pos;
 
 		if (buf.data_avail() < 8) rbuf_sfd_refill(buf,sfo);
@@ -2899,11 +2901,6 @@ try_again:	t = token_t();
 		lst.flags &= ~lst_was_flags;
 
 		if (lst.flags & lgtok_state_t::FL_MSASM) {
-			if (wspc) {
-				t.type = token_type_t::whitespace;
-				return 1;
-			}
-
 			switch (buf.peekb()) {
 				case '\r':
 					buf.discardb();
