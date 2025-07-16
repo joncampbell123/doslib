@@ -4133,7 +4133,7 @@ try_again:	t = token_t();
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
-			if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+			if (t.type == token_type_t::identifier) {
 				if (identifier(t.v.identifier) == "__VA_ARGS__") {
 					if (macro.flags & pptok_macro_t::FL_VARIADIC) {
 						t = token_t(token_type_t::r___VA_ARGS__,t.pos,t.source_file);
@@ -4153,7 +4153,7 @@ try_again:	t = token_t();
 			else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
 				macro.tokens.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
 			}
-			else if (t.type == token_type_t::identifier || t.type == token_type_t::r___asm_text) {
+			else if (t.type == token_type_t::identifier) {
 				/* if the identifier matches a paraemeter then put in a parameter reference,
 				 * else pass the identifier along. */
 
@@ -4235,7 +4235,6 @@ try_again:	t = token_t();
 
 	int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		/* caller just parsed the identifier token */
-		const bool asm_expand = (t.type == token_type_t::r___asm_text);
 		int r;
 
 #if 0//DEBUG
@@ -4249,8 +4248,6 @@ try_again:	t = token_t();
 		std::vector< rbuf > params_str;
 
 		if (macro->ment.flags & pptok_macro_t::FL_PARENTHESIS) {
-			if (asm_expand)
-				CCERR_RET(EINVAL,buf.pos,"Parameter macro expansion within __asm not permitted");
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::openparenthesis)
@@ -5072,8 +5069,7 @@ try_again_w_token:
 				}
 
 				goto try_again; }
-			case token_type_t::identifier: /* macro substitution */
-			case token_type_t::r___asm_text: { /* to allow macros to work with assembly language */
+			case token_type_t::identifier: { /* macro substitution */
 				if (!pst.condb_true())
 					goto try_again;
 
