@@ -2335,20 +2335,12 @@ private:
 		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 	}
 
-	bool is_asm_text_char(unsigned char c) {
-		return !(c == '{' || c == '}' || c == '\n' || c == '\'' || c == '\"' || is_whitespace(c));
-	}
-
-	bool is_asm_text_first_char(unsigned char c) {
-		return is_asm_text_char(c);
+	bool is_asm_non_ident_text_char(unsigned char c) {
+		return !(c == '{' || c == '}' || c == '\n' || c == '\'' || c == '\"' || is_whitespace(c) || isdigit(c) || is_identifier_first_char(c));
 	}
 
 	bool is_asm_ident_text_char(unsigned char c) {
 		return c == '.' || isdigit(c) || is_identifier_char(c);
-	}
-
-	bool is_asm_ident_text_first_char(unsigned char c) {
-		return is_asm_ident_text_char(c) && !isdigit(c);
 	}
 
 	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
@@ -2573,21 +2565,17 @@ private:
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
 
-		unsigned char data[128];
+		unsigned char data[1024];
 		unsigned char *p = data;
 		unsigned char *f = data + sizeof(data);
 
 		assert(p < f);
 		assert(t.type == token_type_t::none);
 
-		const bool is_asmident = is_asm_ident_text_first_char(buf.peekb());
-		const bool is_asmtext = !is_asmident && is_asm_text_first_char(buf.peekb());
-		assert(is_asmtext || is_asmident);
-
 		rbuf_sfd_refill(buf,sfo);
 		*p++ = buf.getb();
-		if (is_asmtext) {
-			while (is_asm_text_char(buf.peekb()) && !is_asm_ident_text_char(buf.peekb())) {
+		if (is_asm_ident_text_char(buf.peekb())) {
+			while (is_asm_ident_text_char(buf.peekb())) {
 				if ((p+1) >= f)
 					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
@@ -2597,7 +2585,7 @@ private:
 			}
 		}
 		else {
-			while (is_asm_ident_text_char(buf.peekb())) {
+			while (is_asm_non_ident_text_char(buf.peekb())) {
 				if ((p+1) >= f)
 					CCERR_RET(ENAMETOOLONG,t.pos,"Identifier name too long");
 
@@ -2948,11 +2936,7 @@ try_again:	t = token_t();
 				case '\"':
 					return lgtok_charstrlit(buf,sfo,t);
 				default:
-					if (is_asm_text_first_char(buf.peekb()))
-						return lgtok_asm_text(lst,buf,sfo,t);
-					else
-						CCERR_RET(ESRCH,buf.pos,"Unexpected symbol at");
-					break;
+					return lgtok_asm_text(lst,buf,sfo,t);
 			}
 		}
 		else {
