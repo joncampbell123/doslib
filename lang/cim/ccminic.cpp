@@ -2000,6 +2000,10 @@ namespace CCMiniC {
 			return true;
 		}
 
+		bool copy_from(const std::string &s) {
+			return copy_from((const unsigned char*)s.c_str(),s.length());
+		}
+
 		std::string to_str(void) const {
 			if (data != NULL && length != 0) return std::string((char*)data,length);
 			return std::string();
@@ -2057,6 +2061,9 @@ namespace CCMiniC {
 	typedef unsigned int scope_id_t;
 	static constexpr unsigned int scope_none = ~((unsigned int)0u);
 	static constexpr unsigned int scope_global = 0;
+
+	typedef unsigned int segment_id_t;
+	static constexpr unsigned int segment_none = ~((unsigned int)0u);
 
 	typedef size_t symbol_id_t;
 	static constexpr size_t symbol_none = ~size_t(0);
@@ -5933,6 +5940,54 @@ try_again_w_token:
 			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
 			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
 			current_packing = align_packing;
+
+			{
+				const segment_id_t s = code_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CODE;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_EXECUTABLE;
+				io.copy_from("CODE");
+			}
+
+			{
+				const segment_id_t s = const_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CONST;
+				so.flags = segment_t::FL_READABLE;
+				io.copy_from("CONST");
+			}
+
+			{
+				const segment_id_t s = data_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::DATA;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+				io.copy_from("DATA");
+			}
+
+			{
+				const segment_id_t s = stack_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::STACK;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+				io.copy_from("STACK");
+			}
+
+			{
+				const segment_id_t s = bss_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::BSS;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+				io.copy_from("BSS");
+			}
+
+			{
+				const segment_id_t s = fardata_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::DATA;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+				io.copy_from("FARDATA");
+			}
 		}
 
 		struct enumerator_t {
@@ -5991,6 +6046,45 @@ try_again_w_token:
 				offset = x.offset;
 				bf_start = x.bf_start;
 				bf_length = x.bf_length;
+			}
+		};
+
+		struct segment_t {
+			enum type_t {
+				NONE=0,
+				CODE,
+				CONST,
+				DATA,
+				BSS,
+				STACK
+			};
+
+			static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
+			static constexpr unsigned int FL_READABLE = 1u << 1u;
+			static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
+			static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
+			static constexpr unsigned int FL_PRIVATE = 1u << 4u;
+
+			addrmask_t				align = addrmask_none;
+			identifier_id_t				name = identifier_none;
+			type_t					type = type_t::NONE;
+			unsigned int				flags = 0;
+
+			segment_t() { }
+			segment_t(const segment_t &) = delete;
+			segment_t &operator=(const segment_t &) = delete;
+			segment_t(segment_t &&x) { common_move(x); }
+			segment_t &operator=(segment_t &&x) { common_move(x); return *this; }
+
+			~segment_t() {
+				identifier.release(name);
+			}
+
+			void common_move(segment_t &x) {
+				align = x.align; x.align = addrmask_none;
+				identifier.assignmove(/*to*/name,/*from*/x.name);
+				type = x.type; x.type = type_t::NONE;
+				flags = x.flags; x.flags = 0;
 			}
 		};
 
@@ -6109,6 +6203,8 @@ try_again_w_token:
 		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
 		void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
+		void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
+		void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 
 		std::string ddip_list_to_str(const ddip_list_t &dl) {
@@ -6204,10 +6300,18 @@ try_again_w_token:
 		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
 		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
 
+		std::vector<segment_t>	segments;
 		std::vector<symbol_t>	symbols;
 
 		std::vector<scope_t>	scopes;
 		std::vector<scope_id_t>	scope_stack;
+
+		segment_id_t		code_segment = segment_none;
+		segment_id_t		const_segment = segment_none;
+		segment_id_t		data_segment = segment_none;
+		segment_id_t		stack_segment = segment_none;
+		segment_id_t		bss_segment = segment_none;
+		segment_id_t		fardata_segment = segment_none;
 
 		bool			ignore_whitespace = true;
 
@@ -6266,6 +6370,34 @@ try_again_w_token:
 				return err; /* 0 or negative */
 
 			return 1;
+		}
+
+		segment_t &segref(segment_id_t id) { /* we can't call it segment() that's reserved by some compilers */
+#if 1//DEBUG
+			if (id < segments.size())
+				return segments[id];
+
+			throw std::out_of_range("segment out of range");
+#else
+			return segments[id];
+#endif
+		}
+
+		segment_id_t new_segment(void) {
+			const segment_id_t r = segments.size();
+			segments.resize(r+1u);
+			return r;
+		}
+
+		segment_id_t find_segment(identifier_id_t name) {
+			if (name != identifier_none) {
+				for (const auto &s : segments) {
+					if (s.name != identifier_none && identifier(s.name) == identifier(name))
+						return (segment_id_t)(&s - &segments[0]);
+				}
+			}
+
+			return segment_none;
 		}
 
 		scope_t &scope(scope_id_t id) {
@@ -10010,6 +10142,12 @@ common_error:
 			debug_dump_scope(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-scopes.begin())));
 	}
 
+	void cc_state_t::debug_dump_segment_table(const std::string prefix,const std::string &name) {
+		fprintf(stderr,"%s%s%ssegment table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		for (auto si=segments.begin();si!=segments.end();si++)
+			debug_dump_segment(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-segments.begin())));
+	}
+
 	void cc_state_t::debug_dump_structfield(const std::string prefix,structfield_t &field,const std::string &name) {
 		fprintf(stderr,"%s%s%sfield:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		if (field.name != identifier_none) fprintf(stderr," '%s'",identifier(field.name).to_str().c_str());
@@ -10038,6 +10176,32 @@ common_error:
 
 			fprintf(stderr,"\n");
 		}
+	}
+
+	void cc_state_t::debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name) {
+		fprintf(stderr,"%s%s%ssegment#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&s-&segments[0]));
+
+		switch (s.type) {
+			case cc_state_t::segment_t::CODE: fprintf(stderr," code"); break;
+			case cc_state_t::segment_t::CONST: fprintf(stderr," const"); break;
+			case cc_state_t::segment_t::DATA: fprintf(stderr," data"); break;
+			case cc_state_t::segment_t::BSS: fprintf(stderr," bss"); break;
+			case cc_state_t::segment_t::STACK: fprintf(stderr," stack"); break;
+			default: break;
+		};
+
+		if (s.name != identifier_none) fprintf(stderr," '%s'",identifier(s.name).to_str().c_str());
+		else fprintf(stderr," <anon>");
+		if (s.flags & cc_state_t::segment_t::FL_NOTINEXE) fprintf(stderr," NOTINEXE");
+		if (s.flags & cc_state_t::segment_t::FL_READABLE) fprintf(stderr," READABLE");
+		if (s.flags & cc_state_t::segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
+		if (s.flags & cc_state_t::segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
+		if (s.flags & cc_state_t::segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
+
+		fprintf(stderr,"\n");
+
+		if (s.align != addrmask_none)
+			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
@@ -12682,6 +12846,7 @@ int main(int argc,char **argv) {
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
+			ccst.debug_dump_segment_table("");
 			ccst.debug_dump_scope_table("");
 			ccst.debug_dump_symbol_table("");
 
