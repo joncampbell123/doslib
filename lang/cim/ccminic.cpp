@@ -5946,6 +5946,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::CODE;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_EXECUTABLE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("CODE");
 			}
 
@@ -5954,6 +5959,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::CONST;
 				so.flags = segment_t::FL_READABLE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("CONST");
 			}
 
@@ -5962,6 +5972,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::DATA;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("DATA");
 			}
 
@@ -5970,6 +5985,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::STACK;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("STACK");
 			}
 
@@ -5978,6 +5998,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::BSS;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("BSS");
 			}
 
@@ -5986,6 +6011,11 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::DATA;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+
+				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
+				so.limit = addrmask_make(0x10000); // 64KB
+				so.use = segment_t::use_t::X86_16; // 16-bit
+
 				io.copy_from("FARDATA");
 			}
 		}
@@ -6050,7 +6080,7 @@ try_again_w_token:
 		};
 
 		struct segment_t {
-			enum type_t {
+			enum class type_t {
 				NONE=0,
 				CODE,
 				CONST,
@@ -6059,15 +6089,26 @@ try_again_w_token:
 				STACK
 			};
 
+			enum class use_t {
+				NONE=0,
+
+				X86_16=1,
+				X86_32,
+				X86_64
+			};
+
 			static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
 			static constexpr unsigned int FL_READABLE = 1u << 1u;
 			static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
 			static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
 			static constexpr unsigned int FL_PRIVATE = 1u << 4u;
+			static constexpr unsigned int FL_FLAT = 1u << 5u;
 
 			addrmask_t				align = addrmask_none;
 			identifier_id_t				name = identifier_none;
 			type_t					type = type_t::NONE;
+			use_t					use = use_t::NONE;
+			addrmask_t				limit = addrmask_none;
 			unsigned int				flags = 0;
 
 			segment_t() { }
@@ -6084,6 +6125,8 @@ try_again_w_token:
 				align = x.align; x.align = addrmask_none;
 				identifier.assignmove(/*to*/name,/*from*/x.name);
 				type = x.type; x.type = type_t::NONE;
+				use = x.use; x.use = use_t::NONE;
+				limit = x.limit; x.limit = addrmask_none;
 				flags = x.flags; x.flags = 0;
 			}
 		};
@@ -10182,11 +10225,18 @@ common_error:
 		fprintf(stderr,"%s%s%ssegment#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&s-&segments[0]));
 
 		switch (s.type) {
-			case cc_state_t::segment_t::CODE: fprintf(stderr," code"); break;
-			case cc_state_t::segment_t::CONST: fprintf(stderr," const"); break;
-			case cc_state_t::segment_t::DATA: fprintf(stderr," data"); break;
-			case cc_state_t::segment_t::BSS: fprintf(stderr," bss"); break;
-			case cc_state_t::segment_t::STACK: fprintf(stderr," stack"); break;
+			case cc_state_t::segment_t::type_t::CODE: fprintf(stderr," code"); break;
+			case cc_state_t::segment_t::type_t::CONST: fprintf(stderr," const"); break;
+			case cc_state_t::segment_t::type_t::DATA: fprintf(stderr," data"); break;
+			case cc_state_t::segment_t::type_t::BSS: fprintf(stderr," bss"); break;
+			case cc_state_t::segment_t::type_t::STACK: fprintf(stderr," stack"); break;
+			default: break;
+		};
+
+		switch (s.use) {
+			case cc_state_t::segment_t::use_t::X86_16: fprintf(stderr," X86:16"); break;
+			case cc_state_t::segment_t::use_t::X86_32: fprintf(stderr," X86:32"); break;
+			case cc_state_t::segment_t::use_t::X86_64: fprintf(stderr," X86:64"); break;
 			default: break;
 		};
 
@@ -10197,11 +10247,14 @@ common_error:
 		if (s.flags & cc_state_t::segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
 		if (s.flags & cc_state_t::segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
 		if (s.flags & cc_state_t::segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
+		if (s.flags & cc_state_t::segment_t::FL_FLAT) fprintf(stderr," FLAT");
 
 		fprintf(stderr,"\n");
 
 		if (s.align != addrmask_none)
 			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
+		if (s.limit != addrmask_none)
+			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.limit) + 1ull,(unsigned long long)(~s.limit) + 1ull);
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
