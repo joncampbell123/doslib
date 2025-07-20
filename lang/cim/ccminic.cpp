@@ -5488,31 +5488,66 @@ try_again_w_token:
 
 	/* code generation */
 	enum target_cpu_t {
-		CPU_NONE=0,
-		CPU_INTEL_X86
+		CPU_NONE=0,			// 0
+		CPU_INTEL_X86,
+
+		CPU__MAX
 	};
 
+	const char *target_cpu_str_t[CPU__MAX] = {
+		"none",				// 0
+		"intel x86"
+	};
+
+	static_assert( sizeof(target_cpu_str_t) / sizeof(target_cpu_str_t[0]) == CPU__MAX, "oops" );
+
 	enum target_cpu_sub_t {
-		CPU_SUB_NONE=0,
+		CPU_SUB_NONE=0,			// 0
 
 		// CPU_INTEL_X86
 		CPU_SUB_X86_16,
 		CPU_SUB_X86_32,
-		CPU_SUB_X86_64
+		CPU_SUB_X86_64,
+
+		CPU_SUB__MAX
 	};
 
+	const char *target_cpu_sub_str_t[CPU_SUB__MAX] = {
+		"none",				// 0
+		"x86:16",
+		"x86:32",
+		"x86:64"
+	};
+
+	static_assert( sizeof(target_cpu_sub_str_t) / sizeof(target_cpu_sub_str_t[0]) == CPU_SUB__MAX, "oops" );
+
 	enum target_cpu_rev_t {
-		CPU_REV_NONE=0,
+		CPU_REV_NONE=0,			// 0
 
 		// CPU_INTEL_X86
 		CPU_REV_X86_8086,
 		CPU_REV_X86_80186,
 		CPU_REV_X86_80286,
 		CPU_REV_X86_80386,
-		CPU_REV_X86_80486,
+		CPU_REV_X86_80486,		// 5
 		CPU_REV_X86_80586,
-		CPU_REV_X86_80686
+		CPU_REV_X86_80686,
+
+		CPU_REV__MAX
 	};
+
+	const char *target_cpu_rev_str_t[CPU_REV__MAX] = {
+		"none",				// 0
+		"x86:8086",
+		"x86:80186",
+		"x86:80286",
+		"x86:80386",
+		"x86:80486",			// 5
+		"x86:80586",
+		"x86:80686"
+	};
+
+	static_assert( sizeof(target_cpu_rev_str_t) / sizeof(target_cpu_rev_str_t[0]) == CPU_REV__MAX, "oops" );
 
 	target_cpu_t				target_cpu = CPU_INTEL_X86;
 	target_cpu_sub_t			target_cpusub = CPU_SUB_X86_16;
@@ -6259,6 +6294,7 @@ try_again_w_token:
 		};
 
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
@@ -9990,6 +10026,13 @@ common_error:
 		return 1;
 	}
 
+	void cc_state_t::debug_dump_general(const std::string prefix,const std::string &name) {
+		fprintf(stderr,"%s%s%sgeneral info:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
+		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
+		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
+	}
+
 	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
 		fprintf(stderr,"%s",prefix.c_str());
 
@@ -12937,6 +12980,7 @@ int main(int argc,char **argv) {
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
+			ccst.debug_dump_general("");
 			ccst.debug_dump_segment_table("");
 			ccst.debug_dump_scope_table("");
 			ccst.debug_dump_symbol_table("");
