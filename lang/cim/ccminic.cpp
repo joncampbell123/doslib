@@ -6181,6 +6181,8 @@ try_again_w_token:
 			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
 			scope_id_t				scope = scope_none;
 			scope_id_t				parent_of_scope = scope_none;
+			segment_id_t				part_of_segment = segment_none;
+			data_offset_t				offset = data_offset_none;
 			enum type_t				sym_type = NONE;
 			unsigned int				flags = 0;
 
@@ -6203,6 +6205,8 @@ try_again_w_token:
 				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
 				scope = x.scope; x.scope = scope_none;
 				parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
+				part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
+				offset = x.offset; x.offset = data_offset_none;
 				sym_type = x.sym_type; x.sym_type = NONE;
 				flags = x.flags; x.flags = 0;
 			}
@@ -10310,6 +10314,16 @@ common_error:
 		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
 
 		if (sym.parent_of_scope != scope_none) fprintf(stderr," parent-of-scope:%lu",(unsigned long)sym.parent_of_scope);
+
+		if (sym.part_of_segment != segment_none) {
+			const segment_t &so = segref(sym.part_of_segment);
+			fprintf(stderr," segment=#%u:'%s'",
+				(unsigned int)(&so - &segments[0]),
+				(so.name != identifier_none) ? identifier(so.name).to_str().c_str() : "(none)");
+		}
+		if (sym.offset != data_offset_none) {
+			fprintf(stderr," offset=0x%llx",(unsigned long long)sym.offset);
+		}
 
 		fprintf(stderr,"\n");
 
