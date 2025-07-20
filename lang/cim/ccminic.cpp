@@ -9888,9 +9888,9 @@ common_error:
 		debug_dump_arraydef(prefix+"  ",ddip.arraydef);
 
 		if (ddip.dd_flags & declarator_t::FL_FUNCTION_POINTER)
-			fprintf(stderr,"%s  function pointer:\n",prefix.c_str());
+			fprintf(stderr,"%s  is function pointer\n",prefix.c_str());
 		else if (ddip.dd_flags & declarator_t::FL_FUNCTION)
-			fprintf(stderr,"%s  function:\n",prefix.c_str());
+			fprintf(stderr,"%s  is function\n",prefix.c_str());
 
 		if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
 			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
