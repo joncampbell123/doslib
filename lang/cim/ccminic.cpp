@@ -5486,6 +5486,38 @@ try_again_w_token:
 	/* default alignment */
 	addrmask_t				align_packing = align_packing_default;
 
+	/* code generation */
+	enum target_cpu_t {
+		CPU_NONE=0,
+		CPU_INTEL_X86
+	};
+
+	enum target_cpu_sub_t {
+		CPU_SUB_NONE=0,
+
+		// CPU_INTEL_X86
+		CPU_SUB_X86_16,
+		CPU_SUB_X86_32,
+		CPU_SUB_X86_64
+	};
+
+	enum target_cpu_rev_t {
+		CPU_REV_NONE=0,
+
+		// CPU_INTEL_X86
+		CPU_REV_X86_8086,
+		CPU_REV_X86_80186,
+		CPU_REV_X86_80286,
+		CPU_REV_X86_80386,
+		CPU_REV_X86_80486,
+		CPU_REV_X86_80586,
+		CPU_REV_X86_80686
+	};
+
+	target_cpu_t				target_cpu = CPU_INTEL_X86;
+	target_cpu_sub_t			target_cpusub = CPU_SUB_X86_16;
+	target_cpu_rev_t			target_cpurev = CPU_REV_X86_8086;
+
 	///////////////////////////////////////
 
 	typedef unsigned int ast_node_id_t;
@@ -5946,11 +5978,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::CODE;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_EXECUTABLE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("CODE");
 			}
 
@@ -5959,11 +5987,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::CONST;
 				so.flags = segment_t::FL_READABLE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("CONST");
 			}
 
@@ -5972,11 +5996,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::DATA;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("DATA");
 			}
 
@@ -5985,11 +6005,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::STACK;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("STACK");
 			}
 
@@ -5998,11 +6014,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::BSS;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("BSS");
 			}
 
@@ -6011,11 +6023,7 @@ try_again_w_token:
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::DATA;
 				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
-
-				// TODO: CCMINICC option to control target (16-bit, 32-bit, 64-bit)
-				so.limit = addrmask_make(0x10000); // 64KB
-				so.use = segment_t::use_t::X86_16; // 16-bit
-
+				default_segment_setup(so);
 				io.copy_from("FARDATA");
 			}
 		}
@@ -6130,6 +6138,22 @@ try_again_w_token:
 				flags = x.flags; x.flags = 0;
 			}
 		};
+
+		void default_segment_setup(segment_t &so) {
+			if (target_cpu == CPU_INTEL_X86) {
+				if (target_cpusub == CPU_SUB_X86_16) {
+					so.limit = addrmask_make(0x10000u); // 64KB
+					so.use = segment_t::use_t::X86_16; // 16-bit
+				}
+				else if (target_cpusub == CPU_SUB_X86_32) {
+					so.limit = addrmask_make(0x100000000ull); // 4GB
+					so.use = segment_t::use_t::X86_32; // 32-bit
+				}
+				else {
+					so.use = segment_t::use_t::X86_64; // 64-bit
+				}
+			}
+		}
 
 		struct symbol_t {
 			enum type_t {
