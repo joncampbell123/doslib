@@ -8039,10 +8039,6 @@ again:
 
 						const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
 
-						const ast_node_id_t sroot = ast_node.alloc();
-						ast_node_t &srootnode = ast_node(sroot);
-						srootnode.t = std::move(erootnode.t);
-
 						if (sid == symbol_none)
 							sid = match_str_symbol(csl);
 
@@ -8053,6 +8049,10 @@ again:
 							so.sym_type = symbol_t::STR;
 							so.part_of_segment = conststr_segment;
 							so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+
+							const ast_node_id_t sroot = ast_node.alloc();
+							ast_node_t &srootnode = ast_node(sroot);
+							srootnode.t = std::move(erootnode.t);
 
 							switch (csl.unitsize()) {
 								case 1:
@@ -8072,6 +8072,9 @@ again:
 							so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
 							so.spec.align = addrmask_make(csl.unitsize());
 							so.expr = sroot;
+						}
+						else {
+							erootnode.t.clear_v();
 						}
 
 						erootnode.t.type = token_type_t::op_symbol;
@@ -10704,6 +10707,8 @@ common_error:
 					ast_node_id_t nexpr = ast_node_none;
 					if ((r=assignment_expression(nexpr)) < 1)
 						return r;
+
+					ast_node_reduce(nexpr);
 
 					ast_node(expr).set_next(nexpr); ast_node(nexpr).release();
 					expr = nexpr;
