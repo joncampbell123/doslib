@@ -6297,7 +6297,9 @@ try_again_w_token:
 		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
 		void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name=std::string());
+		void debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name=std::string());
 		void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
+		void debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name=std::string());
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
 		void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
@@ -10042,12 +10044,29 @@ common_error:
 		}
 	}
 
+	void cc_state_t::debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name) {
+		fprintf(stderr,"%s%s%sptr type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		if (dt.t.size != data_size_none)
+			fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
+		if (dt.t.align != addrmask_none)
+			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
+
+		if (dt.tq != 0) {
+			fprintf(stderr,"%s  qualifiers:",prefix.c_str());
+			for (unsigned int x=0;x < TQI__MAX;x++) { if (dt.tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+			fprintf(stderr,"\n");
+		}
+	}
+
 	void cc_state_t::debug_dump_general(const std::string prefix,const std::string &name) {
 		fprintf(stderr,"%s%s%sgeneral info:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
 		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
 		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
 		debug_dump_data_type_set(prefix+"  ",data_types);
+		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_code,"code");
+		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_data,"data");
+		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_stack,"stack");
 	}
 
 	void cc_state_t::debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name) {
@@ -10061,6 +10080,16 @@ common_error:
 		debug_dump_var_type(prefix+"  ",dts.dt_float,"float");
 		debug_dump_var_type(prefix+"  ",dts.dt_double,"double");
 		debug_dump_var_type(prefix+"  ",dts.dt_longdouble,"longdouble");
+	}
+
+	void cc_state_t::debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name) {
+		fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr,"ptr");
+		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_near,"near ptr");
+		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_far,"far ptr");
+		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_huge,"huge ptr");
+		debug_dump_var_type(prefix+"  ",dtsp.dt_size_t,"size_t");
+		debug_dump_var_type(prefix+"  ",dtsp.dt_intptr_t,"intptr_t");
 	}
 
 	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
