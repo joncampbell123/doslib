@@ -1710,6 +1710,8 @@ namespace CCMiniC {
 			__MAX__
 		};
 
+		const unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
+
 		type_t			type = CHAR;
 		void*			data = NULL;
 		size_t			length = 0; /* in bytes */
@@ -1782,8 +1784,11 @@ namespace CCMiniC {
 		}
 		inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
 
+		size_t unitsize(void) const {
+			return unit_size[type];
+		}
+
 		size_t units(void) const {
-			static constexpr unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
 			return length / unit_size[type];
 		}
 
@@ -6035,6 +6040,15 @@ try_again_w_token:
 			}
 
 			{
+				const segment_id_t s = conststr_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CONST;
+				so.flags = segment_t::FL_READABLE;
+				default_segment_setup(so);
+				io.copy_from("CONST:str");
+			}
+
+			{
 				const segment_id_t s = data_segment = new_segment(); segment_t &so = segref(s);
 				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
 				so.type = segment_t::type_t::DATA;
@@ -6209,7 +6223,8 @@ try_again_w_token:
 				STRUCT,
 				UNION,
 				CONST,
-				ENUM
+				ENUM,
+				STR
 			};
 
 			static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
@@ -6430,6 +6445,7 @@ try_again_w_token:
 
 		segment_id_t		code_segment = segment_none;
 		segment_id_t		const_segment = segment_none;
+		segment_id_t		conststr_segment = segment_none;
 		segment_id_t		data_segment = segment_none;
 		segment_id_t		stack_segment = segment_none;
 		segment_id_t		bss_segment = segment_none;
@@ -6849,6 +6865,12 @@ exists:
 			if (sym.sym_type == symbol_t::FUNCTION) {
 				if (sym.expr != ast_node_none)
 					return code_segment;
+			}
+			else if (sym.sym_type == symbol_t::STR) {
+				if (sym.spec.type_qualifier & TQ_CONST)
+					return conststr_segment;
+
+				return data_segment;
 			}
 			else if (sym.sym_type == symbol_t::VARIABLE) {
 				if (sym.flags & symbol_t::FL_STACK)
@@ -7954,6 +7976,42 @@ again:
 			/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
 			ast_node_t &erootnode = ast_node(eroot);
 			switch (erootnode.t.type) {
+				case token_type_t::strliteral:
+					{
+						const symbol_id_t sid = new_symbol(identifier_none);//anonymous symbol
+						symbol_t &so = symbol(sid);
+						so.sym_type = symbol_t::STR;
+						so.part_of_segment = conststr_segment;
+						so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+
+						const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
+						switch (csl.unitsize()) {
+							case 1:
+								so.spec.type_specifier = TS_CHAR;
+								break;
+							case 2:
+								so.spec.type_specifier = TS_INT|TS_SZ16;
+								break;
+							case 4:
+								so.spec.type_specifier = TS_INT|TS_SZ32;
+								break;
+							default:
+								abort();
+						}
+
+						so.spec.type_qualifier = TQ_CONST;
+						so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
+						so.spec.align = addrmask_make(csl.unitsize());
+
+						const ast_node_id_t sroot = ast_node.alloc();
+						ast_node_t &srootnode = ast_node(sroot);
+						srootnode.t = std::move(erootnode.t);
+						so.expr = sroot;
+
+						erootnode.t.type = token_type_t::op_symbol;
+						erootnode.t.v.symbol = sid;
+						break;
+					}
 				case token_type_t::op_sizeof:
 					{
 						size_t ptrdref = 0;
@@ -10452,6 +10510,7 @@ common_error:
 			case cc_state_t::symbol_t::UNION: fprintf(stderr," union"); break;
 			case cc_state_t::symbol_t::CONST: fprintf(stderr," const"); break;
 			case cc_state_t::symbol_t::ENUM: fprintf(stderr," enum"); break;
+			case cc_state_t::symbol_t::STR: fprintf(stderr," str"); break;
 			default: break;
 		};
 		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
