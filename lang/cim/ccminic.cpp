@@ -6957,9 +6957,34 @@ exists:
 		int statement(ast_node_id_t &aroot);
 		int external_declaration(void);
 		int translation_unit(void);
+
+		bool is_ast_constexpr(token_t &t);
+		bool ast_constexpr_to_bool(integer_value_t &iv);
+		bool ast_constexpr_to_bool(token_t &t);
+		bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_binary_not(token_t &r,token_t &op);
+		bool ast_constexpr_logical_not(token_t &r,token_t &op);
+		bool ast_constexpr_negate(token_t &r,token_t &op);
+		bool ast_constexpr_add(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2);
+		bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2);
 	};
 
-	bool is_ast_constexpr(token_t &t) {
+	bool cc_state_t::is_ast_constexpr(token_t &t) {
 		switch (t.type) {
 			case token_type_t::integer:
 				return true;
@@ -6970,11 +6995,11 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_to_bool(integer_value_t &iv) {
+	bool cc_state_t::ast_constexpr_to_bool(integer_value_t &iv) {
 		return iv.v.u != 0ull;
 	}
 
-	bool ast_constexpr_to_bool(token_t &t) {
+	bool cc_state_t::ast_constexpr_to_bool(token_t &t) {
 		switch (t.type) {
 			case token_type_t::integer:
 				return ast_constexpr_to_bool(t.v.integer);
@@ -7568,7 +7593,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7596,7 +7621,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7624,7 +7649,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7643,7 +7668,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7662,7 +7687,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7681,7 +7706,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7700,7 +7725,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7716,7 +7741,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7732,7 +7757,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_binary_not(token_t &r,token_t &op) {
+	bool cc_state_t::ast_constexpr_binary_not(token_t &r,token_t &op) {
 		/* TODO: type promotion/conversion */
 		switch (op.type) {
 			case token_type_t::integer:
@@ -7746,7 +7771,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_logical_not(token_t &r,token_t &op) {
+	bool cc_state_t::ast_constexpr_logical_not(token_t &r,token_t &op) {
 		/* TODO: type promotion/conversion */
 		switch (op.type) {
 			case token_type_t::integer:
@@ -7760,7 +7785,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_negate(token_t &r,token_t &op) {
+	bool cc_state_t::ast_constexpr_negate(token_t &r,token_t &op) {
 		/* TODO: type promotion/conversion */
 		switch (op.type) {
 			case token_type_t::integer:
@@ -7775,7 +7800,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_add(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_add(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7791,7 +7816,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7807,7 +7832,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7823,7 +7848,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7839,7 +7864,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7855,7 +7880,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7871,7 +7896,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7887,7 +7912,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7906,7 +7931,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
@@ -7929,7 +7954,7 @@ exists:
 		return false;
 	}
 
-	bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
+	bool cc_state_t::ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
 		/* TODO: type promotion/conversion */
 		if (op1.type == op2.type) {
 			switch (op1.type) {
