@@ -301,6 +301,7 @@ static int x1a1f = sizeof(int*[3][3]);
 static int x1a1g = sizeof(const int);
 static int x1a1h[] = { 1 };
 static int x1a1i[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+static int x1a1i2[] = { 1, 2*2, 3*3, 4*4 };
 static int x1a1j[] = { dba, dbb, dbc+dbd, dbe*dbf, dbg*dbh+dbi };
 static int x1a1k[] = { dba, dbb, { 1, 2, 3, 4 }, c, d };
 static int x1a1l[] = { dba, dbb, { 1, 2, 3, 4, { dax*dax, day*day, daz*daz } }, dbc, dbd };
@@ -638,6 +639,22 @@ int fwd1(int a,int b) {
 }
 
 int fwd1(int a,int b);
+
+int fwd1call1(int a,int b) {
+	return fwd1(5,4);
+}
+
+int fwd1call2(int a,int b) {
+	return fwd1(a,b);
+}
+
+int fwd1call3(int a,int b) {
+	return fwd1(a*b,b*a);
+}
+
+int fwd1call4(int a,int b) {
+	return fwd1(2*2,4*4);
+}
 
 enum negatives { NA, NB, NC, ND=-5, NE, NF, NG, NH=-10000, NI };
 
