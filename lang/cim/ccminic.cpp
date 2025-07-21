@@ -5477,15 +5477,6 @@ try_again_w_token:
 		{ { /*size*/8u,                /*align*/addrmask_make(8u)                 }, TS_LONGLONG             }  /* intptr_t/uintptr_t */
 	};
 
-	/* data types */
-	data_type_set_t				data_types = data_types_intel16;
-	data_type_set_ptr_t			data_types_ptr_code = data_ptr_types_intel16_small; // small memory model
-	data_type_set_ptr_t			data_types_ptr_data = data_ptr_types_intel16_small;
-	data_type_set_ptr_t			data_types_ptr_stack = data_ptr_types_intel16_small;
-
-	/* default alignment */
-	addrmask_t				align_packing = align_packing_default;
-
 	/* code generation */
 	enum target_cpu_t {
 		CPU_NONE=0,			// 0
@@ -5549,9 +5540,9 @@ try_again_w_token:
 
 	static_assert( sizeof(target_cpu_rev_str_t) / sizeof(target_cpu_rev_str_t[0]) == CPU_REV__MAX, "oops" );
 
-	target_cpu_t				target_cpu = CPU_INTEL_X86;
-	target_cpu_sub_t			target_cpusub = CPU_SUB_X86_16;
-	target_cpu_rev_t			target_cpurev = CPU_REV_X86_8086;
+	target_cpu_t				target_cpu = CPU_NONE;
+	target_cpu_sub_t			target_cpusub = CPU_SUB_NONE;
+	target_cpu_rev_t			target_cpurev = CPU_REV_NONE;
 
 	///////////////////////////////////////
 
@@ -5980,6 +5971,15 @@ try_again_w_token:
 	};
 
 	struct cc_state_t {
+		/* data types */
+		data_type_set_t					data_types = data_types_default;
+		data_type_set_ptr_t				data_types_ptr_code = data_ptr_types_default;
+		data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
+		data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
+
+		/* default alignment */
+		addrmask_t					align_packing = align_packing_default;
+
 		struct pack_state_t {
 			addrmask_t				align_limit = addrmask_none;
 			std::string				identifier;
