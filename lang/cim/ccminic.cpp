@@ -5354,8 +5354,6 @@ try_again_w_token:
 		{ { /*size*/sizeof(uintptr_t), /*align*/addrmask_make(alignof(uintptr_t)) }, TS_LONG                 }  /* intptr_t/uintptr_t */
 	};
 
-	const addrmask_t align_packing_default = addrmask_none; /* no limit */
-
 	/* 16-bit segmented x86 (MS-DOS, Windows, OS/2, etc) */
 	const data_type_set_t data_types_intel16 = {
 		{ { /*size*/1u,                /*align*/addrmask_make(1u)                 }, TS_CHAR                 }, /* bool */
@@ -5978,15 +5976,13 @@ try_again_w_token:
 		data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
 		data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
 
-		/* default alignment */
-		addrmask_t					align_packing = align_packing_default;
-
 		struct pack_state_t {
 			addrmask_t				align_limit = addrmask_none;
 			std::string				identifier;
 		};
 
-		addrmask_t					current_packing;
+		addrmask_t					default_packing = addrmask_none;
+		addrmask_t					current_packing = addrmask_none;
 		std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 		enum cpp11attr_namespace_t {
@@ -6004,10 +6000,12 @@ try_again_w_token:
 
 			assert(scope_stack.empty());
 			scope_stack.push_back(scope_global);
+		}
 
+		bool init(void) {
 			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
 			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
-			current_packing = align_packing;
+			current_packing = default_packing;
 
 			{
 				const segment_id_t s = code_segment = new_segment(); segment_t &so = segref(s);
@@ -6062,6 +6060,8 @@ try_again_w_token:
 				default_segment_setup(so);
 				io.copy_from("FARDATA");
 			}
+
+			return true;
 		}
 
 		struct enumerator_t {
@@ -10064,6 +10064,19 @@ common_error:
 		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
 		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
 		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
+
+		fprintf(stderr,"%s  default packing: ",prefix.c_str());
+		if (default_packing != addrmask_none)
+			fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~default_packing) + 1ull,(unsigned long long)(~default_packing) + 1ull);
+		else
+			fprintf(stderr,"none\n");
+
+		fprintf(stderr,"%s  current packing: ",prefix.c_str());
+		if (current_packing != addrmask_none)
+			fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~current_packing) + 1ull,(unsigned long long)(~current_packing) + 1ull);
+		else
+			fprintf(stderr,"none\n");
+
 		debug_dump_data_type_set(prefix+"  ",data_types);
 		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_code,"code");
 		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_data,"data");
@@ -13038,6 +13051,12 @@ int main(int argc,char **argv) {
 
 			assert(rb.allocate());
 			rb.set_source_file(CCMiniC::alloc_source_file(sfo->getname()));
+
+			if (!ccst.init()) {
+				fprintf(stderr,"Failed to init compiler\n");
+				return -1;
+			}
+
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
 
 			ccst.debug_dump_general("");
