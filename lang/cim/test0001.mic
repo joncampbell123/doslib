@@ -20,6 +20,7 @@ static long int *c2,**d2,e2,f2,g2,h2,i2;
 static int c6 = 4;
 static int cc = 4,ddd = 6,ee = 12.34,ff = cc;
 static const char *sss = "Hello world";
+static const char sss2[] = "Hello world";
 static int c8 = 6;;;
 static int d0a = -4;
 static int d1a = 4 ? 2 : 1;
