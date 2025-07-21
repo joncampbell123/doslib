@@ -5540,10 +5540,6 @@ try_again_w_token:
 
 	static_assert( sizeof(target_cpu_rev_str_t) / sizeof(target_cpu_rev_str_t[0]) == CPU_REV__MAX, "oops" );
 
-	target_cpu_t				target_cpu = CPU_NONE;
-	target_cpu_sub_t			target_cpusub = CPU_SUB_NONE;
-	target_cpu_rev_t			target_cpurev = CPU_REV_NONE;
-
 	///////////////////////////////////////
 
 	typedef unsigned int ast_node_id_t;
@@ -5971,6 +5967,11 @@ try_again_w_token:
 	};
 
 	struct cc_state_t {
+		/* target settings */
+		target_cpu_t					target_cpu = CPU_NONE;
+		target_cpu_sub_t				target_cpusub = CPU_SUB_NONE;
+		target_cpu_rev_t				target_cpurev = CPU_REV_NONE;
+
 		/* data types */
 		data_type_set_t					data_types = data_types_default;
 		data_type_set_ptr_t				data_types_ptr_code = data_ptr_types_default;
