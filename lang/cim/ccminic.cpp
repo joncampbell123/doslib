@@ -6577,6 +6577,20 @@ try_again_w_token:
 			return scope_stack[scope_stack.size()-1u];
 		}
 
+		symbol_id_t match_str_symbol(const csliteral_t &csl) {
+			for (const auto &sym : symbols) {
+				if (sym.sym_type == symbol_t::STR && sym.expr != ast_node_none) {
+					ast_node_t &sa = ast_node(sym.expr);
+					if (sa.t.type == token_type_t::strliteral && sa.t.v.csliteral != csliteral_none) {
+						if (csliteral(sa.t.v.csliteral) == csl)
+							return (symbol_id_t)(&sym - &symbols[0]);
+					}
+				}
+			}
+
+			return symbol_none;
+		}
+
 		/* symbols are never removed from the vector, and they are always added in increasing ID order */
 		symbol_id_t new_symbol(const identifier_id_t name) {
 			const symbol_id_t r = symbols.size();
@@ -8021,35 +8035,44 @@ again:
 			switch (erootnode.t.type) {
 				case token_type_t::strliteral:
 					{
-						const symbol_id_t sid = new_symbol(identifier_none);//anonymous symbol
-						symbol_t &so = symbol(sid);
-						so.sym_type = symbol_t::STR;
-						so.part_of_segment = conststr_segment;
-						so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+						symbol_id_t sid = symbol_none;
 
 						const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
-						switch (csl.unitsize()) {
-							case 1:
-								so.spec.type_specifier = TS_CHAR;
-								break;
-							case 2:
-								so.spec.type_specifier = TS_INT|TS_SZ16;
-								break;
-							case 4:
-								so.spec.type_specifier = TS_INT|TS_SZ32;
-								break;
-							default:
-								abort();
-						}
-
-						so.spec.type_qualifier = TQ_CONST;
-						so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
-						so.spec.align = addrmask_make(csl.unitsize());
 
 						const ast_node_id_t sroot = ast_node.alloc();
 						ast_node_t &srootnode = ast_node(sroot);
 						srootnode.t = std::move(erootnode.t);
-						so.expr = sroot;
+
+						if (sid == symbol_none)
+							sid = match_str_symbol(csl);
+
+						if (sid == symbol_none) {
+							sid = new_symbol(identifier_none);//anonymous symbol
+
+							symbol_t &so = symbol(sid);
+							so.sym_type = symbol_t::STR;
+							so.part_of_segment = conststr_segment;
+							so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+
+							switch (csl.unitsize()) {
+								case 1:
+									so.spec.type_specifier = TS_CHAR;
+									break;
+								case 2:
+									so.spec.type_specifier = TS_INT|TS_SZ16;
+									break;
+								case 4:
+									so.spec.type_specifier = TS_INT|TS_SZ32;
+									break;
+								default:
+									abort();
+							}
+
+							so.spec.type_qualifier = TQ_CONST;
+							so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
+							so.spec.align = addrmask_make(csl.unitsize());
+							so.expr = sroot;
+						}
 
 						erootnode.t.type = token_type_t::op_symbol;
 						erootnode.t.v.symbol = sid;
