@@ -6959,6 +6959,7 @@ exists:
 		int translation_unit(void);
 
 		bool is_ast_constexpr(token_t &t);
+		bool is_ast_strconstexpr(token_t &t);
 		bool ast_constexpr_to_bool(integer_value_t &iv);
 		bool ast_constexpr_to_bool(token_t &t);
 		bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2);
@@ -6983,6 +6984,23 @@ exists:
 		bool ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2);
 		bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2);
 	};
+
+	bool cc_state_t::is_ast_strconstexpr(token_t &t) {
+		switch (t.type) {
+			case token_type_t::strliteral:
+				return true;
+			case token_type_t::op_symbol:
+				if (t.v.symbol != symbol_none) {
+					symbol_t &so = symbol(t.v.symbol);
+					if (so.sym_type == symbol_t::STR && (so.spec.type_qualifier & TQ_CONST))
+						return true;
+				}
+			default:
+				break;
+		};
+
+		return false;
+	}
 
 	bool cc_state_t::is_ast_constexpr(token_t &t) {
 		switch (t.type) {
@@ -8037,6 +8055,7 @@ again:
 						erootnode.t.v.symbol = sid;
 						break;
 					}
+
 				case token_type_t::op_sizeof:
 					{
 						size_t ptrdref = 0;
@@ -8362,7 +8381,7 @@ again:
 				case token_type_t::op_comma:
 					{
 						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t)) {
+						if (is_ast_constexpr(ast_node(op1).t) || is_ast_strconstexpr(ast_node(op1).t)) {
 							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
 							op1 = ast_node.returnmove(erootnode.child);
 							op2 = ast_node.returnmove(ast_node(op1).next);
