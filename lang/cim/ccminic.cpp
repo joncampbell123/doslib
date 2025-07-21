@@ -10460,6 +10460,13 @@ common_error:
 					fprintf(stderr,"%s  identifier: ",prefix.c_str());
 					if (sym.name != identifier_none) fprintf(stderr,"%s\n",identifier(sym.name).to_str().c_str());
 					else fprintf(stderr,"<anon>\n");
+
+					if (sym.sym_type == symbol_t::STR && sym.expr != ast_node_none) {
+						ast_node_t &sa = ast_node(sym.expr);
+						if (sa.t.type == token_type_t::strliteral && sa.t.v.csliteral != csliteral_none) {
+							fprintf(stderr,"%s    string: %s\n",prefix.c_str(),csliteral(sa.t.v.csliteral).to_str().c_str());
+						}
+					}
 				}
 			}
 
