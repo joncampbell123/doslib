@@ -5478,10 +5478,10 @@ try_again_w_token:
 	};
 
 	/* data types */
-	data_type_set_t				data_types = data_types_default;
-	data_type_set_ptr_t			data_types_ptr_code = data_ptr_types_default;
-	data_type_set_ptr_t			data_types_ptr_data = data_ptr_types_default;
-	data_type_set_ptr_t			data_types_ptr_stack = data_ptr_types_default;
+	data_type_set_t				data_types = data_types_intel16;
+	data_type_set_ptr_t			data_types_ptr_code = data_ptr_types_intel16_small; // small memory model
+	data_type_set_ptr_t			data_types_ptr_data = data_ptr_types_intel16_small;
+	data_type_set_ptr_t			data_types_ptr_stack = data_ptr_types_intel16_small;
 
 	/* default alignment */
 	addrmask_t				align_packing = align_packing_default;
@@ -6296,6 +6296,7 @@ try_again_w_token:
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+		void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
 		void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
@@ -10026,11 +10027,36 @@ common_error:
 		return 1;
 	}
 
+	void cc_state_t::debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name) {
+		fprintf(stderr,"%s%s%svar type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		if (dt.t.size != data_size_none)
+			fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
+		if (dt.t.align != addrmask_none)
+			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
+
+		if (dt.ts != 0) {
+			fprintf(stderr,"%s  type:",prefix.c_str());
+			for (unsigned int x=0;x < TSI__MAX;x++) { if (dt.ts&(1u<<x)) fprintf(stderr," %s",type_specifier_idx_t_str[x]); }
+			fprintf(stderr,"\n");
+		}
+	}
+
 	void cc_state_t::debug_dump_general(const std::string prefix,const std::string &name) {
 		fprintf(stderr,"%s%s%sgeneral info:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
 		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
 		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
 		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
+
+		fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		debug_dump_var_type(prefix+"  ",data_types.dt_bool,"bool");
+		debug_dump_var_type(prefix+"  ",data_types.dt_char,"char");
+		debug_dump_var_type(prefix+"  ",data_types.dt_short,"short");
+		debug_dump_var_type(prefix+"  ",data_types.dt_int,"int");
+		debug_dump_var_type(prefix+"  ",data_types.dt_long,"long");
+		debug_dump_var_type(prefix+"  ",data_types.dt_longlong,"longlong");
+		debug_dump_var_type(prefix+"  ",data_types.dt_float,"float");
+		debug_dump_var_type(prefix+"  ",data_types.dt_double,"double");
+		debug_dump_var_type(prefix+"  ",data_types.dt_longdouble,"longdouble");
 	}
 
 	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
