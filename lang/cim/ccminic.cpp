@@ -6296,6 +6296,7 @@ try_again_w_token:
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+		void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name=std::string());
 		void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
 		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
 		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
@@ -10046,17 +10047,20 @@ common_error:
 		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
 		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
 		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
+		debug_dump_data_type_set(prefix+"  ",data_types);
+	}
 
+	void cc_state_t::debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name) {
 		fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_var_type(prefix+"  ",data_types.dt_bool,"bool");
-		debug_dump_var_type(prefix+"  ",data_types.dt_char,"char");
-		debug_dump_var_type(prefix+"  ",data_types.dt_short,"short");
-		debug_dump_var_type(prefix+"  ",data_types.dt_int,"int");
-		debug_dump_var_type(prefix+"  ",data_types.dt_long,"long");
-		debug_dump_var_type(prefix+"  ",data_types.dt_longlong,"longlong");
-		debug_dump_var_type(prefix+"  ",data_types.dt_float,"float");
-		debug_dump_var_type(prefix+"  ",data_types.dt_double,"double");
-		debug_dump_var_type(prefix+"  ",data_types.dt_longdouble,"longdouble");
+		debug_dump_var_type(prefix+"  ",dts.dt_bool,"bool");
+		debug_dump_var_type(prefix+"  ",dts.dt_char,"char");
+		debug_dump_var_type(prefix+"  ",dts.dt_short,"short");
+		debug_dump_var_type(prefix+"  ",dts.dt_int,"int");
+		debug_dump_var_type(prefix+"  ",dts.dt_long,"long");
+		debug_dump_var_type(prefix+"  ",dts.dt_longlong,"longlong");
+		debug_dump_var_type(prefix+"  ",dts.dt_float,"float");
+		debug_dump_var_type(prefix+"  ",dts.dt_double,"double");
+		debug_dump_var_type(prefix+"  ",dts.dt_longdouble,"longdouble");
 	}
 
 	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
