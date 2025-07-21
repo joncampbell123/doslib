@@ -6002,6 +6002,15 @@ try_again_w_token:
 			scope_stack.push_back(scope_global);
 		}
 
+		bool arrange_symbols(void) {
+			for (auto &sym : symbols) {
+				if (sym.part_of_segment == segment_none)
+					sym.part_of_segment = decide_sym_segment(sym);
+			}
+
+			return true;
+		}
+
 		bool init(void) {
 			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
 			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
@@ -6833,6 +6842,32 @@ exists:
 			sym.sym_type = sl.st;
 			ast_node.assign(/*to*/sym.expr,/*from*/declor.expr);
 			return 1;
+		}
+
+		segment_id_t decide_sym_segment(symbol_t &sym) {
+			if (sym.sym_type == symbol_t::FUNCTION) {
+				if (sym.expr != ast_node_none)
+					return code_segment;
+			}
+			else if (sym.sym_type == symbol_t::VARIABLE) {
+				if (sym.flags & symbol_t::FL_STACK)
+					return stack_segment;
+
+				if (sym.expr != ast_node_none) {
+					if (sym.spec.type_qualifier & TQ_CONST)
+						return const_segment;
+
+					return data_segment;
+				}
+				else {
+					if (sym.spec.type_qualifier & TQ_CONST)
+						return segment_none; // um??? const with no expression? what's the point?
+
+					return bss_segment;
+				}
+			}
+
+			return segment_none;
 		}
 
 		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
@@ -13058,6 +13093,9 @@ int main(int argc,char **argv) {
 			}
 
 			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
+
+			if (!ccst.arrange_symbols())
+				fprintf(stderr,"Failed to arrange symbols\n");
 
 			ccst.debug_dump_general("");
 			ccst.debug_dump_segment_table("");
