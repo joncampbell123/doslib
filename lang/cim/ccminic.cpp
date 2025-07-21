@@ -6303,6 +6303,7 @@ try_again_w_token:
 			}
 		};
 
+		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
@@ -6852,6 +6853,8 @@ exists:
 			else if (sym.sym_type == symbol_t::VARIABLE) {
 				if (sym.flags & symbol_t::FL_STACK)
 					return stack_segment;
+				if (sym.flags & symbol_t::FL_PARAMETER)
+					return segment_none; // well... that's up to the calling convention. could be CPU registers or stack
 
 				if (sym.expr != ast_node_none) {
 					if (sym.spec.type_qualifier & TQ_CONST)
@@ -12808,18 +12811,18 @@ common_error:
 		return 1;
 	}
 
-	int CCstep(cc_state_t &cc,rbuf &buf,source_file_object &sfo) {
+	int cc_state_t::CCstep(rbuf &_buf,source_file_object &_sfo) {
 		int r;
 
-		cc.buf = &buf;
-		cc.sfo = &sfo;
+		buf = &_buf;
+		sfo = &_sfo;
 
-		if (cc.err == 0) {
-			if ((r=cc.translation_unit()) < 1)
+		if (err == 0) {
+			if ((r=translation_unit()) < 1)
 				return r;
 		}
 
-		if (cc.err < 0)
+		if (err < 0)
 			return r;
 
 		return 1;
@@ -13092,7 +13095,7 @@ int main(int argc,char **argv) {
 				return -1;
 			}
 
-			while ((r=CCMiniC::CCstep(ccst,rb,*sfo)) > 0);
+			while ((r=ccst.CCstep(rb,*sfo)) > 0);
 
 			if (!ccst.arrange_symbols())
 				fprintf(stderr,"Failed to arrange symbols\n");
