@@ -6020,21 +6020,25 @@ try_again_w_token:
 				if (sym.part_of_segment != segment_none) {
 					segment_t &se = segref(sym.part_of_segment);
 
-					if (sym.offset == data_offset_none && sym.spec.size != data_size_none &&
-						(sym.flags & symbol_t::FL_DEFINED) && (sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
-						!(sym.part_of_segment == stack_segment) && sym.spec.align != addrmask_none) {
+					const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+					const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
+
+					if (sym.offset == data_offset_none && (sym.flags & symbol_t::FL_DEFINED) &&
+						(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
+						!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
+						am != addrmask_none) {
+
 						if (sym.sym_type == symbol_t::VARIABLE ||
 							sym.sym_type == symbol_t::CONST ||
 							sym.sym_type == symbol_t::STR) {
 
 							/* stack must align to largest alignment of symbol */
-							se.align &= sym.spec.align;
+							se.align &= am;
 
 							/* next symbol align and assign */
-							se.next_alloc = (se.next_alloc + (~sym.spec.align)) & sym.spec.align;
+							se.next_alloc = (se.next_alloc + (~am)) & am;
 							sym.offset = se.next_alloc;
-
-							se.next_alloc += sym.spec.size;
+							se.next_alloc += sz;
 						}
 					}
 				}
@@ -10642,6 +10646,16 @@ common_error:
 		}
 		if (sym.offset != data_offset_none) {
 			fprintf(stderr," offset=0x%llx",(unsigned long long)sym.offset);
+		}
+
+		{
+			const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+			if (sz != data_size_none) fprintf(stderr," size=0x%llx(%llx)",(unsigned long long)sz,(unsigned long long)sz);
+		}
+
+		{
+			const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
+			if (am != addrmask_none) fprintf(stderr," symalign=0x%llx(%llx)",(unsigned long long)(~am) + 1ull,(unsigned long long)(~am) + 1ull);
 		}
 
 		fprintf(stderr,"\n");
