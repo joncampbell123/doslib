@@ -6202,7 +6202,7 @@ try_again_w_token:
 			identifier_id_t				name = identifier_none;
 			type_t					type = type_t::NONE;
 			use_t					use = use_t::NONE;
-			addrmask_t				limit = addrmask_none;
+			data_size_t				limit = data_size_none;
 			unsigned int				flags = 0;
 			data_offset_t				next_alloc = 0;
 
@@ -6230,11 +6230,11 @@ try_again_w_token:
 		void default_segment_setup(segment_t &so) {
 			if (target_cpu == CPU_INTEL_X86) {
 				if (target_cpusub == CPU_SUB_X86_16) {
-					so.limit = addrmask_make(0x10000u); // 64KB
+					so.limit = data_size_t(0x10000u); // 64KB
 					so.use = segment_t::use_t::X86_16; // 16-bit
 				}
 				else if (target_cpusub == CPU_SUB_X86_32) {
-					so.limit = addrmask_make(0x100000000ull); // 4GB
+					so.limit = data_size_t(0x100000000ull); // 4GB
 					so.use = segment_t::use_t::X86_32; // 32-bit
 				}
 				else {
@@ -10599,8 +10599,8 @@ common_error:
 
 		if (s.align != addrmask_none)
 			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
-		if (s.limit != addrmask_none)
-			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.limit) + 1ull,(unsigned long long)(~s.limit) + 1ull);
+		if (s.limit != data_size_none)
+			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.limit,(unsigned long long)s.limit);
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
