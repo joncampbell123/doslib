@@ -6008,9 +6008,36 @@ try_again_w_token:
 		}
 
 		bool arrange_symbols(void) {
+			for (auto &sg : segments) {
+				if (sg.align == addrmask_none)
+					sg.align = addrmask_make(1);
+			}
+
 			for (auto &sym : symbols) {
 				if (sym.part_of_segment == segment_none)
 					sym.part_of_segment = decide_sym_segment(sym);
+
+				if (sym.part_of_segment != segment_none) {
+					segment_t &se = segref(sym.part_of_segment);
+
+					if (sym.offset == data_offset_none && sym.spec.size != data_size_none &&
+						(sym.flags & symbol_t::FL_DEFINED) && (sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
+						!(sym.part_of_segment == stack_segment) && sym.spec.align != addrmask_none) {
+						if (sym.sym_type == symbol_t::VARIABLE ||
+							sym.sym_type == symbol_t::CONST ||
+							sym.sym_type == symbol_t::STR) {
+
+							/* stack must align to largest alignment of symbol */
+							se.align &= sym.spec.align;
+
+							/* next symbol align and assign */
+							se.next_alloc = (se.next_alloc + (~sym.spec.align)) & sym.spec.align;
+							sym.offset = se.next_alloc;
+
+							se.next_alloc += sym.spec.size;
+						}
+					}
+				}
 			}
 
 			return true;
@@ -6177,6 +6204,7 @@ try_again_w_token:
 			use_t					use = use_t::NONE;
 			addrmask_t				limit = addrmask_none;
 			unsigned int				flags = 0;
+			data_offset_t				next_alloc = 0;
 
 			segment_t() { }
 			segment_t(const segment_t &) = delete;
@@ -6195,6 +6223,7 @@ try_again_w_token:
 				use = x.use; x.use = use_t::NONE;
 				limit = x.limit; x.limit = addrmask_none;
 				flags = x.flags; x.flags = 0;
+				next_alloc = x.next_alloc; x.next_alloc = 0;
 			}
 		};
 
