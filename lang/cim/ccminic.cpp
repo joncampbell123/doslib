@@ -6044,6 +6044,13 @@ try_again_w_token:
 				}
 			}
 
+			for (auto &sg : segments) {
+				if (sg.size == data_size_none)
+					sg.size = 0;
+				if (sg.size < sg.next_alloc)
+					sg.size = sg.next_alloc;
+			}
+
 			return true;
 		}
 
@@ -6207,6 +6214,7 @@ try_again_w_token:
 			type_t					type = type_t::NONE;
 			use_t					use = use_t::NONE;
 			data_size_t				limit = data_size_none;
+			data_size_t				size = data_size_none;
 			unsigned int				flags = 0;
 			data_offset_t				next_alloc = 0;
 
@@ -6226,6 +6234,7 @@ try_again_w_token:
 				type = x.type; x.type = type_t::NONE;
 				use = x.use; x.use = use_t::NONE;
 				limit = x.limit; x.limit = addrmask_none;
+				size = x.size; x.size = data_size_none;
 				flags = x.flags; x.flags = 0;
 				next_alloc = x.next_alloc; x.next_alloc = 0;
 			}
@@ -10605,6 +10614,8 @@ common_error:
 			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
 		if (s.limit != data_size_none)
 			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.limit,(unsigned long long)s.limit);
+		if (s.size != data_size_none)
+			fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.size,(unsigned long long)s.size);
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
