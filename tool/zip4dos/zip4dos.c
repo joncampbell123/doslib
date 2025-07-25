@@ -25,6 +25,11 @@
 #include <unistd.h>
 
 #if defined(TARGET_MSDOS)
+#include <dos.h>
+#define WILDCARD_MATCH
+#endif
+
+#if defined(TARGET_MSDOS)
 #include <ext/zlib/zlib.h>
 #include <conio.h>
 #else
@@ -1013,6 +1018,19 @@ static int skip_file(char *a,struct stat *st) {
     return 0;
 }
 
+#ifdef WILDCARD_MATCH
+static int is_wildcard(const char *s) {
+    while (*s) {
+        if (*s == '*' || *s == '?')
+            return 1;
+        else
+            s++;
+    }
+
+    return 0;
+}
+#endif
+
 static int parse(int argc,char **argv) {
     unsigned int zip_cdir_total_count = 0;
     unsigned int zip_cdir_last_count = 0;
@@ -1107,6 +1125,54 @@ static int parse(int argc,char **argv) {
                 }
             }
 #endif
+
+#ifdef WILDCARD_MATCH
+            if (is_wildcard(a)) {
+#if defined(TARGET_MSDOS) /* MS-DOS 8.3 */
+                struct find_t fi;
+
+                char *tmp = malloc(PATH_MAX),*tf = tmp+PATH_MAX,*tmpappend = tmp;
+                if (!tmp) return 1;
+                *tmp = 0;
+
+                if (_dos_findfirst(a,_A_NORMAL|_A_RDONLY|_A_SUBDIR|_A_ARCH,&fi) == 0) {
+                    {
+                        char *s = a,*e = strrchr(a,'\\');
+                        if (e) {
+                            while (s <= e && tmpappend < tf) *tmpappend++ = *s++;
+                            if (tmpappend >= tf) continue;
+                            *tmpappend = 0;
+                        }
+                    }
+
+                    do {
+                        if (fi.name[0] == '.')
+                            continue;
+
+                        {
+                            char *s = fi.name,*d = tmpappend;
+                            while (*s && d < tf) *d++ = *s++;
+                            if (d >= tf) continue;
+                            *d = 0;
+                        }
+
+                        if (skip_file(tmp,&st))
+                            continue;
+
+#ifdef USE_ICONV
+# error unexpected
+#else
+                        if (add_file(tmp,st))
+                                return 1;
+#endif
+                    } while (_dos_findnext(&fi) == 0);
+                }
+
+                free(tmp);
+#endif
+                continue;
+            }
+#endif /*WILDCARD_MATCH*/
 
             if (skip_file(a,&st))
                 continue;
