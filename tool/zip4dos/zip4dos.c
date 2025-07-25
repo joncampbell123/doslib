@@ -26,6 +26,7 @@
 
 #if defined(TARGET_MSDOS)
 #include <ext/zlib/zlib.h>
+#include <conio.h>
 #else
 #include <zlib.h>
 #define USE_ICONV
@@ -121,6 +122,11 @@ static void help(void) {
     fprintf(stderr,"  -t+                      Add trailing data descriptor\n");
     fprintf(stderr,"  -t-                      Don't write trailing descriptor\n");
     fprintf(stderr,"\n");
+#if defined(TARGET_MSDOS)
+    fprintf(stderr,"Press any key to continue..."); fflush(stderr);
+    getch();
+    fprintf(stderr,"\x0D                                         \x0D"); fflush(stderr);
+#endif
     fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
     fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
     fprintf(stderr,"per fragment to d01, d02, etc.\n");
