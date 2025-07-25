@@ -1019,6 +1019,12 @@ static int skip_file(char *a,struct stat *st) {
 }
 
 #ifdef WILDCARD_MATCH
+struct searchpathappend_t {
+    char*       tmp;
+    char*       tf;
+    char*       tmpappend;
+};
+
 static int is_wildcard(const char *s) {
     while (*s) {
         if (*s == '*' || *s == '?')
@@ -1027,6 +1033,41 @@ static int is_wildcard(const char *s) {
             s++;
     }
 
+    return 0;
+}
+
+static int spa_init(struct searchpathappend_t *spa) {
+    spa->tmp = malloc(PATH_MAX);
+    if (!spa->tmp) return 1;
+    spa->tf = spa->tmp+PATH_MAX;
+    spa->tmpappend = spa->tmp;
+    *(spa->tmp) = 0;
+    return 0;
+}
+
+static void spa_free(struct searchpathappend_t *spa) {
+    if (spa->tmp) free(spa->tmp);
+    spa->tmp = spa->tf = spa->tmpappend = NULL;
+}
+
+static int spa_set_path_from_wildcard(struct searchpathappend_t *spa,const char *a) {
+    const char *s = a,*e = strrchr(a,'\\');
+    char *ap = spa->tmp;
+    if (e) {
+        while (s <= e && ap < spa->tf) *ap++ = *s++;
+        if (ap >= spa->tf) return 1;
+        *ap = 0;
+    }
+    spa->tmpappend = ap;
+    return 0;
+}
+
+static int spa_append_filename(struct searchpathappend_t *spa,const char *fn) {
+    char *d = spa->tmpappend;
+    const char *s = fn;
+    while (*s && d < spa->tf) *d++ = *s++;
+    if (d >= spa->tf) return 1;
+    *d = 0;
     return 0;
 }
 #endif
@@ -1129,46 +1170,33 @@ static int parse(int argc,char **argv) {
 #ifdef WILDCARD_MATCH
             if (is_wildcard(a)) {
 #if defined(TARGET_MSDOS) /* MS-DOS 8.3 */
+                struct searchpathappend_t spa;
                 struct find_t fi;
 
-                char *tmp = malloc(PATH_MAX),*tf = tmp+PATH_MAX,*tmpappend = tmp;
-                if (!tmp) return 1;
-                *tmp = 0;
+                if (spa_init(&spa)) return 1;
+
+                if (spa_set_path_from_wildcard(&spa,a)) {
+                    spa_free(&spa);
+                    continue;
+                }
 
                 if (_dos_findfirst(a,_A_NORMAL|_A_RDONLY|_A_SUBDIR|_A_ARCH,&fi) == 0) {
-                    {
-                        char *s = a,*e = strrchr(a,'\\');
-                        if (e) {
-                            while (s <= e && tmpappend < tf) *tmpappend++ = *s++;
-                            if (tmpappend >= tf) continue;
-                            *tmpappend = 0;
-                        }
-                    }
-
                     do {
                         if (fi.name[0] == '.')
                             continue;
 
-                        {
-                            char *s = fi.name,*d = tmpappend;
-                            while (*s && d < tf) *d++ = *s++;
-                            if (d >= tf) continue;
-                            *d = 0;
-                        }
-
-                        if (skip_file(tmp,&st))
+                        if (spa_append_filename(&spa,fi.name))
                             continue;
 
-#ifdef USE_ICONV
-# error unexpected
-#else
-                        if (add_file(tmp,st))
+                        if (skip_file(spa.tmp,&st))
+                            continue;
+
+                        if (add_file(spa.tmp,st))
                                 return 1;
-#endif
                     } while (_dos_findnext(&fi) == 0);
                 }
 
-                free(tmp);
+                spa_free(&spa);
 #endif
                 continue;
             }
