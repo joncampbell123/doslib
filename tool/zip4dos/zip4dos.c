@@ -1171,6 +1171,34 @@ static int parse(int argc,char **argv) {
             if (is_wildcard(a)) {
 #if defined(TARGET_MSDOS) /* MS-DOS 8.3 */
                 struct searchpathappend_t spa;
+# if TARGET_WINDOWS == 32 || defined(TARGET_OS2)
+                struct _finddata_t fi;
+                int handle;
+
+                if (spa_init(&spa)) return 1;
+
+                if (spa_set_path_from_wildcard(&spa,a)) {
+                    spa_free(&spa);
+                    continue;
+                }
+
+                if ((handle=_findfirst(a,&fi)) >= 0) {
+                    do {
+                        if (fi.name[0] == '.')
+                            continue;
+
+                        if (spa_append_filename(&spa,fi.name))
+                            continue;
+
+                        if (skip_file(spa.tmp,&st))
+                            continue;
+
+                        if (add_file(spa.tmp,st))
+                                return 1;
+                    } while (_findnext(handle,&fi) >= 0);
+                    _findclose(handle);
+                }
+# else
                 struct find_t fi;
 
                 if (spa_init(&spa)) return 1;
@@ -1194,8 +1222,9 @@ static int parse(int argc,char **argv) {
                         if (add_file(spa.tmp,st))
                                 return 1;
                     } while (_dos_findnext(&fi) == 0);
+                    _dos_findclose(&fi);
                 }
-
+# endif
                 spa_free(&spa);
 #endif
                 continue;
