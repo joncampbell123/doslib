@@ -18,7 +18,6 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -223,7 +222,7 @@ struct in_file {
     uint32_t            crc32;
     struct in_file*     next;
 
-    _Bool               data_descriptor;/* write data descriptor after file */
+    unsigned char       data_descriptor;/* write data descriptor after file */
 } in_file;
 
 struct in_file *in_file_alloc(void) {
@@ -245,7 +244,7 @@ void in_file_free(struct in_file *f) {
 }
 
 struct in_file *file_list_head = NULL;
-struct in_file *file_list_tail = NULL; // for ref only to append quicker
+struct in_file *file_list_tail = NULL; /* for ref only to append quicker */
 
 void file_list_free(void) {
     while (file_list_head != NULL) {
@@ -279,7 +278,7 @@ void file_list_append(struct in_file *f) {
 char *zip_path = NULL;
 unsigned long spanning_size = 0;
 int deflate_mode = 5; /* default deflate mode */
-_Bool recurse = 0;
+unsigned char recurse = 0;
 char *codepage_in = NULL;
 char *codepage_out = NULL;
 int trailing_data_descriptor = -1;
@@ -339,13 +338,13 @@ void zip_out_header_finish(void) {
         lseek(zip_fd,archive_zip_offset,SEEK_SET);
         read(zip_fd,tmp,32);
 
-        // starting cluster already filled in. update file size.
+        /* starting cluster already filled in. update file size. */
         *((uint32_t*)(tmp+0x1C)) = fsz;
 
         lseek(zip_fd,archive_zip_offset,SEEK_SET);
         write(zip_fd,tmp,32);
 
-        // now make a FAT chain
+        /* now make a FAT chain */
         {
             unsigned char *FAT = malloc(512 * fat_sectors);
 
@@ -353,7 +352,7 @@ void zip_out_header_finish(void) {
             lseek(zip_fd,fat_start,SEEK_SET);
             read(zip_fd,FAT,512 * fat_sectors);
 
-            // how many clusters?
+            /* how many clusters? */
             u = 512 * sectors_per_cluster;
             m = ((fsz + u - 1U) / u) + 2;
             for (i=2;i < m;i++) {
@@ -378,7 +377,7 @@ void zip_out_header_finish(void) {
             free(FAT);
         }
 
-        // fill to end
+        /* fill to end */
         memset(tmp,0,sizeof(tmp));
         lseek(zip_fd,0,SEEK_END);
         while (zip_out_pos_abs() < spanning_size) {
@@ -436,12 +435,12 @@ int zip_out_header(void) {
             abort();
         }
 
-        root_dir_entries = (root_dir_sectors * 512UL) / 32UL;                   // one sector / (bytes per root dir entry)
+        root_dir_entries = (root_dir_sectors * 512UL) / 32UL;                   /* one sector / (bytes per root dir entry) */
         total_log_sectors = C * H * S;
         total_data_sectors = total_log_sectors - reserved_sectors - root_dir_sectors;
         total_clusters = total_data_sectors / sectors_per_cluster;
         for (it=0;it < 3;it++) {
-            unsigned long fatsz = (((unsigned long)total_clusters + 1UL) / 2UL) * 3UL; // FAT12
+            unsigned long fatsz = (((unsigned long)total_clusters + 1UL) / 2UL) * 3UL; /* FAT12 */
             fat_sectors = (fatsz + 511UL) / 512UL;
             total_data_sectors = total_log_sectors - reserved_sectors - root_dir_sectors;
             total_data_sectors -= fat_sectors * number_of_fats;
@@ -478,12 +477,12 @@ int zip_out_header(void) {
             if (FAT == NULL) return 1;
             memset(FAT,0,512 * fat_sectors);
 
-            // media byte + filler
+            /* media byte + filler */
             FAT[0] = media_desc;
             FAT[1] = 0xFF;
             FAT[2] = 0xFF;
 
-            // zip_out_close() will write a FAT chain for how much was actually written
+            /* zip_out_close() will write a FAT chain for how much was actually written */
 
             for (it=0;it < number_of_fats;it++) {
                 write(zip_fd,FAT,512 * fat_sectors);
@@ -497,19 +496,19 @@ int zip_out_header(void) {
         {
             unsigned char *ent = (unsigned char*)tmp + 0;
 
-            //          <---8+3--->
+            /*          <---8+3---> */
             memcpy(ent,"ARCHIVE ZIP",11);
-            ent[11] = 0x00; // normal file
-            *((uint16_t*)(tmp+26)) = 2; // starting cluster
-            // zip_out_close() will update size later
+            ent[11] = 0x00; /* normal file */
+            *((uint16_t*)(tmp+26)) = 2; /* starting cluster */
+            /* zip_out_close() will update size later */
         }
 
         {
             unsigned char *ent = (unsigned char*)tmp + 32;
 
-            // volume label 11 char (based on PKZIP)
+            /* volume label 11 char (based on PKZIP) */
             sprintf((char*)ent,"PKBACK# %03u",disk_current_number()+1);
-            ent[11] = 0x08; // volume label
+            ent[11] = 0x08; /* volume label */
         }
 
         archive_zip_offset = zip_out_pos_abs();
@@ -570,7 +569,7 @@ int parse_unit_amount(unsigned long *out,const char *s) {
 }
 
 char *zip_out_get_span_name(int disk_number) {
-    char *a;
+    char *a,*x;
 
     assert(zip_path != NULL);
     if (disk_number < 0 || disk_number >= 99) return NULL;
@@ -581,7 +580,7 @@ char *zip_out_get_span_name(int disk_number) {
     /* replace .zip with .d01, .d02, etc. */
     /* we'll change to doing .z01, .z02, etc. when we support split archives properly,
      * until then we only support generating disk images. */
-    char *x = strrchr(a,'.');
+    x = strrchr(a,'.');
     if (x == NULL) {
         free(a);
         return NULL;
@@ -695,7 +694,7 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
 
     lfh->uncompressed_size = list->file_size;
     if (list->file_size == 0)
-        return 0; // nothing to do
+        return 0; /* nothing to do */
 
     src_fd = open(list->in_path,O_RDONLY|O_BINARY);
     if (src_fd < 0) {
@@ -1043,7 +1042,7 @@ static int parse(int argc,char **argv) {
 
                     ret = iconv(ic,&in,&inleft,&out,&outleft);
                     if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
-                        fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%zu outleft=%zu\n",ft,ret,inleft,outleft);
+                        fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%lu outleft=%lu\n",ft,ret,(unsigned long)inleft,(unsigned long)outleft);
                         return 1;
                     }
                     assert(out >= ic_tmp);
@@ -1254,7 +1253,7 @@ static int parse(int argc,char **argv) {
 
                             ret = iconv(ic,&in,&inleft,&out,&outleft);
                             if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
-                                fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%zu outleft=%zu\n",ft,ret,inleft,outleft);
+                                fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%lu outleft=%lu\n",ft,ret,(unsigned long)inleft,(unsigned long)outleft);
                                 return 1;
                             }
                             assert(out >= ic_tmp);
