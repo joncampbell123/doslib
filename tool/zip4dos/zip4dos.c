@@ -996,6 +996,23 @@ static int add_file(char *a,struct stat st) {
     return 0;
 }
 
+static int skip_file(char *a,struct stat *st) {
+    if (lstat(a,st)) {
+        fprintf(stderr,"Cannot stat %s, %s\n",a,strerror(errno));
+        return 1;
+    }
+    if (!(S_ISREG(st->st_mode) || S_ISDIR(st->st_mode))) {
+        fprintf(stderr,"Skipping non-file non-directory %s\n",a);
+        return 1;
+    }
+    if (st->st_size >= (off_t)((1UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
+        fprintf(stderr,"Skipping file %s, too large (%llu bytes)\n",a,(unsigned long long)st->st_size);
+        return 1;
+    }
+
+    return 0;
+}
+
 static int parse(int argc,char **argv) {
     unsigned int zip_cdir_total_count = 0;
     unsigned int zip_cdir_last_count = 0;
@@ -1091,18 +1108,8 @@ static int parse(int argc,char **argv) {
             }
 #endif
 
-            if (lstat(a,&st)) {
-                fprintf(stderr,"Cannot stat %s, %s\n",a,strerror(errno));
-                return 1;
-            }
-            if (!(S_ISREG(st.st_mode) || S_ISDIR(st.st_mode))) {
-                fprintf(stderr,"Skipping non-file non-directory %s\n",a);
+            if (skip_file(a,&st))
                 continue;
-            }
-            if (st.st_size >= (off_t)((1UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
-                fprintf(stderr,"Skipping file %s, too large (%llu bytes)\n",a,(unsigned long long)st.st_size);
-                continue;
-            }
 
 #ifdef USE_ICONV
             if (add_file(a,st,ic))
