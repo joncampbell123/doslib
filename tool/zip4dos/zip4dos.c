@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <endian.h>
 #include <dirent.h>
+#include <strings.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
@@ -23,8 +24,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "zlib.h"
+#if defined(TARGET_MSDOS)
+#include <ext/zlib/zlib.h>
+#else
+#include <zlib.h>
+#define USE_ICONV
 #include "iconv.h"
+#endif
 
 #include "zipcrc.h"
 
@@ -870,7 +876,9 @@ static int parse(int argc,char **argv) {
     unsigned int zip_cdir_last_count = 0;
     unsigned long zip_cdir_byte_count = 0;
     unsigned long zip_cdir_offset = 0;
+#ifdef USE_ICONV
     iconv_t ic = (iconv_t)-1;
+#endif
     struct stat st;
     char *a;
     int i;
@@ -907,21 +915,23 @@ static int parse(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 set_string(&codepage_in,a);
-
+#ifdef USE_ICONV
                 if (ic != (iconv_t)-1) {
                     iconv_close(ic);
                     ic = (iconv_t)-1;
                 }
+#endif
             }
             else if (!strcmp(a,"oc")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 set_string(&codepage_out,a);
-
+#ifdef USE_ICONV
                 if (ic != (iconv_t)-1) {
                     iconv_close(ic);
                     ic = (iconv_t)-1;
                 }
+#endif
             }
             else if (!strcmp(a,"t+")) {
                 trailing_data_descriptor = 1;
@@ -940,6 +950,7 @@ static int parse(int argc,char **argv) {
             }
         }
         else {
+#ifdef USE_ICONV
             /* file to archive */
             if (ic == (iconv_t)-1 && (codepage_out != NULL || codepage_in != NULL)) {
                 if (codepage_out != NULL && codepage_in == NULL) {
@@ -953,7 +964,7 @@ static int parse(int argc,char **argv) {
                     return 1;
                 }
             }
-
+#endif
             if (lstat(a,&st)) {
                 fprintf(stderr,"Cannot stat %s, %s\n",a,strerror(errno));
                 return 1;
@@ -962,8 +973,8 @@ static int parse(int argc,char **argv) {
                 fprintf(stderr,"Skipping non-file non-directory %s\n",a);
                 continue;
             }
-            if (st.st_size >= (off_t)((2UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
-                fprintf(stderr,"Skipping file %s, too large\n",a);
+            if (st.st_size >= (off_t)((1UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
+                fprintf(stderr,"Skipping file %s, too large (%llu bytes)\n",a,(unsigned long long)st.st_size);
                 continue;
             }
 
@@ -1034,6 +1045,7 @@ static int parse(int argc,char **argv) {
                     }
                 }
 
+#ifdef USE_ICONV
                 if (ic != (iconv_t)-1) {
                     size_t inleft = strlen(ft);
                     size_t outleft = sizeof(ic_tmp)-1;
@@ -1054,6 +1066,10 @@ static int parse(int argc,char **argv) {
                         return 1;
                     }
                 }
+#else
+                if (0) {
+                }
+#endif
                 else {
                     if (in_file_set_zip_name(f,ft) == NULL) {
                         fprintf(stderr,"out of memory\n");
@@ -1073,7 +1089,7 @@ static int parse(int argc,char **argv) {
     if (spanning_size > 0)
         spanning_size -= spanning_size & 0x1FFU;
 
-    if (1/*TODO*/) {
+    if (spanning_size > 0) {
         /* when writing as disk images, the spanning size must match that of a floppy disk */
         if (spanning_size > (512UL*80UL*2UL*18UL)) {
             fprintf(stderr,"For a floppy, spanning size is too big. Try 1440k.\n");
@@ -1096,10 +1112,12 @@ static int parse(int argc,char **argv) {
     if (spanning_size > 0)
         fprintf(stderr,"Spanning size: %luKB\n",spanning_size / 1024UL);
 
+#ifdef USE_ICONV
     if (ic != (iconv_t)-1) {
         iconv_close(ic);
         ic = (iconv_t)-1;
     }
+#endif
 
     if (zip_path == NULL) {
         fprintf(stderr,"Must specify ZIP file: --zip\n");
@@ -1133,6 +1151,7 @@ static int parse(int argc,char **argv) {
         size_t sl;
         DIR *dir;
 
+#ifdef USE_ICONV
         if (ic == (iconv_t)-1 && (codepage_out != NULL || codepage_in != NULL)) {
             if (codepage_out != NULL && codepage_in == NULL) {
                 codepage_in = strdup("UTF-8");
@@ -1145,6 +1164,7 @@ static int parse(int argc,char **argv) {
                 return 1;
             }
         }
+#endif
 
         for (list=file_list_head;list;list=list->next) {
             if (list->attr & ATTR_DOS_DIR) {
@@ -1173,8 +1193,8 @@ static int parse(int argc,char **argv) {
                         fprintf(stderr,"Skipping non-file non-directory %s\n",ic_tmp);
                         continue;
                     }
-                    if (st.st_size >= (off_t)((2UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
-                        fprintf(stderr,"Skipping file %s, too large\n",ic_tmp);
+                    if (st.st_size >= (off_t)((1UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
+                        fprintf(stderr,"Skipping file %s, too large (%llu bytes)\n",ic_tmp,(unsigned long long)st.st_size);
                         continue;
                     }
 
@@ -1245,6 +1265,7 @@ static int parse(int argc,char **argv) {
                             }
                         }
 
+#ifdef USE_ICONV
                         if (ic != (iconv_t)-1) {
                             size_t inleft = strlen(ft);
                             size_t outleft = sizeof(ic_tmp)-1;
@@ -1265,6 +1286,10 @@ static int parse(int argc,char **argv) {
                                 return 1;
                             }
                         }
+#else
+                        if (0) {
+                        }
+#endif
                         else {
                             if (in_file_set_zip_name(f,ft) == NULL) {
                                 fprintf(stderr,"out of memory\n");
@@ -1285,10 +1310,12 @@ static int parse(int argc,char **argv) {
         }
     }
 
+#ifdef USE_ICONV
     if (ic != (iconv_t)-1) {
         iconv_close(ic);
         ic = (iconv_t)-1;
     }
+#endif
 
     {
         struct disk_info *d = disk_new();
