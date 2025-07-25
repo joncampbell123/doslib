@@ -687,7 +687,11 @@ ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
 }
 
 int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
+#if TARGET_MSDOS == 16
+    size_t buffer_sz = 512; /* should be good */
+#else
     size_t buffer_sz = 16384; /* should be good */
+#endif
     unsigned long total = 0;
     zipcrc_t crc32;
     char *buffer;
@@ -732,7 +736,11 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
 }
 
 int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
+#if TARGET_MSDOS == 16
+    size_t inbuffer_sz = 512,outbuffer_sz = 512;
+#else
     size_t inbuffer_sz = 32768,outbuffer_sz = 32768;
+#endif
     char *inbuffer,*outbuffer;
     unsigned long total = 0;
     zipcrc_t crc32;
