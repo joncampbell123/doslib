@@ -885,6 +885,117 @@ uint16_t stat2msdosdate(struct stat *st) {
            tm->tm_mday;
 }
 
+#ifdef USE_ICONV
+static int add_file(char *a,struct stat st,iconv_t ic) {
+#else
+static int add_file(char *a,struct stat st) {
+#endif
+    char *t,*ft;
+    struct in_file *f = in_file_alloc();
+
+    if (f == NULL) {
+        fprintf(stderr,"Out of memory\n");
+        return 1;
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        f->attr = ATTR_DOS_DIR;
+    }
+    else {
+        f->file_size = (unsigned long)st.st_size;
+        f->attr = 0;
+    }
+
+    if (in_file_set_in_path(f,a) == NULL) {
+        fprintf(stderr,"out of memory\n");
+        return 1;
+    }
+
+    /* now pick the ZIP name */
+    /* PKZIP undocumented behavior (or not mentioned in APPNOTE) is that directories are stored with '/' at the end of the name */
+    if (f->attr & ATTR_DOS_DIR)
+        t = strdup_plus_slash(a);
+    else
+        t = strdup(a);
+
+    if (t == NULL) return 1;
+
+    /* (in case of future porting to MS-DOS) convert backwards slashes to forward slashes */
+    {
+        char *ss;
+        for (ss=t;*ss!=0;ss++) {
+            if (*ss == '\\')
+                *ss = '/';
+        }
+    }
+
+    /* prevent absolute paths */
+    ft = t;
+    while (*ft == '/') ft++;
+
+    /* NO single or double dots! */
+    {
+        char *ss = ft,*n;
+        size_t chk;
+
+        while (*ss != 0) {
+            n = strchr(ss,'/');
+            if (n)
+                chk = (size_t)(n-ss);
+            else
+                chk = strlen(ss);
+
+            if ((chk == 1 && !strncmp(ss,".",  chk)) ||
+                (chk == 2 && !strncmp(ss,"..", chk))) {
+                fprintf(stderr,". or .. not allowed in the path\n");
+                return 1;
+            }
+
+            ss += chk;
+            if (*ss == '/') ss++;
+        }
+    }
+
+#ifdef USE_ICONV
+    if (ic != (iconv_t)-1) {
+        size_t inleft = strlen(ft);
+        size_t outleft = sizeof(ic_tmp)-1;
+        char *out = ic_tmp,*in = ft;
+        int ret;
+
+        ret = iconv(ic,&in,&inleft,&out,&outleft);
+        if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
+            fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%lu outleft=%lu\n",ft,ret,(unsigned long)inleft,(unsigned long)outleft);
+            return 1;
+        }
+        assert(out >= ic_tmp);
+        assert(out < (ic_tmp+sizeof(ic_tmp)));
+        *out = 0;
+
+        if (in_file_set_zip_name(f,ic_tmp) == NULL) {
+            fprintf(stderr,"out of memory\n");
+            return 1;
+        }
+    }
+#else
+    if (0) {
+    }
+#endif
+    else {
+        if (in_file_set_zip_name(f,ft) == NULL) {
+            fprintf(stderr,"out of memory\n");
+            return 1;
+        }
+    }
+
+    f->msdos_time = stat2msdostime(&st);
+    f->msdos_date = stat2msdosdate(&st);
+
+    free(t);
+    file_list_append(f);
+    return 0;
+}
+
 static int parse(int argc,char **argv) {
     unsigned int zip_cdir_total_count = 0;
     unsigned int zip_cdir_last_count = 0;
@@ -979,6 +1090,7 @@ static int parse(int argc,char **argv) {
                 }
             }
 #endif
+
             if (lstat(a,&st)) {
                 fprintf(stderr,"Cannot stat %s, %s\n",a,strerror(errno));
                 return 1;
@@ -992,111 +1104,13 @@ static int parse(int argc,char **argv) {
                 continue;
             }
 
-            {
-                char *t,*ft;
-                struct in_file *f = in_file_alloc();
-
-                if (f == NULL) {
-                    fprintf(stderr,"Out of memory\n");
-                    return 1;
-                }
-
-                if (S_ISDIR(st.st_mode)) {
-                    f->attr = ATTR_DOS_DIR;
-                }
-                else {
-                    f->file_size = (unsigned long)st.st_size;
-                    f->attr = 0;
-                }
-
-                if (in_file_set_in_path(f,a) == NULL) {
-                    fprintf(stderr,"out of memory\n");
-                    return 1;
-                }
-
-                /* now pick the ZIP name */
-                /* PKZIP undocumented behavior (or not mentioned in APPNOTE) is that directories are stored with '/' at the end of the name */
-                if (f->attr & ATTR_DOS_DIR)
-                    t = strdup_plus_slash(a);
-                else
-                    t = strdup(a);
-
-                if (t == NULL) return 1;
-
-                /* (in case of future porting to MS-DOS) convert backwards slashes to forward slashes */
-                {
-                    char *ss;
-                    for (ss=t;*ss!=0;ss++) {
-                        if (*ss == '\\')
-                            *ss = '/';
-                    }
-                }
-
-                /* prevent absolute paths */
-                ft = t;
-                while (*ft == '/') ft++;
-
-                /* NO single or double dots! */
-                {
-                    char *ss = ft,*n;
-                    size_t chk;
-
-                    while (*ss != 0) {
-                        n = strchr(ss,'/');
-                        if (n)
-                            chk = (size_t)(n-ss);
-                        else
-                            chk = strlen(ss);
-
-                        if ((chk == 1 && !strncmp(ss,".",  chk)) ||
-                            (chk == 2 && !strncmp(ss,"..", chk))) {
-                            fprintf(stderr,". or .. not allowed in the path\n");
-                            return 1;
-                        }
-
-                        ss += chk;
-                        if (*ss == '/') ss++;
-                    }
-                }
-
 #ifdef USE_ICONV
-                if (ic != (iconv_t)-1) {
-                    size_t inleft = strlen(ft);
-                    size_t outleft = sizeof(ic_tmp)-1;
-                    char *out = ic_tmp,*in = ft;
-                    int ret;
-
-                    ret = iconv(ic,&in,&inleft,&out,&outleft);
-                    if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
-                        fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%lu outleft=%lu\n",ft,ret,(unsigned long)inleft,(unsigned long)outleft);
-                        return 1;
-                    }
-                    assert(out >= ic_tmp);
-                    assert(out < (ic_tmp+sizeof(ic_tmp)));
-                    *out = 0;
-
-                    if (in_file_set_zip_name(f,ic_tmp) == NULL) {
-                        fprintf(stderr,"out of memory\n");
-                        return 1;
-                    }
-                }
+            if (add_file(a,st,ic))
+                return 1;
 #else
-                if (0) {
-                }
+            if (add_file(a,st))
+                return 1;
 #endif
-                else {
-                    if (in_file_set_zip_name(f,ft) == NULL) {
-                        fprintf(stderr,"out of memory\n");
-                        return 1;
-                    }
-                }
-
-                f->msdos_time = stat2msdostime(&st);
-                f->msdos_date = stat2msdosdate(&st);
-
-                free(t);
-                file_list_append(f);
-            }
         }
     }
 
