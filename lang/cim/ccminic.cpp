@@ -6978,6 +6978,7 @@ exists:
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
 		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
+		void ast_node_strliteral_to_symbol(ast_node_t &erootnode);
 		int asm_statement(ast_node_id_t &aroot);
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
@@ -8051,6 +8052,53 @@ exists:
 		return false;
 	}
 
+	void cc_state_t::ast_node_strliteral_to_symbol(ast_node_t &erootnode) {
+		symbol_id_t sid = symbol_none;
+
+		const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
+
+		if (sid == symbol_none)
+			sid = match_str_symbol(csl);
+
+		if (sid == symbol_none) {
+			sid = new_symbol(identifier_none);//anonymous symbol
+
+			symbol_t &so = symbol(sid);
+			so.sym_type = symbol_t::STR;
+			so.part_of_segment = conststr_segment;
+			so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+
+			const ast_node_id_t sroot = ast_node.alloc();
+			ast_node_t &srootnode = ast_node(sroot);
+			srootnode.t = std::move(erootnode.t);
+
+			switch (csl.unitsize()) {
+				case 1:
+					so.spec.type_specifier = TS_CHAR;
+					break;
+				case 2:
+					so.spec.type_specifier = TS_INT|TS_SZ16;
+					break;
+				case 4:
+					so.spec.type_specifier = TS_INT|TS_SZ32;
+					break;
+				default:
+					abort();
+			}
+
+			so.spec.type_qualifier = TQ_CONST;
+			so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
+			so.spec.align = addrmask_make(csl.unitsize());
+			so.expr = sroot;
+		}
+		else {
+			erootnode.t.clear_v();
+		}
+
+		erootnode.t.type = token_type_t::op_symbol;
+		erootnode.t.v.symbol = sid;
+	}
+
 	void cc_state_t::ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) { /* destructive reduce */
 #define OP_ONE_PARAM_TEVAL ast_node_id_t op1 = erootnode.child
 
@@ -8076,53 +8124,8 @@ again:
 			ast_node_t &erootnode = ast_node(eroot);
 			switch (erootnode.t.type) {
 				case token_type_t::strliteral:
-					{
-						symbol_id_t sid = symbol_none;
-
-						const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
-
-						if (sid == symbol_none)
-							sid = match_str_symbol(csl);
-
-						if (sid == symbol_none) {
-							sid = new_symbol(identifier_none);//anonymous symbol
-
-							symbol_t &so = symbol(sid);
-							so.sym_type = symbol_t::STR;
-							so.part_of_segment = conststr_segment;
-							so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
-
-							const ast_node_id_t sroot = ast_node.alloc();
-							ast_node_t &srootnode = ast_node(sroot);
-							srootnode.t = std::move(erootnode.t);
-
-							switch (csl.unitsize()) {
-								case 1:
-									so.spec.type_specifier = TS_CHAR;
-									break;
-								case 2:
-									so.spec.type_specifier = TS_INT|TS_SZ16;
-									break;
-								case 4:
-									so.spec.type_specifier = TS_INT|TS_SZ32;
-									break;
-								default:
-									abort();
-							}
-
-							so.spec.type_qualifier = TQ_CONST;
-							so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
-							so.spec.align = addrmask_make(csl.unitsize());
-							so.expr = sroot;
-						}
-						else {
-							erootnode.t.clear_v();
-						}
-
-						erootnode.t.type = token_type_t::op_symbol;
-						erootnode.t.v.symbol = sid;
-						break;
-					}
+					ast_node_strliteral_to_symbol(erootnode);
+					break;
 
 				case token_type_t::op_sizeof:
 					{
