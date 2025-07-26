@@ -8123,10 +8123,6 @@ again:
 			/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
 			ast_node_t &erootnode = ast_node(eroot);
 			switch (erootnode.t.type) {
-				case token_type_t::strliteral:
-					ast_node_strliteral_to_symbol(erootnode);
-					break;
-
 				case token_type_t::op_sizeof:
 					{
 						size_t ptrdref = 0;
