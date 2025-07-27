@@ -48,6 +48,7 @@ void bmpfileimage_free_image(struct BMPFILEIMAGE *b) {
 	if (b) {
 		free(b->bitmap);
 		b->bitmap = NULL;
+		b->stride = 0;
 	}
 }
 
@@ -61,6 +62,30 @@ void bmpfileimage_free(struct BMPFILEIMAGE **b) {
 	}
 }
 
+unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
+	return (((w * bpp) + 31u) & (~31u)) >> 3u;
+}
+
+int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
+	if (membmp->bitmap)
+		return 0;
+
+	if (membmp->stride == 0)
+		membmp->stride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
+	if (membmp->stride == 0 || membmp->stride > 32768u)
+		return 0;
+
+	/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
+	 *      to use _fmalloc() and pass in size as paragraphs! */
+	/* NTS: 16-bit Windows, this code will need to make multiple allocations of bitmap slices
+	 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
+	membmp->bitmap = malloc(membmp->stride * membmp->height);
+	if (!membmp->bitmap)
+		return 0;
+
+	return 1;
+}
+
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
 /* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
  * NTS: Future plans: Compile as 16-bit Windows, and this program will allocate the bitmap in slices and this function will map to slice and scanline. */
@@ -69,10 +94,6 @@ unsigned char *bitmap_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
 		return bfi->bitmap + (bfi->stride * y);
 
 	return NULL;
-}
-
-unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
-	return (((w * bpp) + 31u) & (~31u)) >> 3u;
 }
 
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
@@ -124,15 +145,8 @@ int main(int argc,char **argv) {
 		membmp->bpp = 24;
 		membmp->width = bfr->width;
 		membmp->height = bfr->height;
-		membmp->stride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
 
-		/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
-		 *      to use _fmalloc() and pass in size as paragraphs! */
-		/* NTS: 16-bit Windows, this code will need to make multiple allocations of bitmap slices
-		 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
-		membmp->bitmap = malloc(membmp->stride * membmp->height);
-
-		if (!membmp->bitmap) {
+		if (!bmpfileimage_alloc_image(membmp)) {
 			fprintf(stderr,"Failed to allocate memory\n");
 			return 1;
 		}
