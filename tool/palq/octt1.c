@@ -62,10 +62,6 @@ void bmpfileimage_free(struct BMPFILEIMAGE **b) {
 	}
 }
 
-unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
-	return (((w * bpp) + 31u) & (~31u)) >> 3u;
-}
-
 int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
 	if (membmp->bitmap)
 		return 0;
@@ -89,34 +85,11 @@ int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
 /* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
  * NTS: Future plans: Compile as 16-bit Windows, and this program will allocate the bitmap in slices and this function will map to slice and scanline. */
-unsigned char *bitmap_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
+unsigned char *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
 	if (bfi->bitmap != NULL || y >= bfi->height)
 		return bfi->bitmap + (bfi->stride * y);
 
 	return NULL;
-}
-
-unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
-	if (fw != 0u) {
-		w >>= fs;
-		w &= (1u << fw) - 1u;
-		if (fw > 8u) w >>= (uint32_t)(fw - 8u); /* truncate to 8 bits if larger */
-		if (fw < 8u) w = (w * 255u) / ((1u << fw) - 1u);
-		return (unsigned char)w;
-	}
-
-	return 0;
-}
-
-void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
-	const uint32_t *s32 = (const uint32_t*)s32raw;
-
-	while (w-- > 0) {
-		const uint32_t w = *s32++;
-		*d24++ = bitmap_mkbf8(w,bfr->blue_shift, bfr->blue_width);
-		*d24++ = bitmap_mkbf8(w,bfr->green_shift,bfr->green_width);
-		*d24++ = bitmap_mkbf8(w,bfr->red_shift,  bfr->red_width);
-	}
 }
 
 int main(int argc,char **argv) {
@@ -152,7 +125,7 @@ int main(int argc,char **argv) {
 		}
 
 		while (read_bmp_line(bfr) == 0) {
-			unsigned char *dest = bitmap_row(membmp,(unsigned int)bfr->current_line);
+			unsigned char *dest = bmpfileimage_row(membmp,(unsigned int)bfr->current_line);
 			assert(dest != NULL);
 
 			if (bfr->bpp == 32)
@@ -209,7 +182,7 @@ int main(int argc,char **argv) {
 		}
 
 		for (y=0;y < membmp->height;y++) {
-			s = bitmap_row(membmp,membmp->height - 1u - y);/* normal bitmaps are bottom up */
+			s = bmpfileimage_row(membmp,membmp->height - 1u - y);/* normal bitmaps are bottom up */
 			assert(s != NULL);
 
 			if ((unsigned int)write(fd,s,wstride) != wstride) {

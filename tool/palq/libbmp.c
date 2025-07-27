@@ -223,3 +223,30 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 	return 0;
 }
 
+unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
+	return (((w * bpp) + 31u) & (~31u)) >> 3u;
+}
+
+unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
+	if (fw != 0u) {
+		w >>= fs;
+		w &= (1u << fw) - 1u;
+		if (fw > 8u) w >>= (uint32_t)(fw - 8u); /* truncate to 8 bits if larger */
+		if (fw < 8u) w = (w * 255u) / ((1u << fw) - 1u);
+		return (unsigned char)w;
+	}
+
+	return 0;
+}
+
+void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
+	const uint32_t *s32 = (const uint32_t*)s32raw;
+
+	while (w-- > 0) {
+		const uint32_t w = *s32++;
+		*d24++ = bitmap_mkbf8(w,bfr->blue_shift, bfr->blue_width);
+		*d24++ = bitmap_mkbf8(w,bfr->green_shift,bfr->green_width);
+		*d24++ = bitmap_mkbf8(w,bfr->red_shift,  bfr->red_width);
+	}
+}
+

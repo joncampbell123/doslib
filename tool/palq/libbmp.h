@@ -99,3 +99,7 @@ struct BMPFILEREAD *open_bmp(const char *path);
 int read_bmp_line(struct BMPFILEREAD *bmp);
 void close_bmp(struct BMPFILEREAD **bmp);
 
+void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr);
+unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w);
+unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw);
+
