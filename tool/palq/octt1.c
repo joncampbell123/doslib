@@ -32,7 +32,7 @@ struct BMPFILEIMAGE {
 #else
 	unsigned char*		bitmap;
 #endif
-	unsigned int		width,height,stride;
+	unsigned int		width,height,stride,bpp;
 #ifdef BITMAP_FARPTR_RMNORM
 # error not yet supported
 #endif
@@ -48,6 +48,10 @@ unsigned char *bitmap_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
 		return bfi->bitmap + (bfi->stride * y);
 
 	return NULL;
+}
+
+unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
+	return (((w * bpp) + 31u) & (~31u)) >> 3u;
 }
 
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
@@ -92,9 +96,10 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
+		membmp.bpp = 24;
 		membmp.width = bfr->width;
 		membmp.height = bfr->height;
-		membmp.stride = bfr->stride;
+		membmp.stride = bitmap_stride_from_bpp_and_w(membmp.bpp,membmp.width);
 
 		/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
 		 *      to use _fmalloc() and pass in size as paragraphs! */
@@ -130,7 +135,7 @@ int main(int argc,char **argv) {
 		unsigned int y;
 		int fd;
 
-		wstride = (((membmp.width * 24) + 31u) & (~31u)) >> 3u;
+		wstride = bitmap_stride_from_bpp_and_w(membmp.bpp,membmp.width);
 
 		fd = open(argv[2],O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
 		if (fd < 0) {
@@ -148,11 +153,11 @@ int main(int argc,char **argv) {
 		}
 
 		memset(&bih,0,sizeof(bih));
+		bih.biPlanes = 1;
 		bih.biSize = sizeof(bih);
 		bih.biWidth = membmp.width;
 		bih.biHeight = membmp.height;
-		bih.biPlanes = 1;
-		bih.biBitCount = 24;
+		bih.biBitCount = membmp.bpp;
 		bih.biSizeImage = (unsigned long)membmp.height * (unsigned long)wstride;
 		if ((unsigned int)write(fd,&bih,sizeof(bih)) != sizeof(bih)) {
 			fprintf(stderr,"Cannot write bitmap\n");
