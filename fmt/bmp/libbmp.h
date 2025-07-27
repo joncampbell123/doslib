@@ -35,6 +35,16 @@ struct BMPFILEREAD {
 	uint8_t			has_alpha;
 };
 
+struct BMPFILEWRITE {
+	int			fd;
+	unsigned int		width;
+	unsigned int		height;
+	unsigned int		bpp;
+	unsigned int		stride;
+	int			current_line;
+	int			current_line_add;
+};
+
 #pragma pack(push,1)
 struct winBITMAPFILEHEADER {
 	uint16_t		bfType;		/* +0  'BM' */
