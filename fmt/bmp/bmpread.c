@@ -200,17 +200,6 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 	return 0;
 }
 
-void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
-	const uint32_t *s32 = (const uint32_t*)s32raw;
-
-	while (w-- > 0) {
-		const uint32_t w = *s32++;
-		*d24++ = bitmap_mkbf8(w,bfr->blue_shift, bfr->blue_width);
-		*d24++ = bitmap_mkbf8(w,bfr->green_shift,bfr->green_width);
-		*d24++ = bitmap_mkbf8(w,bfr->red_shift,  bfr->red_width);
-	}
-}
-
 struct BMPFILEIMAGE *bmpfileimage_alloc(void) {
 	struct BMPFILEIMAGE *b = (struct BMPFILEIMAGE*)malloc(sizeof(struct BMPFILEIMAGE));
 	if (b) memset(b,0,sizeof(*b));
