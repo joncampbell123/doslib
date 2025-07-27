@@ -200,10 +200,6 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 	return 0;
 }
 
-unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
-	return (((w * bpp) + 31u) & (~31u)) >> 3u;
-}
-
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
 	if (fw != 0u) {
 		w >>= fs;
