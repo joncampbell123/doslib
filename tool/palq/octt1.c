@@ -38,7 +38,28 @@ struct BMPFILEIMAGE {
 #endif
 };
 
-static struct BMPFILEIMAGE membmp;
+struct BMPFILEIMAGE *bmpfileimage_alloc(void) {
+	struct BMPFILEIMAGE *b = (struct BMPFILEIMAGE*)malloc(sizeof(struct BMPFILEIMAGE));
+	if (b) memset(b,0,sizeof(*b));
+	return b;
+}
+
+void bmpfileimage_free_image(struct BMPFILEIMAGE *b) {
+	if (b) {
+		free(b->bitmap);
+		b->bitmap = NULL;
+	}
+}
+
+void bmpfileimage_free(struct BMPFILEIMAGE **b) {
+	if (b) {
+		if (*b) {
+			bmpfileimage_free_image(*b);
+			free(*b);
+			*b = NULL;
+		}
+	}
+}
 
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
 /* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
@@ -78,10 +99,14 @@ void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned
 }
 
 int main(int argc,char **argv) {
+	struct BMPFILEIMAGE *membmp = NULL;
+
 	if (argc < 3)
 		return 1;
 
-	memset(&membmp,0,sizeof(membmp));
+	membmp = bmpfileimage_alloc();
+	if (!membmp)
+		return 1;
 
 	{
 		struct BMPFILEREAD *bfr;
@@ -96,30 +121,30 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		membmp.bpp = 24;
-		membmp.width = bfr->width;
-		membmp.height = bfr->height;
-		membmp.stride = bitmap_stride_from_bpp_and_w(membmp.bpp,membmp.width);
+		membmp->bpp = 24;
+		membmp->width = bfr->width;
+		membmp->height = bfr->height;
+		membmp->stride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
 
 		/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
 		 *      to use _fmalloc() and pass in size as paragraphs! */
 		/* NTS: 16-bit Windows, this code will need to make multiple allocations of bitmap slices
 		 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
-		membmp.bitmap = malloc(membmp.stride * membmp.height);
+		membmp->bitmap = malloc(membmp->stride * membmp->height);
 
-		if (!membmp.bitmap) {
+		if (!membmp->bitmap) {
 			fprintf(stderr,"Failed to allocate memory\n");
 			return 1;
 		}
 
 		while (read_bmp_line(bfr) == 0) {
-			unsigned char *dest = bitmap_row(&membmp,(unsigned int)bfr->current_line);
+			unsigned char *dest = bitmap_row(membmp,(unsigned int)bfr->current_line);
 			assert(dest != NULL);
 
 			if (bfr->bpp == 32)
-				bitmap_memcpy32to24(dest,bfr->scanline,membmp.width,bfr);
+				bitmap_memcpy32to24(dest,bfr->scanline,membmp->width,bfr);
 			else
-				memcpy(dest,bfr->scanline,membmp.stride);
+				memcpy(dest,bfr->scanline,membmp->stride);
 		}
 
 		/* done reading */
@@ -135,7 +160,7 @@ int main(int argc,char **argv) {
 		unsigned int y;
 		int fd;
 
-		wstride = bitmap_stride_from_bpp_and_w(membmp.bpp,membmp.width);
+		wstride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
 
 		fd = open(argv[2],O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
 		if (fd < 0) {
@@ -146,7 +171,7 @@ int main(int argc,char **argv) {
 		memset(&bfh,0,sizeof(bfh));
 		bfh.bfType = 0x4D42; /* 'BM' */
 		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = ((unsigned long)membmp.height * (unsigned long)wstride) + bfh.bfOffBits;
+		bfh.bfSize = ((unsigned long)membmp->height * (unsigned long)wstride) + bfh.bfOffBits;
 		if ((unsigned int)write(fd,&bfh,sizeof(bfh)) != sizeof(bfh)) {
 			fprintf(stderr,"Cannot write bitmap\n");
 			return 1;
@@ -155,10 +180,10 @@ int main(int argc,char **argv) {
 		memset(&bih,0,sizeof(bih));
 		bih.biPlanes = 1;
 		bih.biSize = sizeof(bih);
-		bih.biWidth = membmp.width;
-		bih.biHeight = membmp.height;
-		bih.biBitCount = membmp.bpp;
-		bih.biSizeImage = (unsigned long)membmp.height * (unsigned long)wstride;
+		bih.biWidth = membmp->width;
+		bih.biHeight = membmp->height;
+		bih.biBitCount = membmp->bpp;
+		bih.biSizeImage = (unsigned long)membmp->height * (unsigned long)wstride;
 		if ((unsigned int)write(fd,&bih,sizeof(bih)) != sizeof(bih)) {
 			fprintf(stderr,"Cannot write bitmap\n");
 			return 1;
@@ -169,8 +194,8 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		for (y=0;y < membmp.height;y++) {
-			s = bitmap_row(&membmp,membmp.height - 1u - y);/* normal bitmaps are bottom up */
+		for (y=0;y < membmp->height;y++) {
+			s = bitmap_row(membmp,membmp->height - 1u - y);/* normal bitmaps are bottom up */
 			assert(s != NULL);
 
 			if ((unsigned int)write(fd,s,wstride) != wstride) {
@@ -183,7 +208,7 @@ int main(int argc,char **argv) {
 	}
 
 	/* free bitmap */
-	free(membmp.bitmap);
+	bmpfileimage_free(&membmp);
 	return 0;
 }
 
