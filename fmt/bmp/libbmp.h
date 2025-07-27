@@ -144,3 +144,10 @@ int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp);
 void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width);
 unsigned char *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y);
 
+struct BMPFILEWRITE *create_write_bmp(void);
+int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path);
+int write_bmp_line(struct BMPFILEWRITE *bmp,const unsigned char *row,const unsigned int len);
+void do_close_write_bmp_file(struct BMPFILEWRITE *bmp);
+void do_close_write_bmp(struct BMPFILEWRITE *bmp);
+void close_write_bmp(struct BMPFILEWRITE **bmp);
+
