@@ -47,13 +47,26 @@ unsigned char *bitmap_row(unsigned int y) {
 	return NULL;
 }
 
-void memcpy32to24(unsigned char *d24,const unsigned char *d32,unsigned int w) {
-	while (w-- > 0) {
-		*d24++ = *d32++; // B
-		*d24++ = *d32++; // G
-		*d24++ = *d32++; // R
+unsigned char mkbf8(uint32_t w,uint8_t fs,uint8_t fw) {
+	if (fw != 0u) {
+		w >>= fs;
+		w &= (1u << fw) - 1u;
+		if (fw > 8u) w >>= (uint32_t)(fw - 8u); /* truncate to 8 bits if larger */
+		if (fw < 8u) w = (w * 255u) / ((1u << fw) - 1u);
+		return (unsigned char)w;
+	}
 
-		d32++; // skip A
+	return 0;
+}
+
+void memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
+	const uint32_t *s32 = (const uint32_t*)s32raw;
+
+	while (w-- > 0) {
+		const uint32_t w = *s32++;
+		*d24++ = mkbf8(w,bfr->blue_shift, bfr->blue_width);
+		*d24++ = mkbf8(w,bfr->green_shift,bfr->green_width);
+		*d24++ = mkbf8(w,bfr->red_shift,  bfr->red_width);
 	}
 }
 
@@ -94,7 +107,7 @@ int main(int argc,char **argv) {
 			assert(dest != NULL);
 
 			if (bfr->bpp == 32)
-				memcpy32to24(dest,bfr->scanline,bitmap_width);
+				memcpy32to24(dest,bfr->scanline,bitmap_width,bfr);
 			else
 				memcpy(dest,bfr->scanline,bitmap_stride);
 		}
