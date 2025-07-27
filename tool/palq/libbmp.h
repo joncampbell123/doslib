@@ -103,3 +103,33 @@ void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned
 unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w);
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw);
 
+#if TARGET_MSDOS == 16
+# if defined(TARGET_WINDOWS)
+/* 16-bit Windows: We can hold a bitmap larger than 64KB, and even point at rows, we just have to store it in slices
+ * less than 64KB to keep our sanity */
+#  define BITMAP_SLICES
+#  define MAX_BITMAP_SLICE (0xFF00ul)
+# else
+/* 16-bit MS-DOS: We can do some real mode FAR pointer normalization to keep our sanity, no scanline we handle will exceed 64KB. */
+#  define BITMAP_FARPTR_RMNORM
+# endif
+#endif
+
+struct BMPFILEIMAGE {
+#ifdef BITMAP_SLICES
+# error not yet supported
+#else
+	unsigned char*		bitmap;
+#endif
+	unsigned int		width,height,stride,bpp;
+#ifdef BITMAP_FARPTR_RMNORM
+# error not yet supported
+#endif
+};
+
+struct BMPFILEIMAGE *bmpfileimage_alloc(void);
+void bmpfileimage_free_image(struct BMPFILEIMAGE *b);
+void bmpfileimage_free(struct BMPFILEIMAGE **b);
+int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp);
+unsigned char *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y);
+
