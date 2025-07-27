@@ -13,29 +13,6 @@
 # define O_BINARY 0
 #endif
 
-void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width) {
-	if (mask != 0) {
-		uint8_t c;
-
-		c = 0;
-		while ((mask&(uint32_t)1ul) == (uint32_t)0ul) {
-			mask >>= (uint32_t)1ul;
-			c++;
-		}
-		*shift = c;
-
-		c = 0;
-		while (mask&(uint32_t)1ul) {
-			mask >>= (uint32_t)1ul;
-			c++;
-		}
-		*width = c;
-	}
-	else {
-		*shift = *width = 0;
-	}
-}
-
 struct BMPFILEREAD *open_bmp(const char *path) {
 	struct BMPFILEREAD *bmp = (struct BMPFILEREAD*)calloc(1,sizeof(struct BMPFILEREAD));
 	unsigned char *temp;

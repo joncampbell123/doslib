@@ -8,7 +8,7 @@ all: lib
 
 lib: linux-host $(LIB_OUT)
 
-BMPLIB_DEPS = linux-host/bmpread.o
+BMPLIB_DEPS = linux-host/bmpread.o linux-host/maskshft.o
 
 $(BMPLIB): $(BMPLIB_DEPS)
 	rm -f $(BMPLIB)
@@ -22,5 +22,5 @@ linux-host/%.o : %.c
 
 clean:
 	rm -f linux-host/*.o linux-host/*.a
-	rmdir linux-host
+	(rmdir linux-host 2>/dev/null) || true
 
