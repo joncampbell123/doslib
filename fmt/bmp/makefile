@@ -8,7 +8,7 @@ all: lib
 
 lib: linux-host $(LIB_OUT)
 
-BMPLIB_DEPS = linux-host/libbmp.o
+BMPLIB_DEPS = linux-host/bmpread.o
 
 $(BMPLIB): $(BMPLIB_DEPS)
 	rm -f $(BMPLIB)
