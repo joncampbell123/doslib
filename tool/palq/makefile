@@ -3,15 +3,27 @@ OCTT1 = linux-host/octt1
 
 BIN_OUT = $(OCTT1)
 
+BMPLIB = linux-host/libbmp.a
+
+LIB_OUT = $(BMPLIB)
+
 # GNU makefile, Linux host
-all: bin
+all: bin lib
 
 bin: linux-host $(BIN_OUT)
+
+lib: linux-host $(LIB_OUT)
+
+BMPLIB_DEPS = linux-host/libbmp.o
+
+$(BMPLIB): $(BMPLIB_DEPS)
+	rm -f $(BMPLIB)
+	ar r $(BMPLIB) $(BMPLIB_DEPS)
 
 linux-host:
 	mkdir -p linux-host
 
-$(OCTT1): linux-host/octt1.o linux-host/libbmp.o
+$(OCTT1): linux-host/octt1.o $(BMPLIB)
 	gcc -o $@ $^
 
 linux-host/%.o : %.c
