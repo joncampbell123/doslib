@@ -31,4 +31,5 @@ linux-host/%.o : %.c
 
 clean:
 	rm -f linux-host/octt1 linux-host/*.o linux-host/*.a
+	rmdir linux-host
 

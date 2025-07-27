@@ -13,7 +13,7 @@
 # define O_BINARY 0
 #endif
 
-static void mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width) {
+void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width) {
 	if (mask != 0) {
 		uint8_t c;
 
@@ -160,10 +160,10 @@ struct BMPFILEREAD *open_bmp(const char *path) {
 			bmp->size = (unsigned long)bmp->stride * (unsigned long)bmp->height;
 
 			if (bmp->bpp == 16 || bmp->bpp == 32) {
-				mask2shift(bi4->bV4BlueMask,&bmp->blue_shift,&bmp->blue_width);
-				mask2shift(bi4->bV4GreenMask,&bmp->green_shift,&bmp->green_width);
-				mask2shift(bi4->bV4RedMask,&bmp->red_shift,&bmp->red_width);
-				mask2shift(bi->biSize >= 56 ? bi4->bV4AlphaMask : 0,&bmp->alpha_shift,&bmp->alpha_width);
+				bitmap_mask2shift(bi4->bV4BlueMask,&bmp->blue_shift,&bmp->blue_width);
+				bitmap_mask2shift(bi4->bV4GreenMask,&bmp->green_shift,&bmp->green_width);
+				bitmap_mask2shift(bi4->bV4RedMask,&bmp->red_shift,&bmp->red_width);
+				bitmap_mask2shift(bi->biSize >= 56 ? bi4->bV4AlphaMask : 0,&bmp->alpha_shift,&bmp->alpha_width);
 				bmp->has_alpha = 1;
 			}
 			else {

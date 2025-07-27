@@ -131,5 +131,6 @@ struct BMPFILEIMAGE *bmpfileimage_alloc(void);
 void bmpfileimage_free_image(struct BMPFILEIMAGE *b);
 void bmpfileimage_free(struct BMPFILEIMAGE **b);
 int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp);
+void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width);
 unsigned char *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y);
 
