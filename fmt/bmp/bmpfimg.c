@@ -16,19 +16,18 @@ struct BMPFILEIMAGE *bmpfileimage_alloc(void) {
 }
 
 void bmpfileimage_free_image(struct BMPFILEIMAGE *b) {
-	if (b) {
+	if (b->bitmap) {
 		free(b->bitmap);
 		b->bitmap = NULL;
-		b->stride = 0;
 	}
+	b->stride = 0;
 }
 
 void bmpfileimage_free(struct BMPFILEIMAGE **b) {
 	if (b) {
 		if (*b) {
 			bmpfileimage_free_image(*b);
-			free(*b);
-			*b = NULL;
+			free(*b); *b = NULL;
 		}
 	}
 }
