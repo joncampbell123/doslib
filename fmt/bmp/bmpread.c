@@ -200,18 +200,6 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 	return 0;
 }
 
-unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw) {
-	if (fw != 0u) {
-		w >>= fs;
-		w &= (1u << fw) - 1u;
-		if (fw > 8u) w >>= (uint32_t)(fw - 8u); /* truncate to 8 bits if larger */
-		if (fw < 8u) w = (w * 255u) / ((1u << fw) - 1u);
-		return (unsigned char)w;
-	}
-
-	return 0;
-}
-
 void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
 	const uint32_t *s32 = (const uint32_t*)s32raw;
 
