@@ -22,7 +22,7 @@
 #  define MAX_BITMAP_SLICE (0xFF00ul)
 # else
 /* 16-bit MS-DOS: We can do some real mode FAR pointer normalization to keep our sanity, no scanline we handle will exceed 64KB. */
-#  define REALMODE_FARPTR_NORM
+#  define BITMAP_FARPTR_RMNORM
 # endif
 #endif
 
@@ -33,7 +33,7 @@ unsigned char *bitmap = NULL;
 #endif
 unsigned int bitmap_width = 0,bitmap_height = 0,bitmap_stride = 0;
 
-#ifdef REALMODE_FARPTR_NORM
+#ifdef BITMAP_FARPTR_RMNORM
 # error not yet supported
 #endif
 
