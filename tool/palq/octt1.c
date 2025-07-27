@@ -26,23 +26,26 @@
 # endif
 #endif
 
+struct BMPFILEIMAGE {
 #ifdef BITMAP_SLICES
 # error not yet supported
 #else
-unsigned char *bitmap = NULL;
+	unsigned char*		bitmap;
 #endif
-unsigned int bitmap_width = 0,bitmap_height = 0,bitmap_stride = 0;
-
+	unsigned int		width,height,stride;
 #ifdef BITMAP_FARPTR_RMNORM
 # error not yet supported
 #endif
+};
+
+static struct BMPFILEIMAGE membmp;
 
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
 /* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
  * NTS: Future plans: Compile as 16-bit Windows, and this program will allocate the bitmap in slices and this function will map to slice and scanline. */
 unsigned char *bitmap_row(unsigned int y) {
-	if (bitmap != NULL || y >= bitmap_height)
-		return bitmap + (bitmap_stride * y);
+	if (membmp.bitmap != NULL || y >= membmp.height)
+		return membmp.bitmap + (membmp.stride * y);
 
 	return NULL;
 }
@@ -74,6 +77,8 @@ int main(int argc,char **argv) {
 	if (argc < 3)
 		return 1;
 
+	memset(&membmp,0,sizeof(membmp));
+
 	{
 		struct BMPFILEREAD *bfr;
 
@@ -87,17 +92,17 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		bitmap_width = bfr->width;
-		bitmap_height = bfr->height;
-		bitmap_stride = bfr->stride;
+		membmp.width = bfr->width;
+		membmp.height = bfr->height;
+		membmp.stride = bfr->stride;
 
 		/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
 		 *      to use _fmalloc() and pass in size as paragraphs! */
 		/* NTS: 16-bit Windows, this code will need to make multiple allocations of bitmap slices
 		 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
-		bitmap = malloc(bitmap_stride * bitmap_height);
+		membmp.bitmap = malloc(membmp.stride * membmp.height);
 
-		if (!bitmap) {
+		if (!membmp.bitmap) {
 			fprintf(stderr,"Failed to allocate memory\n");
 			return 1;
 		}
@@ -107,9 +112,9 @@ int main(int argc,char **argv) {
 			assert(dest != NULL);
 
 			if (bfr->bpp == 32)
-				memcpy32to24(dest,bfr->scanline,bitmap_width,bfr);
+				memcpy32to24(dest,bfr->scanline,membmp.width,bfr);
 			else
-				memcpy(dest,bfr->scanline,bitmap_stride);
+				memcpy(dest,bfr->scanline,membmp.stride);
 		}
 
 		/* done reading */
@@ -125,7 +130,7 @@ int main(int argc,char **argv) {
 		unsigned int y;
 		int fd;
 
-		wstride = (((bitmap_width * 24) + 31u) & (~31u)) >> 3u;
+		wstride = (((membmp.width * 24) + 31u) & (~31u)) >> 3u;
 
 		fd = open(argv[2],O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
 		if (fd < 0) {
@@ -136,7 +141,7 @@ int main(int argc,char **argv) {
 		memset(&bfh,0,sizeof(bfh));
 		bfh.bfType = 0x4D42; /* 'BM' */
 		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = ((unsigned long)bitmap_height * (unsigned long)wstride) + bfh.bfOffBits;
+		bfh.bfSize = ((unsigned long)membmp.height * (unsigned long)wstride) + bfh.bfOffBits;
 		if ((unsigned int)write(fd,&bfh,sizeof(bfh)) != sizeof(bfh)) {
 			fprintf(stderr,"Cannot write bitmap\n");
 			return 1;
@@ -144,11 +149,11 @@ int main(int argc,char **argv) {
 
 		memset(&bih,0,sizeof(bih));
 		bih.biSize = sizeof(bih);
-		bih.biWidth = bitmap_width;
-		bih.biHeight = bitmap_height;
+		bih.biWidth = membmp.width;
+		bih.biHeight = membmp.height;
 		bih.biPlanes = 1;
 		bih.biBitCount = 24;
-		bih.biSizeImage = (unsigned long)bitmap_height * (unsigned long)wstride;
+		bih.biSizeImage = (unsigned long)membmp.height * (unsigned long)wstride;
 		if ((unsigned int)write(fd,&bih,sizeof(bih)) != sizeof(bih)) {
 			fprintf(stderr,"Cannot write bitmap\n");
 			return 1;
@@ -159,8 +164,8 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		for (y=0;y < bitmap_height;y++) {
-			s = bitmap_row(bitmap_height - 1u - y);/* normal bitmaps are bottom up */
+		for (y=0;y < membmp.height;y++) {
+			s = bitmap_row(membmp.height - 1u - y);/* normal bitmaps are bottom up */
 			assert(s != NULL);
 
 			if ((unsigned int)write(fd,s,wstride) != wstride) {
@@ -173,7 +178,7 @@ int main(int argc,char **argv) {
 	}
 
 	/* free bitmap */
-	free(bitmap);
+	free(membmp.bitmap);
 	return 0;
 }
 
