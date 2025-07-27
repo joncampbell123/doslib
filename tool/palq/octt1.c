@@ -14,6 +14,107 @@
 # define O_BINARY 0
 #endif
 
+struct BMPFILEWRITE {
+	int			fd;
+	unsigned int		width;
+	unsigned int		height;
+	unsigned int		bpp;
+	unsigned int		stride;
+	int			current_line;
+	int			current_line_add;
+};
+
+struct BMPFILEWRITE *create_write_bmp(void) {
+	struct BMPFILEWRITE *b = (struct BMPFILEWRITE*)malloc(sizeof(struct BMPFILEWRITE));
+	if (b) {
+		memset(b,0,sizeof(*b));
+		b->fd = -1;
+		return b;
+	}
+
+	return NULL;
+}
+
+int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
+	if (bmp->fd >= 0 || path == NULL)
+		return -1;
+	if (bmp->width == 0 || bmp->height == 0 || bmp->bpp == 0 || bmp->width > 4096 || bmp->height > 4096)
+		return -1;
+	if (!(bmp->bpp == 15 || bmp->bpp == 16 || bmp->bpp == 24 || bmp->bpp == 32))
+		return -1;
+
+	/* bottom up */
+	bmp->current_line = bmp->height - 1;
+	bmp->current_line_add = -1;
+
+	bmp->stride = bitmap_stride_from_bpp_and_w(bmp->bpp,bmp->width);
+
+	bmp->fd = open(path,O_CREAT|O_TRUNC|O_BINARY|O_WRONLY,0644);
+	if (bmp->fd < 0)
+		return -1;
+
+	{
+		struct winBITMAPFILEHEADER bfh;
+		struct winBITMAPINFOHEADER bih;
+
+		memset(&bfh,0,sizeof(bfh));
+		bfh.bfType = 0x4D42; /* 'BM' */
+		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
+		bfh.bfSize = ((unsigned long)bmp->height * (unsigned long)bmp->stride) + bfh.bfOffBits;
+		if ((unsigned int)write(bmp->fd,&bfh,sizeof(bfh)) != sizeof(bfh))
+			return 1;
+
+		memset(&bih,0,sizeof(bih));
+		bih.biPlanes = 1;
+		bih.biSize = sizeof(bih);
+		bih.biWidth = bmp->width;
+		bih.biHeight = bmp->height;
+		bih.biBitCount = bmp->bpp;
+		bih.biSizeImage = (unsigned long)bmp->height * (unsigned long)bmp->stride;
+		if ((unsigned int)write(bmp->fd,&bih,sizeof(bih)) != sizeof(bih))
+			return 1;
+
+		if (lseek(bmp->fd,0,SEEK_CUR) != bfh.bfOffBits)
+			return 1;
+	}
+
+	return 0;
+}
+
+int write_bmp_line(struct BMPFILEWRITE *bmp,const unsigned char *row,const unsigned int len) {
+	if (bmp->fd < 0 || row == NULL)
+		return -1;
+	if (len < bmp->stride)
+		return -1;
+	if (bmp->current_line < 0 || (unsigned int)bmp->current_line >= bmp->height)
+		return -1;
+
+	if ((unsigned int)write(bmp->fd,row,bmp->stride) != bmp->stride)
+		return -1;
+
+	bmp->current_line += bmp->current_line_add;
+	return 0;
+}
+
+void do_close_write_bmp_file(struct BMPFILEWRITE *bmp) {
+	if (bmp->fd >= 0) {
+		close(bmp->fd);
+		bmp->fd = -1;
+	}
+}
+
+void do_close_write_bmp(struct BMPFILEWRITE *bmp) {
+	do_close_write_bmp_file(bmp);
+}
+
+void close_write_bmp(struct BMPFILEWRITE **bmp) {
+	if (*bmp) {
+		do_close_write_bmp(*bmp);
+		free(*bmp);
+		*bmp = NULL;
+	}
+}
+
 int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *membmp = NULL;
 
@@ -41,7 +142,7 @@ int main(int argc,char **argv) {
 		membmp->width = bfr->width;
 		membmp->height = bfr->height;
 
-		if (!bmpfileimage_alloc_image(membmp)) {
+		if (bmpfileimage_alloc_image(membmp)) {
 			fprintf(stderr,"Failed to allocate memory\n");
 			return 1;
 		}
@@ -62,58 +163,36 @@ int main(int argc,char **argv) {
 
 	/* write it out */
 	{
-		struct winBITMAPFILEHEADER bfh;
-		struct winBITMAPINFOHEADER bih;
-		unsigned long wstride;
+		struct BMPFILEWRITE *bfw;
 		unsigned char *s;
 		unsigned int y;
-		int fd;
 
-		wstride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
-
-		fd = open(argv[2],O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
-		if (fd < 0) {
-			fprintf(stderr,"Cannot write bitmap\n");
+		bfw = create_write_bmp();
+		if (!bfw) {
+			fprintf(stderr,"Cannot alloc write bmp\n");
 			return 1;
 		}
 
-		memset(&bfh,0,sizeof(bfh));
-		bfh.bfType = 0x4D42; /* 'BM' */
-		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = ((unsigned long)membmp->height * (unsigned long)wstride) + bfh.bfOffBits;
-		if ((unsigned int)write(fd,&bfh,sizeof(bfh)) != sizeof(bfh)) {
-			fprintf(stderr,"Cannot write bitmap\n");
-			return 1;
-		}
+		bfw->bpp = membmp->bpp;
+		bfw->width = membmp->width;
+		bfw->height = membmp->height;
 
-		memset(&bih,0,sizeof(bih));
-		bih.biPlanes = 1;
-		bih.biSize = sizeof(bih);
-		bih.biWidth = membmp->width;
-		bih.biHeight = membmp->height;
-		bih.biBitCount = membmp->bpp;
-		bih.biSizeImage = (unsigned long)membmp->height * (unsigned long)wstride;
-		if ((unsigned int)write(fd,&bih,sizeof(bih)) != sizeof(bih)) {
+		if (open_write_bmp(bfw,argv[2])) {
 			fprintf(stderr,"Cannot write bitmap\n");
-			return 1;
-		}
-
-		if (lseek(fd,0,SEEK_CUR) != bfh.bfOffBits) {
-			fprintf(stderr,"Offset error\n");
 			return 1;
 		}
 
 		for (y=0;y < membmp->height;y++) {
-			s = bmpfileimage_row(membmp,membmp->height - 1u - y);/* normal bitmaps are bottom up */
+			s = bmpfileimage_row(membmp,bfw->current_line);
 			assert(s != NULL);
 
-			if ((unsigned int)write(fd,s,wstride) != wstride) {
+			if (write_bmp_line(bfw,s,membmp->stride)) {
 				fprintf(stderr,"Scanline write err\n");
 				return 1;
 			}
 		}
 
-		close(fd);
+		close_write_bmp(&bfw);
 	}
 
 	/* free bitmap */

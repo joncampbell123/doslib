@@ -24,22 +24,20 @@ void bmpfileimage_free_image(struct BMPFILEIMAGE *b) {
 }
 
 void bmpfileimage_free(struct BMPFILEIMAGE **b) {
-	if (b) {
-		if (*b) {
-			bmpfileimage_free_image(*b);
-			free(*b); *b = NULL;
-		}
+	if (*b) {
+		bmpfileimage_free_image(*b);
+		free(*b); *b = NULL;
 	}
 }
 
 int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
 	if (membmp->bitmap)
-		return 0;
+		return -1;
 
 	if (membmp->stride == 0)
 		membmp->stride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
 	if (membmp->stride == 0 || membmp->stride > 32768u)
-		return 0;
+		return -1;
 
 	/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
 	 *      to use _fmalloc() and pass in size as paragraphs! */
@@ -47,9 +45,9 @@ int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
 	 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
 	membmp->bitmap = malloc(membmp->stride * membmp->height);
 	if (!membmp->bitmap)
-		return 0;
+		return -1;
 
-	return 1;
+	return 0;
 }
 
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
