@@ -2,22 +2,26 @@
 #include <stdint.h>
 
 #if TARGET_MSDOS == 16
+// headers
 # include <i86.h>
 
+// general
 # define BMPFAR far
 
-// 16-bit real mode segmented normalization
-static inline unsigned char BMPFAR* BMPPTR_NORMALIZE(unsigned char BMPFAR* p) {
-	const unsigned s = FP_SEG(p) + (FP_OFF(p) >> 4u);
-	const unsigned o = FP_OFF(p) & 0xFu;
-	return (unsigned char BMPFAR*)MK_FP(s,o);
-}
-#else
-# define ENABLE_BMPFILEIMAGE
+# if defined(TARGET_WINDOWS)
+# elif defined(TARGET_OS2)
+# else
+// MS-DOS real mode
+#  include <dos.h>
 
+#  define BMPFILEIMAGE_SEGMENT_BASE
+#  define ENABLE_BMPFILEIMAGE
+# endif
+#else
+// general
 # define BMPFAR
 
-# define BMPPTR_NORMALIZE(x) (x)
+# define ENABLE_BMPFILEIMAGE
 #endif
 
 #pragma pack(push,1)
@@ -129,13 +133,18 @@ int read_bmp_line(struct BMPFILEREAD *bmp);
 void close_bmp(struct BMPFILEREAD **bmp);
 
 void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width);
-void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr);
+void bitmap_memcpy(unsigned char BMPFAR *d,const unsigned char BMPFAR *s,unsigned int l);
+void bitmap_memcpy32to24(unsigned char BMPFAR *d24,const unsigned char BMPFAR *s32raw,unsigned int w,const struct BMPFILEREAD *bfr);
 unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w);
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw);
 
 #if defined(ENABLE_BMPFILEIMAGE)
 struct BMPFILEIMAGE {
+#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	unsigned		bitmap_seg;
+#else
 	unsigned char BMPFAR*	bitmap;
+#endif
 	unsigned int		width,height,stride,bpp;
 };
 

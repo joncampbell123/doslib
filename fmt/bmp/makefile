@@ -15,7 +15,7 @@ bin: linux-host $(BIN_OUT)
 
 lib: linux-host $(LIB_OUT)
 
-BMPLIB_DEPS = linux-host/bmpread.o linux-host/bmpwrite.o linux-host/maskshft.o linux-host/strid1.o linux-host/mkbf8.o linux-host/c32t24.o linux-host/bmpfimg.o
+BMPLIB_DEPS = linux-host/bmpread.o linux-host/bmpwrite.o linux-host/maskshft.o linux-host/strid1.o linux-host/mkbf8.o linux-host/cpy.o linux-host/c32t24.o linux-host/bmpfimg.o
 
 $(T_CPY0): linux-host/t_cpy0.o $(BMPLIB)
 	gcc -o $@ $^

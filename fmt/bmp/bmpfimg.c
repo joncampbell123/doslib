@@ -17,10 +17,17 @@ struct BMPFILEIMAGE *bmpfileimage_alloc(void) {
 }
 
 void bmpfileimage_free_image(struct BMPFILEIMAGE *b) {
+#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	if (b->bitmap_seg) {
+		_dos_freemem(b->bitmap_seg);
+		b->bitmap_seg = 0;
+	}
+#else
 	if (b->bitmap) {
 		free(b->bitmap);
 		b->bitmap = NULL;
 	}
+#endif
 	b->stride = 0;
 }
 
@@ -32,31 +39,54 @@ void bmpfileimage_free(struct BMPFILEIMAGE **b) {
 }
 
 int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
+#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	if (membmp->bitmap_seg)
+		return -1;
+#else
 	if (membmp->bitmap)
 		return -1;
+#endif
 
 	if (membmp->stride == 0)
 		membmp->stride = bitmap_stride_from_bpp_and_w(membmp->bpp,membmp->width);
-	if (membmp->stride == 0 || membmp->stride > 32768u)
+	if (membmp->stride == 0 || membmp->stride > 32768u || membmp->height == 0)
 		return -1;
 
-	/* NTS: Careful, malloc() on 16-bit DOS might only have a 16-bit param! You'll need
-	 *      to use _fmalloc() and pass in size as paragraphs! */
-	/* NTS: 16-bit Windows, this code will need to make multiple allocations of bitmap slices
-	 *      less than 64KB, perhaps using LocalAlloc() or GlobalAlloc() */
+#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	{
+		const unsigned long sz = (unsigned long)membmp->stride * (unsigned long)membmp->height; /* in bytes */
+		unsigned s;
+
+		/* Real-mode MS-DOS usually has 640KB of RAM and cannot address more than 1MB of RAM, cap at 960KB */
+		if (sz >= (960ul * 1024ul))
+			return -1;
+
+		if (_dos_allocmem((unsigned)((sz + 0xFu) >> 4ul)/*bytes->paragraphs*/,&s))
+			return -1;
+
+		membmp->bitmap_seg = s;
+	}
+#else
 	membmp->bitmap = malloc(membmp->stride * membmp->height);
 	if (!membmp->bitmap)
 		return -1;
+#endif
 
 	return 0;
 }
 
-/* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
-/* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
- * NTS: Future plans: Compile as 16-bit Windows, and this program will allocate the bitmap in slices and this function will map to slice and scanline. */
 unsigned char BMPFAR *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
-	if (bfi->bitmap != NULL || y >= bfi->height)
+#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	if (bfi->bitmap_seg && y < bfi->height) {
+		const unsigned long ofs = (unsigned long)bfi->stride * (unsigned long)y;
+		const unsigned s = bfi->bitmap_seg + (unsigned)(ofs >> 4ul);
+		const unsigned o = (unsigned)(ofs & 0xFul);
+		return MK_FP(s,o);
+	}
+#else
+	if (bfi->bitmap != NULL && y < bfi->height)
 		return bfi->bitmap + (bfi->stride * y);
+#endif
 
 	return NULL;
 }

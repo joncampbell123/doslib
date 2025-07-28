@@ -9,8 +9,8 @@
 
 #include "libbmp.h"
 
-void bitmap_memcpy32to24(unsigned char *d24,const unsigned char *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
-	const uint32_t *s32 = (const uint32_t*)s32raw;
+void bitmap_memcpy32to24(unsigned char BMPFAR *d24,const unsigned char BMPFAR *s32raw,unsigned int w,const struct BMPFILEREAD *bfr) {
+	const uint32_t BMPFAR *s32 = (const uint32_t BMPFAR*)s32raw;
 
 	while (w-- > 0) {
 		const uint32_t w = *s32++;

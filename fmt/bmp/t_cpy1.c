@@ -44,13 +44,13 @@ int main(int argc,char **argv) {
 		}
 
 		while (read_bmp_line(bfr) == 0) {
-			unsigned char *dest = bmpfileimage_row(membmp,(unsigned int)bfr->current_line);
+			unsigned char BMPFAR *dest = bmpfileimage_row(membmp,(unsigned int)bfr->current_line);
 			assert(dest != NULL);
 
 			if (bfr->bpp == 32)
 				bitmap_memcpy32to24(dest,bfr->scanline,membmp->width,bfr);
 			else
-				memcpy(dest,bfr->scanline,membmp->stride);
+				bitmap_memcpy(dest,bfr->scanline,membmp->stride);
 		}
 
 		/* done reading */
@@ -60,7 +60,7 @@ int main(int argc,char **argv) {
 	/* write it out */
 	{
 		struct BMPFILEWRITE *bfw;
-		unsigned char *s;
+		unsigned char BMPFAR *s;
 		unsigned int y;
 
 		bfw = create_write_bmp();
