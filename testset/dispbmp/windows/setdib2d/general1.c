@@ -100,12 +100,12 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 
+#if defined(MEM_BY_GLOBALALLOC)
 			if (bmpPalette) {
 				pPalette = SelectPalette(ps.hdc,bmpPalette,FALSE);
 				if (pPalette) RealizePalette(ps.hdc);
 			}
 
-#if defined(MEM_BY_GLOBALALLOC)
 			{
 				BITMAPINFOHEADER *bmi = bmpInfo();
 				unsigned int strip=bmpStripCount-1u,y=0u;
@@ -136,7 +136,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				bmi->biHeight = bmpHeight;
 				bmi->biSizeImage = bmi->biHeight * bmpStride;
 			}
+
+			if (bmpPalette && pPalette)
+				SelectPalette(ps.hdc,pPalette,TRUE);
 #else
+			if (bmpPalette) {
+				pPalette = SelectPalette(ps.hdc,bmpPalette,FALSE);
+				if (pPalette) RealizePalette(ps.hdc);
+			}
+
 			if (bmpMem) {
 				BITMAPINFOHEADER *bmi = bmpInfo();
 
@@ -150,10 +158,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					(BITMAPINFO*)bmi,
 					bmpDIBmode);
 			}
-#endif
 
 			if (bmpPalette && pPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
+#endif
 
 			EndPaint(hwnd,&ps);
 		}
