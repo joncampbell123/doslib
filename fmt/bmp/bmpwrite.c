@@ -71,7 +71,7 @@ int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
 	return 0;
 }
 
-int write_bmp_line(struct BMPFILEWRITE *bmp,const unsigned char *row,const unsigned int len) {
+int write_bmp_line(struct BMPFILEWRITE *bmp,const unsigned char BMPFAR *row,const unsigned int len) {
 	if (bmp->fd < 0 || row == NULL)
 		return -1;
 	if (len < bmp->stride)

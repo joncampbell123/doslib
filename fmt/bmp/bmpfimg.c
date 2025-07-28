@@ -53,7 +53,7 @@ int bmpfileimage_alloc_image(struct BMPFILEIMAGE *membmp) {
 /* For our sanity's sake we read the bitmap bottom-up, store in memory top-down, write to disk bottom-up. */
 /* NTS: Future plans: Compile as 16-bit real mode DOS, and this function will use FAR pointer normalization to return bitmap scanlines properly.
  * NTS: Future plans: Compile as 16-bit Windows, and this program will allocate the bitmap in slices and this function will map to slice and scanline. */
-unsigned char *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
+unsigned char BMPFAR *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned int y) {
 	if (bfi->bitmap != NULL || y >= bfi->height)
 		return bfi->bitmap + (bfi->stride * y);
 
