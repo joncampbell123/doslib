@@ -95,9 +95,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		RECT um;
 
 		if (GetUpdateRect(hwnd,&um,TRUE)) {
+			HPALETTE pPalette = (unsigned)NULL;
 			PAINTSTRUCT ps;
 
 			BeginPaint(hwnd,&ps);
+
+			if (bmpPalette) {
+				pPalette = SelectPalette(ps.hdc,bmpPalette,FALSE);
+				if (pPalette) RealizePalette(ps.hdc);
+			}
 
 #if defined(MEM_BY_GLOBALALLOC)
 			{
@@ -142,6 +148,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					bmpDIBmode);
 			}
 #endif
+
+			if (bmpPalette && pPalette)
+				SelectPalette(ps.hdc,pPalette,TRUE);
 
 			EndPaint(hwnd,&ps);
 		}
