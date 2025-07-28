@@ -1,17 +1,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.."
-NOW_BUILDING = HW_VGA_LIB
-
-OBJS =        $(SUBDIR)$(HPS)libbmp.obj
-
-LIBBMP_LIB =  ..$(HPS)..$(HPS)$(SUBDIR)$(HPS)libbmp.lib
-
-$(LIBBMP_LIB):
-	@cd ..$(HPS)..$(HPS)
-	@$(MAKECMD) build lib $(SUBDIR)
-	@cd $(HERE)
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../../../../fmt/bmp"
+NOW_BUILDING = TESTBMP_TEST
 
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
@@ -30,13 +21,13 @@ GENERAL_EXE =     $(SUBDIR)$(HPS)general.$(EXEEXT)
 
 all: $(OMFSEGDG) lib exe
        
-lib: $(LIBBMP_LIB) .symbolic
+lib: $(FMT_BMP_LIB) .symbolic
 	
 exe: $(GENERAL_EXE) .symbolic
 
 !ifdef GENERAL_EXE
-$(GENERAL_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)general.obj
-	%write tmp.cmd option quiet option map=$(GENERAL_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)general.obj name $(GENERAL_EXE)
+$(GENERAL_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general.obj
+	%write tmp.cmd option quiet option map=$(GENERAL_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general.obj name $(GENERAL_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w640$(HPS)350vga.bmp $(SUBDIR)$(HPS)640350_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w640$(HPS)400vga.bmp $(SUBDIR)$(HPS)640400_8.bmp

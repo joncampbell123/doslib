@@ -1,17 +1,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.."
-NOW_BUILDING = HW_VGA_LIB
-
-OBJS =        $(SUBDIR)$(HPS)libbmp.obj
-
-LIBBMP_LIB =  ..$(HPS)..$(HPS)$(SUBDIR)$(HPS)libbmp.lib
-
-$(LIBBMP_LIB):
-	@cd ..$(HPS)..$(HPS)
-	@$(MAKECMD) build lib $(SUBDIR)
-	@cd $(HERE)
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../../../../fmt/bmp"
+NOW_BUILDING = TESTBMP_TEST
 
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
@@ -36,21 +27,21 @@ $(LIBBMP_LIB):
 
 all: $(OMFSEGDG) lib exe
        
-lib: $(LIBBMP_LIB) .symbolic
+lib: $(FMT_BMP_LIB) .symbolic
 	
 exe: $(320X200L_EXE) $(320X200M_EXE) $(640X200L_EXE) $(640X200M_EXE) $(640X350L_EXE) $(640X350M_EXE) $(640X3504_EXE) .symbolic
 
 !ifdef 320X200L_EXE
-$(320X200L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200l.obj
-	%write tmp.cmd option quiet option map=$(320X200L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200l.obj name $(320X200L_EXE)
+$(320X200L_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)320x200l.obj
+	%write tmp.cmd option quiet option map=$(320X200L_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)320x200l.obj name $(320X200L_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w320$(HPS)200cga.bmp $(SUBDIR)$(HPS)32020016.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef 320X200M_EXE
-$(320X200M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200m.obj
-	%write tmp.cmd option quiet option map=$(320X200M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200m.obj name $(320X200M_EXE)
+$(320X200M_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)320x200m.obj
+	%write tmp.cmd option quiet option map=$(320X200M_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)320x200m.obj name $(320X200M_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w320$(HPS)200vga.bmp $(SUBDIR)$(HPS)320200mc.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w320$(HPS)200m.bmp $(SUBDIR)$(HPS)320200m.bmp
@@ -58,16 +49,16 @@ $(320X200M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200m.obj
 !endif
 
 !ifdef 640X200L_EXE
-$(640X200L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x200l.obj
-	%write tmp.cmd option quiet option map=$(640X200L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x200l.obj name $(640X200L_EXE)
+$(640X200L_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x200l.obj
+	%write tmp.cmd option quiet option map=$(640X200L_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x200l.obj name $(640X200L_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)200cga.bmp $(SUBDIR)$(HPS)64020016.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef 640X200M_EXE
-$(640X200M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x200m.obj
-	%write tmp.cmd option quiet option map=$(640X200M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x200m.obj name $(640X200M_EXE)
+$(640X200M_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x200m.obj
+	%write tmp.cmd option quiet option map=$(640X200M_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x200m.obj name $(640X200M_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)200vga.bmp $(SUBDIR)$(HPS)640200mc.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)200m.bmp $(SUBDIR)$(HPS)640200m.bmp
@@ -75,16 +66,16 @@ $(640X200M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x200m.obj
 !endif
 
 !ifdef 640X350L_EXE
-$(640X350L_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x350l.obj
-	%write tmp.cmd option quiet option map=$(640X350L_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x350l.obj name $(640X350L_EXE)
+$(640X350L_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x350l.obj
+	%write tmp.cmd option quiet option map=$(640X350L_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x350l.obj name $(640X350L_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)350ega.bmp $(SUBDIR)$(HPS)64035016.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef 640X350M_EXE
-$(640X350M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x350m.obj
-	%write tmp.cmd option quiet option map=$(640X350M_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x350m.obj name $(640X350M_EXE)
+$(640X350M_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x350m.obj
+	%write tmp.cmd option quiet option map=$(640X350M_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x350m.obj name $(640X350M_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)350vga.bmp $(SUBDIR)$(HPS)640350mc.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)350m.bmp $(SUBDIR)$(HPS)640350m.bmp
@@ -92,8 +83,8 @@ $(640X350M_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x350m.obj
 !endif
 
 !ifdef 640X3504_EXE
-$(640X3504_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x3504.obj
-	%write tmp.cmd option quiet option map=$(640X3504_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x3504.obj name $(640X3504_EXE)
+$(640X3504_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x3504.obj
+	%write tmp.cmd option quiet option map=$(640X3504_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x3504.obj name $(640X3504_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)4bpp$(HPS)w640$(HPS)350ega4.bmp $(SUBDIR)$(HPS)640350_4.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe

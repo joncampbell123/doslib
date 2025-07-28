@@ -1,17 +1,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.."
-NOW_BUILDING = HW_VGA_LIB
-
-OBJS =        $(SUBDIR)$(HPS)libbmp.obj
-
-LIBBMP_LIB =  ..$(HPS)..$(HPS)$(SUBDIR)$(HPS)libbmp.lib
-
-$(LIBBMP_LIB):
-	@cd ..$(HPS)..$(HPS)
-	@$(MAKECMD) build lib $(SUBDIR)
-	@cd $(HERE)
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../../../../fmt/bmp"
+NOW_BUILDING = TESTBMP_TEST
 
 !ifndef PC98
 ! ifndef TARGET_WINDOWS
@@ -31,21 +22,21 @@ $(LIBBMP_LIB):
 
 all: $(OMFSEGDG) lib exe
        
-lib: $(LIBBMP_LIB) .symbolic
+lib: $(FMT_BMP_LIB) .symbolic
 	
 exe: $(320X200A_EXE) $(640X480A_EXE) .symbolic
 
 !ifdef 320X200A_EXE
-$(320X200A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
-	%write tmp.cmd option quiet option map=$(320X200A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)320x200a.obj name $(320X200A_EXE)
+$(320X200A_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)320x200a.obj
+	%write tmp.cmd option quiet option map=$(320X200A_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)320x200a.obj name $(320X200A_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w320$(HPS)200vga.bmp $(SUBDIR)$(HPS)200l8v.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef 640X480A_EXE
-$(640X480A_EXE): $(LIBBMP_LIB) $(SUBDIR)$(HPS)640x480a.obj
-	%write tmp.cmd option quiet option map=$(640X480A_EXE).map system $(WLINK_CON_SYSTEM) library $(LIBBMP_LIB) file $(SUBDIR)$(HPS)640x480a.obj name $(640X480A_EXE)
+$(640X480A_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)640x480a.obj
+	%write tmp.cmd option quiet option map=$(640X480A_EXE).map system $(WLINK_CON_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)640x480a.obj name $(640X480A_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)480mc.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w640$(HPS)480m.bmp $(SUBDIR)$(HPS)480m.bmp

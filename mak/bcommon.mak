@@ -466,6 +466,12 @@ FMT_OMF_LIB=$(FMT_OMF_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)omf.lib
 FMT_OMF_LIB_DEPENDENCIES=
 FMT_OMF_LIB_WLINK_LIBRARIES=library $(FMT_OMF_LIB)
 
+# FMT\BMP----------------------------------------------------------------------------------
+FMT_BMP_LIB_DIR=$(REL)$(HPS)fmt$(HPS)bmp
+FMT_BMP_LIB=$(FMT_BMP_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)bmp.lib
+FMT_BMP_LIB_DEPENDENCIES=
+FMT_BMP_LIB_WLINK_LIBRARIES=library $(FMT_BMP_LIB)
+
 # FMT\MINIPNG------------------------------------------------------------------------------
 FMT_MINIPNG_LIB_DIR=$(REL)$(HPS)fmt$(HPS)minipng
 FMT_MINIPNG_LIB=$(FMT_MINIPNG_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)minipng.lib

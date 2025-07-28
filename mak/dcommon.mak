@@ -396,6 +396,14 @@ $(FMT_OMF_LIB):
 	@cd $(HERE)
 !endif
 
+# FMT\BMP-----------------------------------------------------------------------------------
+!ifneq NOW_BUILDING FMT_BMP_LIB
+$(FMT_BMP_LIB):
+	@cd $(FMT_BMP_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+!endif
+
 # FMT\OMF\OMFSEGDG utility
 !ifeq HPS /
 $(OMFSEGDG):
