@@ -356,16 +356,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			bih->biClrImportant = bfr->colors;
 		}
 
-		if (bfr->bpp == 4 || bfr->bpp == 8) {
+		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
 			if (need_palette) {
 				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
 				bmpDIBmode = DIB_PAL_COLORS;
 			}
-			else {
-				RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
-				if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
-			}
+		}
+		if (bmpDIBmode == DIB_RGB_COLORS) {
+			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
+			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
 	}
 	/* palette */
