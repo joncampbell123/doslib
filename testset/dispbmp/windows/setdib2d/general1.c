@@ -14,6 +14,10 @@
 
 #include "libbmp.h"
 
+#if TARGET_MSDOS == 16
+# define MEM_BY_GLOBALALLOC
+#endif
+
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
 static char*			bmpfile = NULL;
@@ -22,9 +26,28 @@ static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
 static HINSTANCE near		myInstance;
 
+#ifdef MEM_BY_GLOBALALLOC
+# define MAX_STRIPS		128
+static unsigned int		bmpStripHeight = 0;
+static unsigned int		bmpStripCount = 0;
+static unsigned int		bmpHeight = 0;
+static unsigned int		bmpStride = 0;
+struct bmpstrip_t {
+	HGLOBAL			stripHandle;
+	unsigned int		stripHeight;
+};
+static struct bmpstrip_t	bmpStrips[MAX_STRIPS] = {0};
+#else
+static unsigned char*		bmpMem = NULL;
+#endif
+
+static unsigned char		bmpInfoRaw[sizeof(BITMAPINFOHEADER) + (256 * sizeof(RGBQUAD))];
+
+static inline BITMAPINFOHEADER* bmpInfo(void) {
+	return (BITMAPINFOHEADER*)bmpInfoRaw;
+}
+
 static BOOL need_palette = FALSE;
-static HGLOBAL bmpMemHandle = 0;
-static HGLOBAL bmpInfoHandle = 0;
 static HPALETTE bmpPalette = 0;
 static struct BMPFILEREAD *bfr = NULL;
 static unsigned bmpDIBmode = DIB_RGB_COLORS;
@@ -73,28 +96,52 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		if (GetUpdateRect(hwnd,&um,TRUE)) {
 			PAINTSTRUCT ps;
-			BITMAPINFO FAR *bmi;
-			void FAR *bm;
 
 			BeginPaint(hwnd,&ps);
 
-			bmi = (BITMAPINFO FAR*)GlobalLock(bmpInfoHandle);
-			bm = GlobalLock(bmpMemHandle);
+#if defined(MEM_BY_GLOBALALLOC)
+			{
+				BITMAPINFOHEADER *bmi = bmpInfo();
+				unsigned int strip=bmpStripCount-1u,y=0u;
+				void FAR *p;
 
-			if (bmi && bm) {
+				for (strip=0;strip < bmpStripCount;strip++) {
+					p = GlobalLock(bmpStrips[strip].stripHandle);
+					bmi->biHeight = bmpStrips[strip].stripHeight;
+					bmi->biSizeImage = bmi->biHeight * bmpStride;
+
+					if (p) {
+						SetDIBitsToDevice(ps.hdc,
+							0,y,
+							bmi->biWidth,bmi->biHeight,
+							0,0,
+							0,
+							bmi->biHeight,
+							p,
+							(BITMAPINFO*)bmi,
+							bmpDIBmode);
+					}
+
+
+					GlobalUnlock(bmpStrips[strip].stripHandle);
+					y += bmi->biHeight;
+				}
+			}
+#else
+			if (bmpMem) {
+				BITMAPINFOHEADER *bmi = bmpInfo();
+
 				SetDIBitsToDevice(ps.hdc,
-					0,0, // dX,dY
-					bmi->bmiHeader.biWidth,bmi->bmiHeader.biHeight, // cx,cy (rect w/h)
-					0,0, // sX,sY
-					0, // first scanline in array
-					bmi->bmiHeader.biHeight, // numbe of scanlines
-					bm, // bitmap bits
-					bmi, // bitmap info
+					0,0,
+					bmi->biWidth,bmi->biHeight,
+					0,0,
+					0,
+					bmi->biHeight,
+					bmpMem,
+					(BITMAPINFO*)bmi,
 					bmpDIBmode);
 			}
-
-			if (bm) GlobalUnlock(bmpMemHandle);
-			if (bmi) GlobalUnlock(bmpInfoHandle);
+#endif
 
 			EndPaint(hwnd,&ps);
 		}
@@ -153,29 +200,20 @@ void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsign
 	}
 }
 
-static void load_bmp_scanline(unsigned char FAR *dbase,unsigned int line,unsigned char *s) {
-	unsigned w = (unsigned)bfr->stride;
-#if TARGET_MSDOS == 16 || defined(WIN386)
-	const unsigned long ofs = ((unsigned long)(bfr->height - 1u - line) * (unsigned long)bfr->stride) + (unsigned long)FP_OFF(dbase);
-# if defined(WIN386)
-	unsigned ps = FP_SEG(dbase) + ((unsigned)(ofs >> 16ul) << (unsigned)3u); // TODO: Use __AHSHIFT
-# else
-	unsigned ps = FP_SEG(dbase) + ((unsigned)(ofs >> 16ul) << (unsigned)3u); // TODO: Use __AHSHIFT
-# endif
-	unsigned po = (unsigned)ofs;
-
-	if (((unsigned long)po+(unsigned long)w) > 0x10000ul) {
-		const unsigned rem = (~po + 1u);
-
-		_fmemcpy(MK_FP(ps,po),s,rem);
-		po = 0; ps += 1u << 3u; w -= rem; s += rem; // TODO: Use __AHINCR
-		_fmemcpy(MK_FP(ps,po),s,w);
-	}
-	else {
-		_fmemcpy(MK_FP(ps,po),s,w);
+static void load_bmp_scanline(const unsigned int line,const unsigned char *s) {
+#if defined(MEM_BY_GLOBALALLOC)
+	const unsigned int strip = line / bmpStripHeight;
+	if (strip < bmpStripCount) {
+		unsigned int sy = bmpStrips[strip].stripHeight - 1u - (line % bmpStrips[strip].stripHeight);
+		void FAR *p = GlobalLock(bmpStrips[strip].stripHandle);
+		if (p) {
+			_fmemcpy((unsigned char FAR*)p + (sy*bfr->stride),s,bfr->stride);
+			GlobalUnlock(bmpStrips[strip].stripHandle);
+		}
 	}
 #else
-	memcpy(dbase+(line*bfr->stride),s,w);
+	const unsigned int cline = bfr->height - 1u - line;
+	memcpy(bmpMem+(cline*bfr->stride),s,bfr->stride);
 #endif
 }
 
@@ -237,7 +275,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		if ((rcaps & RC_PALETTE) && szpal > 0)
 			need_palette = TRUE;
 
-		if (!(rcaps & RC_BITMAP64) || !(rcaps & RC_DIBTODEV)) {
+		if (!(rcaps & RC_DIBTODEV)) {
 			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (64KB bitmap + SetDIBitsToDevice)","Err",MB_OK);
 			return 1;
 		}
@@ -282,32 +320,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
-	/* how much BITMAPINFO do we need? */
-	{
-		DWORD sz = sizeof(BITMAPINFOHEADER);
-
-		if (bfr->bpp <= 8) sz += sizeof(RGBQUAD) * (1u << bfr->bpp);
-		bmpInfoHandle = GlobalAlloc(GMEM_SHARE|GMEM_ZEROINIT,sz);
-		if (!bmpInfoHandle) {
-			MessageBox((unsigned)NULL,"Unable to allocate bmp info","Err",MB_OK);
-			return 1;
-		}
-	}
 	/* set it up */
 	{
-		BITMAPINFOHEADER FAR *bih = NULL;
+		BITMAPINFOHEADER *bih = bmpInfo();/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
-		void FAR *p;
-
-		p = GlobalLock(bmpInfoHandle);
-		if (!p) {
-			MessageBox((unsigned)NULL,"Unable to lock bmp info","Err",MB_OK);
-			return 1;
-		}
 
 		bmpDIBmode = DIB_RGB_COLORS;
 
-		bih = (BITMAPINFOHEADER FAR*)p;
 		bih->biSize = sizeof(BITMAPINFOHEADER);
 		bih->biWidth = bfr->width;
 		bih->biHeight = bfr->height;
@@ -322,17 +341,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		if (bfr->bpp == 4 || bfr->bpp == 8) {
 			if (need_palette) {
-				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)p + sizeof(BITMAPINFOHEADER));
+				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
 				bmpDIBmode = DIB_PAL_COLORS;
 			}
 			else {
-				RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)p + sizeof(BITMAPINFOHEADER));
+				RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
 				if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 			}
 		}
-
-		GlobalUnlock(bmpInfoHandle);
 	}
 	/* palette */
 	if (bmpDIBmode == DIB_PAL_COLORS) {
@@ -364,26 +381,51 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	/* the bitmap itself */
-	bmpMemHandle = GlobalAlloc(GMEM_SHARE|GMEM_ZEROINIT,(DWORD)bfr->height * (DWORD)bfr->stride);
-	if (!bmpMemHandle) {
-		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+#ifdef MEM_BY_GLOBALALLOC
+	/* Problem: GlobalAlloc does let you alloc large regions of memory, and StretchDIBitsToDevice()
+	 *          from them, but there seems to be bugs in certain drivers that crash Windows if you
+	 *          try to draw certain bit depths (S3 drivers in DOSBox). These bugs don't happen if
+	 *          you limit the bitmap to strips of less than 64KB each. */
+	bmpHeight = bfr->height;
+	bmpStride = bfr->stride;
+	bmpStripHeight = 0xFFF0u / bfr->stride;
+	bmpStripCount = ((bfr->height + bmpStripHeight - 1u) / bmpStripHeight);
+	if (bmpStripCount > MAX_STRIPS) {
+		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
 		return 1;
 	}
 
 	{
-		void FAR *p = GlobalLock(bmpMemHandle);
-		if (!p) {
-			MessageBox((unsigned)NULL,"Unable to lock bitmap","Err",MB_OK);
-			return 1;
+		unsigned int i,h=bfr->height;
+		for (i=0;i < bmpStripCount && h >= bmpStripHeight;i++) {
+			bmpStrips[i].stripHeight = bmpStripHeight;
+			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,bmpStripHeight*bfr->stride);
+			if (!bmpStrips[i].stripHandle) {
+				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+				return 1;
+			}
+			h -= bmpStripHeight;
 		}
-
-		/* OK, now read it in! */
-		while (read_bmp_line(bfr) == 0) {
-			convert_scanline(bfr,bfr->scanline,bfr->width);
-			load_bmp_scanline(p,bfr->current_line,bfr->scanline);
+		if (i < bmpStripCount && h != 0) {
+			bmpStrips[i].stripHeight = h;
+			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*bfr->stride);
+			if (!bmpStrips[i].stripHandle) {
+				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+				return 1;
+			}
 		}
-
-		GlobalUnlock(bmpMemHandle);
+	}
+#else
+	bmpMem = malloc(bfr->height * bfr->stride);
+	if (!bmpMem) {
+		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+		return 1;
+	}
+#endif
+	/* OK, now read it in! */
+	while (read_bmp_line(bfr) == 0) {
+		convert_scanline(bfr,bfr->scanline,bfr->width);
+		load_bmp_scanline(bfr->current_line,bfr->scanline);
 	}
 
 	/* done reading */
@@ -414,12 +456,25 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 #endif
 
+#ifdef MEM_BY_GLOBALALLOC
+	{
+		unsigned int i;
+		for (i=0;i < bmpStripCount;i++) {
+			if (bmpStrips[i].stripHandle) {
+				GlobalFree(bmpStrips[i].stripHandle);
+				bmpStrips[i].stripHandle = (unsigned)NULL;
+				bmpStrips[i].stripHeight = 0;
+			}
+		}
+	}
+#else
+	free(bmpMem);
+	bmpMem = NULL;
+#endif
+
 	if (bmpPalette) DeleteObject(bmpPalette);
 	bmpPalette = (unsigned)NULL;
-	GlobalFree(bmpMemHandle);
-	bmpMemHandle = (unsigned)NULL;
-	GlobalFree(bmpInfoHandle);
-	bmpInfoHandle = (unsigned)NULL;
+
 	return msg.wParam;
 }
 
