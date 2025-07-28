@@ -155,16 +155,16 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	return 0;
 }
 
-void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
-	(void)bytes;
+void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+	(void)pixels;
 	(void)src;
 	(void)bfr;
 }
 
-void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	uint32_t *s32 = (uint32_t*)src;
 
-	while (bytes-- > 0u) {
+	while (pixels-- > 0u) {
 		uint32_t f;
 
 		f  = ((*s32 >> (uint32_t)bfr->red_shift) & 0xFFu) << (uint32_t)16u;
@@ -174,10 +174,12 @@ void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned
 	}
 }
 
-void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+/* NTS: In Windows 3.x. and BITMAPINFOHEADER, 15/16bpp is always 5:5:5 even IF the video driver is using a 5:6:5 mode!
+ *      In Windows 95/98, it is possible to BitBlt 5:6:5 if you use BITMAPINFOV4HEADER and BI_BITFIELDS. */
+void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	uint16_t *s16 = (uint16_t*)src;
 
-	while (bytes-- > 0u) {
+	while (pixels-- > 0u) {
 		uint16_t f;
 
 		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)10u;
@@ -187,10 +189,10 @@ void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsign
 	}
 }
 
-void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes) {
+void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	uint16_t *s16 = (uint16_t*)src;
 
-	while (bytes-- > 0u) {
+	while (pixels-- > 0u) {
 		uint16_t f;
 
 		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)10u;
