@@ -13,9 +13,16 @@
 int main(int argc,char **argv) {
 #if defined(ENABLE_BMPFILEIMAGE)
 	struct BMPFILEIMAGE *membmp = NULL;
+	const char *sfname,*dfname;
 
-	if (argc < 3)
+	if (argc < 2)
 		return 1;
+
+	sfname = argv[1];
+	if (argc > 2)
+		dfname = argv[2];
+	else
+		dfname = "x.bmp";
 
 	membmp = bmpfileimage_alloc();
 	if (!membmp)
@@ -24,7 +31,7 @@ int main(int argc,char **argv) {
 	{
 		struct BMPFILEREAD *bfr;
 
-		bfr = open_bmp(argv[1]);
+		bfr = open_bmp(sfname);
 		if (bfr == NULL) {
 			fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
 			return 1;
@@ -73,7 +80,7 @@ int main(int argc,char **argv) {
 		bfw->width = membmp->width;
 		bfw->height = membmp->height;
 
-		if (open_write_bmp(bfw,argv[2])) {
+		if (open_write_bmp(bfw,dfname)) {
 			fprintf(stderr,"Cannot write bitmap\n");
 			return 1;
 		}
