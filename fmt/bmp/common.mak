@@ -12,6 +12,7 @@ NOW_BUILDING = FMT_BMP_LIB
 OBJS =        $(SUBDIR)$(HPS)bmpfimg.obj $(SUBDIR)$(HPS)bmpread.obj $(SUBDIR)$(HPS)bmpwrite.obj $(SUBDIR)$(HPS)c32t24.obj $(SUBDIR)$(HPS)maskshft.obj $(SUBDIR)$(HPS)mkbf8.obj $(SUBDIR)$(HPS)strid1.obj
 
 !ifndef NO_EXE
+T_CPY0_EXE = $(SUBDIR)$(HPS)t_cpy0.$(EXEEXT)
 T_CPY1_EXE = $(SUBDIR)$(HPS)t_cpy1.$(EXEEXT)
 !endif
 
@@ -29,9 +30,31 @@ $(FMT_BMP_LIB): $(OBJS)
 
 all: lib exe
 
-exe: $(T_CPY1_EXE) .symbolic
+exe: $(T_CPY0_EXE) $(T_CPY1_EXE) .symbolic
 
 lib: $(FMT_BMP_LIB) .symbolic
+
+!ifdef T_CPY0_EXE
+$(T_CPY0_EXE): $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy0.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)t_cpy0.obj $(FMT_BMP_LIB_WLINK_LIBRARIES)
+	%write tmp.cmd option map=$(T_CPY0_EXE).map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+! endif
+	%write tmp.cmd name $(T_CPY0_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(T_CPY0_EXE)
+	@wbind $(T_CPY0_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(T_CPY0_EXE)
+! endif
+!endif
 
 !ifdef T_CPY1_EXE
 $(T_CPY1_EXE): $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy1.obj

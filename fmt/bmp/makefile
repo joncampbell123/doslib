@@ -1,9 +1,10 @@
 
 BMPLIB = linux-host/libbmp.a
 
+T_CPY0 = linux-host/t_cpy0
 T_CPY1 = linux-host/t_cpy1
 
-BIN_OUT = $(T_CPY1)
+BIN_OUT = $(T_CPY0) $(T_CPY1)
 
 LIB_OUT = $(BMPLIB)
 
@@ -15,6 +16,9 @@ bin: linux-host $(BIN_OUT)
 lib: linux-host $(LIB_OUT)
 
 BMPLIB_DEPS = linux-host/bmpread.o linux-host/bmpwrite.o linux-host/maskshft.o linux-host/strid1.o linux-host/mkbf8.o linux-host/c32t24.o linux-host/bmpfimg.o
+
+$(T_CPY0): linux-host/t_cpy0.o $(BMPLIB)
+	gcc -o $@ $^
 
 $(T_CPY1): linux-host/t_cpy1.o $(BMPLIB)
 	gcc -o $@ $^
