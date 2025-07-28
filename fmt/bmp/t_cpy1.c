@@ -11,6 +11,7 @@
 #include "libbmp.h"
 
 int main(int argc,char **argv) {
+#if defined(ENABLE_BMPFILEIMAGE)
 	struct BMPFILEIMAGE *membmp = NULL;
 
 	if (argc < 3)
@@ -93,5 +94,11 @@ int main(int argc,char **argv) {
 	/* free bitmap */
 	bmpfileimage_free(&membmp);
 	return 0;
+#else
+	(void)argc;
+	(void)argv;
+	fprintf(stderr,"Not available for this build\n");
+	return 0;
+#endif
 }
 

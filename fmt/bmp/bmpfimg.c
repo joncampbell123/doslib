@@ -9,6 +9,7 @@
 
 #include "libbmp.h"
 
+#if defined(ENABLE_BMPFILEIMAGE)
 struct BMPFILEIMAGE *bmpfileimage_alloc(void) {
 	struct BMPFILEIMAGE *b = (struct BMPFILEIMAGE*)malloc(sizeof(struct BMPFILEIMAGE));
 	if (b) memset(b,0,sizeof(*b));
@@ -59,4 +60,5 @@ unsigned char BMPFAR *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned i
 
 	return NULL;
 }
+#endif
 

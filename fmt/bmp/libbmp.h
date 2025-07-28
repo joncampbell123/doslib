@@ -2,6 +2,8 @@
 #include <stdint.h>
 
 #if TARGET_MSDOS == 16
+# include <i86.h>
+
 # define BMPFAR far
 
 // 16-bit real mode segmented normalization
