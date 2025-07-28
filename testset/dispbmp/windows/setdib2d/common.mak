@@ -31,6 +31,10 @@ $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 !endif
 	@wlink @tmp.cmd
+!ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(GENERAL1_EXE)
+	@wbind $(GENERAL1_EXE) -q -n
+!endif
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w640$(HPS)350vga.bmp $(SUBDIR)$(HPS)640350_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w640$(HPS)400vga.bmp $(SUBDIR)$(HPS)640400_8.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)256$(HPS)w640$(HPS)480vga.bmp $(SUBDIR)$(HPS)640480_8.bmp
