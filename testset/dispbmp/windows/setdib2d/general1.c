@@ -132,6 +132,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					GlobalUnlock(bmpStrips[strip].stripHandle);
 					y += bmi->biHeight;
 				}
+
+				bmi->biHeight = bmpHeight;
+				bmi->biSizeImage = bmi->biHeight * bmpStride;
 			}
 #else
 			if (bmpMem) {
@@ -215,11 +218,14 @@ static void load_bmp_scanline(const unsigned int line,const unsigned char *s) {
 #if defined(MEM_BY_GLOBALALLOC)
 	const unsigned int strip = line / bmpStripHeight;
 	if (strip < bmpStripCount) {
-		unsigned int sy = bmpStrips[strip].stripHeight - 1u - (line % bmpStrips[strip].stripHeight);
-		void FAR *p = GlobalLock(bmpStrips[strip].stripHandle);
-		if (p) {
-			_fmemcpy((unsigned char FAR*)p + (sy*bmpStride),s,bmpStride);
-			GlobalUnlock(bmpStrips[strip].stripHandle);
+		const unsigned int subline = line % bmpStripHeight;
+		if (subline < bmpStrips[strip].stripHeight) {
+			unsigned int sy = bmpStrips[strip].stripHeight - 1u - subline;
+			void FAR *p = GlobalLock(bmpStrips[strip].stripHandle);
+			if (p) {
+				_fmemcpy((unsigned char FAR*)p + (sy*bmpStride),s,bmpStride);
+				GlobalUnlock(bmpStrips[strip].stripHandle);
+			}
 		}
 	}
 #else
@@ -256,7 +262,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	hwndMain = CreateWindow(WndProcClass,bmpfile,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
-		300,200,
+		1024,1024,
 		(unsigned)NULL,(unsigned)NULL,
 		hInstance,NULL);
 	if (!hwndMain) {
