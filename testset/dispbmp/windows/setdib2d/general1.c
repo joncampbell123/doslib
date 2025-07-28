@@ -31,7 +31,6 @@ static HINSTANCE near		myInstance;
 static unsigned int		bmpStripHeight = 0;
 static unsigned int		bmpStripCount = 0;
 static unsigned int		bmpHeight = 0;
-static unsigned int		bmpStride = 0;
 struct bmpstrip_t {
 	HGLOBAL			stripHandle;
 	unsigned int		stripHeight;
@@ -41,6 +40,7 @@ static struct bmpstrip_t	bmpStrips[MAX_STRIPS] = {0};
 static unsigned char*		bmpMem = NULL;
 #endif
 
+static unsigned int		bmpStride = 0;
 static unsigned char		bmpInfoRaw[sizeof(BITMAPINFOHEADER) + (256 * sizeof(RGBQUAD))];
 
 static inline BITMAPINFOHEADER* bmpInfo(void) {
@@ -207,13 +207,13 @@ static void load_bmp_scanline(const unsigned int line,const unsigned char *s) {
 		unsigned int sy = bmpStrips[strip].stripHeight - 1u - (line % bmpStrips[strip].stripHeight);
 		void FAR *p = GlobalLock(bmpStrips[strip].stripHandle);
 		if (p) {
-			_fmemcpy((unsigned char FAR*)p + (sy*bfr->stride),s,bfr->stride);
+			_fmemcpy((unsigned char FAR*)p + (sy*bmpStride),s,bmpStride);
 			GlobalUnlock(bmpStrips[strip].stripHandle);
 		}
 	}
 #else
 	const unsigned int cline = bfr->height - 1u - line;
-	memcpy(bmpMem+(cline*bfr->stride),s,bfr->stride);
+	memcpy(bmpMem+(cline*bmpStride),s,bmpStride);
 #endif
 }
 
@@ -333,7 +333,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		bih->biPlanes = 1;
 		bih->biBitCount = bfr->bpp;
 		bih->biCompression = 0;
-		bih->biSizeImage = bfr->stride * bfr->height;
+		bih->biSizeImage = bmpStride * bfr->height;
 		if (bfr->bpp <= 8) {
 			bih->biClrUsed = bfr->colors;
 			bih->biClrImportant = bfr->colors;
@@ -388,7 +388,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *          you limit the bitmap to strips of less than 64KB each. */
 	bmpHeight = bfr->height;
 	bmpStride = bfr->stride;
-	bmpStripHeight = 0xFFF0u / bfr->stride;
+	bmpStripHeight = 0xFFF0u / bmpStride;
 	bmpStripCount = ((bfr->height + bmpStripHeight - 1u) / bmpStripHeight);
 	if (bmpStripCount > MAX_STRIPS) {
 		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
@@ -399,7 +399,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		unsigned int i,h=bfr->height;
 		for (i=0;i < bmpStripCount && h >= bmpStripHeight;i++) {
 			bmpStrips[i].stripHeight = bmpStripHeight;
-			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,bmpStripHeight*bfr->stride);
+			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,bmpStripHeight*bmpStride);
 			if (!bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 				return 1;
@@ -408,7 +408,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 		if (i < bmpStripCount && h != 0) {
 			bmpStrips[i].stripHeight = h;
-			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*bfr->stride);
+			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*bmpStride);
 			if (!bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 				return 1;
@@ -416,7 +416,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 #else
-	bmpMem = malloc(bfr->height * bfr->stride);
+	bmpStride = bfr->stride;
+	bmpMem = malloc(bfr->height * bmpStride);
 	if (!bmpMem) {
 		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 		return 1;
