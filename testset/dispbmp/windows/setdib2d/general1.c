@@ -12,6 +12,9 @@
 
 #include <windows.h>
 
+#include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
+
 #include "libbmp.h"
 
 #if TARGET_MSDOS == 16
@@ -24,6 +27,7 @@ static char*			bmpfile = NULL;
 
 static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
+static const char near		drawFailMsg[] = "Windows failed to draw the image";
 static HINSTANCE near		myInstance;
 
 #ifdef MEM_BY_GLOBALALLOC
@@ -41,7 +45,7 @@ static unsigned char*		bmpMem = NULL;
 #endif
 
 static unsigned int		bmpStride = 0;
-static unsigned char		bmpInfoRaw[sizeof(BITMAPINFOHEADER) + (256 * sizeof(RGBQUAD))];
+static unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
 static inline BITMAPINFOHEADER* bmpInfo(void) {
 	return (BITMAPINFOHEADER*)bmpInfoRaw;
@@ -92,6 +96,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		return 1; /* Important: Returning 1 signals to Windows that we processed the message. Windows 3.0 gets really screwed up if we don't! */
 	}
 	else if (message == WM_PAINT) {
+		BOOL drawFail = FALSE;
 		RECT um;
 
 		if (GetUpdateRect(hwnd,&um,TRUE)) {
@@ -117,7 +122,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					bmi->biSizeImage = bmi->biHeight * bmpStride;
 
 					if (p) {
-						SetDIBitsToDevice(ps.hdc,
+						if (SetDIBitsToDevice(ps.hdc,
 							0,y,
 							bmi->biWidth,bmi->biHeight,
 							0,0,
@@ -125,7 +130,8 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 							bmi->biHeight,
 							p,
 							(BITMAPINFO*)bmi,
-							bmpDIBmode);
+							bmpDIBmode) == 0)
+							drawFail = TRUE;
 					}
 
 
@@ -148,7 +154,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			if (bmpMem) {
 				BITMAPINFOHEADER *bmi = bmpInfo();
 
-				SetDIBitsToDevice(ps.hdc,
+				if (SetDIBitsToDevice(ps.hdc,
 					0,0,
 					bmi->biWidth,bmi->biHeight,
 					0,0,
@@ -156,12 +162,16 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					bmi->biHeight,
 					bmpMem,
 					(BITMAPINFO*)bmi,
-					bmpDIBmode);
+					bmpDIBmode) == 0)
+					drawFail = TRUE;
 			}
 
 			if (bmpPalette && pPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #endif
+
+			if (drawFail)
+				TextOut(ps.hdc,0,0,drawFailMsg,sizeof(drawFailMsg)-1);
 
 			EndPaint(hwnd,&ps);
 		}
@@ -245,6 +255,9 @@ static void load_bmp_scanline(const unsigned int line,const unsigned char *s) {
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	WNDCLASS wnd;
 	MSG msg;
+
+	probe_dos();
+	detect_windows();
 
 	bmpfile = lpCmdLine;
 	myInstance = hInstance;

@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../../../../fmt/bmp"
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../../../.." -i"../../../../fmt/bmp"
 NOW_BUILDING = TESTBMP_TEST
 
 GENERAL1_EXE =     $(SUBDIR)$(HPS)general1.$(EXEEXT)
@@ -17,13 +17,13 @@ GENERAL1_EXE =     $(SUBDIR)$(HPS)general1.$(EXEEXT)
 
 all: $(OMFSEGDG) lib exe
        
-lib: $(FMT_BMP_LIB) .symbolic
+lib: $(FMT_BMP_LIB) $(HW_DOS_LIB) .symbolic
 	
 exe: $(GENERAL1_EXE) .symbolic
 
 !ifdef GENERAL1_EXE
 $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
-	%write tmp.cmd option quiet option map=$(GENERAL1_EXE).map system $(WLINK_SYSTEM) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general1.obj name $(GENERAL1_EXE)
+	%write tmp.cmd option quiet option map=$(GENERAL1_EXE).map system $(WLINK_SYSTEM) library $(HW_DOS_LIB) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general1.obj name $(GENERAL1_EXE)
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 # NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
