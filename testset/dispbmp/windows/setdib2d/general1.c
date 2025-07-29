@@ -207,6 +207,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			ReleaseDC(hwnd,hdc);
 
 			if (changed) InvalidateRect(hwnd,NULL,FALSE);
+
+			if (message == WM_QUERYNEWPALETTE)
+				return changed;
 		}
 	}
 	else if (message == WM_HSCROLL) {
@@ -269,7 +272,6 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 							work_state->bmpDIBmode) == 0)
 							drawFail = TRUE;
 					}
-
 
 					GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
 					y += bmi->biHeight;
@@ -719,11 +721,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #if TARGET_MSDOS == 16 || defined(WIN386)
 	/* let go of slot */
 	work_state->taken = FALSE;
+	work_state = NULL;
 	my_slot = 0;
-
-	/* let go of our copy of the handle */
-	GlobalUnlock(inst_state_handle);
-	inst_state = NULL;
 
 	/* Win16 only:
 	 * If we are the owner (the first instance that registered the window class),
@@ -739,9 +738,20 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			DispatchMessage(&pmsg);
 		}
 
+		/* let go of our copy of the handle */
+		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop calles ALL instances
+		 *      to lose their data. Calling GlobalUnlock() after the loop fixes that issue. Why? */
+		GlobalUnlock(inst_state_handle);
+		inst_state = NULL;
+
 		/* only the first instance, who allocated the handle, should free it */
 		GlobalFree(inst_state_handle);
 		inst_state_handle = 0;
+	}
+	else {
+		/* let go of our copy of the handle */
+		GlobalUnlock(inst_state_handle);
+		inst_state = NULL;
 	}
 #endif
 
