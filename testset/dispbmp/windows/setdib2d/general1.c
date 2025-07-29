@@ -38,7 +38,7 @@ struct bmpstrip_t {
 };
 #endif
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 struct windowextra_t {
 	WORD			instance_slot;
 };
@@ -79,7 +79,7 @@ static void wndstate_init(struct wndstate_t FAR *w) {
 	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 static HGLOBAL near inst_state_handle = (HGLOBAL)0; // managed by first instance
 static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
 #else
@@ -146,7 +146,7 @@ static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int
 }
 
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
 	struct wndstate_t FAR *work_state = &inst_state[instance_slot];
 #else
@@ -409,7 +409,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		wnd.lpfnWndProc = (WNDPROC)WndProc;
 #endif
 		wnd.cbClsExtra = 0;
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 		wnd.cbWndExtra = sizeof(struct windowextra_t);
 #else
 		wnd.cbWndExtra = 0;
@@ -426,7 +426,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 		inst_state_handle = GlobalAlloc(GMEM_ZEROINIT|GMEM_SHARE,sizeof(struct wndstate_t) * MAX_INSTANCES);
 		if (!inst_state_handle) {
 			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
@@ -446,7 +446,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	}
 	else {
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 32 && defined(WIN386)
+		/* Um, no. This kind of multi instance code does not work right with Win386. Crash, crash, crash.
+		 * So we'll just not allow multiple instances. Sorry. */
+		MessageBox((unsigned)NULL,"Due to stablity issues, this program does not allow multiple Watcom Win386 instances","Oops!",MB_OK);
+		return 1;
+#endif
+#if TARGET_MSDOS == 16
 		GetInstanceData(hPrevInstance,(BYTE near*)(&inst_state_handle),sizeof(inst_state_handle));
 		if (!inst_state_handle) {
 			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
@@ -472,7 +478,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 	{
 		unsigned int i=0;
 
@@ -721,7 +727,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
 	work_state->bmpPalette = (unsigned)NULL;
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 	/* let go of slot */
 	work_state->taken = FALSE;
 	work_state = NULL;
