@@ -392,6 +392,40 @@ void convert_scanline_16bpp565_to_555(struct BMPFILEREAD *bfr,unsigned char *src
 	}
 }
 
+void convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+	unsigned char *d = (unsigned char*)src;
+	uint16_t *s16 = (uint16_t*)src;
+
+	/* expansion, so, work from the end */
+	s16 += pixels - 1u;
+	d += (pixels - 1u) * 3u;
+
+	while (pixels-- > 0u) {
+		const uint16_t sw = *s16--;
+		d[0] = ((sw >> (uint32_t)bfr->blue_shift) & 0x1Fu) << 3u;
+		d[1] = ((sw >> (uint32_t)bfr->green_shift) & 0x1Fu) << 3u;
+		d[2] = ((sw >> (uint32_t)bfr->red_shift) & 0x1Fu) << 3u;
+		d -= 3;
+	}
+}
+
+void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+	unsigned char *d = (unsigned char*)src;
+	uint16_t *s16 = (uint16_t*)src;
+
+	/* expansion, so, work from the end */
+	s16 += pixels - 1u;
+	d += (pixels - 1u) * 3u;
+
+	while (pixels-- > 0u) {
+		const uint16_t sw = *s16--;
+		d[0] = ((sw >> (uint32_t)bfr->blue_shift) & 0x1Fu) << 3u;
+		d[1] = ((sw >> (uint32_t)bfr->green_shift) & 0x3Fu) << 2u;
+		d[2] = ((sw >> (uint32_t)bfr->red_shift) & 0x1Fu) << 3u;
+		d -= 3;
+	}
+}
+
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
 #if defined(MEM_BY_GLOBALALLOC)
 	const unsigned int strip = line / work_state->bmpStripHeight;
@@ -483,7 +517,8 @@ static void draw_progress(unsigned int p,unsigned int t) {
 
 enum {
 	CONV_NONE=0,
-	CONV_32TO24
+	CONV_32TO24,
+	CONV_16TO24
 };
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
@@ -686,12 +721,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
 		if (!can16bpp) {
-			MessageBox((unsigned)NULL,"16bpp is not supported on the system","",MB_OK);
-			work_state->taken = FALSE;
-			return 1;
+			conv = CONV_16TO24; /* Windows 3.1 cannot render 16bpp unless 16bpp display, convert to 24bpp */
+			if (bfr->green_width > 5)
+				convert_scanline = convert_scanline_16_565to24;
+			else
+				convert_scanline = convert_scanline_16_555to24;
 		}
-
-		if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
+		else if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
 			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
@@ -716,10 +752,20 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	work_state->bmpWidth = bfr->width;
 	work_state->bmpHeight = bfr->height;
 
-	if (bfr->bpp == 32 && conv == CONV_32TO24)
+	if (bfr->bpp == 32 && conv == CONV_32TO24) {
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
-	else
+	}
+	else if ((bfr->bpp == 15 || bfr->bpp == 16) && conv == CONV_16TO24) {
+		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
+		if (resize_bmp_scanline(bfr,work_state->bmpStride)) {
+			MessageBox((unsigned)NULL,"cannot resize bmp stride","Err",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+	}
+	else {
 		work_state->bmpStride = bfr->stride;
+	}
 
 	/* set it up */
 	{
@@ -749,6 +795,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		bih->biPlanes = 1;
 
 		if (bfr->bpp == 32 && conv == CONV_32TO24)
+			bih->biBitCount = 24;
+		else if ((bfr->bpp == 15 || bfr->bpp == 16) && conv == CONV_16TO24)
 			bih->biBitCount = 24;
 		else
 			bih->biBitCount = bfr->bpp;
