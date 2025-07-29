@@ -29,12 +29,12 @@ static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
 static const char near		drawFailMsg[] = "Windows failed to draw the image";
 static HINSTANCE near		myInstance;
+static unsigned int		scrollX = 0,scrollY = 0;
 
 #ifdef MEM_BY_GLOBALALLOC
 # define MAX_STRIPS		128
 static unsigned int		bmpStripHeight = 0;
 static unsigned int		bmpStripCount = 0;
-static unsigned int		bmpHeight = 0;
 struct bmpstrip_t {
 	HGLOBAL			stripHandle;
 	unsigned int		stripHeight;
@@ -44,6 +44,8 @@ static struct bmpstrip_t	bmpStrips[MAX_STRIPS] = {0};
 static unsigned char*		bmpMem = NULL;
 #endif
 
+static unsigned int		bmpWidth = 0;
+static unsigned int		bmpHeight = 0;
 static unsigned int		bmpStride = 0;
 static unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
@@ -56,6 +58,58 @@ static HPALETTE bmpPalette = 0;
 static struct BMPFILEREAD *bfr = NULL;
 static unsigned bmpDIBmode = DIB_RGB_COLORS;
 static conv_scanline_func_t convert_scanline;
+
+static void CheckScrollBars(HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
+	if (nWidth < bmpWidth)
+		SetScrollRange(hwnd,SB_HORZ,0,bmpWidth - nWidth,TRUE);
+	else
+		SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
+
+	if (nHeight < bmpHeight)
+		SetScrollRange(hwnd,SB_VERT,0,bmpHeight - nHeight,TRUE);
+	else
+		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
+}
+
+static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int *scrollPos,const unsigned int req,const unsigned int nPos) {
+# if defined(WIN386)
+	short pMin=0,pMax=0;
+# else
+	int pMin=0,pMax=0;
+# endif
+	const int cPos = GetScrollPos(hwnd,sb);
+	BOOL redraw = FALSE;
+	RECT um;
+
+	GetClientRect(hwnd,&um);
+	GetScrollRange(hwnd,sb,&pMin,&pMax);
+
+	switch (req) {
+		case SB_BOTTOM:
+			SetScrollPos(hwnd,sb,pMax,TRUE); redraw = TRUE; break;
+		case SB_TOP:
+			SetScrollPos(hwnd,sb,pMin,TRUE); redraw = TRUE; break;
+		case SB_LINEDOWN:
+			SetScrollPos(hwnd,sb,cPos + 32,TRUE); redraw = TRUE; break;
+		case SB_LINEUP:
+			SetScrollPos(hwnd,sb,cPos - 32,TRUE); redraw = TRUE; break;
+		case SB_PAGEDOWN:
+			SetScrollPos(hwnd,sb,cPos + (int)um.bottom,TRUE); redraw = TRUE; break;
+		case SB_PAGEUP:
+			SetScrollPos(hwnd,sb,cPos - (int)um.bottom,TRUE); redraw = TRUE; break;
+		case SB_THUMBTRACK:
+			SetScrollPos(hwnd,sb,nPos,TRUE); redraw = TRUE; break;
+		case SB_THUMBPOSITION:
+			SetScrollPos(hwnd,sb,nPos,TRUE); redraw = TRUE; break;
+		default:
+			break;
+	}
+
+	if (redraw) {
+		*scrollPos = GetScrollPos(hwnd,sb);
+		InvalidateRect(hwnd,NULL,FALSE);
+	}
+}
 
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
@@ -73,6 +127,11 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		else {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
+	}
+	else if (message == WM_SIZE) {
+		const unsigned int nWidth = LOWORD(lparam);
+		const unsigned int nHeight = HIWORD(lparam);
+		CheckScrollBars(hwnd,nWidth,nHeight);
 	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
@@ -94,6 +153,28 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		}
 
 		return 1; /* Important: Returning 1 signals to Windows that we processed the message. Windows 3.0 gets really screwed up if we don't! */
+	}
+	else if (message == WM_HSCROLL) {
+		// Microsoft changed how the info is passed between Win16 and Win32!
+#if TARGET_MSDOS == 32 && !defined(WIN386)
+		const unsigned int req = LOWORD(wparam);
+		const unsigned int nPos = HIWORD(wparam);
+#else
+		const unsigned int req = LOWORD(wparam);
+		const unsigned int nPos = LOWORD(lparam);
+#endif
+		CommonScrollPosHandling(hwnd,SB_HORZ,&scrollX,req,nPos);
+	}
+	else if (message == WM_VSCROLL) {
+		// Microsoft changed how the info is passed between Win16 and Win32!
+#if TARGET_MSDOS == 32 && !defined(WIN386)
+		const unsigned int req = LOWORD(wparam);
+		const unsigned int nPos = HIWORD(wparam);
+#else
+		const unsigned int req = LOWORD(wparam);
+		const unsigned int nPos = LOWORD(lparam);
+#endif
+		CommonScrollPosHandling(hwnd,SB_VERT,&scrollY,req,nPos);
 	}
 	else if (message == WM_PAINT) {
 		BOOL drawFail = FALSE;
@@ -123,7 +204,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 					if (p) {
 						if (SetDIBitsToDevice(ps.hdc,
-							0,y,
+							-scrollX,y-scrollY,
 							bmi->biWidth,bmi->biHeight,
 							0,0,
 							0,
@@ -155,7 +236,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				BITMAPINFOHEADER *bmi = bmpInfo();
 
 				if (SetDIBitsToDevice(ps.hdc,
-					0,0,
+					-scrollX,-scrollY,
 					bmi->biWidth,bmi->biHeight,
 					0,0,
 					0,
@@ -422,13 +503,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		free(lp);
 	}
 
+	bmpWidth = bfr->width;
+	bmpHeight = bfr->height;
+
 	/* the bitmap itself */
 #ifdef MEM_BY_GLOBALALLOC
 	/* Problem: GlobalAlloc does let you alloc large regions of memory, and StretchDIBitsToDevice()
 	 *          from them, but there seems to be bugs in certain drivers that crash Windows if you
 	 *          try to draw certain bit depths (S3 drivers in DOSBox). These bugs don't happen if
 	 *          you limit the bitmap to strips of less than 64KB each. */
-	bmpHeight = bfr->height;
 	bmpStride = bfr->stride;
 	bmpStripHeight = 0xFFF0u / bmpStride;
 	bmpStripCount = ((bfr->height + bmpStripHeight - 1u) / bmpStripHeight);
@@ -473,6 +556,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* done reading */
 	close_bmp(&bfr);
+
+	{
+		RECT um;
+		GetClientRect(hwndMain,&um);
+		CheckScrollBars(hwndMain,(unsigned)um.right,(unsigned)um.bottom);
+	}
 
 	/* force redraw */
 	InvalidateRect(hwndMain,(unsigned)NULL,FALSE);
