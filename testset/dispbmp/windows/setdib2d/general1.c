@@ -390,13 +390,6 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 #endif
 }
 
-#if TARGET_MSDOS == 16 || defined(WIN386)
-void release_work_state(void) {
-	if (inst_state)
-		inst_state[my_slot].taken = FALSE;
-}
-#endif
-
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	WNDCLASS wnd;
@@ -493,8 +486,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		SetWindowWord(hwndMain,offsetof(struct windowextra_t,instance_slot),my_slot);
 		work_state = &inst_state[my_slot];
 		work_state->taken = TRUE;
-
-		atexit(release_work_state);
 	}
 #else
 	work_state = &the_state;
@@ -514,6 +505,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		hDC = GetDC(hwndMain);
 		if (!hDC) {
 			MessageBox((unsigned)NULL,"GetDC err","Err",MB_OK);
+			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -527,26 +519,31 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		if (!(rcaps & RC_DIBTODEV)) {
 			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (64KB bitmap + SetDIBitsToDevice)","Err",MB_OK);
+			work_state->taken = FALSE;
 			return 1;
 		}
 	}
 
 	if (bmpfile == NULL) {
 		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 
 	bfr = open_bmp(bmpfile);
 	if (bfr == NULL) {
 		MessageBox((unsigned)NULL,"Failed to open BMP","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 	if (bfr->bpp <= 8 && (bfr->palette == NULL || bfr->colors == 0)) {
 		MessageBox((unsigned)NULL,"BMP missing color palette","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 
@@ -609,6 +606,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		lp = malloc(sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * (1u << bfr->bpp)));
 		if (!lp || bfr->colors > (1u << bfr->bpp)) {
 			MessageBox((unsigned)NULL,"Unable to alloc palette struct","Err",MB_OK);
+			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -624,6 +622,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpPalette = CreatePalette(lp);
 		if (!work_state->bmpPalette) {
 			MessageBox((unsigned)NULL,"Unable to createPalette","Err",MB_OK);
+			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -644,6 +643,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	work_state->bmpStripCount = ((bfr->height + work_state->bmpStripHeight - 1u) / work_state->bmpStripHeight);
 	if (work_state->bmpStripCount > MAX_STRIPS) {
 		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 
@@ -654,6 +654,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,work_state->bmpStripHeight*work_state->bmpStride);
 			if (!work_state->bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+				work_state->taken = FALSE;
 				return 1;
 			}
 			h -= work_state->bmpStripHeight;
@@ -663,6 +664,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*work_state->bmpStride);
 			if (!work_state->bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+				work_state->taken = FALSE;
 				return 1;
 			}
 		}
@@ -672,6 +674,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	work_state->bmpMem = malloc(bfr->height * work_state->bmpStride);
 	if (!work_state->bmpMem) {
 		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+		work_state->taken = FALSE;
 		return 1;
 	}
 #endif
@@ -732,11 +735,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 * behind the window class out from the other processes). */
 	if (!hPrevInstance) {
 		MSG pmsg; /* do not overwrite msg.wParam */
-		while (GetModuleUsage(hInstance) > 1) {
+
+		/* NTS: PeekMessage() PM_REMOVE only, do not translate or dispatch.
+		 *      Windows 3.1 tolerates it just fine, but Windows 3.0 will crash. */
+		while (GetModuleUsage(hInstance) > 1)
 			PeekMessage(&pmsg,(unsigned)NULL,0,0,PM_REMOVE);
-			TranslateMessage(&pmsg);
-			DispatchMessage(&pmsg);
-		}
 
 		/* let go of our copy of the handle */
 		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop calles ALL instances
