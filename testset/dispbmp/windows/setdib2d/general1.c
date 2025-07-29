@@ -742,7 +742,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			PeekMessage(&pmsg,(unsigned)NULL,0,0,PM_REMOVE);
 
 		/* let go of our copy of the handle */
-		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop calles ALL instances
+		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop causes ALL instances
 		 *      to lose their data. Calling GlobalUnlock() after the loop fixes that issue. Why? */
 		GlobalUnlock(inst_state_handle);
 		inst_state = NULL;
