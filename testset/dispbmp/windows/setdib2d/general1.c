@@ -18,6 +18,8 @@
 
 #include "libbmp.h"
 
+#define IDCSM_INFO		0x7700u
+
 #if TARGET_MSDOS == 16
 # define MEM_BY_GLOBALALLOC
 #endif
@@ -67,6 +69,15 @@ struct wndstate_t {
 	BOOL			need_palette;
 	HPALETTE		bmpPalette;
 	unsigned		bmpDIBmode;
+	uint8_t			src_red_shift;
+	uint8_t			src_red_width;
+	uint8_t			src_green_shift;
+	uint8_t			src_green_width;
+	uint8_t			src_blue_shift;
+	uint8_t			src_blue_width;
+	uint8_t			src_alpha_shift;
+	uint8_t			src_alpha_width;
+	unsigned char		srcBpp;
 };
 
 static void wndstate_init(struct wndstate_t FAR *w) {
@@ -148,6 +159,48 @@ static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int
 	}
 }
 
+static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
+	char *tmp = malloc(4096),*w = tmp,*f = tmp+4095;
+	BITMAPINFOHEADER FAR* bmi = bmpInfo(work_state);
+
+	w += snprintf(w,(int)(f-w),
+		"Displaying as: %ux%u %ubpp",
+		work_state->bmpWidth,
+		work_state->bmpHeight,
+		bmi->biBitCount);
+
+	if (work_state->bmpPalette)
+		w += snprintf(w,(int)(f-w),", using color palette");
+	else if (work_state->need_palette)
+		w += snprintf(w,(int)(f-w),", need color palette");
+
+	w += snprintf(w,(int)(f-w),
+		"\nSource: %ubpp",
+		work_state->srcBpp);
+	if (work_state->srcBpp > 8) {
+		w += snprintf(w,(int)(f-w),
+			" R/G/B/A %u:%u:%u:%u at bit pos %u:%u:%u:%u",
+			work_state->src_red_width,
+			work_state->src_green_width,
+			work_state->src_blue_width,
+			work_state->src_alpha_width,
+			work_state->src_red_shift,
+			work_state->src_green_shift,
+			work_state->src_blue_shift,
+			work_state->src_alpha_shift);
+	}
+
+	w += snprintf(w,(int)(f-w),
+		"\nCaps: can16bpp=%u can32bpp=%u canBI_BITFIELDS=%u",
+		can16bpp?1:0,
+		can32bpp?1:0,
+		canBitfields?1:0);
+
+	MessageBox(hwnd,tmp,"Info",MB_OK);
+
+	free(tmp);
+}
+
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #if TARGET_MSDOS == 16
 	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
@@ -158,6 +211,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
+	}
+	else if (message == WM_SYSCOMMAND) {
+		switch (LOWORD(wparam)) {
+			case IDCSM_INFO:
+				ShowInfo(hwnd,work_state);
+				break;
+			default:
+				return DefWindowProc(hwnd,message,wparam,lparam);
+		};
 	}
 	else if (message == WM_DESTROY) {
 		PostQuitMessage(0);
@@ -640,6 +702,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	/* first instance already called init on each element */
 
+	{
+		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info"); /* NTS: Any ID is OK as long at it's less than 0xF000 */
+	}
+
 	ShowWindow(hwndMain,nCmdShow);
 	UpdateWindow(hwndMain);
 
@@ -772,6 +840,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
+		work_state->srcBpp = bfr->bpp;
+		work_state->src_red_shift = bfr->red_shift;
+		work_state->src_red_width = bfr->red_width;
+		work_state->src_green_shift = bfr->green_shift;
+		work_state->src_green_width = bfr->green_width;
+		work_state->src_blue_shift = bfr->blue_shift;
+		work_state->src_blue_width = bfr->blue_width;
+		work_state->src_alpha_shift = bfr->alpha_shift;
+		work_state->src_alpha_width = bfr->alpha_width;
 		work_state->bmpDIBmode = DIB_RGB_COLORS;
 
 		bih->biSize = sizeof(BITMAPINFOHEADER);
