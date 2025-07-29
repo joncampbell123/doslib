@@ -400,6 +400,75 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 #endif
 }
 
+static void draw_progress(unsigned int p,unsigned int t) {
+	HBRUSH oldBrush,newBrush;
+	HPEN oldPen,newPen;
+	RECT um;
+	HDC hdc;
+
+	GetClientRect(hwndMain,&um);
+	{
+		int w = (int)(um.right - um.left);
+		int h = (int)(um.bottom - um.top);
+		int bw = w / 4;
+		int bh = 32;
+		int x = (w - bw) / 2;
+		int y = (h - bh) / 2;
+
+		um.top = y;
+		um.left = x;
+		um.right = x + bw;
+		um.bottom = y + bh;
+	}
+
+	hdc = GetDC(hwndMain);
+
+	if (t > 0) {
+		int fw = (um.right - um.left) - 1;
+		int sw = ((long)fw * (long)p) / (long)t;
+		if (sw > fw) sw = fw;
+
+		newPen = (HPEN)GetStockObject(BLACK_PEN);
+		newBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
+
+		oldPen = SelectObject(hdc,newPen);
+		oldBrush = SelectObject(hdc,newBrush);
+
+		Rectangle(hdc,um.left,um.top,um.right,um.bottom);
+
+		newPen = (HPEN)GetStockObject(NULL_PEN);
+		newBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+		SelectObject(hdc,newPen);
+		SelectObject(hdc,newBrush);
+
+		Rectangle(hdc,um.left+1,um.top+1,um.left+sw+1,um.bottom);
+
+		newPen = (HPEN)GetStockObject(NULL_PEN);
+		newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+		SelectObject(hdc,newPen);
+		SelectObject(hdc,newBrush);
+
+		Rectangle(hdc,um.left+sw+1,um.top+1,um.right,um.bottom);
+
+		SelectObject(hdc,oldBrush);
+		SelectObject(hdc,oldPen);
+	}
+	else {
+		newPen = (HPEN)GetStockObject(NULL_PEN);
+		newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+
+		oldPen = SelectObject(hdc,newPen);
+		oldBrush = SelectObject(hdc,newBrush);
+
+		Rectangle(hdc,um.left,um.top,um.right+1,um.bottom+1);
+
+		SelectObject(hdc,oldBrush);
+		SelectObject(hdc,oldPen);
+	}
+
+	ReleaseDC(hwndMain,hdc);
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	WNDCLASS wnd;
@@ -751,10 +820,19 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 #endif
-	/* OK, now read it in! */
-	while (read_bmp_line(bfr) == 0) {
-		convert_scanline(bfr,bfr->scanline,bfr->width);
-		load_bmp_scanline(work_state,bfr->current_line,bfr->scanline);
+
+	{
+		unsigned int p=0;
+
+		/* OK, now read it in! */
+		draw_progress(p,bfr->height);
+		while (read_bmp_line(bfr) == 0) {
+			convert_scanline(bfr,bfr->scanline,bfr->width);
+			load_bmp_scanline(work_state,bfr->current_line,bfr->scanline);
+			draw_progress(++p,bfr->height);
+		}
+
+		draw_progress(0,0);
 	}
 
 	/* done reading */
