@@ -33,6 +33,9 @@ int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
 	if (!(bmp->bpp == 15 || bmp->bpp == 16 || bmp->bpp == 24 || bmp->bpp == 32))
 		return -1;
 
+	if (bmp->bpp == 15)
+		bmp->bpp = 16;
+
 	/* bottom up */
 	bmp->current_line = bmp->height - 1;
 	bmp->current_line_add = -1;

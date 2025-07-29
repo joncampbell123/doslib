@@ -90,6 +90,9 @@ static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 }
 
 static BOOL canBitfields = FALSE; /* can do BI_BITFIELDS (Win95/WinNT 4) */
+static BOOL can16bpp = FALSE; /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
+static BOOL can32bpp = FALSE; /* Windows 3.1 doesn't like or support 32bpp ARGB??
+                                 Either ignores it, misrenders as black (and can CRASH if more than 64KB!), or misrenders as 24bpp? */
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
@@ -408,6 +411,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
 			canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
+			can32bpp = TRUE; /* can use 32bpp ARGB */
+			can16bpp = TRUE; /* can use 16bpp 5:5:5 */
 		}
 	}
 
@@ -518,7 +523,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
 	{
-		int rcaps,szpal;
+		int rcaps,szpal,bpp,planes;
 		HDC hDC;
 
 		hDC = GetDC(hwndMain);
@@ -528,8 +533,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 
+		bpp = GetDeviceCaps(hDC,BITSPIXEL);
 		rcaps = GetDeviceCaps(hDC,RASTERCAPS);
 		szpal = GetDeviceCaps(hDC,SIZEPALETTE);
+		planes = GetDeviceCaps(hDC,PLANES);
 
 		ReleaseDC(hwndMain,hDC);
 
@@ -537,9 +544,18 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			work_state->need_palette = TRUE;
 
 		if (!(rcaps & RC_DIBTODEV)) {
-			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (64KB bitmap + SetDIBitsToDevice)","Err",MB_OK);
+			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (SetDIBitsToDevice)","Err",MB_OK);
 			work_state->taken = FALSE;
 			return 1;
+		}
+
+		/* Windows 3.1 can do 16bpp 5:5:5 but only if the screen is 5:5:5.
+		 * However, Windows 3.1 cannot do 32bpp ARGB even if the framebuffer itself is 32bpp ARGB,
+		 * but it can render 24bpp RGB just fine. */
+		if (!can16bpp && windows_version < 0x330) { /* Windows 3.1 and below */
+			if (planes == 1 && (bpp == 15 || bpp == 16)) { /* display is 16bpp */
+				can16bpp = TRUE;
+			}
 		}
 	}
 
@@ -569,6 +585,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	convert_scanline = convert_scanline_none;
 
 	if (bfr->bpp == 32) {
+		if (!can32bpp) {
+			MessageBox((unsigned)NULL,"32bpp is not supported on the system","",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
 		if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
 			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
@@ -578,6 +600,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
+		if (!can16bpp) {
+			MessageBox((unsigned)NULL,"16bpp is not supported on the system","",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
 		if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
 			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */

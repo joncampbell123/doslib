@@ -97,6 +97,7 @@ struct BMPFILEREAD *open_bmp(const char *path) {
 				bmp->alpha_shift = 15;
 				bmp->alpha_width = 1;
 				bmp->has_alpha = 0;
+				bmp->bpp = 16;
 			}
 			else if (bmp->bpp == 24) {
 				bmp->blue_shift = 0;

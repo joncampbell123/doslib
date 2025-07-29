@@ -10,6 +10,7 @@
 #include "libbmp.h"
 
 unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
+	if (bpp == 15) bpp = 16;
 	return (((w * bpp) + 31u) & (~31u)) >> 3u;
 }
 
