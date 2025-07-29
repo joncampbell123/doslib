@@ -29,44 +29,59 @@ static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
 static const char near		drawFailMsg[] = "Windows failed to draw the image";
 static HINSTANCE near		myInstance;
-static unsigned int		scrollX = 0,scrollY = 0;
 
 #ifdef MEM_BY_GLOBALALLOC
-# define MAX_STRIPS		128
-static unsigned int		bmpStripHeight = 0;
-static unsigned int		bmpStripCount = 0;
 struct bmpstrip_t {
 	HGLOBAL			stripHandle;
 	unsigned int		stripHeight;
 };
-static struct bmpstrip_t	bmpStrips[MAX_STRIPS] = {0};
-#else
-static unsigned char*		bmpMem = NULL;
 #endif
 
-static unsigned int		bmpWidth = 0;
-static unsigned int		bmpHeight = 0;
-static unsigned int		bmpStride = 0;
-static unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
+struct wndstate_t {
+	unsigned int		scrollX,scrollY;
 
-static inline BITMAPINFOHEADER* bmpInfo(void) {
-	return (BITMAPINFOHEADER*)bmpInfoRaw;
+#ifdef MEM_BY_GLOBALALLOC
+# define MAX_STRIPS		128
+	unsigned int		bmpStripHeight;
+	unsigned int		bmpStripCount;
+	struct bmpstrip_t	bmpStrips[MAX_STRIPS];
+#else
+	unsigned char*		bmpMem;
+#endif
+
+	unsigned int		bmpWidth;
+	unsigned int		bmpHeight;
+	unsigned int		bmpStride;
+	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
+
+	BOOL			need_palette;
+	HPALETTE		bmpPalette;
+	unsigned		bmpDIBmode;
+};
+
+static void wndstate_init(struct wndstate_t *w) {
+	memset(w,0,sizeof(*w));
+	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
-static BOOL need_palette = FALSE;
-static HPALETTE bmpPalette = 0;
+// TEMPORARY
+static struct wndstate_t tndstate;
+
+static inline BITMAPINFOHEADER* bmpInfo(struct wndstate_t *w) {
+	return (BITMAPINFOHEADER*)(w->bmpInfoRaw);
+}
+
 static struct BMPFILEREAD *bfr = NULL;
-static unsigned bmpDIBmode = DIB_RGB_COLORS;
 static conv_scanline_func_t convert_scanline;
 
-static void CheckScrollBars(HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
-	if (nWidth < bmpWidth)
-		SetScrollRange(hwnd,SB_HORZ,0,bmpWidth - nWidth,TRUE);
+static void CheckScrollBars(struct wndstate_t *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
+	if (nWidth < w->bmpWidth)
+		SetScrollRange(hwnd,SB_HORZ,0,w->bmpWidth - nWidth,TRUE);
 	else
 		SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
 
-	if (nHeight < bmpHeight)
-		SetScrollRange(hwnd,SB_VERT,0,bmpHeight - nHeight,TRUE);
+	if (nHeight < w->bmpHeight)
+		SetScrollRange(hwnd,SB_VERT,0,w->bmpHeight - nHeight,TRUE);
 	else
 		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
 }
@@ -131,7 +146,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	else if (message == WM_SIZE) {
 		const unsigned int nWidth = LOWORD(lparam);
 		const unsigned int nHeight = HIWORD(lparam);
-		CheckScrollBars(hwnd,nWidth,nHeight);
+		CheckScrollBars(&tndstate,hwnd,nWidth,nHeight);
 	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
@@ -163,7 +178,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = LOWORD(lparam);
 #endif
-		CommonScrollPosHandling(hwnd,SB_HORZ,&scrollX,req,nPos);
+		CommonScrollPosHandling(hwnd,SB_HORZ,&tndstate.scrollX,req,nPos);
 	}
 	else if (message == WM_VSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
@@ -174,7 +189,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = LOWORD(lparam);
 #endif
-		CommonScrollPosHandling(hwnd,SB_VERT,&scrollY,req,nPos);
+		CommonScrollPosHandling(hwnd,SB_VERT,&tndstate.scrollY,req,nPos);
 	}
 	else if (message == WM_PAINT) {
 		BOOL drawFail = FALSE;
@@ -187,67 +202,67 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			BeginPaint(hwnd,&ps);
 
 #if defined(MEM_BY_GLOBALALLOC)
-			if (bmpPalette) {
-				pPalette = SelectPalette(ps.hdc,bmpPalette,FALSE);
+			if (tndstate.bmpPalette) {
+				pPalette = SelectPalette(ps.hdc,tndstate.bmpPalette,FALSE);
 				if (pPalette) RealizePalette(ps.hdc);
 			}
 
 			{
-				BITMAPINFOHEADER *bmi = bmpInfo();
-				unsigned int strip=bmpStripCount-1u,y=0u;
+				BITMAPINFOHEADER *bmi = bmpInfo(&tndstate);
+				unsigned int strip=tndstate.bmpStripCount-1u,y=0u;
 				void FAR *p;
 
-				for (strip=0;strip < bmpStripCount;strip++) {
-					p = GlobalLock(bmpStrips[strip].stripHandle);
-					bmi->biHeight = bmpStrips[strip].stripHeight;
-					bmi->biSizeImage = bmi->biHeight * bmpStride;
+				for (strip=0;strip < tndstate.bmpStripCount;strip++) {
+					p = GlobalLock(tndstate.bmpStrips[strip].stripHandle);
+					bmi->biHeight = tndstate.bmpStrips[strip].stripHeight;
+					bmi->biSizeImage = bmi->biHeight * tndstate.bmpStride;
 
 					if (p) {
 						if (SetDIBitsToDevice(ps.hdc,
-							-scrollX,y-scrollY,
+							-tndstate.scrollX,y-tndstate.scrollY,
 							bmi->biWidth,bmi->biHeight,
 							0,0,
 							0,
 							bmi->biHeight,
 							p,
 							(BITMAPINFO*)bmi,
-							bmpDIBmode) == 0)
+							tndstate.bmpDIBmode) == 0)
 							drawFail = TRUE;
 					}
 
 
-					GlobalUnlock(bmpStrips[strip].stripHandle);
+					GlobalUnlock(tndstate.bmpStrips[strip].stripHandle);
 					y += bmi->biHeight;
 				}
 
-				bmi->biHeight = bmpHeight;
-				bmi->biSizeImage = bmi->biHeight * bmpStride;
+				bmi->biHeight = tndstate.bmpHeight;
+				bmi->biSizeImage = bmi->biHeight * tndstate.bmpStride;
 			}
 
-			if (bmpPalette && pPalette)
+			if (pPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #else
-			if (bmpPalette) {
-				pPalette = SelectPalette(ps.hdc,bmpPalette,FALSE);
+			if (tndstate.bmpPalette) {
+				pPalette = SelectPalette(ps.hdc,tndstate.bmpPalette,FALSE);
 				if (pPalette) RealizePalette(ps.hdc);
 			}
 
-			if (bmpMem) {
-				BITMAPINFOHEADER *bmi = bmpInfo();
+			if (tndstate.bmpMem) {
+				BITMAPINFOHEADER *bmi = bmpInfo(&tndstate);
 
 				if (SetDIBitsToDevice(ps.hdc,
-					-scrollX,-scrollY,
+					-tndstate.scrollX,-tndstate.scrollY,
 					bmi->biWidth,bmi->biHeight,
 					0,0,
 					0,
 					bmi->biHeight,
-					bmpMem,
+					tndstate.bmpMem,
 					(BITMAPINFO*)bmi,
-					bmpDIBmode) == 0)
+					tndstate.bmpDIBmode) == 0)
 					drawFail = TRUE;
 			}
 
-			if (bmpPalette && pPalette)
+			if (pPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #endif
 
@@ -315,27 +330,30 @@ void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsign
 
 static void load_bmp_scanline(const unsigned int line,const unsigned char *s) {
 #if defined(MEM_BY_GLOBALALLOC)
-	const unsigned int strip = line / bmpStripHeight;
-	if (strip < bmpStripCount) {
-		const unsigned int subline = line % bmpStripHeight;
-		if (subline < bmpStrips[strip].stripHeight) {
-			unsigned int sy = bmpStrips[strip].stripHeight - 1u - subline;
-			void FAR *p = GlobalLock(bmpStrips[strip].stripHandle);
+	const unsigned int strip = line / tndstate.bmpStripHeight;
+	if (strip < tndstate.bmpStripCount) {
+		const unsigned int subline = line % tndstate.bmpStripHeight;
+		if (subline < tndstate.bmpStrips[strip].stripHeight) {
+			unsigned int sy = tndstate.bmpStrips[strip].stripHeight - 1u - subline;
+			void FAR *p = GlobalLock(tndstate.bmpStrips[strip].stripHandle);
 			if (p) {
-				_fmemcpy((unsigned char FAR*)p + (sy*bmpStride),s,bmpStride);
-				GlobalUnlock(bmpStrips[strip].stripHandle);
+				_fmemcpy((unsigned char FAR*)p + (sy*tndstate.bmpStride),s,tndstate.bmpStride);
+				GlobalUnlock(tndstate.bmpStrips[strip].stripHandle);
 			}
 		}
 	}
 #else
 	const unsigned int cline = bfr->height - 1u - line;
-	memcpy(bmpMem+(cline*bmpStride),s,bmpStride);
+	memcpy(tndstate.bmpMem+(cline*tndstate.bmpStride),s,tndstate.bmpStride);
 #endif
 }
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	WNDCLASS wnd;
 	MSG msg;
+
+	//TEMPORARY
+	wndstate_init(&tndstate);
 
 	probe_dos();
 	detect_windows();
@@ -396,7 +414,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		ReleaseDC(hwndMain,hDC);
 
 		if ((rcaps & RC_PALETTE) && szpal > 0)
-			need_palette = TRUE;
+			tndstate.need_palette = TRUE;
 
 		if (!(rcaps & RC_DIBTODEV)) {
 			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (64KB bitmap + SetDIBitsToDevice)","Err",MB_OK);
@@ -445,10 +463,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* set it up */
 	{
-		BITMAPINFOHEADER *bih = bmpInfo();/*NTS: data area is big enough even for a 256-color paletted file*/
+		BITMAPINFOHEADER *bih = bmpInfo(&tndstate);/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
-		bmpDIBmode = DIB_RGB_COLORS;
+		tndstate.bmpDIBmode = DIB_RGB_COLORS;
 
 		bih->biSize = sizeof(BITMAPINFOHEADER);
 		bih->biWidth = bfr->width;
@@ -456,26 +474,26 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		bih->biPlanes = 1;
 		bih->biBitCount = bfr->bpp;
 		bih->biCompression = 0;
-		bih->biSizeImage = bmpStride * bfr->height;
+		bih->biSizeImage = tndstate.bmpStride * bfr->height;
 		if (bfr->bpp <= 8) {
 			bih->biClrUsed = bfr->colors;
 			bih->biClrImportant = bfr->colors;
 		}
 
 		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
-			if (need_palette) {
+			if (tndstate.need_palette) {
 				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
-				bmpDIBmode = DIB_PAL_COLORS;
+				tndstate.bmpDIBmode = DIB_PAL_COLORS;
 			}
 		}
-		if (bmpDIBmode == DIB_RGB_COLORS) {
+		if (tndstate.bmpDIBmode == DIB_RGB_COLORS) {
 			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
 	}
 	/* palette */
-	if (bmpDIBmode == DIB_PAL_COLORS) {
+	if (tndstate.bmpDIBmode == DIB_PAL_COLORS) {
 		unsigned int i;
 		LOGPALETTE *lp;
 
@@ -494,8 +512,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			lp->palPalEntry[i].peFlags = 0;
 		}
 
-		bmpPalette = CreatePalette(lp);
-		if (!bmpPalette) {
+		tndstate.bmpPalette = CreatePalette(lp);
+		if (!tndstate.bmpPalette) {
 			MessageBox((unsigned)NULL,"Unable to createPalette","Err",MB_OK);
 			return 1;
 		}
@@ -503,8 +521,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		free(lp);
 	}
 
-	bmpWidth = bfr->width;
-	bmpHeight = bfr->height;
+	tndstate.bmpWidth = bfr->width;
+	tndstate.bmpHeight = bfr->height;
 
 	/* the bitmap itself */
 #ifdef MEM_BY_GLOBALALLOC
@@ -512,38 +530,38 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *          from them, but there seems to be bugs in certain drivers that crash Windows if you
 	 *          try to draw certain bit depths (S3 drivers in DOSBox). These bugs don't happen if
 	 *          you limit the bitmap to strips of less than 64KB each. */
-	bmpStride = bfr->stride;
-	bmpStripHeight = 0xFFF0u / bmpStride;
-	bmpStripCount = ((bfr->height + bmpStripHeight - 1u) / bmpStripHeight);
-	if (bmpStripCount > MAX_STRIPS) {
+	tndstate.bmpStride = bfr->stride;
+	tndstate.bmpStripHeight = 0xFFF0u / tndstate.bmpStride;
+	tndstate.bmpStripCount = ((bfr->height + tndstate.bmpStripHeight - 1u) / tndstate.bmpStripHeight);
+	if (tndstate.bmpStripCount > MAX_STRIPS) {
 		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
 		return 1;
 	}
 
 	{
 		unsigned int i,h=bfr->height;
-		for (i=0;i < bmpStripCount && h >= bmpStripHeight;i++) {
-			bmpStrips[i].stripHeight = bmpStripHeight;
-			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,bmpStripHeight*bmpStride);
-			if (!bmpStrips[i].stripHandle) {
+		for (i=0;i < tndstate.bmpStripCount && h >= tndstate.bmpStripHeight;i++) {
+			tndstate.bmpStrips[i].stripHeight = tndstate.bmpStripHeight;
+			tndstate.bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,tndstate.bmpStripHeight*tndstate.bmpStride);
+			if (!tndstate.bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 				return 1;
 			}
-			h -= bmpStripHeight;
+			h -= tndstate.bmpStripHeight;
 		}
-		if (i < bmpStripCount && h != 0) {
-			bmpStrips[i].stripHeight = h;
-			bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*bmpStride);
-			if (!bmpStrips[i].stripHandle) {
+		if (i < tndstate.bmpStripCount && h != 0) {
+			tndstate.bmpStrips[i].stripHeight = h;
+			tndstate.bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*tndstate.bmpStride);
+			if (!tndstate.bmpStrips[i].stripHandle) {
 				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 				return 1;
 			}
 		}
 	}
 #else
-	bmpStride = bfr->stride;
-	bmpMem = malloc(bfr->height * bmpStride);
-	if (!bmpMem) {
+	tndstate.bmpStride = bfr->stride;
+	tndstate.bmpMem = malloc(bfr->height * tndstate.bmpStride);
+	if (!tndstate.bmpMem) {
 		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 		return 1;
 	}
@@ -560,7 +578,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 		GetClientRect(hwndMain,&um);
-		CheckScrollBars(hwndMain,(unsigned)um.right,(unsigned)um.bottom);
+		CheckScrollBars(&tndstate,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
 	}
 
 	/* force redraw */
@@ -591,21 +609,21 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #ifdef MEM_BY_GLOBALALLOC
 	{
 		unsigned int i;
-		for (i=0;i < bmpStripCount;i++) {
-			if (bmpStrips[i].stripHandle) {
-				GlobalFree(bmpStrips[i].stripHandle);
-				bmpStrips[i].stripHandle = (unsigned)NULL;
-				bmpStrips[i].stripHeight = 0;
+		for (i=0;i < tndstate.bmpStripCount;i++) {
+			if (tndstate.bmpStrips[i].stripHandle) {
+				GlobalFree(tndstate.bmpStrips[i].stripHandle);
+				tndstate.bmpStrips[i].stripHandle = (unsigned)NULL;
+				tndstate.bmpStrips[i].stripHeight = 0;
 			}
 		}
 	}
 #else
-	free(bmpMem);
-	bmpMem = NULL;
+	free(tndstate.bmpMem);
+	tndstate.bmpMem = NULL;
 #endif
 
-	if (bmpPalette) DeleteObject(bmpPalette);
-	bmpPalette = (unsigned)NULL;
+	if (tndstate.bmpPalette) DeleteObject(tndstate.bmpPalette);
+	tndstate.bmpPalette = (unsigned)NULL;
 
 	return msg.wParam;
 }
