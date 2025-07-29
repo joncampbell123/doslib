@@ -264,6 +264,18 @@ void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned i
 	(void)bfr;
 }
 
+void convert_scanline_32to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+	unsigned char *d = (unsigned char*)src;
+	uint32_t *s32 = (uint32_t*)src;
+
+	while (pixels-- > 0u) {
+		const uint32_t sw = *s32++;
+		*d++ = ((sw >> (uint32_t)bfr->blue_shift) & 0xFFu);
+		*d++ = ((sw >> (uint32_t)bfr->green_shift) & 0xFFu);
+		*d++ = ((sw >> (uint32_t)bfr->red_shift) & 0xFFu);
+	}
+}
+
 void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	uint32_t *s32 = (uint32_t*)src;
 
@@ -402,9 +414,15 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	ReleaseDC(hwndMain,hdc);
 }
 
+enum {
+	CONV_NONE=0,
+	CONV_32TO24
+};
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldPal = (HPALETTE)0;
+	unsigned int conv = CONV_NONE;
 	WNDCLASS wnd;
 	MSG msg;
 
@@ -589,12 +607,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (bfr->bpp == 32) {
 		if (!can32bpp) {
-			MessageBox((unsigned)NULL,"32bpp is not supported on the system","",MB_OK);
-			work_state->taken = FALSE;
-			return 1;
+			conv = CONV_32TO24; /* Windows 3.1 cannot render 32bpp, but it can render 24bpp, so convert on the fly */
+			convert_scanline = convert_scanline_32to24;
 		}
-
-		if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
+		else if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
 			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
@@ -631,6 +647,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	draw_progress(0,bfr->height);
 
+	work_state->bmpWidth = bfr->width;
+	work_state->bmpHeight = bfr->height;
+
+	if (bfr->bpp == 32 && conv == CONV_32TO24)
+		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
+	else
+		work_state->bmpStride = bfr->stride;
+
 	/* set it up */
 	{
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
@@ -642,7 +666,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		bih->biCompression = 0;
 
 		if (bfr->bpp == 16 || bfr->bpp == 15) {
-			if (canBitfields && bfr->green_width > 5u) { // 5:6:5
+			if (canBitfields && can16bpp && bfr->green_width > 5u) { // 5:6:5
 				struct winBITMAPV4HEADER FAR *bi4 = (struct winBITMAPV4HEADER FAR*)bih;
 
 				bih->biSize = sizeof(struct winBITMAPV4HEADER);
@@ -657,7 +681,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		bih->biWidth = bfr->width;
 		bih->biHeight = bfr->height;
 		bih->biPlanes = 1;
-		bih->biBitCount = bfr->bpp;
+
+		if (bfr->bpp == 32 && conv == CONV_32TO24)
+			bih->biBitCount = 24;
+		else
+			bih->biBitCount = bfr->bpp;
+
 		bih->biSizeImage = work_state->bmpStride * bfr->height;
 		if (bfr->bpp <= 8) {
 			bih->biClrUsed = bfr->colors;
@@ -706,10 +735,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		free(lp);
 	}
-
-	work_state->bmpWidth = bfr->width;
-	work_state->bmpHeight = bfr->height;
-	work_state->bmpStride = bfr->stride;
 
 	{
 		HDC hdc = GetDC(hwndMain);
