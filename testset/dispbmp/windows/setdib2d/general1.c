@@ -357,6 +357,19 @@ void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsign
 	while (pixels-- > 0u) {
 		uint16_t f;
 
+		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)11u;
+		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x3Fu) << (uint16_t)5u;
+		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)0u;
+		*s16++ = f;
+	}
+}
+
+void convert_scanline_16bpp565_to_555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+	uint16_t *s16 = (uint16_t*)src;
+
+	while (pixels-- > 0u) {
+		uint16_t f;
+
 		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)10u;
 		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x3Eu) << (uint16_t)4u; // drop the LSB of green
 		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)0u;
@@ -556,20 +569,32 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	convert_scanline = convert_scanline_none;
 
 	if (bfr->bpp == 32) {
-		if (16u != bfr->red_shift || 8u != bfr->green_shift || 0u != bfr->blue_shift ||
-			5u != bfr->red_width || 5u != bfr->green_width || 5u != bfr->blue_width) {
+		if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
+			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+			/* nothing */
+		}
+		else {
 			convert_scanline = convert_scanline_32bpp8;
 		}
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
-		if (10u != bfr->red_shift || 5u != bfr->green_shift || 0u != bfr->blue_shift ||
-			5u != bfr->red_width || 5u != bfr->green_width || 5u != bfr->blue_width) {
-			if (bfr->red_width == 5 && bfr->green_width == 5 && bfr->blue_width == 5) {
-				convert_scanline = convert_scanline_16bpp555;
-			}
-			else if (bfr->red_width == 5 && bfr->green_width == 6 && bfr->blue_width == 5) {
+		if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
+			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+			/* nothing */
+		}
+		else if (canBitfields &&
+			11u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
+			5u == bfr->red_width && 6u == bfr->green_width && 5u == bfr->blue_width) {
+			/* nothing */
+		}
+		else if (bfr->green_width > 5u) {
+			if (canBitfields)
 				convert_scanline = convert_scanline_16bpp565;
-			}
+			else
+				convert_scanline = convert_scanline_16bpp565_to_555;
+		}
+		else {
+			convert_scanline = convert_scanline_16bpp555;
 		}
 	}
 
@@ -581,11 +606,25 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpDIBmode = DIB_RGB_COLORS;
 
 		bih->biSize = sizeof(BITMAPINFOHEADER);
+		bih->biCompression = 0;
+
+		if (bfr->bpp == 16 || bfr->bpp == 15) {
+			if (canBitfields && bfr->green_width > 5u) { // 5:6:5
+				struct winBITMAPV4HEADER FAR *bi4 = (struct winBITMAPV4HEADER FAR*)bih;
+
+				bih->biSize = sizeof(struct winBITMAPV4HEADER);
+				bih->biCompression = 3; // BI_BITFIELDS
+
+				bi4->bV4RedMask = 0x1Fu << 11u;
+				bi4->bV4GreenMask = 0x3Fu << 5u;
+				bi4->bV4BlueMask = 0x1Fu << 0u;
+			}
+		}
+
 		bih->biWidth = bfr->width;
 		bih->biHeight = bfr->height;
 		bih->biPlanes = 1;
 		bih->biBitCount = bfr->bpp;
-		bih->biCompression = 0;
 		bih->biSizeImage = work_state->bmpStride * bfr->height;
 		if (bfr->bpp <= 8) {
 			bih->biClrUsed = bfr->colors;
