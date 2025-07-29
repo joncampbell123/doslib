@@ -85,8 +85,8 @@ static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
 static struct wndstate_t FAR the_state;
 #endif
 
-static inline BITMAPINFOHEADER* bmpInfo(struct wndstate_t FAR *w) {
-	return (BITMAPINFOHEADER*)(w->bmpInfoRaw);
+static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
+	return (BITMAPINFOHEADER FAR*)(w->bmpInfoRaw);
 }
 
 static struct BMPFILEREAD *bfr = NULL;
@@ -249,7 +249,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			}
 
 			{
-				BITMAPINFOHEADER *bmi = bmpInfo(work_state);
+				BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
 				unsigned int strip=work_state->bmpStripCount-1u,y=0u;
 				void FAR *p;
 
@@ -287,7 +287,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			}
 
 			if (work_state->bmpMem) {
-				BITMAPINFOHEADER *bmi = bmpInfo(work_state);
+				BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
 
 				SetDIBitsToDevice(ps.hdc,
 					-work_state->scrollX,-work_state->scrollY,
@@ -568,7 +568,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* set it up */
 	{
-		BITMAPINFOHEADER *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
+		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
 		work_state->bmpDIBmode = DIB_RGB_COLORS;
