@@ -130,6 +130,7 @@ struct winBITMAPV4HEADER {
 
 struct BMPFILEREAD *open_bmp(const char *path);
 int read_bmp_line(struct BMPFILEREAD *bmp);
+int resize_bmp_scanline(struct BMPFILEREAD *bmp,unsigned int newsz);
 void close_bmp(struct BMPFILEREAD **bmp);
 
 void bitmap_mask2shift(uint32_t mask,uint8_t *shift,uint8_t *width);

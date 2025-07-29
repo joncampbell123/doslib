@@ -201,3 +201,19 @@ int read_bmp_line(struct BMPFILEREAD *bmp) {
 	return 0;
 }
 
+int resize_bmp_scanline(struct BMPFILEREAD *bmp,unsigned int newsz) {
+	if (bmp == NULL) return -1;
+	if (bmp->scanline == NULL || bmp->stride == 0) return -1;
+	if (newsz > 32768) return -1;
+	if (newsz < bmp->stride) newsz = bmp->stride;
+
+	if (bmp->scanline_size != newsz) {
+		void *np = realloc(bmp->scanline,newsz);
+		if (!np) return -1;
+		bmp->scanline = (unsigned char*)np;
+		bmp->scanline_size = newsz;
+	}
+
+	return 0;
+}
+
