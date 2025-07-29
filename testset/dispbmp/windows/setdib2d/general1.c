@@ -1,6 +1,7 @@
 
 #include <sys/types.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -41,6 +42,9 @@ struct bmpstrip_t {
 struct windowextra_t {
 	WORD			instance_slot;
 };
+# define MAX_INSTANCES		32
+
+static unsigned int		my_slot = 0;
 #endif
 
 struct wndstate_t {
@@ -48,7 +52,6 @@ struct wndstate_t {
 
 #ifdef MEM_BY_GLOBALALLOC
 # define MAX_STRIPS		128
-# define MAX_INSTANCES		32
 	unsigned int		bmpStripHeight;
 	unsigned int		bmpStripCount;
 	struct bmpstrip_t	bmpStrips[MAX_STRIPS];
@@ -61,6 +64,7 @@ struct wndstate_t {
 	unsigned int		bmpStride;
 	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
+	BOOL			taken;
 	BOOL			need_palette;
 	HPALETTE		bmpPalette;
 	unsigned		bmpDIBmode;
@@ -75,7 +79,12 @@ static void wndstate_init(struct wndstate_t FAR *w) {
 	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
+#if TARGET_MSDOS == 16 || defined(WIN386)
+static HGLOBAL near inst_state_handle = (HGLOBAL)0; // managed by first instance
+static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
+#else
 static struct wndstate_t FAR the_state;
+#endif
 
 static inline BITMAPINFOHEADER* bmpInfo(struct wndstate_t FAR *w) {
 	return (BITMAPINFOHEADER*)(w->bmpInfoRaw);
@@ -137,7 +146,12 @@ static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int
 }
 
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+#if TARGET_MSDOS == 16 || defined(WIN386)
+	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
+	struct wndstate_t FAR *work_state = &inst_state[instance_slot];
+#else
 	struct wndstate_t FAR *work_state = &the_state;
+#endif
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
@@ -360,6 +374,13 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 #endif
 }
 
+#if TARGET_MSDOS == 16 || defined(WIN386)
+void release_work_state(void) {
+	if (inst_state)
+		inst_state[my_slot].taken = FALSE;
+}
+#endif
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	WNDCLASS wnd;
@@ -395,12 +416,41 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
 			return 1;
 		}
+
+#if TARGET_MSDOS == 16 || defined(WIN386)
+		inst_state_handle = GlobalAlloc(GMEM_ZEROINIT|GMEM_SHARE,sizeof(struct wndstate_t) * MAX_INSTANCES);
+		if (!inst_state_handle) {
+			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
+			return 1;
+		}
+
+		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
+		if (!inst_state) {
+			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
+			return 1;
+		}
+
+		{
+			unsigned int i;
+			for (i=0;i < MAX_INSTANCES;i++) wndstate_init(&inst_state[i]);
+		}
+#endif
 	}
+	else {
+#if TARGET_MSDOS == 16 || defined(WIN386)
+		GetInstanceData(hPrevInstance,(BYTE near*)(&inst_state_handle),sizeof(inst_state_handle));
+		if (!inst_state_handle) {
+			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
+			return 1;
+		}
 
-	//TEMPORARY
-	work_state = &the_state;
-
-	wndstate_init(work_state);
+		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
+		if (!inst_state) {
+			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
+			return 1;
+		}
+#endif
+	}
 
 	hwndMain = CreateWindow(WndProcClass,bmpfile,
 		WS_OVERLAPPEDWINDOW,
@@ -412,6 +462,30 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
 		return 1;
 	}
+
+#if TARGET_MSDOS == 16 || defined(WIN386)
+	{
+		unsigned int i=0;
+
+		while (i < MAX_INSTANCES && inst_state[i].taken) i++;
+		if (i >= MAX_INSTANCES) {
+			MessageBox((unsigned)NULL,"No available slots","Oops!",MB_OK);
+			return 1;
+		}
+
+		my_slot = i;
+		SetWindowWord(hwndMain,offsetof(struct windowextra_t,instance_slot),my_slot);
+		work_state = &inst_state[my_slot];
+		work_state->taken = TRUE;
+
+		atexit(release_work_state);
+	}
+#else
+	work_state = &the_state;
+	work_state->taken = TRUE;
+	wndstate_init(work_state);
+#endif
+	/* first instance already called init on each element */
 
 	ShowWindow(hwndMain,nCmdShow);
 	UpdateWindow(hwndMain);
@@ -609,22 +683,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		DispatchMessage(&msg);
 	}
 
-#if TARGET_MSDOS == 16
-	/* Win16 only:
-	 * If we are the owner (the first instance that registered the window class),
-	 * then we must reside in memory until we are the last instance resident.
-	 * If we do not do this, then if multiple instances are open and the user closes US
-	 * before closing the others, the others will crash (having pulled the code segment
-	 * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-		while (GetModuleUsage(hInstance) > 1) {
-			PeekMessage(&msg,(unsigned)NULL,0,0,PM_REMOVE);
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
-#endif
-
 #ifdef MEM_BY_GLOBALALLOC
 	{
 		unsigned int i;
@@ -643,6 +701,35 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
 	work_state->bmpPalette = (unsigned)NULL;
+
+#if TARGET_MSDOS == 16 || defined(WIN386)
+	/* let go of slot */
+	work_state->taken = FALSE;
+	my_slot = 0;
+
+	/* let go of our copy of the handle */
+	GlobalUnlock(inst_state_handle);
+	inst_state = NULL;
+
+	/* Win16 only:
+	 * If we are the owner (the first instance that registered the window class),
+	 * then we must reside in memory until we are the last instance resident.
+	 * If we do not do this, then if multiple instances are open and the user closes US
+	 * before closing the others, the others will crash (having pulled the code segment
+	 * behind the window class out from the other processes). */
+	if (!hPrevInstance) {
+		MSG pmsg; /* do not overwrite msg.wParam */
+		while (GetModuleUsage(hInstance) > 1) {
+			PeekMessage(&pmsg,(unsigned)NULL,0,0,PM_REMOVE);
+			TranslateMessage(&pmsg);
+			DispatchMessage(&pmsg);
+		}
+
+		/* only the first instance, who allocated the handle, should free it */
+		GlobalFree(inst_state_handle);
+		inst_state_handle = 0;
+	}
+#endif
 
 	return msg.wParam;
 }
