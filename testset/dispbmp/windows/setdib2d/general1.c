@@ -195,6 +195,20 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		return 1; /* Important: Returning 1 signals to Windows that we processed the message. Windows 3.0 gets really screwed up if we don't! */
 	}
+	else if (message == WM_PALETTECHANGED || message == WM_QUERYNEWPALETTE) {
+		if (message == WM_PALETTECHANGED && (HWND)wparam == hwnd)
+			return 0;
+
+		if (work_state->bmpPalette) {
+			HDC hdc = GetDC(hwnd);
+			HPALETTE ppal = SelectPalette(hdc,work_state->bmpPalette,FALSE);
+			UINT changed = RealizePalette(hdc);
+			SelectPalette(hdc,ppal,FALSE);
+			ReleaseDC(hwnd,hdc);
+
+			if (changed) InvalidateRect(hwnd,NULL,FALSE);
+		}
+	}
 	else if (message == WM_HSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
 #if TARGET_MSDOS == 32 && !defined(WIN386)
@@ -265,7 +279,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
 			}
 
-			if (pPalette)
+			if (work_state->bmpPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #else
 			if (work_state->bmpPalette) {
@@ -288,7 +302,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					drawFail = TRUE;
 			}
 
-			if (pPalette)
+			if (work_state->bmpPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #endif
 
