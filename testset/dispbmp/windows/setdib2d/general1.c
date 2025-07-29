@@ -28,7 +28,6 @@ static char*			bmpfile = NULL;
 
 static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
-static const char near		drawFailMsg[] = "Windows failed to draw the image";
 static HINSTANCE near		myInstance;
 
 #ifdef MEM_BY_GLOBALALLOC
@@ -235,7 +234,6 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		CommonScrollPosHandling(hwnd,SB_VERT,&(work_state->scrollY),req,nPos);
 	}
 	else if (message == WM_PAINT) {
-		BOOL drawFail = FALSE;
 		RECT um;
 
 		if (GetUpdateRect(hwnd,&um,TRUE)) {
@@ -261,7 +259,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
 
 					if (p) {
-						if (SetDIBitsToDevice(ps.hdc,
+						SetDIBitsToDevice(ps.hdc,
 							-work_state->scrollX,y-work_state->scrollY,
 							bmi->biWidth,bmi->biHeight,
 							0,0,
@@ -269,8 +267,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 							bmi->biHeight,
 							p,
 							(BITMAPINFO*)bmi,
-							work_state->bmpDIBmode) == 0)
-							drawFail = TRUE;
+							work_state->bmpDIBmode);
 					}
 
 					GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
@@ -292,7 +289,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			if (work_state->bmpMem) {
 				BITMAPINFOHEADER *bmi = bmpInfo(work_state);
 
-				if (SetDIBitsToDevice(ps.hdc,
+				SetDIBitsToDevice(ps.hdc,
 					-work_state->scrollX,-work_state->scrollY,
 					bmi->biWidth,bmi->biHeight,
 					0,0,
@@ -300,16 +297,12 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					bmi->biHeight,
 					work_state->bmpMem,
 					(BITMAPINFO*)bmi,
-					work_state->bmpDIBmode) == 0)
-					drawFail = TRUE;
+					work_state->bmpDIBmode);
 			}
 
 			if (work_state->bmpPalette)
 				SelectPalette(ps.hdc,pPalette,TRUE);
 #endif
-
-			if (drawFail)
-				TextOut(ps.hdc,0,0,drawFailMsg,sizeof(drawFailMsg)-1);
 
 			EndPaint(hwnd,&ps);
 		}
