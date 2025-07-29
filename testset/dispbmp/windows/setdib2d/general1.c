@@ -59,22 +59,26 @@ struct wndstate_t {
 	unsigned		bmpDIBmode;
 };
 
-static void wndstate_init(struct wndstate_t *w) {
+static void wndstate_init(struct wndstate_t FAR *w) {
+#if TARGET_MSDOS == 16 || defined(WIN386)
+	_fmemset(w,0,sizeof(*w));
+#else
 	memset(w,0,sizeof(*w));
+#endif
 	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
 // TEMPORARY
-static struct wndstate_t tndstate;
+static struct wndstate_t FAR tndstate;
 
-static inline BITMAPINFOHEADER* bmpInfo(struct wndstate_t *w) {
+static inline BITMAPINFOHEADER* bmpInfo(struct wndstate_t FAR *w) {
 	return (BITMAPINFOHEADER*)(w->bmpInfoRaw);
 }
 
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
-static void CheckScrollBars(struct wndstate_t *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
+static void CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
 	if (nWidth < w->bmpWidth)
 		SetScrollRange(hwnd,SB_HORZ,0,w->bmpWidth - nWidth,TRUE);
 	else
@@ -86,7 +90,7 @@ static void CheckScrollBars(struct wndstate_t *w,HWND hwnd,const unsigned int nW
 		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
 }
 
-static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int *scrollPos,const unsigned int req,const unsigned int nPos) {
+static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int FAR *scrollPos,const unsigned int req,const unsigned int nPos) {
 # if defined(WIN386)
 	short pMin=0,pMax=0;
 # else
