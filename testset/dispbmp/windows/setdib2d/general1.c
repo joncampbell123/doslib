@@ -89,6 +89,7 @@ static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 	return (BITMAPINFOHEADER FAR*)(w->bmpInfoRaw);
 }
 
+static BOOL canBitfields = FALSE; /* can do BI_BITFIELDS (Win95/WinNT 4) */
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
@@ -391,6 +392,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	probe_dos();
 	detect_windows();
 
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
+			canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
+		}
+	}
+
 	bmpfile = lpCmdLine;
 	myInstance = hInstance;
 
@@ -587,13 +594,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
 			if (work_state->need_palette) {
-				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
+				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + bih->biSize);
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
 				work_state->bmpDIBmode = DIB_PAL_COLORS;
 			}
 		}
 		if (work_state->bmpDIBmode == DIB_RGB_COLORS) {
-			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + sizeof(BITMAPINFOHEADER));
+			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + bih->biSize);
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
 	}
