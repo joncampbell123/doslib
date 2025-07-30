@@ -251,11 +251,25 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		}
 	}
 	else if (message == WM_SIZE) {
-		BOOL mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
-		const unsigned int nWidth = LOWORD(lparam);
-		const unsigned int nHeight = HIWORD(lparam);
+		int nWidth,nHeight;
+		RECT rwin,radj;
+		BOOL mini;
+
+		/* Don't use the client area given, get the client area as if scroll bars didn't exist
+		 * and use that. Using the client area, along with selectively showing them, can cause
+		 * an endless loop and crash Windows 3.1 because showing/hiding the scroll bars changes
+		 * the client area, which triggers a WM_SIZE, etc. */
+		GetWindowRect(hwnd,&rwin);
+
+		memset(&radj,0,sizeof(radj));
+		AdjustWindowRect(&radj,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/); /* extands outward top/left negative bottom/right positive */
+
+		nWidth = (rwin.right - radj.right) - (rwin.left - radj.left);
+		nHeight = (rwin.bottom - radj.bottom) - (rwin.top - radj.top);
+
 		CheckScrollBars(work_state,hwnd,nWidth,nHeight);
 
+		mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
 		if (work_state->isMinimized != mini) {
 			work_state->isMinimized = mini;
 			UpdateTitleBar(hwnd,work_state);
@@ -1089,7 +1103,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	{
 		RECT um;
-		GetClientRect(hwndMain,&um);
+		GetClientRect(hwndMain,&um); // with no scroll bars
 		CheckScrollBars(work_state,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
 	}
 
