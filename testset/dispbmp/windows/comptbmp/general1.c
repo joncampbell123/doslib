@@ -534,6 +534,27 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	ReleaseDC(hwndMain,hdc);
 }
 
+#if TARGET_MSDOS == 16
+/* NTS: Windows 1.x does not have __AHINCR or __AHSHIFT and GetProcAddress() in 1.x causes Windows to dump to DOS if symbol not found */
+static unsigned int Win16_AHINCR(void) {
+# if WINVER >= 0x200
+	unsigned int incr = 8;/*reasonable guess, unless we're in real mode*/
+
+	HMODULE krnl = GetModuleHandle("KERNEL");
+	if (krnl) {
+		/* It's not a pointer or a function, it's a constant that's in the low 16 bits.
+		 * Typical return value for protected mode is 0xFFFF0008, the upper 16 bits are 0xFFFF for some reason. */
+		DWORD v = (DWORD)GetProcAddress(krnl,"__AHINCR");
+		if (v & 0xFFFFu) incr = LOWORD(v);
+	}
+
+	return incr;
+# else
+	return 0x1000u; /* Windows 1.x is real mode only, assume real mode __AHINCR */
+# endif
+}
+#endif
+
 static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 	DWORD sz,copied=0;
 	BITMAP bm;
@@ -575,6 +596,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 #if TARGET_MSDOS == 16
 					/* NTS: Watcom C does not help us here and does not provide FAR pointer math when adding to p,
 					 *      so we have to FAR pointer math ourself, manually. */
+					const unsigned int AHINCR = Win16_AHINCR();
 					unsigned int sv = FP_SEG(p),ov = FP_OFF(p);
 					const unsigned int blksz = 0x4000u;
 					DWORD rem = copied;
