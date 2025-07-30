@@ -20,8 +20,6 @@
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
-static char*			bmpfile = NULL;
-
 static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
 static HINSTANCE near		myInstance;
@@ -45,6 +43,8 @@ struct wndstate_t {
 	unsigned int		bmpHeight;
 	unsigned int		bmpStride;
 	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
+
+	unsigned char*		bmpfile;
 
 	BOOL			taken;
 	BOOL			need_palette;
@@ -149,13 +149,13 @@ static void UpdateTitleBar(HWND hwnd,struct wndstate_t FAR *work_state) {
 
 	/* If minimized, show only the file name, else, show the full path */
 	if (work_state->isMinimized) {
-		char *fp = strrchr(bmpfile,'\\');
+		char *fp = strrchr(work_state->bmpfile,'\\');
 		if (fp) fp++;
-		else fp = bmpfile;
+		else fp = work_state->bmpfile;
 		SetWindowText(hwnd,fp);
 	}
 	else {
-		SetWindowText(hwnd,bmpfile);
+		SetWindowText(hwnd,work_state->bmpfile);
 	}
 }
 
@@ -737,6 +737,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
+	char* bmpfile = NULL;
 	WNDCLASS wnd;
 	MSG msg;
 
@@ -860,6 +861,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	wndstate_init(work_state);
 #endif
 	/* first instance already called init on each element */
+	work_state->bmpfile = bmpfile;
 
 	{
 		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
