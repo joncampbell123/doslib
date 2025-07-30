@@ -573,18 +573,30 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 				fd = open("ddbdump.bin",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 				if (fd >= 0) {
 #if TARGET_MSDOS == 16
+					/* NTS: Watcom C does not help us here and does not provide FAR pointer math when adding to p,
+					 *      so we have to FAR pointer math ourself, manually. */
+					unsigned int sv = FP_SEG(p),ov = FP_OFF(p);
+					const unsigned int blksz = 0x4000u;
 					DWORD rem = copied;
-					DWORD ofs = 0;
+					unsigned int todo;
 
 					draw_progress(30,100);
 
-					while (rem >= 16384ul) {
-						write(fd,&p[ofs],16384ul);
-						ofs += 16384ul;
-						rem -= 16384ul;
-					}
-					if (rem > 0) {
-						write(fd,&p[ofs],(int)rem);
+					while (rem != (DWORD)0) {
+						if (ov > (0x10000u - blksz))
+							todo = 0x10000u - ov; /* from ov to end of 64KB segment */
+						else
+							todo = blksz; /* blksz */
+
+						if ((DWORD)todo > rem)
+							todo = (unsigned int)rem;
+
+						write(fd,MK_FP(sv,ov),todo);
+						rem -= (DWORD)todo;
+
+						/* the above math should ensure that (ov += todo) < 0x10000 or (ov += todo) == 0 */
+						if ((unsigned int)(ov += todo) == 0)
+							sv += 8; // TODO: Use Windows __AHINCR, in case we're running in real mode
 					}
 #else
 					write(fd,p,copied);
