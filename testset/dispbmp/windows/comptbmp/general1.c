@@ -618,7 +618,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 
 						/* the above math should ensure that (ov += todo) < 0x10000 or (ov += todo) == 0 */
 						if ((unsigned int)(ov += todo) == 0)
-							sv += 8; // TODO: Use Windows __AHINCR, in case we're running in real mode
+							sv += AHINCR; // TODO: Use Windows __AHINCR, in case we're running in real mode
 					}
 #else
 					write(fd,p,copied);
