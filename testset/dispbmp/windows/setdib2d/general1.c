@@ -680,7 +680,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	hwndMain = CreateWindow(WndProcClass,bmpfile,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
-		1024,1024,
+		320,200,
 		(unsigned)NULL,(unsigned)NULL,
 		hInstance,NULL);
 	if (!hwndMain) {
@@ -715,9 +715,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
 		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info"); /* NTS: Any ID is OK as long at it's less than 0xF000 */
 	}
-
-	ShowWindow(hwndMain,nCmdShow);
-	UpdateWindow(hwndMain);
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
 	{
@@ -769,6 +766,72 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->taken = FALSE;
 		return 1;
 	}
+	if (bfr->width == 0 || bfr->height == 0 || bfr->width > 8192 || bfr->height > 8192) {
+		MessageBox((unsigned)NULL,"BMP with no size","Err",MB_OK);
+		work_state->taken = FALSE;
+		return 1;
+	}
+
+	/* set the window size to the bitmap BEFORE showing it */
+	{
+		RECT um;
+
+		/* start with client area */
+		um.top = um.left = 0;
+		um.right = bfr->width;
+		um.bottom = bfr->height;
+
+		/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
+		 * NTS: This adjusts the top/left negative and the bottom/right positive! */
+		AdjustWindowRect(&um,GetWindowLong(hwndMain,GWL_STYLE),FALSE/*no menu*/);
+
+		/* do it */
+		SetWindowPos(hwndMain,HWND_TOP,0,0,(int)(um.right-um.left),(int)(um.bottom-um.top),
+			SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOREDRAW);
+	}
+	/* if our resizing put it off the screen edge, move it up */
+	{
+		int borderw,borderh;
+		BOOL move=FALSE;
+		HDC screenDC;
+		RECT um;
+		int w,h;
+
+		/* Get window rect for the position to prevent the window from appearing off the bottom/right edge of the screen.
+		 * Then prevent the top/left from going off screen. */
+		screenDC = GetDC((HWND)NULL);
+		GetWindowRect(hwndMain,&um);
+		w = GetDeviceCaps(screenDC,HORZRES);
+		h = GetDeviceCaps(screenDC,VERTRES);
+		borderw = GetSystemMetrics(SM_CXFRAME);
+		borderh = GetSystemMetrics(SM_CYFRAME);
+
+		if (um.right > w) {
+			const int adjust = um.right - w;
+			um.right -= adjust;
+			um.left -= adjust;
+			move = TRUE;
+			if (um.left < 0) um.left = 0;
+		}
+		if (um.bottom > h) {
+			const int adjust = um.bottom - h;
+			um.bottom -= adjust;
+			um.top -= adjust;
+			move = TRUE;
+			if (um.top < 0) um.top = 0;
+		}
+
+		if (move) {
+			SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
+				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
+		}
+
+		ReleaseDC((HWND)NULL,screenDC);
+	}
+
+	ShowWindow(hwndMain,nCmdShow);
+	UpdateWindow(hwndMain);
+
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
 		work_state->taken = FALSE;
