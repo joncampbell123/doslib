@@ -894,6 +894,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			RealizePalette(work_state->bmpDC);
 		}
 
+		/* NTS: You could call CreateBitmap to set whatever you want, but if you want to work with the GDI
+		 *      regarding bitmaps, you have to match the screen, or else nothing displays and it might also
+		 *      cause a crash. At least in Windows 3.1 */
 		work_state->bmpHandle = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,work_state->bmpWidth,work_state->bmpHeight);
 		if (!work_state->bmpHandle) {
 			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
