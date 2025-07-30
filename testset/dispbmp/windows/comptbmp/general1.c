@@ -615,6 +615,57 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		}
 	}
 
+	{
+		int colors = GetDeviceCaps(work_state->bmpDC,SIZEPALETTE);
+		if (colors == 0) colors = GetDeviceCaps(work_state->bmpDC,NUMCOLORS);
+		if (colors > 0 && bm.bmBitsPixel <= 8) {
+			BITMAPINFOHEADER *bmh = malloc(sizeof(BITMAPINFOHEADER) + (colors * sizeof(RGBQUAD)));
+			if (bmh) {
+				HDC screenDC;
+				HPALETTE oPal;
+
+				screenDC = GetDC((HWND)NULL);
+
+				if (work_state->bmpPalette) {
+					oPal = SelectPalette(screenDC,work_state->bmpPalette,FALSE);
+					RealizePalette(screenDC);
+				}
+
+				memset(bmh,0,sizeof(BITMAPINFOHEADER) + (colors * sizeof(RGBQUAD)));
+				bmh->biSize = sizeof(BITMAPINFOHEADER);
+				bmh->biWidth = bm.bmWidth;
+				bmh->biHeight = bm.bmHeight;
+				bmh->biPlanes = 1;
+				bmh->biBitCount = bm.bmPlanes * bm.bmBitsPixel; /* as if GetDIBits would ever return planar EGA/VGA data */
+				bmh->biClrUsed = colors;
+				bmh->biClrImportant = colors;
+
+				// GetDIBits() will fill in the palette. We're asking it to return the palette, not bitmap bits,
+				// because we only care about the palette.
+#if TARGET_MSDOS == 16
+				GetDIBits(screenDC,work_state->bmpHandle,0,0,NULL,(BITMAPINFO FAR*)bmh,DIB_RGB_COLORS);
+#else
+				GetDIBits(screenDC,work_state->bmpHandle,0,0,NULL,(BITMAPINFO*)bmh,DIB_RGB_COLORS);
+#endif
+
+				if (work_state->bmpPalette)
+					SelectPalette(screenDC,oPal,FALSE);
+
+				ReleaseDC((HWND)NULL,screenDC);
+
+				{
+					int fd = open("ddbdump.pal",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+					if (fd >= 0) {
+						write(fd,(unsigned char*)bmh + bmh->biSize,colors * sizeof(RGBQUAD));
+						close(fd);
+					}
+				}
+
+				free(bmh);
+			}
+		}
+	}
+
 	draw_progress(100,100);
 	InvalidateRect(hwnd,NULL,TRUE);
 }
