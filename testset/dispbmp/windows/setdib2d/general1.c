@@ -600,7 +600,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
-	bmpfile = lpCmdLine;
+	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
+	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
+	 *        especially in real-mode Windows 3.0.
+	 *
+	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
+	 *
+	 *        Why? */
+	bmpfile = strdup(lpCmdLine);
+
 	myInstance = hInstance;
 
 	if (!hPrevInstance) {
