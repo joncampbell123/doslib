@@ -92,12 +92,12 @@ static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
 static void CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
-	if (nWidth < w->bmpWidth)
+	if (nWidth < w->bmpWidth && !w->isMinimized)
 		SetScrollRange(hwnd,SB_HORZ,0,w->bmpWidth - nWidth,TRUE);
 	else
 		SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
 
-	if (nHeight < w->bmpHeight)
+	if (nHeight < w->bmpHeight && !w->isMinimized)
 		SetScrollRange(hwnd,SB_VERT,0,w->bmpHeight - nHeight,TRUE);
 	else
 		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
@@ -1058,10 +1058,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
-	draw_progress(0,bfr->height);
-
 	work_state->bmpWidth = bfr->width;
 	work_state->bmpHeight = bfr->height;
+
+	{
+		RECT um;
+		GetClientRect(hwndMain,&um); // with no scroll bars
+		CheckScrollBars(work_state,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
+	}
+
+	draw_progress(0,bfr->height);
 
 	if (bfr->bpp == 32 && conv == CONV_32TO24) {
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
@@ -1220,12 +1226,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) {
 		SelectPalette(work_state->bmpDC,oldPal,FALSE);
 		oldPal = (HPALETTE)0;
-	}
-
-	{
-		RECT um;
-		GetClientRect(hwndMain,&um); // with no scroll bars
-		CheckScrollBars(work_state,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
 	}
 
 	/* force redraw */
