@@ -32,6 +32,8 @@ static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
 static HINSTANCE near		myInstance;
 
+static BOOL			isMinimized = FALSE;
+
 #ifdef MEM_BY_GLOBALALLOC
 struct bmpstrip_t {
 	HGLOBAL			stripHandle;
@@ -159,6 +161,22 @@ static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int
 	}
 }
 
+static void UpdateTitleBar(HWND hwnd,struct wndstate_t FAR *work_state) {
+	(void)work_state;
+	(void)hwnd;
+
+	/* If minimized, show only the file name, else, show the full path */
+	if (isMinimized) {
+		char *fp = strrchr(bmpfile,'\\');
+		if (fp) fp++;
+		else fp = bmpfile;
+		SetWindowText(hwnd,fp);
+	}
+	else {
+		SetWindowText(hwnd,bmpfile);
+	}
+}
+
 static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 	char *tmp = malloc(4096),*w = tmp,*f = tmp+4095;
 	BITMAPINFOHEADER FAR* bmi = bmpInfo(work_state);
@@ -235,9 +253,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		}
 	}
 	else if (message == WM_SIZE) {
+		BOOL mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
 		const unsigned int nWidth = LOWORD(lparam);
 		const unsigned int nHeight = HIWORD(lparam);
 		CheckScrollBars(work_state,hwnd,nWidth,nHeight);
+
+		if (isMinimized != mini) {
+			isMinimized = mini;
+			UpdateTitleBar(hwnd,work_state);
+		}
 	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
@@ -677,7 +701,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	}
 
-	hwndMain = CreateWindow(WndProcClass,bmpfile,
+	hwndMain = CreateWindow(WndProcClass,NULL,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
 		320,200,
@@ -831,6 +855,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	ShowWindow(hwndMain,nCmdShow);
 	UpdateWindow(hwndMain);
+
+	isMinimized = IsIconic(hwndMain);
+	UpdateTitleBar(hwndMain,work_state);
 
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
