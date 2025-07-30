@@ -25,8 +25,6 @@ static char*			bmpfile = NULL;
 static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
 static HINSTANCE near		myInstance;
- 
-static BOOL			isMinimized = FALSE;
 
 #define IDCSM_INFO		0x7700u
 #define IDCSM_DDBDUMP		0x7701u
@@ -50,6 +48,7 @@ struct wndstate_t {
 
 	BOOL			taken;
 	BOOL			need_palette;
+	BOOL			isMinimized;
 	HPALETTE		bmpPalette;
 	HBITMAP			bmpHandle,bmpOld;
 	HDC			bmpDC;
@@ -149,7 +148,7 @@ static void UpdateTitleBar(HWND hwnd,struct wndstate_t FAR *work_state) {
 	(void)hwnd;
 
 	/* If minimized, show only the file name, else, show the full path */
-	if (isMinimized) {
+	if (work_state->isMinimized) {
 		char *fp = strrchr(bmpfile,'\\');
 		if (fp) fp++;
 		else fp = bmpfile;
@@ -264,8 +263,8 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		const unsigned int nHeight = HIWORD(lparam);
 		CheckScrollBars(work_state,hwnd,nWidth,nHeight);
 
-		if (isMinimized != mini) {
-			isMinimized = mini;
+		if (work_state->isMinimized != mini) {
+			work_state->isMinimized = mini;
 			UpdateTitleBar(hwnd,work_state);
 		}
 	}
@@ -986,7 +985,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	ShowWindow(hwndMain,nCmdShow);
 	UpdateWindow(hwndMain);
 
-	isMinimized = IsIconic(hwndMain);
+	work_state->isMinimized = IsIconic(hwndMain);
 	UpdateTitleBar(hwndMain,work_state);
 
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
