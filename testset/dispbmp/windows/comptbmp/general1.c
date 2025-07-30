@@ -27,6 +27,7 @@ static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
 static HINSTANCE near		myInstance;
 
 #define IDCSM_INFO		0x7700u
+#define IDCSM_DDBDUMP		0x7701u
 
 #if TARGET_MSDOS == 16
 struct windowextra_t {
@@ -201,6 +202,8 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 	free(tmp);
 }
 
+static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state);
+
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #if TARGET_MSDOS == 16
 	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
@@ -216,6 +219,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		switch (LOWORD(wparam)) {
 			case IDCSM_INFO:
 				ShowInfo(hwnd,work_state);
+				break;
+			case IDCSM_DDBDUMP:
+				DumpDDB(hwnd,work_state);
 				break;
 			default:
 				return DefWindowProc(hwnd,message,wparam,lparam);
@@ -528,6 +534,91 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	ReleaseDC(hwndMain,hdc);
 }
 
+static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
+	DWORD sz,copied=0;
+	BITMAP bm;
+
+	if (!work_state->bmpHandle || !work_state->bmpDC)
+		return;
+
+	memset(&bm,0,sizeof(bm));
+	if (GetObject(work_state->bmpHandle,sizeof(bm),&bm) < sizeof(bm))
+		return;
+
+	sz = (DWORD)bm.bmHeight * (DWORD)bm.bmWidthBytes * (DWORD)bm.bmPlanes;
+	if (!sz)
+		return;
+
+	draw_progress(0,100);
+
+	{
+#if TARGET_MSDOS == 16
+		unsigned char FAR *p;
+#else
+		unsigned char *p;
+#endif
+		HGLOBAL gl;
+		int fd;
+
+		gl = GlobalAlloc(GMEM_MOVEABLE,sz);
+		if (gl) {
+			p = GlobalLock(gl);
+			if (p) {
+				draw_progress(10,100);
+
+				copied = (DWORD)GetBitmapBits(work_state->bmpHandle,sz,p);
+
+				draw_progress(20,100);
+
+				fd = open("ddbdump.bin",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+				if (fd >= 0) {
+#if TARGET_MSDOS == 16
+					DWORD rem = copied;
+					DWORD ofs = 0;
+
+					draw_progress(30,100);
+
+					while (rem >= 16384ul) {
+						write(fd,&p[ofs],16384ul);
+						ofs += 16384ul;
+						rem -= 16384ul;
+					}
+					if (rem > 0) {
+						write(fd,&p[ofs],(int)rem);
+					}
+#else
+					write(fd,p,copied);
+#endif
+					close(fd);
+				}
+
+				GlobalUnlock(gl);
+			}
+			GlobalFree(gl);
+		}
+	}
+
+	draw_progress(80,100);
+
+	{
+		FILE *fp = fopen("ddbdump.txt","w");
+		if (fp) {
+			fprintf(fp,"bmType=0x%x\n",bm.bmType);
+			fprintf(fp,"bmWidth=%d\n",bm.bmWidth);
+			fprintf(fp,"bmHeight=%d\n",bm.bmHeight);
+			fprintf(fp,"bmWidthBytes=%d\n",bm.bmWidthBytes);
+			fprintf(fp,"bmPlanes=%d\n",bm.bmPlanes);
+			fprintf(fp,"bmBitsPixel=%u\n",bm.bmBitsPixel);
+			fprintf(fp,"computedSize=%lu\n",(unsigned long)sz);
+			fprintf(fp,"copiedSize=%lu\n",(unsigned long)copied);
+			fclose(fp);
+		}
+	}
+
+	draw_progress(100,100);
+	InvalidateRect(hwnd,NULL,TRUE);
+}
+
 enum {
 	CONV_NONE=0,
 	CONV_32TO24,
@@ -657,7 +748,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info"); /* NTS: Any ID is OK as long at it's less than 0xF000 */
+		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info");
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_DDBDUMP,"&Dump DDB to file");
 	}
 
 	ShowWindow(hwndMain,nCmdShow);
