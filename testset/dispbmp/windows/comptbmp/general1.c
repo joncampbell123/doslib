@@ -49,6 +49,8 @@ struct wndstate_t {
 	unsigned char*		bmpfile;
 
 	BOOL			taken;
+	BOOL			drawReady;
+	BOOL			isLoading;
 	BOOL			need_palette;
 	BOOL			isMinimized;
 	BOOL			scrollEnable;
@@ -136,6 +138,7 @@ static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned i
 			SetScrollRange(hwnd,SB_HORZ,0,extra,TRUE);
 		}
 		else {
+			if (w->scrollX != 0) { w->scrollX = 0; redraw = TRUE; }
 			SetScrollRange(hwnd,SB_HORZ,-1,0,TRUE);
 		}
 
@@ -145,7 +148,14 @@ static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned i
 			SetScrollRange(hwnd,SB_VERT,0,extra,TRUE);
 		}
 		else {
+			if (w->scrollY != 0) { w->scrollY = 0; redraw = TRUE; }
 			SetScrollRange(hwnd,SB_VERT,-1,0,TRUE);
+		}
+	}
+	else {
+		if (w->scrollX != 0 || w->scrollY != 0) {
+			w->scrollX = w->scrollY = 0;
+			redraw = TRUE;
 		}
 	}
 
@@ -284,14 +294,22 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	else if (message == WM_SYSCOMMAND) {
 		switch (LOWORD(wparam)) {
 			case IDCSM_INFO:
-				ShowInfo(hwnd,work_state);
+				if (!work_state->isLoading)
+					ShowInfo(hwnd,work_state);
 				break;
 			case IDCSM_DDBDUMP:
-				DumpDDB(hwnd,work_state);
+				if (!work_state->isLoading)
+					DumpDDB(hwnd,work_state);
 				break;
 			default:
 				return DefWindowProc(hwnd,message,wparam,lparam);
 		};
+	}
+	else if (message == WM_CLOSE) {
+		if (work_state->isLoading)
+			return 0;
+
+		return DefWindowProc(hwnd,message,wparam,lparam);
 	}
 	else if (message == WM_DESTROY) {
 		PostQuitMessage(0);
@@ -405,23 +423,25 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 
-			if (work_state->bmpPalette) {
-				pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
-				if (pPalette) RealizePalette(ps.hdc);
-			}
+			if (work_state->drawReady) {
+				if (work_state->bmpPalette) {
+					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
+					if (pPalette) RealizePalette(ps.hdc);
+				}
 
-			if (work_state->bmpDC) {
-				BitBlt(ps.hdc,
-					-work_state->scrollX,
-					-work_state->scrollY,
-					work_state->bmpWidth,
-					work_state->bmpHeight,
-					work_state->bmpDC,
-					0,0,SRCCOPY);
-			}
+				if (work_state->bmpDC) {
+					BitBlt(ps.hdc,
+						-work_state->scrollX,
+						-work_state->scrollY,
+						work_state->bmpWidth,
+						work_state->bmpHeight,
+						work_state->bmpDC,
+						0,0,SRCCOPY);
+				}
 
-			if (work_state->bmpPalette)
-				SelectPalette(ps.hdc,pPalette,TRUE);
+				if (work_state->bmpPalette)
+					SelectPalette(ps.hdc,pPalette,TRUE);
+			}
 
 			EndPaint(hwnd,&ps);
 		}
@@ -556,6 +576,15 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		work_state->bmpDIBmode);
 }
 
+static void draw_prog_message_pump(void) {
+	MSG msg;
+
+	while (PeekMessage(&msg,(HWND)NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
 static void draw_progress(unsigned int p,unsigned int t) {
 	HBRUSH oldBrush,newBrush;
 	HPEN oldPen,newPen;
@@ -623,6 +652,8 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	}
 
 	ReleaseDC(hwndMain,hdc);
+
+	draw_prog_message_pump();
 }
 
 #if TARGET_MSDOS == 16
@@ -958,13 +989,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	/* first instance already called init on each element */
 	work_state->bmpfile = bmpfile;
+	work_state->isLoading = TRUE;
 
 	{
 		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info");
+		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_INFO,"Image and display &info");
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING,IDCSM_DDBDUMP,"&Dump DDB to file");
+		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_DDBDUMP,"&Dump DDB to file");
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
 	}
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
@@ -1308,6 +1341,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) {
 		SelectPalette(work_state->bmpDC,oldPal,FALSE);
 		oldPal = (HPALETTE)0;
+	}
+
+	work_state->isLoading = FALSE;
+	work_state->drawReady = TRUE;
+
+	{
+		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_ENABLED);
+		EnableMenuItem(SysMenu,IDCSM_INFO,MF_ENABLED);
+		EnableMenuItem(SysMenu,IDCSM_DDBDUMP,MF_ENABLED);
 	}
 
 	/* force redraw */
