@@ -592,6 +592,31 @@ static unsigned int Win16_AHINCR(void) {
 }
 #endif
 
+static HPALETTE CreateIdentityPalette(const unsigned int colors) {
+	unsigned int i;
+	LOGPALETTE *pal = NULL;
+	HPALETTE ph = (HPALETTE)NULL;
+
+	pal = malloc(sizeof(LOGPALETTE) + (colors * sizeof(PALETTEENTRY)));
+	if (pal) {
+		pal->palVersion = 0x300;
+		pal->palNumEntries = colors;
+
+		for (i=0;i < colors;i++) {
+			/* red,green,blue,flags, first 16 bits span red-green */
+			*((WORD*)(&(pal->palPalEntry[i].peRed))) = i;
+			pal->palPalEntry[i].peBlue = 0;
+			pal->palPalEntry[i].peFlags = PC_EXPLICIT;
+		}
+
+		ph = CreatePalette(pal);
+		if (!ph) MessageBeep(-1);
+		free(pal);
+	}
+
+	return ph;
+}
+
 static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 	DWORD sz,copied=0;
 	BITMAP bm;
@@ -692,13 +717,14 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		if (colors > 0 && bm.bmBitsPixel <= 8) {
 			BITMAPINFOHEADER *bmh = malloc(sizeof(BITMAPINFOHEADER) + (colors * sizeof(RGBQUAD)));
 			if (bmh) {
+				HPALETTE oPal=(HPALETTE)NULL,iPal=(HPALETTE)NULL;
 				HDC screenDC;
-				HPALETTE oPal;
 
 				screenDC = GetDC((HWND)NULL);
 
-				if (work_state->bmpPalette) {
-					oPal = SelectPalette(screenDC,work_state->bmpPalette,FALSE);
+				iPal = CreateIdentityPalette(colors);
+				if (iPal) {
+					oPal = SelectPalette(screenDC,iPal,FALSE);
 					RealizePalette(screenDC);
 				}
 
@@ -719,8 +745,10 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 				GetDIBits(screenDC,work_state->bmpHandle,0,0,NULL,(BITMAPINFO*)bmh,DIB_RGB_COLORS);
 #endif
 
-				if (work_state->bmpPalette)
+				if (oPal)
 					SelectPalette(screenDC,oPal,FALSE);
+				if (iPal)
+					DeleteObject(iPal);
 
 				ReleaseDC((HWND)NULL,screenDC);
 
