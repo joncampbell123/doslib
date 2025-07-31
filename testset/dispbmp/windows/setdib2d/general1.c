@@ -113,21 +113,13 @@ static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
 static BOOL CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
-#if defined(WIN386)
-	short pmin=0,pmax=0;
-#else
-	int pmin=0,pmax=0;
-#endif
-	BOOL pW,cW,chg=FALSE;
+	BOOL cW,chg=FALSE;
 
-	GetScrollRange(hwnd,SB_HORZ,&pmin,&pmax);
-	pW = (pmin != pmax);
-	GetScrollRange(hwnd,SB_VERT,&pmin,&pmax);
-	pW |= (pmin != pmax);
+	/* NTS: Reading the scroll range back to detect scrollbars works well in Windows 3.1, but not so well in Windows 95 */
 
 	cW = (nWidth < w->bmpWidth) || (nHeight < w->bmpHeight);
 
-	if (pW != cW) {
+	if (w->scrollEnable != cW) {
 		w->scrollEnable = cW;
 		if (cW) {
 			SetScrollRange(hwnd,SB_HORZ,0,1,TRUE);
