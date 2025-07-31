@@ -24,6 +24,8 @@
 # define MEM_BY_GLOBALALLOC
 #endif
 
+#define WM_USER_SIZECHECK	WM_USER+1
+
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
 static HWND near		hwndMain;
@@ -65,8 +67,11 @@ struct wndstate_t {
 	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
 	BOOL			taken;
+	BOOL			drawReady;
+	BOOL			isLoading;
 	BOOL			need_palette;
 	BOOL			isMinimized;
+	BOOL			scrollEnable;
 	HPALETTE		bmpPalette;
 	unsigned		bmpDIBmode;
 	uint8_t			src_red_shift;
@@ -107,16 +112,70 @@ static BOOL can32bpp = FALSE; /* Windows 3.1 doesn't like or support 32bpp ARGB?
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
-static void CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
-	if (nWidth < w->bmpWidth && !w->isMinimized)
-		SetScrollRange(hwnd,SB_HORZ,0,w->bmpWidth - nWidth,TRUE);
-	else
-		SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
+static BOOL CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
+#if defined(WIN386)
+	short pmin=0,pmax=0;
+#else
+	int pmin=0,pmax=0;
+#endif
+	BOOL pW,cW,chg=FALSE;
 
-	if (nHeight < w->bmpHeight && !w->isMinimized)
-		SetScrollRange(hwnd,SB_VERT,0,w->bmpHeight - nHeight,TRUE);
-	else
-		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
+	GetScrollRange(hwnd,SB_HORZ,&pmin,&pmax);
+	pW = (pmin != pmax);
+	GetScrollRange(hwnd,SB_VERT,&pmin,&pmax);
+	pW |= (pmin != pmax);
+
+	cW = (nWidth < w->bmpWidth) || (nHeight < w->bmpHeight);
+
+	if (pW != cW) {
+		w->scrollEnable = cW;
+		if (cW) {
+			SetScrollRange(hwnd,SB_HORZ,0,1,TRUE);
+			SetScrollRange(hwnd,SB_VERT,0,1,TRUE);
+		}
+		else {
+			SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
+			SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
+		}
+
+		chg = TRUE;
+	}
+
+	return chg;
+}
+
+static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int cWidth,const unsigned int cHeight) {
+	BOOL redraw = FALSE;
+
+	if (w->scrollEnable) {
+		if (cWidth < w->bmpWidth) {
+			const unsigned int extra = w->bmpWidth - cWidth;
+			if (w->scrollX > extra) { w->scrollX = extra; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_HORZ,0,extra,TRUE);
+		}
+		else {
+			if (w->scrollX != 0) { w->scrollX = 0; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_HORZ,-1,0,TRUE);
+		}
+
+		if (cHeight < w->bmpHeight) {
+			const unsigned int extra = w->bmpHeight - cHeight;
+			if (w->scrollY > extra) { w->scrollY = extra; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_VERT,0,extra,TRUE);
+		}
+		else {
+			if (w->scrollY != 0) { w->scrollY = 0; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_VERT,-1,0,TRUE);
+		}
+	}
+	else {
+		if (w->scrollX != 0 || w->scrollY != 0) {
+			w->scrollX = w->scrollY = 0;
+			redraw = TRUE;
+		}
+	}
+
+	if (redraw) InvalidateRect(hwnd,NULL,FALSE);
 }
 
 static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int FAR *scrollPos,const unsigned int req,const unsigned int nPos) {
@@ -231,11 +290,18 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	else if (message == WM_SYSCOMMAND) {
 		switch (LOWORD(wparam)) {
 			case IDCSM_INFO:
-				ShowInfo(hwnd,work_state);
+				if (!work_state->isLoading)
+					ShowInfo(hwnd,work_state);
 				break;
 			default:
 				return DefWindowProc(hwnd,message,wparam,lparam);
 		};
+	}
+	else if (message == WM_CLOSE) {
+		if (work_state->isLoading)
+			return 0;
+
+		return DefWindowProc(hwnd,message,wparam,lparam);
 	}
 	else if (message == WM_DESTROY) {
 		PostQuitMessage(0);
@@ -250,9 +316,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
-	else if (message == WM_SIZE) {
+	else if (message == WM_SIZE || message == WM_USER_SIZECHECK) {
 		int nWidth,nHeight;
-		RECT rwin,radj;
+		RECT rwin,radj,rfin;
 		BOOL mini;
 
 		/* Don't use the client area given, get the client area as if scroll bars didn't exist
@@ -269,10 +335,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		CheckScrollBars(work_state,hwnd,nWidth,nHeight);
 
-		mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
-		if (work_state->isMinimized != mini) {
-			work_state->isMinimized = mini;
-			UpdateTitleBar(hwnd,work_state);
+		GetClientRect(hwnd,&rfin);
+		UpdateScrollBars(work_state,hwnd,rfin.right,rfin.bottom);
+
+		if (message == WM_SIZE) {
+			mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
+			if (work_state->isMinimized != mini) {
+				work_state->isMinimized = mini;
+				UpdateTitleBar(hwnd,work_state);
+			}
 		}
 	}
 	else if (message == WM_ERASEBKGND) {
@@ -344,67 +415,69 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 
+			if (work_state->drawReady) {
 #if defined(MEM_BY_GLOBALALLOC)
-			if (work_state->bmpPalette) {
-				pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
-				if (pPalette) RealizePalette(ps.hdc);
-			}
-
-			{
-				BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
-				unsigned int strip=work_state->bmpStripCount-1u,y=0u;
-				void FAR *p;
-
-				for (strip=0;strip < work_state->bmpStripCount;strip++) {
-					p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
-					bmi->biHeight = work_state->bmpStrips[strip].stripHeight;
-					bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
-
-					if (p) {
-						SetDIBitsToDevice(ps.hdc,
-							-work_state->scrollX,y-work_state->scrollY,
-							bmi->biWidth,bmi->biHeight,
-							0,0,
-							0,
-							bmi->biHeight,
-							p,
-							(BITMAPINFO*)bmi,
-							work_state->bmpDIBmode);
-					}
-
-					GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
-					y += bmi->biHeight;
+				if (work_state->bmpPalette) {
+					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
+					if (pPalette) RealizePalette(ps.hdc);
 				}
 
-				bmi->biHeight = work_state->bmpHeight;
-				bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
-			}
+				{
+					BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
+					unsigned int strip=work_state->bmpStripCount-1u,y=0u;
+					void FAR *p;
 
-			if (work_state->bmpPalette)
-				SelectPalette(ps.hdc,pPalette,TRUE);
+					for (strip=0;strip < work_state->bmpStripCount;strip++) {
+						p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
+						bmi->biHeight = work_state->bmpStrips[strip].stripHeight;
+						bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
+
+						if (p) {
+							SetDIBitsToDevice(ps.hdc,
+								-work_state->scrollX,y-work_state->scrollY,
+								bmi->biWidth,bmi->biHeight,
+								0,0,
+								0,
+								bmi->biHeight,
+								p,
+								(BITMAPINFO*)bmi,
+								work_state->bmpDIBmode);
+						}
+
+						GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
+						y += bmi->biHeight;
+					}
+
+					bmi->biHeight = work_state->bmpHeight;
+					bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
+				}
+
+				if (work_state->bmpPalette)
+					SelectPalette(ps.hdc,pPalette,TRUE);
 #else
-			if (work_state->bmpPalette) {
-				pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
-				if (pPalette) RealizePalette(ps.hdc);
-			}
+				if (work_state->bmpPalette) {
+					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
+					if (pPalette) RealizePalette(ps.hdc);
+				}
 
-			if (work_state->bmpMem) {
-				BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
+				if (work_state->bmpMem) {
+					BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
 
-				SetDIBitsToDevice(ps.hdc,
-					-work_state->scrollX,-work_state->scrollY,
-					bmi->biWidth,bmi->biHeight,
-					0,0,
-					0,
-					bmi->biHeight,
-					work_state->bmpMem,
-					(BITMAPINFO*)bmi,
-					work_state->bmpDIBmode);
-			}
+					SetDIBitsToDevice(ps.hdc,
+						-work_state->scrollX,-work_state->scrollY,
+						bmi->biWidth,bmi->biHeight,
+						0,0,
+						0,
+						bmi->biHeight,
+						work_state->bmpMem,
+						(BITMAPINFO*)bmi,
+						work_state->bmpDIBmode);
+				}
 
-			if (work_state->bmpPalette)
-				SelectPalette(ps.hdc,pPalette,TRUE);
+				if (work_state->bmpPalette)
+					SelectPalette(ps.hdc,pPalette,TRUE);
 #endif
+			}
 
 			EndPaint(hwnd,&ps);
 		}
@@ -544,6 +617,15 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 #endif
 }
 
+static void draw_prog_message_pump(void) {
+	MSG msg;
+
+	while (PeekMessage(&msg,(HWND)NULL,0,0,PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
 static void draw_progress(unsigned int p,unsigned int t) {
 	HBRUSH oldBrush,newBrush;
 	HPEN oldPen,newPen;
@@ -611,6 +693,8 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	}
 
 	ReleaseDC(hwndMain,hdc);
+
+	draw_prog_message_pump();
 }
 
 enum {
@@ -747,11 +831,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	/* first instance already called init on each element */
 	work_state->bmpfile = bmpfile;
+	work_state->isLoading = TRUE;
 
 	{
 		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info"); /* NTS: Any ID is OK as long at it's less than 0xF000 */
+		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_INFO,"Image and display &info");
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
 	}
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
@@ -933,7 +1019,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 		GetClientRect(hwndMain,&um); // with no scroll bars
-		CheckScrollBars(work_state,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
+		PostMessage(hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
 	}
 
 	draw_progress(0,bfr->height);
@@ -1106,6 +1192,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* done reading */
 	close_bmp(&bfr);
+
+	work_state->isLoading = FALSE;
+	work_state->drawReady = TRUE;
+
+	{
+		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_ENABLED);
+		EnableMenuItem(SysMenu,IDCSM_INFO,MF_ENABLED);
+	}
 
 	/* force redraw */
 	InvalidateRect(hwndMain,(unsigned)NULL,FALSE);
