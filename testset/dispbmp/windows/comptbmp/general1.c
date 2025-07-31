@@ -18,6 +18,8 @@
 
 #include "libbmp.h"
 
+#define WM_USER_SIZECHECK	WM_USER+1
+
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
 static HWND near		hwndMain;
@@ -49,6 +51,7 @@ struct wndstate_t {
 	BOOL			taken;
 	BOOL			need_palette;
 	BOOL			isMinimized;
+	BOOL			scrollEnable;
 	HPALETTE		bmpPalette;
 	HBITMAP			bmpHandle,bmpOld;
 	HDC			bmpDC;
@@ -91,16 +94,62 @@ static BOOL can32bpp = FALSE; /* Windows 3.1 doesn't like or support 32bpp ARGB?
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
-static void CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
-	if (nWidth < w->bmpWidth && !w->isMinimized)
-		SetScrollRange(hwnd,SB_HORZ,0,w->bmpWidth - nWidth,TRUE);
-	else
-		SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
+static BOOL CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
+#if defined(WIN386)
+	short pmin=0,pmax=0;
+#else
+	int pmin=0,pmax=0;
+#endif
+	BOOL pW,cW,chg=FALSE;
 
-	if (nHeight < w->bmpHeight && !w->isMinimized)
-		SetScrollRange(hwnd,SB_VERT,0,w->bmpHeight - nHeight,TRUE);
-	else
-		SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
+	GetScrollRange(hwnd,SB_HORZ,&pmin,&pmax);
+	pW = (pmin != pmax);
+	GetScrollRange(hwnd,SB_VERT,&pmin,&pmax);
+	pW |= (pmin != pmax);
+
+	cW = (nWidth < w->bmpWidth) || (nHeight < w->bmpHeight);
+
+	if (pW != cW) {
+		w->scrollEnable = cW;
+		if (cW) {
+			SetScrollRange(hwnd,SB_HORZ,0,1,TRUE);
+			SetScrollRange(hwnd,SB_VERT,0,1,TRUE);
+		}
+		else {
+			SetScrollRange(hwnd,SB_HORZ,0,0,TRUE);
+			SetScrollRange(hwnd,SB_VERT,0,0,TRUE);
+		}
+
+		chg = TRUE;
+	}
+
+	return chg;
+}
+
+static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int cWidth,const unsigned int cHeight) {
+	BOOL redraw = FALSE;
+
+	if (w->scrollEnable) {
+		if (cWidth < w->bmpWidth) {
+			const unsigned int extra = w->bmpWidth - cWidth;
+			if (w->scrollX > extra) { w->scrollX = extra; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_HORZ,0,extra,TRUE);
+		}
+		else {
+			SetScrollRange(hwnd,SB_HORZ,-1,0,TRUE);
+		}
+
+		if (cHeight < w->bmpHeight) {
+			const unsigned int extra = w->bmpHeight - cHeight;
+			if (w->scrollY > extra) { w->scrollY = extra; redraw = TRUE; }
+			SetScrollRange(hwnd,SB_VERT,0,extra,TRUE);
+		}
+		else {
+			SetScrollRange(hwnd,SB_VERT,-1,0,TRUE);
+		}
+	}
+
+	if (redraw) InvalidateRect(hwnd,NULL,FALSE);
 }
 
 static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int FAR *scrollPos,const unsigned int req,const unsigned int nPos) {
@@ -257,9 +306,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
-	else if (message == WM_SIZE) {
+	else if (message == WM_SIZE || message == WM_USER_SIZECHECK) {
 		int nWidth,nHeight;
-		RECT rwin,radj;
+		RECT rwin,radj,rfin;
 		BOOL mini;
 
 		/* Don't use the client area given, get the client area as if scroll bars didn't exist
@@ -276,10 +325,15 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		CheckScrollBars(work_state,hwnd,nWidth,nHeight);
 
-		mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
-		if (work_state->isMinimized != mini) {
-			work_state->isMinimized = mini;
-			UpdateTitleBar(hwnd,work_state);
+		GetClientRect(hwnd,&rfin);
+		UpdateScrollBars(work_state,hwnd,rfin.right,rfin.bottom);
+
+		if (message == WM_SIZE) {
+			mini = wparam == SIZE_MINIMIZED ? TRUE : IsIconic(hwnd);
+			if (work_state->isMinimized != mini) {
+				work_state->isMinimized = mini;
+				UpdateTitleBar(hwnd,work_state);
+			}
 		}
 	}
 	else if (message == WM_ERASEBKGND) {
@@ -1092,7 +1146,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 		GetClientRect(hwndMain,&um); // with no scroll bars
-		CheckScrollBars(work_state,hwndMain,(unsigned)um.right,(unsigned)um.bottom);
+		PostMessage(hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
 	}
 
 	draw_progress(0,bfr->height);
