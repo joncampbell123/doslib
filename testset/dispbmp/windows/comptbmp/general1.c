@@ -717,6 +717,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 	if (!sz)
 		return;
 
+	work_state->isLoading = TRUE;
 	draw_progress(0,100);
 
 	{
@@ -851,6 +852,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 	}
 
 	draw_progress(100,100);
+	work_state->isLoading = FALSE;
 	InvalidateRect(hwnd,NULL,TRUE);
 }
 
