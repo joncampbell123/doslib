@@ -18,7 +18,12 @@
  *                 calls Windows to draw the bitmap. It doesn't appear
  *                 to matter what video mode. 256-color, 16-color, monochrome,
  *                 etc. doesn't matter. Does not occur in real mode or
- *                 286 standard mode.
+ *                 286 standard mode. It also appears for 1280-pixel wide
+ *                 images? The power of 2 or 1280-pixel UAE only occurs if
+ *                 the scroll position is set to show from (0,0). If you
+ *                 tick the scroll bars to the middle of the image before
+ *                 it draws, the crash is avoided until you scroll up to
+ *                 (0,0) again.
  *
  *          Noted: if you load the 1600x1200 8bpp image, it works, and it
  *                 scrolls and displays without issue, however for some
