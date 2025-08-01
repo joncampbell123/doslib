@@ -1,4 +1,33 @@
 
+/* WARNING: This program uses SetDIBitsToDevice with bitmaps larger than 64KB.
+ *          That works GREAT under Windows 3.1 and higher, but this code
+ *          will often trigger weird bugs and crashes under Windows 3.0.
+ *          Especially Windows 3.0 386 Enhanced mode.
+ *
+ *          If you want to display BMPs in Windows 3.0, consider using
+ *          GENERAL1.C instead which never causes crashes in Windows 3.0,
+ *          which it accomplishes by splitting the bitmap in memory into
+ *          slices less than 64KB. To put in another way, the bugs this code
+ *          triggers always seem to involve drawing bitmaps that span
+ *          multiple 64KB segments. Probably because back then, not many
+ *          programmers did that.
+ *
+ *          Noted: If the bitmap has a width that is a power of 2, and you
+ *                 are running Windows 3.0 in 386 enhanced mode, this program
+ *                 will cause an Unrecoverable Application Error when it
+ *                 calls Windows to draw the bitmap. It doesn't appear
+ *                 to matter what video mode. 256-color, 16-color, monochrome,
+ *                 etc. doesn't matter. Does not occur in real mode or
+ *                 286 standard mode.
+ *
+ *          Noted: if you load the 1600x1200 8bpp image, it works, and it
+ *                 scrolls and displays without issue, however for some
+ *                 reason, SetDIBitsToDevice stops drawing if you scroll
+ *                 past... erm... roughly the dimensions of the screen?
+ *                 1600x1200 on a 640x480 display will stop updating when
+ *                 you scroll past about 2/3 of the way in either dimension.
+ *                 Cheap clipping or rejection code? */
+
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stddef.h>
