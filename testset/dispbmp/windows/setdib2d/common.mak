@@ -5,6 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../
 NOW_BUILDING = TESTBMP_TEST
 
 GENERAL1_EXE =     $(SUBDIR)$(HPS)general1.$(EXEEXT)
+GENERAL2_EXE =     $(SUBDIR)$(HPS)general2.$(EXEEXT)
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -19,7 +20,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(FMT_BMP_LIB) $(HW_DOS_LIB) .symbolic
 	
-exe: $(GENERAL1_EXE) .symbolic
+exe: $(GENERAL1_EXE) $(GENERAL2_EXE) .symbolic
 
 !ifdef GENERAL1_EXE
 $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
@@ -68,6 +69,24 @@ $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w800$(HPS)600vga.bmp $(SUBDIR)$(HPS)800600_1.bmp
 	@$(COPY) ..$(HPS)..$(HPS)img$(HPS)1bpp$(HPS)w800$(HPS)600m.bmp $(SUBDIR)$(HPS)800600_m.bmp
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef GENERAL2_EXE
+$(GENERAL2_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general2.obj
+	%write tmp.cmd option quiet option map=$(GENERAL2_EXE).map system $(WLINK_SYSTEM) library $(HW_DOS_LIB) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general2.obj name $(GENERAL2_EXE)
+!ifeq TARGET_MSDOS 16
+	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
+# NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
+#      However if you want to use Open Watcom C runtime functions like sprintf() you have to declare them FIXED. Something
+#      about how those C library functions are written don't work properly with MOVEABLE segments.
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD FIXED
+!endif
+	@wlink @tmp.cmd
+!ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(GENERAL2_EXE)
+	@wbind $(GENERAL2_EXE) -q -n
+!endif
 !endif
 
 clean: .SYMBOLIC
