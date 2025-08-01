@@ -589,15 +589,17 @@ static unsigned int Win16_AHSHIFT(void) {
 }
 #endif
 
+#if defined(MEM_BY_GLOBALALLOC)
+static void FAR *bmpHandleLocked = NULL;
+#endif
+
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
 	const unsigned int cline = bfr->height - 1u - line;
 #if defined(MEM_BY_GLOBALALLOC)
-	void FAR *p = GlobalLock(work_state->bmpHandle);
-
-	if (p) {
+	if (bmpHandleLocked) {
 		const unsigned char ahshf = Win16_AHSHIFT();
-		const unsigned long ofs = ((unsigned long)cline * (unsigned long)work_state->bmpStride) + (unsigned long)FP_OFF(p);
-		unsigned sv = FP_SEG(p) + ((unsigned)(ofs >> 16ul) << (unsigned)ahshf);
+		const unsigned long ofs = ((unsigned long)cline * (unsigned long)work_state->bmpStride) + (unsigned long)FP_OFF(bmpHandleLocked);
+		unsigned sv = FP_SEG(bmpHandleLocked) + ((unsigned)(ofs >> 16ul) << (unsigned)ahshf);
 		unsigned ov = (unsigned)(ofs & 0xFFFFul);
 		unsigned cpy = (unsigned)work_state->bmpStride;
 		const unsigned int rem = 0x10000 - ov;
@@ -612,8 +614,6 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		else {
 			_fmemcpy(MK_FP(sv,ov),s,cpy);
 		}
-
-		GlobalUnlock(work_state->bmpHandle);
 	}
 #else
 	memcpy(work_state->bmpMem+(cline*work_state->bmpStride),s,work_state->bmpStride);
@@ -1151,6 +1151,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 #endif
 
+#if defined(MEM_BY_GLOBALALLOC)
+	bmpHandleLocked = GlobalLock(work_state->bmpHandle);
+#endif
+
 	{
 		unsigned int p=0;
 
@@ -1164,6 +1168,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		draw_progress(0,0);
 	}
+
+#if defined(MEM_BY_GLOBALALLOC)
+	bmpHandleLocked = NULL;
+	GlobalUnlock(work_state->bmpHandle);
+#endif
 
 	/* done reading */
 	close_bmp(&bfr);
