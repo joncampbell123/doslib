@@ -32,13 +32,6 @@ static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
 static HINSTANCE near		myInstance;
 
-#ifdef MEM_BY_GLOBALALLOC
-struct bmpstrip_t {
-	HGLOBAL			stripHandle;
-	unsigned int		stripHeight;
-};
-#endif
-
 #if TARGET_MSDOS == 16
 struct windowextra_t {
 	WORD			instance_slot;
@@ -52,10 +45,7 @@ struct wndstate_t {
 	unsigned int		scrollX,scrollY;
 
 #ifdef MEM_BY_GLOBALALLOC
-# define MAX_STRIPS		128
-	unsigned int		bmpStripHeight;
-	unsigned int		bmpStripCount;
-	struct bmpstrip_t	bmpStrips[MAX_STRIPS];
+	HGLOBAL			bmpHandle;
 #else
 	unsigned char*		bmpMem;
 #endif
@@ -414,34 +404,23 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					if (pPalette) RealizePalette(ps.hdc);
 				}
 
-				{
+				if (work_state->bmpHandle) {
 					BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
-					unsigned int strip=work_state->bmpStripCount-1u,y=0u;
-					void FAR *p;
+					void FAR *p = GlobalLock(work_state->bmpHandle);
 
-					for (strip=0;strip < work_state->bmpStripCount;strip++) {
-						p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
-						bmi->biHeight = work_state->bmpStrips[strip].stripHeight;
-						bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
+					if (p) {
+						SetDIBitsToDevice(ps.hdc,
+							-work_state->scrollX,-work_state->scrollY,
+							bmi->biWidth,bmi->biHeight,
+							0,0,
+							0,
+							bmi->biHeight,
+							p,
+							(BITMAPINFO*)bmi,
+							work_state->bmpDIBmode);
 
-						if (p) {
-							SetDIBitsToDevice(ps.hdc,
-								-work_state->scrollX,y-work_state->scrollY,
-								bmi->biWidth,bmi->biHeight,
-								0,0,
-								0,
-								bmi->biHeight,
-								p,
-								(BITMAPINFO*)bmi,
-								work_state->bmpDIBmode);
-						}
-
-						GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
-						y += bmi->biHeight;
+						GlobalUnlock(work_state->bmpHandle);
 					}
-
-					bmi->biHeight = work_state->bmpHeight;
-					bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
 				}
 
 				if (work_state->bmpPalette)
@@ -589,22 +568,54 @@ void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsi
 	}
 }
 
+#if TARGET_MSDOS == 16
+/* NTS: Windows 1.x does not have __AHINCR or __AHSHIFT and GetProcAddress() in 1.x causes Windows to dump to DOS if symbol not found */
+static unsigned int Win16_AHSHIFT(void) {
+# if WINVER >= 0x200
+	unsigned int sh = 3;/*reasonable guess, unless we're in real mode*/
+
+	HMODULE krnl = GetModuleHandle("KERNEL");
+	if (krnl) {
+		/* It's not a pointer or a function, it's a constant that's in the low 16 bits.
+		 * Typical return value for protected mode is 0xFFFF0008, the upper 16 bits are 0xFFFF for some reason. */
+		DWORD v = (DWORD)GetProcAddress(krnl,"__AHSHIFT");
+		if (v & 0xFFFFu) sh = LOWORD(v);
+	}
+
+	return sh;
+# else
+	return 12; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
+# endif
+}
+#endif
+
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
+	const unsigned int cline = bfr->height - 1u - line;
 #if defined(MEM_BY_GLOBALALLOC)
-	const unsigned int strip = line / work_state->bmpStripHeight;
-	if (strip < work_state->bmpStripCount) {
-		const unsigned int subline = line % work_state->bmpStripHeight;
-		if (subline < work_state->bmpStrips[strip].stripHeight) {
-			unsigned int sy = work_state->bmpStrips[strip].stripHeight - 1u - subline;
-			void FAR *p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
-			if (p) {
-				_fmemcpy((unsigned char FAR*)p + (sy*work_state->bmpStride),s,work_state->bmpStride);
-				GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
-			}
+	void FAR *p = GlobalLock(work_state->bmpHandle);
+
+	if (p) {
+		const unsigned char ahshf = Win16_AHSHIFT();
+		const unsigned long ofs = ((unsigned long)cline * (unsigned long)work_state->bmpStride) + (unsigned long)FP_OFF(p);
+		unsigned sv = FP_SEG(p) + ((unsigned)(ofs >> 16ul) << (unsigned)ahshf);
+		unsigned ov = (unsigned)(ofs & 0xFFFFul);
+		unsigned cpy = (unsigned)work_state->bmpStride;
+		const unsigned int rem = 0x10000 - ov;
+
+		if (ov != 0 && rem < cpy) {
+			/* crosses two 64KB segments */
+			_fmemcpy(MK_FP(sv,ov),s,rem);
+			sv += 1u << ahshf; ov = 0;
+			cpy -= rem; s += rem;
+			_fmemcpy(MK_FP(sv,ov),s,cpy);
 		}
+		else {
+			_fmemcpy(MK_FP(sv,ov),s,cpy);
+		}
+
+		GlobalUnlock(work_state->bmpHandle);
 	}
 #else
-	const unsigned int cline = bfr->height - 1u - line;
 	memcpy(work_state->bmpMem+(cline*work_state->bmpStride),s,work_state->bmpStride);
 #endif
 }
@@ -1125,39 +1136,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	/* the bitmap itself */
 #ifdef MEM_BY_GLOBALALLOC
-	/* Problem: GlobalAlloc does let you alloc large regions of memory, and StretchDIBitsToDevice()
-	 *          from them, but there seems to be bugs in certain drivers that crash Windows if you
-	 *          try to draw certain bit depths (S3 drivers in DOSBox). These bugs don't happen if
-	 *          you limit the bitmap to strips of less than 64KB each. */
-	work_state->bmpStripHeight = 0xFFF0u / work_state->bmpStride;
-	work_state->bmpStripCount = ((bfr->height + work_state->bmpStripHeight - 1u) / work_state->bmpStripHeight);
-	if (work_state->bmpStripCount > MAX_STRIPS) {
-		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
+	work_state->bmpHandle = GlobalAlloc(GMEM_ZEROINIT,(DWORD)work_state->bmpHeight*(DWORD)work_state->bmpStride);
+	if (!work_state->bmpHandle) {
+		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 		work_state->taken = FALSE;
 		return 1;
-	}
-
-	{
-		unsigned int i,h=bfr->height;
-		for (i=0;i < work_state->bmpStripCount && h >= work_state->bmpStripHeight;i++) {
-			work_state->bmpStrips[i].stripHeight = work_state->bmpStripHeight;
-			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,work_state->bmpStripHeight*work_state->bmpStride);
-			if (!work_state->bmpStrips[i].stripHandle) {
-				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-				work_state->taken = FALSE;
-				return 1;
-			}
-			h -= work_state->bmpStripHeight;
-		}
-		if (i < work_state->bmpStripCount && h != 0) {
-			work_state->bmpStrips[i].stripHeight = h;
-			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*work_state->bmpStride);
-			if (!work_state->bmpStrips[i].stripHandle) {
-				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-				work_state->taken = FALSE;
-				return 1;
-			}
-		}
 	}
 #else
 	work_state->bmpMem = malloc(bfr->height * work_state->bmpStride);
@@ -1204,15 +1187,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 #ifdef MEM_BY_GLOBALALLOC
-	{
-		unsigned int i;
-		for (i=0;i < work_state->bmpStripCount;i++) {
-			if (work_state->bmpStrips[i].stripHandle) {
-				GlobalFree(work_state->bmpStrips[i].stripHandle);
-				work_state->bmpStrips[i].stripHandle = (unsigned)NULL;
-				work_state->bmpStrips[i].stripHeight = 0;
-			}
-		}
+	if (work_state->bmpHandle) {
+		GlobalFree(work_state->bmpHandle);
+		work_state->bmpHandle = (unsigned)NULL;
 	}
 #else
 	free(work_state->bmpMem);
