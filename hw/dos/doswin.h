@@ -88,6 +88,12 @@ int ToolHelpInit();
 void ToolHelpFree();
 #endif
 
+#if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)
+DWORD Win16_KERNELSYM(const unsigned int ord);
+unsigned int Win16_AHINCR(void);
+unsigned int Win16_AHSHIFT(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -602,27 +602,6 @@ void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsi
 	}
 }
 
-#if TARGET_MSDOS == 16
-/* NTS: Windows 1.x does not have __AHINCR or __AHSHIFT and GetProcAddress() in 1.x causes Windows to dump to DOS if symbol not found */
-static unsigned int Win16_AHSHIFT(void) {
-# if WINVER >= 0x200
-	unsigned int sh = 3;/*reasonable guess, unless we're in real mode*/
-
-	HMODULE krnl = GetModuleHandle("KERNEL");
-	if (krnl) {
-		/* It's not a pointer or a function, it's a constant that's in the low 16 bits.
-		 * Typical return value for protected mode is 0xFFFF0008, the upper 16 bits are 0xFFFF for some reason. */
-		DWORD v = (DWORD)GetProcAddress(krnl,"__AHSHIFT");
-		if (v & 0xFFFFu) sh = LOWORD(v);
-	}
-
-	return sh;
-# else
-	return 12; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
-# endif
-}
-#endif
-
 #if defined(MEM_BY_GLOBALALLOC)
 static void FAR *bmpHandleLocked = NULL;
 #endif

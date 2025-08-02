@@ -648,30 +648,6 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	draw_prog_message_pump();
 }
 
-#if TARGET_MSDOS == 16
-static DWORD Win16_KERNELSYM(const unsigned int ord) {
-	HMODULE krnl = GetModuleHandle("KERNEL");
-	if (krnl) return (DWORD)GetProcAddress(krnl,MAKEINTRESOURCE(ord));
-	return 0;
-}
-
-static unsigned int Win16_AHINCR(void) {
-# if WINVER >= 0x200
-	return (unsigned)(Win16_KERNELSYM(114) & 0xFFFFu);
-# else
-	return 0x1000u; /* Windows 1.x is real mode only, assume real mode __AHINCR */
-# endif
-}
-
-static unsigned int Win16_AHSHIFT(void) {
-# if WINVER >= 0x200
-	return (unsigned)(Win16_KERNELSYM(113) & 0xFFFFu);
-# else
-	return 0x12u; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
-# endif
-}
-#endif
-
 static HPALETTE CreateIdentityPalette(const unsigned int colors) {
 	unsigned int i;
 	LOGPALETTE *pal = NULL;
