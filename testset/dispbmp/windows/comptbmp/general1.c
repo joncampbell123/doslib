@@ -649,22 +649,25 @@ static void draw_progress(unsigned int p,unsigned int t) {
 }
 
 #if TARGET_MSDOS == 16
-/* NTS: Windows 1.x does not have __AHINCR or __AHSHIFT and GetProcAddress() in 1.x causes Windows to dump to DOS if symbol not found */
+static DWORD Win16_KERNELSYM(const unsigned int ord) {
+	HMODULE krnl = GetModuleHandle("KERNEL");
+	if (krnl) return (DWORD)GetProcAddress(krnl,MAKEINTRESOURCE(ord));
+	return 0;
+}
+
 static unsigned int Win16_AHINCR(void) {
 # if WINVER >= 0x200
-	unsigned int incr = 8;/*reasonable guess, unless we're in real mode*/
-
-	HMODULE krnl = GetModuleHandle("KERNEL");
-	if (krnl) {
-		/* It's not a pointer or a function, it's a constant that's in the low 16 bits.
-		 * Typical return value for protected mode is 0xFFFF0008, the upper 16 bits are 0xFFFF for some reason. */
-		DWORD v = (DWORD)GetProcAddress(krnl,"__AHINCR");
-		if (v & 0xFFFFu) incr = LOWORD(v);
-	}
-
-	return incr;
+	return (unsigned)(Win16_KERNELSYM(114) & 0xFFFFu);
 # else
 	return 0x1000u; /* Windows 1.x is real mode only, assume real mode __AHINCR */
+# endif
+}
+
+static unsigned int Win16_AHSHIFT(void) {
+# if WINVER >= 0x200
+	return (unsigned)(Win16_KERNELSYM(113) & 0xFFFFu);
+# else
+	return 0x12u; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
 # endif
 }
 #endif
