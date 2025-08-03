@@ -968,6 +968,38 @@ static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
 	work_state->bmpIconDC = (unsigned)NULL;
 }
 
+static HICON bitmap2icon(HBITMAP hbmp) {
+	HICON ico = (HICON)NULL;
+	unsigned long andmsz,xormsz;
+#if TARGET_MSDOS == 16
+	void FAR *andb,FAR *xorb;
+#else
+	void *andb,*xorb;
+#endif
+	BITMAP bm;
+
+	if (GetObject(hbmp,sizeof(bm),&bm)) {
+		andmsz = (unsigned long)(((bm.bmWidth + 15u) & (~15u)) >> 3u) * (unsigned long)bm.bmHeight;
+		xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)bm.bmHeight;
+		if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
+			andb = malloc((unsigned)andmsz);
+			xorb = malloc((unsigned)xormsz);
+
+			memset(andb,0x00,(unsigned)andmsz); /* opaque */
+			memset(xorb,0x00,(unsigned)xormsz); /* all black */
+
+			GetBitmapBits(hbmp,xormsz,xorb);
+
+			ico = CreateIcon(myInstance,bm.bmWidth,bm.bmHeight,bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
+
+			free(xorb);
+			free(andb);
+		}
+	}
+
+	return ico;
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldPal = (HPALETTE)0;
@@ -1538,68 +1570,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 * We draw our own icon in Windwos 3.1, and Windows 3.1 only allows association of an
 	 * icon to a window at the window class level anyway, while Windows 95 allows per-icon
 	 * using WM_SETICON. */
-	if (work_state->bmpIconSmall && iconSmallWidth && iconSmallHeight && win95) {
-		unsigned long andmsz,xormsz;
-#if TARGET_MSDOS == 16
-		void FAR *andb,FAR *xorb;
-#else
-		void *andb,*xorb;
-#endif
-		BITMAP bm;
+	if (work_state->bmpIconSmall && iconSmallWidth && iconSmallHeight && win95)
+		work_state->bmpIconSmallIcon = bitmap2icon(work_state->bmpIconSmall);
+	if (work_state->bmpIcon && win95)
+		work_state->bmpIconIcon = bitmap2icon(work_state->bmpIcon);
 
-		if (GetObject(work_state->bmpIconSmall,sizeof(bm),&bm)) {
-			andmsz = (unsigned long)(((iconSmallWidth + 15u) & (~15u)) >> 3u) * (unsigned long)iconSmallHeight;
-			xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)iconSmallHeight;
-			if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
-				andb = malloc((unsigned)andmsz);
-				xorb = malloc((unsigned)xormsz);
-
-				memset(andb,0x00,(unsigned)andmsz); /* opaque */
-				memset(xorb,0x00,(unsigned)xormsz); /* all black */
-
-				GetBitmapBits(work_state->bmpIconSmall,xormsz,xorb);
-
-				work_state->bmpIconSmallIcon = CreateIcon(hInstance,iconSmallWidth,iconSmallHeight,
-					bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
-
-				SendMessage(hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
-
-				free(xorb);
-				free(andb);
-			}
-		}
-	}
-	if (work_state->bmpIcon && win95) {
-		unsigned long andmsz,xormsz;
-#if TARGET_MSDOS == 16
-		void FAR *andb,FAR *xorb;
-#else
-		void *andb,*xorb;
-#endif
-		BITMAP bm;
-
-		if (GetObject(work_state->bmpIcon,sizeof(bm),&bm)) {
-			andmsz = (unsigned long)(((iconWidth + 15u) & (~15u)) >> 3u) * (unsigned long)iconHeight;
-			xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)iconHeight;
-			if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
-				andb = malloc((unsigned)andmsz);
-				xorb = malloc((unsigned)xormsz);
-
-				memset(andb,0x00,(unsigned)andmsz); /* opaque */
-				memset(xorb,0x00,(unsigned)xormsz); /* all black */
-
-				GetBitmapBits(work_state->bmpIcon,xormsz,xorb);
-
-				work_state->bmpIconIcon = CreateIcon(hInstance,iconWidth,iconHeight,
-					bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
-
-				SendMessage(hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
-
-				free(xorb);
-				free(andb);
-			}
-		}
-	}
+	if (work_state->bmpIconIcon)
+		SendMessage(hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
+	if (work_state->bmpIconSmallIcon)
+		SendMessage(hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
 
 	work_state->isLoading = FALSE;
 	work_state->drawReady = TRUE;
