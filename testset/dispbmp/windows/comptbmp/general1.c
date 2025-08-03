@@ -731,7 +731,7 @@ static void draw_prog_message_pump(void) {
 	}
 }
 
-static void draw_progress(unsigned int p,unsigned int t) {
+static void draw_progress(struct wndstate_t FAR *work_state,unsigned int p,unsigned int t) {
 	HBRUSH oldBrush,newBrush;
 	HPEN oldPen,newPen;
 	RECT um;
@@ -741,8 +741,8 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	{
 		int w = (int)(um.right - um.left);
 		int h = (int)(um.bottom - um.top);
-		int bw = the_state.isMinimized ? w : (w / 4);
-		int bh = the_state.isMinimized ? (h / 2) : 32;
+		int bw = work_state->isMinimized ? w : (w / 4);
+		int bh = work_state->isMinimized ? (h / 2) : 32;
 		int x = (w - bw) / 2;
 		int y = (h - bh) / 2;
 
@@ -834,7 +834,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		return;
 
 	work_state->isLoading = TRUE;
-	draw_progress(0,100);
+	draw_progress(work_state,0,100);
 
 	{
 #if TARGET_MSDOS == 16
@@ -849,11 +849,11 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		if (gl) {
 			p = GlobalLock(gl);
 			if (p) {
-				draw_progress(10,100);
+				draw_progress(work_state,10,100);
 
 				copied = (DWORD)GetBitmapBits(work_state->bmpHandle,sz,p);
 
-				draw_progress(20,100);
+				draw_progress(work_state,20,100);
 
 				fd = open("ddbdump.bin",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 				if (fd >= 0) {
@@ -866,7 +866,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 					DWORD rem = copied;
 					unsigned int todo;
 
-					draw_progress(30,100);
+					draw_progress(work_state,30,100);
 
 					while (rem != (DWORD)0) {
 						if (ov > (0x10000u - blksz))
@@ -896,7 +896,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		}
 	}
 
-	draw_progress(80,100);
+	draw_progress(work_state,80,100);
 
 	{
 		FILE *fp = fopen("ddbdump.txt","w");
@@ -967,7 +967,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state) {
 		}
 	}
 
-	draw_progress(100,100);
+	draw_progress(work_state,100,100);
 	work_state->isLoading = FALSE;
 	InvalidateRect(hwnd,NULL,TRUE);
 }
@@ -1403,7 +1403,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		PostMessage(hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
 	}
 
-	draw_progress(0,bfr->height);
+	draw_progress(work_state,0,bfr->height);
 
 	if (bfr->bpp == 32 && conv == CONV_32TO24) {
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
@@ -1626,14 +1626,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		unsigned int p=0;
 
 		/* OK, now read it in! */
-		draw_progress(p,bfr->height);
+		draw_progress(work_state,p,bfr->height);
 		while (read_bmp_line(bfr) == 0) {
 			convert_scanline(bfr,bfr->scanline,bfr->width);
 			load_bmp_scanline(work_state,bfr->current_line,bfr->scanline);
-			draw_progress(++p,bfr->height);
+			draw_progress(work_state,++p,bfr->height);
 		}
 
-		draw_progress(0,0);
+		draw_progress(work_state,0,0);
 	}
 
 	/* done reading */
