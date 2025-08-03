@@ -38,6 +38,8 @@ struct windowextra_t {
 static unsigned int		my_slot = 0;
 #endif
 
+static unsigned short		iconWidth,iconHeight;
+
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
 
@@ -56,7 +58,9 @@ struct wndstate_t {
 	BOOL			scrollEnable;
 	HPALETTE		bmpPalette;
 	HBITMAP			bmpHandle,bmpOld;
+	HBITMAP			bmpIcon,bmpIconOld;
 	HDC			bmpDC;
+	HDC			bmpIconDC;
 	unsigned		bmpDIBmode;
 	uint8_t			src_red_shift;
 	uint8_t			src_red_width;
@@ -343,26 +347,32 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			if (work_state->isMinimized != mini) {
 				work_state->isMinimized = mini;
 				UpdateTitleBar(hwnd,work_state);
+				InvalidateRect(hwnd,NULL,TRUE);
 			}
 		}
 	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
 
-		if (GetUpdateRect(hwnd,&um,FALSE)) {
-			HBRUSH oldBrush,newBrush;
-			HPEN oldPen,newPen;
+		if (work_state->isMinimized) {
+			DefWindowProc(hwnd,WM_ICONERASEBKGND,wparam,lparam);
+		}
+		else {
+			if (GetUpdateRect(hwnd,&um,FALSE)) {
+				HBRUSH oldBrush,newBrush;
+				HPEN oldPen,newPen;
 
-			newPen = (HPEN)GetStockObject(NULL_PEN);
-			newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+				newPen = (HPEN)GetStockObject(NULL_PEN);
+				newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
 
-			oldPen = SelectObject((HDC)wparam,newPen);
-			oldBrush = SelectObject((HDC)wparam,newBrush);
+				oldPen = SelectObject((HDC)wparam,newPen);
+				oldBrush = SelectObject((HDC)wparam,newBrush);
 
-			Rectangle((HDC)wparam,um.left,um.top,um.right+1,um.bottom+1);
+				Rectangle((HDC)wparam,um.left,um.top,um.right+1,um.bottom+1);
 
-			SelectObject((HDC)wparam,oldBrush);
-			SelectObject((HDC)wparam,oldPen);
+				SelectObject((HDC)wparam,oldBrush);
+				SelectObject((HDC)wparam,oldPen);
+			}
 		}
 
 		return 1; /* Important: Returning 1 signals to Windows that we processed the message. Windows 3.0 gets really screwed up if we don't! */
@@ -373,12 +383,12 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		if (work_state->bmpPalette) {
 			HDC hdc = GetDC(hwnd);
-			HPALETTE ppal = SelectPalette(hdc,work_state->bmpPalette,FALSE);
+			HPALETTE ppal = SelectPalette(hdc,work_state->bmpPalette,work_state->isMinimized ? TRUE : FALSE);
 			UINT changed = RealizePalette(hdc);
 			SelectPalette(hdc,ppal,FALSE);
 			ReleaseDC(hwnd,hdc);
 
-			if (changed) InvalidateRect(hwnd,NULL,FALSE);
+			if (changed) InvalidateRect(hwnd,NULL,work_state->isMinimized ? TRUE : FALSE);
 
 			if (message == WM_QUERYNEWPALETTE)
 				return changed;
@@ -417,18 +427,37 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			if (work_state->drawReady) {
 				if (work_state->bmpPalette) {
-					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
+					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,work_state->isMinimized ? TRUE : FALSE);
 					if (pPalette) RealizePalette(ps.hdc);
 				}
 
-				if (work_state->bmpDC) {
-					BitBlt(ps.hdc,
-						-work_state->scrollX,
-						-work_state->scrollY,
-						work_state->bmpWidth,
-						work_state->bmpHeight,
-						work_state->bmpDC,
-						0,0,SRCCOPY);
+				if (work_state->isMinimized) {
+					if (work_state->bmpIconDC) {
+						int x,y;
+
+						GetClientRect(hwnd,&um);
+						x = (um.right - iconWidth) / 2;
+						y = (um.bottom - iconHeight) / 2;
+
+						BitBlt(ps.hdc,
+							x,
+							y,
+							iconWidth,
+							iconHeight,
+							work_state->bmpIconDC,
+							0,0,SRCCOPY);
+					}
+				}
+				else {
+					if (work_state->bmpDC) {
+						BitBlt(ps.hdc,
+							-work_state->scrollX,
+							-work_state->scrollY,
+							work_state->bmpWidth,
+							work_state->bmpHeight,
+							work_state->bmpDC,
+							0,0,SRCCOPY);
+					}
 				}
 
 				if (work_state->bmpPalette)
@@ -553,19 +582,55 @@ void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsi
 	}
 }
 
+static unsigned int load_bmp_icony_last = ~0u;
+
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
 	const unsigned int cline = work_state->bmpHeight - 1u - line;
+#if TARGET_MSDOS == 16
+	BITMAPINFO FAR *bm = (BITMAPINFO FAR*)bmpInfo(work_state);
+#else
+	BITMAPINFO *bm = (BITMAPINFO*)bmpInfo(work_state);
+#endif
+	unsigned int icony;
 
+	/* normal height spec needed here to work, in fact if we try the 1-pixel height
+	 * hackery the image comes out garbled for some reason. */
+	bm->bmiHeader.biHeight = work_state->bmpHeight;
+	bm->bmiHeader.biSizeImage = work_state->bmpHeight * work_state->bmpStride;
 	SetDIBits(work_state->bmpDC,work_state->bmpHandle,
 		cline,1,/*start,lines*/
 #if TARGET_MSDOS == 16
 		(void FAR*)s,
-		(BITMAPINFO FAR*)bmpInfo(work_state),
 #else
 		(void*)s,
-		(BITMAPINFO*)bmpInfo(work_state),
 #endif
+		bm,
 		work_state->bmpDIBmode);
+
+	/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
+	icony = (unsigned int)(((unsigned long)line * (unsigned long)iconHeight) / (unsigned long)work_state->bmpHeight);
+	if (load_bmp_icony_last != icony) {
+		load_bmp_icony_last = icony;
+
+		bm->bmiHeader.biHeight = 1;
+		bm->bmiHeader.biSizeImage = work_state->bmpStride;
+		SetStretchBltMode(work_state->bmpIconDC,STRETCH_DELETESCANS);
+		StretchDIBits(work_state->bmpIconDC,
+			0,icony,iconWidth,1,/*dest*/
+			0,0,work_state->bmpWidth,1,/*src*/
+#if TARGET_MSDOS == 16
+			(void FAR*)s,
+#else
+			(void*)s,
+#endif
+			bm,
+			work_state->bmpDIBmode,
+			SRCCOPY);
+	}
+
+	/* put it back */
+	bm->bmiHeader.biHeight = work_state->bmpHeight;
+	bm->bmiHeader.biSizeImage = work_state->bmpHeight * work_state->bmpStride;
 }
 
 static void draw_prog_message_pump(void) {
@@ -835,6 +900,7 @@ enum {
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
+	HPALETTE oldPalIcon = (HPALETTE)0;
 	HPALETTE oldPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
 	char* bmpfile = NULL;
@@ -843,6 +909,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	probe_dos();
 	detect_windows();
+
+	iconWidth = GetSystemMetrics(SM_CXICON);
+	iconHeight = GetSystemMetrics(SM_CYICON);
 
 	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
@@ -1295,6 +1364,36 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	{
+		HDC hdc = GetDC(hwndMain);
+
+		work_state->bmpIconDC = CreateCompatibleDC(hdc);
+		if (!work_state->bmpIconDC) {
+			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
+		if (work_state->bmpPalette) {
+			oldPalIcon = SelectPalette(work_state->bmpIconDC,work_state->bmpPalette,TRUE);
+			RealizePalette(work_state->bmpIconDC);
+		}
+
+		/* NTS: You could call CreateBitmap to set whatever you want, but if you want to work with the GDI
+		 *      regarding bitmaps, you have to match the screen, or else nothing displays and it might also
+		 *      cause a crash. At least in Windows 3.1 */
+		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconWidth,iconHeight);
+		if (!work_state->bmpIcon) {
+			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
+		work_state->bmpIconOld = SelectObject(work_state->bmpIconDC,work_state->bmpIcon);
+
+		ReleaseDC(hwndMain,hdc);
+	}
+
+	{
 		unsigned int p=0;
 
 		/* OK, now read it in! */
@@ -1314,6 +1413,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) {
 		SelectPalette(work_state->bmpDC,oldPal,FALSE);
 		oldPal = (HPALETTE)0;
+		SelectPalette(work_state->bmpIconDC,oldPalIcon,FALSE);
+		oldPalIcon = (HPALETTE)0;
 	}
 
 	work_state->isLoading = FALSE;
@@ -1338,9 +1439,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpHandle && work_state->bmpOld) SelectObject(work_state->bmpDC,work_state->bmpOld);
 	if (work_state->bmpHandle) DeleteObject(work_state->bmpHandle);
 	work_state->bmpHandle = (unsigned)NULL;
-
 	if (work_state->bmpDC) DeleteDC(work_state->bmpDC);
 	work_state->bmpDC = (unsigned)NULL;
+
+	if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
+	if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
+	work_state->bmpIcon = (unsigned)NULL;
+	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
+	work_state->bmpIconDC = (unsigned)NULL;
 
 	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
 	work_state->bmpPalette = (unsigned)NULL;
