@@ -458,6 +458,8 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				}
 
 				if (work_state->isMinimized) {
+					// NTS: Windows 95 will never call WM_PAINT when you are minimized,
+					//      even IF you make Program Manager your shell instead of Windows Explorer.
 					if (work_state->bmpIconDC) {
 						int x,y;
 
@@ -1597,6 +1599,23 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (bmpInfoIconRaw) {
 		free(bmpInfoIconRaw);
 		bmpInfoIconRaw = NULL;
+	}
+
+	/* Windows 95 will never WM_PAINT our window when minimized.
+	 * For Windows 95, discard our bmpIcon and bmpSmallIcon bitmaps, we don't need them anymore.
+	 * The only thing needed after that point are the HICON resources we created for our window icons. */
+	if (win95) {
+		if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
+		if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
+		work_state->bmpIconSmall = (unsigned)NULL;
+		if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
+		work_state->bmpIconSmallDC = (unsigned)NULL;
+
+		if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
+		if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
+		work_state->bmpIcon = (unsigned)NULL;
+		if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
+		work_state->bmpIconDC = (unsigned)NULL;
 	}
 
 	/* force redraw */
