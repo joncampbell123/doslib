@@ -18,6 +18,15 @@
 
 #include "libbmp.h"
 
+#ifndef WM_SETICON
+# define WM_SETICON 0x0080
+#endif
+
+#ifndef SM_CXSMICON
+# define SM_CXSMICON 49
+# define SM_CYSMICON 50
+#endif
+
 #define WM_USER_SIZECHECK	WM_USER+1
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
@@ -25,6 +34,7 @@ typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,
 static HWND near		hwndMain;
 static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
 static HINSTANCE near		myInstance;
+static BOOL			win95 = FALSE;
 
 #define IDCSM_INFO		0x7700u
 #define IDCSM_DDBDUMP		0x7701u
@@ -39,6 +49,7 @@ static unsigned int		my_slot = 0;
 #endif
 
 static unsigned short		iconWidth,iconHeight;
+static unsigned char		bmpInfoIconRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
@@ -59,6 +70,7 @@ struct wndstate_t {
 	HPALETTE		bmpPalette;
 	HBITMAP			bmpHandle,bmpOld;
 	HBITMAP			bmpIcon,bmpIconOld;
+	HICON			bmpIconIcon;
 	HDC			bmpDC;
 	HDC			bmpIconDC;
 	unsigned		bmpDIBmode;
@@ -88,6 +100,10 @@ static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
 #else
 static struct wndstate_t FAR the_state;
 #endif
+
+static inline BITMAPINFOHEADER FAR* bmpInfoIcon(void) {
+	return (BITMAPINFOHEADER FAR*)(bmpInfoIconRaw);
+}
 
 static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 	return (BITMAPINFOHEADER FAR*)(w->bmpInfoRaw);
@@ -464,6 +480,8 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					SelectPalette(ps.hdc,pPalette,TRUE);
 			}
 
+			DrawIcon(ps.hdc,0,0,work_state->bmpIconIcon);
+
 			EndPaint(hwnd,&ps);
 		}
 
@@ -588,15 +606,13 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 	const unsigned int cline = work_state->bmpHeight - 1u - line;
 #if TARGET_MSDOS == 16
 	BITMAPINFO FAR *bm = (BITMAPINFO FAR*)bmpInfo(work_state);
+	BITMAPINFO FAR *bmicon = (BITMAPINFO FAR*)bmpInfoIcon();
 #else
 	BITMAPINFO *bm = (BITMAPINFO*)bmpInfo(work_state);
+	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon();
 #endif
 	unsigned int icony;
 
-	/* normal height spec needed here to work, in fact if we try the 1-pixel height
-	 * hackery the image comes out garbled for some reason. */
-	bm->bmiHeader.biHeight = work_state->bmpHeight;
-	bm->bmiHeader.biSizeImage = work_state->bmpHeight * work_state->bmpStride;
 	SetDIBits(work_state->bmpDC,work_state->bmpHandle,
 		cline,1,/*start,lines*/
 #if TARGET_MSDOS == 16
@@ -607,13 +623,14 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		bm,
 		work_state->bmpDIBmode);
 
-	/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
 	icony = (unsigned int)(((unsigned long)line * (unsigned long)iconHeight) / (unsigned long)work_state->bmpHeight);
 	if (load_bmp_icony_last != icony) {
 		load_bmp_icony_last = icony;
 
-		bm->bmiHeader.biHeight = 1;
-		bm->bmiHeader.biSizeImage = work_state->bmpStride;
+		/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
+		bmicon->bmiHeader.biHeight = 1;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride;
+
 		SetStretchBltMode(work_state->bmpIconDC,STRETCH_DELETESCANS);
 		StretchDIBits(work_state->bmpIconDC,
 			0,icony,iconWidth,1,/*dest*/
@@ -623,14 +640,14 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 #else
 			(void*)s,
 #endif
-			bm,
-			work_state->bmpDIBmode,
+			bmicon,
+			DIB_RGB_COLORS,
 			SRCCOPY);
-	}
 
-	/* put it back */
-	bm->bmiHeader.biHeight = work_state->bmpHeight;
-	bm->bmiHeader.biSizeImage = work_state->bmpHeight * work_state->bmpStride;
+		/* put it back */
+		bmicon->bmiHeader.biHeight = work_state->bmpHeight;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride * work_state->bmpHeight;
+	}
 }
 
 static void draw_prog_message_pump(void) {
@@ -900,7 +917,6 @@ enum {
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
-	HPALETTE oldPalIcon = (HPALETTE)0;
 	HPALETTE oldPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
 	char* bmpfile = NULL;
@@ -918,6 +934,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
 			can32bpp = TRUE; /* can use 32bpp ARGB */
 			can16bpp = TRUE; /* can use 16bpp 5:5:5 */
+			win95 = TRUE;
 		}
 	}
 
@@ -1244,6 +1261,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	/* set it up */
 	{
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
+		BITMAPINFOHEADER FAR *bihicon = bmpInfoIcon();/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
 		work_state->srcBpp = bfr->bpp;
@@ -1290,6 +1308,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			bih->biClrImportant = bfr->colors;
 		}
 
+		/* icon is the same */
+#if TARGET_MSDOS == 16 || defined(WIN386)
+		_fmemcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
+#else
+		memcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
+#endif
+
 		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
 			if (work_state->need_palette) {
 				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + bih->biSize);
@@ -1299,6 +1324,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 		if (work_state->bmpDIBmode == DIB_RGB_COLORS) {
 			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + bih->biSize);
+			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
+		}
+
+		/* icon always uses RGB_COLORS because we do NOT map it to our palette and we want it to use only default system colors */
+		{
+			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bihicon + bihicon->biSize);
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
 	}
@@ -1373,11 +1404,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 
-		if (work_state->bmpPalette) {
-			oldPalIcon = SelectPalette(work_state->bmpIconDC,work_state->bmpPalette,TRUE);
-			RealizePalette(work_state->bmpIconDC);
-		}
-
 		/* NTS: You could call CreateBitmap to set whatever you want, but if you want to work with the GDI
 		 *      regarding bitmaps, you have to match the screen, or else nothing displays and it might also
 		 *      cause a crash. At least in Windows 3.1 */
@@ -1413,8 +1439,36 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) {
 		SelectPalette(work_state->bmpDC,oldPal,FALSE);
 		oldPal = (HPALETTE)0;
-		SelectPalette(work_state->bmpIconDC,oldPalIcon,FALSE);
-		oldPalIcon = (HPALETTE)0;
+	}
+
+	if (work_state->bmpIcon) {
+		unsigned long andmsz,xormsz;
+#if TARGET_MSDOS == 16
+		void FAR *andb,FAR *xorb;
+#else
+		void *andb,*xorb;
+#endif
+		BITMAP bm;
+
+		if (GetObject(work_state->bmpIcon,sizeof(bm),&bm)) {
+			andmsz = (unsigned long)(((iconWidth + 15u) & (~15u)) >> 3u) * (unsigned long)iconHeight;
+			xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)iconHeight;
+			if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
+				andb = malloc((unsigned)andmsz);
+				xorb = malloc((unsigned)xormsz);
+
+				memset(andb,0x00,(unsigned)andmsz); /* opaque */
+				memset(xorb,0x00,(unsigned)xormsz); /* all black */
+
+				GetBitmapBits(work_state->bmpIcon,xormsz,xorb);
+
+				work_state->bmpIconIcon = CreateIcon(hInstance,iconWidth,iconHeight,
+					bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
+
+				free(xorb);
+				free(andb);
+			}
+		}
 	}
 
 	work_state->isLoading = FALSE;
@@ -1447,6 +1501,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	work_state->bmpIcon = (unsigned)NULL;
 	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
 	work_state->bmpIconDC = (unsigned)NULL;
+
+	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
+	work_state->bmpIconIcon = (unsigned)NULL;
 
 	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
 	work_state->bmpPalette = (unsigned)NULL;
