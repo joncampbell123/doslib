@@ -89,6 +89,7 @@ struct wndstate_t {
 	HDC			bmpIconDC;
 	HDC			bmpIconSmallDC;
 	unsigned		bmpDIBmode;
+	unsigned		bmpIconDIBmode;
 	uint8_t			src_red_shift;
 	uint8_t			src_red_width;
 	uint8_t			src_green_shift;
@@ -419,7 +420,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			SelectPalette(hdc,ppal,FALSE);
 			ReleaseDC(hwnd,hdc);
 
-			if (changed) InvalidateRect(hwnd,NULL,work_state->isMinimized ? TRUE : FALSE);
+			InvalidateRect(hwnd,NULL,work_state->isMinimized ? TRUE : FALSE);
 
 			if (message == WM_QUERYNEWPALETTE)
 				return changed;
@@ -657,7 +658,7 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 			(void*)s,
 #endif
 			bmicon,
-			DIB_RGB_COLORS,
+			work_state->bmpIconDIBmode,
 			SRCCOPY);
 
 		/* put it back */
@@ -1040,6 +1041,7 @@ static void queryDesktopWorkArea(RECT *wa) {
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
+	HPALETTE oldIconPal = (HPALETTE)0;
 	HPALETTE oldPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
 	char* bmpfile = NULL;
@@ -1423,6 +1425,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->src_alpha_shift = bfr->alpha_shift;
 		work_state->src_alpha_width = bfr->alpha_width;
 		work_state->bmpDIBmode = DIB_RGB_COLORS;
+		work_state->bmpIconDIBmode = DIB_RGB_COLORS;
 
 		bih->biSize = sizeof(BITMAPINFOHEADER);
 		bih->biCompression = 0;
@@ -1470,14 +1473,17 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
 				work_state->bmpDIBmode = DIB_PAL_COLORS;
 			}
+			if (work_state->need_palette && !win95) {
+				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bihicon + bih->biSize);
+				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
+				work_state->bmpIconDIBmode = DIB_PAL_COLORS;
+			}
 		}
 		if (work_state->bmpDIBmode == DIB_RGB_COLORS) {
 			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + bih->biSize);
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
-
-		/* icon always uses RGB_COLORS because we do NOT map it to our palette and we want it to use only default system colors */
-		{
+		if (work_state->bmpIconDIBmode == DIB_RGB_COLORS) {
 			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bihicon + bihicon->biSize);
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
@@ -1558,7 +1564,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      it's own minified icon but if we want the icon to appear in the taskbar and ALT+TAB
 	 *      in Windows 95 we have to do this. The effect of this code is that even our custom
 	 *      drawn minified icon in Windows 3.1 limits itself to 16 colors, which is fine since
-	 *      then our minified window doesn't conflict in any way with any other application. */
+	 *      then our minified window doesn't conflict in any way with any other application.
+	 *      But in Windows 3.1 we can draw with the palette anyway while minimized.
+	 *
+	 *      So: Windows 3.1: Select the palette into the bitmap icon, PAL_COLORS.
+	 *          Windows 95: Do not select palette, RGB_COLORS */
 	{
 		HDC hdc = GetDC(hwndMain);
 
@@ -1567,6 +1577,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
 			work_state->taken = FALSE;
 			return 1;
+		}
+
+		if (work_state->bmpPalette && !win95) {
+			oldIconPal = SelectPalette(work_state->bmpIconDC,work_state->bmpPalette,TRUE);
+			RealizePalette(work_state->bmpDC);
 		}
 
 		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconWidth,iconHeight);
@@ -1622,6 +1637,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpPalette) {
 		SelectPalette(work_state->bmpDC,oldPal,FALSE);
 		oldPal = (HPALETTE)0;
+	}
+
+	if (work_state->bmpPalette && !win95) {
+		SelectPalette(work_state->bmpIconDC,oldIconPal,FALSE);
+		oldIconPal = (HPALETTE)0;
 	}
 
 	/* Create an HICON of the minified image, but only for Windows 95.
