@@ -739,8 +739,8 @@ static void draw_progress(unsigned int p,unsigned int t) {
 	{
 		int w = (int)(um.right - um.left);
 		int h = (int)(um.bottom - um.top);
-		int bw = w / 4;
-		int bh = 32;
+		int bw = the_state.isMinimized ? w : (w / 4);
+		int bh = the_state.isMinimized ? (h / 2) : 32;
 		int x = (w - bw) / 2;
 		int y = (h - bh) / 2;
 
@@ -783,16 +783,7 @@ static void draw_progress(unsigned int p,unsigned int t) {
 		SelectObject(hdc,oldPen);
 	}
 	else {
-		newPen = (HPEN)GetStockObject(NULL_PEN);
-		newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-
-		oldPen = SelectObject(hdc,newPen);
-		oldBrush = SelectObject(hdc,newBrush);
-
-		Rectangle(hdc,um.left,um.top,um.right+1,um.bottom+1);
-
-		SelectObject(hdc,oldBrush);
-		SelectObject(hdc,oldPen);
+		InvalidateRect(hwndMain,&um,TRUE);
 	}
 
 	ReleaseDC(hwndMain,hdc);
