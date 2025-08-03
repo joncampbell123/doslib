@@ -12,6 +12,9 @@
 #include <i86.h>
 
 #include <windows.h>
+#if !defined(WIN386)
+# include <commdlg.h>
+#endif
 
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
@@ -1125,7 +1128,59 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
 	 *
 	 *        Why? */
-	bmpfile = strdup(lpCmdLine);
+	if (*lpCmdLine) {
+		bmpfile = strdup(lpCmdLine);
+	}
+	else {
+#if !defined(WIN386)
+		BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
+		HMODULE commdlg_dll;
+		UINT oldMode;
+
+		oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+#if TARGET_MSDOS == 16
+		commdlg_dll = LoadLibrary("COMMDLG");
+		if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GETOPENFILENAME");
+#else
+		commdlg_dll = LoadLibrary("COMDLG32.DLL");
+		if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GetOpenFileNameA");
+#endif
+		SetErrorMode(oldMode);
+
+		if (commdlg_dll && GETOPENFILENAMEPROC) {
+			OPENFILENAME ofn;
+			char *newname = malloc(PATH_MAX);
+
+			if (!newname) {
+				FreeLibrary(commdlg_dll);
+				return 1;
+			}
+
+			memset(newname,0,PATH_MAX);
+			memset(&ofn,0,sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = (HWND)NULL;
+			ofn.hInstance = hInstance;
+			ofn.lpstrFilter =
+				"Bitmap files\x00" "*.bmp\x00"
+				"All files\x00" "*.*\x00"
+				"\x00";
+			ofn.lpstrFile = newname;
+			ofn.nMaxFile = PATH_MAX - 1;
+			ofn.lpstrTitle = "Pick a BMP file to display";
+			ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
+
+			if (!GETOPENFILENAMEPROC(&ofn)) {
+				FreeLibrary(commdlg_dll);
+				return 1;
+			}
+
+			FreeLibrary(commdlg_dll);
+			bmpfile = strdup(newname);
+			free(newname);
+		}
+#endif
+	}
 
 	myInstance = hInstance;
 
