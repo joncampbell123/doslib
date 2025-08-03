@@ -2,7 +2,7 @@
 #include "resource.h"
 #include <windows.h>
 
-IDI_APPICON             ICON    DISCARDABLE     "appicon.ico"
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "appicon.ico"
 
 IDD_ABOUT DIALOG DISCARDABLE MOVEABLE  0, 0, 217, 51
 STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
