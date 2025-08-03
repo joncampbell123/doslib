@@ -952,6 +952,22 @@ enum {
 	CONV_16TO24
 };
 
+static void cleanup_bmpiconsmall(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
+	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
+	work_state->bmpIconSmall = (unsigned)NULL;
+	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
+	work_state->bmpIconSmallDC = (unsigned)NULL;
+}
+
+static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
+	if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
+	work_state->bmpIcon = (unsigned)NULL;
+	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
+	work_state->bmpIconDC = (unsigned)NULL;
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldPal = (HPALETTE)0;
@@ -1605,17 +1621,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 * For Windows 95, discard our bmpIcon and bmpSmallIcon bitmaps, we don't need them anymore.
 	 * The only thing needed after that point are the HICON resources we created for our window icons. */
 	if (win95) {
-		if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
-		if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
-		work_state->bmpIconSmall = (unsigned)NULL;
-		if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
-		work_state->bmpIconSmallDC = (unsigned)NULL;
-
-		if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
-		if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
-		work_state->bmpIcon = (unsigned)NULL;
-		if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
-		work_state->bmpIconDC = (unsigned)NULL;
+		cleanup_bmpiconsmall(work_state);
+		cleanup_bmpicon(work_state);
 	}
 
 	/* force redraw */
@@ -1633,17 +1640,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpDC) DeleteDC(work_state->bmpDC);
 	work_state->bmpDC = (unsigned)NULL;
 
-	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
-	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
-	work_state->bmpIconSmall = (unsigned)NULL;
-	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
-	work_state->bmpIconSmallDC = (unsigned)NULL;
-
-	if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
-	if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
-	work_state->bmpIcon = (unsigned)NULL;
-	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
-	work_state->bmpIconDC = (unsigned)NULL;
+	cleanup_bmpiconsmall(work_state);
+	cleanup_bmpicon(work_state);
 
 	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
 	work_state->bmpIconSmallIcon = (unsigned)NULL;
