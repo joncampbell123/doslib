@@ -301,7 +301,7 @@ static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state);
 
 BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	/* NTS: Despite MakeProcInstance() this is still valid because the proc instance
-	 *      was created right when starting this dialog box */
+	 *      was created right when starting this dialog box from the same instance */
 	struct wndstate_t FAR *work_state = &the_state;
 
 	(void)wparam;
