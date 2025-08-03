@@ -33,6 +33,10 @@
 # define ICON_BIG 1
 #endif
 
+#ifndef SPI_GETWORKAREA
+# define SPI_GETWORKAREA 0x0030
+#endif
+
 #define WM_USER_SIZECHECK	WM_USER+1
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
@@ -57,6 +61,7 @@ static unsigned int		my_slot = 0;
 static unsigned short		iconWidth,iconHeight;
 static unsigned short		iconSmallWidth,iconSmallHeight;
 static unsigned char*		bmpInfoIconRaw = NULL;
+static RECT			desktopWorkArea;
 
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
@@ -1000,6 +1005,39 @@ static HICON bitmap2icon(HBITMAP hbmp) {
 	return ico;
 }
 
+/* For Windows 95, we want to know how much screen we can use without overlapping the taskbar.
+ * Note that the user can put the taskbar on any side of the screen they want, therefore even
+ * though the most common case is a RECT ot 0,0,screen width,screen height-taskbar, it is also
+ * possible to put the taskbar on top and get 0,taskbar,screen width,screen height. Windows
+ * returns a RECT for a reason, obviously!
+ *
+ * Windows 3.1 will not fill in the rectangle at all, because GETWORKAREA did not exist at the time.
+ *
+ * SystemParametersInfo() did not exist in Windows 3.0, hence the GetProcAddress() call. */
+static void queryDesktopWorkArea(RECT *wa) {
+	if (win95) {
+#if TARGET_MSDOS == 16
+		HMODULE user = GetModuleHandle("USER");
+		if (user) {
+			BOOL PASCAL FAR (*SYSPARAMINFO)(UINT,UINT,void FAR*,UINT) = GetProcAddress(user,"SYSTEMPARAMETERSINFO");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#elif TARGET_MSDOS == 32 && !defined(WIN386)
+		HMODULE user = GetModuleHandle("USER32");
+		if (user) {
+			BOOL WINAPI FAR (*SYSPARAMINFO)(UINT,UINT,void*,UINT) = GetProcAddress(user,"SystemParametersInfoA");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#else
+		(void)wa;
+#endif
+	}
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldPal = (HPALETTE)0;
@@ -1017,6 +1055,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	iconSmallWidth = GetSystemMetrics(SM_CXSMICON);
 	iconSmallHeight = GetSystemMetrics(SM_CYSMICON);
 
+	desktopWorkArea.top = 0;
+	desktopWorkArea.left = 0;
+	desktopWorkArea.right = GetSystemMetrics(SM_CXSCREEN);
+	desktopWorkArea.bottom = GetSystemMetrics(SM_CYSCREEN);
+
 	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
 			canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
@@ -1025,6 +1068,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			win95 = TRUE;
 		}
 	}
+
+	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
+	queryDesktopWorkArea(&desktopWorkArea);
 
 	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
 	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
@@ -1226,30 +1272,42 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		BOOL move=FALSE;
 		HDC screenDC;
 		RECT um;
-		int w,h;
 
 		/* Get window rect for the position to prevent the window from appearing off the bottom/right edge of the screen.
 		 * Then prevent the top/left from going off screen. */
 		screenDC = GetDC((HWND)NULL);
 		GetWindowRect(hwndMain,&um);
-		w = GetDeviceCaps(screenDC,HORZRES);
-		h = GetDeviceCaps(screenDC,VERTRES);
 		borderw = GetSystemMetrics(SM_CXFRAME);
 		borderh = GetSystemMetrics(SM_CYFRAME);
 
-		if (um.right > w) {
-			const int adjust = um.right - w;
+		if (um.right > desktopWorkArea.right) {
+			const int adjust = um.right - desktopWorkArea.right;
 			um.right -= adjust;
 			um.left -= adjust;
 			move = TRUE;
-			if (um.left < 0) um.left = 0;
+			if (um.left < desktopWorkArea.left) um.left = desktopWorkArea.left;
 		}
-		if (um.bottom > h) {
-			const int adjust = um.bottom - h;
+		else if (um.left < desktopWorkArea.left) {
+			const int adjust = desktopWorkArea.left - um.left;
+			um.right += adjust;
+			um.left += adjust;
+			move = TRUE;
+			if (um.right > desktopWorkArea.right) um.right = desktopWorkArea.right;
+		}
+
+		if (um.bottom > desktopWorkArea.bottom) {
+			const int adjust = um.bottom - desktopWorkArea.bottom;
 			um.bottom -= adjust;
 			um.top -= adjust;
 			move = TRUE;
-			if (um.top < 0) um.top = 0;
+			if (um.top < desktopWorkArea.top) um.top = desktopWorkArea.top;
+		}
+		else if (um.top < desktopWorkArea.top) {
+			const int adjust = desktopWorkArea.top - um.top;
+			um.bottom += adjust;
+			um.top += adjust;
+			move = TRUE;
+			if (um.bottom > desktopWorkArea.bottom) um.bottom = desktopWorkArea.bottom;
 		}
 
 		if (move) {
