@@ -300,11 +300,15 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state);
 
 BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+	/* NTS: Despite MakeProcInstance() this is still valid because the proc instance
+	 *      was created right when starting this dialog box */
+	struct wndstate_t FAR *work_state = &the_state;
+
 	(void)wparam;
 	(void)lparam;
 
 	if (message == WM_INITDIALOG) {
-		if (!IsIconic(GetParent(hwnd))) {
+		if (!work_state->isMinimized) {
 			RECT me,mom;
 
 			GetWindowRect(GetParent(hwnd),&mom);
@@ -350,6 +354,11 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			case IDCSM_ABOUT:
 				{
 #if TARGET_MSDOS == 16
+					/* NTS: MakeProcInstance is unnecessary and pointless for window procs,
+					 *      but must be done for dialog box procs. Don't worry, unlike the
+					 *      window class proc, the dialog box proc instance will access the
+					 *      correct DS segment because it was made from the instance that
+					 *      started it. */
 					FARPROC p = MakeProcInstance((FARPROC)AboutDlgProc,myInstance);
 					DialogBox(myInstance,MAKEINTRESOURCE(IDD_ABOUT),hwnd,p);
 					FreeProcInstance(p);
