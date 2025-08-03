@@ -304,18 +304,20 @@ BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	(void)lparam;
 
 	if (message == WM_INITDIALOG) {
-		RECT me,mom;
+		if (!IsIconic(GetParent(hwnd))) {
+			RECT me,mom;
 
-		GetWindowRect(GetParent(hwnd),&mom);
-		GetWindowRect(hwnd,&me);
+			GetWindowRect(GetParent(hwnd),&mom);
+			GetWindowRect(hwnd,&me);
 
-		/* Windows 3.1 puts this dialog in the upper left corner.
-		 * Please center it in the window. */
-		SetWindowPos(hwnd,HWND_TOP,
-			(((mom.right - mom.left) - (me.right - me.left)) / 2) + mom.left,
-			(((mom.bottom - mom.top) - (me.bottom - me.top)) / 2) + mom.top,
-			0,0,
-			SWP_NOSIZE);
+			/* Windows 3.1 puts this dialog in the upper left corner.
+			 * Please center it in the window. */
+			SetWindowPos(hwnd,HWND_TOP,
+				(((mom.right - mom.left) - (me.right - me.left)) / 2) + mom.left,
+				(((mom.bottom - mom.top) - (me.bottom - me.top)) / 2) + mom.top,
+				0,0,
+				SWP_NOSIZE);
+		}
 
 		return TRUE;
 	}
