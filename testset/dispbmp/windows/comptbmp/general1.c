@@ -16,6 +16,8 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
 
+#include "resource.h"
+
 #include "libbmp.h"
 
 #ifndef WM_SETICON
@@ -1099,7 +1101,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		wnd.cbWndExtra = 0;
 #endif
 		wnd.hInstance = hInstance;
-		wnd.hIcon = (unsigned)NULL;
+		wnd.hIcon = (unsigned)NULL; /* do NOT load a class icon so that Windows 3.1 lets us paint our own icon */
 		wnd.hCursor = (unsigned)NULL;
 		wnd.hbrBackground = (unsigned)NULL;
 		wnd.lpszMenuName = NULL;
