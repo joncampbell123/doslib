@@ -55,15 +55,6 @@ static BOOL			win95 = FALSE;
 #define IDCSM_DDBDUMP		0x7701u
 #define IDCSM_ABOUT		0x7702u
 
-#if TARGET_MSDOS == 16
-struct windowextra_t {
-	WORD			instance_slot;
-};
-# define MAX_INSTANCES		32
-
-static unsigned int		my_slot = 0;
-#endif
-
 static unsigned short		iconWidth,iconHeight;
 static unsigned short		iconSmallWidth,iconSmallHeight;
 static unsigned char*		bmpInfoIconRaw = NULL;
@@ -79,7 +70,6 @@ struct wndstate_t {
 
 	unsigned char*		bmpfile;
 
-	BOOL			taken;
 	BOOL			drawReady;
 	BOOL			isLoading;
 	BOOL			need_palette;
@@ -116,12 +106,7 @@ static void wndstate_init(struct wndstate_t FAR *w) {
 	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
-#if TARGET_MSDOS == 16
-static HGLOBAL near inst_state_handle = (HGLOBAL)0; // managed by first instance
-static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
-#else
-static struct wndstate_t FAR the_state;
-#endif
+static struct wndstate_t the_state;
 
 static inline BITMAPINFOHEADER FAR* bmpInfoIcon(void) {
 	return (BITMAPINFOHEADER FAR*)(bmpInfoIconRaw);
@@ -345,12 +330,7 @@ BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 }
 
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
-#if TARGET_MSDOS == 16
-	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
-	struct wndstate_t FAR *work_state = &inst_state[instance_slot];
-#else
 	struct wndstate_t FAR *work_state = &the_state;
-#endif
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
@@ -1186,17 +1166,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
-#if TARGET_MSDOS == 16
-		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
-#else
+		/* WARNING: If anyone ever tells you to use MakeProcInstance() with RegisterClass, ignore them.
+		 *          None of Microsoft's SDK samples do it either for RegisterClass (but they do it for
+		 *          DialogBox() though?). What MakeProcInstance() ultimately does is cause the window
+		 *          procedure, when it is called, to always get the same DS data segment as the initial
+		 *          instance. This code is written to work with the DS segment of each individual instance.
+		 *          Older versions of this code had an elaborate Win16 global memory handle array tracking
+		 *          system that was completely unnecessary because of this misunderstanding.  */
 		wnd.lpfnWndProc = (WNDPROC)WndProc;
-#endif
 		wnd.cbClsExtra = 0;
-#if TARGET_MSDOS == 16
-		wnd.cbWndExtra = sizeof(struct windowextra_t);
-#else
 		wnd.cbWndExtra = 0;
-#endif
 		wnd.hInstance = hInstance;
 		wnd.hIcon = (unsigned)NULL; /* do NOT load a class icon so that Windows 3.1 lets us paint our own icon */
 		wnd.hCursor = (unsigned)NULL;
@@ -1208,46 +1187,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
 			return 1;
 		}
-
-#if TARGET_MSDOS == 16
-		inst_state_handle = GlobalAlloc(GMEM_ZEROINIT|GMEM_SHARE,sizeof(struct wndstate_t) * MAX_INSTANCES);
-		if (!inst_state_handle) {
-			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
-		if (!inst_state) {
-			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		{
-			unsigned int i;
-			for (i=0;i < MAX_INSTANCES;i++) wndstate_init(&inst_state[i]);
-		}
-#endif
-	}
-	else {
-#if TARGET_MSDOS == 32 && defined(WIN386)
-		/* Um, no. This kind of multi instance code does not work right with Win386. Crash, crash, crash.
-		 * So we'll just not allow multiple instances. Sorry. */
-		MessageBox((unsigned)NULL,"Due to stablity issues, this program does not allow multiple Watcom Win386 instances","Oops!",MB_OK);
-		return 1;
-#endif
-#if TARGET_MSDOS == 16
-		GetInstanceData(hPrevInstance,(BYTE near*)(&inst_state_handle),sizeof(inst_state_handle));
-		if (!inst_state_handle) {
-			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
-		if (!inst_state) {
-			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
-			return 1;
-		}
-#endif
 	}
 
 	hwndMain = CreateWindow(WndProcClass,NULL,
@@ -1261,26 +1200,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
-#if TARGET_MSDOS == 16
-	{
-		unsigned int i=0;
-
-		while (i < MAX_INSTANCES && inst_state[i].taken) i++;
-		if (i >= MAX_INSTANCES) {
-			MessageBox((unsigned)NULL,"No available slots","Oops!",MB_OK);
-			return 1;
-		}
-
-		my_slot = i;
-		SetWindowWord(hwndMain,offsetof(struct windowextra_t,instance_slot),my_slot);
-		work_state = &inst_state[my_slot];
-		work_state->taken = TRUE;
-	}
-#else
 	work_state = &the_state;
-	work_state->taken = TRUE;
 	wndstate_init(work_state);
-#endif
+
 	/* first instance already called init on each element */
 	work_state->bmpfile = bmpfile;
 	work_state->isLoading = TRUE;
@@ -1304,7 +1226,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		hDC = GetDC(hwndMain);
 		if (!hDC) {
 			MessageBox((unsigned)NULL,"GetDC err","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1320,7 +1241,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		if (!(rcaps & RC_DIBTODEV)) {
 			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (SetDIBitsToDevice)","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1336,19 +1256,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (bmpfile == NULL) {
 		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 
 	bfr = open_bmp(bmpfile);
 	if (bfr == NULL) {
 		MessageBox((unsigned)NULL,"Failed to open BMP","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 	if (bfr->width == 0 || bfr->height == 0 || bfr->width > 8192 || bfr->height > 8192) {
 		MessageBox((unsigned)NULL,"BMP with no size","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 
@@ -1429,12 +1346,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 	if (bfr->bpp <= 8 && (bfr->palette == NULL || bfr->colors == 0)) {
 		MessageBox((unsigned)NULL,"BMP missing color palette","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 
@@ -1499,7 +1414,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
 		if (resize_bmp_scanline(bfr,work_state->bmpStride)) {
 			MessageBox((unsigned)NULL,"cannot resize bmp stride","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 	}
@@ -1597,7 +1511,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		lp = malloc(sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * (1u << bfr->bpp)));
 		if (!lp || bfr->colors > (1u << bfr->bpp)) {
 			MessageBox((unsigned)NULL,"Unable to alloc palette struct","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1613,7 +1526,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpPalette = CreatePalette(lp);
 		if (!work_state->bmpPalette) {
 			MessageBox((unsigned)NULL,"Unable to createPalette","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1626,7 +1538,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpDC) {
 			MessageBox((unsigned)NULL,"Unable to get compatible DC","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1641,7 +1552,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpHandle = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,work_state->bmpWidth,work_state->bmpHeight);
 		if (!work_state->bmpHandle) {
 			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1676,7 +1586,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpIconDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpIconDC) {
 			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1688,7 +1597,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconWidth,iconHeight);
 		if (!work_state->bmpIcon) {
 			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1702,14 +1610,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpIconSmallDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpIconSmallDC) {
 			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
 		work_state->bmpIconSmall = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconSmallWidth,iconSmallHeight);
 		if (!work_state->bmpIconSmall) {
 			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1809,43 +1715,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
 	work_state->bmpPalette = (unsigned)NULL;
-
-#if TARGET_MSDOS == 16
-	/* let go of slot */
-	work_state->taken = FALSE;
-	work_state = NULL;
-	my_slot = 0;
-
-	/* Win16 only:
-	 * If we are the owner (the first instance that registered the window class),
-	 * then we must reside in memory until we are the last instance resident.
-	 * If we do not do this, then if multiple instances are open and the user closes US
-	 * before closing the others, the others will crash (having pulled the code segment
-	 * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-		MSG pmsg; /* do not overwrite msg.wParam */
-
-		/* NTS: PeekMessage() PM_REMOVE only, do not translate or dispatch.
-		 *      Windows 3.1 tolerates it just fine, but Windows 3.0 will crash. */
-		while (GetModuleUsage(hInstance) > 1)
-			PeekMessage(&pmsg,(unsigned)NULL,0,0,PM_REMOVE);
-
-		/* let go of our copy of the handle */
-		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop causes ALL instances
-		 *      to lose their data. Calling GlobalUnlock() after the loop fixes that issue. Why? */
-		GlobalUnlock(inst_state_handle);
-		inst_state = NULL;
-
-		/* only the first instance, who allocated the handle, should free it */
-		GlobalFree(inst_state_handle);
-		inst_state_handle = 0;
-	}
-	else {
-		/* let go of our copy of the handle */
-		GlobalUnlock(inst_state_handle);
-		inst_state = NULL;
-	}
-#endif
 
 	return msg.wParam;
 }
