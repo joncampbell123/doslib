@@ -1178,7 +1178,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		/* Windows 3.1 can do 16bpp 5:5:5 but only if the screen is 5:5:5.
 		 * However, Windows 3.1 cannot do 32bpp ARGB even if the framebuffer itself is 32bpp ARGB,
 		 * but it can render 24bpp RGB just fine. */
-		if (!can16bpp && windows_version < 0x330) { /* Windows 3.1 and below */
+		if (!can16bpp && !win95) { /* Windows 3.1 and below */
 			if (planes == 1 && (bpp == 15 || bpp == 16)) { /* display is 16bpp */
 				can16bpp = TRUE;
 			}
