@@ -49,7 +49,7 @@ static unsigned int		my_slot = 0;
 #endif
 
 static unsigned short		iconWidth,iconHeight;
-static unsigned char		bmpInfoIconRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
+static unsigned char*		bmpInfoIconRaw = NULL;
 
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
@@ -1258,6 +1258,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpStride = bfr->stride;
 	}
 
+	/* allocate temporary buffer */
+	bmpInfoIconRaw = malloc(sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD)));
+
 	/* set it up */
 	{
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
@@ -1479,6 +1482,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_ENABLED);
 		EnableMenuItem(SysMenu,IDCSM_INFO,MF_ENABLED);
 		EnableMenuItem(SysMenu,IDCSM_DDBDUMP,MF_ENABLED);
+	}
+
+	/* we don't need this anymore */
+	if (bmpInfoIconRaw) {
+		free(bmpInfoIconRaw);
+		bmpInfoIconRaw = NULL;
 	}
 
 	/* force redraw */
