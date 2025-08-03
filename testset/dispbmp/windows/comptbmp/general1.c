@@ -27,6 +27,12 @@
 # define SM_CYSMICON 50
 #endif
 
+/* Icon types */
+#ifndef ICON_BIG
+# define ICON_SMALL 0
+# define ICON_BIG 1
+#endif
+
 #define WM_USER_SIZECHECK	WM_USER+1
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
@@ -49,6 +55,7 @@ static unsigned int		my_slot = 0;
 #endif
 
 static unsigned short		iconWidth,iconHeight;
+static unsigned short		iconSmallWidth,iconSmallHeight;
 static unsigned char*		bmpInfoIconRaw = NULL;
 
 struct wndstate_t {
@@ -71,8 +78,11 @@ struct wndstate_t {
 	HBITMAP			bmpHandle,bmpOld;
 	HBITMAP			bmpIcon,bmpIconOld;
 	HICON			bmpIconIcon;
+	HBITMAP			bmpIconSmall,bmpIconSmallOld;
+	HICON			bmpIconSmallIcon;
 	HDC			bmpDC;
 	HDC			bmpIconDC;
+	HDC			bmpIconSmallDC;
 	unsigned		bmpDIBmode;
 	uint8_t			src_red_shift;
 	uint8_t			src_red_width;
@@ -480,8 +490,6 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					SelectPalette(ps.hdc,pPalette,TRUE);
 			}
 
-			DrawIcon(ps.hdc,0,0,work_state->bmpIconIcon);
-
 			EndPaint(hwnd,&ps);
 		}
 
@@ -601,6 +609,7 @@ void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsi
 }
 
 static unsigned int load_bmp_icony_last = ~0u;
+static unsigned int load_bmp_iconsmy_last = ~0u;
 
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
 	const unsigned int cline = work_state->bmpHeight - 1u - line;
@@ -611,7 +620,7 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 	BITMAPINFO *bm = (BITMAPINFO*)bmpInfo(work_state);
 	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon();
 #endif
-	unsigned int icony;
+	unsigned int icony,iconsmy;
 
 	SetDIBits(work_state->bmpDC,work_state->bmpHandle,
 		cline,1,/*start,lines*/
@@ -634,6 +643,32 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		SetStretchBltMode(work_state->bmpIconDC,STRETCH_DELETESCANS);
 		StretchDIBits(work_state->bmpIconDC,
 			0,icony,iconWidth,1,/*dest*/
+			0,0,work_state->bmpWidth,1,/*src*/
+#if TARGET_MSDOS == 16
+			(void FAR*)s,
+#else
+			(void*)s,
+#endif
+			bmicon,
+			DIB_RGB_COLORS,
+			SRCCOPY);
+
+		/* put it back */
+		bmicon->bmiHeader.biHeight = work_state->bmpHeight;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride * work_state->bmpHeight;
+	}
+
+	iconsmy = (unsigned int)(((unsigned long)line * (unsigned long)iconSmallHeight) / (unsigned long)work_state->bmpHeight);
+	if (load_bmp_iconsmy_last != iconsmy) {
+		load_bmp_iconsmy_last = iconsmy;
+
+		/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
+		bmicon->bmiHeader.biHeight = 1;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride;
+
+		SetStretchBltMode(work_state->bmpIconSmallDC,STRETCH_DELETESCANS);
+		StretchDIBits(work_state->bmpIconSmallDC,
+			0,iconsmy,iconSmallWidth,1,/*dest*/
 			0,0,work_state->bmpWidth,1,/*src*/
 #if TARGET_MSDOS == 16
 			(void FAR*)s,
@@ -928,6 +963,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	iconWidth = GetSystemMetrics(SM_CXICON);
 	iconHeight = GetSystemMetrics(SM_CYICON);
+
+	iconSmallWidth = GetSystemMetrics(SM_CXSMICON);
+	iconSmallHeight = GetSystemMetrics(SM_CYSMICON);
 
 	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
@@ -1397,6 +1435,22 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		ReleaseDC(hwndMain,hdc);
 	}
 
+	/* NTS: Unlike the main bitmap, this time we do NOT select the palette into the icon DC.
+	 *      The reason for this is so that, in 256-color mode, to ensure that all StretchDIBits
+	 *      calls are forced to use only the 20 default system colors in the Windows UI,
+	 *
+	 *      While icon resources can have a color palette, CreateIcon() does not allow us to
+	 *      provide a color palette and therefore there is no sense in trying to use all
+	 *      256 colors in the image anyway, they will just display wrong the instant anything
+	 *      else uses the color palette, but the default 20 colors in Windows are always there
+	 *      (unless of course you call that API function to unlock them and gain the ability
+	 *      to control 254 out of 256 colors in the palette, of course).
+	 *
+	 *      This is not a big deal in Windows 3.1 where this program has the ability to draw
+	 *      it's own minified icon but if we want the icon to appear in the taskbar and ALT+TAB
+	 *      in Windows 95 we have to do this. The effect of this code is that even our custom
+	 *      drawn minified icon in Windows 3.1 limits itself to 16 colors, which is fine since
+	 *      then our minified window doesn't conflict in any way with any other application. */
 	{
 		HDC hdc = GetDC(hwndMain);
 
@@ -1407,9 +1461,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 
-		/* NTS: You could call CreateBitmap to set whatever you want, but if you want to work with the GDI
-		 *      regarding bitmaps, you have to match the screen, or else nothing displays and it might also
-		 *      cause a crash. At least in Windows 3.1 */
 		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconWidth,iconHeight);
 		if (!work_state->bmpIcon) {
 			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
@@ -1418,6 +1469,27 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 
 		work_state->bmpIconOld = SelectObject(work_state->bmpIconDC,work_state->bmpIcon);
+
+		ReleaseDC(hwndMain,hdc);
+	}
+	if (win95) {
+		HDC hdc = GetDC(hwndMain);
+
+		work_state->bmpIconSmallDC = CreateCompatibleDC(hdc);
+		if (!work_state->bmpIconSmallDC) {
+			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
+		work_state->bmpIconSmall = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,iconSmallWidth,iconSmallHeight);
+		if (!work_state->bmpIconSmall) {
+			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
+			work_state->taken = FALSE;
+			return 1;
+		}
+
+		work_state->bmpIconSmallOld = SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmall);
 
 		ReleaseDC(hwndMain,hdc);
 	}
@@ -1444,7 +1516,42 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		oldPal = (HPALETTE)0;
 	}
 
-	if (work_state->bmpIcon) {
+	/* Create an HICON of the minified image, but only for Windows 95.
+	 * We draw our own icon in Windwos 3.1, and Windows 3.1 only allows association of an
+	 * icon to a window at the window class level anyway, while Windows 95 allows per-icon
+	 * using WM_SETICON. */
+	if (work_state->bmpIconSmall && iconSmallWidth && iconSmallHeight && win95) {
+		unsigned long andmsz,xormsz;
+#if TARGET_MSDOS == 16
+		void FAR *andb,FAR *xorb;
+#else
+		void *andb,*xorb;
+#endif
+		BITMAP bm;
+
+		if (GetObject(work_state->bmpIconSmall,sizeof(bm),&bm)) {
+			andmsz = (unsigned long)(((iconSmallWidth + 15u) & (~15u)) >> 3u) * (unsigned long)iconSmallHeight;
+			xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)iconSmallHeight;
+			if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
+				andb = malloc((unsigned)andmsz);
+				xorb = malloc((unsigned)xormsz);
+
+				memset(andb,0x00,(unsigned)andmsz); /* opaque */
+				memset(xorb,0x00,(unsigned)xormsz); /* all black */
+
+				GetBitmapBits(work_state->bmpIconSmall,xormsz,xorb);
+
+				work_state->bmpIconSmallIcon = CreateIcon(hInstance,iconSmallWidth,iconSmallHeight,
+					bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
+
+				SendMessage(hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
+
+				free(xorb);
+				free(andb);
+			}
+		}
+	}
+	if (work_state->bmpIcon && win95) {
 		unsigned long andmsz,xormsz;
 #if TARGET_MSDOS == 16
 		void FAR *andb,FAR *xorb;
@@ -1467,6 +1574,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 				work_state->bmpIconIcon = CreateIcon(hInstance,iconWidth,iconHeight,
 					bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
+
+				SendMessage(hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
 
 				free(xorb);
 				free(andb);
@@ -1505,11 +1614,20 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (work_state->bmpDC) DeleteDC(work_state->bmpDC);
 	work_state->bmpDC = (unsigned)NULL;
 
+	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
+	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
+	work_state->bmpIconSmall = (unsigned)NULL;
+	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
+	work_state->bmpIconSmallDC = (unsigned)NULL;
+
 	if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
 	if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
 	work_state->bmpIcon = (unsigned)NULL;
 	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
 	work_state->bmpIconDC = (unsigned)NULL;
+
+	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
+	work_state->bmpIconSmallIcon = (unsigned)NULL;
 
 	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
 	work_state->bmpIconIcon = (unsigned)NULL;
