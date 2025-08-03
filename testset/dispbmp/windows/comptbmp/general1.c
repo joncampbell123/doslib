@@ -1101,10 +1101,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
 	 *
 	 *        Why? */
+	/* TODO:  If we SetErrorMode() to try to turn off all error dialogs in Windows 3.0, and then
+	 *        LoadLibrary(), it shows a dialog prompting the user to install that DLL. Why?
+	 *        The whole purpose of the call is to shut that dialog up!
+	 *
+	 *        Well in any case we'll just not try to LOADLIBRARY COMMDLG if below Windows 3.1 */
 	if (*lpCmdLine) {
 		bmpfile = strdup(lpCmdLine);
 	}
-	else {
+	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
 #if !defined(WIN386)
 		BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
 		HMODULE commdlg_dll;
