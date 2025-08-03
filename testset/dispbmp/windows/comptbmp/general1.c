@@ -50,6 +50,7 @@ static BOOL			win95 = FALSE;
 
 #define IDCSM_INFO		0x7700u
 #define IDCSM_DDBDUMP		0x7701u
+#define IDCSM_ABOUT		0x7702u
 
 #if TARGET_MSDOS == 16
 struct windowextra_t {
@@ -310,6 +311,36 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 
 static void DumpDDB(HWND hwnd,struct wndstate_t FAR *work_state);
 
+BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+	(void)wparam;
+	(void)lparam;
+
+	if (message == WM_INITDIALOG) {
+		RECT me,mom;
+
+		GetWindowRect(GetParent(hwnd),&mom);
+		GetWindowRect(hwnd,&me);
+
+		/* Windows 3.1 puts this dialog in the upper left corner.
+		 * Please center it in the window. */
+		SetWindowPos(hwnd,HWND_TOP,
+			(((mom.right - mom.left) - (me.right - me.left)) / 2) + mom.left,
+			(((mom.bottom - mom.top) - (me.bottom - me.top)) / 2) + mom.top,
+			0,0,
+			SWP_NOSIZE);
+
+		return TRUE;
+	}
+	else if (message == WM_COMMAND) {
+		if (wparam == IDOK) {
+			EndDialog(hwnd,0);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #if TARGET_MSDOS == 16
 	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
@@ -330,6 +361,17 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			case IDCSM_DDBDUMP:
 				if (!work_state->isLoading)
 					DumpDDB(hwnd,work_state);
+				break;
+			case IDCSM_ABOUT:
+				{
+#if TARGET_MSDOS == 16
+					FARPROC p = MakeProcInstance((FARPROC)AboutDlgProc,myInstance);
+					DialogBox(myInstance,MAKEINTRESOURCE(IDD_ABOUT),hwnd,p);
+					FreeProcInstance(p);
+#else
+					DialogBox(myInstance,MAKEINTRESOURCE(IDD_ABOUT),hwnd,AboutDlgProc);
+#endif
+				}
 				break;
 			default:
 				return DefWindowProc(hwnd,message,wparam,lparam);
@@ -1194,6 +1236,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_INFO,"Image and display &info");
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
 		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_DDBDUMP,"&Dump DDB to file");
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_ABOUT,"&About this program");
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
 	}
 

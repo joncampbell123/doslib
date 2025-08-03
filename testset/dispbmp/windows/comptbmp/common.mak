@@ -32,6 +32,7 @@ $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj $(GENERAL1_RES)
 	%write tmp.cmd option quiet option map=$(GENERAL1_EXE).map system $(WLINK_SYSTEM) library $(HW_DOS_LIB) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general1.obj name $(GENERAL1_EXE)
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
+	%write tmp.cmd EXPORT AboutDlgProc.2 PRIVATE RESIDENT
 # NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
 #      However if you want to use Open Watcom C runtime functions like sprintf() you have to declare them FIXED. Something
 #      about how those C library functions are written don't work properly with MOVEABLE segments.
