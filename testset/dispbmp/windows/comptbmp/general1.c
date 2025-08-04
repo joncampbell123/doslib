@@ -1130,6 +1130,67 @@ static void ClipWindowToWorkArea(RECT *um) {
 	}
 }
 
+#if !defined(WIN386)
+static char *CommDlgGetOpenFileName(void) {
+	/* TODO:  If we SetErrorMode() to try to turn off all error dialogs in Windows 3.0, and then
+	 *        LoadLibrary(), it shows a dialog prompting the user to install that DLL. Why?
+	 *        The whole purpose of the call is to shut that dialog up!
+	 *
+	 *        Well in any case we'll just not try to LOADLIBRARY COMMDLG if below Windows 3.1 */
+	BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
+	HMODULE commdlg_dll;
+	UINT oldMode;
+
+	oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+#if TARGET_MSDOS == 16
+	commdlg_dll = LoadLibrary("COMMDLG");
+	if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GETOPENFILENAME");
+#else
+	commdlg_dll = LoadLibrary("COMDLG32.DLL");
+	if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GetOpenFileNameA");
+#endif
+	SetErrorMode(oldMode);
+
+	if (commdlg_dll && GETOPENFILENAMEPROC) {
+		OPENFILENAME ofn;
+		char *newname = malloc(PATH_MAX);
+		char *rt = NULL;
+
+		if (!newname) {
+			FreeLibrary(commdlg_dll);
+			return NULL;
+		}
+
+		memset(newname,0,PATH_MAX);
+		memset(&ofn,0,sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = (HWND)NULL;
+		ofn.hInstance = myInstance;
+		ofn.lpstrFilter =
+			"Bitmap files\x00" "*.bmp\x00"
+			"All files\x00" "*.*\x00"
+			"\x00";
+		ofn.lpstrFile = newname;
+		ofn.nMaxFile = PATH_MAX - 1;
+		ofn.lpstrTitle = "Pick a BMP file to display";
+		ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
+
+		if (!GETOPENFILENAMEPROC(&ofn)) {
+			FreeLibrary(commdlg_dll);
+			free(newname);
+			return NULL;
+		}
+
+		FreeLibrary(commdlg_dll);
+		rt = strdup(newname);
+		free(newname);
+		return rt;
+	}
+
+	return NULL;
+}
+#endif
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldIconPal = (HPALETTE)0;
@@ -1141,6 +1202,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	probe_dos();
 	detect_windows();
+
+	myInstance = hInstance;
 
 	iconWidth = GetSystemMetrics(SM_CXICON);
 	iconHeight = GetSystemMetrics(SM_CYICON);
@@ -1167,66 +1230,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
 	 *
 	 *        Why? */
-	/* TODO:  If we SetErrorMode() to try to turn off all error dialogs in Windows 3.0, and then
-	 *        LoadLibrary(), it shows a dialog prompting the user to install that DLL. Why?
-	 *        The whole purpose of the call is to shut that dialog up!
-	 *
-	 *        Well in any case we'll just not try to LOADLIBRARY COMMDLG if below Windows 3.1 */
 	if (*lpCmdLine) {
 		bmpfile = strdup(lpCmdLine);
 	}
-	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
 #if !defined(WIN386)
-		BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
-		HMODULE commdlg_dll;
-		UINT oldMode;
-
-		oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
-#if TARGET_MSDOS == 16
-		commdlg_dll = LoadLibrary("COMMDLG");
-		if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GETOPENFILENAME");
-#else
-		commdlg_dll = LoadLibrary("COMDLG32.DLL");
-		if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GetOpenFileNameA");
-#endif
-		SetErrorMode(oldMode);
-
-		if (commdlg_dll && GETOPENFILENAMEPROC) {
-			OPENFILENAME ofn;
-			char *newname = malloc(PATH_MAX);
-
-			if (!newname) {
-				FreeLibrary(commdlg_dll);
-				return 1;
-			}
-
-			memset(newname,0,PATH_MAX);
-			memset(&ofn,0,sizeof(ofn));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = (HWND)NULL;
-			ofn.hInstance = hInstance;
-			ofn.lpstrFilter =
-				"Bitmap files\x00" "*.bmp\x00"
-				"All files\x00" "*.*\x00"
-				"\x00";
-			ofn.lpstrFile = newname;
-			ofn.nMaxFile = PATH_MAX - 1;
-			ofn.lpstrTitle = "Pick a BMP file to display";
-			ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
-
-			if (!GETOPENFILENAMEPROC(&ofn)) {
-				FreeLibrary(commdlg_dll);
-				return 1;
-			}
-
-			FreeLibrary(commdlg_dll);
-			bmpfile = strdup(newname);
-			free(newname);
-		}
-#endif
+	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
+		bmpfile = CommDlgGetOpenFileName();
+		if (!bmpfile)
+			return 1;
 	}
-
-	myInstance = hInstance;
+#endif
 
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
