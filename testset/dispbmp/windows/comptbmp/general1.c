@@ -1073,6 +1073,17 @@ static void queryDesktopWorkArea(RECT *wa) {
 	}
 }
 
+static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned int width,const unsigned int height) {
+	/* start with client area */
+	um->top = um->left = 0;
+	um->bottom = height;
+	um->right = width;
+
+	/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
+	 * NTS: This adjusts the top/left negative and the bottom/right positive! */
+	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldIconPal = (HPALETTE)0;
@@ -1280,14 +1291,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 
-		/* start with client area */
-		um.top = um.left = 0;
-		um.right = bfr->width;
-		um.bottom = bfr->height;
-
-		/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
-		 * NTS: This adjusts the top/left negative and the bottom/right positive! */
-		AdjustWindowRect(&um,GetWindowLong(hwndMain,GWL_STYLE),FALSE/*no menu*/);
+		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
 
 		/* do it */
 		SetWindowPos(hwndMain,HWND_TOP,0,0,(int)(um.right-um.left),(int)(um.bottom-um.top),
