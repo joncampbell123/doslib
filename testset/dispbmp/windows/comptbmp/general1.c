@@ -1287,37 +1287,35 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
-	/* set the window size to the bitmap BEFORE showing it */
-	/* if our resizing put it off the screen edge, move it up */
+	/* set the window size to the bitmap BEFORE showing it. */
+	/* if our resizing put it off the screen edge, move it up. */
+	/* keep the window within the work area. */
 	{
-		int borderw,borderh;
-		BOOL move=FALSE;
 		RECT um;
 
+		/* NTS: This will return a rect with top,left,right,bottom adjusted outward i.e. top/left will be negative */
 		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
 
-		/* do it */
-		SetWindowPos(hwndMain,HWND_TOP,0,0,(int)(um.right-um.left),(int)(um.bottom-um.top),
-			SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOREDRAW);
-
-		/* Get window rect for the position to prevent the window from appearing off the bottom/right edge of the screen.
-		 * Then prevent the top/left from going off screen. */
-		GetWindowRect(hwndMain,&um);
-		borderw = GetSystemMetrics(SM_CXFRAME);
-		borderh = GetSystemMetrics(SM_CYFRAME);
+		/* adjust "um" according to current window position */
+		{
+			RECT curr={0};
+			GetWindowRect(hwndMain,&curr);
+			um.top += curr.top;
+			um.left += curr.left;
+			um.right += curr.left;
+			um.bottom += curr.top;
+		}
 
 		if (um.right > desktopWorkArea.right) {
 			const int adjust = um.right - desktopWorkArea.right;
 			um.right -= adjust;
 			um.left -= adjust;
-			move = TRUE;
 			if (um.left < desktopWorkArea.left) um.left = desktopWorkArea.left;
 		}
 		else if (um.left < desktopWorkArea.left) {
 			const int adjust = desktopWorkArea.left - um.left;
 			um.right += adjust;
 			um.left += adjust;
-			move = TRUE;
 			if (um.right > desktopWorkArea.right) um.right = desktopWorkArea.right;
 		}
 
@@ -1325,21 +1323,18 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			const int adjust = um.bottom - desktopWorkArea.bottom;
 			um.bottom -= adjust;
 			um.top -= adjust;
-			move = TRUE;
 			if (um.top < desktopWorkArea.top) um.top = desktopWorkArea.top;
 		}
 		else if (um.top < desktopWorkArea.top) {
 			const int adjust = desktopWorkArea.top - um.top;
 			um.bottom += adjust;
 			um.top += adjust;
-			move = TRUE;
 			if (um.bottom > desktopWorkArea.bottom) um.bottom = desktopWorkArea.bottom;
 		}
 
-		if (move) {
-			SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
-				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
-		}
+		/* do it */
+		SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
+			SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
 	}
 
 	ShowWindow(hwndMain,nCmdShow);
