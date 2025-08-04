@@ -1175,6 +1175,18 @@ static char *CommDlgGetOpenFileName(void) {
 	 *        The whole purpose of the call is to shut that dialog up!
 	 *
 	 *        Well in any case we'll just not try to LOADLIBRARY COMMDLG if below Windows 3.1 */
+
+	/* FIXME: Why does Windows 95 GetOpenFileName() refuse to work for our Win16 builds after a fresh
+	 *        boot, and then mysteriously work every time once any Win32 program that uses COMMDLG32.DLL
+	 *        loads?
+	 *
+	 *        Running any Win32 program that depends on COMMDLG32.DLL mysteriously makes it work.
+	 *        Our Win32 builds. NOTEPAD.EXE. You don't even have to open a file in that application,
+	 *        it just magically makes it work. Why?
+	 *
+	 *        Whatever the problem is, it seems they fixed it somewhere between Windows 95 and
+	 *        Windows 98 because this problem never occurs under Windows 98. */
+
 	BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
 	HMODULE commdlg_dll;
 	UINT oldMode;
