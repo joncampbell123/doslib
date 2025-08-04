@@ -336,11 +336,34 @@ BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	return FALSE;
 }
 
+static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned int width,const unsigned int height) {
+	/* start with client area */
+	um->top = um->left = 0;
+	um->bottom = height;
+	um->right = width;
+
+	/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
+	 * NTS: This adjusts the top/left negative and the bottom/right positive! */
+	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
+
+	/* normalize the rect so top/left is zero */
+	um->bottom -= um->top;
+	um->right -= um->left;
+	um->top = um->left = 0;
+}
+
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	struct wndstate_t FAR *work_state = &the_state;
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
+	}
+	else if (message == WM_WININICHANGE) {
+		RECT um;
+
+		ComputeIdealWindowSizeFromImage(&um,hwnd,work_state->bmpWidth,work_state->bmpHeight);
+		work_state->windowSizeMax.x = um.right;
+		work_state->windowSizeMax.y = um.bottom;
 	}
 	else if (message == WM_SYSCOMMAND) {
 		switch (LOWORD(wparam)) {
@@ -1095,22 +1118,6 @@ static void queryDesktopWorkArea(RECT *wa) {
 	}
 }
 
-static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned int width,const unsigned int height) {
-	/* start with client area */
-	um->top = um->left = 0;
-	um->bottom = height;
-	um->right = width;
-
-	/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
-	 * NTS: This adjusts the top/left negative and the bottom/right positive! */
-	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
-
-	/* normalize the rect so top/left is zero */
-	um->bottom -= um->top;
-	um->right -= um->left;
-	um->top = um->left = 0;
-}
-
 /* adjust "um" according to current window position */
 static void AddWindowPosToRect(RECT *um,HWND hwnd) {
 	RECT curr;
@@ -1368,13 +1375,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 	}
 
+	work_state->bmpWidth = bfr->width;
+	work_state->bmpHeight = bfr->height;
+
 	/* set the window size to the bitmap BEFORE showing it. */
 	/* if our resizing put it off the screen edge, move it up. */
 	/* keep the window within the work area. */
 	{
 		RECT um;
 
-		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
+		ComputeIdealWindowSizeFromImage(&um,hwndMain,work_state->bmpWidth,work_state->bmpHeight);
 		work_state->windowSizeMax.x = um.right;
 		work_state->windowSizeMax.y = um.bottom;
 		AddWindowPosToRect(&um,hwndMain);
@@ -1442,9 +1452,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			convert_scanline = convert_scanline_16bpp555;
 		}
 	}
-
-	work_state->bmpWidth = bfr->width;
-	work_state->bmpHeight = bfr->height;
 
 	{
 		RECT um;
