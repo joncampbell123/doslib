@@ -83,6 +83,7 @@ struct wndstate_t {
 	BOOL			isMinimized;
 	BOOL			scrollEnable;
 	BOOL			displayModeChangeReinit;
+	BOOL			hasDoneFirstTimeWindowPos;
 
 	BOOL			canBitfields; /* can do BI_BITFIELDS (Win95/WinNT 4) */
 	BOOL			can16bpp;     /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
@@ -438,8 +439,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
 
 		/* Did the display depth change? If so, this program needs to reinitialize itself! */
-		if (wparam && wparam != work_state->currentBPP)
+		if (wparam && wparam != work_state->currentBPP) {
 			work_state->displayModeChangeReinit = TRUE;
+			work_state->drawReady = FALSE; /* Windows just invalidated our bitmap, don't draw it, it's junk now! */
+		}
 	}
 	else if (message == WM_WININICHANGE) {
 		RECT um;
@@ -1397,7 +1400,8 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	/* set the window size to the bitmap BEFORE showing it. */
 	/* if our resizing put it off the screen edge, move it up. */
 	/* keep the window within the work area. */
-	{
+	/* But only do this ONCE at startup. */
+	if (!work_state->hasDoneFirstTimeWindowPos) {
 		RECT um;
 
 		ComputeIdealWindowSizeFromImage(&um,work_state->hwndMain,work_state->bmpWidth,work_state->bmpHeight);
@@ -1409,6 +1413,8 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		/* do it */
 		SetWindowPos(work_state->hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
 				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
+
+		work_state->hasDoneFirstTimeWindowPos = TRUE;
 	}
 
 	ShowWindow(work_state->hwndMain,nCmdShow);
