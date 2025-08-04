@@ -1291,109 +1291,26 @@ static char *CommDlgGetOpenFileName(void) {
 	return NULL;
 }
 
-int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
-	struct wndstate_t FAR *work_state;
+enum {
+	APPLOOP_RESTART = -1
+};
+
+static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	HPALETTE oldIconPal = (HPALETTE)0;
 	HPALETTE oldPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
-	char* bmpfile = NULL;
-	HWND hwndMain;
-	WNDCLASS wnd;
+	int retv = 0;
+	BOOL gmRet;
 	MSG msg;
 
-	probe_dos();
-	detect_windows();
-
-	myInstance = hInstance;
-
-	work_state = &the_state;
-	wndstate_init(work_state);
-
-	CheckIconSizes(work_state);
-
-	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
-		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
-			work_state->canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
-			work_state->can32bpp = TRUE; /* can use 32bpp ARGB */
-			work_state->can16bpp = TRUE; /* can use 16bpp 5:5:5 */
-			work_state->win95 = TRUE;
-		}
-	}
-
-	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
-	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
-
-	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
-	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
-	 *        especially in real-mode Windows 3.0.
-	 *
-	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
-	 *
-	 *        Why? */
-	if (*lpCmdLine) {
-		bmpfile = strdup(lpCmdLine);
-	}
-	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
-		bmpfile = CommDlgGetOpenFileName();
-		if (!bmpfile)
-			return 1;
-	}
-
-	if (bmpfile == NULL) {
-		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
-		return 1;
-	}
-
-	if (!hPrevInstance) {
-		wnd.style = CS_HREDRAW|CS_VREDRAW;
-		/* WARNING: If anyone ever tells you to use MakeProcInstance() with RegisterClass, ignore them.
-		 *          None of Microsoft's SDK samples do it either for RegisterClass (but they do it for
-		 *          DialogBox() though?). What MakeProcInstance() ultimately does is cause the window
-		 *          procedure, when it is called, to always get the same DS data segment as the initial
-		 *          instance. This code is written to work with the DS segment of each individual instance.
-		 *          Older versions of this code had an elaborate Win16 global memory handle array tracking
-		 *          system that was completely unnecessary because of this misunderstanding.  */
-		wnd.lpfnWndProc = (WNDPROC)WndProc;
-		wnd.cbClsExtra = 0;
-		wnd.cbWndExtra = 0;
-		wnd.hInstance = hInstance;
-		wnd.hIcon = (unsigned)NULL; /* do NOT load a class icon so that Windows 3.1 lets us paint our own icon */
-		wnd.hCursor = (unsigned)NULL;
-		wnd.hbrBackground = (unsigned)NULL;
-		wnd.lpszMenuName = NULL;
-		wnd.lpszClassName = WndProcClass;
-
-		if (!RegisterClass(&wnd)) {
-			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
-			return 1;
-		}
-	}
-
-	hwndMain = CreateWindow(WndProcClass,NULL,
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT,CW_USEDEFAULT,
-		320,200,
-		(unsigned)NULL,(unsigned)NULL,
-		hInstance,NULL);
-	if (!hwndMain) {
-		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
-		return 1;
-	}
-
-	/* first instance already called init on each element */
-	work_state->hwndMain = hwndMain;
-	work_state->bmpfile = bmpfile;
 	work_state->isLoading = TRUE;
+	InvalidateRect(work_state->hwndMain,(unsigned)NULL,TRUE);
 
 	{
-		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
-		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_INFO,"Image and display &info");
-		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_DDBDUMP,"&Dump DDB to file");
-		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING,IDCSM_ABOUT,"&About this program");
+		HMENU SysMenu = GetSystemMenu(work_state->hwndMain,FALSE);
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
+		EnableMenuItem(SysMenu,IDCSM_INFO,MF_DISABLED|MF_GRAYED);
+		EnableMenuItem(SysMenu,IDCSM_DDBDUMP,MF_DISABLED|MF_GRAYED);
 	}
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
@@ -1401,9 +1318,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		int rcaps;
 		HDC hDC;
 
-		hDC = GetDC(hwndMain);
+		hDC = GetDC(work_state->hwndMain);
 		rcaps = GetDeviceCaps(hDC,RASTERCAPS);
-		ReleaseDC(hwndMain,hDC);
+		ReleaseDC(work_state->hwndMain,hDC);
 
 		if (!(rcaps & RC_DIBTODEV)) {
 			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (SetDIBitsToDevice)","Err",MB_OK);
@@ -1415,12 +1332,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		int rcaps,szpal,bpp,planes;
 		HDC hDC;
 
-		hDC = GetDC(hwndMain);
+		hDC = GetDC(work_state->hwndMain);
 		bpp = GetDeviceCaps(hDC,BITSPIXEL);
 		rcaps = GetDeviceCaps(hDC,RASTERCAPS);
 		szpal = GetDeviceCaps(hDC,SIZEPALETTE);
 		planes = GetDeviceCaps(hDC,PLANES);
-		ReleaseDC(hwndMain,hDC);
+		ReleaseDC(work_state->hwndMain,hDC);
 
 		if ((rcaps & RC_PALETTE) && szpal > 0)
 			work_state->need_palette = TRUE;
@@ -1435,7 +1352,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
-	bfr = open_bmp(bmpfile);
+	bfr = open_bmp(work_state->bmpfile);
 	if (bfr == NULL) {
 		MessageBox((unsigned)NULL,"Failed to open BMP","Err",MB_OK);
 		return 1;
@@ -1454,22 +1371,22 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 
-		ComputeIdealWindowSizeFromImage(&um,hwndMain,work_state->bmpWidth,work_state->bmpHeight);
+		ComputeIdealWindowSizeFromImage(&um,work_state->hwndMain,work_state->bmpWidth,work_state->bmpHeight);
 		work_state->windowSizeMax.x = um.right;
 		work_state->windowSizeMax.y = um.bottom;
-		AddWindowPosToRect(&um,hwndMain);
+		AddWindowPosToRect(&um,work_state->hwndMain);
 		ClipWindowToWorkArea(work_state,&um);
 
 		/* do it */
-		SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
-			SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
+		SetWindowPos(work_state->hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
+				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
 	}
 
-	ShowWindow(hwndMain,nCmdShow);
-	UpdateWindow(hwndMain);
+	ShowWindow(work_state->hwndMain,nCmdShow);
+	UpdateWindow(work_state->hwndMain);
 
-	work_state->isMinimized = IsIconic(hwndMain);
-	UpdateTitleBar(hwndMain,work_state);
+	work_state->isMinimized = IsIconic(work_state->hwndMain);
+	UpdateTitleBar(work_state->hwndMain,work_state);
 
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
@@ -1488,7 +1405,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			convert_scanline = convert_scanline_32to24;
 		}
 		else if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else {
@@ -1504,12 +1421,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 				convert_scanline = convert_scanline_16_555to24;
 		}
 		else if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else if (work_state->canBitfields &&
-			11u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 6u == bfr->green_width && 5u == bfr->blue_width) {
+				11u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
+				5u == bfr->red_width && 6u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else if (bfr->green_width > 5u) {
@@ -1525,8 +1442,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	{
 		RECT um;
-		GetClientRect(hwndMain,&um); // with no scroll bars
-		PostMessage(hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
+		GetClientRect(work_state->hwndMain,&um); // with no scroll bars
+		PostMessage(work_state->hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
 	}
 
 	draw_progress(work_state,0,bfr->height);
@@ -1657,7 +1574,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	{
-		HDC hdc = GetDC(hwndMain);
+		HDC hdc = GetDC(work_state->hwndMain);
 
 		work_state->bmpDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpDC) {
@@ -1681,7 +1598,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		work_state->bmpOld = SelectObject(work_state->bmpDC,work_state->bmpHandle);
 
-		ReleaseDC(hwndMain,hdc);
+		ReleaseDC(work_state->hwndMain,hdc);
 	}
 
 	/* NTS: Unlike the main bitmap, this time we do NOT select the palette into the icon DC.
@@ -1705,7 +1622,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      So: Windows 3.1: Select the palette into the bitmap icon, PAL_COLORS.
 	 *          Windows 95: Do not select palette, RGB_COLORS */
 	{
-		HDC hdc = GetDC(hwndMain);
+		HDC hdc = GetDC(work_state->hwndMain);
 
 		work_state->bmpIconDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpIconDC) {
@@ -1726,10 +1643,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		work_state->bmpIconOld = SelectObject(work_state->bmpIconDC,work_state->bmpIcon);
 
-		ReleaseDC(hwndMain,hdc);
+		ReleaseDC(work_state->hwndMain,hdc);
 	}
 	if (work_state->win95) {
-		HDC hdc = GetDC(hwndMain);
+		HDC hdc = GetDC(work_state->hwndMain);
 
 		work_state->bmpIconSmallDC = CreateCompatibleDC(hdc);
 		if (!work_state->bmpIconSmallDC) {
@@ -1745,7 +1662,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		work_state->bmpIconSmallOld = SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmall);
 
-		ReleaseDC(hwndMain,hdc);
+		ReleaseDC(work_state->hwndMain,hdc);
 	}
 
 	{
@@ -1785,15 +1702,15 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpIconIcon = bitmap2icon(work_state->bmpIcon);
 
 	if (work_state->bmpIconIcon)
-		SendMessage(hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
 	if (work_state->bmpIconSmallIcon)
-		SendMessage(hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
 
 	work_state->isLoading = FALSE;
 	work_state->drawReady = TRUE;
 
 	{
-		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		HMENU SysMenu = GetSystemMenu(work_state->hwndMain,FALSE);
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_ENABLED);
 		EnableMenuItem(SysMenu,IDCSM_INFO,MF_ENABLED);
 		EnableMenuItem(SysMenu,IDCSM_DDBDUMP,MF_ENABLED);
@@ -1811,10 +1728,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	/* force redraw */
-	InvalidateRect(hwndMain,(unsigned)NULL,FALSE);
-	UpdateWindow(hwndMain);
+	InvalidateRect(work_state->hwndMain,(unsigned)NULL,FALSE);
+	UpdateWindow(work_state->hwndMain);
 
-	while (GetMessage(&msg,(unsigned)NULL,0,0)) {
+	while (gmRet=GetMessage(&msg,(unsigned)NULL,0,0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
@@ -1824,6 +1741,117 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	cleanup_bmpicon(work_state);
 	cleanup_bmppalette(work_state);
 
-	return msg.wParam;
+	if (gmRet == FALSE) /* WM_QUIT */
+		return msg.wParam;
+
+	return retv;
+}
+
+int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
+	struct wndstate_t FAR *work_state;
+	char* bmpfile = NULL;
+	HWND hwndMain;
+	WNDCLASS wnd;
+	int retv;
+
+	probe_dos();
+	detect_windows();
+
+	myInstance = hInstance;
+
+	work_state = &the_state;
+	wndstate_init(work_state);
+
+	CheckIconSizes(work_state);
+
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
+			work_state->canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
+			work_state->can32bpp = TRUE; /* can use 32bpp ARGB */
+			work_state->can16bpp = TRUE; /* can use 16bpp 5:5:5 */
+			work_state->win95 = TRUE;
+		}
+	}
+
+	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
+	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
+
+	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
+	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
+	 *        especially in real-mode Windows 3.0.
+	 *
+	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
+	 *
+	 *        Why? */
+	if (*lpCmdLine) {
+		bmpfile = strdup(lpCmdLine);
+	}
+	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
+		bmpfile = CommDlgGetOpenFileName();
+		if (!bmpfile)
+			return 1;
+	}
+
+	if (bmpfile == NULL) {
+		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
+		return 1;
+	}
+
+	if (!hPrevInstance) {
+		wnd.style = CS_HREDRAW|CS_VREDRAW;
+		/* WARNING: If anyone ever tells you to use MakeProcInstance() with RegisterClass, ignore them.
+		 *          None of Microsoft's SDK samples do it either for RegisterClass (but they do it for
+		 *          DialogBox() though?). What MakeProcInstance() ultimately does is cause the window
+		 *          procedure, when it is called, to always get the same DS data segment as the initial
+		 *          instance. This code is written to work with the DS segment of each individual instance.
+		 *          Older versions of this code had an elaborate Win16 global memory handle array tracking
+		 *          system that was completely unnecessary because of this misunderstanding.  */
+		wnd.lpfnWndProc = (WNDPROC)WndProc;
+		wnd.cbClsExtra = 0;
+		wnd.cbWndExtra = 0;
+		wnd.hInstance = hInstance;
+		wnd.hIcon = (unsigned)NULL; /* do NOT load a class icon so that Windows 3.1 lets us paint our own icon */
+		wnd.hCursor = (unsigned)NULL;
+		wnd.hbrBackground = (unsigned)NULL;
+		wnd.lpszMenuName = NULL;
+		wnd.lpszClassName = WndProcClass;
+
+		if (!RegisterClass(&wnd)) {
+			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
+			return 1;
+		}
+	}
+
+	hwndMain = CreateWindow(WndProcClass,NULL,
+		WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT,CW_USEDEFAULT,
+		320,200,
+		(unsigned)NULL,(unsigned)NULL,
+		hInstance,NULL);
+	if (!hwndMain) {
+		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
+		return 1;
+	}
+
+	/* first instance already called init on each element */
+	work_state->hwndMain = hwndMain;
+	work_state->bmpfile = bmpfile;
+
+	{
+		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info");
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_DDBDUMP,"&Dump DDB to file");
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_ABOUT,"&About this program");
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
+	}
+
+	do {
+		retv = AppLoop(work_state,nCmdShow);
+	} while (retv < 0);
+
+	return retv;
 }
 
