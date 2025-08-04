@@ -84,6 +84,7 @@ struct wndstate_t {
 	HDC			bmpDC;
 	HDC			bmpIconDC;
 	HDC			bmpIconSmallDC;
+	POINT			windowSizeMax;
 	unsigned		bmpDIBmode;
 	unsigned		bmpIconDIBmode;
 	uint8_t			src_red_shift;
@@ -389,6 +390,27 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		else {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
+	}
+	else if (message == WM_GETMINMAXINFO) {
+#if TARGET_MSDOS == 16
+		MINMAXINFO FAR *mmi = (MINMAXINFO FAR*)lparam;
+#else
+		MINMAXINFO *mmi = (MINMAXINFO*)lparam;
+#endif
+
+		/* don't let the user maximize the window beyond the image size */
+		if (mmi->ptMaxSize.x > work_state->windowSizeMax.x)
+			mmi->ptMaxSize.x = work_state->windowSizeMax.x;
+		if (mmi->ptMaxSize.y > work_state->windowSizeMax.y)
+			mmi->ptMaxSize.y = work_state->windowSizeMax.y;
+
+		/* don't let the user resize the window beyond the image size */
+		if (mmi->ptMaxTrackSize.x > work_state->windowSizeMax.x)
+			mmi->ptMaxTrackSize.x = work_state->windowSizeMax.x;
+		if (mmi->ptMaxTrackSize.y > work_state->windowSizeMax.y)
+			mmi->ptMaxTrackSize.y = work_state->windowSizeMax.y;
+
+		return 0;
 	}
 	else if (message == WM_SIZE || message == WM_USER_SIZECHECK) {
 		int nWidth,nHeight;
@@ -1353,6 +1375,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		RECT um;
 
 		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
+		work_state->windowSizeMax.x = um.right;
+		work_state->windowSizeMax.y = um.bottom;
 		AddWindowPosToRect(&um,hwndMain);
 		ClipWindowToWorkArea(&um);
 
