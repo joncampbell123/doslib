@@ -1082,6 +1082,11 @@ static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned in
 	/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
 	 * NTS: This adjusts the top/left negative and the bottom/right positive! */
 	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
+
+	/* normalize the rect so top/left is zero */
+	um->bottom -= um->top;
+	um->right -= um->left;
+	um->top = um->left = 0;
 }
 
 /* adjust "um" according to current window position */
@@ -1334,7 +1339,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	{
 		RECT um;
 
-		/* NTS: This will return a rect with top,left,right,bottom adjusted outward i.e. top/left will be negative */
 		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
 		AddWindowPosToRect(&um,hwndMain);
 		ClipWindowToWorkArea(&um);
