@@ -12,12 +12,16 @@
 #include <i86.h>
 
 #include <windows.h>
-#if !defined(WIN386)
-# include <commdlg.h>
-#endif
+#include <commdlg.h>
 
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
+
+/* This code crashes under Win386 no matter what I try under every version of Windows I test.
+ * Fuck it, we're not supporting Watcom Win386. */
+#if TARGET_MSDOS == 32 && defined(WIN386)
+# error This code does not support running under Watcom Win386
+#endif
 
 #include "resource.h"
 
@@ -99,7 +103,7 @@ struct wndstate_t {
 };
 
 static void wndstate_init(struct wndstate_t FAR *w) {
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 	_fmemset(w,0,sizeof(*w));
 #else
 	memset(w,0,sizeof(*w));
@@ -183,12 +187,8 @@ static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned i
 }
 
 static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int FAR *scrollPos,const unsigned int req,const unsigned int nPos) {
-# if defined(WIN386)
-	short pMin=0,pMax=0;
-# else
-	int pMin=0,pMax=0;
-# endif
 	const int cPos = GetScrollPos(hwnd,sb);
+	int pMin = 0,pMax = 0;
 	BOOL redraw = FALSE;
 	RECT um;
 
@@ -388,7 +388,7 @@ static void queryDesktopWorkArea(RECT *wa) {
 				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
 			}
 		}
-#elif TARGET_MSDOS == 32 && !defined(WIN386)
+#elif TARGET_MSDOS == 32
 		HMODULE user = GetModuleHandle("USER32");
 		if (user) {
 			BOOL WINAPI FAR (*SYSPARAMINFO)(UINT,UINT,void*,UINT) = GetProcAddress(user,"SystemParametersInfoA");
@@ -570,7 +570,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	}
 	else if (message == WM_HSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
-#if TARGET_MSDOS == 32 && !defined(WIN386)
+#if TARGET_MSDOS == 32
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = HIWORD(wparam);
 #else
@@ -581,7 +581,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	}
 	else if (message == WM_VSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
-#if TARGET_MSDOS == 32 && !defined(WIN386)
+#if TARGET_MSDOS == 32
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = HIWORD(wparam);
 #else
@@ -1180,7 +1180,6 @@ static void ClipWindowToWorkArea(RECT *um) {
 	}
 }
 
-#if !defined(WIN386)
 static char *CommDlgGetOpenFileName(void) {
 	/* TODO:  If we SetErrorMode() to try to turn off all error dialogs in Windows 3.0, and then
 	 *        LoadLibrary(), it shows a dialog prompting the user to install that DLL. Why?
@@ -1253,7 +1252,6 @@ static char *CommDlgGetOpenFileName(void) {
 
 	return NULL;
 }
-#endif
 
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
@@ -1297,13 +1295,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	if (*lpCmdLine) {
 		bmpfile = strdup(lpCmdLine);
 	}
-#if !defined(WIN386)
 	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
 		bmpfile = CommDlgGetOpenFileName();
 		if (!bmpfile)
 			return 1;
 	}
-#endif
 
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
@@ -1565,7 +1561,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 
 		/* icon is the same */
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 		_fmemcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
 #else
 		memcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
