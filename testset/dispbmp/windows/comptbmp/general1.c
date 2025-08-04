@@ -1202,14 +1202,13 @@ static char *CommDlgGetOpenFileName(void) {
 		memset(newname,0,PATH_MAX);
 		memset(&ofn,0,sizeof(ofn));
 		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = (HWND)NULL;
-		ofn.hInstance = myInstance;
 		ofn.lpstrFilter =
 			"Bitmap files\x00" "*.bmp\x00"
 			"All files\x00" "*.*\x00"
-			"\x00";
+			"\x00\x00";
 		ofn.lpstrFile = newname;
 		ofn.nMaxFile = PATH_MAX - 1;
+		ofn.nFilterIndex = 1;
 		ofn.lpstrTitle = "Pick a BMP file to display";
 		ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
 
@@ -1224,6 +1223,9 @@ static char *CommDlgGetOpenFileName(void) {
 		free(newname);
 		return rt;
 	}
+
+	if (commdlg_dll)
+		FreeLibrary(commdlg_dll);
 
 	return NULL;
 }
