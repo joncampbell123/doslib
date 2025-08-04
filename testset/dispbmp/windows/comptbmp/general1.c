@@ -472,7 +472,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		if (work_state->isMinimized) {
 			DefWindowProc(hwnd,WM_ICONERASEBKGND,wparam,lparam);
 		}
-		else {
+		else if (work_state->isLoading) { /* filling the background is only necessary when loading, the image fills the window now */
 			if (GetUpdateRect(hwnd,&um,FALSE)) {
 				HBRUSH oldBrush,newBrush;
 				HPEN oldPen,newPen;
