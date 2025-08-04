@@ -293,6 +293,18 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 		}
 	}
 
+	w += snprintf(w,(int)(f-w),
+		"\nMax size: %ux%u",
+		(unsigned)work_state->windowSizeMax.x,
+		(unsigned)work_state->windowSizeMax.y);
+
+	w += snprintf(w,(int)(f-w),
+		" Desktop work area: %dx%d-%dx%d",
+		(int)desktopWorkArea.left,
+		(int)desktopWorkArea.top,
+		(int)desktopWorkArea.right,
+		(int)desktopWorkArea.bottom);
+
 	MessageBox(hwnd,tmp,"Info",MB_OK);
 
 	free(tmp);
