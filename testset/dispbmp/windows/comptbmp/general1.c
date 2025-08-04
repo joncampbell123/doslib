@@ -27,6 +27,10 @@
 
 #include "libbmp.h"
 
+#ifndef WM_DISPLAYCHANGE
+# define WM_DISPLAYCHANGE 0x007E
+#endif
+
 #ifndef WM_SETICON
 # define WM_SETICON 0x0080
 #endif
@@ -419,6 +423,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
+	}
+	else if (message == WM_DISPLAYCHANGE) {
+		/* Windows 95: The user or someone else changed the display resolution */
+		queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
 	}
 	else if (message == WM_WININICHANGE) {
 		RECT um;
@@ -1110,15 +1118,22 @@ static void cleanup_bmpinfoiconraw(struct wndstate_t *work_state) {
 	}
 }
 
+static void cleanup_bmpiconsmallicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
+	work_state->bmpIconSmallIcon = (unsigned)NULL;
+}
+
 static void cleanup_bmpiconsmall(struct wndstate_t FAR *work_state) {
 	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
 	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
 	work_state->bmpIconSmall = (unsigned)NULL;
 	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
 	work_state->bmpIconSmallDC = (unsigned)NULL;
+}
 
-	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
-	work_state->bmpIconSmallIcon = (unsigned)NULL;
+static void cleanup_bmpiconicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
+	work_state->bmpIconIcon = (unsigned)NULL;
 }
 
 static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
@@ -1127,9 +1142,6 @@ static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
 	work_state->bmpIcon = (unsigned)NULL;
 	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
 	work_state->bmpIconDC = (unsigned)NULL;
-
-	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
-	work_state->bmpIconIcon = (unsigned)NULL;
 }
 
 static void cleanup_bmp(struct wndstate_t *work_state) {
@@ -1738,7 +1750,9 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 
 	cleanup_bmp(work_state);
 	cleanup_bmpiconsmall(work_state);
+	cleanup_bmpiconsmallicon(work_state);
 	cleanup_bmpicon(work_state);
+	cleanup_bmpiconicon(work_state);
 	cleanup_bmppalette(work_state);
 
 	if (gmRet == FALSE) /* WM_QUIT */
