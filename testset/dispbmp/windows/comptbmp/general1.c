@@ -1770,6 +1770,14 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		}
 	}
 
+	/* Before destroying the icons, remove them from the window.
+	 * If we leave destroyed icons in the window, the Windows 95 explorer shell might crash at random
+	 * drawing a destroyed icon while this code goes into reloading state after display mode change. */
+	if (work_state->bmpIconIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_BIG, (LPARAM)NULL);
+	if (work_state->bmpIconSmallIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)NULL);
+
 	cleanup_bmp(work_state);
 	cleanup_bmpiconsmall(work_state);
 	cleanup_bmpiconsmallicon(work_state);
