@@ -1084,6 +1084,47 @@ static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned in
 	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
 }
 
+/* adjust "um" according to current window position */
+static void AddWindowPosToRect(RECT *um,HWND hwnd) {
+	RECT curr;
+
+	memset(&curr,0,sizeof(curr));
+	GetWindowRect(hwnd,&curr);
+
+	um->top += curr.top;
+	um->left += curr.left;
+	um->right += curr.left;
+	um->bottom += curr.top;
+}
+
+static void ClipWindowToWorkArea(RECT *um) {
+	if (um->right > desktopWorkArea.right) {
+		const int adjust = um->right - desktopWorkArea.right;
+		um->right -= adjust;
+		um->left -= adjust;
+		if (um->left < desktopWorkArea.left) um->left = desktopWorkArea.left;
+	}
+	else if (um->left < desktopWorkArea.left) {
+		const int adjust = desktopWorkArea.left - um->left;
+		um->right += adjust;
+		um->left += adjust;
+		if (um->right > desktopWorkArea.right) um->right = desktopWorkArea.right;
+	}
+
+	if (um->bottom > desktopWorkArea.bottom) {
+		const int adjust = um->bottom - desktopWorkArea.bottom;
+		um->bottom -= adjust;
+		um->top -= adjust;
+		if (um->top < desktopWorkArea.top) um->top = desktopWorkArea.top;
+	}
+	else if (um->top < desktopWorkArea.top) {
+		const int adjust = desktopWorkArea.top - um->top;
+		um->bottom += adjust;
+		um->top += adjust;
+		if (um->bottom > desktopWorkArea.bottom) um->bottom = desktopWorkArea.bottom;
+	}
+}
+
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	struct wndstate_t FAR *work_state;
 	HPALETTE oldIconPal = (HPALETTE)0;
@@ -1295,42 +1336,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 		/* NTS: This will return a rect with top,left,right,bottom adjusted outward i.e. top/left will be negative */
 		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
-
-		/* adjust "um" according to current window position */
-		{
-			RECT curr={0};
-			GetWindowRect(hwndMain,&curr);
-			um.top += curr.top;
-			um.left += curr.left;
-			um.right += curr.left;
-			um.bottom += curr.top;
-		}
-
-		if (um.right > desktopWorkArea.right) {
-			const int adjust = um.right - desktopWorkArea.right;
-			um.right -= adjust;
-			um.left -= adjust;
-			if (um.left < desktopWorkArea.left) um.left = desktopWorkArea.left;
-		}
-		else if (um.left < desktopWorkArea.left) {
-			const int adjust = desktopWorkArea.left - um.left;
-			um.right += adjust;
-			um.left += adjust;
-			if (um.right > desktopWorkArea.right) um.right = desktopWorkArea.right;
-		}
-
-		if (um.bottom > desktopWorkArea.bottom) {
-			const int adjust = um.bottom - desktopWorkArea.bottom;
-			um.bottom -= adjust;
-			um.top -= adjust;
-			if (um.top < desktopWorkArea.top) um.top = desktopWorkArea.top;
-		}
-		else if (um.top < desktopWorkArea.top) {
-			const int adjust = desktopWorkArea.top - um.top;
-			um.bottom += adjust;
-			um.top += adjust;
-			if (um.bottom > desktopWorkArea.bottom) um.bottom = desktopWorkArea.bottom;
-		}
+		AddWindowPosToRect(&um,hwndMain);
+		ClipWindowToWorkArea(&um);
 
 		/* do it */
 		SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
