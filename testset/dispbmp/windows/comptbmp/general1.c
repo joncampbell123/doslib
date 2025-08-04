@@ -61,7 +61,6 @@ static BOOL			win95 = FALSE;
 
 static unsigned short		iconWidth,iconHeight;
 static unsigned short		iconSmallWidth,iconSmallHeight;
-static unsigned char*		bmpInfoIconRaw = NULL;
 static RECT			desktopWorkArea;
 
 struct wndstate_t {
@@ -73,6 +72,8 @@ struct wndstate_t {
 	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
 	unsigned char*		bmpfile;
+
+	unsigned char*		bmpInfoIconRaw;
 
 	BOOL			drawReady;
 	BOOL			isLoading;
@@ -113,8 +114,8 @@ static void wndstate_init(struct wndstate_t FAR *w) {
 
 static struct wndstate_t the_state;
 
-static inline BITMAPINFOHEADER FAR* bmpInfoIcon(void) {
-	return (BITMAPINFOHEADER FAR*)(bmpInfoIconRaw);
+static inline BITMAPINFOHEADER FAR* bmpInfoIcon(struct wndstate_t FAR *w) {
+	return (BITMAPINFOHEADER FAR*)(w->bmpInfoIconRaw);
 }
 
 static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
@@ -765,10 +766,10 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 	const unsigned int cline = work_state->bmpHeight - 1u - line;
 #if TARGET_MSDOS == 16
 	BITMAPINFO FAR *bm = (BITMAPINFO FAR*)bmpInfo(work_state);
-	BITMAPINFO FAR *bmicon = (BITMAPINFO FAR*)bmpInfoIcon();
+	BITMAPINFO FAR *bmicon = (BITMAPINFO FAR*)bmpInfoIcon(work_state);
 #else
 	BITMAPINFO *bm = (BITMAPINFO*)bmpInfo(work_state);
-	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon();
+	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon(work_state);
 #endif
 	unsigned int icony,iconsmy;
 
@@ -1091,12 +1092,22 @@ enum {
 	CONV_16TO24
 };
 
+static void cleanup_bmpinfoiconraw(struct wndstate_t *work_state) {
+	if (work_state->bmpInfoIconRaw) {
+		free(work_state->bmpInfoIconRaw);
+		work_state->bmpInfoIconRaw = NULL;
+	}
+}
+
 static void cleanup_bmpiconsmall(struct wndstate_t FAR *work_state) {
 	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
 	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
 	work_state->bmpIconSmall = (unsigned)NULL;
 	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
 	work_state->bmpIconSmallDC = (unsigned)NULL;
+
+	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
+	work_state->bmpIconSmallIcon = (unsigned)NULL;
 }
 
 static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
@@ -1105,6 +1116,22 @@ static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
 	work_state->bmpIcon = (unsigned)NULL;
 	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
 	work_state->bmpIconDC = (unsigned)NULL;
+
+	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
+	work_state->bmpIconIcon = (unsigned)NULL;
+}
+
+static void cleanup_bmp(struct wndstate_t *work_state) {
+	if (work_state->bmpHandle && work_state->bmpOld) SelectObject(work_state->bmpDC,work_state->bmpOld);
+	if (work_state->bmpHandle) DeleteObject(work_state->bmpHandle);
+	work_state->bmpHandle = (unsigned)NULL;
+	if (work_state->bmpDC) DeleteDC(work_state->bmpDC);
+	work_state->bmpDC = (unsigned)NULL;
+}
+
+static void cleanup_bmppalette(struct wndstate_t *work_state) {
+	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
+	work_state->bmpPalette = (unsigned)NULL;
 }
 
 static HICON bitmap2icon(HBITMAP hbmp) {
@@ -1507,12 +1534,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	/* allocate temporary buffer */
-	bmpInfoIconRaw = malloc(sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD)));
+	work_state->bmpInfoIconRaw = malloc(sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD)));
 
 	/* set it up */
 	{
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
-		BITMAPINFOHEADER FAR *bihicon = bmpInfoIcon();/*NTS: data area is big enough even for a 256-color paletted file*/
+		BITMAPINFOHEADER FAR *bihicon = bmpInfoIcon(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
 		work_state->srcBpp = bfr->bpp;
@@ -1761,10 +1788,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	/* we don't need this anymore */
-	if (bmpInfoIconRaw) {
-		free(bmpInfoIconRaw);
-		bmpInfoIconRaw = NULL;
-	}
+	cleanup_bmpinfoiconraw(work_state);
 
 	/* Windows 95 will never WM_PAINT our window when minimized.
 	 * For Windows 95, discard our bmpIcon and bmpSmallIcon bitmaps, we don't need them anymore.
@@ -1783,23 +1807,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		DispatchMessage(&msg);
 	}
 
-	if (work_state->bmpHandle && work_state->bmpOld) SelectObject(work_state->bmpDC,work_state->bmpOld);
-	if (work_state->bmpHandle) DeleteObject(work_state->bmpHandle);
-	work_state->bmpHandle = (unsigned)NULL;
-	if (work_state->bmpDC) DeleteDC(work_state->bmpDC);
-	work_state->bmpDC = (unsigned)NULL;
-
+	cleanup_bmp(work_state);
 	cleanup_bmpiconsmall(work_state);
 	cleanup_bmpicon(work_state);
-
-	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
-	work_state->bmpIconSmallIcon = (unsigned)NULL;
-
-	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
-	work_state->bmpIconIcon = (unsigned)NULL;
-
-	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
-	work_state->bmpPalette = (unsigned)NULL;
+	cleanup_bmppalette(work_state);
 
 	return msg.wParam;
 }
