@@ -1735,6 +1735,12 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	 * We draw our own icon in Windwos 3.1, and Windows 3.1 only allows association of an
 	 * icon to a window at the window class level anyway, while Windows 95 allows per-icon
 	 * using WM_SETICON. */
+	/* NTS: WM_SETICON works for both Win16 and Win32 under Windows 95, 98, and ME.
+	 *      Windows XP however ignores Win16 WM_SETICON calls. That means if you run these Win16
+	 *      builds under XP, you will only see a generic Windows icon in the taskbar, not the
+	 *      icon we're trying to display. Perhaps NTVDM.EXE in Windows XP has no translation
+	 *      code for WM_SETICON and Microsoft didn't care enough to support it. After all,
+	 *      WM_SETICON didn't exist in Windows 3.1 so why should NTVDM.EXE support it? */
 	if (work_state->bmpIconSmall && work_state->iconSmallWidth && work_state->iconSmallHeight && work_state->win95)
 		work_state->bmpIconSmallIcon = bitmap2icon(work_state->bmpIconSmall);
 	if (work_state->bmpIcon && work_state->win95)
