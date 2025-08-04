@@ -1045,6 +1045,11 @@ static HICON bitmap2icon(HBITMAP hbmp) {
  *
  * SystemParametersInfo() did not exist in Windows 3.0, hence the GetProcAddress() call. */
 static void queryDesktopWorkArea(RECT *wa) {
+	wa->top = 0;
+	wa->left = 0;
+	wa->right = GetSystemMetrics(SM_CXSCREEN);
+	wa->bottom = GetSystemMetrics(SM_CYSCREEN);
+
 	if (win95) {
 #if TARGET_MSDOS == 16
 		HMODULE user = GetModuleHandle("USER");
@@ -1085,11 +1090,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	iconSmallWidth = GetSystemMetrics(SM_CXSMICON);
 	iconSmallHeight = GetSystemMetrics(SM_CYSMICON);
-
-	desktopWorkArea.top = 0;
-	desktopWorkArea.left = 0;
-	desktopWorkArea.right = GetSystemMetrics(SM_CXSCREEN);
-	desktopWorkArea.bottom = GetSystemMetrics(SM_CYSCREEN);
 
 	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
