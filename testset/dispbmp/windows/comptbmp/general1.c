@@ -1288,7 +1288,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	/* set the window size to the bitmap BEFORE showing it */
+	/* if our resizing put it off the screen edge, move it up */
 	{
+		int borderw,borderh;
+		BOOL move=FALSE;
 		RECT um;
 
 		ComputeIdealWindowSizeFromImage(&um,hwndMain,bfr->width,bfr->height);
@@ -1296,17 +1299,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		/* do it */
 		SetWindowPos(hwndMain,HWND_TOP,0,0,(int)(um.right-um.left),(int)(um.bottom-um.top),
 			SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOREDRAW);
-	}
-	/* if our resizing put it off the screen edge, move it up */
-	{
-		int borderw,borderh;
-		BOOL move=FALSE;
-		HDC screenDC;
-		RECT um;
 
 		/* Get window rect for the position to prevent the window from appearing off the bottom/right edge of the screen.
 		 * Then prevent the top/left from going off screen. */
-		screenDC = GetDC((HWND)NULL);
 		GetWindowRect(hwndMain,&um);
 		borderw = GetSystemMetrics(SM_CXFRAME);
 		borderh = GetSystemMetrics(SM_CYFRAME);
@@ -1345,8 +1340,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
 				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
 		}
-
-		ReleaseDC((HWND)NULL,screenDC);
 	}
 
 	ShowWindow(hwndMain,nCmdShow);
