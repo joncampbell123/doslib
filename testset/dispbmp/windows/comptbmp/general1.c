@@ -64,6 +64,9 @@ static HINSTANCE near		myInstance;
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
 
+	unsigned int		currentBPP;
+	unsigned int		currentPlanes;
+
 	unsigned int		bmpWidth;
 	unsigned int		bmpHeight;
 	unsigned int		bmpStride;
@@ -312,6 +315,11 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 		(int)work_state->desktopWorkArea.top,
 		(int)work_state->desktopWorkArea.right,
 		(int)work_state->desktopWorkArea.bottom);
+
+	w += snprintf(w,(int)(f-w),
+		"\nDisplay: %ubpp %uplanes",
+		(int)work_state->currentBPP,
+		(int)work_state->currentPlanes);
 
 	MessageBox(hwnd,tmp,"Info",MB_OK);
 
@@ -1362,6 +1370,10 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 				work_state->can16bpp = TRUE;
 			}
 		}
+
+		/* keep track in case of Windows 95 display mode changes */
+		work_state->currentBPP = bpp;
+		work_state->currentPlanes = planes;
 	}
 
 	bfr = open_bmp(work_state->bmpfile);
