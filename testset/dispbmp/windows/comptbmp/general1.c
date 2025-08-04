@@ -352,6 +352,44 @@ static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned in
 	um->top = um->left = 0;
 }
 
+/* For Windows 95, we want to know how much screen we can use without overlapping the taskbar.
+ * Note that the user can put the taskbar on any side of the screen they want, therefore even
+ * though the most common case is a RECT ot 0,0,screen width,screen height-taskbar, it is also
+ * possible to put the taskbar on top and get 0,taskbar,screen width,screen height. Windows
+ * returns a RECT for a reason, obviously!
+ *
+ * Windows 3.1 will not fill in the rectangle at all, because GETWORKAREA did not exist at the time.
+ *
+ * SystemParametersInfo() did not exist in Windows 3.0, hence the GetProcAddress() call. */
+static void queryDesktopWorkArea(RECT *wa) {
+	wa->top = 0;
+	wa->left = 0;
+	wa->right = GetSystemMetrics(SM_CXSCREEN);
+	wa->bottom = GetSystemMetrics(SM_CYSCREEN);
+
+	if (win95) {
+#if TARGET_MSDOS == 16
+		HMODULE user = GetModuleHandle("USER");
+		if (user) {
+			BOOL PASCAL FAR (*SYSPARAMINFO)(UINT,UINT,void FAR*,UINT) = GetProcAddress(user,"SYSTEMPARAMETERSINFO");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#elif TARGET_MSDOS == 32 && !defined(WIN386)
+		HMODULE user = GetModuleHandle("USER32");
+		if (user) {
+			BOOL WINAPI FAR (*SYSPARAMINFO)(UINT,UINT,void*,UINT) = GetProcAddress(user,"SystemParametersInfoA");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#else
+		(void)wa;
+#endif
+	}
+}
+
 LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	struct wndstate_t FAR *work_state = &the_state;
 
@@ -361,9 +399,18 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	else if (message == WM_WININICHANGE) {
 		RECT um;
 
+		/* The user might have changed border size in Windows 3.1.
+		 * Notice that Windows 95 and later don't let you change border size anymore.
+		 * Maybe because 12-year old me thought it was funny to set the Windows 3.1 sizing borders to
+		 * absurdly large values so that every window looked like they were ready to play bumper cars,
+		 * ha ha. --Jon */
 		ComputeIdealWindowSizeFromImage(&um,hwnd,work_state->bmpWidth,work_state->bmpHeight);
 		work_state->windowSizeMax.x = um.right;
 		work_state->windowSizeMax.y = um.bottom;
+
+		/* Windows 95 also signals this whenever you change which side of the screen the taskbar sits on,
+		 * confirmed using Spy++ / Microsoft Visual C++ 4.2 */
+		queryDesktopWorkArea(&desktopWorkArea);
 	}
 	else if (message == WM_SYSCOMMAND) {
 		switch (LOWORD(wparam)) {
@@ -1078,44 +1125,6 @@ static HICON bitmap2icon(HBITMAP hbmp) {
 	}
 
 	return ico;
-}
-
-/* For Windows 95, we want to know how much screen we can use without overlapping the taskbar.
- * Note that the user can put the taskbar on any side of the screen they want, therefore even
- * though the most common case is a RECT ot 0,0,screen width,screen height-taskbar, it is also
- * possible to put the taskbar on top and get 0,taskbar,screen width,screen height. Windows
- * returns a RECT for a reason, obviously!
- *
- * Windows 3.1 will not fill in the rectangle at all, because GETWORKAREA did not exist at the time.
- *
- * SystemParametersInfo() did not exist in Windows 3.0, hence the GetProcAddress() call. */
-static void queryDesktopWorkArea(RECT *wa) {
-	wa->top = 0;
-	wa->left = 0;
-	wa->right = GetSystemMetrics(SM_CXSCREEN);
-	wa->bottom = GetSystemMetrics(SM_CYSCREEN);
-
-	if (win95) {
-#if TARGET_MSDOS == 16
-		HMODULE user = GetModuleHandle("USER");
-		if (user) {
-			BOOL PASCAL FAR (*SYSPARAMINFO)(UINT,UINT,void FAR*,UINT) = GetProcAddress(user,"SYSTEMPARAMETERSINFO");
-			if (SYSPARAMINFO) {
-				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
-			}
-		}
-#elif TARGET_MSDOS == 32 && !defined(WIN386)
-		HMODULE user = GetModuleHandle("USER32");
-		if (user) {
-			BOOL WINAPI FAR (*SYSPARAMINFO)(UINT,UINT,void*,UINT) = GetProcAddress(user,"SystemParametersInfoA");
-			if (SYSPARAMINFO) {
-				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
-			}
-		}
-#else
-		(void)wa;
-#endif
-	}
 }
 
 /* adjust "um" according to current window position */
