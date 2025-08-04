@@ -82,6 +82,7 @@ struct wndstate_t {
 	BOOL			need_palette;
 	BOOL			isMinimized;
 	BOOL			scrollEnable;
+	BOOL			displayModeChangeReinit;
 
 	BOOL			canBitfields; /* can do BI_BITFIELDS (Win95/WinNT 4) */
 	BOOL			can16bpp;     /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
@@ -435,6 +436,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	else if (message == WM_DISPLAYCHANGE) {
 		/* Windows 95: The user or someone else changed the display resolution */
 		queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
+
+		/* Did the display depth change? If so, this program needs to reinitialize itself! */
+		if (wparam && wparam != work_state->currentBPP)
+			work_state->displayModeChangeReinit = TRUE;
 	}
 	else if (message == WM_WININICHANGE) {
 		RECT um;
@@ -1758,6 +1763,11 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	while (gmRet=GetMessage(&msg,(unsigned)NULL,0,0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+
+		if (work_state->displayModeChangeReinit) {
+			retv = APPLOOP_RESTART;
+			break;
+		}
 	}
 
 	cleanup_bmp(work_state);
@@ -1766,6 +1776,7 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	cleanup_bmpicon(work_state);
 	cleanup_bmpiconicon(work_state);
 	cleanup_bmppalette(work_state);
+	work_state->displayModeChangeReinit = FALSE;
 
 	if (gmRet == FALSE) /* WM_QUIT */
 		return msg.wParam;
