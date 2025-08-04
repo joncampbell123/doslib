@@ -1551,11 +1551,15 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 			bih->biClrImportant = bfr->colors;
 		}
 
-		/* icon is the same */
+		/* Icon is the same.
+		 *
+		 * Make sure to copy biSize, not just BITMAPINFOHEADER.
+		 * If we do not, the icon will render as garbage in the Windows 95 taskbar
+		 * if the BMP file we loaded is using the BI_BITFIELDS format. */
 #if TARGET_MSDOS == 16
-		_fmemcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
+		_fmemcpy(bihicon,bih,bih->biSize);
 #else
-		memcpy(bihicon,bih,sizeof(BITMAPINFOHEADER));
+		memcpy(bihicon,bih,bih->biSize);
 #endif
 
 		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
