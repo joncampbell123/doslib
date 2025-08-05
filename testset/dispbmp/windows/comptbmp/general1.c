@@ -142,7 +142,7 @@ static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
 #if TARGET_MSDOS == 32
-/* Windows 11 by default puts these rounded corners on your window. Please don't.
+/* Windows 11 by default puts these rounded corners on all application windows. Please don't.
  * The Win16 builds don't have to worry about this because Windows 11 is 64-bit only and therefore cannot run 16-bit applications. */
 typedef HRESULT(WINAPI* PFNSETWINDOWATTRIBUTE)(HWND hWnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
 
