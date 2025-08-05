@@ -1708,7 +1708,7 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 
 		if (work_state->bmpPalette && !work_state->win95) {
 			oldIconPal = SelectPalette(work_state->bmpIconDC,work_state->bmpPalette,TRUE);
-			RealizePalette(work_state->bmpDC);
+			RealizePalette(work_state->bmpIconDC);
 		}
 
 		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,work_state->iconWidth,work_state->iconHeight);
