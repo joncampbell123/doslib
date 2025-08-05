@@ -689,12 +689,22 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 						struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
 						void FAR *p = GlobalLock(bmst->bmpMemHandle);
 						if (p) {
+							/* NTS: There's something weird about Windows 3.0 where it refuses to draw beyond
+							 *      a certain point of a DIB depending on how much larger the bitmap is than
+							 *      the screen. So, to make this work, it is necessary to modify the BITMAPINFO
+							 *      to the strip height temporarily during the call, then put it back again. */
+							bi->bmiHeader.biHeight = bmst->height;
+							bi->bmiHeader.biSizeImage = (DWORD)bi->bmiHeader.biHeight * (DWORD)work_state->bmpStride;
+
 							SetDIBitsToDevice(ps.hdc,
 								-work_state->scrollX,y-work_state->scrollY,/*dest pos*/
 								work_state->bmpWidth,bmst->height,/*dest dim*/
 								0,0,/*src pos (bottom up bitmap Y coordinates)*/
 								0,bmst->height,/*start,count DIB scanlines*/
 								p,bi,work_state->bmpDIBmode);
+
+							bi->bmiHeader.biHeight = work_state->bmpHeight;
+							bi->bmiHeader.biSizeImage = (DWORD)bi->bmiHeader.biHeight * (DWORD)work_state->bmpStride;
 						}
 						GlobalUnlock(bmst->bmpMemHandle);
 						y += bmst->height;
@@ -1708,18 +1718,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			work_state->win95 = TRUE;
 		}
 	}
-
-#if TARGET_MSDOS == 16
-	/* 16-bit builds of this program cause some weird crashes within the Windows 3.0 GDI when
-	 * using SetDIBitsToDevice() with DIBs larger than 64KB with a width that is either a power
-	 * of 2 or multiple of 128 pixels? Also doesn't like to fully SetDIBitsToDevice() that are
-	 * some amount larger than the screen? These crashes do not occur in Windows 3.0 real more
-	 * or Windows 3.0 286 standard mode, they only happen in Windows 3.0 386 enhanced mode */
-	if (windows_mode == WINDOWS_ENHANCED && windows_version < 0x30A) {
-		if (MessageBox((HWND)NULL,"This program seems to cause some minor crashes or errors when run under Windows 3.0 386 enhanced mode. Please consider using GENERAL1.EXE or restarting Windows 3.0 in real mode or standard mode. Continue?","WARNING",MB_YESNO|MB_ICONHAND) == IDNO)
-			return 1;
-	}
-#endif
 
 	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
 	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
