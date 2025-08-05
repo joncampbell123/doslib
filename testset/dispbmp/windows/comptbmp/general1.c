@@ -536,6 +536,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
 	}
+	/* 2025/08/05: Noted while testing: Wine 9.0 does not present our system menu and, while it appears
+	 *             to respect WM_GETMINMAX, the X11 window manager does not, therefore the user can resize
+	 *             our window beyond the limits anyway. I can tell WINE honors it at least by how the scroll
+	 *             bars appear within the limits even if the window is sized too large. */
 	else if (message == WM_GETMINMAXINFO) {
 #if TARGET_MSDOS == 16
 		MINMAXINFO FAR *mmi = (MINMAXINFO FAR*)lparam;
