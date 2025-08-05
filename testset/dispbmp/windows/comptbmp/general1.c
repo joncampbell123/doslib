@@ -141,6 +141,33 @@ static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
 
+#if TARGET_MSDOS == 32
+/* Windows 11 by default puts these rounded corners on your window. Please don't.
+ * The Win16 builds don't have to worry about this because Windows 11 is 64-bit only and therefore cannot run 16-bit applications. */
+typedef HRESULT(WINAPI* PFNSETWINDOWATTRIBUTE)(HWND hWnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
+
+void Windows11RemoveRoundCorners(HWND hWnd) {
+	enum DWMWINDOWATTRIBUTE {
+		DWMWA_WINDOW_CORNER_PREFERENCE = 33
+	};
+	enum DWM_WINDOW_CORNER_PREFERENCE {
+		DWMWCP_DEFAULT    = 0,
+		DWMWCP_DONOTROUND = 1,
+		DWMWCP_ROUND      = 2,
+		DWMWCP_ROUNDSMALL = 3
+	};
+	HMODULE hDwmApi = LoadLibrary("dwmapi.dll");
+	if (hDwmApi) {
+		PFNSETWINDOWATTRIBUTE pfnSetWindowAttribute = (PFNSETWINDOWATTRIBUTE)GetProcAddress(hDwmApi, "DwmSetWindowAttribute");
+		if (pfnSetWindowAttribute) {
+			unsigned int preference = DWMWCP_DONOTROUND;
+			pfnSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+		}
+		FreeLibrary(hDwmApi);
+	}
+}
+#endif
+
 static BOOL CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
 	BOOL cW,chg=FALSE;
 
@@ -1893,6 +1920,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
 		return 1;
 	}
+
+#if TARGET_MSDOS == 32
+	/* Windows 11, trying to be Mac OS, puts rounded corners on windows by default. Please don't. */
+	Windows11RemoveRoundCorners(hwndMain);
+#endif
 
 	/* first instance already called init on each element */
 	work_state->hwndMain = hwndMain;
