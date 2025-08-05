@@ -751,8 +751,8 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 							bi->bmiHeader.biHeight = work_state->bmpHeight;
 							bi->bmiHeader.biSizeImage = (DWORD)bi->bmiHeader.biHeight * (DWORD)work_state->bmpStride;
+							GlobalUnlock(bmst->bmpMemHandle);
 						}
-						GlobalUnlock(bmst->bmpMemHandle);
 						y += bmst->height;
 					}
 				}
