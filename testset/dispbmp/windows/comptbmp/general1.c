@@ -699,13 +699,14 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				}
 				else {
 					if (work_state->bmpDC) {
+						GetClientRect(hwnd,&um);
+
 						BitBlt(ps.hdc,
-							-work_state->scrollX,
-							-work_state->scrollY,
-							work_state->bmpWidth,
-							work_state->bmpHeight,
+							0,0,/*dest pos*/
+							um.right,um.bottom,/*dest dim*/
 							work_state->bmpDC,
-							0,0,SRCCOPY);
+							work_state->scrollX,work_state->scrollY,/*src pos*/
+							SRCCOPY);
 					}
 				}
 
