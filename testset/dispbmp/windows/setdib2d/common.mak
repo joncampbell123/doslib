@@ -5,7 +5,9 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -i"../../.." -i"../
 NOW_BUILDING = TESTBMP_TEST
 
 GENERAL1_EXE =     $(SUBDIR)$(HPS)general1.$(EXEEXT)
+GENERAL1_RES =     $(SUBDIR)$(HPS)general1.res
 GENERAL2_EXE =     $(SUBDIR)$(HPS)general2.$(EXEEXT)
+GENERAL2_RES =     $(SUBDIR)$(HPS)general2.res
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -22,8 +24,18 @@ lib: $(FMT_BMP_LIB) $(HW_DOS_LIB) .symbolic
 	
 exe: $(GENERAL1_EXE) $(GENERAL2_EXE) .symbolic
 
+!ifdef GENERAL1_RES
+$(GENERAL1_RES): general1.rc
+	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)general1.res  $[@
+!endif
+
+!ifdef GENERAL2_RES
+$(GENERAL2_RES): general2.rc
+	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)general2.res  $[@
+!endif
+
 !ifdef GENERAL1_EXE
-$(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
+$(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj $(GENERAL1_RES)
 	%write tmp.cmd option quiet option map=$(GENERAL1_EXE).map system $(WLINK_SYSTEM) library $(HW_DOS_LIB) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general1.obj name $(GENERAL1_EXE)
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
@@ -32,6 +44,9 @@ $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
 #      about how those C library functions are written don't work properly with MOVEABLE segments.
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD FIXED
+!endif
+!ifdef GENERAL1_RES
+	%write tmp.cmd op resource=$(GENERAL1_RES) name $(GENERAL1_EXE)
 !endif
 	@wlink @tmp.cmd
 !ifdef WIN386
@@ -72,7 +87,7 @@ $(GENERAL1_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general1.obj
 !endif
 
 !ifdef GENERAL2_EXE
-$(GENERAL2_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general2.obj
+$(GENERAL2_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general2.obj $(GENERAL2_RES)
 	%write tmp.cmd option quiet option map=$(GENERAL2_EXE).map system $(WLINK_SYSTEM) library $(HW_DOS_LIB) library $(FMT_BMP_LIB) file $(SUBDIR)$(HPS)general2.obj name $(GENERAL2_EXE)
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
@@ -81,6 +96,9 @@ $(GENERAL2_EXE): $(FMT_BMP_LIB) $(SUBDIR)$(HPS)general2.obj
 #      about how those C library functions are written don't work properly with MOVEABLE segments.
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD FIXED
+!endif
+!ifdef GENERAL2_RES
+	%write tmp.cmd op resource=$(GENERAL2_RES) name $(GENERAL2_EXE)
 !endif
 	@wlink @tmp.cmd
 !ifdef WIN386

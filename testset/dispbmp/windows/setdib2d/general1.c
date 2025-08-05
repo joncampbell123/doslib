@@ -12,68 +12,104 @@
 #include <i86.h>
 
 #include <windows.h>
+#include <commdlg.h>
 
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
 
+/* This code crashes under Win386 no matter what I try under every version of Windows I test.
+ * Fuck it, we're not supporting Watcom Win386. */
+#if TARGET_MSDOS == 32 && defined(WIN386)
+# error This code does not support running under Watcom Win386
+#endif
+
+#include "resource.h"
+
 #include "libbmp.h"
 
-#define IDCSM_INFO		0x7700u
+#ifndef WM_DISPLAYCHANGE
+# define WM_DISPLAYCHANGE 0x007E
+#endif
 
-#if TARGET_MSDOS == 16
-# define MEM_BY_GLOBALALLOC
+#ifndef WM_SETICON
+# define WM_SETICON 0x0080
+#endif
+
+#ifndef SM_CXSMICON
+# define SM_CXSMICON 49
+# define SM_CYSMICON 50
+#endif
+
+/* Icon types */
+#ifndef ICON_BIG
+# define ICON_SMALL 0
+# define ICON_BIG 1
+#endif
+
+#ifndef SPI_GETWORKAREA
+# define SPI_GETWORKAREA 0x0030
 #endif
 
 #define WM_USER_SIZECHECK	WM_USER+1
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
-static HWND near		hwndMain;
-static const char near		WndProcClass[] = "GENERAL1SETDIBITSTODEVICE";
+static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
 static HINSTANCE near		myInstance;
 
-#ifdef MEM_BY_GLOBALALLOC
-struct bmpstrip_t {
-	HGLOBAL			stripHandle;
-	unsigned int		stripHeight;
-};
-#endif
-
-#if TARGET_MSDOS == 16
-struct windowextra_t {
-	WORD			instance_slot;
-};
-# define MAX_INSTANCES		32
-
-static unsigned int		my_slot = 0;
-#endif
+#define IDCSM_INFO		0x7700u
+#define IDCSM_ABOUT		0x7702u
 
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
 
-#ifdef MEM_BY_GLOBALALLOC
-# define MAX_STRIPS		128
-	unsigned int		bmpStripHeight;
-	unsigned int		bmpStripCount;
-	struct bmpstrip_t	bmpStrips[MAX_STRIPS];
-#else
-	unsigned char*		bmpMem;
-#endif
-	unsigned char*		bmpfile;
+	unsigned int		currentBPP;
+	unsigned int		currentPlanes;
 
 	unsigned int		bmpWidth;
 	unsigned int		bmpHeight;
 	unsigned int		bmpStride;
 	unsigned char		bmpInfoRaw[sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD))];
 
-	BOOL			taken;
+	unsigned char*		bmpfile;
+
+	unsigned char*		bmpInfoIconRaw;
+
+	BOOL			win95;
 	BOOL			drawReady;
 	BOOL			isLoading;
 	BOOL			need_palette;
 	BOOL			isMinimized;
 	BOOL			scrollEnable;
+	BOOL			displayModeChangeReinit;
+	BOOL			hasDoneFirstTimeWindowPos;
+
+	BOOL			canBitfields; /* can do BI_BITFIELDS (Win95/WinNT 4) */
+	BOOL			can16bpp;     /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
+
+	/* Windows 3.1 doesn't like or support 32bpp ARGB??
+	   Either ignores it, misrenders as black (and can CRASH if more than 64KB!), or misrenders as 24bpp? */
+	BOOL			can32bpp;
+
+	HWND			hwndMain;
 	HPALETTE		bmpPalette;
+#if TARGET_MSDOS == 16
+	HGLOBAL			bmpMemHandle;
+#else
+	unsigned char*		bmpPtr;
+#endif
+	HBITMAP			bmpIcon,bmpIconOld;
+	HICON			bmpIconIcon;
+	HBITMAP			bmpIconSmall,bmpIconSmallOld;
+	HICON			bmpIconSmallIcon;
+	HDC			bmpIconDC;
+	HDC			bmpIconSmallDC;
+	POINT			windowSizeMax;
+	RECT			desktopWorkArea;
 	unsigned		bmpDIBmode;
+	unsigned		bmpIconDIBmode;
+	unsigned short		iconWidth,iconHeight;
+	unsigned short		iconSmallWidth,iconSmallHeight;
 	uint8_t			src_red_shift;
 	uint8_t			src_red_width;
 	uint8_t			src_green_shift;
@@ -86,7 +122,7 @@ struct wndstate_t {
 };
 
 static void wndstate_init(struct wndstate_t FAR *w) {
-#if TARGET_MSDOS == 16 || defined(WIN386)
+#if TARGET_MSDOS == 16
 	_fmemset(w,0,sizeof(*w));
 #else
 	memset(w,0,sizeof(*w));
@@ -94,23 +130,51 @@ static void wndstate_init(struct wndstate_t FAR *w) {
 	w->bmpDIBmode = DIB_RGB_COLORS;
 }
 
-#if TARGET_MSDOS == 16
-static HGLOBAL near inst_state_handle = (HGLOBAL)0; // managed by first instance
-static struct wndstate_t FAR *inst_state = NULL; // array of MAX_INSTANCES
-#else
-static struct wndstate_t FAR the_state;
-#endif
+static struct wndstate_t the_state;
+
+static inline BITMAPINFOHEADER FAR* bmpInfoIcon(struct wndstate_t FAR *w) {
+	return (BITMAPINFOHEADER FAR*)(w->bmpInfoIconRaw);
+}
 
 static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 	return (BITMAPINFOHEADER FAR*)(w->bmpInfoRaw);
 }
 
-static BOOL canBitfields = FALSE; /* can do BI_BITFIELDS (Win95/WinNT 4) */
-static BOOL can16bpp = FALSE; /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
-static BOOL can32bpp = FALSE; /* Windows 3.1 doesn't like or support 32bpp ARGB??
-                                 Either ignores it, misrenders as black (and can CRASH if more than 64KB!), or misrenders as 24bpp? */
 static struct BMPFILEREAD *bfr = NULL;
 static conv_scanline_func_t convert_scanline;
+
+#if TARGET_MSDOS == 32
+/* Windows 11 by default puts these rounded corners on all application windows. Please don't.
+ * The Win16 builds don't have to worry about this because Windows 11 is 64-bit only and therefore cannot run 16-bit applications. */
+typedef HRESULT(WINAPI* PFNSETWINDOWATTRIBUTE)(HWND hWnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
+
+void Windows11RemoveRoundCorners(HWND hWnd) {
+	enum DWMWINDOWATTRIBUTE {
+		DWMWA_WINDOW_CORNER_PREFERENCE = 33
+	};
+	enum DWM_WINDOW_CORNER_PREFERENCE {
+		DWMWCP_DEFAULT    = 0,
+		DWMWCP_DONOTROUND = 1,
+		DWMWCP_ROUND      = 2,
+		DWMWCP_ROUNDSMALL = 3
+	};
+	HMODULE hDwmApi;
+	UINT oldMode;
+
+	oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+	hDwmApi = LoadLibrary("dwmapi.dll");
+	SetErrorMode(oldMode);
+
+	if (hDwmApi) {
+		PFNSETWINDOWATTRIBUTE pfnSetWindowAttribute = (PFNSETWINDOWATTRIBUTE)GetProcAddress(hDwmApi, "DwmSetWindowAttribute");
+		if (pfnSetWindowAttribute) {
+			unsigned int preference = DWMWCP_DONOTROUND;
+			pfnSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+		}
+		FreeLibrary(hDwmApi);
+	}
+}
+#endif
 
 static BOOL CheckScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned int nWidth,const unsigned int nHeight) {
 	BOOL cW,chg=FALSE;
@@ -171,12 +235,8 @@ static void UpdateScrollBars(struct wndstate_t FAR *w,HWND hwnd,const unsigned i
 }
 
 static void CommonScrollPosHandling(HWND hwnd,const unsigned int sb,unsigned int FAR *scrollPos,const unsigned int req,const unsigned int nPos) {
-# if defined(WIN386)
-	short pMin=0,pMax=0;
-# else
-	int pMin=0,pMax=0;
-# endif
 	const int cPos = GetScrollPos(hwnd,sb);
+	int pMin = 0,pMax = 0;
 	BOOL redraw = FALSE;
 	RECT um;
 
@@ -259,31 +319,183 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 
 	w += snprintf(w,(int)(f-w),
 		"\nCaps: can16bpp=%u can32bpp=%u canBI_BITFIELDS=%u",
-		can16bpp?1:0,
-		can32bpp?1:0,
-		canBitfields?1:0);
+		work_state->can16bpp?1:0,
+		work_state->can32bpp?1:0,
+		work_state->canBitfields?1:0);
+
+	w += snprintf(w,(int)(f-w),
+		"\nMax size: %ux%u",
+		(unsigned)work_state->windowSizeMax.x,
+		(unsigned)work_state->windowSizeMax.y);
+
+	w += snprintf(w,(int)(f-w),
+		" Desktop work area: %dx%d-%dx%d",
+		(int)work_state->desktopWorkArea.left,
+		(int)work_state->desktopWorkArea.top,
+		(int)work_state->desktopWorkArea.right,
+		(int)work_state->desktopWorkArea.bottom);
+
+	w += snprintf(w,(int)(f-w),
+		"\nDisplay: %ubpp %uplanes",
+		(int)work_state->currentBPP,
+		(int)work_state->currentPlanes);
 
 	MessageBox(hwnd,tmp,"Info",MB_OK);
 
 	free(tmp);
 }
 
-LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
-#if TARGET_MSDOS == 16
-	unsigned instance_slot = GetWindowWord(hwnd,offsetof(struct windowextra_t,instance_slot));
-	struct wndstate_t FAR *work_state = &inst_state[instance_slot];
-#else
+BOOL PASCAL AboutDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+	/* NTS: Despite MakeProcInstance() this is still valid because the proc instance
+	 *      was created right when starting this dialog box from the same instance */
 	struct wndstate_t FAR *work_state = &the_state;
+
+	(void)wparam;
+	(void)lparam;
+
+	if (message == WM_INITDIALOG) {
+		if (!work_state->isMinimized) {
+			RECT me,mom;
+
+			GetWindowRect(GetParent(hwnd),&mom);
+			GetWindowRect(hwnd,&me);
+
+			/* Windows 3.1 puts this dialog in the upper left corner.
+			 * Please center it in the window. */
+			SetWindowPos(hwnd,HWND_TOP,
+				(((mom.right - mom.left) - (me.right - me.left)) / 2) + mom.left,
+				(((mom.bottom - mom.top) - (me.bottom - me.top)) / 2) + mom.top,
+				0,0,
+				SWP_NOSIZE);
+		}
+
+		return TRUE;
+	}
+	else if (message == WM_COMMAND) {
+		if (wparam == IDOK) {
+			EndDialog(hwnd,0);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+static void ComputeIdealWindowSizeFromImage(RECT *um,HWND hwnd,const unsigned int width,const unsigned int height) {
+	/* start with client area */
+	um->top = um->left = 0;
+	um->bottom = height;
+	um->right = width;
+
+	/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
+	 * NTS: This adjusts the top/left negative and the bottom/right positive! */
+	AdjustWindowRect(um,GetWindowLong(hwnd,GWL_STYLE),FALSE/*no menu*/);
+
+	/* normalize the rect so top/left is zero */
+	um->bottom -= um->top;
+	um->right -= um->left;
+	um->top = um->left = 0;
+}
+
+/* For Windows 95, we want to know how much screen we can use without overlapping the taskbar.
+ * Note that the user can put the taskbar on any side of the screen they want, therefore even
+ * though the most common case is a RECT ot 0,0,screen width,screen height-taskbar, it is also
+ * possible to put the taskbar on top and get 0,taskbar,screen width,screen height. Windows
+ * returns a RECT for a reason, obviously!
+ *
+ * Windows 3.1 will not fill in the rectangle at all, because GETWORKAREA did not exist at the time.
+ *
+ * SystemParametersInfo() did not exist in Windows 3.0, hence the GetProcAddress() call. */
+static void queryDesktopWorkArea(struct wndstate_t FAR *work_state,RECT *wa) {
+	wa->top = 0;
+	wa->left = 0;
+	wa->right = GetSystemMetrics(SM_CXSCREEN);
+	wa->bottom = GetSystemMetrics(SM_CYSCREEN);
+
+	if (work_state->win95) {
+#if TARGET_MSDOS == 16
+		HMODULE user = GetModuleHandle("USER");
+		if (user) {
+			BOOL PASCAL FAR (*SYSPARAMINFO)(UINT,UINT,void FAR*,UINT) = GetProcAddress(user,"SYSTEMPARAMETERSINFO");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#elif TARGET_MSDOS == 32
+		HMODULE user = GetModuleHandle("USER32");
+		if (user) {
+			BOOL WINAPI FAR (*SYSPARAMINFO)(UINT,UINT,void*,UINT) = GetProcAddress(user,"SystemParametersInfoA");
+			if (SYSPARAMINFO) {
+				SYSPARAMINFO(SPI_GETWORKAREA,0,wa,0);
+			}
+		}
+#else
+		(void)wa;
 #endif
+	}
+}
+
+static void CheckIconSizes(struct wndstate_t FAR *work_state) {
+	work_state->iconWidth = GetSystemMetrics(SM_CXICON);
+	work_state->iconHeight = GetSystemMetrics(SM_CYICON);
+
+	work_state->iconSmallWidth = GetSystemMetrics(SM_CXSMICON);
+	work_state->iconSmallHeight = GetSystemMetrics(SM_CYSMICON);
+}
+
+LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+	struct wndstate_t FAR *work_state = &the_state;
 
 	if (message == WM_CREATE) {
 		return 0; /* Success */
+	}
+	else if (message == WM_DISPLAYCHANGE) {
+		/* Windows 95: The user or someone else changed the display resolution */
+		queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
+
+		/* Did the display depth change? If so, this program needs to reinitialize itself! */
+		if (wparam && wparam != work_state->currentBPP) {
+			work_state->displayModeChangeReinit = TRUE;
+			work_state->drawReady = FALSE; /* Windows just invalidated our bitmap, don't draw it, it's junk now! */
+		}
+	}
+	else if (message == WM_WININICHANGE) {
+		RECT um;
+
+		/* The user might have changed border size in Windows 3.1.
+		 * Notice that Windows 95 and later don't let you change border size anymore.
+		 * Maybe because 12-year old me thought it was funny to set the Windows 3.1 sizing borders to
+		 * absurdly large values so that every window looked like they were ready to play bumper cars,
+		 * ha ha. --Jon */
+		ComputeIdealWindowSizeFromImage(&um,hwnd,work_state->bmpWidth,work_state->bmpHeight);
+		work_state->windowSizeMax.x = um.right;
+		work_state->windowSizeMax.y = um.bottom;
+
+		/* Windows 95 also signals this whenever you change which side of the screen the taskbar sits on,
+		 * confirmed using Spy++ / Microsoft Visual C++ 4.2 */
+		queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
 	}
 	else if (message == WM_SYSCOMMAND) {
 		switch (LOWORD(wparam)) {
 			case IDCSM_INFO:
 				if (!work_state->isLoading)
 					ShowInfo(hwnd,work_state);
+				break;
+			case IDCSM_ABOUT:
+				{
+#if TARGET_MSDOS == 16
+					/* NTS: MakeProcInstance is unnecessary and pointless for window procs,
+					 *      but must be done for dialog box procs. Don't worry, unlike the
+					 *      window class proc, the dialog box proc instance will access the
+					 *      correct DS segment because it was made from the instance that
+					 *      started it. */
+					FARPROC p = MakeProcInstance((FARPROC)AboutDlgProc,myInstance);
+					DialogBox(myInstance,MAKEINTRESOURCE(IDD_ABOUT),hwnd,p);
+					FreeProcInstance(p);
+#else
+					DialogBox(myInstance,MAKEINTRESOURCE(IDD_ABOUT),hwnd,AboutDlgProc);
+#endif
+				}
 				break;
 			default:
 				return DefWindowProc(hwnd,message,wparam,lparam);
@@ -307,6 +519,31 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		else {
 			return DefWindowProc(hwnd,message,wparam,lparam);
 		}
+	}
+	/* 2025/08/05: Noted while testing: Wine 9.0 does not present our system menu and, while it appears
+	 *             to respect WM_GETMINMAX, the X11 window manager does not, therefore the user can resize
+	 *             our window beyond the limits anyway. I can tell WINE honors it at least by how the scroll
+	 *             bars appear within the limits even if the window is sized too large. */
+	else if (message == WM_GETMINMAXINFO) {
+#if TARGET_MSDOS == 16
+		MINMAXINFO FAR *mmi = (MINMAXINFO FAR*)lparam;
+#else
+		MINMAXINFO *mmi = (MINMAXINFO*)lparam;
+#endif
+
+		/* don't let the user maximize the window beyond the image size */
+		if (mmi->ptMaxSize.x > work_state->windowSizeMax.x)
+			mmi->ptMaxSize.x = work_state->windowSizeMax.x;
+		if (mmi->ptMaxSize.y > work_state->windowSizeMax.y)
+			mmi->ptMaxSize.y = work_state->windowSizeMax.y;
+
+		/* don't let the user resize the window beyond the image size */
+		if (mmi->ptMaxTrackSize.x > work_state->windowSizeMax.x)
+			mmi->ptMaxTrackSize.x = work_state->windowSizeMax.x;
+		if (mmi->ptMaxTrackSize.y > work_state->windowSizeMax.y)
+			mmi->ptMaxTrackSize.y = work_state->windowSizeMax.y;
+
+		return 0;
 	}
 	else if (message == WM_SIZE || message == WM_USER_SIZECHECK) {
 		int nWidth,nHeight;
@@ -335,26 +572,32 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			if (work_state->isMinimized != mini) {
 				work_state->isMinimized = mini;
 				UpdateTitleBar(hwnd,work_state);
+				InvalidateRect(hwnd,NULL,TRUE);
 			}
 		}
 	}
 	else if (message == WM_ERASEBKGND) {
 		RECT um;
 
-		if (GetUpdateRect(hwnd,&um,FALSE)) {
-			HBRUSH oldBrush,newBrush;
-			HPEN oldPen,newPen;
+		if (work_state->isMinimized) {
+			DefWindowProc(hwnd,WM_ICONERASEBKGND,wparam,lparam);
+		}
+		else if (work_state->isLoading) { /* filling the background is only necessary when loading, the image fills the window now */
+			if (GetUpdateRect(hwnd,&um,FALSE)) {
+				HBRUSH oldBrush,newBrush;
+				HPEN oldPen,newPen;
 
-			newPen = (HPEN)GetStockObject(NULL_PEN);
-			newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+				newPen = (HPEN)GetStockObject(NULL_PEN);
+				newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
 
-			oldPen = SelectObject((HDC)wparam,newPen);
-			oldBrush = SelectObject((HDC)wparam,newBrush);
+				oldPen = SelectObject((HDC)wparam,newPen);
+				oldBrush = SelectObject((HDC)wparam,newBrush);
 
-			Rectangle((HDC)wparam,um.left,um.top,um.right+1,um.bottom+1);
+				Rectangle((HDC)wparam,um.left,um.top,um.right+1,um.bottom+1);
 
-			SelectObject((HDC)wparam,oldBrush);
-			SelectObject((HDC)wparam,oldPen);
+				SelectObject((HDC)wparam,oldBrush);
+				SelectObject((HDC)wparam,oldPen);
+			}
 		}
 
 		return 1; /* Important: Returning 1 signals to Windows that we processed the message. Windows 3.0 gets really screwed up if we don't! */
@@ -365,12 +608,12 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 		if (work_state->bmpPalette) {
 			HDC hdc = GetDC(hwnd);
-			HPALETTE ppal = SelectPalette(hdc,work_state->bmpPalette,FALSE);
+			HPALETTE ppal = SelectPalette(hdc,work_state->bmpPalette,work_state->isMinimized ? TRUE : FALSE);
 			UINT changed = RealizePalette(hdc);
 			SelectPalette(hdc,ppal,FALSE);
 			ReleaseDC(hwnd,hdc);
 
-			if (changed) InvalidateRect(hwnd,NULL,FALSE);
+			InvalidateRect(hwnd,NULL,work_state->isMinimized ? TRUE : FALSE);
 
 			if (message == WM_QUERYNEWPALETTE)
 				return changed;
@@ -378,7 +621,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	}
 	else if (message == WM_HSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
-#if TARGET_MSDOS == 32 && !defined(WIN386)
+#if TARGET_MSDOS == 32
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = HIWORD(wparam);
 #else
@@ -389,7 +632,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	}
 	else if (message == WM_VSCROLL) {
 		// Microsoft changed how the info is passed between Win16 and Win32!
-#if TARGET_MSDOS == 32 && !defined(WIN386)
+#if TARGET_MSDOS == 32
 		const unsigned int req = LOWORD(wparam);
 		const unsigned int nPos = HIWORD(wparam);
 #else
@@ -408,67 +651,53 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			BeginPaint(hwnd,&ps);
 
 			if (work_state->drawReady) {
-#if defined(MEM_BY_GLOBALALLOC)
 				if (work_state->bmpPalette) {
-					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
+					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,work_state->isMinimized ? TRUE : FALSE);
 					if (pPalette) RealizePalette(ps.hdc);
 				}
 
-				{
-					BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
-					unsigned int strip=work_state->bmpStripCount-1u,y=0u;
-					void FAR *p;
+				if (work_state->isMinimized) {
+					// NTS: Windows 95 will never call WM_PAINT when you are minimized,
+					//      even IF you make Program Manager your shell instead of Windows Explorer.
+					if (work_state->bmpIconDC) {
+						int x,y;
 
-					for (strip=0;strip < work_state->bmpStripCount;strip++) {
-						p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
-						bmi->biHeight = work_state->bmpStrips[strip].stripHeight;
-						bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
+						GetClientRect(hwnd,&um);
+						x = (um.right - work_state->iconWidth) / 2;
+						y = (um.bottom - work_state->iconHeight) / 2;
 
-						if (p) {
-							SetDIBitsToDevice(ps.hdc,
-								-work_state->scrollX,y-work_state->scrollY,
-								bmi->biWidth,bmi->biHeight,
-								0,0,
-								0,
-								bmi->biHeight,
-								p,
-								(BITMAPINFO*)bmi,
-								work_state->bmpDIBmode);
-						}
-
-						GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
-						y += bmi->biHeight;
+						BitBlt(ps.hdc,
+							x,
+							y,
+							work_state->iconWidth,
+							work_state->iconHeight,
+							work_state->bmpIconDC,
+							0,0,SRCCOPY);
 					}
-
-					bmi->biHeight = work_state->bmpHeight;
-					bmi->biSizeImage = bmi->biHeight * work_state->bmpStride;
 				}
-
-				if (work_state->bmpPalette)
-					SelectPalette(ps.hdc,pPalette,TRUE);
+				else {
+#if TARGET_MSDOS == 16
+					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
+					void FAR *p = GlobalLock(work_state->bmpMemHandle);
 #else
-				if (work_state->bmpPalette) {
-					pPalette = SelectPalette(ps.hdc,work_state->bmpPalette,FALSE);
-					if (pPalette) RealizePalette(ps.hdc);
-				}
-
-				if (work_state->bmpMem) {
-					BITMAPINFOHEADER FAR *bmi = bmpInfo(work_state);
-
-					SetDIBitsToDevice(ps.hdc,
-						-work_state->scrollX,-work_state->scrollY,
-						bmi->biWidth,bmi->biHeight,
-						0,0,
-						0,
-						bmi->biHeight,
-						work_state->bmpMem,
-						(BITMAPINFO*)bmi,
-						work_state->bmpDIBmode);
+					BITMAPINFO *bi = (BITMAPINFO*)bmpInfo(work_state);
+					void *p = work_state->bmpPtr;
+#endif
+					if (p) {
+						SetDIBitsToDevice(ps.hdc,
+							0,0,/*dest pos*/
+							work_state->bmpWidth,work_state->bmpHeight,/*dest dim*/
+							work_state->scrollX,-work_state->scrollY,/*src pos (bottom up bitmap Y coordinates)*/
+							0,work_state->bmpHeight,/*start,count DIB scanlines*/
+							p,bi,work_state->bmpDIBmode);
+					}
+#if TARGET_MSDOS == 16
+					GlobalUnlock(work_state->bmpMemHandle);
+#endif
 				}
 
 				if (work_state->bmpPalette)
 					SelectPalette(ps.hdc,pPalette,TRUE);
-#endif
 			}
 
 			EndPaint(hwnd,&ps);
@@ -589,24 +818,102 @@ void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsi
 	}
 }
 
+static unsigned int load_bmp_icony_last = ~0u;
+static unsigned int load_bmp_iconsmy_last = ~0u;
+
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
-#if defined(MEM_BY_GLOBALALLOC)
-	const unsigned int strip = line / work_state->bmpStripHeight;
-	if (strip < work_state->bmpStripCount) {
-		const unsigned int subline = line % work_state->bmpStripHeight;
-		if (subline < work_state->bmpStrips[strip].stripHeight) {
-			unsigned int sy = work_state->bmpStrips[strip].stripHeight - 1u - subline;
-			void FAR *p = GlobalLock(work_state->bmpStrips[strip].stripHandle);
-			if (p) {
-				_fmemcpy((unsigned char FAR*)p + (sy*work_state->bmpStride),s,work_state->bmpStride);
-				GlobalUnlock(work_state->bmpStrips[strip].stripHandle);
-			}
+	const unsigned int cline = work_state->bmpHeight - 1u - line;
+#if TARGET_MSDOS == 16
+	BITMAPINFO FAR *bmicon = (BITMAPINFO FAR*)bmpInfoIcon(work_state);
+	const unsigned ahshf = Win16_AHSHIFT();
+	unsigned sv,ov;
+	void FAR *p;
+#else
+	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon(work_state);
+	unsigned char *d;
+#endif
+	unsigned int icony,iconsmy;
+
+#if TARGET_MSDOS == 16
+	p = GlobalLock(work_state->bmpMemHandle);
+	if (p) {
+		const uint32_t ofs = ((DWORD)cline * (DWORD)work_state->bmpStride) + (DWORD)FP_OFF(p);
+		unsigned rem,cpy = (unsigned)work_state->bmpStride;
+
+		ov = (unsigned)ofs;
+		sv = FP_SEG(p) + ((unsigned)(ofs >> (DWORD)16ul) << ahshf);
+		rem = 0x10000u - ov;
+
+		if (ov && rem < cpy) {
+			/* the scanline crosses two segments.
+			 * no, we cannot assume 16-bit real-mode and "normalize" the FAR pointer to adjust for it
+			 * because we're more likely in 16-bit protected mode. Windows provides barely documented
+			 * AHINCR/AHSHIFT constants in the KERNEL module (that nonetheless, Watcom C programmers
+			 * noticed), which provide the shift/increment values to know how to deal with FAR pointers. */
+			_fmemcpy(MK_FP(sv,ov),s,rem); /* copy what we can in the first segment */
+			s += rem; cpy -= rem; sv += 1 << ahshf; ov = 0;
+			_fmemcpy(MK_FP(sv,ov),s,cpy); /* then copy the rest starting from offset 0 in the next segment */
+		}
+		else {
+			_fmemcpy(MK_FP(sv,ov),s,cpy);
 		}
 	}
 #else
-	const unsigned int cline = bfr->height - 1u - line;
-	memcpy(work_state->bmpMem+(cline*work_state->bmpStride),s,work_state->bmpStride);
+	d = work_state->bmpPtr + (cline * work_state->bmpStride);
+	memcpy(d,s,work_state->bmpStride);
 #endif
+
+	icony = (unsigned int)(((unsigned long)line * (unsigned long)work_state->iconHeight) / (unsigned long)work_state->bmpHeight);
+	if (load_bmp_icony_last != icony) {
+		load_bmp_icony_last = icony;
+
+		/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
+		bmicon->bmiHeader.biHeight = 1;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride;
+
+		SetStretchBltMode(work_state->bmpIconDC,STRETCH_DELETESCANS);
+		StretchDIBits(work_state->bmpIconDC,
+			0,icony,work_state->iconWidth,1,/*dest*/
+			0,0,work_state->bmpWidth,1,/*src*/
+#if TARGET_MSDOS == 16
+			(void FAR*)s,
+#else
+			(void*)s,
+#endif
+			bmicon,
+			work_state->bmpIconDIBmode,
+			SRCCOPY);
+
+		/* put it back */
+		bmicon->bmiHeader.biHeight = work_state->bmpHeight;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride * work_state->bmpHeight;
+	}
+
+	iconsmy = (unsigned int)(((unsigned long)line * (unsigned long)work_state->iconSmallHeight) / (unsigned long)work_state->bmpHeight);
+	if (load_bmp_iconsmy_last != iconsmy) {
+		load_bmp_iconsmy_last = iconsmy;
+
+		/* 1-pixel height spec needed here to work, or else it does nothing, and also, the inverted Y axis is not needed! */
+		bmicon->bmiHeader.biHeight = 1;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride;
+
+		SetStretchBltMode(work_state->bmpIconSmallDC,STRETCH_DELETESCANS);
+		StretchDIBits(work_state->bmpIconSmallDC,
+			0,iconsmy,work_state->iconSmallWidth,1,/*dest*/
+			0,0,work_state->bmpWidth,1,/*src*/
+#if TARGET_MSDOS == 16
+			(void FAR*)s,
+#else
+			(void*)s,
+#endif
+			bmicon,
+			DIB_RGB_COLORS,
+			SRCCOPY);
+
+		/* put it back */
+		bmicon->bmiHeader.biHeight = work_state->bmpHeight;
+		bmicon->bmiHeader.biSizeImage = work_state->bmpStride * work_state->bmpHeight;
+	}
 }
 
 static void draw_prog_message_pump(void) {
@@ -618,18 +925,18 @@ static void draw_prog_message_pump(void) {
 	}
 }
 
-static void draw_progress(unsigned int p,unsigned int t) {
+static void draw_progress(struct wndstate_t FAR *work_state,unsigned int p,unsigned int t) {
 	HBRUSH oldBrush,newBrush;
 	HPEN oldPen,newPen;
 	RECT um;
 	HDC hdc;
 
-	GetClientRect(hwndMain,&um);
+	GetClientRect(work_state->hwndMain,&um);
 	{
 		int w = (int)(um.right - um.left);
 		int h = (int)(um.bottom - um.top);
-		int bw = w / 4;
-		int bh = 32;
+		int bw = work_state->isMinimized ? w : (w / 4);
+		int bh = work_state->isMinimized ? (h / 2) : 32;
 		int x = (w - bw) / 2;
 		int y = (h - bh) / 2;
 
@@ -639,7 +946,7 @@ static void draw_progress(unsigned int p,unsigned int t) {
 		um.bottom = y + bh;
 	}
 
-	hdc = GetDC(hwndMain);
+	hdc = GetDC(work_state->hwndMain);
 
 	if (t > 0) {
 		int fw = (um.right - um.left) - 1;
@@ -672,19 +979,10 @@ static void draw_progress(unsigned int p,unsigned int t) {
 		SelectObject(hdc,oldPen);
 	}
 	else {
-		newPen = (HPEN)GetStockObject(NULL_PEN);
-		newBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-
-		oldPen = SelectObject(hdc,newPen);
-		oldBrush = SelectObject(hdc,newBrush);
-
-		Rectangle(hdc,um.left,um.top,um.right+1,um.bottom+1);
-
-		SelectObject(hdc,oldBrush);
-		SelectObject(hdc,oldPen);
+		InvalidateRect(work_state->hwndMain,&um,TRUE);
 	}
 
-	ReleaseDC(hwndMain,hdc);
+	ReleaseDC(work_state->hwndMain,hdc);
 
 	draw_prog_message_pump();
 }
@@ -695,282 +993,320 @@ enum {
 	CONV_16TO24
 };
 
-int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
-	struct wndstate_t FAR *work_state;
+static void cleanup_bmpinfoiconraw(struct wndstate_t *work_state) {
+	if (work_state->bmpInfoIconRaw) {
+		free(work_state->bmpInfoIconRaw);
+		work_state->bmpInfoIconRaw = NULL;
+	}
+}
+
+static void cleanup_bmpiconsmallicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconSmallIcon) DestroyIcon(work_state->bmpIconSmallIcon);
+	work_state->bmpIconSmallIcon = (unsigned)NULL;
+}
+
+static void cleanup_bmpiconsmall(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconSmall && work_state->bmpIconSmallOld) SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmallOld);
+	if (work_state->bmpIconSmall) DeleteObject(work_state->bmpIconSmall);
+	work_state->bmpIconSmall = (unsigned)NULL;
+	if (work_state->bmpIconSmallDC) DeleteDC(work_state->bmpIconSmallDC);
+	work_state->bmpIconSmallDC = (unsigned)NULL;
+}
+
+static void cleanup_bmpiconicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIconIcon) DestroyIcon(work_state->bmpIconIcon);
+	work_state->bmpIconIcon = (unsigned)NULL;
+}
+
+static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
+	if (work_state->bmpIcon && work_state->bmpIconOld) SelectObject(work_state->bmpIconDC,work_state->bmpIconOld);
+	if (work_state->bmpIcon) DeleteObject(work_state->bmpIcon);
+	work_state->bmpIcon = (unsigned)NULL;
+	if (work_state->bmpIconDC) DeleteDC(work_state->bmpIconDC);
+	work_state->bmpIconDC = (unsigned)NULL;
+}
+
+static void cleanup_bmp(struct wndstate_t *work_state) {
+#if TARGET_MSDOS == 16
+	if (work_state->bmpMemHandle) GlobalFree(work_state->bmpMemHandle);
+	work_state->bmpMemHandle = (HGLOBAL)NULL;
+#else
+	if (work_state->bmpPtr) free(work_state->bmpPtr);
+	work_state->bmpPtr = NULL;
+#endif
+}
+
+static void cleanup_bmppalette(struct wndstate_t *work_state) {
+	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
+	work_state->bmpPalette = (unsigned)NULL;
+}
+
+static HICON bitmap2icon(HBITMAP hbmp) {
+	HICON ico = (HICON)NULL;
+	unsigned long andmsz,xormsz;
+#if TARGET_MSDOS == 16
+	void FAR *andb,FAR *xorb;
+#else
+	void *andb,*xorb;
+#endif
+	BITMAP bm;
+
+	if (GetObject(hbmp,sizeof(bm),&bm)) {
+		andmsz = (unsigned long)(((bm.bmWidth + 15u) & (~15u)) >> 3u) * (unsigned long)bm.bmHeight;
+		xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)bm.bmHeight;
+		if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
+			andb = malloc((unsigned)andmsz);
+			xorb = malloc((unsigned)xormsz);
+
+			memset(andb,0x00,(unsigned)andmsz); /* opaque */
+			memset(xorb,0x00,(unsigned)xormsz); /* all black */
+
+			GetBitmapBits(hbmp,xormsz,xorb);
+
+			ico = CreateIcon(myInstance,bm.bmWidth,bm.bmHeight,bm.bmPlanes,bm.bmBitsPixel,andb,xorb);
+
+			free(xorb);
+			free(andb);
+		}
+	}
+
+	return ico;
+}
+
+/* adjust "um" according to current window position */
+static void AddWindowPosToRect(RECT *um,HWND hwnd) {
+	RECT curr;
+
+	memset(&curr,0,sizeof(curr));
+	GetWindowRect(hwnd,&curr);
+
+	um->top += curr.top;
+	um->left += curr.left;
+	um->right += curr.left;
+	um->bottom += curr.top;
+}
+
+static void ClipWindowToWorkArea(struct wndstate_t *work_state,RECT *um) {
+	if (um->right > work_state->desktopWorkArea.right) {
+		const int adjust = um->right - work_state->desktopWorkArea.right;
+		um->right -= adjust;
+		um->left -= adjust;
+		if (um->left < work_state->desktopWorkArea.left) um->left = work_state->desktopWorkArea.left;
+	}
+	else if (um->left < work_state->desktopWorkArea.left) {
+		const int adjust = work_state->desktopWorkArea.left - um->left;
+		um->right += adjust;
+		um->left += adjust;
+		if (um->right > work_state->desktopWorkArea.right) um->right = work_state->desktopWorkArea.right;
+	}
+
+	if (um->bottom > work_state->desktopWorkArea.bottom) {
+		const int adjust = um->bottom - work_state->desktopWorkArea.bottom;
+		um->bottom -= adjust;
+		um->top -= adjust;
+		if (um->top < work_state->desktopWorkArea.top) um->top = work_state->desktopWorkArea.top;
+	}
+	else if (um->top < work_state->desktopWorkArea.top) {
+		const int adjust = work_state->desktopWorkArea.top - um->top;
+		um->bottom += adjust;
+		um->top += adjust;
+		if (um->bottom > work_state->desktopWorkArea.bottom) um->bottom = work_state->desktopWorkArea.bottom;
+	}
+}
+
+static char *CommDlgGetOpenFileName(void) {
+	/* TODO:  If we SetErrorMode() to try to turn off all error dialogs in Windows 3.0, and then
+	 *        LoadLibrary(), it shows a dialog prompting the user to install that DLL. Why?
+	 *        The whole purpose of the call is to shut that dialog up!
+	 *
+	 *        Well in any case we'll just not try to LOADLIBRARY COMMDLG if below Windows 3.1 */
+
+	/* FIXME: Why does Windows 95 GetOpenFileName() refuse to work for our Win16 builds after a fresh
+	 *        boot, and then mysteriously work every time once any Win32 program that uses COMMDLG32.DLL
+	 *        loads?
+	 *
+	 *        Running any Win32 program that depends on COMMDLG32.DLL mysteriously makes it work.
+	 *        Our Win32 builds. NOTEPAD.EXE. You don't even have to open a file in that application,
+	 *        it just magically makes it work. Why?
+	 *
+	 *        Whatever the problem is, it seems they fixed it somewhere between Windows 95 and
+	 *        Windows 98 because this problem never occurs under Windows 98. */
+
+	BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *) = NULL;
+	HMODULE commdlg_dll;
+	UINT oldMode;
+
+	oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+#if TARGET_MSDOS == 16
+	commdlg_dll = LoadLibrary("COMMDLG");
+	if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GETOPENFILENAME");
+#else
+	commdlg_dll = LoadLibrary("COMDLG32.DLL");
+	if (commdlg_dll) GETOPENFILENAMEPROC = GetProcAddress(commdlg_dll,"GetOpenFileNameA");
+#endif
+	SetErrorMode(oldMode);
+
+	if (commdlg_dll && GETOPENFILENAMEPROC) {
+		OPENFILENAME ofn;
+		char *newname = malloc(PATH_MAX);
+		char *rt = NULL;
+
+		if (!newname) {
+			FreeLibrary(commdlg_dll);
+			return NULL;
+		}
+
+		memset(newname,0,PATH_MAX);
+		memset(&ofn,0,sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.lpstrFilter =
+			"Bitmap files\x00" "*.bmp\x00"
+			"All files\x00" "*.*\x00"
+			"\x00\x00";
+		ofn.lpstrFile = newname;
+		ofn.nMaxFile = PATH_MAX - 1;
+		ofn.nFilterIndex = 1;
+		ofn.lpstrTitle = "Pick a BMP file to display";
+		ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
+
+		if (!GETOPENFILENAMEPROC(&ofn)) {
+			FreeLibrary(commdlg_dll);
+			free(newname);
+			return NULL;
+		}
+
+		FreeLibrary(commdlg_dll);
+		rt = strdup(newname);
+		free(newname);
+		return rt;
+	}
+
+	if (commdlg_dll)
+		FreeLibrary(commdlg_dll);
+
+	return NULL;
+}
+
+enum {
+	APPLOOP_RESTART = -1
+};
+
+static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
+	HPALETTE oldIconPal = (HPALETTE)0;
 	unsigned int conv = CONV_NONE;
-	char* bmpfile = NULL;
-	WNDCLASS wnd;
+	int retv = 0;
+	BOOL gmRet;
 	MSG msg;
 
-	probe_dos();
-	detect_windows();
-
-	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
-		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
-			canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
-			can32bpp = TRUE; /* can use 32bpp ARGB */
-			can16bpp = TRUE; /* can use 16bpp 5:5:5 */
-		}
-	}
-
-	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
-	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
-	 *        especially in real-mode Windows 3.0.
-	 *
-	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
-	 *
-	 *        Why? */
-	bmpfile = strdup(lpCmdLine);
-
-	myInstance = hInstance;
-
-	if (!hPrevInstance) {
-		wnd.style = CS_HREDRAW|CS_VREDRAW;
-#if TARGET_MSDOS == 16
-		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
-#else
-		wnd.lpfnWndProc = (WNDPROC)WndProc;
-#endif
-		wnd.cbClsExtra = 0;
-#if TARGET_MSDOS == 16
-		wnd.cbWndExtra = sizeof(struct windowextra_t);
-#else
-		wnd.cbWndExtra = 0;
-#endif
-		wnd.hInstance = hInstance;
-		wnd.hIcon = (unsigned)NULL;
-		wnd.hCursor = (unsigned)NULL;
-		wnd.hbrBackground = (unsigned)NULL;
-		wnd.lpszMenuName = NULL;
-		wnd.lpszClassName = WndProcClass;
-
-		if (!RegisterClass(&wnd)) {
-			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
-			return 1;
-		}
-
-#if TARGET_MSDOS == 16
-		inst_state_handle = GlobalAlloc(GMEM_ZEROINIT|GMEM_SHARE,sizeof(struct wndstate_t) * MAX_INSTANCES);
-		if (!inst_state_handle) {
-			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
-		if (!inst_state) {
-			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		{
-			unsigned int i;
-			for (i=0;i < MAX_INSTANCES;i++) wndstate_init(&inst_state[i]);
-		}
-#endif
-	}
-	else {
-#if TARGET_MSDOS == 32 && defined(WIN386)
-		/* Um, no. This kind of multi instance code does not work right with Win386. Crash, crash, crash.
-		 * So we'll just not allow multiple instances. Sorry. */
-		MessageBox((unsigned)NULL,"Due to stablity issues, this program does not allow multiple Watcom Win386 instances","Oops!",MB_OK);
-		return 1;
-#endif
-#if TARGET_MSDOS == 16
-		GetInstanceData(hPrevInstance,(BYTE near*)(&inst_state_handle),sizeof(inst_state_handle));
-		if (!inst_state_handle) {
-			MessageBox((unsigned)NULL,"Unable to allocate state array","Oops!",MB_OK);
-			return 1;
-		}
-
-		inst_state = (struct wndstate_t FAR*)GlobalLock(inst_state_handle);
-		if (!inst_state) {
-			MessageBox((unsigned)NULL,"Unable to lock state array","Oops!",MB_OK);
-			return 1;
-		}
-#endif
-	}
-
-	hwndMain = CreateWindow(WndProcClass,NULL,
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT,CW_USEDEFAULT,
-		320,200,
-		(unsigned)NULL,(unsigned)NULL,
-		hInstance,NULL);
-	if (!hwndMain) {
-		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
-		return 1;
-	}
-
-#if TARGET_MSDOS == 16
-	{
-		unsigned int i=0;
-
-		while (i < MAX_INSTANCES && inst_state[i].taken) i++;
-		if (i >= MAX_INSTANCES) {
-			MessageBox((unsigned)NULL,"No available slots","Oops!",MB_OK);
-			return 1;
-		}
-
-		my_slot = i;
-		SetWindowWord(hwndMain,offsetof(struct windowextra_t,instance_slot),my_slot);
-		work_state = &inst_state[my_slot];
-		work_state->taken = TRUE;
-	}
-#else
-	work_state = &the_state;
-	work_state->taken = TRUE;
-	wndstate_init(work_state);
-#endif
-	/* first instance already called init on each element */
-	work_state->bmpfile = bmpfile;
 	work_state->isLoading = TRUE;
+	InvalidateRect(work_state->hwndMain,(unsigned)NULL,TRUE);
 
 	{
-		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
-		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
-		AppendMenu(SysMenu,MF_STRING|MF_DISABLED|MF_GRAYED,IDCSM_INFO,"Image and display &info");
+		HMENU SysMenu = GetSystemMenu(work_state->hwndMain,FALSE);
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
+		EnableMenuItem(SysMenu,IDCSM_INFO,MF_DISABLED|MF_GRAYED);
 	}
 
 	/* make sure Windows can handle SetDIBitsToDevice() and bitmaps larger than 64KB and check other things */
 	{
+		int rcaps;
+		HDC hDC;
+
+		hDC = GetDC(work_state->hwndMain);
+		rcaps = GetDeviceCaps(hDC,RASTERCAPS);
+		ReleaseDC(work_state->hwndMain,hDC);
+
+		if (!(rcaps & RC_DIBTODEV)) {
+			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (SetDIBitsToDevice)","Err",MB_OK);
+			return 1;
+		}
+	}
+
+	{
 		int rcaps,szpal,bpp,planes;
 		HDC hDC;
 
-		hDC = GetDC(hwndMain);
-		if (!hDC) {
-			MessageBox((unsigned)NULL,"GetDC err","Err",MB_OK);
-			work_state->taken = FALSE;
-			return 1;
-		}
-
+		hDC = GetDC(work_state->hwndMain);
 		bpp = GetDeviceCaps(hDC,BITSPIXEL);
 		rcaps = GetDeviceCaps(hDC,RASTERCAPS);
 		szpal = GetDeviceCaps(hDC,SIZEPALETTE);
 		planes = GetDeviceCaps(hDC,PLANES);
-
-		ReleaseDC(hwndMain,hDC);
+		ReleaseDC(work_state->hwndMain,hDC);
 
 		if ((rcaps & RC_PALETTE) && szpal > 0)
 			work_state->need_palette = TRUE;
 
-		if (!(rcaps & RC_DIBTODEV)) {
-			MessageBox((unsigned)NULL,"Windows GDI lacks features we require (SetDIBitsToDevice)","Err",MB_OK);
-			work_state->taken = FALSE;
-			return 1;
-		}
-
 		/* Windows 3.1 can do 16bpp 5:5:5 but only if the screen is 5:5:5.
 		 * However, Windows 3.1 cannot do 32bpp ARGB even if the framebuffer itself is 32bpp ARGB,
 		 * but it can render 24bpp RGB just fine. */
-		if (!can16bpp && windows_version < 0x330) { /* Windows 3.1 and below */
+		if (!work_state->can16bpp && !work_state->win95) { /* Windows 3.1 and below */
 			if (planes == 1 && (bpp == 15 || bpp == 16)) { /* display is 16bpp */
-				can16bpp = TRUE;
+				work_state->can16bpp = TRUE;
 			}
 		}
+
+		/* keep track in case of Windows 95 display mode changes */
+		work_state->currentBPP = bpp;
+		work_state->currentPlanes = planes;
 	}
 
-	if (bmpfile == NULL) {
-		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
-		work_state->taken = FALSE;
-		return 1;
-	}
-
-	bfr = open_bmp(bmpfile);
+	bfr = open_bmp(work_state->bmpfile);
 	if (bfr == NULL) {
 		MessageBox((unsigned)NULL,"Failed to open BMP","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 	if (bfr->width == 0 || bfr->height == 0 || bfr->width > 8192 || bfr->height > 8192) {
 		MessageBox((unsigned)NULL,"BMP with no size","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 
-	/* set the window size to the bitmap BEFORE showing it */
-	{
+	work_state->bmpWidth = bfr->width;
+	work_state->bmpHeight = bfr->height;
+
+	/* set the window size to the bitmap BEFORE showing it. */
+	/* if our resizing put it off the screen edge, move it up. */
+	/* keep the window within the work area. */
+	/* But only do this ONCE at startup. */
+	if (!work_state->hasDoneFirstTimeWindowPos) {
 		RECT um;
 
-		/* start with client area */
-		um.top = um.left = 0;
-		um.right = bfr->width;
-		um.bottom = bfr->height;
-
-		/* ask Windows to adjust the rect to describe the overall window, frame, titlebar and all.
-		 * NTS: This adjusts the top/left negative and the bottom/right positive! */
-		AdjustWindowRect(&um,GetWindowLong(hwndMain,GWL_STYLE),FALSE/*no menu*/);
+		ComputeIdealWindowSizeFromImage(&um,work_state->hwndMain,work_state->bmpWidth,work_state->bmpHeight);
+		work_state->windowSizeMax.x = um.right;
+		work_state->windowSizeMax.y = um.bottom;
+		AddWindowPosToRect(&um,work_state->hwndMain);
+		ClipWindowToWorkArea(work_state,&um);
 
 		/* do it */
-		SetWindowPos(hwndMain,HWND_TOP,0,0,(int)(um.right-um.left),(int)(um.bottom-um.top),
-			SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOREDRAW);
-	}
-	/* if our resizing put it off the screen edge, move it up */
-	{
-		int borderw,borderh;
-		BOOL move=FALSE;
-		HDC screenDC;
-		RECT um;
-		int w,h;
-
-		/* Get window rect for the position to prevent the window from appearing off the bottom/right edge of the screen.
-		 * Then prevent the top/left from going off screen. */
-		screenDC = GetDC((HWND)NULL);
-		GetWindowRect(hwndMain,&um);
-		w = GetDeviceCaps(screenDC,HORZRES);
-		h = GetDeviceCaps(screenDC,VERTRES);
-		borderw = GetSystemMetrics(SM_CXFRAME);
-		borderh = GetSystemMetrics(SM_CYFRAME);
-
-		if (um.right > w) {
-			const int adjust = um.right - w;
-			um.right -= adjust;
-			um.left -= adjust;
-			move = TRUE;
-			if (um.left < 0) um.left = 0;
-		}
-		if (um.bottom > h) {
-			const int adjust = um.bottom - h;
-			um.bottom -= adjust;
-			um.top -= adjust;
-			move = TRUE;
-			if (um.top < 0) um.top = 0;
-		}
-
-		if (move) {
-			SetWindowPos(hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
+		SetWindowPos(work_state->hwndMain,HWND_TOP,um.left,um.top,(int)(um.right-um.left),(int)(um.bottom-um.top),
 				SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
-		}
 
-		ReleaseDC((HWND)NULL,screenDC);
+		work_state->hasDoneFirstTimeWindowPos = TRUE;
 	}
 
-	ShowWindow(hwndMain,nCmdShow);
-	UpdateWindow(hwndMain);
+	ShowWindow(work_state->hwndMain,nCmdShow);
+	UpdateWindow(work_state->hwndMain);
 
-	work_state->isMinimized = IsIconic(hwndMain);
-	UpdateTitleBar(hwndMain,work_state);
+	work_state->isMinimized = IsIconic(work_state->hwndMain);
+	UpdateTitleBar(work_state->hwndMain,work_state);
 
 	if (!(bfr->bpp == 1 || bfr->bpp == 2 || bfr->bpp == 4 || bfr->bpp == 8 || bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
 		MessageBox((unsigned)NULL,"BMP wrong bit depth","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 	if (bfr->bpp <= 8 && (bfr->palette == NULL || bfr->colors == 0)) {
 		MessageBox((unsigned)NULL,"BMP missing color palette","Err",MB_OK);
-		work_state->taken = FALSE;
 		return 1;
 	}
 
 	convert_scanline = convert_scanline_none;
 
 	if (bfr->bpp == 32) {
-		if (!can32bpp) {
+		if (!work_state->can32bpp) {
 			conv = CONV_32TO24; /* Windows 3.1 cannot render 32bpp, but it can render 24bpp, so convert on the fly */
 			convert_scanline = convert_scanline_32to24;
 		}
 		else if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else {
@@ -978,7 +1314,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
-		if (!can16bpp) {
+		if (!work_state->can16bpp) {
 			conv = CONV_16TO24; /* Windows 3.1 cannot render 16bpp unless 16bpp display, convert to 24bpp */
 			if (bfr->green_width > 5)
 				convert_scanline = convert_scanline_16_565to24;
@@ -986,16 +1322,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 				convert_scanline = convert_scanline_16_555to24;
 		}
 		else if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
+				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
-		else if (canBitfields &&
-			11u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
-			5u == bfr->red_width && 6u == bfr->green_width && 5u == bfr->blue_width) {
+		else if (work_state->canBitfields &&
+				11u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
+				5u == bfr->red_width && 6u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else if (bfr->green_width > 5u) {
-			if (canBitfields)
+			if (work_state->canBitfields)
 				convert_scanline = convert_scanline_16bpp565;
 			else
 				convert_scanline = convert_scanline_16bpp565_to_555;
@@ -1005,16 +1341,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
-	work_state->bmpWidth = bfr->width;
-	work_state->bmpHeight = bfr->height;
-
 	{
 		RECT um;
-		GetClientRect(hwndMain,&um); // with no scroll bars
-		PostMessage(hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
+		GetClientRect(work_state->hwndMain,&um); // with no scroll bars
+		PostMessage(work_state->hwndMain,WM_USER_SIZECHECK,0,0); // let the same WM_SIZE logic set the scroll bars
 	}
 
-	draw_progress(0,bfr->height);
+	draw_progress(work_state,0,bfr->height);
 
 	if (bfr->bpp == 32 && conv == CONV_32TO24) {
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
@@ -1023,7 +1356,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpStride = bitmap_stride_from_bpp_and_w(24,work_state->bmpWidth);
 		if (resize_bmp_scanline(bfr,work_state->bmpStride)) {
 			MessageBox((unsigned)NULL,"cannot resize bmp stride","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 	}
@@ -1031,9 +1363,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpStride = bfr->stride;
 	}
 
+	/* allocate temporary buffer */
+	work_state->bmpInfoIconRaw = malloc(sizeof(struct winBITMAPV4HEADER) + (256 * sizeof(RGBQUAD)));
+
 	/* set it up */
 	{
 		BITMAPINFOHEADER FAR *bih = bmpInfo(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
+		BITMAPINFOHEADER FAR *bihicon = bmpInfoIcon(work_state);/*NTS: data area is big enough even for a 256-color paletted file*/
 		unsigned int i;
 
 		work_state->srcBpp = bfr->bpp;
@@ -1046,12 +1382,13 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->src_alpha_shift = bfr->alpha_shift;
 		work_state->src_alpha_width = bfr->alpha_width;
 		work_state->bmpDIBmode = DIB_RGB_COLORS;
+		work_state->bmpIconDIBmode = DIB_RGB_COLORS;
 
 		bih->biSize = sizeof(BITMAPINFOHEADER);
 		bih->biCompression = 0;
 
 		if (bfr->bpp == 16 || bfr->bpp == 15) {
-			if (canBitfields && can16bpp && bfr->green_width > 5u) { // 5:6:5
+			if (work_state->canBitfields && work_state->can16bpp && bfr->green_width > 5u) { // 5:6:5
 				struct winBITMAPV4HEADER FAR *bi4 = (struct winBITMAPV4HEADER FAR*)bih;
 
 				bih->biSize = sizeof(struct winBITMAPV4HEADER);
@@ -1080,15 +1417,35 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			bih->biClrImportant = bfr->colors;
 		}
 
+		/* Icon is the same.
+		 *
+		 * Make sure to copy biSize, not just BITMAPINFOHEADER.
+		 * If we do not, the icon will render as garbage in the Windows 95 taskbar
+		 * if the BMP file we loaded is using the BI_BITFIELDS format. */
+#if TARGET_MSDOS == 16
+		_fmemcpy(bihicon,bih,bih->biSize);
+#else
+		memcpy(bihicon,bih,bih->biSize);
+#endif
+
 		if (bfr->bpp == 1 || bfr->bpp == 4 || bfr->bpp == 8) {
 			if (work_state->need_palette) {
 				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bih + bih->biSize);
 				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
 				work_state->bmpDIBmode = DIB_PAL_COLORS;
 			}
+			if (work_state->need_palette && !work_state->win95) {
+				uint16_t FAR *pal = (uint16_t FAR*)((unsigned char FAR*)bihicon + bih->biSize);
+				for (i=0;i < (1u << bfr->bpp);i++) pal[i] = i;
+				work_state->bmpIconDIBmode = DIB_PAL_COLORS;
+			}
 		}
 		if (work_state->bmpDIBmode == DIB_RGB_COLORS) {
 			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bih + bih->biSize);
+			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
+		}
+		if (work_state->bmpIconDIBmode == DIB_RGB_COLORS) {
+			RGBQUAD FAR *pal = (RGBQUAD FAR*)((unsigned char FAR*)bihicon + bihicon->biSize);
 			if (bfr->colors != 0 && bfr->colors <= (1u << bfr->bpp)) _fmemcpy(pal,bfr->palette,sizeof(RGBQUAD) * bfr->colors);
 		}
 	}
@@ -1100,7 +1457,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		lp = malloc(sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * (1u << bfr->bpp)));
 		if (!lp || bfr->colors > (1u << bfr->bpp)) {
 			MessageBox((unsigned)NULL,"Unable to alloc palette struct","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
@@ -1116,149 +1472,310 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		work_state->bmpPalette = CreatePalette(lp);
 		if (!work_state->bmpPalette) {
 			MessageBox((unsigned)NULL,"Unable to createPalette","Err",MB_OK);
-			work_state->taken = FALSE;
 			return 1;
 		}
 
 		free(lp);
 	}
 
-	/* the bitmap itself */
-#ifdef MEM_BY_GLOBALALLOC
-	/* Problem: GlobalAlloc does let you alloc large regions of memory, and StretchDIBitsToDevice()
-	 *          from them, but there seems to be bugs in certain drivers that crash Windows if you
-	 *          try to draw certain bit depths (S3 drivers in DOSBox). These bugs don't happen if
-	 *          you limit the bitmap to strips of less than 64KB each. */
-	work_state->bmpStripHeight = 0xFFF0u / work_state->bmpStride;
-	work_state->bmpStripCount = ((bfr->height + work_state->bmpStripHeight - 1u) / work_state->bmpStripHeight);
-	if (work_state->bmpStripCount > MAX_STRIPS) {
-		MessageBox((unsigned)NULL,"Bitmap too big (tall)","Err",MB_OK);
-		work_state->taken = FALSE;
-		return 1;
+	{
+#if TARGET_MSDOS == 16
+		work_state->bmpMemHandle = GlobalAlloc(GMEM_MOVEABLE,(DWORD)work_state->bmpStride * (DWORD)work_state->bmpHeight);
+		if (!work_state->bmpMemHandle) {
+			MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+			return 1;
+		}
+#else
+		work_state->bmpPtr = malloc(work_state->bmpStride * work_state->bmpHeight);
+		if (!work_state->bmpPtr) {
+			MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
+			return 1;
+		}
+#endif
 	}
 
+	/* NTS: Unlike the main bitmap, this time we do NOT select the palette into the icon DC.
+	 *      The reason for this is so that, in 256-color mode, to ensure that all StretchDIBits
+	 *      calls are forced to use only the 20 default system colors in the Windows UI,
+	 *
+	 *      While icon resources can have a color palette, CreateIcon() does not allow us to
+	 *      provide a color palette and therefore there is no sense in trying to use all
+	 *      256 colors in the image anyway, they will just display wrong the instant anything
+	 *      else uses the color palette, but the default 20 colors in Windows are always there
+	 *      (unless of course you call that API function to unlock them and gain the ability
+	 *      to control 254 out of 256 colors in the palette, of course).
+	 *
+	 *      This is not a big deal in Windows 3.1 where this program has the ability to draw
+	 *      it's own minified icon but if we want the icon to appear in the taskbar and ALT+TAB
+	 *      in Windows 95 we have to do this. The effect of this code is that even our custom
+	 *      drawn minified icon in Windows 3.1 limits itself to 16 colors, which is fine since
+	 *      then our minified window doesn't conflict in any way with any other application.
+	 *      But in Windows 3.1 we can draw with the palette anyway while minimized.
+	 *
+	 *      So: Windows 3.1: Select the palette into the bitmap icon, PAL_COLORS.
+	 *          Windows 95: Do not select palette, RGB_COLORS */
 	{
-		unsigned int i,h=bfr->height;
-		for (i=0;i < work_state->bmpStripCount && h >= work_state->bmpStripHeight;i++) {
-			work_state->bmpStrips[i].stripHeight = work_state->bmpStripHeight;
-			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,work_state->bmpStripHeight*work_state->bmpStride);
-			if (!work_state->bmpStrips[i].stripHandle) {
-				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-				work_state->taken = FALSE;
-				return 1;
-			}
-			h -= work_state->bmpStripHeight;
+		HDC hdc = GetDC(work_state->hwndMain);
+
+		work_state->bmpIconDC = CreateCompatibleDC(hdc);
+		if (!work_state->bmpIconDC) {
+			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
+			return 1;
 		}
-		if (i < work_state->bmpStripCount && h != 0) {
-			work_state->bmpStrips[i].stripHeight = h;
-			work_state->bmpStrips[i].stripHandle = GlobalAlloc(GMEM_ZEROINIT,h*work_state->bmpStride);
-			if (!work_state->bmpStrips[i].stripHandle) {
-				MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-				work_state->taken = FALSE;
-				return 1;
-			}
+
+		if (work_state->bmpPalette && !work_state->win95) {
+			oldIconPal = SelectPalette(work_state->bmpIconDC,work_state->bmpPalette,TRUE);
+			RealizePalette(work_state->bmpIconDC);
 		}
+
+		work_state->bmpIcon = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,work_state->iconWidth,work_state->iconHeight);
+		if (!work_state->bmpIcon) {
+			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
+			return 1;
+		}
+
+		work_state->bmpIconOld = SelectObject(work_state->bmpIconDC,work_state->bmpIcon);
+
+		ReleaseDC(work_state->hwndMain,hdc);
 	}
-#else
-	work_state->bmpMem = malloc(bfr->height * work_state->bmpStride);
-	if (!work_state->bmpMem) {
-		MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-		work_state->taken = FALSE;
-		return 1;
+	if (work_state->win95) {
+		HDC hdc = GetDC(work_state->hwndMain);
+
+		work_state->bmpIconSmallDC = CreateCompatibleDC(hdc);
+		if (!work_state->bmpIconSmallDC) {
+			MessageBox((unsigned)NULL,"Unable to get compatible DC (icon)","Err",MB_OK);
+			return 1;
+		}
+
+		work_state->bmpIconSmall = CreateCompatibleBitmap(hdc/*use the window DC not the compat DC*/,work_state->iconSmallWidth,work_state->iconSmallHeight);
+		if (!work_state->bmpIconSmall) {
+			MessageBox((unsigned)NULL,"Unable to get compatible bitmap","Err",MB_OK);
+			return 1;
+		}
+
+		work_state->bmpIconSmallOld = SelectObject(work_state->bmpIconSmallDC,work_state->bmpIconSmall);
+
+		ReleaseDC(work_state->hwndMain,hdc);
 	}
-#endif
 
 	{
 		unsigned int p=0;
 
 		/* OK, now read it in! */
-		draw_progress(p,bfr->height);
+		draw_progress(work_state,p,bfr->height);
 		while (read_bmp_line(bfr) == 0) {
 			convert_scanline(bfr,bfr->scanline,bfr->width);
 			load_bmp_scanline(work_state,bfr->current_line,bfr->scanline);
-			draw_progress(++p,bfr->height);
+			draw_progress(work_state,++p,bfr->height);
 		}
 
-		draw_progress(0,0);
+		draw_progress(work_state,0,0);
 	}
 
 	/* done reading */
 	close_bmp(&bfr);
 
+	if (work_state->bmpPalette && !work_state->win95) {
+		SelectPalette(work_state->bmpIconDC,oldIconPal,FALSE);
+		oldIconPal = (HPALETTE)0;
+	}
+
+	/* Create an HICON of the minified image, but only for Windows 95.
+	 * We draw our own icon in Windwos 3.1, and Windows 3.1 only allows association of an
+	 * icon to a window at the window class level anyway, while Windows 95 allows per-icon
+	 * using WM_SETICON. */
+	/* NTS: WM_SETICON works for both Win16 and Win32 under Windows 95, 98, and ME.
+	 *      Windows XP however ignores Win16 WM_SETICON calls. That means if you run these Win16
+	 *      builds under XP, you will only see a generic Windows icon in the taskbar, not the
+	 *      icon we're trying to display. Perhaps NTVDM.EXE in Windows XP has no translation
+	 *      code for WM_SETICON and Microsoft didn't care enough to support it. After all,
+	 *      WM_SETICON didn't exist in Windows 3.1 so why should NTVDM.EXE support it? */
+	if (work_state->bmpIconSmall && work_state->iconSmallWidth && work_state->iconSmallHeight && work_state->win95)
+		work_state->bmpIconSmallIcon = bitmap2icon(work_state->bmpIconSmall);
+	if (work_state->bmpIcon && work_state->win95)
+		work_state->bmpIconIcon = bitmap2icon(work_state->bmpIcon);
+
+	if (work_state->bmpIconIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_BIG, (LPARAM)work_state->bmpIconIcon);
+	if (work_state->bmpIconSmallIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)work_state->bmpIconSmallIcon);
+
 	work_state->isLoading = FALSE;
 	work_state->drawReady = TRUE;
 
 	{
-		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		HMENU SysMenu = GetSystemMenu(work_state->hwndMain,FALSE);
 		EnableMenuItem(SysMenu,SC_CLOSE,MF_ENABLED);
 		EnableMenuItem(SysMenu,IDCSM_INFO,MF_ENABLED);
 	}
 
-	/* force redraw */
-	InvalidateRect(hwndMain,(unsigned)NULL,FALSE);
-	UpdateWindow(hwndMain);
+	/* we don't need this anymore */
+	cleanup_bmpinfoiconraw(work_state);
 
-	while (GetMessage(&msg,(unsigned)NULL,0,0)) {
+	/* Windows 95 will never WM_PAINT our window when minimized.
+	 * For Windows 95, discard our bmpIcon and bmpSmallIcon bitmaps, we don't need them anymore.
+	 * The only thing needed after that point are the HICON resources we created for our window icons. */
+	if (work_state->win95) {
+		cleanup_bmpiconsmall(work_state);
+		cleanup_bmpicon(work_state);
+	}
+
+	/* force redraw */
+	InvalidateRect(work_state->hwndMain,(unsigned)NULL,FALSE);
+	UpdateWindow(work_state->hwndMain);
+
+	while (gmRet=GetMessage(&msg,(unsigned)NULL,0,0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-	}
 
-#ifdef MEM_BY_GLOBALALLOC
-	{
-		unsigned int i;
-		for (i=0;i < work_state->bmpStripCount;i++) {
-			if (work_state->bmpStrips[i].stripHandle) {
-				GlobalFree(work_state->bmpStrips[i].stripHandle);
-				work_state->bmpStrips[i].stripHandle = (unsigned)NULL;
-				work_state->bmpStrips[i].stripHeight = 0;
-			}
+		if (work_state->displayModeChangeReinit) {
+			retv = APPLOOP_RESTART;
+			break;
 		}
 	}
-#else
-	free(work_state->bmpMem);
-	work_state->bmpMem = NULL;
-#endif
 
-	if (work_state->bmpPalette) DeleteObject(work_state->bmpPalette);
-	work_state->bmpPalette = (unsigned)NULL;
+	/* Before destroying the icons, remove them from the window.
+	 * If we leave destroyed icons in the window, the Windows 95 explorer shell might crash at random
+	 * drawing a destroyed icon while this code goes into reloading state after display mode change. */
+	if (work_state->bmpIconIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_BIG, (LPARAM)NULL);
+	if (work_state->bmpIconSmallIcon)
+		SendMessage(work_state->hwndMain, WM_SETICON, ICON_SMALL, (LPARAM)NULL);
+
+	cleanup_bmp(work_state);
+	cleanup_bmpiconsmall(work_state);
+	cleanup_bmpiconsmallicon(work_state);
+	cleanup_bmpicon(work_state);
+	cleanup_bmpiconicon(work_state);
+	cleanup_bmppalette(work_state);
+	work_state->displayModeChangeReinit = FALSE;
+
+	if (gmRet == FALSE) /* WM_QUIT */
+		return msg.wParam;
+
+	return retv;
+}
+
+int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
+	struct wndstate_t FAR *work_state;
+	char* bmpfile = NULL;
+	HWND hwndMain;
+	WNDCLASS wnd;
+	int retv;
+
+	probe_dos();
+	detect_windows();
+
+	myInstance = hInstance;
+
+	work_state = &the_state;
+	wndstate_init(work_state);
+
+	CheckIconSizes(work_state);
+
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+		if (windows_version >= 0x350) { /* NTS: 3.95 or higher == Windows 95 or Windows NT 4.0 */
+			work_state->canBitfields = TRUE; /* we can use BITMAPV4HEADER and BI_BITFIELDS */
+			work_state->can32bpp = TRUE; /* can use 32bpp ARGB */
+			work_state->can16bpp = TRUE; /* can use 16bpp 5:5:5 */
+			work_state->win95 = TRUE;
+		}
+	}
 
 #if TARGET_MSDOS == 16
-	/* let go of slot */
-	work_state->taken = FALSE;
-	work_state = NULL;
-	my_slot = 0;
-
-	/* Win16 only:
-	 * If we are the owner (the first instance that registered the window class),
-	 * then we must reside in memory until we are the last instance resident.
-	 * If we do not do this, then if multiple instances are open and the user closes US
-	 * before closing the others, the others will crash (having pulled the code segment
-	 * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-		MSG pmsg; /* do not overwrite msg.wParam */
-
-		/* NTS: PeekMessage() PM_REMOVE only, do not translate or dispatch.
-		 *      Windows 3.1 tolerates it just fine, but Windows 3.0 will crash. */
-		while (GetModuleUsage(hInstance) > 1)
-			PeekMessage(&pmsg,(unsigned)NULL,0,0,PM_REMOVE);
-
-		/* let go of our copy of the handle */
-		/* NTS: For some weird reason, calling GlobalUnlock() before this waiting loop causes ALL instances
-		 *      to lose their data. Calling GlobalUnlock() after the loop fixes that issue. Why? */
-		GlobalUnlock(inst_state_handle);
-		inst_state = NULL;
-
-		/* only the first instance, who allocated the handle, should free it */
-		GlobalFree(inst_state_handle);
-		inst_state_handle = 0;
-	}
-	else {
-		/* let go of our copy of the handle */
-		GlobalUnlock(inst_state_handle);
-		inst_state = NULL;
+	/* 16-bit builds of this program cause some weird crashes within the Windows 3.0 GDI when
+	 * using SetDIBitsToDevice() with DIBs larger than 64KB with a width that is either a power
+	 * of 2 or multiple of 128 pixels? Also doesn't like to fully SetDIBitsToDevice() that are
+	 * some amount larger than the screen? These crashes do not occur in Windows 3.0 real more
+	 * or Windows 3.0 286 standard mode, they only happen in Windows 3.0 386 enhanced mode */
+	if (windows_mode == WINDOWS_ENHANCED && windows_version < 0x30A) {
+		if (MessageBox((HWND)NULL,"This program seems to cause some minor crashes or errors when run under Windows 3.0 386 enhanced mode. Please consider using GENERAL1.EXE or restarting Windows 3.0 in real mode or standard mode. Continue?","WARNING",MB_YESNO|MB_ICONHAND) == IDNO)
+			return 1;
 	}
 #endif
 
-	return msg.wParam;
+	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
+	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
+
+	/* TODO:  If we assign bmpfile = lpCmdLine, it remains valid through this code but Windows APIs
+	 *        sometimes gets corrupted or gibberish strings i.e. CreateWindow() and SetWindowText(),
+	 *        especially in real-mode Windows 3.0.
+	 *
+	 *        Making a copy with strdup() seems to solve this issue for some unknown reason.
+	 *
+	 *        Why? */
+	if (*lpCmdLine) {
+		bmpfile = strdup(lpCmdLine);
+	}
+	else if (windows_version >= 0x30A/*Windows 3.1 or higher*/) {
+		bmpfile = CommDlgGetOpenFileName();
+		if (!bmpfile)
+			return 1;
+	}
+
+	if (bmpfile == NULL) {
+		MessageBox((unsigned)NULL,"No bitmap specified","Err",MB_OK);
+		return 1;
+	}
+
+	if (!hPrevInstance) {
+		wnd.style = CS_HREDRAW|CS_VREDRAW;
+		/* WARNING: If anyone ever tells you to use MakeProcInstance() with RegisterClass, ignore them.
+		 *          None of Microsoft's SDK samples do it either for RegisterClass (but they do it for
+		 *          DialogBox() though?). What MakeProcInstance() ultimately does is cause the window
+		 *          procedure, when it is called, to always get the same DS data segment as the initial
+		 *          instance. This code is written to work with the DS segment of each individual instance.
+		 *          Older versions of this code had an elaborate Win16 global memory handle array tracking
+		 *          system that was completely unnecessary because of this misunderstanding.  */
+		wnd.lpfnWndProc = (WNDPROC)WndProc;
+		wnd.cbClsExtra = 0;
+		wnd.cbWndExtra = 0;
+		wnd.hInstance = hInstance;
+		wnd.hIcon = (unsigned)NULL; /* do NOT load a class icon so that Windows 3.1 lets us paint our own icon */
+		wnd.hCursor = (unsigned)NULL;
+		wnd.hbrBackground = (unsigned)NULL;
+		wnd.lpszMenuName = NULL;
+		wnd.lpszClassName = WndProcClass;
+
+		if (!RegisterClass(&wnd)) {
+			MessageBox((unsigned)NULL,"Unable to register Window class","Oops!",MB_OK);
+			return 1;
+		}
+	}
+
+	hwndMain = CreateWindow(WndProcClass,NULL,
+		WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT,CW_USEDEFAULT,
+		320,200,
+		(unsigned)NULL,(unsigned)NULL,
+		hInstance,NULL);
+	if (!hwndMain) {
+		MessageBox((unsigned)NULL,"Unable to create window","Oops!",MB_OK);
+		return 1;
+	}
+
+#if TARGET_MSDOS == 32
+	/* Windows 11, trying to be Mac OS, puts rounded corners on windows by default. Please don't. */
+	Windows11RemoveRoundCorners(hwndMain);
+#endif
+
+	/* first instance already called init on each element */
+	work_state->hwndMain = hwndMain;
+	work_state->bmpfile = bmpfile;
+
+	{
+		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info");
+		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
+		AppendMenu(SysMenu,MF_STRING,IDCSM_ABOUT,"&About this program");
+		EnableMenuItem(SysMenu,SC_CLOSE,MF_DISABLED|MF_GRAYED);
+	}
+
+	do {
+		retv = AppLoop(work_state,nCmdShow);
+	} while (retv < 0);
+
+	return retv;
 }
 
