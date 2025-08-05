@@ -88,7 +88,7 @@ struct wndstate_t {
 	BOOL			scrollEnable;
 	BOOL			displayModeChangeReinit;
 	BOOL			hasDoneFirstTimeWindowPos;
-	BOOL			win30_bitmap_width_limitations;
+	BOOL			win30_bitmap_dim_limitations;
 
 	BOOL			canBitfields; /* can do BI_BITFIELDS (Win95/WinNT 4) */
 	BOOL			can16bpp;     /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
@@ -344,9 +344,9 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 		(int)work_state->currentBPP,
 		(int)work_state->currentPlanes);
 
-	if (work_state->win30_bitmap_width_limitations) {
+	if (work_state->win30_bitmap_dim_limitations) {
 		w += snprintf(w,(int)(f-w),
-			"\nUsing: SetDIBits biWidth hack for Windows 3.0");
+			"\nUsing: SetDIBits bmpdim hack for Windows 3.0");
 	}
 
 	MessageBox(hwnd,tmp,"Info",MB_OK);
@@ -688,10 +688,9 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					unsigned int i,y=0;
 					int scx = -work_state->scrollX;
 #if TARGET_MSDOS == 16
+					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
 					const unsigned ahincr = Win16_AHINCR();
 					unsigned ptradj = 0;
-					/* end hack */
-					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
 #else
 					BITMAPINFO *bi = (BITMAPINFO*)bmpInfo(work_state);
 #endif
@@ -702,7 +701,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					 * So for Windows 3.0, hack the dest X coord and pointer to compensate. Hopefully Windows 3.0 will
 					 * not read off the end of the buffer if asked only to process DIB bits within the destination
 					 * rectangle we give it. */
-					if (work_state->win30_bitmap_width_limitations) {
+					if (work_state->win30_bitmap_dim_limitations) {
 						const unsigned int mxx = 128u; /* must be a multiple of 32 */
 						const unsigned int stp = bitmap_stride_from_bpp_and_w(bi->bmiHeader.biBitCount,mxx);
 
@@ -1770,7 +1769,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 * scrolling the 1600x1200 test BMP horizontally all the way, but we can hack the pointer and
 	 * scroll X given to SetDIBitsToDevice() to compensate! */
 	if (windows_version < 0x30A)
-		work_state->win30_bitmap_width_limitations = TRUE;
+		work_state->win30_bitmap_dim_limitations = TRUE;
 
 	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
 	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
