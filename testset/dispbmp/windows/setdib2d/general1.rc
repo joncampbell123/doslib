@@ -1,0 +1,18 @@
+
+#include "resource.h"
+#include <windows.h>
+
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "appicon.ico"
+
+IDD_ABOUT DIALOG DISCARDABLE MOVEABLE  0, 0, 217, 51
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About this program"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,161,9,50,14
+    ICON            "IDI_APPICON",IDC_STATIC,6,7,18,20
+    LTEXT           "DOSLIB BMP viewer for Windows",IDC_STATIC,31,13,124,12
+    LTEXT           "\2512025 Jonathan Campbell, DOSLIB project, DOSBox-X",
+                    IDC_STATIC,6,36,206,11
+END
+
