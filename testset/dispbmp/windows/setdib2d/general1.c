@@ -88,6 +88,7 @@ struct wndstate_t {
 	BOOL			scrollEnable;
 	BOOL			displayModeChangeReinit;
 	BOOL			hasDoneFirstTimeWindowPos;
+	BOOL			win30_bitmap_width_limitations;
 
 	BOOL			canBitfields; /* can do BI_BITFIELDS (Win95/WinNT 4) */
 	BOOL			can16bpp;     /* apparently Windows 3.1 can do 16bpp but only if the screen is 16bpp */
@@ -342,6 +343,11 @@ static void ShowInfo(HWND hwnd,struct wndstate_t FAR *work_state) {
 		"\nDisplay: %ubpp %uplanes",
 		(int)work_state->currentBPP,
 		(int)work_state->currentPlanes);
+
+	if (work_state->win30_bitmap_width_limitations) {
+		w += snprintf(w,(int)(f-w),
+			"\nUsing: SetDIBits biWidth hack for Windows 3.0");
+	}
 
 	MessageBox(hwnd,tmp,"Info",MB_OK);
 
@@ -680,11 +686,40 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				}
 				else {
 					unsigned int i,y=0;
+					int scx = -work_state->scrollX;
 #if TARGET_MSDOS == 16
+					const unsigned ahincr = Win16_AHINCR();
+					unsigned ptradj = 0;
+					/* end hack */
 					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
 #else
 					BITMAPINFO *bi = (BITMAPINFO*)bmpInfo(work_state);
 #endif
+
+#if TARGET_MSDOS == 16
+					/* Windows 3.0 has some weird behavior with SetDIBitsToDevice and strips that are some amount wider
+					 * than the screen. The 1600x1200 test case cannot horizontally scroll all the way because of it.
+					 * So for Windows 3.0, hack the dest X coord and pointer to compensate. Hopefully Windows 3.0 will
+					 * not read off the end of the buffer if asked only to process DIB bits within the destination
+					 * rectangle we give it. */
+					if (work_state->win30_bitmap_width_limitations) {
+						const unsigned int mxx = 128u; /* must be a multiple of 32 */
+						const unsigned int stp = bitmap_stride_from_bpp_and_w(bi->bmiHeader.biBitCount,mxx);
+
+						while (scx < -((int)mxx)) {
+							/* if we're within 32 bytes of the end of the scanline with the pointer math,
+							 * then stop, because who knows if some part of Windows 3.0 or a device driver
+							 * might have optimized code that might read beyond the end of the buffer,
+							 * and if the data or page alignment is right, cause a fault. */
+							if ((ptradj+stp+32u) > work_state->bmpStride)
+								break;
+
+							ptradj += stp;
+							scx += mxx;
+						}
+					}
+#endif
+
 					for (i=0;i < work_state->bmpStripCount;i++) {
 						struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
 						void FAR *p = GlobalLock(bmst->bmpMemHandle);
@@ -696,8 +731,20 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 							bi->bmiHeader.biHeight = bmst->height;
 							bi->bmiHeader.biSizeImage = (DWORD)bi->bmiHeader.biHeight * (DWORD)work_state->bmpStride;
 
+#if TARGET_MSDOS == 16
+							/* pointer adjust in order to display bitmap strips wider than the screen in Windows 3.0 */
+							if (ptradj) {
+								const unsigned oov = FP_OFF(p);
+								unsigned nov = oov;
+								if ((nov += ptradj) < oov/*16-bit carry*/)
+									p = MK_FP(FP_SEG(p)+ahincr,nov);
+								else
+									p = (void FAR*)((unsigned char FAR*)p+ptradj); /* will not change segment */
+							}
+#endif
+
 							SetDIBitsToDevice(ps.hdc,
-								-work_state->scrollX,y-work_state->scrollY,/*dest pos*/
+								scx,y-work_state->scrollY,/*dest pos*/
 								work_state->bmpWidth,bmst->height,/*dest dim*/
 								0,0,/*src pos (bottom up bitmap Y coordinates)*/
 								0,bmst->height,/*start,count DIB scanlines*/
@@ -1718,6 +1765,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			work_state->win95 = TRUE;
 		}
 	}
+
+	/* Windows 3.0 has some odd SetDIBitsToDevice width limitations that prevent the user from fully
+	 * scrolling the 1600x1200 test BMP horizontally all the way, but we can hack the pointer and
+	 * scroll X given to SetDIBitsToDevice() to compensate! */
+	if (windows_version < 0x30A)
+		work_state->win30_bitmap_width_limitations = TRUE;
 
 	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
 	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
