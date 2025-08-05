@@ -93,11 +93,7 @@ struct wndstate_t {
 
 	HWND			hwndMain;
 	HPALETTE		bmpPalette;
-#if TARGET_MSDOS == 16
 	HGLOBAL			bmpMemHandle;
-#else
-	unsigned char*		bmpPtr;
-#endif
 	HBITMAP			bmpIcon,bmpIconOld;
 	HICON			bmpIconIcon;
 	HBITMAP			bmpIconSmall,bmpIconSmallOld;
@@ -678,11 +674,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				else {
 #if TARGET_MSDOS == 16
 					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
-					void FAR *p = GlobalLock(work_state->bmpMemHandle);
 #else
 					BITMAPINFO *bi = (BITMAPINFO*)bmpInfo(work_state);
-					void *p = work_state->bmpPtr;
 #endif
+					void FAR *p = GlobalLock(work_state->bmpMemHandle);
 					if (p) {
 						SetDIBitsToDevice(ps.hdc,
 							0,0,/*dest pos*/
@@ -691,9 +686,7 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 							0,work_state->bmpHeight,/*start,count DIB scanlines*/
 							p,bi,work_state->bmpDIBmode);
 					}
-#if TARGET_MSDOS == 16
 					GlobalUnlock(work_state->bmpMemHandle);
-#endif
 				}
 
 				if (work_state->bmpPalette)
@@ -830,13 +823,13 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 	void FAR *p;
 #else
 	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon(work_state);
-	unsigned char *d;
+	void FAR *p;
 #endif
 	unsigned int icony,iconsmy;
 
-#if TARGET_MSDOS == 16
 	p = GlobalLock(work_state->bmpMemHandle);
 	if (p) {
+#if TARGET_MSDOS == 16
 		const uint32_t ofs = ((DWORD)cline * (DWORD)work_state->bmpStride) + (DWORD)FP_OFF(p);
 		unsigned rem,cpy = (unsigned)work_state->bmpStride;
 
@@ -857,11 +850,11 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		else {
 			_fmemcpy(MK_FP(sv,ov),s,cpy);
 		}
-	}
 #else
-	d = work_state->bmpPtr + (cline * work_state->bmpStride);
-	memcpy(d,s,work_state->bmpStride);
+		const uint32_t ofs = ((DWORD)cline * (DWORD)work_state->bmpStride);
+		memcpy((unsigned char*)p+ofs,s,work_state->bmpStride);
 #endif
+	}
 
 	icony = (unsigned int)(((unsigned long)line * (unsigned long)work_state->iconHeight) / (unsigned long)work_state->bmpHeight);
 	if (load_bmp_icony_last != icony) {
@@ -1027,13 +1020,8 @@ static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
 }
 
 static void cleanup_bmp(struct wndstate_t *work_state) {
-#if TARGET_MSDOS == 16
 	if (work_state->bmpMemHandle) GlobalFree(work_state->bmpMemHandle);
 	work_state->bmpMemHandle = (HGLOBAL)NULL;
-#else
-	if (work_state->bmpPtr) free(work_state->bmpPtr);
-	work_state->bmpPtr = NULL;
-#endif
 }
 
 static void cleanup_bmppalette(struct wndstate_t *work_state) {
@@ -1479,19 +1467,11 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	}
 
 	{
-#if TARGET_MSDOS == 16
 		work_state->bmpMemHandle = GlobalAlloc(GMEM_MOVEABLE,(DWORD)work_state->bmpStride * (DWORD)work_state->bmpHeight);
 		if (!work_state->bmpMemHandle) {
 			MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
 			return 1;
 		}
-#else
-		work_state->bmpPtr = malloc(work_state->bmpStride * work_state->bmpHeight);
-		if (!work_state->bmpPtr) {
-			MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-			return 1;
-		}
-#endif
 	}
 
 	/* NTS: Unlike the main bitmap, this time we do NOT select the palette into the icon DC.
