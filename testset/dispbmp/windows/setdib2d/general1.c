@@ -60,6 +60,11 @@ static HINSTANCE near		myInstance;
 #define IDCSM_INFO		0x7700u
 #define IDCSM_ABOUT		0x7702u
 
+struct bmpstrip_t {
+	HGLOBAL			bmpMemHandle;
+	unsigned int		height;
+};
+
 struct wndstate_t {
 	unsigned int		scrollX,scrollY;
 
@@ -93,7 +98,9 @@ struct wndstate_t {
 
 	HWND			hwndMain;
 	HPALETTE		bmpPalette;
-	HGLOBAL			bmpMemHandle;
+	unsigned int		bmpStripCount;
+	unsigned int		bmpStripHeight;
+	struct bmpstrip_t*	bmpStrip;
 	HBITMAP			bmpIcon,bmpIconOld;
 	HICON			bmpIconIcon;
 	HBITMAP			bmpIconSmall,bmpIconSmallOld;
@@ -672,21 +679,26 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					}
 				}
 				else {
+					unsigned int i,y=0;
 #if TARGET_MSDOS == 16
 					BITMAPINFO FAR *bi = (BITMAPINFO FAR*)bmpInfo(work_state);
 #else
 					BITMAPINFO *bi = (BITMAPINFO*)bmpInfo(work_state);
 #endif
-					void FAR *p = GlobalLock(work_state->bmpMemHandle);
-					if (p) {
-						SetDIBitsToDevice(ps.hdc,
-							0,0,/*dest pos*/
-							work_state->bmpWidth,work_state->bmpHeight,/*dest dim*/
-							work_state->scrollX,-work_state->scrollY,/*src pos (bottom up bitmap Y coordinates)*/
-							0,work_state->bmpHeight,/*start,count DIB scanlines*/
-							p,bi,work_state->bmpDIBmode);
+					for (i=0;i < work_state->bmpStripCount;i++) {
+						struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
+						void FAR *p = GlobalLock(bmst->bmpMemHandle);
+						if (p) {
+							SetDIBitsToDevice(ps.hdc,
+								-work_state->scrollX,y-work_state->scrollY,/*dest pos*/
+								work_state->bmpWidth,bmst->height,/*dest dim*/
+								0,0,/*src pos (bottom up bitmap Y coordinates)*/
+								0,bmst->height,/*start,count DIB scanlines*/
+								p,bi,work_state->bmpDIBmode);
+						}
+						GlobalUnlock(bmst->bmpMemHandle);
+						y += bmst->height;
 					}
-					GlobalUnlock(work_state->bmpMemHandle);
 				}
 
 				if (work_state->bmpPalette)
@@ -815,45 +827,32 @@ static unsigned int load_bmp_icony_last = ~0u;
 static unsigned int load_bmp_iconsmy_last = ~0u;
 
 static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned int line,const unsigned char *s) {
-	const unsigned int cline = work_state->bmpHeight - 1u - line;
 #if TARGET_MSDOS == 16
 	BITMAPINFO FAR *bmicon = (BITMAPINFO FAR*)bmpInfoIcon(work_state);
-	const unsigned ahshf = Win16_AHSHIFT();
-	unsigned sv,ov;
 	void FAR *p;
 #else
 	BITMAPINFO *bmicon = (BITMAPINFO*)bmpInfoIcon(work_state);
 	void FAR *p;
 #endif
+	const unsigned int strip = line / work_state->bmpStripHeight;
+	const unsigned int sline = line % work_state->bmpStripHeight;
 	unsigned int icony,iconsmy;
 
-	p = GlobalLock(work_state->bmpMemHandle);
-	if (p) {
+	if (strip < work_state->bmpStripCount && work_state->bmpStrip) {
+		struct bmpstrip_t *bmst = &work_state->bmpStrip[strip];
+		if (sline < bmst->height) {
+			const unsigned int scline = bmst->height - 1u - sline;
+
+			p = GlobalLock(bmst->bmpMemHandle);
+			if (p) {
 #if TARGET_MSDOS == 16
-		const uint32_t ofs = ((DWORD)cline * (DWORD)work_state->bmpStride) + (DWORD)FP_OFF(p);
-		unsigned rem,cpy = (unsigned)work_state->bmpStride;
-
-		ov = (unsigned)ofs;
-		sv = FP_SEG(p) + ((unsigned)(ofs >> (DWORD)16ul) << ahshf);
-		rem = 0x10000u - ov;
-
-		if (ov && rem < cpy) {
-			/* the scanline crosses two segments.
-			 * no, we cannot assume 16-bit real-mode and "normalize" the FAR pointer to adjust for it
-			 * because we're more likely in 16-bit protected mode. Windows provides barely documented
-			 * AHINCR/AHSHIFT constants in the KERNEL module (that nonetheless, Watcom C programmers
-			 * noticed), which provide the shift/increment values to know how to deal with FAR pointers. */
-			_fmemcpy(MK_FP(sv,ov),s,rem); /* copy what we can in the first segment */
-			s += rem; cpy -= rem; sv += 1 << ahshf; ov = 0;
-			_fmemcpy(MK_FP(sv,ov),s,cpy); /* then copy the rest starting from offset 0 in the next segment */
-		}
-		else {
-			_fmemcpy(MK_FP(sv,ov),s,cpy);
-		}
+				_fmemcpy((unsigned char*)p+(scline*work_state->bmpStride),s,work_state->bmpStride);
 #else
-		const uint32_t ofs = ((DWORD)cline * (DWORD)work_state->bmpStride);
-		memcpy((unsigned char*)p+ofs,s,work_state->bmpStride);
+				memcpy((unsigned char*)p+(scline*work_state->bmpStride),s,work_state->bmpStride);
 #endif
+				GlobalUnlock(bmst->bmpMemHandle);
+			}
+		}
 	}
 
 	icony = (unsigned int)(((unsigned long)line * (unsigned long)work_state->iconHeight) / (unsigned long)work_state->bmpHeight);
@@ -1020,8 +1019,19 @@ static void cleanup_bmpicon(struct wndstate_t FAR *work_state) {
 }
 
 static void cleanup_bmp(struct wndstate_t *work_state) {
-	if (work_state->bmpMemHandle) GlobalFree(work_state->bmpMemHandle);
-	work_state->bmpMemHandle = (HGLOBAL)NULL;
+	unsigned int i;
+
+	if (work_state->bmpStrip) {
+		for (i=0;i < work_state->bmpStripCount;i++) {
+			struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
+			if (bmst->bmpMemHandle) GlobalFree(bmst->bmpMemHandle);
+			bmst->bmpMemHandle = (HGLOBAL)NULL;
+			bmst->height = 0;
+		}
+		free(work_state->bmpStrip);
+		work_state->bmpStrip = NULL;
+	}
+	work_state->bmpStripCount = 0;
 }
 
 static void cleanup_bmppalette(struct wndstate_t *work_state) {
@@ -1467,11 +1477,48 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 	}
 
 	{
-		work_state->bmpMemHandle = GlobalAlloc(GMEM_MOVEABLE,(DWORD)work_state->bmpStride * (DWORD)work_state->bmpHeight);
-		if (!work_state->bmpMemHandle) {
-			MessageBox((unsigned)NULL,"Unable to alloc bitmap","Err",MB_OK);
-			return 1;
+		const unsigned int maxheight = 0xFFF0u / work_state->bmpStride;
+		if (!maxheight) return 1;
+
+		work_state->bmpStripHeight = maxheight;
+		work_state->bmpStripCount = (work_state->bmpHeight + maxheight - 1u) / maxheight;
+		if (!work_state->bmpStripCount) return 1;
+
+		work_state->bmpStrip = malloc(sizeof(struct bmpstrip_t) * work_state->bmpStripCount);
+		if (!work_state->bmpStrip) return 1;
+	}
+	{
+		unsigned int i=0,h=work_state->bmpHeight;
+
+		while (i < work_state->bmpStripCount && h >= work_state->bmpStripHeight) {
+			struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
+
+			bmst->height = work_state->bmpStripHeight;
+			bmst->bmpMemHandle = GlobalAlloc(GMEM_MOVEABLE,bmst->height * work_state->bmpStride);
+			if (!bmst->bmpMemHandle) {
+				MessageBox((unsigned)NULL,"Unable to alloc bitmap strip","Err",MB_OK);
+				return 1;
+			}
+
+			h -= bmst->height;
+			i++;
 		}
+		if (i < work_state->bmpStripCount && h > 0) {
+			struct bmpstrip_t *bmst = &work_state->bmpStrip[i];
+
+			bmst->height = h;
+			bmst->bmpMemHandle = GlobalAlloc(GMEM_MOVEABLE,bmst->height * work_state->bmpStride);
+			if (!bmst->bmpMemHandle) {
+				MessageBox((unsigned)NULL,"Unable to alloc bitmap strip","Err",MB_OK);
+				return 1;
+			}
+
+			h -= bmst->height;
+			i++;
+		}
+
+		if (i != work_state->bmpStripCount || h != 0)
+			return 1;
 	}
 
 	/* NTS: Unlike the main bitmap, this time we do NOT select the palette into the icon DC.

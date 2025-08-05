@@ -857,6 +857,7 @@ static void load_bmp_scanline(struct wndstate_t FAR *work_state,const unsigned i
 		else {
 			_fmemcpy(MK_FP(sv,ov),s,cpy);
 		}
+		GlobalUnlock(work_state->bmpMemHandle);
 	}
 #else
 	d = work_state->bmpPtr + (cline * work_state->bmpStride);
