@@ -685,12 +685,10 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #endif
 					if (p) {
 						SetDIBitsToDevice(ps.hdc,
-							-work_state->scrollX,
-							-work_state->scrollY,
-							work_state->bmpWidth,
-							work_state->bmpHeight,
-							0,0,
-							0,work_state->bmpHeight,
+							0,0,/*dest pos*/
+							work_state->bmpWidth,work_state->bmpHeight,/*dest dim*/
+							work_state->scrollX,-work_state->scrollY,/*src pos (bottom up bitmap Y coordinates)*/
+							0,work_state->bmpHeight,/*start,count DIB scanlines*/
 							p,bi,work_state->bmpDIBmode);
 					}
 #if TARGET_MSDOS == 16
