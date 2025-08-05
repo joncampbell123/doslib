@@ -1682,6 +1682,18 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		}
 	}
 
+#if TARGET_MSDOS == 16
+	/* 16-bit builds of this program cause some weird crashes within the Windows 3.0 GDI when
+	 * using SetDIBitsToDevice() with DIBs larger than 64KB with a width that is either a power
+	 * of 2 or multiple of 128 pixels? Also doesn't like to fully SetDIBitsToDevice() that are
+	 * some amount larger than the screen? These crashes do not occur in Windows 3.0 real more
+	 * or Windows 3.0 286 standard mode, they only happen in Windows 3.0 386 enhanced mode */
+	if (windows_mode == WINDOWS_ENHANCED && windows_version < 0x30A) {
+		if (MessageBox((HWND)NULL,"This program seems to cause some minor crashes or errors when run under Windows 3.0 386 enhanced mode. Please consider using GENERAL1.EXE or restarting Windows 3.0 in real mode or standard mode. Continue?","WARNING",MB_YESNO|MB_ICONHAND) == IDNO)
+			return 1;
+	}
+#endif
+
 	/* Windows 95: Ask Windows the "work area" we can use without overlapping the task bar */
 	queryDesktopWorkArea(work_state,&work_state->desktopWorkArea);
 
