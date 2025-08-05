@@ -156,7 +156,13 @@ void Windows11RemoveRoundCorners(HWND hWnd) {
 		DWMWCP_ROUND      = 2,
 		DWMWCP_ROUNDSMALL = 3
 	};
-	HMODULE hDwmApi = LoadLibrary("dwmapi.dll");
+	HMODULE hDwmApi;
+	UINT oldMode;
+
+	oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+	hDwmApi = LoadLibrary("dwmapi.dll");
+	SetErrorMode(oldMode);
+
 	if (hDwmApi) {
 		PFNSETWINDOWATTRIBUTE pfnSetWindowAttribute = (PFNSETWINDOWATTRIBUTE)GetProcAddress(hDwmApi, "DwmSetWindowAttribute");
 		if (pfnSetWindowAttribute) {
