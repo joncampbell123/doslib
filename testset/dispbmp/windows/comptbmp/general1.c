@@ -1944,7 +1944,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		HMENU SysMenu = GetSystemMenu(hwndMain,FALSE);
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
 		AppendMenu(SysMenu,MF_STRING,IDCSM_INFO,"Image and display &info");
-		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
 		AppendMenu(SysMenu,MF_STRING,IDCSM_DDBDUMP,"&Dump DDB to file");
 		AppendMenu(SysMenu,MF_SEPARATOR,0,"");
 		AppendMenu(SysMenu,MF_STRING,IDCSM_ABOUT,"&About this program");
