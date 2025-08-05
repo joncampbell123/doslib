@@ -54,7 +54,7 @@
 
 typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
-static const char near		WndProcClass[] = "GENERAL1COMPATBITMAP1";
+static const char near		WndProcClass[] = "GENERAL2COMPATBITMAP1";
 static HINSTANCE near		myInstance;
 
 #define IDCSM_INFO		0x7700u
