@@ -52,8 +52,6 @@
 
 #define WM_USER_SIZECHECK	WM_USER+1
 
-typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
-
 static const char near		WndProcClass[] = "GENERAL2COMPATBITMAP1";
 static HINSTANCE near		myInstance;
 
@@ -142,7 +140,7 @@ static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 }
 
 static struct BMPFILEREAD *bfr = NULL;
-static conv_scanline_func_t convert_scanline;
+static libbmp_conv_scanline_func_t convert_scanline;
 
 #if TARGET_MSDOS == 32
 /* Windows 11 by default puts these rounded corners on all application windows. Please don't.
@@ -787,112 +785,6 @@ LRESULT PASCAL FAR WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	return 0;
 }
 
-void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	(void)pixels;
-	(void)src;
-	(void)bfr;
-}
-
-void convert_scanline_32to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	unsigned char *d = (unsigned char*)src;
-	uint32_t *s32 = (uint32_t*)src;
-
-	while (pixels-- > 0u) {
-		const uint32_t sw = *s32++;
-		*d++ = ((sw >> (uint32_t)bfr->blue_shift) & 0xFFu);
-		*d++ = ((sw >> (uint32_t)bfr->green_shift) & 0xFFu);
-		*d++ = ((sw >> (uint32_t)bfr->red_shift) & 0xFFu);
-	}
-}
-
-void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	uint32_t *s32 = (uint32_t*)src;
-
-	while (pixels-- > 0u) {
-		uint32_t f;
-
-		f  = ((*s32 >> (uint32_t)bfr->red_shift) & 0xFFu) << (uint32_t)16u;
-		f += ((*s32 >> (uint32_t)bfr->green_shift) & 0xFFu) << (uint32_t)8u;
-		f += ((*s32 >> (uint32_t)bfr->blue_shift) & 0xFFu) << (uint32_t)0u;
-		*s32++ = f;
-	}
-}
-
-/* NTS: In Windows 3.x. and BITMAPINFOHEADER, 15/16bpp is always 5:5:5 even IF the video driver is using a 5:6:5 mode!
- *      In Windows 95/98, it is possible to BitBlt 5:6:5 if you use BITMAPINFOV4HEADER and BI_BITFIELDS. */
-void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	uint16_t *s16 = (uint16_t*)src;
-
-	while (pixels-- > 0u) {
-		uint16_t f;
-
-		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)10u;
-		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x1Fu) << (uint16_t)5u;
-		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)0u;
-		*s16++ = f;
-	}
-}
-
-void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	uint16_t *s16 = (uint16_t*)src;
-
-	while (pixels-- > 0u) {
-		uint16_t f;
-
-		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)11u;
-		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x3Fu) << (uint16_t)5u;
-		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)0u;
-		*s16++ = f;
-	}
-}
-
-void convert_scanline_16bpp565_to_555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	uint16_t *s16 = (uint16_t*)src;
-
-	while (pixels-- > 0u) {
-		uint16_t f;
-
-		f  = ((*s16 >> (uint16_t)bfr->red_shift) & 0x1Fu) << (uint16_t)10u;
-		f += ((*s16 >> (uint16_t)bfr->green_shift) & 0x3Eu) << (uint16_t)4u; // drop the LSB of green
-		f += ((*s16 >> (uint16_t)bfr->blue_shift) & 0x1Fu) << (uint16_t)0u;
-		*s16++ = f;
-	}
-}
-
-void convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	unsigned char *d = (unsigned char*)src;
-	uint16_t *s16 = (uint16_t*)src;
-
-	/* expansion, so, work from the end */
-	s16 += pixels - 1u;
-	d += (pixels - 1u) * 3u;
-
-	while (pixels-- > 0u) {
-		const uint16_t sw = *s16--;
-		d[0] = ((sw >> (uint32_t)bfr->blue_shift) & 0x1Fu) << 3u;
-		d[1] = ((sw >> (uint32_t)bfr->green_shift) & 0x1Fu) << 3u;
-		d[2] = ((sw >> (uint32_t)bfr->red_shift) & 0x1Fu) << 3u;
-		d -= 3;
-	}
-}
-
-void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
-	unsigned char *d = (unsigned char*)src;
-	uint16_t *s16 = (uint16_t*)src;
-
-	/* expansion, so, work from the end */
-	s16 += pixels - 1u;
-	d += (pixels - 1u) * 3u;
-
-	while (pixels-- > 0u) {
-		const uint16_t sw = *s16--;
-		d[0] = ((sw >> (uint32_t)bfr->blue_shift) & 0x1Fu) << 3u;
-		d[1] = ((sw >> (uint32_t)bfr->green_shift) & 0x3Fu) << 2u;
-		d[2] = ((sw >> (uint32_t)bfr->red_shift) & 0x1Fu) << 3u;
-		d -= 3;
-	}
-}
-
 static unsigned int load_bmp_icony_last = ~0u;
 static unsigned int load_bmp_iconsmy_last = ~0u;
 
@@ -1374,28 +1266,28 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		return 1;
 	}
 
-	convert_scanline = convert_scanline_none;
+	convert_scanline = libbmp_convert_scanline_none;
 
 	if (bfr->bpp == 32) {
 		if (!work_state->can32bpp) {
 			conv = CONV_32TO24; /* Windows 3.1 cannot render 32bpp, but it can render 24bpp, so convert on the fly */
-			convert_scanline = convert_scanline_32to24;
+			convert_scanline = libbmp_convert_scanline_32to24;
 		}
 		else if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
 				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else {
-			convert_scanline = convert_scanline_32bpp8;
+			convert_scanline = libbmp_convert_scanline_32bpp8;
 		}
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
 		if (!work_state->can16bpp) {
 			conv = CONV_16TO24; /* Windows 3.1 cannot render 16bpp unless 16bpp display, convert to 24bpp */
 			if (bfr->green_width > 5)
-				convert_scanline = convert_scanline_16_565to24;
+				convert_scanline = libbmp_convert_scanline_16_565to24;
 			else
-				convert_scanline = convert_scanline_16_555to24;
+				convert_scanline = libbmp_convert_scanline_16_555to24;
 		}
 		else if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
 				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
@@ -1408,12 +1300,12 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		}
 		else if (bfr->green_width > 5u) {
 			if (work_state->canBitfields)
-				convert_scanline = convert_scanline_16bpp565;
+				convert_scanline = libbmp_convert_scanline_16bpp565;
 			else
-				convert_scanline = convert_scanline_16bpp565_to_555;
+				convert_scanline = libbmp_convert_scanline_16bpp565_to_555;
 		}
 		else {
-			convert_scanline = convert_scanline_16bpp555;
+			convert_scanline = libbmp_convert_scanline_16bpp555;
 		}
 	}
 
