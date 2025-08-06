@@ -9,7 +9,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = FMT_BMP_LIB
 
-OBJS =        $(SUBDIR)$(HPS)bmpfimg.obj $(SUBDIR)$(HPS)bmpread.obj $(SUBDIR)$(HPS)bmpwrite.obj $(SUBDIR)$(HPS)cpy.obj $(SUBDIR)$(HPS)c32t24.obj $(SUBDIR)$(HPS)maskshft.obj $(SUBDIR)$(HPS)mkbf8.obj $(SUBDIR)$(HPS)strid1.obj
+OBJS =        $(SUBDIR)$(HPS)bmpfimg.obj $(SUBDIR)$(HPS)bmpread.obj $(SUBDIR)$(HPS)bmpwrite.obj $(SUBDIR)$(HPS)cpy.obj $(SUBDIR)$(HPS)c32t24.obj $(SUBDIR)$(HPS)maskshft.obj $(SUBDIR)$(HPS)mkbf8.obj $(SUBDIR)$(HPS)strid1.obj $(SUBDIR)$(HPS)c_16555.obj $(SUBDIR)$(HPS)c_16565.obj $(SUBDIR)$(HPS)c16t555b.obj $(SUBDIR)$(HPS)c_32b8.obj $(SUBDIR)$(HPS)c_32t24.obj $(SUBDIR)$(HPS)c32t24.obj $(SUBDIR)$(HPS)cht24555.obj $(SUBDIR)$(HPS)cht24565.obj $(SUBDIR)$(HPS)c_none.obj
 
 !ifndef NO_EXE
 T_CPY0_EXE = $(SUBDIR)$(HPS)t_cpy0.$(EXEEXT)
@@ -21,6 +21,11 @@ $(FMT_BMP_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)bmpwrite.obj -+$(SUBDIR)$(HPS)c32t24.obj
 	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)maskshft.obj -+$(SUBDIR)$(HPS)mkbf8.obj
 	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)strid1.obj   -+$(SUBDIR)$(HPS)cpy.obj
+	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)c_16555.obj  -+$(SUBDIR)$(HPS)c_16565.obj
+	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)c16t555b.obj -+$(SUBDIR)$(HPS)c_32b8.obj
+	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)c_32t24.obj  -+$(SUBDIR)$(HPS)c32t24.obj
+	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)cht24555.obj -+$(SUBDIR)$(HPS)cht24565.obj
+	wlib -q -b -c $(FMT_BMP_LIB) -+$(SUBDIR)$(HPS)c_none.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -83,4 +88,6 @@ clean: .SYMBOLIC
           del $(FMT_BMP_LIB)
           del tmp.cmd
           @echo Cleaning done
+
+ 
 
