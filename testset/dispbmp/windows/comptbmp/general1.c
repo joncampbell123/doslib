@@ -137,7 +137,7 @@ static inline BITMAPINFOHEADER FAR* bmpInfo(struct wndstate_t FAR *w) {
 }
 
 static struct BMPFILEREAD *bfr = NULL;
-static conv_scanline_func_t convert_scanline;
+static libbmp_conv_scanline_func_t convert_scanline;
 
 #if TARGET_MSDOS == 32
 /* Windows 11 by default puts these rounded corners on all application windows. Please don't.
@@ -1362,28 +1362,28 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		return 1;
 	}
 
-	convert_scanline = convert_scanline_none;
+	convert_scanline = libbmp_convert_scanline_none;
 
 	if (bfr->bpp == 32) {
 		if (!work_state->can32bpp) {
 			conv = CONV_32TO24; /* Windows 3.1 cannot render 32bpp, but it can render 24bpp, so convert on the fly */
-			convert_scanline = convert_scanline_32to24;
+			convert_scanline = libbmp_convert_scanline_32to24;
 		}
 		else if (16u == bfr->red_shift && 8u == bfr->green_shift && 0u == bfr->blue_shift &&
 				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
 			/* nothing */
 		}
 		else {
-			convert_scanline = convert_scanline_32bpp8;
+			convert_scanline = libbmp_convert_scanline_32bpp8;
 		}
 	}
 	else if (bfr->bpp == 16 || bfr->bpp == 15) {
 		if (!work_state->can16bpp) {
 			conv = CONV_16TO24; /* Windows 3.1 cannot render 16bpp unless 16bpp display, convert to 24bpp */
 			if (bfr->green_width > 5)
-				convert_scanline = convert_scanline_16_565to24;
+				convert_scanline = libbmp_convert_scanline_16_565to24;
 			else
-				convert_scanline = convert_scanline_16_555to24;
+				convert_scanline = libbmp_convert_scanline_16_555to24;
 		}
 		else if (10u == bfr->red_shift && 5u == bfr->green_shift && 0u == bfr->blue_shift &&
 				5u == bfr->red_width && 5u == bfr->green_width && 5u == bfr->blue_width) {
@@ -1396,12 +1396,12 @@ static int AppLoop(struct wndstate_t *work_state,int nCmdShow) {
 		}
 		else if (bfr->green_width > 5u) {
 			if (work_state->canBitfields)
-				convert_scanline = convert_scanline_16bpp565;
+				convert_scanline = libbmp_convert_scanline_16bpp565;
 			else
-				convert_scanline = convert_scanline_16bpp565_to_555;
+				convert_scanline = libbmp_convert_scanline_16bpp565_to_555;
 		}
 		else {
-			convert_scanline = convert_scanline_16bpp555;
+			convert_scanline = libbmp_convert_scanline_16bpp555;
 		}
 	}
 
