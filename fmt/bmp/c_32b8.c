@@ -3,7 +3,7 @@
 
 #include "libbmp.h"
 
-void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+void libbmp_convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	uint32_t *s32 = (uint32_t*)src;
 
 	while (pixels-- > 0u) {

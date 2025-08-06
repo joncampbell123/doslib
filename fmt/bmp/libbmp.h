@@ -163,13 +163,13 @@ void do_close_write_bmp_file(struct BMPFILEWRITE *bmp);
 void do_close_write_bmp(struct BMPFILEWRITE *bmp);
 void close_write_bmp(struct BMPFILEWRITE **bmp);
 
-typedef void (*conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
+typedef void (*libbmp_conv_scanline_func_t)(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int bytes);
 
-void convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_16bpp565_to_555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_32to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
-void convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_16bpp555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_16bpp565(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_16bpp565_to_555(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_32bpp8(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_32to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_16_565to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);
+void libbmp_convert_scanline_none(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels);

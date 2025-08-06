@@ -3,7 +3,7 @@
 
 #include "libbmp.h"
 
-void convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
+void libbmp_convert_scanline_16_555to24(struct BMPFILEREAD *bfr,unsigned char *src,unsigned int pixels) {
 	unsigned char *d = (unsigned char*)src;
 	uint16_t *s16 = (uint16_t*)src;
 
