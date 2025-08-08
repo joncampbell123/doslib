@@ -4,3 +4,15 @@
 
 IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
 
+IDM_MAINMENU MENU DISCARDABLE MOVEABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Save",                       IDC_FILE_SAVE
+        MENUITEM SEPARATOR
+        MENUITEM "&Refresh",                    IDC_FILE_REFRESH
+        MENUITEM SEPARATOR
+        MENUITEM "&Quit",                       IDC_FILE_QUIT
+    END
+END
+

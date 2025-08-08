@@ -4,6 +4,12 @@
 //
 #define IDI_APPICON                     101
 
+#define IDC_FILE_SAVE                   102
+#define IDC_FILE_QUIT                   103
+#define IDC_FILE_REFRESH                104
+
+#define IDM_MAINMENU                    101
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

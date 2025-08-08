@@ -38,6 +38,91 @@ HINSTANCE near			myInstance;
 
 HWND near			cbListHwnd = NULL;
 
+static void DoClipboardSave(void) {
+	MessageBox(hwndMain,"SAVE","TODO",MB_OK);
+}
+
+struct clipboard_fmt_t {
+	UINT			cbFmt;
+};
+
+#define MAX_CLIPBOARD_FORMATS 256
+static struct clipboard_fmt_t clipboard_format[MAX_CLIPBOARD_FORMATS];
+static unsigned int clipboard_format_count = 0;
+
+static void PopulateClipboardFormats(void) {
+	char tmp[128],*w=tmp,*f=tmp+sizeof(tmp)-1;
+
+	SendMessage(cbListHwnd,LB_RESETCONTENT,0,0);
+
+	if (OpenClipboard(hwndMain)) {
+		UINT efmt = 0,nfmt,i = 0;
+		int r;
+
+		while (i < MAX_CLIPBOARD_FORMATS) {
+			nfmt = EnumClipboardFormats(efmt);
+			if (nfmt == 0) break;
+			efmt = nfmt;
+
+			clipboard_format[i].cbFmt = efmt;
+
+			w = tmp;
+			switch (efmt) {
+				case CF_BITMAP:
+					strcpy(w,"CF_BITMAP"); break;
+				case CF_DIB:
+					strcpy(w,"CF_DIB"); break;
+				case CF_DIF:
+					strcpy(w,"CF_DIF"); break;
+				case CF_DSPBITMAP:
+					strcpy(w,"CF_DSPBITMAP"); break;
+				case CF_DSPMETAFILEPICT:
+					strcpy(w,"CF_DSPMETAFILEPICT"); break;
+				case CF_DSPTEXT:
+					strcpy(w,"CF_DSPTEXT"); break;
+				case CF_METAFILEPICT:
+					strcpy(w,"CF_METAFILEPICT"); break;
+				case CF_OEMTEXT:
+					strcpy(w,"CF_OEMTEXT"); break;
+				case CF_OWNERDISPLAY:
+					strcpy(w,"CF_OWNERDISPLAY"); break;
+				case CF_PALETTE:
+					strcpy(w,"CF_PALETTE"); break;
+				case CF_PENDATA:
+					strcpy(w,"CF_PENDATA"); break;
+				case CF_RIFF:
+					strcpy(w,"CF_RIFF"); break;
+				case CF_SYLK:
+					strcpy(w,"CF_SYLK"); break;
+				case CF_TEXT:
+					strcpy(w,"CF_TEXT"); break;
+				case CF_TIFF:
+					strcpy(w,"CF_TIFF"); break;
+				case CF_WAVE:
+					strcpy(w,"CF_WAVE"); break;
+				default:
+					if (efmt >= 0xC000/*registered*/) {
+						r = GetClipboardFormatName(efmt,w,(int)(f-w));
+						if (r < 0) r = 0;
+						w += r; if (w > f) w = f;
+						w += snprintf(w,(int)(f-w)," 0x%x",(unsigned)efmt);
+						*w = 0;
+					}
+					else {
+						w += snprintf(w,(int)(f-w),"??? 0x%x",(unsigned)efmt);
+					}
+					break;
+			}
+
+			SendMessage(cbListHwnd,LB_ADDSTRING,0,(LPARAM)tmp);
+			i++;
+		}
+
+		clipboard_format_count = i;
+		CloseClipboard();
+	}
+}
+
 WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		cbListHwnd = CreateWindow("LISTBOX","",
@@ -47,8 +132,8 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			NULL,/*menu*/
 			myInstance,
 			NULL);
-		if (!cbListHwnd) MessageBox(hwnd,"Whut?","",MB_OK);
 		ShowWindow(cbListHwnd,SHOW_OPENNOACTIVATE);
+		PopulateClipboardFormats();
 
 		return 0; /* Success */
 	}
@@ -101,6 +186,17 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 
 		return 0; /* Return 0 to signal we processed the message */
 	}
+	else if (message == WM_COMMAND) {
+		if (wparam == IDC_FILE_QUIT) {
+			PostMessage(hwnd,WM_CLOSE,0,0);
+		}
+		else if (wparam == IDC_FILE_SAVE) {
+			DoClipboardSave();
+		}
+		else if (wparam == IDC_FILE_REFRESH) {
+			PopulateClipboardFormats();
+		}
+	}
 	else if (message == WM_SIZE) {
 #if WINVER >= 0x200 /* SetWindowPos() did not appear until Windows 2.x */
 		unsigned int w = LOWORD(lparam),h = HIWORD(lparam);
@@ -140,7 +236,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		wnd.hIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 		wnd.hCursor = NULL;
 		wnd.hbrBackground = NULL;
-		wnd.lpszMenuName = NULL;
+		wnd.lpszMenuName = MAKEINTRESOURCE(IDM_MAINMENU);
 		wnd.lpszClassName = WndProcClass;
 
 		if (!RegisterClass(&wnd)) {
