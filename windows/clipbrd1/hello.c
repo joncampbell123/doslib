@@ -38,6 +38,9 @@ HINSTANCE near			myInstance;
 
 HWND near			cbListHwnd = NULL;
 
+HWND near			cbViewNextHwnd = NULL;
+BOOL				cbViewInit = FALSE;
+
 static void DoClipboardSave(void) {
 	MessageBox(hwndMain,"SAVE","TODO",MB_OK);
 }
@@ -135,10 +138,39 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 		ShowWindow(cbListHwnd,SHOW_OPENNOACTIVATE);
 		PopulateClipboardFormats();
 
+		/* NTS: There is no way to know if this failed, because NULL is a valid response
+		 *      in the case that there is no viewer after us */
+		cbViewNextHwnd = SetClipboardViewer(hwnd);
+		cbViewInit = TRUE;
+
 		return 0; /* Success */
+	}
+	else if (message == WM_DRAWCLIPBOARD) {
+		PopulateClipboardFormats();
+		if (cbViewNextHwnd) return SendMessage(cbViewNextHwnd,message,wparam,lparam);
+		return 0;
+	}
+	else if (message == WM_CHANGECBCHAIN) {
+		if (cbViewInit) {
+			/* wparam == HWND of window being removed
+			 * lparam == next window after removed window */
+			if ((HWND)wparam == cbViewNextHwnd)
+				cbViewNextHwnd = (HWND)LOWORD(lparam);
+			else
+				return SendMessage(cbViewNextHwnd,message,wparam,lparam);
+		}
+
+		return 0;
 	}
 	else if (message == WM_DESTROY) {
 		if (cbListHwnd) DestroyWindow(cbListHwnd);
+
+		if (cbViewInit) {
+			ChangeClipboardChain(hwnd,cbViewNextHwnd);
+			cbViewNextHwnd = NULL;
+			cbViewInit = FALSE;
+		}
+
 		PostQuitMessage(0);
 		return 0; /* OK */
 	}
