@@ -273,6 +273,16 @@ BOOL WINAPI	(*__Process32First)(HANDLE hSnapshot,LPPROCESSENTRY32 lppe) = NULL;
 BOOL WINAPI	(*__Process32Next)(HANDLE hSnapshot,LPPROCESSENTRY32 lppe) = NULL;
 #endif
 
+#if (WINVER < 0x300)
+/* AppendMenu() did not exist until Windows 3.0, this is a polyfill */
+static BOOL near AppendMenu(HMENU hMenu,UINT fuFlags,UINT idNewItem,LPCSTR lpNewItem) {
+	/* Microsoft's Windows 3.1 SDK barely documents this function at all, because you're "supposed" to use the newer functions.
+	 * Also back in the Windows 1.x and 2.x SDK days Microsoft declared the functions in their headers without parameter names. */
+	return ChangeMenu(hMenu,0/*position not used*/,lpNewItem,idNewItem,MF_APPEND | fuFlags);
+}
+#endif
+
+
 #if TARGET_MSDOS == 16
 static volatile unsigned char faulted = 0;
 static UINT viewselector,my_ds=0,my_ss=0,my_cs=0;
@@ -776,6 +786,9 @@ static void RedrawMemory(HWND hwnd,HDC hdc) {
 	int x,y,fail;
 	HFONT of;
 
+	(void)hwnd;
+	(void)hdc;
+
 	if (hwndMainClientDataColumns == 0)
 		return;
 
@@ -839,7 +852,9 @@ static void UpdateClientAreaValues() {
 	if (hwndMainClientDataColumns > 128) hwndMainClientDataColumns = 128;
 }
 
-BOOL CALLBACK FAR __loadds GoToDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+BOOL CALLBACK FAR GoToDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+	(void)lparam;
+
 	if (message == WM_INITDIALOG) {
 		char tmp[128];
 		sprintf(tmp,"0x%08lX",(unsigned long)displayOffset);
@@ -873,6 +888,8 @@ static void ShowHelp() {
 
 #if TARGET_MSDOS == 32
 BOOL WINAPI PickAProcessDlgProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam) {
+	(void)lparam;
+
 	if (msg == WM_INITDIALOG) {
 		PostMessage(hwnd,WM_USER+1,0,0); /* populate the list */
 		SetFocus(GetDlgItem(hwnd,IDC_PROCESS_LIST));
@@ -1229,7 +1246,7 @@ static int CreateAppMenu() {
  *   that it always makes the function prolog return FAR. Unfortunately, when Watcom C's runtime
  *   calls this function in a memory model that's compact or small, the call is made as if NEAR,
  *   not FAR. To avoid a GPF or crash on return, we must simply declare it PASCAL instead. */
-int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
+int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
 	WNDCLASS wnd;
 	MSG msg;
 

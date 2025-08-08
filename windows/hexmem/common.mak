@@ -38,7 +38,7 @@ $(HEXMEM_EXE): $(SUBDIR)$(HPS)hexmem.obj $(HEXMEM_RES) $(HW_DOS_LIB) $(HW_DOS_LI
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 	%write tmp.cmd EXPORT GoToDlgProc.2 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 !endif
 	%write tmp.cmd op resource=$(HEXMEM_RES) name $(HEXMEM_EXE)
