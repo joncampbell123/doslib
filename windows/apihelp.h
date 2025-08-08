@@ -11,7 +11,7 @@
 
 # if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
 /* Win16 */
-#  define WindowProcType		LRESULT PASCAL FAR __loadds
+#  define WindowProcType		LRESULT PASCAL FAR
 #  define WindowProcType_NoLoadDS	LRESULT PASCAL FAR
 # elif defined(WIN386)
 #  define WindowProcType		LRESULT PASCAL
@@ -24,7 +24,7 @@
 
 # if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
 /* Win16 */
-#  define DialogProcType		BOOL PASCAL FAR __loadds 
+#  define DialogProcType		BOOL PASCAL FAR
 #  define DialogProcType_NoLoadDS	BOOL PASCAL FAR
 # elif defined(WIN386)
 #  define DialogProcType		BOOL PASCAL
@@ -37,7 +37,7 @@
 
 # if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
 /* Win16 */
-#  define DllEntryType			PASCAL FAR __loadds
+#  define DllEntryType			PASCAL FAR
 #  define DllEntryType_NoLoadDS		PASCAL FAR
 # elif defined(WIN386)
 #  define DllEntryType			PASCAL

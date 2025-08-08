@@ -385,11 +385,12 @@ int DisplayDibLoadDLL() {
 		return 0;
 
 	/* This will not work under Windows NT/2000/XP/etc. They lack DISPDIB.DLL anyway */
+	/* FIXME: Actually there is supposedly a version of DISPDIB for Windows NT/2000 that emulates this DLL, is that true? */
 	if (windows_mode == WINDOWS_NT)
-		return -1;
+		{ dispDibLastError="Not supported under Windows NT"; return -1; }
 	/* do NOT attempt while under Linux + WINE */
 	if (windows_emulation == WINEMU_WINE)
-		return -1;
+		{ dispDibLastError="Not supported under WINE"; return -1; }
 
 #if TARGET_MSDOS == 32
 	{
@@ -400,7 +401,7 @@ int DisplayDibLoadDLL() {
 		/* Windows 3.1 + Win32s: Don't try, it won't work. Windows 3.1 DISPDIB.DLL lacks the window class
 		   and message-based design that Windows 9x/ME uses to allow Win32 application to use the library */
 		if (windows_version < ((3 << 8) + 95))
-			return -1;
+			{ dispDibLastError="Not supported under Win32s"; return -1; }
 
 		/* Use the Win9x/ME thunk library if available */
 		if (!dispDibDontUseWin9xLoadLibrary16)
@@ -448,6 +449,7 @@ int DisplayDibLoadDLL() {
 	dispDibDLL = LoadLibrary(DISPLAYDIB_DLL);
 	SetErrorMode(oldMode);
 	if (dispDibDLL < (HINSTANCE)HINSTANCE_ERROR) {
+		dispDibLastError = "Failed to load DISPDIB";
 		dispDibDLL = NULL;
 		return -1;
 	}
