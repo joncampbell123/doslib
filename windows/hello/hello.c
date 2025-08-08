@@ -120,19 +120,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      MakeProcInstance it to create a 'thunk' so that Windows can call you (ick). */
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-		wnd.lpfnWndProc = (WNDPROC)MakeProcInstance((FARPROC)WndProc,hInstance);
-#else
 		wnd.lpfnWndProc = (WNDPROC)WndProc;
-#endif
 		wnd.cbClsExtra = 0;
 		wnd.cbWndExtra = 0;
 		wnd.hInstance = hInstance;
-#if TARGET_WINDOWS >= 30
 		wnd.hIcon = AppIcon;
-#else
-		wnd.hIcon = NULL;
-#endif
 		wnd.hCursor = NULL;
 		wnd.hbrBackground = NULL;
 		wnd.lpszMenuName = NULL;
@@ -171,22 +163,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-
-#if TARGET_MSDOS == 16
-	/* Win16 only:
-	 * If we are the owner (the first instance that registered the window class),
-	 * then we must reside in memory until we are the last instance resident.
-	 * If we do not do this, then if multiple instances are open and the user closes US
-	 * before closing the others, the others will crash (having pulled the code segment
-	 * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-		while (GetModuleUsage(hInstance) > 1) {
-			PeekMessage(&msg,NULL,0,0,PM_REMOVE);
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
-#endif
 
 	return msg.wParam;
 }

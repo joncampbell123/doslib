@@ -38,9 +38,6 @@ HICON		AppIcon;
 void DllEntryType HelloMsg();
 void DllEntryType HelloDraw(HWND hwnd,HDC hdc,HICON icon);
 
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-FARPROC WndProc_MPI;
-#endif
 WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		return 0; /* Success */
@@ -124,10 +121,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
 
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
-#endif
-
 	/* NTS: In the Windows 3.1 environment all handles are global. Registering a class window twice won't work.
 	 *      It's only under 95 and later (win32 environment) where Windows always sets hPrevInstance to 0
 	 *      and window classes are per-application.
@@ -136,11 +129,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      MakeProcInstance it to create a 'thunk' so that Windows can call you (ick). */
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
-#ifdef WIN16_NEEDS_MAKEPROCINSTANCE
-		wnd.lpfnWndProc = (WNDPROC)WndProc_MPI;
-#else
 		wnd.lpfnWndProc = WndProc;
-#endif
 		wnd.cbClsExtra = 0;
 		wnd.cbWndExtra = 0;
 		wnd.hInstance = hInstance;
@@ -176,22 +165,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-
-#if TARGET_MSDOS == 16
-    /* Win16 only:
-     * If we are the owner (the first instance that registered the window class),
-     * then we must reside in memory until we are the last instance resident.
-     * If we do not do this, then if multiple instances are open and the user closes US
-     * before closing the others, the others will crash (having pulled the code segment
-     * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-        while (GetModuleUsage(hInstance) > 1) {
-            PeekMessage(&msg,NULL,0,0,PM_REMOVE);
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-#endif
 
 	return msg.wParam;
 }
