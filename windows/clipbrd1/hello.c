@@ -36,11 +36,24 @@ HWND near			hwndMain;
 const char near			WndProcClass[] = "CLIPBRD1WINDOWS";
 HINSTANCE near			myInstance;
 
+HWND near			cbListHwnd = NULL;
+
 WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
+		cbListHwnd = CreateWindow("LISTBOX","",
+			WS_CHILD | LBS_MULTIPLESEL | LBS_NOINTEGRALHEIGHT,/*style*/
+			0,0,64,64,/*initial pos+size*/
+			hwnd,/*parent window*/
+			NULL,/*menu*/
+			myInstance,
+			NULL);
+		if (!cbListHwnd) MessageBox(hwnd,"Whut?","",MB_OK);
+		ShowWindow(cbListHwnd,SHOW_OPENNOACTIVATE);
+
 		return 0; /* Success */
 	}
 	else if (message == WM_DESTROY) {
+		if (cbListHwnd) DestroyWindow(cbListHwnd);
 		PostQuitMessage(0);
 		return 0; /* OK */
 	}
@@ -83,13 +96,16 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 			PAINTSTRUCT ps;
 
 			BeginPaint(hwnd,&ps);
-
-			// TODO
-
 			EndPaint(hwnd,&ps);
 		}
 
 		return 0; /* Return 0 to signal we processed the message */
+	}
+	else if (message == WM_SIZE) {
+#if WINVER >= 0x200 /* SetWindowPos() did not appear until Windows 2.x */
+		unsigned int w = LOWORD(lparam),h = HIWORD(lparam);
+		SetWindowPos(cbListHwnd,HWND_TOP,0,0,w,h,SWP_NOACTIVATE);
+#endif
 	}
 	else {
 		return DefWindowProc(hwnd,message,wparam,lparam);
