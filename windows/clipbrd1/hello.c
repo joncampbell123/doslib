@@ -108,11 +108,17 @@ static void PopulateClipboardFormats(void) {
 						r = GetClipboardFormatName(efmt,w,(int)(f-w));
 						if (r < 0) r = 0;
 						w += r; if (w > f) w = f;
+#if WINVER >= 0x200
 						w += snprintf(w,(int)(f-w)," 0x%x",(unsigned)efmt);
+#endif
 						*w = 0;
 					}
 					else {
+#if WINVER >= 0x200
 						w += snprintf(w,(int)(f-w),"??? 0x%x",(unsigned)efmt);
+#else
+						strcpy(w,"???");
+#endif
 					}
 					break;
 			}
