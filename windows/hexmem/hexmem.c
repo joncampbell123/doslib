@@ -998,9 +998,6 @@ static int CanViewOtherProcesses() {
 	return 0;
 }
 
-#if TARGET_MSDOS == 16
-FARPROC WndProc_MPI;
-#endif
 WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 	if (message == WM_CREATE) {
 		return 0; /* Success */
@@ -1402,10 +1399,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
 
-#if TARGET_MSDOS == 16
-	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
-#endif
-
 	/* NTS: In the Windows 3.1 environment all handles are global. Registering a class window twice won't work.
 	 *      It's only under 95 and later (win32 environment) where Windows always sets hPrevInstance to 0
 	 *      and window classes are per-application.
@@ -1414,11 +1407,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      MakeProcInstance it to create a 'thunk' so that Windows can call you (ick). */
 	if (!hPrevInstance) {
 		wnd.style = CS_HREDRAW|CS_VREDRAW;
-#if TARGET_MSDOS == 16
-		wnd.lpfnWndProc = (WNDPROC)WndProc_MPI;
-#else
 		wnd.lpfnWndProc = WndProc;
-#endif
 		wnd.cbClsExtra = 0;
 		wnd.cbWndExtra = 0;
 		wnd.hInstance = hInstance;

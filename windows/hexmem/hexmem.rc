@@ -2,7 +2,7 @@
 #include "resource.h"
 #include <windows.h>
 
-IDI_APPICON             ICON    DISCARDABLE     "hexmem.ico"
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE     "hexmem.ico"
 
 IDD_GOTO DIALOG FIXED IMPURE 20,40,161,23
 STYLE DS_MODALFRAME | WS_OVERLAPPED | WS_CAPTION | WS_VISIBLE | WS_SYSMENU
