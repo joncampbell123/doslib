@@ -482,22 +482,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		DispatchMessage(&msg);
 	}
 
-#if TARGET_MSDOS == 16
-	/* Win16 only:
-	 * If we are the owner (the first instance that registered the window class),
-	 * then we must reside in memory until we are the last instance resident.
-	 * If we do not do this, then if multiple instances are open and the user closes US
-	 * before closing the others, the others will crash (having pulled the code segment
-	 * behind the window class out from the other processes). */
-	if (!hPrevInstance) {
-		while (GetModuleUsage(hInstance) > 1) {
-			PeekMessage(&msg,NULL,0,0,PM_REMOVE);
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
-#endif
-
 	/* NTS: Do not DestroyMenu(). Windows will do that for us on destruction of the window.
 	 *      If we do, Win16 systems will act funny, ESPECIALLY Windows 3.0 */
 	return msg.wParam;
