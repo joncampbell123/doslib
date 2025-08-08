@@ -1,0 +1,6 @@
+//Microsoft App Studio generated resource script.
+//
+#include "resource.h"
+
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
+
