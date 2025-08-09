@@ -280,6 +280,186 @@ static void DoClipboardSaveFormat(unsigned int sel) {
 	}
 }
 
+static unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w) {
+	if (bpp == 15) bpp = 16;
+	return (((w * bpp) + 31u) & (~31u)) >> 3u;
+}
+
+#if WINVER >= 0x300
+static HPALETTE CreateIdentityPalette(const unsigned int colors) {
+	unsigned int i;
+	LOGPALETTE *pal = NULL;
+	HPALETTE ph = (HPALETTE)NULL;
+
+	pal = malloc(sizeof(LOGPALETTE) + (colors * sizeof(PALETTEENTRY)));
+	if (pal) {
+		pal->palVersion = 0x300;
+		pal->palNumEntries = colors;
+
+		for (i=0;i < colors;i++) {
+			/* red,green,blue,flags, first 16 bits span red-green */
+			*((WORD*)(&(pal->palPalEntry[i].peRed))) = i;
+			pal->palPalEntry[i].peBlue = 0;
+			pal->palPalEntry[i].peFlags = PC_EXPLICIT;
+		}
+
+		ph = CreatePalette(pal);
+		if (!ph) MessageBeep(-1);
+		free(pal);
+	}
+
+	return ph;
+}
+#endif
+
+static void DumpBITMAPasBMP(void) {
+// NOTES: Windows 3.0 and higher have the Print Screen function, which produces CF_BITMAP.
+//        On a 256-color display, Print Screen produces only CF_BITMAP on Windows 3.0 which means
+//        if the palette changes afterward, anything outside the standard 20 colors are "corrupted".
+//        Windows 3.1 puts CF_BITMAP and CF_PALETTE so that the palette is presevved.
+//
+//        Windows 3.0: If the DDB in CF_BITMAP is planar such as 16-color VGA, we can use
+//        GetDIBits instead to convert it to a format appropriate for a BMP file. Windows 2.x
+//        and 1.x as far as I can tell will never provide a user a way to copy a color bitmap
+//        to the clipboard, if that happens, we're in trouble because GetDIBits and DIB API
+//        functions did not exist until 3.0, but again, monochrome bitmaps are everywhere as
+//        a sort of common baseline and it is unlikely for any user-visible tool to allow them
+//        to make and copy color bitmaps, so, no big deal really.
+//
+//        If somehow in Windows 1.x and 2.x a color CF_BITMAP is on the screen, we cannot render
+//        it because those are device driver specific, especially planar graphics mode. DIBs
+//        didn't exist back then. Do you understand now why bitmaps and icons in that time
+//        were always 1bpp monochrome? It's a safe common ground for all code.
+//
+//        Windows 2.x amd 1.x do not have a print screen function. The most likely CF_BITMAP
+//        is a monochrome bitmap from Paintbrush.
+#if WINVER >= 0x300
+	HANDLE hpl = GetClipboardData(CF_PALETTE);
+	HPALETTE idPal=(HPALETTE)NULL;
+	HPALETTE oPal=(HPALETTE)NULL;
+#endif
+	HANDLE han = GetClipboardData(CF_BITMAP);
+	unsigned int bmpStride;
+	BITMAPFILEHEADER bfh;
+	unsigned int bmpbpp;
+	unsigned int bmisz;
+#if WINVER >= 0x300
+	HDC cmpDC,screenDC;
+#endif
+	BITMAPINFO *bmi;
+	HGLOBAL hmem;
+	DWORD bmsz;
+	BITMAP bm;
+	int fd;
+
+#if TARGET_MSDOS == 16
+	void FAR *p = NULL;
+#else
+	void *p = NULL;
+#endif
+
+	memset(&bm,0,sizeof(bm));
+	if (GetObject((HGDIOBJ)han,sizeof(bm),&bm) != sizeof(bm))
+		return;
+	if (bm.bmBitsPixel == 0 || bm.bmPlanes == 0)
+		return;
+
+	bmsz = (DWORD)bm.bmHeight * (DWORD)bm.bmWidthBytes * (DWORD)bm.bmPlanes;
+	bmpStride = bitmap_stride_from_bpp_and_w(bm.bmBitsPixel,bm.bmWidth);
+	bmpbpp = bm.bmPlanes * bm.bmBitsPixel;
+
+	if (!bmsz || !bmpStride || !bmpbpp)
+		return;
+
+#if WINVER >= 0x300
+	// TODO: 16-color VGA planar or oddpal planar > 8bpp
+	if (bm.bmPlanes != 1 || bmpbpp > 8)
+		return;
+#else
+	// Windows 1.x/2.x: monochrome only, everything else is device dependent
+	if (bm.bmBitsPixel != 1 || bm.bmPlanes != 1)
+		return;
+#endif
+
+	bmisz = sizeof(BITMAPINFOHEADER);
+	if (bmpbpp <= 8) bmisz += sizeof(RGBQUAD) << bmpbpp;
+	bmi = (BITMAPINFO*)malloc(bmisz);
+	if (!bmi) return;
+	memset(bmi,0,bmisz);
+	bmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi->bmiHeader.biWidth = bm.bmWidth;
+	bmi->bmiHeader.biHeight = bm.bmHeight;
+	bmi->bmiHeader.biPlanes = 1;
+	bmi->bmiHeader.biBitCount = bmpbpp;
+	bmi->bmiHeader.biSizeImage = (DWORD)bm.bmHeight * (DWORD)bmpStride;
+	if (bmpbpp <= 8) bmi->bmiHeader.biClrUsed = bmi->bmiHeader.biClrImportant = 1 << bmpbpp;
+
+	memset(&bfh,0,sizeof(bfh));
+	bfh.bfType = 0x4D42; // BM
+	bfh.bfSize = (DWORD)bmisz + (DWORD)sizeof(bfh) + bmi->bmiHeader.biSizeImage;
+	bfh.bfOffBits = (DWORD)sizeof(bfh) + (DWORD)bmisz;
+
+#if WINVER >= 0x300
+	screenDC = GetDC((HWND)NULL);
+	cmpDC = CreateCompatibleDC(screenDC);
+	if (cmpDC) {
+		if (bmpbpp <= 8) {
+			if (hpl) {
+				oPal = SelectPalette(cmpDC,hpl,FALSE);
+				RealizePalette(cmpDC);
+			}
+			else {
+				/* No CF_PALETTE (Windows 3.0)? Use the screen palette. */
+				idPal = CreateIdentityPalette(bmi->bmiHeader.biClrUsed);
+				if (idPal) {
+					oPal = SelectPalette(cmpDC,idPal,FALSE);
+					RealizePalette(cmpDC);
+				}
+			}
+		}
+	}
+#endif
+
+	hmem = GlobalAlloc(GHND,bmi->bmiHeader.biSizeImage);
+	if (hmem) p = GlobalLock(hmem);
+
+#if TARGET_MSDOS == 16
+	// FIXME: open() in real-mode Windows is unable to open and create a file if it doesn't exist??
+	{
+		int han = 0;
+		if (_dos_creat("BITMAP.BMP",0,&han) == 0) _dos_close(han);
+	}
+#endif
+	fd = open("BITMAP.BMP",O_WRONLY|O_TRUNC|O_CREAT|O_BINARY,0644);
+
+#if WINVER >= 0x300
+	if (p && cmpDC && fd) {
+		write(fd,&bfh,sizeof(bfh));
+		GetDIBits(cmpDC,(HBITMAP)han,0,bm.bmHeight,p,bmi,DIB_RGB_COLORS);
+		write(fd,bmi,bmisz);
+		DumpToFile(fd,p,bmi->bmiHeader.biSizeImage);
+	}
+#else
+	if (p && fd) {
+		GetBitmapBits((HBITMAP)han,(LONG)bmi->bmiHeader.biSizeImage,p);
+	}
+#endif
+
+	if (fd) close(fd);
+	if (p) GlobalUnlock(hmem);
+	if (hmem) GlobalFree(hmem);
+
+#if WINVER >= 0x300
+	if (cmpDC) {
+		if (oPal) SelectPalette(cmpDC,oPal,TRUE);
+		DeleteObject(cmpDC);
+	}
+	if (idPal) DeleteObject(idPal);
+	ReleaseDC((HWND)NULL,screenDC);
+#endif
+	free(bmi);
+}
+
 static void DumpDIBasBMP(void) {
 	HANDLE han = GetClipboardData(CF_DIB);
 	if (han) {
@@ -298,7 +478,7 @@ static void DumpDIBasBMP(void) {
 
 			memset(&bfh,0,sizeof(bfh));
 			bfh.bfType = 0x4D42; // BM
-			bfh.bfSize = (DWORD)bm->bmiHeader.biSize + (DWORD)sizeof(bfh);
+			bfh.bfSize = (DWORD)bm->bmiHeader.biSize + (DWORD)sizeof(bfh) + bm->bmiHeader.biSizeImage;
 			bfh.bfOffBits = (DWORD)sizeof(bfh) + (DWORD)bm->bmiHeader.biSize;
 			if (bm->bmiHeader.biBitCount <= 8) {
 				if (bm->bmiHeader.biClrUsed != 0 && bm->bmiHeader.biClrUsed <= 256)
@@ -329,7 +509,7 @@ static void DoClipboardSave(void) {
 	unsigned int sel,cn;
 
 	if (OpenClipboard(hwndMain)) {
-		BOOL doBMP = FALSE;
+		BOOL doBMP = FALSE,doDIB = FALSE;
 
 		cn = SendMessage(cbListHwnd,LB_GETCOUNT,0,0);
 		if (cn > MAX_CLIPBOARD_FORMATS) cn = MAX_CLIPBOARD_FORMATS;
@@ -338,16 +518,17 @@ static void DoClipboardSave(void) {
 			if (SendMessage(cbListHwnd,LB_GETSEL,sel,0)) {
 				DoClipboardSaveFormat(sel);
 
-				if (clipboard_format[sel].cbFmt == CF_BITMAP || clipboard_format[sel].cbFmt == CF_DIB)
+				if (clipboard_format[sel].cbFmt == CF_BITMAP)
 					doBMP = TRUE;
+				if (clipboard_format[sel].cbFmt == CF_DIB)
+					doDIB = TRUE;
 			}
 		}
 
-		if (doBMP) {
-			if (IsClipboardFormatAvailable(CF_DIB)) {
-				DumpDIBasBMP();
-			}
-		}
+		if (doBMP && IsClipboardFormatAvailable(CF_BITMAP))
+			DumpBITMAPasBMP();
+		if (doDIB && IsClipboardFormatAvailable(CF_DIB))
+			DumpDIBasBMP();
 
 		CloseClipboard();
 	}
