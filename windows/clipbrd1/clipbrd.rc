@@ -2,7 +2,7 @@
 //
 #include "resource.h"
 
-IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "hello.ico"
+IDI_APPICON             ICON    DISCARDABLE MOVEABLE    "clipbrd.ico"
 
 IDM_MAINMENU MENU DISCARDABLE MOVEABLE 
 BEGIN
