@@ -1021,7 +1021,7 @@ static HICON bitmap2icon(HBITMAP hbmp) {
 
 	if (GetObject(hbmp,sizeof(bm),&bm)) {
 		andmsz = (unsigned long)(((bm.bmWidth + 15u) & (~15u)) >> 3u) * (unsigned long)bm.bmHeight;
-		xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)bm.bmHeight;
+		xormsz = (unsigned long)bm.bmWidthBytes * (unsigned long)bm.bmHeight * (unsigned long)bm.bmPlanes;
 		if (andmsz < 0xFFF0ul && xormsz < 0xFFF0ul) {
 			andb = malloc((unsigned)andmsz);
 			xorb = malloc((unsigned)xormsz);
