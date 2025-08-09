@@ -444,7 +444,25 @@ static void DumpBITMAPasBMP(void) {
 	}
 #else
 	if (p && fd) {
+		unsigned int y;
+
+		/* monochrome color palette */
+		{
+			RGBQUAD *p = (RGBQUAD*)((unsigned char*)bmi + bmi->bmiHeader.biSize);
+			p[0].rgbRed = 0;
+			p[0].rgbGreen = 0;
+			p[0].rgbBlue = 0;
+			p[0].rgbReserved = 0;
+			p[1].rgbRed = 0xFF;
+			p[1].rgbGreen = 0xFF;
+			p[1].rgbBlue = 0xFF;
+			p[1].rgbReserved = 0;
+		}
+
 		GetBitmapBits((HBITMAP)han,(LONG)bmi->bmiHeader.biSizeImage,p);
+		write(fd,&bfh,sizeof(bfh));
+		write(fd,bmi,bmisz);
+		DumpToFile(fd,p,bmi->bmiHeader.biSizeImage);
 	}
 #endif
 
