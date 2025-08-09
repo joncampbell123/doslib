@@ -52,14 +52,6 @@ static unsigned int Win16_AHINCR(void) {
 	return 0x1000u; /* Windows 1.x is real mode only, assume real mode __AHINCR */
 # endif
 }
-
-static unsigned int Win16_AHSHIFT(void) {
-# if WINVER >= 0x200
-	return (unsigned)(Win16_KERNELSYM(113) & 0xFFFFu);
-# else
-	return 0x12u; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
-# endif
-}
 #endif // 16-bit Windows
 
 HWND near			hwndMain;
@@ -191,6 +183,28 @@ void DumpToFile(int fd,void *p,DWORD psz) {
 	}
 }
 
+static void DumpBitmapBits(int fd,BITMAP *bm,HBITMAP han) {
+	DWORD bmsz = (DWORD)bm->bmHeight * (DWORD)bm->bmWidthBytes * (DWORD)bm->bmPlanes;
+#if TARGET_MSDOS == 16
+	void FAR *p;
+#else
+	void *p;
+#endif
+
+	if (bmsz) {
+		HGLOBAL tmp = GlobalAlloc(GHND,bmsz);
+		if (tmp) {
+			p = GlobalLock(tmp);
+			if (p) {
+				GetBitmapBits((HBITMAP)han,bmsz,p);
+				DumpToFile(fd,p,bmsz);
+				GlobalUnlock(tmp);
+			}
+			GlobalFree(tmp);
+		}
+	}
+}
+
 static void DoClipboardSaveFormat(unsigned int sel) {
 	UINT efmt = clipboard_format[sel].cbFmt;
 	char fname[128];
@@ -210,7 +224,13 @@ static void DoClipboardSaveFormat(unsigned int sel) {
 		fd = open(fname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 		if (fd >= 0) {
 			if (efmt == CF_BITMAP) {
-				// TODO
+				BITMAP bm;
+
+				memset(&bm,0,sizeof(bm));
+				if (GetObject((HGDIOBJ)han,sizeof(bm),&bm) == sizeof(bm)) {
+					write(fd,&bm,sizeof(bm));
+					DumpBitmapBits(fd,&bm,(HBITMAP)han);
+				}
 			}
 			else if (efmt == CF_PALETTE) {
 				int colors = 0;
