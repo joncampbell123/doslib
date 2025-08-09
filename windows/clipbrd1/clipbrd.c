@@ -737,6 +737,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	WNDCLASS wnd;
 	MSG msg;
 
+	(void)lpCmdLine;
+
 	myInstance = hInstance;
 
 	/* NTS: In the Windows 3.1 environment all handles are global. Registering a class window twice won't work.
