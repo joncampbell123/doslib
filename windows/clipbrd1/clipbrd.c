@@ -624,6 +624,9 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 		cbViewNextHwnd = SetClipboardViewer(hwnd);
 		cbViewInit = TRUE;
 
+		/* please focus on the list box */
+		SetFocus(cbListHwnd);
+
 		return 0; /* Success */
 	}
 	else if (message == WM_DRAWCLIPBOARD) {
