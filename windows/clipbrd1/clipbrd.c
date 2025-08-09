@@ -149,9 +149,9 @@ static char *MakeCFName(char *w,char *f,UINT efmt,BOOL isFileName) {
 }
 
 #if TARGET_MSDOS == 16
-void DumpToFile(int fd,void FAR *p,DWORD psz) {
+static void DumpToFile(int fd,void FAR *p,DWORD psz) {
 #else
-void DumpToFile(int fd,void *p,DWORD psz) {
+static void DumpToFile(int fd,void *p,DWORD psz) {
 #endif
 	if (p) {
 #if TARGET_MSDOS == 16
