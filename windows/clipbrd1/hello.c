@@ -262,16 +262,66 @@ static void DoClipboardSaveFormat(unsigned int sel) {
 	}
 }
 
+static void DumpDIBasBMP(void) {
+	HANDLE han = GetClipboardData(CF_DIB);
+	if (han) {
+		DWORD psz = GlobalSize((HGLOBAL)han);
+#if TARGET_MSDOS == 16
+		void FAR *p = GlobalLock((HGLOBAL)han);
+		BITMAPINFO FAR *bm = (BITMAPINFO FAR *)p;
+#else
+		void *p = GlobalLock((HGLOBAL)han);
+		BITMAPINFO *bm = (BITMAPINFO*)p;
+#endif
+		if (p) {
+			/* everything for a BMP is there, except the BMP file header */
+			BITMAPFILEHEADER bfh;
+			int fd;
+
+			memset(&bfh,0,sizeof(bfh));
+			bfh.bfType = 0x4D42; // BM
+			bfh.bfSize = (DWORD)bm->bmiHeader.biSize + (DWORD)sizeof(bfh);
+			bfh.bfOffBits = (DWORD)sizeof(bfh) + (DWORD)bm->bmiHeader.biSize;
+			if (bm->bmiHeader.biBitCount <= 8) {
+				if (bm->bmiHeader.biClrUsed != 0 && bm->bmiHeader.biClrUsed <= 256)
+					bfh.bfOffBits += (DWORD)4 * (DWORD)bm->bmiHeader.biClrUsed;
+				else
+					bfh.bfOffBits += (DWORD)4 << (DWORD)bm->bmiHeader.biBitCount;
+			}
+
+			fd = open("DIB.BMP",O_WRONLY|O_TRUNC|O_CREAT|O_BINARY,0644);
+			if (fd >= 0) {
+				write(fd,&bfh,sizeof(bfh));
+				DumpToFile(fd,p,psz);
+				GlobalUnlock((HGLOBAL)han);
+				close(fd);
+			}
+		}
+	}
+}
+
 static void DoClipboardSave(void) {
 	unsigned int sel,cn;
 
 	if (OpenClipboard(hwndMain)) {
+		BOOL doBMP = FALSE;
+
 		cn = SendMessage(cbListHwnd,LB_GETCOUNT,0,0);
 		if (cn > MAX_CLIPBOARD_FORMATS) cn = MAX_CLIPBOARD_FORMATS;
 
 		for (sel=0;sel < cn;sel++) {
-			if (SendMessage(cbListHwnd,LB_GETSEL,sel,0))
+			if (SendMessage(cbListHwnd,LB_GETSEL,sel,0)) {
 				DoClipboardSaveFormat(sel);
+
+				if (clipboard_format[sel].cbFmt == CF_BITMAP || clipboard_format[sel].cbFmt == CF_DIB)
+					doBMP = TRUE;
+			}
+		}
+
+		if (doBMP) {
+			if (IsClipboardFormatAvailable(CF_DIB)) {
+				DumpDIBasBMP();
+			}
 		}
 
 		CloseClipboard();
