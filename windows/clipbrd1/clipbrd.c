@@ -444,7 +444,10 @@ static void DumpBITMAPasBMP(void) {
 	}
 #else
 	if (p && fd) {
-		unsigned int y;
+#if TARGET_MSDOS == 16
+		const unsigned int ahincr = Win16_AHINCR();
+#endif
+		unsigned int y,pl;
 
 		/* monochrome color palette */
 		{
@@ -462,7 +465,30 @@ static void DumpBITMAPasBMP(void) {
 		GetBitmapBits((HBITMAP)han,(LONG)bmi->bmiHeader.biSizeImage,p);
 		write(fd,&bfh,sizeof(bfh));
 		write(fd,bmi,bmisz);
-		DumpToFile(fd,p,bmi->bmiHeader.biSizeImage);
+
+		/* DDBs are top-down, BMPs are bottom-up DIBs */
+		for (y=0;y < bm.bmHeight;y++) {
+#if TARGET_MSDOS == 16
+			const unsigned long ofs = ((unsigned long)(bm.bmHeight - 1u - y) * (unsigned long)bm.bmWidthBytes) + (unsigned long)FP_OFF(p);
+			unsigned sv = FP_SEG(p) + (((unsigned)(ofs >> 16ul)) * ahincr);
+			unsigned ov = (unsigned)(ofs & 0xFFFFu);
+			unsigned cpy = bmpStride;
+
+			if (ov && cpy > (0x10000u - ov)) {
+				const unsigned rem = 0x10000u - ov;
+				write(fd,MK_FP(sv,ov),rem);
+				cpy -= rem;
+
+				sv += ahincr;
+				ov = 0;
+			}
+			if (cpy) {
+				write(fd,MK_FP(sv,ov),cpy);
+			}
+#else
+# error Silly programmer, Windows 1 and 2 do not run 32-bit code
+#endif
+		}
 	}
 #endif
 
