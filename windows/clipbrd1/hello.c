@@ -27,6 +27,7 @@
 #include <windows.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
@@ -212,7 +213,19 @@ static void DoClipboardSaveFormat(unsigned int sel) {
 				// TODO
 			}
 			else if (efmt == CF_PALETTE) {
-				// TODO
+				int colors = 0;
+
+				if (GetObject((HGDIOBJ)han,sizeof(int),&colors) == sizeof(int)) {
+					if (colors > 0 && colors <= 256) {
+						PALETTEENTRY *lp = malloc(sizeof(PALETTEENTRY) * colors);
+						if (lp) {
+							memset(lp,0,sizeof(PALETTEENTRY) * colors);
+							GetPaletteEntries((HPALETTE)han,0,colors,lp);
+							write(fd,lp,sizeof(PALETTEENTRY) * colors);
+							free(lp);
+						}
+					}
+				}
 			}
 			else {
 				DWORD psz = GlobalSize((HGLOBAL)han);
