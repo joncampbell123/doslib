@@ -22,15 +22,44 @@
  */
 /* FIXME: This code crashes when multiple instances are involved. Especially the win386 build. */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <windows.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <math.h>
 #include <i86.h>
 #include <dos.h>
 #include "resource.h"
 
 #include <windows/apihelp.h>
+
+// copy pasts from hw/dos until hw/dos can compile for Windows 1.x
+#if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)
+static DWORD Win16_KERNELSYM(const unsigned int ord) {
+	HMODULE krnl = GetModuleHandle("KERNEL");
+	if (krnl) return (DWORD)GetProcAddress(krnl,MAKEINTRESOURCE(ord));
+	return 0;
+}
+
+static unsigned int Win16_AHINCR(void) {
+# if WINVER >= 0x200
+	return (unsigned)(Win16_KERNELSYM(114) & 0xFFFFu);
+# else
+	return 0x1000u; /* Windows 1.x is real mode only, assume real mode __AHINCR */
+# endif
+}
+
+static unsigned int Win16_AHSHIFT(void) {
+# if WINVER >= 0x200
+	return (unsigned)(Win16_KERNELSYM(113) & 0xFFFFu);
+# else
+	return 0x12u; /* Windows 1.x is real mode only, assume real mode __AHSHIFT */
+# endif
+}
+#endif // 16-bit Windows
 
 HWND near			hwndMain;
 const char near			WndProcClass[] = "CLIPBRD1WINDOWS";
@@ -41,10 +70,6 @@ HWND near			cbListHwnd = NULL;
 HWND near			cbViewNextHwnd = NULL;
 BOOL				cbViewInit = FALSE;
 
-static void DoClipboardSave(void) {
-	MessageBox(hwndMain,"SAVE","TODO",MB_OK);
-}
-
 struct clipboard_fmt_t {
 	UINT			cbFmt;
 };
@@ -53,14 +78,180 @@ struct clipboard_fmt_t {
 static struct clipboard_fmt_t clipboard_format[MAX_CLIPBOARD_FORMATS];
 static unsigned int clipboard_format_count = 0;
 
+static char *MakeCFName(char *w,char *f,UINT efmt,BOOL isFileName) {
+	int r;
+
+	switch (efmt) {
+		case CF_BITMAP:
+			if (isFileName) { strcpy(w,"BITMAP"); break; }
+			strcpy(w,"CF_BITMAP"); break;
+		case CF_DIB:
+			if (isFileName) { strcpy(w,"DIB"); break; }
+			strcpy(w,"CF_DIB"); break;
+		case CF_DIF:
+			if (isFileName) { strcpy(w,"DIF"); break; }
+			strcpy(w,"CF_DIF"); break;
+		case CF_DSPBITMAP:
+			if (isFileName) { strcpy(w,"DSPBMP"); break; }
+			strcpy(w,"CF_DSPBITMAP"); break;
+		case CF_DSPMETAFILEPICT:
+			if (isFileName) { strcpy(w,"DSPMFP"); break; }
+			strcpy(w,"CF_DSPMETAFILEPICT"); break;
+		case CF_DSPTEXT:
+			if (isFileName) { strcpy(w,"DSPTEXT"); break; }
+			strcpy(w,"CF_DSPTEXT"); break;
+		case CF_METAFILEPICT:
+			if (isFileName) { strcpy(w,"METAFPCT"); break; }
+			strcpy(w,"CF_METAFILEPICT"); break;
+		case CF_OEMTEXT:
+			if (isFileName) { strcpy(w,"OEMTEXT"); break; }
+			strcpy(w,"CF_OEMTEXT"); break;
+		case CF_OWNERDISPLAY:
+			if (isFileName) { strcpy(w,"OWNDISP"); break; }
+			strcpy(w,"CF_OWNERDISPLAY"); break;
+		case CF_PALETTE:
+			if (isFileName) { strcpy(w,"PALETTE"); break; }
+			strcpy(w,"CF_PALETTE"); break;
+		case CF_PENDATA:
+			if (isFileName) { strcpy(w,"PENDATA"); break; }
+			strcpy(w,"CF_PENDATA"); break;
+		case CF_RIFF:
+			if (isFileName) { strcpy(w,"RIFF"); break; }
+			strcpy(w,"CF_RIFF"); break;
+		case CF_SYLK:
+			if (isFileName) { strcpy(w,"SYLK"); break; }
+			strcpy(w,"CF_SYLK"); break;
+		case CF_TEXT:
+			if (isFileName) { strcpy(w,"TEXT"); break; }
+			strcpy(w,"CF_TEXT"); break;
+		case CF_TIFF:
+			if (isFileName) { strcpy(w,"TIFF"); break; }
+			strcpy(w,"CF_TIFF"); break;
+		case CF_WAVE:
+			if (isFileName) { strcpy(w,"WAVE"); break; }
+			strcpy(w,"CF_WAVE"); break;
+		default:
+			if (efmt >= 0xC000/*registered*/) {
+				r = GetClipboardFormatName(efmt,w,(int)(f-w));
+				if (r < 0) r = 0;
+				w += r; if (w > f) w = f;
+#if WINVER >= 0x200
+				w += snprintf(w,(int)(f-w)," 0x%x",(unsigned)efmt);
+#endif
+				*w = 0;
+			}
+			else {
+#if WINVER >= 0x200
+				w += snprintf(w,(int)(f-w),"??? 0x%x",(unsigned)efmt);
+#else
+				strcpy(w,"???");
+#endif
+			}
+			break;
+	}
+
+	return w;
+}
+
+#if TARGET_MSDOS == 16
+void DumpToFile(int fd,void FAR *p,DWORD psz) {
+#else
+void DumpToFile(int fd,void *p,DWORD psz) {
+#endif
+	if (p) {
+#if TARGET_MSDOS == 16
+		/* NTS: Watcom C does not help us here and does not provide FAR pointer math when adding to p,
+		 *      so we have to FAR pointer math ourself, manually. */
+		const unsigned int AHINCR = Win16_AHINCR();
+		unsigned int sv = FP_SEG(p),ov = FP_OFF(p);
+		const unsigned int blksz = 0x4000u;
+		unsigned int todo;
+		DWORD rem = psz;
+
+		while (rem != (DWORD)0) {
+			if (ov > (0x10000u - blksz))
+				todo = 0x10000u - ov; /* from ov to end of 64KB segment */
+			else
+				todo = blksz; /* blksz */
+
+			if ((DWORD)todo > rem)
+				todo = (unsigned int)rem;
+
+			write(fd,MK_FP(sv,ov),todo);
+			rem -= (DWORD)todo;
+
+			/* the above math should ensure that (ov += todo) < 0x10000 or (ov += todo) == 0 */
+			if ((unsigned int)(ov += todo) == 0)
+				sv += AHINCR; // TODO: Use Windows __AHINCR, in case we're running in real mode
+		}
+#else
+		if (psz) write(fd,p,psz);
+#endif
+	}
+}
+
+static void DoClipboardSaveFormat(unsigned int sel) {
+	UINT efmt = clipboard_format[sel].cbFmt;
+	char fname[128];
+	unsigned int x;
+	HANDLE han;
+	int fd;
+
+	fname[0] = 0;
+	MakeCFName(fname,fname+sizeof(fname)-1,efmt,TRUE);
+	x = strlen(fname);
+	if (x > 8) x = 8;
+	if (x == 0) fname[x++] = '_';
+	strcpy(fname+x,".bin");
+
+	han = GetClipboardData(efmt);
+	if (han) {
+		fd = open(fname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+		if (fd >= 0) {
+			if (efmt == CF_BITMAP) {
+				// TODO
+			}
+			else if (efmt == CF_PALETTE) {
+				// TODO
+			}
+			else {
+				DWORD psz = GlobalSize((HGLOBAL)han);
+#if TARGET_MSDOS == 16
+				void FAR *p = GlobalLock((HGLOBAL)han);
+#else
+				void *p = GlobalLock((HGLOBAL)han);
+#endif
+				DumpToFile(fd,p,psz);
+				GlobalUnlock((HGLOBAL)han);
+			}
+			close(fd);
+		}
+	}
+}
+
+static void DoClipboardSave(void) {
+	unsigned int sel,cn;
+
+	if (OpenClipboard(hwndMain)) {
+		cn = SendMessage(cbListHwnd,LB_GETCOUNT,0,0);
+		if (cn > MAX_CLIPBOARD_FORMATS) cn = MAX_CLIPBOARD_FORMATS;
+
+		for (sel=0;sel < cn;sel++) {
+			if (SendMessage(cbListHwnd,LB_GETSEL,sel,0))
+				DoClipboardSaveFormat(sel);
+		}
+
+		CloseClipboard();
+	}
+}
+
 static void PopulateClipboardFormats(void) {
-	char tmp[128],*w=tmp,*f=tmp+sizeof(tmp)-1;
+	char tmp[128];
 
 	SendMessage(cbListHwnd,LB_RESETCONTENT,0,0);
 
 	if (OpenClipboard(hwndMain)) {
 		UINT efmt = 0,nfmt,i = 0;
-		int r;
 
 		while (i < MAX_CLIPBOARD_FORMATS) {
 			nfmt = EnumClipboardFormats(efmt);
@@ -69,59 +260,7 @@ static void PopulateClipboardFormats(void) {
 
 			clipboard_format[i].cbFmt = efmt;
 
-			w = tmp;
-			switch (efmt) {
-				case CF_BITMAP:
-					strcpy(w,"CF_BITMAP"); break;
-				case CF_DIB:
-					strcpy(w,"CF_DIB"); break;
-				case CF_DIF:
-					strcpy(w,"CF_DIF"); break;
-				case CF_DSPBITMAP:
-					strcpy(w,"CF_DSPBITMAP"); break;
-				case CF_DSPMETAFILEPICT:
-					strcpy(w,"CF_DSPMETAFILEPICT"); break;
-				case CF_DSPTEXT:
-					strcpy(w,"CF_DSPTEXT"); break;
-				case CF_METAFILEPICT:
-					strcpy(w,"CF_METAFILEPICT"); break;
-				case CF_OEMTEXT:
-					strcpy(w,"CF_OEMTEXT"); break;
-				case CF_OWNERDISPLAY:
-					strcpy(w,"CF_OWNERDISPLAY"); break;
-				case CF_PALETTE:
-					strcpy(w,"CF_PALETTE"); break;
-				case CF_PENDATA:
-					strcpy(w,"CF_PENDATA"); break;
-				case CF_RIFF:
-					strcpy(w,"CF_RIFF"); break;
-				case CF_SYLK:
-					strcpy(w,"CF_SYLK"); break;
-				case CF_TEXT:
-					strcpy(w,"CF_TEXT"); break;
-				case CF_TIFF:
-					strcpy(w,"CF_TIFF"); break;
-				case CF_WAVE:
-					strcpy(w,"CF_WAVE"); break;
-				default:
-					if (efmt >= 0xC000/*registered*/) {
-						r = GetClipboardFormatName(efmt,w,(int)(f-w));
-						if (r < 0) r = 0;
-						w += r; if (w > f) w = f;
-#if WINVER >= 0x200
-						w += snprintf(w,(int)(f-w)," 0x%x",(unsigned)efmt);
-#endif
-						*w = 0;
-					}
-					else {
-#if WINVER >= 0x200
-						w += snprintf(w,(int)(f-w),"??? 0x%x",(unsigned)efmt);
-#else
-						strcpy(w,"???");
-#endif
-					}
-					break;
-			}
+			MakeCFName(tmp,tmp+sizeof(tmp)-1,efmt,FALSE);
 
 			SendMessage(cbListHwnd,LB_ADDSTRING,0,(LPARAM)tmp);
 			i++;

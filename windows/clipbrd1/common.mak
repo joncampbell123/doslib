@@ -14,24 +14,15 @@ HELLO_RES =  $(SUBDIR)$(HPS)hello.res
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
 
-$(SUBDIR)$(HPS)helldld1.obj: helldld1.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $[@
-	$(CC) @tmp.cmd
-
 all: lib exe
 
 lib: .symbolic
 
-exe: $(HELLO_EXE) $(HELLDLL1_EXE) .symbolic
+exe: $(HELLO_EXE) .symbolic
 
 !ifdef HELLO_RES
 $(HELLO_RES): hello.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)hello.res  $[@
-!endif
-
-!ifdef HELLDLL1_RES
-$(HELLDLL1_RES): helldll1.rc
-	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)HELLDLL1.RES  $[@
 !endif
 
 $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
