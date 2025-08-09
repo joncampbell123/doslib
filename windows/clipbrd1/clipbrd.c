@@ -483,9 +483,11 @@ WindowProcType_NoLoadDS WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpar
 		}
 	}
 	else if (message == WM_SIZE) {
-#if WINVER >= 0x200 /* SetWindowPos() did not appear until Windows 2.x */
 		unsigned int w = LOWORD(lparam),h = HIWORD(lparam);
+#if WINVER >= 0x200 /* SetWindowPos() did not appear until Windows 2.x */
 		SetWindowPos(cbListHwnd,HWND_TOP,0,0,w,h,SWP_NOACTIVATE);
+#else
+		MoveWindow(cbListHwnd,0,0,w,h,TRUE);
 #endif
 	}
 	else {
