@@ -341,6 +341,7 @@ static void DumpBITMAPasBMP(void) {
 	HANDLE han = GetClipboardData(CF_BITMAP);
 	unsigned int bmpStride;
 	BITMAPFILEHEADER bfh;
+	unsigned int obmpbpp;
 	unsigned int bmpbpp;
 	unsigned int bmisz;
 #if WINVER >= 0x300
@@ -365,17 +366,19 @@ static void DumpBITMAPasBMP(void) {
 		return;
 
 	bmsz = (DWORD)bm.bmHeight * (DWORD)bm.bmWidthBytes * (DWORD)bm.bmPlanes;
-	bmpStride = bitmap_stride_from_bpp_and_w(bm.bmBitsPixel,bm.bmWidth);
 	bmpbpp = bm.bmPlanes * bm.bmBitsPixel;
+
+	if (bmpbpp <= 1) obmpbpp = 1;
+	else if (bmpbpp <= 4) obmpbpp = 4;
+	else if (bmpbpp <= 8) obmpbpp = 8;
+	else obmpbpp = 24;
+
+	bmpStride = bitmap_stride_from_bpp_and_w(obmpbpp,bm.bmWidth);
 
 	if (!bmsz || !bmpStride || !bmpbpp)
 		return;
 
-#if WINVER >= 0x300
-	// TODO: 16-color VGA planar or oddpal planar > 8bpp
-	if (bm.bmPlanes != 1 || bmpbpp > 8)
-		return;
-#else
+#if WINVER < 0x300
 	// Windows 1.x/2.x: monochrome only, everything else is device dependent
 	if (bm.bmBitsPixel != 1 || bm.bmPlanes != 1)
 		return;
@@ -390,7 +393,7 @@ static void DumpBITMAPasBMP(void) {
 	bmi->bmiHeader.biWidth = bm.bmWidth;
 	bmi->bmiHeader.biHeight = bm.bmHeight;
 	bmi->bmiHeader.biPlanes = 1;
-	bmi->bmiHeader.biBitCount = bmpbpp;
+	bmi->bmiHeader.biBitCount = obmpbpp;
 	bmi->bmiHeader.biSizeImage = (DWORD)bm.bmHeight * (DWORD)bmpStride;
 	if (bmpbpp <= 8) bmi->bmiHeader.biClrUsed = bmi->bmiHeader.biClrImportant = 1 << bmpbpp;
 
