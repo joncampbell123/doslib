@@ -39,11 +39,13 @@
 
 // copy pasts from hw/dos until hw/dos can compile for Windows 1.x
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)
+# if WINVER >= 0x200
 static DWORD Win16_KERNELSYM(const unsigned int ord) {
 	HMODULE krnl = GetModuleHandle("KERNEL");
 	if (krnl) return (DWORD)GetProcAddress(krnl,MAKEINTRESOURCE(ord));
 	return 0;
 }
+# endif
 
 static unsigned int Win16_AHINCR(void) {
 # if WINVER >= 0x200
@@ -61,15 +63,15 @@ HINSTANCE near			myInstance;
 HWND near			cbListHwnd = NULL;
 
 HWND near			cbViewNextHwnd = NULL;
-BOOL				cbViewInit = FALSE;
+BOOL near			cbViewInit = FALSE;
 
 struct clipboard_fmt_t {
 	UINT			cbFmt;
 };
 
 #define MAX_CLIPBOARD_FORMATS 256
-static struct clipboard_fmt_t clipboard_format[MAX_CLIPBOARD_FORMATS];
-static unsigned int clipboard_format_count = 0;
+static struct clipboard_fmt_t near clipboard_format[MAX_CLIPBOARD_FORMATS];
+static unsigned int near clipboard_format_count = 0;
 
 static char *MakeCFName(char *w,char *f,UINT efmt,BOOL isFileName) {
 	int r;
@@ -514,7 +516,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 	}
 
-	hwndMain = CreateWindow(WndProcClass,"Hello!",
+	hwndMain = CreateWindow(WndProcClass,"Clipboard dumper",
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
 		300,200,
