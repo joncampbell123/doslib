@@ -526,7 +526,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 	hwndMain = CreateWindow(WndProcClass,"Clipboard dumper",
-		WS_OVERLAPPEDWINDOW,
+		WS_OVERLAPPED|WS_SYSMENU|WS_MINIMIZEBOX,
 		CW_USEDEFAULT,CW_USEDEFAULT,
 		300,200,
 		NULL,NULL,
