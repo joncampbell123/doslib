@@ -30,8 +30,8 @@ $(CLIPBRD_EXE): $(SUBDIR)$(HPS)clipbrd.obj $(CLIPBRD_RES)
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 # NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD FIXED
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 !endif
 	%write tmp.cmd option map=$(CLIPBRD_EXE).map
 !ifdef CLIPBRD_RES
