@@ -37,6 +37,20 @@
 
 #include <windows/apihelp.h>
 
+static char hexes[] = "0123456789ABCDEF";
+
+static char *uint2hex(char *w,unsigned int v,unsigned int digits) {
+	char *r = w + digits;
+
+	while (digits > 0u) {
+		w[--digits] = hexes[v&0xFu];
+		v >>= 4u;
+	}
+
+	*r = 0;
+	return r;
+}
+
 // copy pasts from hw/dos until hw/dos can compile for Windows 1.x
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)
 # if WINVER >= 0x200
@@ -130,17 +144,12 @@ static char *MakeCFName(char *w,char *f,UINT efmt,BOOL isFileName) {
 				r = GetClipboardFormatName(efmt,w,(int)(f-w));
 				if (r < 0) r = 0;
 				w += r; if (w > f) w = f;
-#if WINVER >= 0x200
-				w += snprintf(w,(int)(f-w)," 0x%x",(unsigned)efmt);
-#endif
 				*w = 0;
 			}
 			else {
-#if WINVER >= 0x200
-				w += snprintf(w,(int)(f-w),"??? 0x%x",(unsigned)efmt);
-#else
-				strcpy(w,"???");
-#endif
+				*w++ = '0';
+				*w++ = 'x';
+				w = uint2hex(w,efmt,4);
 			}
 			break;
 	}
