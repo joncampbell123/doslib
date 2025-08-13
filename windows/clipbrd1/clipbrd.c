@@ -232,13 +232,6 @@ static void DoClipboardSaveFormat(unsigned int sel) {
 
 	han = GetClipboardData(efmt);
 	if (han) {
-#if TARGET_MSDOS == 16
-		// FIXME: open() in real-mode Windows is unable to open and create a file if it doesn't exist??
-		{
-			int han = 0;
-			if (_dos_creat(fname,0,&han) == 0) _dos_close(han);
-		}
-#endif
 		fd = open(fname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 		if (fd >= 0) {
 			if (efmt == CF_BITMAP) {
@@ -426,13 +419,6 @@ static void DumpBITMAPasBMP(void) {
 	hmem = GlobalAlloc(GHND,bmi->bmiHeader.biSizeImage);
 	if (hmem) p = GlobalLock(hmem);
 
-#if TARGET_MSDOS == 16
-	// FIXME: open() in real-mode Windows is unable to open and create a file if it doesn't exist??
-	{
-		int han = 0;
-		if (_dos_creat("BITMAP.BMP",0,&han) == 0) _dos_close(han);
-	}
-#endif
 	fd = open("BITMAP.BMP",O_WRONLY|O_TRUNC|O_CREAT|O_BINARY,0644);
 
 #if WINVER >= 0x300
@@ -447,7 +433,7 @@ static void DumpBITMAPasBMP(void) {
 #if TARGET_MSDOS == 16
 		const unsigned int ahincr = Win16_AHINCR();
 #endif
-		unsigned int y,pl;
+		unsigned int y;
 
 		/* monochrome color palette */
 		{
@@ -534,13 +520,6 @@ static void DumpDIBasBMP(void) {
 					bfh.bfOffBits += (DWORD)4 << (DWORD)bm->bmiHeader.biBitCount;
 			}
 
-#if TARGET_MSDOS == 16
-			// FIXME: open() in real-mode Windows is unable to open and create a file if it doesn't exist??
-			{
-				int han = 0;
-				if (_dos_creat("DIB.BMP",0,&han) == 0) _dos_close(han);
-			}
-#endif
 			fd = open("DIB.BMP",O_WRONLY|O_TRUNC|O_CREAT|O_BINARY,0644);
 			if (fd >= 0) {
 				write(fd,&bfh,sizeof(bfh));
