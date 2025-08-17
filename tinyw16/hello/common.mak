@@ -28,6 +28,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj ..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)hello.obj
 	%write tmp.cmd option map=$(SUBDIR)$(HPS)hello.map
 	%write tmp.cmd option stack=4096 option heapsize=512
+	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option stub=..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	# NTS: If we ever want this code to run under Windows 1.0 & 2.0, we HAVE to declare the segments MOVEABLE, LOADONCALL, else it won't work
 	%write tmp.cmd segment TYPE CODE MOVEABLE DISCARDABLE LOADONCALL

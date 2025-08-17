@@ -29,6 +29,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj ..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option map=$(SUBDIR)$(HPS)hello.map
 	%write tmp.cmd option stub=..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option stack=4096 option heapsize=1024
+	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd EXPORT myWndProc.1
 	%write tmp.cmd segment TYPE CODE FIXED SHARED PRELOAD READONLY
 	%write tmp.cmd segment TYPE DATA FIXED SHARED PRELOAD READWRITE
