@@ -17,6 +17,110 @@ struct rgb_t {
 	unsigned char	r,g,b;
 };
 
+struct octtree_entry_t {
+	uint16_t			next[8];
+	uint16_t			flags;
+};
+
+#define OCTTREE_EMPTY (0u)
+#define OCTFL_TAKEN (0x8000u)
+
+struct octtree_buf_t {
+	unsigned int			allocd,next;
+	unsigned int			colors;
+	struct octtree_entry_t*		map;
+};
+
+unsigned int octtree_find_empty_slot(struct octtree_buf_t *bt) {
+	while (bt->next < bt->allocd) {
+		if (bt->map[bt->next].flags == 0)
+			return bt->next;
+		else
+			(bt->next)++;
+	}
+
+	bt->next = 1;
+	while (bt->next < bt->allocd) {
+		if (bt->map[bt->next].flags == 0)
+			return bt->next;
+		else
+			(bt->next)++;
+	}
+
+	return OCTTREE_EMPTY;
+}
+
+void free_octtree_struct(struct octtree_buf_t *bt) {
+	if (bt->map) {
+		free(bt->map);
+		bt->map = NULL;
+	}
+	bt->colors = 0;
+	bt->allocd = 0;
+	bt->next = 0;
+}
+
+void free_octtree(struct octtree_buf_t **bt) {
+	if (*bt) {
+		free_octtree_struct(*bt);
+		free(*bt);
+		*bt = NULL;
+	}
+}
+
+int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigned char b,unsigned char bits) {
+	unsigned int cent = 0,nent;
+	unsigned char idx;
+
+	if (bits == 0)
+		return 1;
+
+	while (bits > 0) {
+		assert(bt->map[cent].flags & OCTFL_TAKEN);
+
+		idx = ((r>>(7u-2u))&0x4) + ((g>>(7u-1u))&0x2) + ((b>>(7u-0u))&0x1);
+		r <<= 1u; g <<= 1u; b <<= 1u;
+		bits--;
+
+		if (bt->map[cent].flags & (1u << idx)) {
+			cent = bt->map[cent].next[idx];
+		}
+		else {
+			nent = octtree_find_empty_slot(bt);
+			if (nent == OCTTREE_EMPTY) return 1;
+			bt->map[cent].flags |= 1u << idx;
+			cent = bt->map[cent].next[idx] = nent;
+			bt->map[cent].flags |= OCTFL_TAKEN;
+			bt->colors++;
+		}
+	}
+
+	return 0;
+}
+
+struct octtree_buf_t *alloc_octtree(unsigned int tsize) {
+	struct octtree_buf_t *bt = malloc(sizeof(struct octtree_buf_t));
+
+	if (tsize == 0 || tsize > 65535u)
+		tsize = 4096;
+
+	if (bt) {
+		bt->allocd = tsize;
+		bt->colors = 0;
+		bt->next = 1;
+
+		bt->map = malloc(sizeof(struct octtree_entry_t) * bt->allocd);
+		if (!bt->map) {
+			free_octtree(&bt);
+			return NULL;
+		}
+		memset(bt->map,0,sizeof(struct octtree_entry_t) * bt->allocd);
+		bt->map[0].flags = OCTFL_TAKEN;
+	}
+
+	return bt;
+}
+
 unsigned char map2palette(unsigned char r,unsigned char g,unsigned char b,struct rgb_t *pal,unsigned int colors) {
 	unsigned int mdst = ~0u,dst,col = 0,i = 0;
 
@@ -41,6 +145,7 @@ int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *membmp = NULL;
 	struct BMPFILEIMAGE *memdst = NULL;
 	unsigned int target_colors = 256;
+	struct octtree_buf_t *oct = NULL;
 	unsigned char paldepthbits = 8;
 	struct rgb_t *palette;
 	unsigned int i;
@@ -54,6 +159,10 @@ int main(int argc,char **argv) {
 
 	memdst = bmpfileimage_alloc();
 	if (!memdst)
+		return 1;
+
+	oct = alloc_octtree(0xFFFFu);
+	if (!oct)
 		return 1;
 
 	if (argc > 3) {
@@ -122,21 +231,31 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+	/* make color palette */
+	{
+		unsigned char *s24;
+		unsigned int x,y;
+
+		for (y=0;y < membmp->height;y++) {
+			s24 = bmpfileimage_row(membmp,y);
+			assert(s24 != NULL);
+
+			for (x=0;x < membmp->width;x++) {
+				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
+					fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
+
+				s24 += 3;
+			}
+		}
+
+		fprintf(stderr,"%u colors in tree\n",oct->colors);
+	}
+
 	/* test palette, a 6x8x5 color cube */
 	for (i=0;i < target_colors;i++) {
 		palette[i].r = (unsigned char)(((i % 6u) * 255u) / 5u);
 		palette[i].g = (unsigned char)((((i / 6u) % 8u) * 255u) / 7u);
 		palette[i].b = (unsigned char)(((i / 6u / 8u) * 255u) / 4u);
-	}
-
-	/* quant palette */
-	if (paldepthbits < 8) {
-		const unsigned char msk = (0xFF00u >> paldepthbits) & 0xFFu;
-		for (i=0;i < target_colors;i++) {
-			palette[i].r &= msk;
-			palette[i].g &= msk;
-			palette[i].b &= msk;
-		}
 	}
 
 	/* convert 24bpp to 8bpp image */
@@ -208,6 +327,7 @@ int main(int argc,char **argv) {
 	/* free bitmap */
 	bmpfileimage_free(&membmp);
 	bmpfileimage_free(&memdst);
+	free_octtree(&oct);
 	free(palette);
 	return 0;
 }
