@@ -7,17 +7,38 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
+#if defined(LINUX)
+# include <time.h>
+#endif
 
 #include "libbmp.h"
 
+struct rgb_t {
+	unsigned int	r,g,b;
+};
+
 int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *membmp = NULL;
+	unsigned int target_colors = 256;
+	struct rgb_t *palette;
+	unsigned int i;
 
 	if (argc < 3)
 		return 1;
 
 	membmp = bmpfileimage_alloc();
 	if (!membmp)
+		return 1;
+
+	if (argc > 3) {
+		fprintf(stderr,"%s\n",argv[3]);
+		target_colors = strtoul(argv[3],NULL,0);
+		if (target_colors == 0u || target_colors > 256u)
+			return 1;
+	}
+
+	palette = malloc(sizeof(struct rgb_t) * 256);
+	if (!palette)
 		return 1;
 
 	{
@@ -56,6 +77,17 @@ int main(int argc,char **argv) {
 		close_bmp(&bfr);
 	}
 
+#if defined(LINUX)
+	srand(time(NULL));
+#endif
+
+	/* random palette */
+	for (i=0;i < target_colors;i++) {
+		palette[i].r = (unsigned char)rand();
+		palette[i].g = (unsigned char)rand();
+		palette[i].b = (unsigned char)rand();
+	}
+
 	/* write it out */
 	{
 		struct BMPFILEWRITE *bfw;
@@ -68,9 +100,24 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		bfw->bpp = membmp->bpp;
+		bfw->bpp = 8; // TODO: 2 colors = 1bpp  3-16 colors = 4bpp   anything else 8bpp
 		bfw->width = membmp->width;
 		bfw->height = membmp->height;
+		bfw->colors_used = target_colors;
+
+		if (createpalette_write_bmp(bfw)) {
+			fprintf(stderr,"Cannot make write bmp palette\n");
+			return 1;
+		}
+
+		if (bfw->palette) {
+			bfw->colors_used = target_colors;
+			for (i=0;i < target_colors;i++) {
+				bfw->palette[i].rgbRed = palette[i].r;
+				bfw->palette[i].rgbGreen = palette[i].g;
+				bfw->palette[i].rgbBlue = palette[i].b;
+			}
+		}
 
 		if (open_write_bmp(bfw,argv[2])) {
 			fprintf(stderr,"Cannot write bitmap\n");
@@ -92,6 +139,7 @@ int main(int argc,char **argv) {
 
 	/* free bitmap */
 	bmpfileimage_free(&membmp);
+	free(palette);
 	return 0;
 }
 
