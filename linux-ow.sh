@@ -9,7 +9,6 @@ if [ -z "$WATCOM" ]; then
         export WATCOM=/usr/watcom-2.0
     fi
 
-    # TESTING: If Jon's custom branch of Open Watcom 2.0 is present, use it--this is vital for testing!
     if [ -d "/usr/src/ow/open-watcom-v2/rel/binl" ]; then
         export WATCOM=/usr/src/ow/open-watcom-v2/rel
     fi
@@ -24,13 +23,16 @@ if [ -z "$WATCOM" ]; then
     if [ -d "/usr/src/ow/open-watcom-v2-upstream/rel/binl" ]; then
         export WATCOM=/usr/src/ow/open-watcom-v2-upstream/rel
     fi
+    if [ -d "/usr/src/open-watcom-x/rel/binl" ]; then
+        export WATCOM=/usr/src/open-watcom-x/rel
+    fi
 
     # roaming development on an external drive? (depends on Bash)
-    if [ -n "${BASH_SOURCE[0]}" ]; then
-        x="`dirname ${BASH_SOURCE[0]}`/../open-watcom-v2"
-	if [ -n "$x" ]; then x=`realpath "$x"`; fi
-        if [ -d "$x" ]; then export WATCOM="$x/rel"; fi
-    fi
+    #if [ -n "${BASH_SOURCE[0]}" ]; then
+    #    x="`dirname ${BASH_SOURCE[0]}`/../open-watcom-v2"
+    #    if [ -n "$x" ]; then x=`realpath "$x"`; fi
+    #    if [ -d "$x" ]; then export WATCOM="$x/rel"; fi
+    #fi
 
     export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
     export EDPATH=$WATCOM/eddat

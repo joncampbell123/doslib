@@ -24,6 +24,10 @@ if [ -z "$WATCOM" ]; then
     elif [ -d "/usr/src/open-watcom-v2/rel/binl" ]; then
         export WATCOM=/usr/src/open-watcom-v2/rel
     fi
+    if [ -d "/usr/src/open-watcom-x/rel/binl" ]; then
+        export WATCOM=/usr/src/open-watcom-x/rel
+    fi
+
     export EDPATH=$WATCOM/eddat
     export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
     export INCLUDE=$WATCOM/lh
