@@ -25,16 +25,38 @@ struct BMPFILEWRITE *create_write_bmp(void) {
 	return NULL;
 }
 
+int createpalette_write_bmp(struct BMPFILEWRITE *bmp) {
+	if (bmp->fd >= 0 || bmp->palette)
+		return -1;
+
+	if (bmp->bpp <= 8) {
+		bmp->colors = 1u << bmp->bpp;
+		bmp->palette = malloc(sizeof(struct BMPPALENTRY) * bmp->colors);
+		if (!bmp->palette)
+			return -1;
+
+		memset(bmp->palette,0,sizeof(struct BMPPALENTRY) * bmp->colors);
+	}
+	else {
+		bmp->colors = 0;
+	}
+
+	return 0;
+}
+
 int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
 	if (bmp->fd >= 0 || path == NULL)
 		return -1;
 	if (bmp->width == 0 || bmp->height == 0 || bmp->bpp == 0 || bmp->width > 4096 || bmp->height > 4096)
 		return -1;
-	if (!(bmp->bpp == 15 || bmp->bpp == 16 || bmp->bpp == 24 || bmp->bpp == 32))
+	if (!(bmp->bpp == 1 || bmp->bpp == 4 || bmp->bpp == 8 || bmp->bpp == 15 || bmp->bpp == 16 || bmp->bpp == 24 || bmp->bpp == 32))
 		return -1;
 
 	if (bmp->bpp == 15)
 		bmp->bpp = 16;
+
+	if (bmp->bpp <= 8 && (bmp->palette == NULL || bmp->colors == 0))
+		return -1;
 
 	/* bottom up */
 	bmp->current_line = bmp->height - 1;
@@ -53,9 +75,6 @@ int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
 		memset(&bfh,0,sizeof(bfh));
 		bfh.bfType = 0x4D42; /* 'BM' */
 		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = ((unsigned long)bmp->height * (unsigned long)bmp->stride) + bfh.bfOffBits;
-		if ((unsigned int)write(bmp->fd,&bfh,sizeof(bfh)) != sizeof(bfh))
-			return 1;
 
 		memset(&bih,0,sizeof(bih));
 		bih.biPlanes = 1;
@@ -64,11 +83,29 @@ int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path) {
 		bih.biHeight = bmp->height;
 		bih.biBitCount = bmp->bpp;
 		bih.biSizeImage = (unsigned long)bmp->height * (unsigned long)bmp->stride;
+
+		if (bmp->bpp <= 8) {
+			bih.biClrUsed = bmp->colors;
+			if (bmp->colors_used != 0 && bih.biClrUsed > bmp->colors_used)
+				bih.biClrUsed = bmp->colors_used;
+
+			bih.biClrImportant = bih.biClrUsed;
+			bfh.bfOffBits += sizeof(struct BMPPALENTRY)*bih.biClrUsed;
+		}
+
+		bfh.bfSize = ((unsigned long)bmp->height * (unsigned long)bmp->stride) + bfh.bfOffBits;
+		if ((unsigned int)write(bmp->fd,&bfh,sizeof(bfh)) != sizeof(bfh))
+			return 1;
 		if ((unsigned int)write(bmp->fd,&bih,sizeof(bih)) != sizeof(bih))
 			return 1;
 
+		if (bmp->bpp <= 8 && bih.biClrUsed != 0 && bmp->palette) {
+			if ((unsigned int)write(bmp->fd,bmp->palette,sizeof(struct BMPPALENTRY)*bih.biClrUsed) != (sizeof(struct BMPPALENTRY)*bih.biClrUsed))
+				return 1;
+		}
+
 		if (lseek(bmp->fd,0,SEEK_CUR) != bfh.bfOffBits)
-			return 1;
+			return -1;
 	}
 
 	return 0;
@@ -93,6 +130,10 @@ void do_close_write_bmp_file(struct BMPFILEWRITE *bmp) {
 	if (bmp->fd >= 0) {
 		close(bmp->fd);
 		bmp->fd = -1;
+	}
+	if (bmp->palette) {
+		free(bmp->palette);
+		bmp->palette = NULL;
 	}
 }
 

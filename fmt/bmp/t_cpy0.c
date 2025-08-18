@@ -29,10 +29,6 @@ int main(int argc,char **argv) {
 		fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
 		return 1;
 	}
-	if (!(bfr->bpp == 15 || bfr->bpp == 16 || bfr->bpp == 24 || bfr->bpp == 32)) {
-		fprintf(stderr,"BMP wrong format\n");
-		return 1;
-	}
 
 	bfw = create_write_bmp();
 	if (!bfw) {
@@ -43,6 +39,16 @@ int main(int argc,char **argv) {
 	bfw->bpp = bfr->bpp;
 	bfw->width = bfr->width;
 	bfw->height = bfr->height;
+
+	if (createpalette_write_bmp(bfw)) {
+		fprintf(stderr,"Cannot create palette write bmp\n");
+		return 1;
+	}
+
+	if (bfw->palette && bfr->palette && bfr->colors <= bfw->colors) {
+		bfw->colors_used = bfr->colors;
+		memcpy(bfw->palette,bfr->palette,sizeof(struct BMPPALENTRY) * bfw->colors_used);
+	}
 
 	if (open_write_bmp(bfw,dfname)) {
 		fprintf(stderr,"Cannot write bitmap\n");

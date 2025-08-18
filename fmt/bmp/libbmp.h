@@ -64,6 +64,9 @@ struct BMPFILEWRITE {
 	unsigned int		height;
 	unsigned int		bpp;
 	unsigned int		stride;
+	unsigned int		colors;
+	unsigned int		colors_used; /* set this nonzero if you use less than the full possible palette */
+	struct BMPPALENTRY*	palette;	/* size is "colors" */
 	int			current_line;
 	int			current_line_add;
 };
@@ -157,6 +160,7 @@ unsigned char BMPFAR *bmpfileimage_row(const struct BMPFILEIMAGE *bfi,unsigned i
 #endif
 
 struct BMPFILEWRITE *create_write_bmp(void);
+int createpalette_write_bmp(struct BMPFILEWRITE *bmp);
 int open_write_bmp(struct BMPFILEWRITE *bmp,const char *path);
 int write_bmp_line(struct BMPFILEWRITE *bmp,const unsigned char BMPFAR *row,const unsigned int len);
 void do_close_write_bmp_file(struct BMPFILEWRITE *bmp);
