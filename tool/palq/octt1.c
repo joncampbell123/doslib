@@ -68,27 +68,73 @@ void free_octtree(struct octtree_buf_t **bt) {
 	}
 }
 
-int octtree_trim_sub(struct octtree_buf_t *bt,unsigned char bits,unsigned int to_colors,unsigned int *max_colors,unsigned int cent,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char bstp) {
-	unsigned int i;
+unsigned int octtree_gen_pal_sub(struct octtree_buf_t *bt,unsigned int colors,struct rgb_t *pal,unsigned int cent,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char bstp) {
+	unsigned int count = 0,subc = 0,i;
+
+	assert(bt->map[cent].flags & OCTFL_TAKEN);
 
 	for (i=0;i < 8;i++) {
-		assert(bt->map[cent].flags & OCTFL_TAKEN);
-
 		if (bt->map[cent].flags & (1u << i)) {
 			const unsigned char nrb = rb + ((i&0x4)?bstp:0);
 			const unsigned char ngb = gb + ((i&0x2)?bstp:0);
 			const unsigned char nbb = bb + ((i&0x1)?bstp:0);
 			const unsigned int u = bt->map[cent].next[i];
 
-			if (octtree_trim_sub(bt,bits,to_colors,max_colors,u,nrb,ngb,nbb,bstp>>1u))
-				return 1;
+			if (bt->map[u].flags == OCTFL_TAKEN) {
+				if (colors != 0) {
+					pal->r = nrb;
+					pal->g = ngb;
+					pal->b = nbb;
+					colors--;
+					count++;
+					pal++;
+				}
+			}
+			else {
+				subc = octtree_gen_pal_sub(bt,colors,pal,u,nrb,ngb,nbb,bstp>>1u);
+				assert(subc <= colors);
+				colors -= subc;
+				count += subc;
+				pal += subc;
+			}
+		}
+	}
 
-			if (bt->colors > to_colors && *max_colors != 0u) {
-				if (bt->map[u].flags == OCTFL_TAKEN) {
-					bt->map[cent].flags &= ~(1u << i);
-					bt->map[u].flags = 0;
-					(*max_colors)--;
-					bt->colors--;
+	return count;
+
+}
+
+unsigned int octtree_gen_pal(struct octtree_buf_t *bt,unsigned int colors,struct rgb_t *pal) {
+	return octtree_gen_pal_sub(bt,colors,pal,0,0x00,0x00,0x00,0x80);
+}
+
+int octtree_trim_sub(struct octtree_buf_t *bt,unsigned int to_colors,unsigned int *max_colors,unsigned int cent,unsigned int depthrem) {
+	unsigned int i;
+
+	assert(bt->map[cent].flags & OCTFL_TAKEN);
+
+	for (i=0;i < 8;i++) {
+		if (bt->map[cent].flags & (1u << i)) {
+			const unsigned int u = bt->map[cent].next[i];
+
+			if (octtree_trim_sub(bt,to_colors,max_colors,u,depthrem ? (depthrem - 1u) : 0u))
+				return 1;
+		}
+	}
+
+	if (depthrem == 0u) {
+		for (i=0;i < 8;i++) {
+			if (bt->map[cent].flags & (1u << i)) {
+				const unsigned int u = bt->map[cent].next[i];
+
+				if (bt->colors > to_colors && *max_colors != 0u) {
+					if (bt->map[u].flags == OCTFL_TAKEN) {
+						bt->map[cent].flags &= ~(1u << i);
+						bt->map[u].flags = 0;
+						bt->next = u;
+						(*max_colors)--;
+						bt->colors--;
+					}
 				}
 			}
 		}
@@ -97,11 +143,19 @@ int octtree_trim_sub(struct octtree_buf_t *bt,unsigned char bits,unsigned int to
 	return 0;
 }
 
-int octtree_trim(struct octtree_buf_t *bt,unsigned char bits,unsigned int to_colors,unsigned int max_colors) {
+int octtree_trim(struct octtree_buf_t *bt,unsigned int to_colors,unsigned int max_colors) {
+	unsigned int i;
+
 	if (max_colors == 0)
 		max_colors = bt->allocd;
 
-	return octtree_trim_sub(bt,bits,to_colors,&max_colors,0/*root node*/,0x00,0x00,0x00,0x80);
+	i = 7;
+	do {
+		if (octtree_trim_sub(bt,to_colors,&max_colors,0/*root node*/,i/*at this depth*/))
+			return 1;
+	} while (i-- != 0u);
+
+	return 0;
 }
 
 int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigned char b,unsigned char bits) {
@@ -278,8 +332,8 @@ int main(int argc,char **argv) {
 
 			for (x=0;x < membmp->width;x++) {
 				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits)) {
-					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
-					if (octtree_trim(oct,paldepthbits,target_colors,512))
+//					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
+					if (octtree_trim(oct,target_colors * 10u,0))
 						fprintf(stderr,"Failure to trim\n");
 					if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
 						fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
@@ -290,15 +344,13 @@ int main(int argc,char **argv) {
 		}
 
 		fprintf(stderr,"%u colors in tree\n",oct->colors);
-		octtree_trim(oct,paldepthbits,target_colors,0);
+		octtree_trim(oct,target_colors,0);
 		fprintf(stderr,"%u final colors in tree\n",oct->colors);
 	}
 
-	/* test palette, a 6x8x5 color cube */
-	for (i=0;i < target_colors;i++) {
-		palette[i].r = (unsigned char)(((i % 6u) * 255u) / 5u);
-		palette[i].g = (unsigned char)((((i / 6u) % 8u) * 255u) / 7u);
-		palette[i].b = (unsigned char)(((i / 6u / 8u) * 255u) / 4u);
+	{
+		unsigned int gen = octtree_gen_pal(oct,target_colors,palette);
+		fprintf(stderr,"%u/%u-color palette generated\n",gen,oct->colors);
 	}
 
 	/* convert 24bpp to 8bpp image */
