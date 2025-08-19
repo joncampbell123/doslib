@@ -108,12 +108,24 @@ unsigned int octtree_gen_pal(struct octtree_buf_t *bt,unsigned int colors,struct
 	return octtree_gen_pal_sub(bt,colors,pal,0,0x00,0x00,0x00,0x80);
 }
 
+static const unsigned char oct_trimorder[8] = {
+	0x1/*rgb=001*/,
+	0x5/*rgb=101*/,
+	0x4/*rgb=100*/,
+	0x3/*rgb=011*/,
+	0x6/*rgb=110*/,
+	0x7/*rgb=111*/,
+	0x0/*rgb=000*/,
+	0x2/*rgb=010*/
+};
+
 int octtree_trim_sub(struct octtree_buf_t *bt,unsigned int to_colors,unsigned int *max_colors,unsigned int cent,unsigned int depthrem) {
-	unsigned int i;
+	unsigned int mi,i;
 
 	assert(bt->map[cent].flags & OCTFL_TAKEN);
 
-	for (i=0;i < 8;i++) {
+	for (mi=0;mi < 8;mi++) {
+		i = oct_trimorder[mi];
 		if (bt->map[cent].flags & (1u << i)) {
 			const unsigned int u = bt->map[cent].next[i];
 
