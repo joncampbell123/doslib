@@ -68,6 +68,42 @@ void free_octtree(struct octtree_buf_t **bt) {
 	}
 }
 
+int octtree_trim_sub(struct octtree_buf_t *bt,unsigned char bits,unsigned int to_colors,unsigned int *max_colors,unsigned int cent,unsigned char rb,unsigned char gb,unsigned char bb,unsigned char bstp) {
+	unsigned int i;
+
+	for (i=0;i < 8;i++) {
+		assert(bt->map[cent].flags & OCTFL_TAKEN);
+
+		if (bt->map[cent].flags & (1u << i)) {
+			const unsigned char nrb = rb + ((i&0x4)?bstp:0);
+			const unsigned char ngb = gb + ((i&0x2)?bstp:0);
+			const unsigned char nbb = bb + ((i&0x1)?bstp:0);
+			const unsigned int u = bt->map[cent].next[i];
+
+			if (octtree_trim_sub(bt,bits,to_colors,max_colors,u,nrb,ngb,nbb,bstp>>1u))
+				return 1;
+
+			if (bt->colors > to_colors && *max_colors != 0u) {
+				if (bt->map[u].flags == OCTFL_TAKEN) {
+					bt->map[cent].flags &= ~(1u << i);
+					bt->map[u].flags = 0;
+					(*max_colors)--;
+					bt->colors--;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int octtree_trim(struct octtree_buf_t *bt,unsigned char bits,unsigned int to_colors,unsigned int max_colors) {
+	if (max_colors == 0)
+		max_colors = bt->allocd;
+
+	return octtree_trim_sub(bt,bits,to_colors,&max_colors,0/*root node*/,0x00,0x00,0x00,0x80);
+}
+
 int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigned char b,unsigned char bits) {
 	unsigned int cent = 0,nent;
 	unsigned char idx;
@@ -241,14 +277,21 @@ int main(int argc,char **argv) {
 			assert(s24 != NULL);
 
 			for (x=0;x < membmp->width;x++) {
-				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
-					fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
+				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits)) {
+					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
+					if (octtree_trim(oct,paldepthbits,target_colors,512))
+						fprintf(stderr,"Failure to trim\n");
+					if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
+						fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
+				}
 
 				s24 += 3;
 			}
 		}
 
 		fprintf(stderr,"%u colors in tree\n",oct->colors);
+		octtree_trim(oct,paldepthbits,target_colors,0);
+		fprintf(stderr,"%u final colors in tree\n",oct->colors);
 	}
 
 	/* test palette, a 6x8x5 color cube */
