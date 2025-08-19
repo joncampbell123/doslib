@@ -1,6 +1,7 @@
 
 #include <sys/types.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
@@ -114,9 +115,9 @@ static const unsigned char oct_trimorder[8] = {
 	0x4/*rgb=100*/,
 	0x3/*rgb=011*/,
 	0x6/*rgb=110*/,
+	0x2/*rgb=010*/,
 	0x7/*rgb=111*/,
-	0x0/*rgb=000*/,
-	0x2/*rgb=010*/
+	0x0/*rgb=000*/
 };
 
 int octtree_trim_sub(struct octtree_buf_t *bt,unsigned int to_colors,unsigned int *max_colors,unsigned int cent,unsigned int depthrem) {
@@ -135,19 +136,27 @@ int octtree_trim_sub(struct octtree_buf_t *bt,unsigned int to_colors,unsigned in
 	}
 
 	if (depthrem == 0u) {
-		for (i=0;i < 8;i++) {
-			if (bt->map[cent].flags & (1u << i)) {
-				const unsigned int u = bt->map[cent].next[i];
+		if (bt->map[cent].flags != OCTFL_TAKEN) {
+			for (mi=0;mi < 8;mi++) {
+				i = oct_trimorder[mi];
+				if (bt->map[cent].flags & (1u << i)) {
+					const unsigned int u = bt->map[cent].next[i];
 
-				if (bt->colors > to_colors && *max_colors != 0u) {
-					if (bt->map[u].flags == OCTFL_TAKEN) {
-						bt->map[cent].flags &= ~(1u << i);
-						bt->map[u].flags = 0;
-						bt->next = u;
-						(*max_colors)--;
-						bt->colors--;
+					if (bt->colors > to_colors && *max_colors != 0u) {
+						if (bt->map[u].flags == OCTFL_TAKEN) {
+							bt->map[cent].flags &= ~(1u << i);
+							bt->map[u].flags = 0;
+							bt->next = u;
+							(*max_colors)--;
+							bt->colors--;
+						}
 					}
 				}
+			}
+
+			if (bt->map[cent].flags == OCTFL_TAKEN) {
+				(*max_colors)++;
+				bt->colors++;
 			}
 		}
 	}
@@ -190,9 +199,13 @@ int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigne
 		else {
 			nent = octtree_find_empty_slot(bt);
 			if (nent == OCTTREE_EMPTY) return 1;
+
+			if (bt->map[cent].flags == OCTFL_TAKEN)
+				bt->colors--;
+
 			bt->map[cent].flags |= 1u << idx;
 			cent = bt->map[cent].next[idx] = nent;
-			bt->map[cent].flags |= OCTFL_TAKEN;
+			bt->map[cent].flags = OCTFL_TAKEN;
 			bt->colors++;
 		}
 	}
@@ -202,13 +215,20 @@ int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigne
 
 struct octtree_buf_t *alloc_octtree(unsigned int tsize) {
 	struct octtree_buf_t *bt = malloc(sizeof(struct octtree_buf_t));
+	size_t maxx = UINT_MAX / sizeof(struct octtree_buf_t);
 
-	if (tsize == 0 || tsize > 65535u)
-		tsize = 4096;
+	if (maxx > 0xFFFFu)
+		maxx = 0xFFFFu;
+
+	if (tsize == 0 || tsize > maxx)
+		tsize = maxx;
+
+	if (tsize < 1024)
+		tsize = 1024;
 
 	if (bt) {
 		bt->allocd = tsize;
-		bt->colors = 0;
+		bt->colors = 1;
 		bt->next = 1;
 
 		bt->map = malloc(sizeof(struct octtree_entry_t) * bt->allocd);
@@ -263,9 +283,11 @@ int main(int argc,char **argv) {
 	if (!memdst)
 		return 1;
 
-	oct = alloc_octtree(0xFFFFu);
+	oct = alloc_octtree(0);
 	if (!oct)
 		return 1;
+
+	fprintf(stderr,"%u nodes allocated\n",oct->allocd);
 
 	if (argc > 3) {
 		char *s = argv[3];
@@ -345,7 +367,7 @@ int main(int argc,char **argv) {
 			for (x=0;x < membmp->width;x++) {
 				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits)) {
 //					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
-					if (octtree_trim(oct,target_colors * 10u,0))
+					if (octtree_trim(oct,target_colors,256))
 						fprintf(stderr,"Failure to trim\n");
 					if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
 						fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
@@ -361,7 +383,7 @@ int main(int argc,char **argv) {
 	}
 
 	{
-		unsigned int gen = octtree_gen_pal(oct,target_colors,palette);
+		unsigned int gen = octtree_gen_pal(oct,256,palette);
 		fprintf(stderr,"%u/%u-color palette generated\n",gen,oct->colors);
 	}
 
