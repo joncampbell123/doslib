@@ -243,6 +243,7 @@ int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigne
 			bt->map[cent].flags |= 1u << idx;
 			cent = bt->map[cent].next[idx] = nent;
 			bt->map[cent].flags = OCTFL_TAKEN;
+			bt->map[cent].weight = 0;
 			bt->colors++;
 		}
 
@@ -410,7 +411,7 @@ int main(int argc,char **argv) {
 			for (x=0;x < membmp->width;x++) {
 				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits)) {
 //					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
-					if (octtree_trim(oct,target_colors,256))
+					if (octtree_trim(oct,target_colors,oct->allocd / 4u))
 						fprintf(stderr,"Failure to trim\n");
 					if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
 						fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
