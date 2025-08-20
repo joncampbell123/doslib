@@ -327,6 +327,7 @@ int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *membmp = NULL;
 	struct BMPFILEIMAGE *memdst = NULL;
 	unsigned int target_colors = 256;
+	unsigned int final_colors = 256;
 	unsigned int init_palette = 4096;
 	struct octtree_buf_t *oct = NULL;
 	unsigned char paldepthbits = 8;
@@ -453,10 +454,82 @@ int main(int argc,char **argv) {
 		/* sort by weight */
 		qsort(palette,gen,sizeof(struct rgb_t),octtree_rgb_weight_sort);
 
+		/* while the palette is larger than target, merge together like colors,
+		 * prioritizing the least used first */
+		{
+			unsigned int i,cd,chg,j,ogen;
+			unsigned long dst,thr = 1ul;
+
+			while (gen > target_colors) {
+				chg = 0;
+				i = gen / 2u;
+
+				ogen = gen;
+				while ((i+1u) < gen) {
+					if (palette[i].weight) {
+						cd = abs((int)palette[i].r - (int)palette[i+1].r); dst  = cd;
+						cd = abs((int)palette[i].g - (int)palette[i+1].g); dst += cd;
+						cd = abs((int)palette[i].b - (int)palette[i+1].b); dst += cd;
+
+						if (dst < thr && ogen > target_colors) {
+							palette[i].r = ((unsigned int)palette[i].r + (unsigned int)palette[i+1].r) / 2u;
+							palette[i].g = ((unsigned int)palette[i].g + (unsigned int)palette[i+1].g) / 2u;
+							palette[i].b = ((unsigned int)palette[i].b + (unsigned int)palette[i+1].b) / 2u;
+							palette[i].weight += palette[i+1].weight;
+							palette[i+1].weight = 0;
+							chg = 1u;
+							i += 2u;
+							ogen--;
+						}
+						else {
+							i++;
+						}
+					}
+					else {
+						i++;
+					}
+				}
+
+#if 0
+				if (ogen != gen)
+					fprintf(stderr,"Removed %u -> %u colors\n",gen,ogen);
+#endif
+
+				if (chg) {
+					i = j = 0;
+					ogen = gen;
+					while (i < ogen) {
+						if (palette[i].weight) {
+							if (i != j) memcpy(&palette[j],&palette[i],sizeof(struct rgb_t));
+							j++;
+						}
+						else {
+							gen--;
+						}
+
+						i++;
+					}
+
+#if 0
+					fprintf(stderr,"reduced %u -> %u\n",ogen,gen);
+#endif
+
+					/* sort by weight again -- this seems to help with desaturation problems too */
+					qsort(palette,gen,sizeof(struct rgb_t),octtree_rgb_weight_sort);
+				}
+
+
+				thr++;
+			}
+		}
+
 		fprintf(stderr,"X:");
 		for (i=0;i < gen;i++)
 			fprintf(stderr," %02x%02x%02x:%u",palette[i].r,palette[i].g,palette[i].b,palette[i].weight);
 		fprintf(stderr,"\n");
+
+		final_colors = gen;
+		assert(final_colors <= target_colors);
 	}
 
 	/* convert 24bpp to 8bpp image */
@@ -470,7 +543,7 @@ int main(int argc,char **argv) {
 			assert(d8 != NULL && s24 != NULL);
 
 			for (x=0;x < membmp->width;x++) {
-				*d8++ = map2palette(s24[2],s24[1],s24[0],palette,target_colors); /* Windows BMPs are BGR order */
+				*d8++ = map2palette(s24[2],s24[1],s24[0],palette,final_colors); /* Windows BMPs are BGR order */
 				s24 += 3;
 			}
 		}
@@ -491,7 +564,7 @@ int main(int argc,char **argv) {
 		bfw->bpp = 8; // TODO: 2 colors = 1bpp  3-16 colors = 4bpp   anything else 8bpp
 		bfw->width = membmp->width;
 		bfw->height = membmp->height;
-		bfw->colors_used = target_colors;
+		bfw->colors_used = final_colors;
 
 		if (createpalette_write_bmp(bfw)) {
 			fprintf(stderr,"Cannot make write bmp palette\n");
@@ -499,8 +572,8 @@ int main(int argc,char **argv) {
 		}
 
 		if (bfw->palette) {
-			bfw->colors_used = target_colors;
-			for (i=0;i < target_colors;i++) {
+			bfw->colors_used = final_colors;
+			for (i=0;i < final_colors;i++) {
 				bfw->palette[i].rgbRed = palette[i].r;
 				bfw->palette[i].rgbGreen = palette[i].g;
 				bfw->palette[i].rgbBlue = palette[i].b;
