@@ -39,12 +39,16 @@ int octtree_rgb_weight_sort(const void *a,const void *b) {
 	const struct rgb_t *ra = (const struct rgb_t*)a;
 	const struct rgb_t *rb = (const struct rgb_t*)b;
 
-	if (ra->weight < rb->weight)
-		return 1;
-	else if (ra->weight > rb->weight)
-		return -1;
-	else
-		return 0;
+	if (ra->weight != rb->weight)
+		return rb->weight - ra->weight;
+	if (ra->g != rb->g)
+		return ra->g - rb->g;
+	if (ra->r != rb->r)
+		return ra->r - rb->r;
+	if (ra->b != rb->b)
+		return ra->b - rb->b;
+
+	return 0;
 }
 
 unsigned int octtree_find_empty_slot(struct octtree_buf_t *bt) {
