@@ -462,7 +462,7 @@ int main(int argc,char **argv) {
 
 			while (gen > target_colors) {
 				chg = 0;
-				i = gen / 2u;
+				i = gen / 3u;
 
 				ogen = gen;
 				while ((i+1u) < gen) {
