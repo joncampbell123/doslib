@@ -311,6 +311,8 @@ int main(int argc,char **argv) {
 	if (!palette)
 		return 1;
 
+	memset(palette,0,sizeof(struct rgb_t) * 256);
+
 	{
 		struct BMPFILEREAD *bfr;
 

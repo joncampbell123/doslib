@@ -308,6 +308,7 @@ int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *membmp = NULL;
 	struct BMPFILEIMAGE *memdst = NULL;
 	unsigned int target_colors = 256;
+	unsigned int init_palette = 4096;
 	struct octtree_buf_t *oct = NULL;
 	unsigned char paldepthbits = 8;
 	struct rgb_t *palette;
@@ -347,9 +348,11 @@ int main(int argc,char **argv) {
 
 	fprintf(stderr,"Quant to %u colors with %u bits per palette entry\n",target_colors,paldepthbits);
 
-	palette = malloc(sizeof(struct rgb_t) * 256);
+	palette = malloc(sizeof(struct rgb_t) * init_palette);
 	if (!palette)
 		return 1;
+
+	memset(palette,0,sizeof(struct rgb_t) * init_palette);
 
 	{
 		struct BMPFILEREAD *bfr;
@@ -419,12 +422,12 @@ int main(int argc,char **argv) {
 		}
 
 		fprintf(stderr,"%u colors in tree\n",oct->colors);
-		octtree_trim(oct,target_colors,0);
+		octtree_trim(oct,init_palette,0);
 		fprintf(stderr,"%u final colors in tree\n",oct->colors);
 	}
 
 	{
-		unsigned int gen = octtree_gen_pal(oct,256,palette);
+		unsigned int gen = octtree_gen_pal(oct,init_palette,palette);
 		fprintf(stderr,"%u/%u-color palette generated\n",gen,oct->colors);
 	}
 
