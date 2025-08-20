@@ -244,12 +244,13 @@ struct octtree_buf_t *alloc_octtree(unsigned int tsize) {
 }
 
 unsigned char map2palette(unsigned char r,unsigned char g,unsigned char b,struct rgb_t *pal,unsigned int colors) {
-	unsigned int mdst = ~0u,dst,col = 0,i = 0;
+	unsigned long mdst = ~0lu,dst;
+	unsigned int col = 0,i = 0,cd;
 
 	while (i < colors) {
-		dst  = (unsigned int)abs((int)r - (int)(pal->r));
-		dst += (unsigned int)abs((int)g - (int)(pal->g));
-		dst += (unsigned int)abs((int)b - (int)(pal->b));
+		cd = (unsigned int)abs((int)r - (int)(pal->r)); dst  = cd*cd;
+		cd = (unsigned int)abs((int)g - (int)(pal->g)); dst += cd*cd;
+		cd = (unsigned int)abs((int)b - (int)(pal->b)); dst += cd*cd;
 
 		if (mdst > dst) {
 			mdst = dst;
