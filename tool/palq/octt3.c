@@ -15,13 +15,14 @@
 #include "libbmp.h"
 
 struct rgb_t {
-	unsigned char	r,g,b;
+	unsigned char			r,g,b;
+	uint32_t			weight;
 };
 
 struct octtree_entry_t {
 	uint16_t			next[8];
 	uint16_t			flags;
-	uint16_t			weight;
+	uint32_t			weight;
 };
 
 #define OCTTREE_EMPTY (0u)
@@ -32,6 +33,19 @@ struct octtree_buf_t {
 	unsigned int			colors;
 	struct octtree_entry_t*		map;
 };
+
+/* weight largest to smallest */
+int octtree_rgb_weight_sort(const void *a,const void *b) {
+	const struct rgb_t *ra = (const struct rgb_t*)a;
+	const struct rgb_t *rb = (const struct rgb_t*)b;
+
+	if (ra->weight < rb->weight)
+		return 1;
+	else if (ra->weight > rb->weight)
+		return -1;
+	else
+		return 0;
+}
 
 unsigned int octtree_find_empty_slot(struct octtree_buf_t *bt) {
 	while (bt->next < bt->allocd) {
@@ -84,6 +98,7 @@ unsigned int octtree_gen_pal_sub(struct octtree_buf_t *bt,unsigned int colors,st
 
 			if (bt->map[u].flags == OCTFL_TAKEN) {
 				if (colors != 0) {
+					pal->weight = bt->map[u].weight;
 					pal->r = nrb;
 					pal->g = ngb;
 					pal->b = nbb;
@@ -243,11 +258,11 @@ int octtree_add(struct octtree_buf_t *bt,unsigned char r,unsigned char g,unsigne
 			bt->map[cent].flags |= 1u << idx;
 			cent = bt->map[cent].next[idx] = nent;
 			bt->map[cent].flags = OCTFL_TAKEN;
+			bt->map[cent].weight = 0;
 			bt->colors++;
 		}
 
-		if (bt->map[cent].weight != 0xFFFFu)
-			bt->map[cent].weight++;
+		bt->map[cent].weight++;
 	}
 
 	return 0;
@@ -411,7 +426,7 @@ int main(int argc,char **argv) {
 			for (x=0;x < membmp->width;x++) {
 				if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits)) {
 //					fprintf(stderr,"Need to trim from %u colors to add %u,%u,%u\n",oct->colors,s24[2],s24[1],s24[0]);
-					if (octtree_trim(oct,target_colors,256))
+					if (octtree_trim(oct,target_colors,oct->allocd / 4u))
 						fprintf(stderr,"Failure to trim\n");
 					if (octtree_add(oct,s24[2],s24[1],s24[0],paldepthbits))
 						fprintf(stderr,"Failed to add %u,%u,%u\n",s24[2],s24[1],s24[0]);
@@ -427,8 +442,17 @@ int main(int argc,char **argv) {
 	}
 
 	{
+		unsigned int i;
 		unsigned int gen = octtree_gen_pal(oct,init_palette,palette);
 		fprintf(stderr,"%u/%u-color palette generated\n",gen,oct->colors);
+
+		/* sort by weight */
+		qsort(palette,gen,sizeof(struct rgb_t),octtree_rgb_weight_sort);
+
+		fprintf(stderr,"X:");
+		for (i=0;i < gen;i++)
+			fprintf(stderr," %02x%02x%02x:%u",palette[i].r,palette[i].g,palette[i].b,palette[i].weight);
+		fprintf(stderr,"\n");
 	}
 
 	/* convert 24bpp to 8bpp image */
