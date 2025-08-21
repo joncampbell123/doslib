@@ -328,7 +328,7 @@ int main(int argc,char **argv) {
 	struct BMPFILEIMAGE *memdst = NULL;
 	unsigned int target_colors = 256;
 	unsigned int final_colors = 256;
-	unsigned int init_palette = 4096;
+	unsigned int init_palette = 8192;
 	struct octtree_buf_t *oct = NULL;
 	unsigned char paldepthbits = 8;
 	struct rgb_t *palette;
@@ -461,8 +461,8 @@ int main(int argc,char **argv) {
 			unsigned long dst,thr = 1ul;
 
 			while (gen > target_colors) {
+				i = (target_colors + 3u) / 4u;
 				chg = 0;
-				i = gen / 3u;
 
 				ogen = gen;
 				while ((i+1u) < gen) {
