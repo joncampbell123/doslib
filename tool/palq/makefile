@@ -4,8 +4,9 @@ CFLAGS = -I../../fmt/bmp
 OCTT1 = linux-host/octt1
 OCTT2 = linux-host/octt2
 OCTT3 = linux-host/octt3
+OCTT4 = linux-host/octt4
 
-BIN_OUT = $(OCTT1) $(OCTT2) $(OCTT3)
+BIN_OUT = $(OCTT1) $(OCTT2) $(OCTT3) $(OCTT4)
 
 BMPLIB = ../../fmt/bmp/linux-host/libbmp.a
 
@@ -29,10 +30,13 @@ $(OCTT2): linux-host/octt2.o $(BMPLIB)
 $(OCTT3): linux-host/octt3.o $(BMPLIB)
 	gcc -o $@ $^
 
+$(OCTT4): linux-host/octt4.o $(BMPLIB)
+	gcc -o $@ $^
+
 linux-host/%.o : %.c
 	gcc -I../.. $(CFLAGS) -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $^
 
 clean:
-	rm -f linux-host/octt1 linux-host/octt2 linux-host/octt3 linux-host/*.o linux-host/*.a
+	rm -f linux-host/octt1 linux-host/octt2 linux-host/octt3 linux-host/octt4 linux-host/*.o linux-host/*.a
 	(rmdir linux-host 2>/dev/null) || true
 
