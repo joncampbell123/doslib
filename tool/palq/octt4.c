@@ -302,7 +302,7 @@ struct octtree_buf_t *alloc_octtree(unsigned int tsize) {
 	return bt;
 }
 
-unsigned char map2palette(unsigned char r,unsigned char g,unsigned char b,struct rgb_t *pal,unsigned int colors) {
+unsigned char map2palette(int r,int g,int b,struct rgb_t *pal,unsigned int colors) {
 	unsigned long mdst = ~0lu,dst;
 	unsigned int col = 0,i = 0,cd;
 
@@ -331,6 +331,7 @@ int main(int argc,char **argv) {
 	unsigned int init_palette = 8192;
 	struct octtree_buf_t *oct = NULL;
 	unsigned char paldepthbits = 8;
+	unsigned char dither = 0;
 	struct rgb_t *palette;
 	unsigned int i;
 
@@ -363,6 +364,16 @@ int main(int argc,char **argv) {
 			paldepthbits = strtoul(s,&s,0);
 			if (paldepthbits == 0 || paldepthbits > 8)
 				return 1;
+		}
+
+		while (1) {
+			if (*s == 'd') {
+				s++;
+				dither = 1;
+			}
+			else {
+				break;
+			}
 		}
 	}
 
@@ -536,7 +547,82 @@ int main(int argc,char **argv) {
 	}
 
 	/* convert 24bpp to 8bpp image */
-	{
+	if (dither) {
+		signed short *tmps[2] = {NULL,NULL},*s24,*n24;
+		unsigned int x,y,sy;
+		unsigned char *d8;
+		unsigned char pc;
+
+		tmps[0] = malloc(sizeof(signed short) * (membmp->width + 2u) * 3);
+		tmps[1] = malloc(sizeof(signed short) * (membmp->width + 2u) * 3);
+		if (!tmps[0] || !tmps[1])
+			return 1;
+
+		memset(tmps[0],0,sizeof(signed short) * (membmp->width + 2u) * 3);
+		memset(tmps[1],0,sizeof(signed short) * (membmp->width + 2u) * 3);
+
+		sy = 0;
+		for (y=0;y < membmp->height;y++) {
+			{
+				unsigned char *rp;
+
+				if (y != 0) {
+					signed short *t;
+
+					t = tmps[0];
+					tmps[0] = tmps[1];
+					tmps[1] = t;
+				}
+
+				if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
+				if ((sy+1u) < membmp->height) sy++;
+				for (x=0;x < (membmp->width * 3u);x++) tmps[0][x] = (unsigned short)rp[x];
+
+				if (y == 0) {
+					if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
+					if ((sy+1u) < membmp->height) sy++;
+					for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (unsigned short)rp[x];
+				}
+			}
+
+			s24 = tmps[0] + 3u; n24 = tmps[1] + 3u;
+			d8 = bmpfileimage_row(memdst,y);
+			assert(d8 != NULL);
+
+			for (x=0;x < membmp->width;x++) {
+				pc = map2palette(s24[2],s24[1],s24[0],palette,final_colors); /* Windows BMPs are BGR order */
+
+				{
+					int dr = (int)s24[2] - (int)palette[pc].r;
+					int dg = (int)s24[1] - (int)palette[pc].g;
+					int db = (int)s24[0] - (int)palette[pc].b;
+
+					s24[3+2] += (dr * 7) / 16;
+					s24[3+1] += (dg * 7) / 16;
+					s24[3+0] += (db * 7) / 16;
+
+					n24[-3+2] += (dr * 3) / 16;
+					n24[-3+1] += (dg * 3) / 16;
+					n24[-3+0] += (db * 3) / 16;
+
+					n24[0+2] += (dr * 5) / 16;
+					n24[0+1] += (dg * 5) / 16;
+					n24[0+0] += (db * 5) / 16;
+
+					n24[3+2] += (dr * 1) / 16;
+					n24[3+1] += (dg * 1) / 16;
+					n24[3+0] += (db * 1) / 16;
+				}
+
+				*d8++ = pc;
+				s24 += 3;
+			}
+		}
+
+		free(tmps[0]);
+		free(tmps[1]);
+	}
+	else {
 		unsigned char *s24,*d8;
 		unsigned int x,y;
 
