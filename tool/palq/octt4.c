@@ -574,15 +574,15 @@ int main(int argc,char **argv) {
 					tmps[1] = t;
 				}
 
-				if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
-				if ((sy+1u) < membmp->height) sy++;
-				for (x=0;x < (membmp->width * 3u);x++) tmps[0][x] = (unsigned short)rp[x];
-
 				if (y == 0) {
 					if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
 					if ((sy+1u) < membmp->height) sy++;
-					for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (unsigned short)rp[x];
+					for (x=0;x < (membmp->width * 3u);x++) tmps[0][x] = (unsigned short)rp[x];
 				}
+
+				if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
+				if ((sy+1u) < membmp->height) sy++;
+				for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (unsigned short)rp[x];
 			}
 
 			s24 = tmps[0] + 3u; n24 = tmps[1] + 3u;
