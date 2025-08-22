@@ -553,13 +553,13 @@ int main(int argc,char **argv) {
 		unsigned char *d8;
 		unsigned char pc;
 
-		tmps[0] = malloc(sizeof(signed short) * (membmp->width + 2u) * 3);
-		tmps[1] = malloc(sizeof(signed short) * (membmp->width + 2u) * 3);
+		tmps[0] = malloc(sizeof(signed short) * (membmp->width + 1u) * 3);
+		tmps[1] = malloc(sizeof(signed short) * (membmp->width + 1u) * 3);
 		if (!tmps[0] || !tmps[1])
 			return 1;
 
-		memset(tmps[0],0,sizeof(signed short) * (membmp->width + 2u) * 3);
-		memset(tmps[1],0,sizeof(signed short) * (membmp->width + 2u) * 3);
+		memset(tmps[0],0,sizeof(signed short) * (membmp->width + 1u) * 3);
+		memset(tmps[1],0,sizeof(signed short) * (membmp->width + 1u) * 3);
 
 		sy = 0;
 		for (y=0;y < membmp->height;y++) {
@@ -585,7 +585,7 @@ int main(int argc,char **argv) {
 				for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (unsigned short)rp[x];
 			}
 
-			s24 = tmps[0] + 3u; n24 = tmps[1] + 3u;
+			s24 = tmps[0]; n24 = tmps[1];
 			d8 = bmpfileimage_row(memdst,y);
 			assert(d8 != NULL);
 
@@ -601,9 +601,11 @@ int main(int argc,char **argv) {
 					s24[3+1] += (dg * 7) / 16;
 					s24[3+0] += (db * 7) / 16;
 
-					n24[-3+2] += (dr * 3) / 16;
-					n24[-3+1] += (dg * 3) / 16;
-					n24[-3+0] += (db * 3) / 16;
+					if (x != 0) {
+						n24[-3+2] += (dr * 3) / 16;
+						n24[-3+1] += (dg * 3) / 16;
+						n24[-3+0] += (db * 3) / 16;
+					}
 
 					n24[0+2] += (dr * 5) / 16;
 					n24[0+1] += (dg * 5) / 16;
@@ -615,6 +617,7 @@ int main(int argc,char **argv) {
 				}
 
 				*d8++ = pc;
+				n24 += 3;
 				s24 += 3;
 			}
 		}
