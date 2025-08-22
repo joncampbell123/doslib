@@ -306,6 +306,13 @@ unsigned char map2palette(int r,int g,int b,struct rgb_t *pal,unsigned int color
 	unsigned long mdst = ~0lu,dst;
 	unsigned int col = 0,i = 0,cd;
 
+	if (r < 0) r = 0;
+	if (r > 255) r = 255;
+	if (g < 0) g = 0;
+	if (g > 255) g = 255;
+	if (b < 0) b = 0;
+	if (b > 255) b = 255;
+
 	while (i < colors) {
 		cd = (unsigned int)abs((int)r - (int)(pal->r)); dst  = cd*cd;
 		cd = (unsigned int)abs((int)g - (int)(pal->g)); dst += cd*cd;
@@ -577,12 +584,12 @@ int main(int argc,char **argv) {
 				if (y == 0) {
 					if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
 					if ((sy+1u) < membmp->height) sy++;
-					for (x=0;x < (membmp->width * 3u);x++) tmps[0][x] = (unsigned short)rp[x];
+					for (x=0;x < (membmp->width * 3u);x++) tmps[0][x] = (signed short)rp[x];
 				}
 
 				if ((rp=bmpfileimage_row(membmp,sy)) == NULL) break;
 				if ((sy+1u) < membmp->height) sy++;
-				for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (unsigned short)rp[x];
+				for (x=0;x < (membmp->width * 3u);x++) tmps[1][x] = (signed short)rp[x];
 			}
 
 			s24 = tmps[0]; n24 = tmps[1];
