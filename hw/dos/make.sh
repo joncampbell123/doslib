@@ -7,6 +7,7 @@ dos=1 # MS-DOS
 dostiny=1 # MS-DOS tiny model
 doshuge=1 # MS-DOS huge model
 dospc98=1 # MS-DOS PC-98
+win20=1 # Windows 2.0
 win30=1 # Windows 3.0
 win31=1 # Windows 3.1
 winnt=1 # Windows NT

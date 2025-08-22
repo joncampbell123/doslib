@@ -224,6 +224,8 @@ int main(int argc,char **argv,char **envp) {
 	{
 		char c;
 
+		fprintf(stderr,"fprintf to stderr test.\n");
+
 		printf("---------[Type junk here]---------\n");
 		do {
 			c = getch();

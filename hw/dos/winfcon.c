@@ -521,14 +521,10 @@ void _win_putc(char c) {
 	}
 }
 
-size_t _win_printf(const char *fmt,...) {
+size_t _win_common_vaprintf(const char *fmt,va_list va) {
+	size_t r = vsnprintf(temprintf,sizeof(temprintf)-1,fmt,va);
 	int fX = _this_console.conX;
-	va_list va;
 	char *t;
-
-	va_start(va,fmt);
-	vsnprintf(temprintf,sizeof(temprintf)-1,fmt,va);
-	va_end(va);
 
 	t = temprintf;
 	if (*t != 0) {
@@ -541,7 +537,33 @@ size_t _win_printf(const char *fmt,...) {
 	}
 
 	_win_pump();
-	return 0;
+	return r;
+}
+
+size_t _win_printf(const char *fmt,...) {
+	va_list va;
+	size_t r;
+
+	va_start(va,fmt);
+	r = _win_common_vaprintf(fmt,va);
+	va_end(va);
+
+	return r;
+}
+
+size_t _win_fprintf(FILE *fp,const char *fmt,...) {
+	va_list va;
+	size_t r;
+
+	va_start(va,fmt);
+
+	if ((stderr && fp == stderr) || (stdout && fp == stdout))
+		r = _win_common_vaprintf(fmt,va);
+	else
+		r = vfprintf(fp,fmt,va);
+
+	va_end(va);
+	return r;
 }
 
 void _gdi_pause() {

@@ -15,11 +15,13 @@
 # define getch _win_getch
 # define kbhit _win_kbhit
 # define fflush _win_fflush
-# define fprintf __XXX_TODO_fprintf
+# define fprintf _win_fprintf
 # define printf _win_printf
 # define isatty _win_isatty
 # define write _win_write
 # define read _win_read
+
+# include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +38,7 @@ int _win_isatty(int fd);
 int _win_fflush(FILE *stream);
 int _win_read(int fd,void *buf,size_t sz);
 size_t _win_printf(const char *fmt,...);
+size_t _win_fprintf(FILE *fp,const char *fmt,...);
 int _win_write(int fd,const void *buf,int sz);
 int _cdecl _fake_main(int argc,char **argv,char **envp);
 int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow,int (_cdecl *_main_f)(int argc,char**,char**));
