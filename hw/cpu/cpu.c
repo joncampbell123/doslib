@@ -107,7 +107,6 @@ void cpu_probe() {
 		DWORD (PASCAL FAR *__GetWinFlags)() = (LPVOID)GetProcAddress(GetModuleHandle("KERNEL"),"GETWINFLAGS");
 		if (__GetWinFlags != NULL) {
 			DWORD flags = __GetWinFlags();
-			MessageBox(NULL,"Found it","",MB_OK);
 # else /* don't try. Windows 1.0 does not have GetWinFlags() and does not have any dynamic library functions either. There is
           no GetModuleHandle, GetProcAddress, etc. */
 		if (0) {
