@@ -40,8 +40,8 @@ exe: $(T_CPY0_EXE) $(T_CPY1_EXE) .symbolic
 lib: $(FMT_BMP_LIB) .symbolic
 
 !ifdef T_CPY0_EXE
-$(T_CPY0_EXE): $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy0.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)t_cpy0.obj $(FMT_BMP_LIB_WLINK_LIBRARIES)
+$(T_CPY0_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy0.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)t_cpy0.obj $(HW_DOS_LIB_WLINK_LIBRARIES) $(FMT_BMP_LIB_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(T_CPY0_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
@@ -62,8 +62,8 @@ $(T_CPY0_EXE): $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy0.
 !endif
 
 !ifdef T_CPY1_EXE
-$(T_CPY1_EXE): $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy1.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)t_cpy1.obj $(FMT_BMP_LIB_WLINK_LIBRARIES)
+$(T_CPY1_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(FMT_BMP_LIB) $(FMT_BMP_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)t_cpy1.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)t_cpy1.obj $(HW_DOS_LIB_WLINK_LIBRARIES) $(FMT_BMP_LIB_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(T_CPY1_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16

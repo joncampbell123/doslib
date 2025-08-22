@@ -10,10 +10,18 @@
 
 #include "libbmp.h"
 
-int main(int argc,char **argv) {
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <windows.h>
+# include <hw/dos/winfcon.h>
+#endif
+
+int main(int argc,char **argv,char **envp) {
 	struct BMPFILEREAD *bfr;
 	struct BMPFILEWRITE *bfw;
 	const char *sfname,*dfname;
+
+	(void)envp;
 
 	if (argc < 2)
 		return 1;
@@ -26,13 +34,13 @@ int main(int argc,char **argv) {
 
 	bfr = open_bmp(sfname);
 	if (bfr == NULL) {
-		fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
+		printf("Failed to open BMP, errno %s\n",strerror(errno));
 		return 1;
 	}
 
 	bfw = create_write_bmp();
 	if (!bfw) {
-		fprintf(stderr,"Cannot alloc write bmp\n");
+		printf("Cannot alloc write bmp\n");
 		return 1;
 	}
 
@@ -41,7 +49,7 @@ int main(int argc,char **argv) {
 	bfw->height = bfr->height;
 
 	if (createpalette_write_bmp(bfw)) {
-		fprintf(stderr,"Cannot create palette write bmp\n");
+		printf("Cannot create palette write bmp\n");
 		return 1;
 	}
 
@@ -51,13 +59,13 @@ int main(int argc,char **argv) {
 	}
 
 	if (open_write_bmp(bfw,dfname)) {
-		fprintf(stderr,"Cannot write bitmap\n");
+		printf("Cannot write bitmap\n");
 		return 1;
 	}
 
 	while (read_bmp_line(bfr) == 0) {
 		if (write_bmp_line(bfw,bfr->scanline,bfr->scanline_size)) {
-			fprintf(stderr,"Scanline write err\n");
+			printf("Scanline write err\n");
 			return 1;
 		}
 	}

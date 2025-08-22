@@ -10,12 +10,20 @@
 
 #include "libbmp.h"
 
-int main(int argc,char **argv) {
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <windows.h>
+# include <hw/dos/winfcon.h>
+#endif
+
+int main(int argc,char **argv,char **envp) {
 #if defined(ENABLE_BMPFILEIMAGE)
 	struct BMPFILEREAD *bfr = NULL;
 	struct BMPFILEWRITE *bfw = NULL;
 	struct BMPFILEIMAGE *membmp = NULL;
 	const char *sfname,*dfname;
+
+	(void)envp;
 
 	if (argc < 2)
 		return 1;
@@ -34,7 +42,7 @@ int main(int argc,char **argv) {
 
 		bfr = open_bmp(sfname);
 		if (bfr == NULL) {
-			fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
+			printf("Failed to open BMP, errno %s\n",strerror(errno));
 			return 1;
 		}
 
@@ -43,7 +51,7 @@ int main(int argc,char **argv) {
 		membmp->height = bfr->height;
 
 		if (bmpfileimage_alloc_image(membmp)) {
-			fprintf(stderr,"Failed to allocate memory\n");
+			printf("Failed to allocate memory\n");
 			return 1;
 		}
 
@@ -61,7 +69,7 @@ int main(int argc,char **argv) {
 
 		bfw = create_write_bmp();
 		if (!bfw) {
-			fprintf(stderr,"Cannot alloc write bmp\n");
+			printf("Cannot alloc write bmp\n");
 			return 1;
 		}
 
@@ -70,7 +78,7 @@ int main(int argc,char **argv) {
 		bfw->height = membmp->height;
 
 		if (createpalette_write_bmp(bfw)) {
-			fprintf(stderr,"Cannot create palette write bmp\n");
+			printf("Cannot create palette write bmp\n");
 			return 1;
 		}
 
@@ -80,7 +88,7 @@ int main(int argc,char **argv) {
 		}
 
 		if (open_write_bmp(bfw,dfname)) {
-			fprintf(stderr,"Cannot write bitmap\n");
+			printf("Cannot write bitmap\n");
 			return 1;
 		}
 
@@ -89,7 +97,7 @@ int main(int argc,char **argv) {
 			assert(s != NULL);
 
 			if (write_bmp_line(bfw,s,membmp->stride)) {
-				fprintf(stderr,"Scanline write err\n");
+				printf("Scanline write err\n");
 				return 1;
 			}
 		}
@@ -104,7 +112,7 @@ int main(int argc,char **argv) {
 #else
 	(void)argc;
 	(void)argv;
-	fprintf(stderr,"Not available for this build\n");
+	printf("Not available for this build\n");
 	return 0;
 #endif
 }
