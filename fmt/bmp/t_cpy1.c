@@ -12,6 +12,8 @@
 
 int main(int argc,char **argv) {
 #if defined(ENABLE_BMPFILEIMAGE)
+	struct BMPFILEREAD *bfr = NULL;
+	struct BMPFILEWRITE *bfw = NULL;
 	struct BMPFILEIMAGE *membmp = NULL;
 	const char *sfname,*dfname;
 
@@ -29,19 +31,14 @@ int main(int argc,char **argv) {
 		return 1;
 
 	{
-		struct BMPFILEREAD *bfr;
 
 		bfr = open_bmp(sfname);
 		if (bfr == NULL) {
 			fprintf(stderr,"Failed to open BMP, errno %s\n",strerror(errno));
 			return 1;
 		}
-		if (!(bfr->bpp == 24 || bfr->bpp == 32)) {
-			fprintf(stderr,"BMP wrong format\n");
-			return 1;
-		}
 
-		membmp->bpp = 24;
+		membmp->bpp = bfr->bpp;
 		membmp->width = bfr->width;
 		membmp->height = bfr->height;
 
@@ -53,20 +50,12 @@ int main(int argc,char **argv) {
 		while (read_bmp_line(bfr) == 0) {
 			unsigned char BMPFAR *dest = bmpfileimage_row(membmp,(unsigned int)bfr->current_line);
 			assert(dest != NULL);
-
-			if (bfr->bpp == 32)
-				bitmap_memcpy32to24(dest,bfr->scanline,membmp->width,bfr);
-			else
-				bitmap_memcpy(dest,bfr->scanline,membmp->stride);
+			bitmap_memcpy(dest,bfr->scanline,membmp->stride);
 		}
-
-		/* done reading */
-		close_bmp(&bfr);
 	}
 
 	/* write it out */
 	{
-		struct BMPFILEWRITE *bfw;
 		unsigned char BMPFAR *s;
 		unsigned int y;
 
@@ -79,6 +68,16 @@ int main(int argc,char **argv) {
 		bfw->bpp = membmp->bpp;
 		bfw->width = membmp->width;
 		bfw->height = membmp->height;
+
+		if (createpalette_write_bmp(bfw)) {
+			fprintf(stderr,"Cannot create palette write bmp\n");
+			return 1;
+		}
+
+		if (bfw->palette && bfr->palette && bfr->colors <= bfw->colors) {
+			bfw->colors_used = bfr->colors;
+			memcpy(bfw->palette,bfr->palette,sizeof(struct BMPPALENTRY) * bfw->colors_used);
+		}
 
 		if (open_write_bmp(bfw,dfname)) {
 			fprintf(stderr,"Cannot write bitmap\n");
@@ -96,6 +95,7 @@ int main(int argc,char **argv) {
 		}
 
 		close_write_bmp(&bfw);
+		close_bmp(&bfr);
 	}
 
 	/* free bitmap */

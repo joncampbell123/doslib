@@ -31,7 +31,7 @@ linux-host:
 	mkdir -p linux-host
 
 linux-host/%.o : %.c
-	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $^
+	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -O0 -c -o $@ $^
 
 clean:
 	rm -f linux-host/*.o linux-host/*.a linux-host/t_cpy1
