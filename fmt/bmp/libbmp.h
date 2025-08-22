@@ -9,6 +9,11 @@
 # define BMPFAR far
 
 # if defined(TARGET_WINDOWS)
+// Windows 16-bit segmented
+#  include <windows.h>
+
+#  define BMPFILEIMAGE_GMEM_ARRAY
+#  define ENABLE_BMPFILEIMAGE
 # elif defined(TARGET_OS2)
 # else
 // MS-DOS real mode
@@ -143,13 +148,27 @@ unsigned int bitmap_stride_from_bpp_and_w(unsigned int bpp,unsigned int w);
 unsigned char bitmap_mkbf8(uint32_t w,const uint8_t fs,const uint8_t fw);
 
 #if defined(ENABLE_BMPFILEIMAGE)
-struct BMPFILEIMAGE {
-#if defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
-	unsigned		bitmap_seg;
-#else
-	unsigned char BMPFAR*	bitmap;
+# if defined(BMPFILEIMAGE_GMEM_ARRAY) && TARGET_MSDOS == 16
+struct BMPFILEIMAGE_WIN16_HG {
+	HGLOBAL			ghandle;
+	void FAR*		ptr;
+};
+# endif
 #endif
-	unsigned int		width,height,stride,bpp;
+
+#if defined(ENABLE_BMPFILEIMAGE)
+struct BMPFILEIMAGE {
+#if defined(BMPFILEIMAGE_GMEM_ARRAY) && TARGET_MSDOS == 16
+	unsigned			last_strip_height;
+	unsigned			strip_height;
+	unsigned			strip_count;
+	struct BMPFILEIMAGE_WIN16_HG*	strips;
+#elif defined(BMPFILEIMAGE_SEGMENT_BASE) && TARGET_MSDOS == 16
+	unsigned			bitmap_seg;
+#else
+	unsigned char BMPFAR*		bitmap;
+#endif
+	unsigned int			width,height,stride,bpp;
 };
 
 struct BMPFILEIMAGE *bmpfileimage_alloc(void);
