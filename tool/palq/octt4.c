@@ -597,6 +597,14 @@ int main(int argc,char **argv) {
 			assert(d8 != NULL);
 
 			for (x=0;x < membmp->width;x++) {
+				{
+					unsigned int a;
+					for (a=0;a < 6;a++) {
+						if (s24[a] < 0) s24[a] = 0;
+						else if (s24[a] > 255) s24[a] = 255;
+					}
+				}
+
 				pc = map2palette(s24[2],s24[1],s24[0],palette,final_colors); /* Windows BMPs are BGR order */
 
 				{
