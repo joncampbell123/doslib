@@ -479,7 +479,7 @@ int main(int argc,char **argv) {
 			unsigned long dst,thr = 1ul;
 
 			while (gen > target_colors) {
-				i = (target_colors + 3u) / 4u;
+				i = dither ? 0 : (target_colors + 3u) / 4u;
 				chg = 0;
 
 				ogen = gen;
