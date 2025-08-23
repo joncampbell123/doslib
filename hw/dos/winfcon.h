@@ -8,6 +8,9 @@
  * <insert LGPL legal text here>
  */
 
+/* This code only works for Windows 3.0 and higher, and only in protected mode */
+#if WINVER >= 0x300
+
 /* Windows 3.1 and earlier, even for Win32s: there is no system given console.
  * We either have to draw and maintain our own window, or find some other way to printf() and display it. */
 #if defined(TARGET_WINDOWS) && (TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && TARGET_WINDOWS == 31) || (defined(WIN386) && TARGET_MSDOS == 32))
@@ -69,4 +72,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 
 #endif
+
+#endif //WINVER
 
