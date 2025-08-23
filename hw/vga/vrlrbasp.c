@@ -13,7 +13,11 @@ void vrl_palrebase(struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs,uns
 #endif
 {
     unsigned char run,skip;
+#if TARGET_MSDOS == 32
     unsigned char *cdat;
+#else
+    unsigned char far *cdat;
+#endif
     unsigned int i,j;
 
     for (i=0;i < hdr->width;i++) {

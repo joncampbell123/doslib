@@ -12,6 +12,7 @@
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stddef.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
