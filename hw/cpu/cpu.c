@@ -110,6 +110,7 @@ void cpu_probe() {
 # else /* don't try. Windows 1.0 does not have GetWinFlags() and does not have any dynamic library functions either. There is
           no GetModuleHandle, GetProcAddress, etc. */
 		if (0) {
+			const DWORD flags = 0;
 # endif
 			if (WF_PMODE) {
 				cpu_flags |= CPU_FLAG_DONT_WRITE_RDTSC;

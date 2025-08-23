@@ -287,7 +287,7 @@ int cpu_check_sse_is_usable() {
 		 * under NTVDM.EXE in Windows NT/2000/XP */
 		else if ((windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) && ToolHelpInit()) {
 			cpu_sse_usable_detection_method = "InterruptRegister/TOOLHELP.DLL, executing SSE to see if it causes a fault [Win16]";
-			if (__InterruptRegister(NULL,MakeProcInstance((FARPROC)fault_int6_toolhelp,_win_hInstance))) {
+			if (__InterruptRegister(NULL,(FARPROC)fault_int6_toolhelp)) {
 				faulted = 0;
 				__asm {
 					.686p
