@@ -519,6 +519,7 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 
 		return 0;
 	}
+# if WINVER >= 0x300
 	else if (windows_mode == WINDOWS_NT) {
 		DWORD result;
 
@@ -647,6 +648,9 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 
 		return fail;
 	}
+# else //WINVER
+	return howmuch;
+# endif //WINVER
 #endif
 }
 
@@ -677,6 +681,7 @@ static int CaptureMemory(DWORD memofs,unsigned int howmuch) {
 }
 
 static void DoScanForward() { /* scan forward from current location to find next valid region */
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 	/* NTS: Because of the number of exceptions/second we generate, Windows ME will very
 	 *      quickly revert to ignoring our exception handler and shutting down this program.
 	 *      Do not run under Windows ME. Hopefully I can figure out how to hack Windows ME
@@ -709,9 +714,11 @@ static void DoScanForward() { /* scan forward from current location to find next
 			if (GetAsyncKeyState(VK_ESCAPE)) return;
 		}
 	}
+#endif
 }
 
 static void DoScanBackward() { /* scan forward from current location to find next valid region */
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 	/* NTS: Because of the number of exceptions/second we generate, Windows ME will very
 	 *      quickly revert to ignoring our exception handler and shutting down this program.
 	 *      Do not run under Windows ME. Hopefully I can figure out how to hack Windows ME
@@ -766,6 +773,7 @@ static void DoScanBackward() { /* scan forward from current location to find nex
 
 		displayOffset = (displayOffset | 0xFFFUL) + 1UL;
 	}
+#endif
 }
 
 static const char *hexes = "0123456789ABCDEF";
@@ -871,6 +879,7 @@ BOOL CALLBACK FAR GoToDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam
 		else if (wparam == IDCANCEL) {
 			EndDialog(hwnd,0);
 		}
+		return TRUE;
 	}
 
 	return FALSE;
@@ -1066,22 +1075,30 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 		}
 		else if (wparam == VK_UP) {
 			displayOffset -= hwndMainClientDataColumns;
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 			if (GetAsyncKeyState(VK_SHIFT)) displayOffset &= ~(0xFUL);
+#endif
 			InvalidateRect(hwnd,NULL,FALSE);
 		}
 		else if (wparam == VK_DOWN) {
 			displayOffset += hwndMainClientDataColumns;
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 			if (GetAsyncKeyState(VK_SHIFT)) displayOffset &= ~(0xFUL);
+#endif
 			InvalidateRect(hwnd,NULL,FALSE);
 		}
 		else if (wparam == VK_PRIOR) {/*page up*/
 			displayOffset -= hwndMainClientDataColumns * (hwndMainClientRows-2);
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 			if (GetAsyncKeyState(VK_SHIFT)) displayOffset &= ~(0xFUL);
+#endif
 			InvalidateRect(hwnd,NULL,FALSE);
 		}
 		else if (wparam == VK_NEXT) {/*page down*/
 			displayOffset += hwndMainClientDataColumns * (hwndMainClientRows-2);
+#if WINVER >= 0x200 /* GetAsyncKeyState didn't exist until Windows 2.0 */
 			if (GetAsyncKeyState(VK_SHIFT)) displayOffset &= ~(0xFUL);
+#endif
 			InvalidateRect(hwnd,NULL,FALSE);
 		}
 		else if (wparam == VK_F1) {
@@ -1138,6 +1155,10 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				case IDC_FILE_GO_TO:
 					if (DialogBox(myInstance,MAKEINTRESOURCE(IDD_GOTO),hwnd,MakeProcInstance(GoToDlgProc,myInstance)))
 						InvalidateRect(hwnd,NULL,FALSE);
+#if WINVER < 0x200 /* Windows 1.0 bug? Main window remains disabled after dialog box, and the focus is not returned to this window */
+					EnableWindow(hwnd, TRUE);
+					SetFocus(hwnd);
+#endif
 					break;
 				case IDC_VIEW_DATASEG:
 					displayMode = DIM_DATASEG;
@@ -1331,11 +1352,16 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 	}
 
 	if (windows_mode != WINDOWS_REAL) {
+#if WINVER >= 0x300
 		viewselector = AllocSelector(my_ds);
 		if (viewselector == 0) {
 			MessageBox(NULL,"Unable to alloc selector","Error",MB_OK);
 			return 1;
 		}
+#else
+		MessageBox(NULL,"Protected mode not supported","Error",MB_OK);
+		return 1;
+#endif
 	}
 
 	/* We really only need to trap Page Fault from 386 enhanced mode Windows 3.x or Windows 9x/ME/NT.
@@ -1351,6 +1377,7 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 	/* TODO: Some long-term Win95 stress testing is required.
 	 *       Also test Win98, and WinME */
 	if (windows_mode == WINDOWS_NT) {
+#if WINVER >= 0x300
 		/* use "Windows on Windows" to call into the Win32 world and use ReadProcessMemory() */
 		if (!genthunk32_init()) {
 			MessageBox(NULL,"Unable to initialize Win16->32 thunking code","Error",MB_OK);
@@ -1384,8 +1411,13 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 
 		wow32_code_linear_address = GetSelectorBase(FP_SEG(wow32_data_exec_segment)) +
 			FP_OFF(wow32_data_exec_segment);
+#else
+		MessageBox(NULL,"Windows 1.x/2.x builds not supported on NT","",MB_OK);
+		return 1;
+#endif
 	}
 	else if (windows_mode == WINDOWS_ENHANCED) {
+#if WINVER >= 0x300
 		/* Windows 3.1 or higher: Use Toolhelp.
 		   Windows 3.0: Use DPMI hacks.
 		   Windows NT: Use Toolhelp, or DPMI hack. Doesn't matter. NTVDM.EXE will not pass it down.
@@ -1409,6 +1441,10 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 				return 1;
 			}
 		}
+#else
+		MessageBox(NULL,"Windows 1.x/2.x builds not supported on protected mode Windows","",MB_OK);
+		return 1;
+#endif
 	}
 #endif
 
@@ -1455,8 +1491,21 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 #else
 		HDC hdc = GetDC(NULL);
 #endif
+#if WINVER >= 0x200 /* GetCharWidth did not appear until Windows 2.0 */
 		monospaceFontHeight = 12;
 		if (!GetCharWidth(hdc,'A','A',&monospaceFontWidth)) monospaceFontWidth = 9;
+#else
+		{
+			DWORD ex = GetTextExtent(hdc,"A",1);
+			if (ex) {
+				monospaceFontWidth = LOWORD(ex);
+				monospaceFontHeight = HIWORD(ex);
+			}
+			else {
+				monospaceFontWidth = 9;
+			}
+		}
+#endif
 #if WINVER >= 0x300
 		ReleaseDC(hwnd,hdc);
 #else
@@ -1499,13 +1548,17 @@ int PASCAL FAR WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLi
 		genthunk32_free();
 	}
 	else if (windows_mode == WINDOWS_ENHANCED) {
+#if WINVER >= 0x300
 		/* remove page fault handler */
 		if (hook_use_tlhelp) __InterruptUnRegister(NULL);
 		else win16_setexhandler(14,oldDPMIPFHook);
+#endif
 	}
 
+# if WINVER >= 0x300
 	if (windows_mode != WINDOWS_REAL)
 		FreeSelector(viewselector);
+# endif
 #endif
 
 #if TARGET_MSDOS == 32
