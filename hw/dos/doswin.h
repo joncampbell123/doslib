@@ -76,7 +76,7 @@ int Win9xQT_ThunkInit();
 void Win9xQT_ThunkFree();
 #endif
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16 && WINVER >= 0x200
 # include <toolhelp.h>
 extern HMODULE			ToolHelpDLL;
 extern unsigned char		ToolHelpProbed;

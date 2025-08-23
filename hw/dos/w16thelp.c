@@ -20,7 +20,7 @@
 #include <hw/dos/doswin.h>
 #include <hw/dos/dosntvdm.h>
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16 && WINVER >= 0x200
 unsigned char	ToolHelpProbed = 0;
 HMODULE		ToolHelpDLL = 0;
 BOOL		(PASCAL FAR *__TimerCount)(TIMERINFO FAR *t) = NULL;
