@@ -5,6 +5,8 @@
 %a  1213
 %o  1117
 
+%option yylineno
+
 O   [0-7]
 D   [0-9]
 NZ  [1-9]
