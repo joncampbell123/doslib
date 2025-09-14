@@ -4,6 +4,6 @@
 #include "c11.h"
 
 int main() {
-	return yy_do_compile_c11();
+	return c11yy_do_compile();
 }
 

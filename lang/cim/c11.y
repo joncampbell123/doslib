@@ -1,3 +1,6 @@
+
+%define api.prefix {c11yy}
+
 %token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
@@ -18,7 +21,7 @@
 %{
 #include "c11.h"
 #include "c11.l.h"
-void yyerror(const char *s);
+void c11yyerror(const char *s);
 %}
 
 %start translation_unit
@@ -539,7 +542,7 @@ void yyerror(const char *s)
 	fprintf(stderr, "*** %s\n", s);
 }
 
-int yy_do_compile_c11() {
+int c11yy_do_compile() {
 	return yyparse();
 }
 

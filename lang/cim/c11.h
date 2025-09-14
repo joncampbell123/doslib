@@ -1,3 +1,3 @@
 
-int yy_do_compile_c11();
+int c11yy_do_compile();
 
