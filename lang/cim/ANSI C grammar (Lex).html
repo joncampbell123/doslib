@@ -1,0 +1,254 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>ANSI C grammar (Lex)</title>
+<link rel="made" rev="made" href="mailto:jutta@pobox.com">
+<style>
+body {
+  margin: 3em;
+}
+</style>
+</head><body>
+<h1>ANSI C grammar, Lex specification</h1>
+
+(This Lex file is accompanied by a <a href="https://www.quut.com/c/ANSI-C-grammar-y-2011.html">matching Yacc file</a><a>.)
+</a><p><a>
+In 1985, Jeff Lee published his Yacc grammar based on a draft version of
+the ANSI C standard, along with a supporting Lex specification.  Tom
+Stockfisch reposted those files to net.sources in 1987; as mentioned in
+the answer to </a><a href="https://www.quut.com/c/c-faq/c-17.html#17-25">question 17.25</a>
+of the comp.lang.c FAQ, they used to be
+available from ftp.uu.net as usenet/net.sources/ansi.c.grammar.Z.
+</p><p>
+The version you see here has been updated based on the 2011 ISO C
+standard.
+(The previous version's <a href="http://www.quut.com/c/ANSI-C-grammar-l-1999.html">Lex</a>
+and 
+<a href="http://www.quut.com/c/ANSI-C-grammar-y-1999.html">Yacc</a>
+files for ANSI C9X still exist as archived copies.)
+</p><p>
+It is assumed that translation phases 1..5 have already been completed,
+including preprocessing and <code>_Pragma</code> processing.
+The Lex rule for <a href="#STRING_LITERAL">string literals</a> will perform concatenation (translation phase 6).
+Transliteration of universal character names (<code>\u</code><i>HHHH</i> or <code>\U</code><i>HHHHHHHH</i>) must
+have been done by either the preprocessor or a replacement for the
+<code>input()</code> macro used by Lex (or the YY_INPUT function used by Flex)
+to read characters.
+Although <a href="#lex_rule_for_comment">comments</a> should have been changed to space characters during
+translation phase 3, there are Lex rules for them anyway.
+</p><p>
+I want to keep this version as close to the current C Standard grammar
+as possible; please let me know if you discover
+discrepancies.<br>
+(There is an <a href="http://www.quut.com/c/ANSI-C-grammar-FAQ.html">FAQ</a>
+for this grammar that you might want to read first.)
+</p><p>
+jutta@pobox.com, 2012
+</p><p>
+Last edit:
+2012-12-19 DAGwyn@aol.com
+</p><hr>
+Note: The following %-parameters are the minimum sizes needed for real Lex.
+<table>
+  <tbody><tr><td><code>%e</code></td><td> number of parsed tree nodes </td> </tr>
+  <tr><td><code>%p</code></td><td> number of positions </td> </tr>
+  <tr><td><code>%n</code></td><td> number of states </td> </tr>
+  <tr><td><code>%k</code></td><td> number of packed character classes </td> </tr>
+  <tr><td><code>%a</code></td><td> number of transitions </td> </tr>
+  <tr><td><code>%o</code></td><td> size of output array</td> </tr>
+</tbody></table>
+<hr>
+<p>
+</p><pre>%e  1019
+%p  2807
+%n  371
+%k  284
+%a  1213
+%o  1117
+
+O   [0-7]
+D   [0-9]
+NZ  [1-9]
+L   [a-zA-Z_]
+A   [a-zA-Z_0-9]
+H   [a-fA-F0-9]
+HP  (0[xX])
+E   ([Ee][+-]?{D}+)
+P   ([Pp][+-]?{D}+)
+FS  (f|F|l|L)
+IS  (((u|U)(l|L|ll|LL)?)|((l|L|ll|LL)(u|U)?))
+CP  (u|U|L)
+SP  (u8|u|U|L)
+ES  (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+WS  [ \t\v\n\f]
+
+%{
+#include &lt;stdio.h&gt;
+#include "y.tab.h"
+
+extern void yyerror(const char *);  /* prints grammar violation message */
+
+extern int sym_type(const char *);  /* returns type from symbol table */
+
+#define sym_type(identifier) IDENTIFIER /* with no symbol table, fake it */
+
+static void <a href="#comment">comment(void)</a>;
+static int <a href="#check_type">check_type(void)</a>;
+%}
+
+%%
+<a name="lex_rule_for_comment">"/*"</a>                                    { <a href="#comment">comment()</a>; }
+"//".*                                    { /* consume //-comment */ }
+
+"auto"					{ return(<a name="AUTO">AUTO</a>); }
+"break"					{ return(<a name="BREAK">BREAK</a>); }
+"case"					{ return(<a name="CASE">CASE</a>); }
+"char"					{ return(<a name="CHAR">CHAR</a>); }
+"const"					{ return(<a name="CONST">CONST</a>); }
+"continue"				{ return(<a name="CONTINUE">CONTINUE</a>); }
+"default"				{ return(<a name="DEFAULT">DEFAULT</a>); }
+"do"					{ return(<a name="DO">DO</a>); }
+"double"				{ return(<a name="DOUBLE">DOUBLE</a>); }
+"else"					{ return(<a name="ELSE">ELSE</a>); }
+"enum"					{ return(<a name="ENUM">ENUM</a>); }
+"extern"				{ return(<a name="EXTERN">EXTERN</a>); }
+"float"					{ return(<a name="FLOAT">FLOAT</a>); }
+"for"					{ return(<a name="FOR">FOR</a>); }
+"goto"					{ return(<a name="GOTO">GOTO</a>); }
+"if"					{ return(<a name="IF">IF</a>); }
+"inline"				{ return(<a name="INLINE">INLINE</a>); }
+"int"					{ return(<a name="INT">INT</a>); }
+"long"					{ return(<a name="LONG">LONG</a>); }
+"register"				{ return(<a name="REGISTER">REGISTER</a>); }
+"restrict"				{ return(<a name="RESTRICT">RESTRICT</a>); }
+"return"				{ return(<a name="RETURN">RETURN</a>); }
+"short"					{ return(<a name="SHORT">SHORT</a>); }
+"signed"				{ return(<a name="SIGNED">SIGNED</a>); }
+"sizeof"				{ return(<a name="SIZEOF">SIZEOF</a>); }
+"static"				{ return(<a name="STATIC">STATIC</a>); }
+"struct"				{ return(<a name="STRUCT">STRUCT</a>); }
+"switch"				{ return(<a name="SWITCH">SWITCH</a>); }
+"typedef"				{ return(<a name="TYPEDEF">TYPEDEF</a>); }
+"union"					{ return(<a name="UNION">UNION</a>); }
+"unsigned"				{ return(<a name="UNSIGNED">UNSIGNED</a>); }
+"void"					{ return(<a name="VOID">VOID</a>); }
+"volatile"				{ return(<a name="VOLATILE">VOLATILE</a>); }
+"while"					{ return(<a name="WHILE">WHILE</a>); }
+"_Alignas"                              { return <a name="ALIGNAS">ALIGNAS</a>; }
+"_Alignof"                              { return <a name="ALIGNOF">ALIGNOF</a>; }
+"_Atomic"                               { return <a name="ATOMIC">ATOMIC</a>; }
+"_Bool"                                 { return <a name="BOOL">BOOL</a>; }
+"_Complex"                              { return <a name="COMPLEX">COMPLEX</a>; }
+"_Generic"                              { return <a name="GENERIC">GENERIC</a>; }
+"_Imaginary"                            { return <a name="IMAGINARY">IMAGINARY</a>; }
+"_Noreturn"                             { return <a name="NORETURN">NORETURN</a>; }
+"_Static_assert"                        { return <a name="STATIC_ASSERT">STATIC_ASSERT</a>; }
+"_Thread_local"                         { return <a name="THREAD_LOCAL">THREAD_LOCAL</a>; }
+"__func__"                              { return <a name="FUNC_NAME">FUNC_NAME</a>; }
+
+{L}{A}*					{ return <a href="#check_type">check_type()</a>; }
+
+{HP}{H}+{IS}?				{ return <a name="I_CONSTANT">I_CONSTANT</a>; }
+{NZ}{D}*{IS}?				{ return I_CONSTANT; }
+"0"{O}*{IS}?				{ return I_CONSTANT; }
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ return I_CONSTANT; }
+
+{D}+{E}{FS}?				{ return <a name="F_CONSTANT">F_CONSTANT</a>; }
+{D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
+{D}+"."{E}?{FS}?			{ return F_CONSTANT; }
+{HP}{H}+{P}{FS}?			{ return F_CONSTANT; }
+{HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
+{HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
+
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return <a name="STRING_LITERAL">STRING_LITERAL</a>; }
+
+"..."					{ return <a name="ELLIPSIS">ELLIPSIS</a>; }
+"&gt;&gt;="					{ return <a name="RIGHT_ASSIGN">RIGHT_ASSIGN</a>; }
+"&lt;&lt;="					{ return <a name="LEFT_ASSIGN">LEFT_ASSIGN</a>; }
+"+="					{ return <a name="ADD_ASSIGN">ADD_ASSIGN</a>; }
+"-="					{ return <a name="SUB_ASSIGN">SUB_ASSIGN</a>; }
+"*="					{ return <a name="MUL_ASSIGN">MUL_ASSIGN</a>; }
+"/="					{ return <a name="DIV_ASSIGN">DIV_ASSIGN</a>; }
+"%="					{ return <a name="MOD_ASSIGN">MOD_ASSIGN</a>; }
+"&amp;="					{ return <a name="AND_ASSIGN">AND_ASSIGN</a>; }
+"^="					{ return <a name="XOR_ASSIGN">XOR_ASSIGN</a>; }
+"|="					{ return <a name="OR_ASSIGN">OR_ASSIGN</a>; }
+"&gt;&gt;"					{ return <a name="RIGHT_OP">RIGHT_OP</a>; }
+"&lt;&lt;"					{ return <a name="LEFT_OP">LEFT_OP</a>; }
+"++"					{ return <a name="INC_OP">INC_OP</a>; }
+"--"					{ return <a name="DEC_OP">DEC_OP</a>; }
+"-&gt;"					{ return <a name="PTR_OP">PTR_OP</a>; }
+"&amp;&amp;"					{ return <a name="AND_OP">AND_OP</a>; }
+"||"					{ return <a name="OR_OP">OR_OP</a>; }
+"&lt;="					{ return <a name="LE_OP">LE_OP</a>; }
+"&gt;="					{ return <a name="GE_OP">GE_OP</a>; }
+"=="					{ return <a name="EQ_OP">EQ_OP</a>; }
+"!="					{ return <a name="NE_OP">NE_OP</a>; }
+";"					{ return ';'; }
+("{"|"&lt;%")				{ return '{'; }
+("}"|"%&gt;")				{ return '}'; }
+","					{ return ','; }
+":"					{ return ':'; }
+"="					{ return '='; }
+"("					{ return '('; }
+")"					{ return ')'; }
+("["|"&lt;:")				{ return '['; }
+("]"|":&gt;")				{ return ']'; }
+"."					{ return '.'; }
+"&amp;"					{ return '&amp;'; }
+"!"					{ return '!'; }
+"~"					{ return '~'; }
+"-"					{ return '-'; }
+"+"					{ return '+'; }
+"*"					{ return '*'; }
+"/"					{ return '/'; }
+"%"					{ return '%'; }
+"&lt;"					{ return '&lt;'; }
+"&gt;"					{ return '&gt;'; }
+"^"					{ return '^'; }
+"|"					{ return '|'; }
+"?"					{ return '?'; }
+
+{WS}+					{ /* whitespace separates tokens */ }
+.					{ /* discard bad characters */ }
+
+%%
+
+<a name="yywrap">int yywrap(void)</a>        /* called at end of input */
+{
+    return 1;           /* terminate now */
+}
+
+<a name="comment">static void comment(void)</a>
+{
+    int c;
+
+    while ((c = input()) != 0)
+        if (c == '*')
+        {
+            while ((c = input()) == '*')
+                ;
+
+            if (c == '/')
+                return;
+
+            if (c == 0)
+                break;
+        }
+    yyerror("unterminated comment");
+}
+
+<a name="check_type">static int check_type(void)</a>
+{
+    switch (sym_type(yytext))
+    {
+    case TYPEDEF_NAME:                /* previously defined */
+        return TYPEDEF_NAME;
+    case ENUMERATION_CONSTANT:        /* previously defined */
+        return ENUMERATION_CONSTANT;
+    default:                          /* includes undefined */
+        return IDENTIFIER;
+    }
+}
+</pre>
+
+
+</body><script src="ANSI%20C%20grammar%20(Lex)_files/inject.js"></script></html>
