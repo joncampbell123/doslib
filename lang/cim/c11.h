@@ -6,7 +6,7 @@
 int c11yy_do_compile();
 
 typedef uint32_t c11yy_string_token_id;
-static constexpr uint32_t c11yy_string_token_none = (uint32_t)(~0ul);
+#define c11yy_string_token_none			((uint32_t)(~0ul))
 
 struct c11yy_struct_base {
 	enum c11yytokentype			t; /* from c11.y.h */
@@ -21,8 +21,8 @@ struct c11yy_struct_integer {
 	uint8_t					sz; /* 0 if no size, else in bits */
 };
 
-static constexpr uint8_t C11YY_FLOATF_NEGATIVE = (1u << 0u);
-static constexpr uint8_t C11YY_FLOATF_SPECIAL = (1u << 1u); /* i.e. NaN, inf, etc */
+#define C11YY_FLOATF_NEGATIVE			(1u << 0u)
+#define C11YY_FLOATF_SPECIAL			(1u << 1u) /* i.e. NaN, inf, etc */
 
 struct c11yy_struct_float {
 	enum c11yytokentype			t; /* from c11.y.h */
