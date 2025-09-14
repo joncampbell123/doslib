@@ -13,7 +13,7 @@ yyparser: c11.l.h c11.l.c c11.y.h c11.y.c
 %.r: %.l
 
 %.o: %.c
-	gcc -c -o $@ $<
+	gcc -std=c11 -Wall -pedantic -c -o $@ $<
 
 c11: c11.o c11.l.o c11.y.o
 	gcc -o $@ $+

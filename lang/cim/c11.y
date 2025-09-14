@@ -24,6 +24,8 @@
 void c11yyerror(const char *s);
 %}
 
+%define api.value.type {union c11yy_struct}
+
 %start translation_unit
 %%
 
