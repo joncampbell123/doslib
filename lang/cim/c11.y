@@ -539,7 +539,7 @@ void yyerror(const char *s)
 	fprintf(stderr, "*** %s\n", s);
 }
 
-int yy_do_compile() {
+int yy_do_compile_c11() {
 	return yyparse();
 }
 
