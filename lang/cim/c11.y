@@ -15,6 +15,12 @@
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
+%{
+#include "c11.h"
+#include "c11.l.h"
+void yyerror(const char *s);
+%}
+
 %start translation_unit
 %%
 
@@ -531,5 +537,9 @@ void yyerror(const char *s)
 {
 	fflush(stdout);
 	fprintf(stderr, "*** %s\n", s);
+}
+
+int yy_do_compile() {
+	return yyparse();
 }
 
