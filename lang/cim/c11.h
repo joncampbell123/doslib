@@ -13,7 +13,7 @@ struct c11yy_struct_base {
 };
 
 struct c11yy_struct_integer {
-	enum c11yytokentype			t; /* from c11.y.h == I_CONSTANT */
+	enum c11yytokentype			t; /* from c11.y.h == I_CONSTANT, ENUMERATION_CONSTANT */
 	union {
 		uint64_t			u;
 		int64_t				s;
