@@ -25,7 +25,7 @@ WS  [ \t\v\n\f]
 
 %{
 #include <stdio.h>
-#include "y.tab.h"
+#include "c11.y.h"
 
 extern void yyerror(const char *);  /* prints grammar violation message */
 
