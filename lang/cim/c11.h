@@ -1,31 +1,35 @@
 
 #include <stdint.h>
 
-#include "c11.y.h"
-
 int c11yy_do_compile();
 
 typedef uint32_t c11yy_string_token_id;
 #define c11yy_string_token_none			((uint32_t)(~0ul))
 
 struct c11yy_struct_base {
-	enum c11yytokentype			t; /* from c11.y.h */
+	unsigned int				t; /* from c11.y.h */
 };
 
+#define C11YY_INTF_OVERFLOW			(1u << 0u) /* value overflowed during parsing */
+#define C11YY_INTF_PARSED			(1u << 1u) /* value was parsed, v is valid */
+#define C11YY_INTF_SIGNED			(1u << 2u) /* value is signed, use v.s else use v.u */
+#define C11YY_INTF_CHARCONST			(1u << 3u) /* value came from char constant */
+
 struct c11yy_struct_integer {
-	enum c11yytokentype			t; /* from c11.y.h == I_CONSTANT, ENUMERATION_CONSTANT */
+	unsigned int				t; /* from c11.y.h == I_CONSTANT, ENUMERATION_CONSTANT */
 	union {
 		uint64_t			u;
 		int64_t				s;
 	} v;
 	uint8_t					sz; /* 0 if no size, else in bits */
+	uint8_t					flags;
 };
 
 #define C11YY_FLOATF_NEGATIVE			(1u << 0u)
 #define C11YY_FLOATF_SPECIAL			(1u << 1u) /* i.e. NaN, inf, etc */
 
 struct c11yy_struct_float {
-	enum c11yytokentype			t; /* from c11.y.h == F_CONSTANT */
+	unsigned int				t; /* from c11.y.h == F_CONSTANT */
 	uint64_t				mant;
 	int					exponent;
 	uint8_t					flags;
@@ -40,7 +44,7 @@ enum c11yystringtype {
 };
 
 struct c11yy_struct_strliteral {
-	enum c11yytokentype			t; /* from c11.y.h == STRING_LITERAL */
+	unsigned int				t; /* from c11.y.h == STRING_LITERAL */
 	c11yy_string_token_id			id;
 	enum c11yystringtype			stype;
 };
@@ -51,4 +55,6 @@ union c11yy_struct {
 	struct c11yy_struct_float		floatval;
 	struct c11yy_struct_strliteral		strlitval;
 };
+
+void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 

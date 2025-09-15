@@ -25,7 +25,10 @@ WS  [ \t\v\n\f]
 
 %{
 #include <stdio.h>
+#include "c11.h"
 #include "c11.y.h"
+
+extern union c11yy_struct c11yylval;
 
 extern void c11yyerror(const char *);  /* prints grammar violation message */
 
@@ -89,10 +92,10 @@ static int check_type(void);
 
 {L}{A}*					{ return check_type(); }
 
-{HP}{H}+{IS}?				{ return I_CONSTANT; }
-{NZ}{D}*{IS}?				{ return I_CONSTANT; }
-"0"{O}*{IS}?				{ return I_CONSTANT; }
-{CP}?"'"([^'\\\n]|{ES})+"'"		{ return I_CONSTANT; }
+{HP}{H}+{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'H'); return I_CONSTANT; }
+{NZ}{D}*{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'N'); return I_CONSTANT; }
+"0"{O}*{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'O'); return I_CONSTANT; }
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ c11yy_init_iconst(&c11yylval.intval,yytext,'C'); return I_CONSTANT; }
 
 {D}+{E}{FS}?				{ return F_CONSTANT; }
 {D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
