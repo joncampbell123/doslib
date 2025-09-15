@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "c11.h"
+#include "c11.l.h"
 #include "c11.y.h"
 
 void c11yyskip(const char **y,unsigned int c) {
@@ -172,6 +173,10 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 }
 
 int main() {
-	return c11yy_do_compile();
+	if (c11yy_do_compile())
+		return 1;
+
+	c11yylex_destroy();
+	return 0;
 }
 
