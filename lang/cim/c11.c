@@ -50,9 +50,7 @@ uint8_t c11yy_iconstu_auto_size(uint64_t v) {
 
 uint8_t c11yy_iconsts_auto_size(int64_t v) {
 	if (v >= (int64_t)0)
-		return c11yy_iconstu_auto_size((uint64_t)v);
-	else if (v >= (int64_t)-1ll)
-		return 8u;
+		return c11yy_iconstu_auto_size(v >> (uint64_t)7ull) + 8u;
 	else
 		return c11yy_iconstu_auto_size((((uint64_t)(-v)) - (uint64_t)1ull) >> (uint64_t)7ull) + 8u;
 }
@@ -260,9 +258,28 @@ int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
 	return 1;
 }
 
+int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		memcpy(d,s,sizeof(*s));
+		d->intval.flags |= C11YY_INTF_SIGNED;
+
+		{
+			const uint8_t sz = c11yy_iconsts_auto_size(d->intval.v.s);
+			if (d->intval.sz < sz)
+				d->intval.sz = sz;
+		}
+
+		fprintf(stderr,"pos %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
 int (*c11yy_unary_op[])(union c11yy_struct *,const union c11yy_struct *) = {
-	c11yy_unary_op_none,
+	c11yy_unary_op_none,		// 0
 	c11yy_unary_op_neg,
+	c11yy_unary_op_pos
 };
 
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {

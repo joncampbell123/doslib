@@ -2,8 +2,9 @@
 #include <stdint.h>
 
 enum c11yy_unop {
-	C11YY_UNOP_NONE=0,
+	C11YY_UNOP_NONE=0,			// 0
 	C11YY_UNOP_NEG,
+	C11YY_UNOP_POS,
 
 	C11YY_UNOP__MAX
 };
