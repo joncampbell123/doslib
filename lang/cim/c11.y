@@ -88,19 +88,19 @@ unary_expression
 	: postfix_expression
 	| INC_OP unary_expression
 	| DEC_OP unary_expression
-	| unary_operator cast_expression
+	| unary_operator cast_expression { if (c11yy_unary(&($$),&($2),$1.base.t)) return 1; }
 	| SIZEOF unary_expression
 	| SIZEOF '(' type_name ')'
 	| ALIGNOF '(' type_name ')'
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&' { $$.base.t = C11YY_UNOP_NONE; }
+	| '*' { $$.base.t = C11YY_UNOP_NONE; }
+	| '+' { $$.base.t = C11YY_UNOP_NONE; }
+	| '-' { $$.base.t = C11YY_UNOP_NEG;  }
+	| '~' { $$.base.t = C11YY_UNOP_NONE; }
+	| '!' { $$.base.t = C11YY_UNOP_NONE; }
 	;
 
 cast_expression

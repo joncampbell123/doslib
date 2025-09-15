@@ -1,6 +1,13 @@
 
 #include <stdint.h>
 
+enum c11yy_unop {
+	C11YY_UNOP_NONE=0,
+	C11YY_UNOP_NEG,
+
+	C11YY_UNOP__MAX
+};
+
 int c11yy_do_compile();
 
 typedef uint32_t c11yy_string_token_id;
@@ -57,4 +64,5 @@ union c11yy_struct {
 };
 
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
+int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
 
