@@ -5,7 +5,7 @@
 #include "c11.l.h"
 #include "c11.y.h"
 
-void c11yyskip(const char **y,unsigned int c) {
+static void c11yyskip(const char **y,unsigned int c) {
 	const char *s = *y;
 
 	while (*s && c) {
@@ -16,7 +16,7 @@ void c11yyskip(const char **y,unsigned int c) {
 	*y = s;
 }
 
-int c11yy_iconst_readc(const unsigned int base,const char **y) {
+static int c11yy_iconst_readc(const unsigned int base,const char **y) {
 	const char *s = *y;
 	unsigned char v;
 
@@ -37,7 +37,7 @@ int c11yy_iconst_readc(const unsigned int base,const char **y) {
 	return -1;
 }
 
-uint8_t c11yy_iconstu_auto_size(uint64_t v) {
+static uint8_t c11yy_iconstu_auto_size(uint64_t v) {
 	uint8_t sz = 0u;
 
 	while (v) {
@@ -48,14 +48,14 @@ uint8_t c11yy_iconstu_auto_size(uint64_t v) {
 	return sz;
 }
 
-uint8_t c11yy_iconsts_auto_size(int64_t v) {
+static uint8_t c11yy_iconsts_auto_size(int64_t v) {
 	if (v >= (int64_t)0)
 		return c11yy_iconstu_auto_size(v >> (uint64_t)7ull) + 8u;
 	else
 		return c11yy_iconstu_auto_size((((uint64_t)(-v)) - (uint64_t)1ull) >> (uint64_t)7ull) + 8u;
 }
 
-void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,const char **y) {
+static void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,const char **y) {
 	const uint64_t maxv = UINT64_MAX / (uint64_t)(base);
 	const char *s = *y;
 	int v;
@@ -74,7 +74,7 @@ void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,
 	*y = s;
 }
 
-void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
+static void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
 	const char *s = *y;
 	unsigned int f = 0;
 #define UF 0x1u
@@ -118,7 +118,7 @@ void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
 #undef UF
 }
 
-void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_integer *val,const char **y) {
+static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_integer *val,const char **y) {
 	const char *s = *y;
 
 	val->v.u = 0;
@@ -162,7 +162,7 @@ void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_int
 	*y = s;
 }
 
-void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **y) {
+static void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **y) {
 	const char *s = *y;
 
 	if (*s == 'u') {
@@ -234,12 +234,12 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 	fprintf(stderr,"%llu sz=%u f=%x\n",(unsigned long long)val->v.u,val->sz,val->flags);
 }
 
-int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
+static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
 	memcpy(d,s,sizeof(*s));
 	return 0;
 }
 
-int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
+static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
 		memcpy(d,s,sizeof(*s));
 		d->intval.v.s = -d->intval.v.s;
@@ -258,7 +258,7 @@ int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
 	return 1;
 }
 
-int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
+static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
 		memcpy(d,s,sizeof(*s));
 		d->intval.flags |= C11YY_INTF_SIGNED;
@@ -276,10 +276,11 @@ int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
 	return 1;
 }
 
-int (*c11yy_unary_op[])(union c11yy_struct *,const union c11yy_struct *) = {
-	c11yy_unary_op_none,		// 0
-	c11yy_unary_op_neg,
-	c11yy_unary_op_pos
+static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const union c11yy_struct *) = {
+	/* if FFMPEG has long used this kind of init than we should too */
+	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
+	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
+	[C11YY_UNOP_POS]  = c11yy_unary_op_pos
 };
 
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
