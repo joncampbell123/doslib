@@ -213,8 +213,10 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 		}
 	}
 
-	if (val->sz == 0)
-		val->sz = c11yy_iconstu_auto_size(val->v.u);
+	{
+		const uint8_t sz = c11yy_iconstu_auto_size(val->v.u);
+		if (val->sz < sz) val->sz = sz;
+	}
 
 	/* this code never parses the leading minus sign, therefore everything parsed here is a nonnegative number,
 	 * therefore if signed and the leading bit is set, overflow happend. */
