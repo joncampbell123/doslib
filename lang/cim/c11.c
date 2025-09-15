@@ -266,10 +266,11 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 
 static int c11yy_unary_op_not(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
+		/* do not update size */
 		memcpy(d,s,sizeof(*s));
 		d->intval.v.u = ~d->intval.v.u;
 		d->intval.flags &= ~C11YY_INTF_SIGNED;
-		/* do not update size */
+		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
 		fprintf(stderr,"not %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
 		return 0;
 	}

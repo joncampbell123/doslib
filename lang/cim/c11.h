@@ -23,6 +23,7 @@ struct c11yy_struct_base {
 #define C11YY_INTF_PARSED			(1u << 1u) /* value was parsed, v is valid */
 #define C11YY_INTF_SIGNED			(1u << 2u) /* value is signed, use v.s else use v.u */
 #define C11YY_INTF_CHARCONST			(1u << 3u) /* value came from char constant */
+#define C11YY_INTF_TRUNCATEOK			(1u << 4u) /* value can be truncated without issue */
 
 struct c11yy_struct_integer {
 	unsigned int				t; /* from c11.y.h == I_CONSTANT, ENUMERATION_CONSTANT */
