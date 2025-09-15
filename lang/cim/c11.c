@@ -264,14 +264,27 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 	return 1;
 }
 
-static int c11yy_unary_op_not(union c11yy_struct *d,const union c11yy_struct *s) {
+static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
 		/* do not update size */
 		memcpy(d,s,sizeof(*s));
 		d->intval.v.u = ~d->intval.v.u;
 		d->intval.flags &= ~C11YY_INTF_SIGNED;
 		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
-		fprintf(stderr,"not %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
+		fprintf(stderr,"bnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		/* do not update size */
+		memset(d,0,sizeof(*d));
+		d->base.t = s->base.t;
+		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
+		fprintf(stderr,"lnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
 		return 0;
 	}
 
@@ -283,7 +296,8 @@ static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const 
 	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
 	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
 	[C11YY_UNOP_POS]  = c11yy_unary_op_pos,
-	[C11YY_UNOP_NOT]  = c11yy_unary_op_not
+	[C11YY_UNOP_BNOT] = c11yy_unary_op_bnot,
+	[C11YY_UNOP_LNOT] = c11yy_unary_op_lnot
 };
 
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
