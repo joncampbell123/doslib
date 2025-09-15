@@ -99,7 +99,7 @@ unary_operator
 	| '*' { $$.base.t = C11YY_UNOP_NONE; }
 	| '+' { $$.base.t = C11YY_UNOP_POS;  }
 	| '-' { $$.base.t = C11YY_UNOP_NEG;  }
-	| '~' { $$.base.t = C11YY_UNOP_NONE; }
+	| '~' { $$.base.t = C11YY_UNOP_NOT;  }
 	| '!' { $$.base.t = C11YY_UNOP_NONE; }
 	;
 

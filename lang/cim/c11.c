@@ -244,13 +244,7 @@ static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s)
 		memcpy(d,s,sizeof(*s));
 		d->intval.v.s = -d->intval.v.s;
 		d->intval.flags |= C11YY_INTF_SIGNED;
-
-		{
-			const uint8_t sz = c11yy_iconsts_auto_size(d->intval.v.s);
-			if (d->intval.sz < sz)
-				d->intval.sz = sz;
-		}
-
+		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
 		fprintf(stderr,"negate %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
 		return 0;
 	}
@@ -262,14 +256,21 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 	if (s->base.t == I_CONSTANT) {
 		memcpy(d,s,sizeof(*s));
 		d->intval.flags |= C11YY_INTF_SIGNED;
-
-		{
-			const uint8_t sz = c11yy_iconsts_auto_size(d->intval.v.s);
-			if (d->intval.sz < sz)
-				d->intval.sz = sz;
-		}
-
+		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
 		fprintf(stderr,"pos %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int c11yy_unary_op_not(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		memcpy(d,s,sizeof(*s));
+		d->intval.v.u = ~d->intval.v.u;
+		d->intval.flags &= ~C11YY_INTF_SIGNED;
+		/* do not update size */
+		fprintf(stderr,"not %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
 		return 0;
 	}
 
@@ -280,7 +281,8 @@ static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const 
 	/* if FFMPEG has long used this kind of init than we should too */
 	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
 	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
-	[C11YY_UNOP_POS]  = c11yy_unary_op_pos
+	[C11YY_UNOP_POS]  = c11yy_unary_op_pos,
+	[C11YY_UNOP_NOT]  = c11yy_unary_op_not
 };
 
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
