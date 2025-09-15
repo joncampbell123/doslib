@@ -67,7 +67,7 @@ void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,
 	*y = s;
 }
 
-void c11yy_iconst_readchar(struct c11yy_struct_integer *val,const char **y) {
+void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_integer *val,const char **y) {
 	const char *s = *y;
 
 	val->v.u = 0;
@@ -111,6 +111,25 @@ void c11yy_iconst_readchar(struct c11yy_struct_integer *val,const char **y) {
 	*y = s;
 }
 
+void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **y) {
+	const char *s = *y;
+
+	if (*s == 'u') {
+		*st = C11YY_STRT_UTF16; s++;
+		if (*s == '8') {
+			*st = C11YY_STRT_UTF8; s++;
+		}
+	}
+	else if (*s == 'U') {
+		*st = C11YY_STRT_UTF32; s++;
+	}
+	else if (*s == 'L') {
+		*st = C11YY_STRT_UTF32; s++;
+	}
+
+	*y = s;
+}
+
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch) {
 	/* lexmatch:
 	 * 'H' hexadecimal
@@ -134,9 +153,14 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 		c11yy_iconst_read(/*base*/8,val,&yytext); /* "0" is handled as octal, which is still correct parsing anyway */
 	}
 	else if (lexmatch == 'C') {
+		enum c11yystringtype st = C11YY_STRT_LOCAL;
+
+		/* NTS: lexer syntax prevents 'u8' prefix */
+		c11yy_check_stringtype_prefix(&st,&yytext);
+
 		if (*yytext == '\'') {
 			yytext++;
-			c11yy_iconst_readchar(val,&yytext);
+			c11yy_iconst_readchar(st,val,&yytext);
 			/* assume trailing ' */
 		}
 	}
