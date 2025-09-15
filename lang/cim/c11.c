@@ -68,6 +68,50 @@ void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,
 	*y = s;
 }
 
+void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
+	const char *s = *y;
+	unsigned int f = 0;
+#define UF 0x1u
+#define LF 0x2u
+#define LLF 0x4u
+	while (1) {
+		if (*s == 'u' || *s == 'U') {
+			s++;
+			f |= UF;
+		}
+		else if (*s == 'l' || *s == 'L') {
+			s++;
+			if (*s == 'l' || *s == 'L') {
+				s++;
+				f |= LLF;
+			}
+			else {
+				f |= LF;
+			}
+		}
+		else {
+			break;
+		}
+	}
+
+	if (f & UF)
+		val->flags &= ~C11YY_INTF_SIGNED;
+
+	if (f & LLF) {
+		if (val->sz < 64u)
+			val->sz = 64u;
+	}
+	else if (f & LF) {
+		if (val->sz < 32u)
+			val->sz = 32u;
+	}
+
+	*y = s;
+#undef LLF
+#undef LF
+#undef UF
+}
+
 void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_integer *val,const char **y) {
 	const char *s = *y;
 
@@ -140,18 +184,21 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 	 */
 	val->sz = 0;
 	val->v.u = 0;
-	val->flags = 0;
+	val->flags = C11YY_INTF_SIGNED; /* values are signed by default */
 	val->t = I_CONSTANT;
 
 	if (lexmatch == 'H') {
 		c11yyskip(&yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
 		c11yy_iconst_read(/*base*/16,val,&yytext);
+		c11yy_iconst_readsuffix(val,&yytext);
 	}
 	else if (lexmatch == 'N') {
 		c11yy_iconst_read(/*base*/10,val,&yytext);
+		c11yy_iconst_readsuffix(val,&yytext);
 	}
 	else if (lexmatch == 'O') {
 		c11yy_iconst_read(/*base*/8,val,&yytext); /* "0" is handled as octal, which is still correct parsing anyway */
+		c11yy_iconst_readsuffix(val,&yytext);
 	}
 	else if (lexmatch == 'C') {
 		enum c11yystringtype st = C11YY_STRT_LOCAL;
@@ -169,7 +216,14 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 	if (val->sz == 0)
 		val->sz = c11yy_iconstu_auto_size(val->v.u);
 
-	fprintf(stderr,"%llu sz=%u\n",(unsigned long long)val->v.u,val->sz);
+	/* this code never parses the leading minus sign, therefore everything parsed here is a nonnegative number,
+	 * therefore if signed and the leading bit is set, overflow happend. */
+	if (val->flags & C11YY_INTF_SIGNED) {
+		if (val->v.s < (int64_t)0)
+			val->flags |= C11YY_INTF_OVERFLOW;
+	}
+
+	fprintf(stderr,"%llu sz=%u f=%x\n",(unsigned long long)val->v.u,val->sz,val->flags);
 }
 
 int main() {
