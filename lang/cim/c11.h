@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include <string.h>
 
 enum c11yy_unop {
 	C11YY_UNOP_NONE=0,			// 0
@@ -14,7 +15,7 @@ enum c11yy_unop {
 int c11yy_do_compile();
 
 typedef uint32_t c11yy_string_token_id;
-#define c11yy_string_token_none			((uint32_t)(~0ul))
+#define c11yy_string_token_none			( ~((uint32_t)(0u)) )
 
 struct c11yy_struct_base {
 	unsigned int				t; /* from c11.y.h */
@@ -57,7 +58,6 @@ enum c11yystringtype {
 struct c11yy_struct_strliteral {
 	unsigned int				t; /* from c11.y.h == STRING_LITERAL */
 	c11yy_string_token_id			id;
-	enum c11yystringtype			stype;
 };
 
 union c11yy_struct {
@@ -67,6 +67,34 @@ union c11yy_struct {
 	struct c11yy_struct_strliteral		strlitval;
 };
 
+struct c11yy_string_obj {
+	enum c11yystringtype			stype;
+	uint16_t				len; /* in bytes -- we're not going to support strings >= 64KB long! */
+	union {
+		void*				raw;
+		uint8_t*			s8; /* local/UTF-8 */
+		uint16_t*			s16; /* local/UTF-16 */
+		uint32_t*			s32; /* local/UTF-32 */
+	} str;
+};
+
+struct c11yy_string_objarray {
+	struct c11yy_string_obj*		array;
+	size_t					length,alloc,next;
+};
+
+struct c11yy_string_objarray *c11yy_string_objarray_alloc(void);
+struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id);
+c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
+void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id);
+void c11yy_string_objarray_freestr_obj(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
+struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a);
+void c11yy_string_objarray_free(struct c11yy_string_objarray **a);
+void c11yy_string_obj_freestring(struct c11yy_string_obj *st);
+
+void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
+
+extern struct c11yy_string_objarray *c11yy_stringarray;
 

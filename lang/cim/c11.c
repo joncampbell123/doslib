@@ -1,9 +1,12 @@
 
 #include <stdio.h>
+#include <assert.h>
 
 #include "c11.h"
 #include "c11.l.h"
 #include "c11.y.h"
+
+struct c11yy_string_objarray *c11yy_stringarray = NULL;
 
 static void c11yyskip(const char **y,unsigned int c) {
 	const char *s = *y;
@@ -156,6 +159,7 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 		}
 	}
 	else if (*s) {
+		// TODO: If not local encoding type, read "s" as UTF-8 char
 		val->v.u = *s++;
 	}
 
@@ -179,6 +183,140 @@ static void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **
 	}
 
 	*y = s;
+}
+
+static int c11yy_strl_write_local(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint8_t *d = *dst;
+
+	if (val->v.s < 0 || val->v.s > 255)
+		return 1;
+
+	*d++ = (uint8_t)val->v.u;
+	*dst = d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf8(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint8_t *d = *dst;
+
+	if (val->v.s < 0 || val->v.s > 0x7FFFFFFFll)
+		return 1;
+
+	// TODO: Encode UTF-8
+	*d++ = (uint8_t)val->v.u;
+	*dst = d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf16(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint16_t *d = (uint16_t*)(*dst);
+
+	if (val->v.s < 0 || val->v.s > 0x10FFFFll)
+		return 1;
+
+	// TODO: Encode UTF-16 including surrogate pairs
+	*d++ = (uint16_t)val->v.u;
+	*dst = (uint8_t*)d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf32(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint32_t *d = (uint32_t*)(*dst);
+
+	if (val->v.s < 0 || val->v.s > 0xFFFFFFFFll)
+		return 1;
+
+	*d++ = (uint32_t)val->v.u;
+	*dst = (uint8_t*)d;
+	return 0;
+}
+
+void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
+	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
+	struct c11yy_string_obj *st = c11yy_string_objarray_newstr(c11yy_stringarray);
+	enum c11yystringtype stype = C11YY_STRT_LOCAL;
+	struct c11yy_struct_integer ival;
+
+	val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+	val->t = STRING_LITERAL;
+
+	if (*yytext == 'u') {
+		strw = c11yy_strl_write_utf16;
+		stype = C11YY_STRT_UTF16;
+		yytext++;
+		if (*yytext == '8') {
+			strw = c11yy_strl_write_utf8;
+			stype = C11YY_STRT_UTF8;
+			yytext++;
+		}
+	}
+	else if (*yytext == 'U') {
+		strw = c11yy_strl_write_utf32;
+		stype = C11YY_STRT_UTF32;
+		yytext++;
+	}
+	else if (*yytext == 'L') {
+		strw = c11yy_strl_write_utf16;
+		stype = C11YY_STRT_UTF16;
+		yytext++;
+	}
+
+	if (!st) return;
+
+	{
+		const size_t extra = 16; /* enough space for encoding and writing a NUL at end of loop */
+		size_t alloc = 64;
+		uint8_t *buf,*w;
+
+		w = buf = malloc(alloc);
+		if (!buf) return;//err
+
+		while (*yytext) {
+			// trust the lexer has provided us properly formatted strings with escapes and possible whitespace between them
+			if (*yytext == '\"') {
+				yytext++;
+
+				while (*yytext) {
+					if (*yytext == '\"') {
+						yytext++;
+						break;//err
+					}
+
+					if ((w+extra) > (buf+alloc)) {
+						const size_t nal = alloc + 8u + (alloc / 2u);
+						const size_t wo = (size_t)(w - buf); /* realloc may move buffer */
+						uint8_t *np = realloc(buf,nal);
+						if (!np) {
+							free(buf);
+							return;//err
+						}
+						buf = np;
+						alloc = nal;
+						w = buf + wo; /* realloc may move buffer */
+					}
+
+					assert((w+extra) <= (buf+alloc));
+
+					c11yy_iconst_readchar(stype,&ival,&yytext);
+					if (strw(&w,&ival)) {
+						free(buf);
+						return;//err
+					}
+				}
+			}
+			else {
+				yytext++;
+			}
+		}
+
+		ival.v.u = 0;
+		strw(&w,&ival);
+		assert(w <= (buf+alloc));
+
+		st->len = (size_t)(w - buf);
+		st->stype = stype;
+		st->str.s8 = buf;
+	}
 }
 
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch) {
@@ -307,11 +445,174 @@ int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned
 		return 1;
 }
 
+struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
+	struct c11yy_string_objarray *a = malloc(sizeof(struct c11yy_string_objarray));
+	if (a) {
+		const size_t init_len = 8;
+
+		memset(a,0,sizeof(*a));
+		a->array = malloc(sizeof(struct c11yy_string_obj) * init_len);
+		if (a->array) {
+			a->alloc = init_len;
+			a->length = 0;
+			a->next = 0;
+		}
+	}
+
+	return a;
+}
+
+struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
+	if (a && a->array && id < a->length)
+		return a->array + id; /* pointer math equiv to &(a->array[id]) */
+
+	return NULL;
+}
+
+c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
+	if (a && a->array && st >= a->array) {
+		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(string_obj) */
+		if (i < a->length) return i;
+	}
+
+	return c11yy_string_token_none;
+}
+
+static struct c11yy_string_obj *c11yy_string_objarray_newstr_scan(struct c11yy_string_objarray *a) {
+	/* assume a && a->array */
+	while (a->next < a->length) {
+		struct c11yy_string_obj *o = a->array + a->next;
+
+		if (o->str.raw == NULL && o->len == 0)
+			return o;
+
+		a->next++;
+	}
+
+	return NULL;
+}
+
+static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_item(struct c11yy_string_objarray *a) {
+	/* assume a && a->array */
+	if (a->length < a->alloc) {
+		struct c11yy_string_obj *o = a->array + a->length;
+		memset(o,0,sizeof(*o));
+		a->next = ++a->length;
+		return o;
+	}
+
+	return NULL;
+}
+
+static unsigned int c11yy_string_objarray_newstr_extend_alloc(struct c11yy_string_objarray *a,size_t newlen) {
+	/* assume a && a->array */
+	if (a->alloc < newlen) {
+		struct c11yy_string_obj *na = realloc(a->array, sizeof(struct c11yy_string_obj) * newlen);
+		if (na) {
+			a->alloc = newlen;
+			a->array = na;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
+	if (st) {
+		if (st->str.raw) free(st->str.raw);
+		st->str.raw = NULL;
+		st->len = 0;
+	}
+}
+
+void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id) {
+	if (a && a->array && id < a->length) {
+		struct c11yy_string_obj *st = c11yy_string_objarray_id2str(a,id);
+		if (st) {
+			c11yy_string_obj_freestring(st);
+			memset(st,0,sizeof(*st));
+			a->next = id;
+		}
+	}
+}
+
+void c11yy_string_objarray_freestr_obj(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
+	if (a && a->array) {
+		const c11yy_string_token_id id = c11yy_string_objarray_str2id(a,st);
+		if (id != c11yy_string_token_none) a->next = id;
+		c11yy_string_obj_freestring(st);
+		memset(st,0,sizeof(*st));
+	}
+}
+
+struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a) {
+	if (a && a->array) {
+		struct c11yy_string_obj *r = c11yy_string_objarray_newstr_scan(a);
+
+		if (r == NULL)
+			r = c11yy_string_objarray_newstr_init_next_length_item(a);
+
+		if (r == NULL && c11yy_string_objarray_newstr_extend_alloc(a,a->alloc + 8u + (a->alloc / 2u))) 
+			r = c11yy_string_objarray_newstr_init_next_length_item(a);
+
+		return r;
+	}
+
+	return NULL;
+}
+
+struct c11yy_string_objarray *c11yy_string_objarray_do_free(struct c11yy_string_objarray *a) {
+	if (a) {
+		if (a->array) {
+			size_t i;
+
+			for (i=0;i < a->length;i++)
+				c11yy_string_objarray_freestr_id(a,i);
+
+			free(a->array);
+		}
+
+		a->length = 0;
+		a->alloc = 0;
+		a->next = 0;
+
+		free(a);
+	}
+
+	return NULL;
+}
+
+void c11yy_string_objarray_free(struct c11yy_string_objarray **a) {
+	if (a) *a = c11yy_string_objarray_do_free(*a);
+}
+
+static int c11yy_init(void) {
+	if (!c11yy_stringarray) {
+		if ((c11yy_stringarray=c11yy_string_objarray_alloc()) == NULL)
+			return 1;
+	}
+
+	return 0;
+}
+
+static void c11yy_cleanup(void) {
+	c11yy_string_objarray_free(&c11yy_stringarray);
+}
+
 int main() {
-	if (c11yy_do_compile())
+	if (c11yy_init()) {
+		c11yy_cleanup();
 		return 1;
+	}
+
+	if (c11yy_do_compile()) {
+		c11yy_cleanup();
+		return 1;
+	}
 
 	c11yylex_destroy();
+	c11yy_cleanup();
 	return 0;
 }
 
