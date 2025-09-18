@@ -6,5 +6,7 @@ void func() {
 	const short *strs = { u"Hello", u"World""How", u"Are" "You" };
 	const long *strs = { U"Hello", U"World""How", U"Are" "You" };
 	const long *strs = { L"Hello", L"World""How", L"Are" "You" };
+	const char *strs = { u8"Ｔｅｓｔｉｎｇ　１２３" };
+	const char *strs = { u8"Wide text Ｔｅｓｔｉｎｇ　１２３ is so vaporwave" };
 }
 

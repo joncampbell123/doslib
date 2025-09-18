@@ -159,8 +159,34 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 		}
 	}
 	else if (*s) {
-		// TODO: If not local encoding type, read "s" as UTF-8 char
-		val->v.u = *s++;
+		if (st != C11YY_STRT_LOCAL && (unsigned char)(*s) >= 0xC0 && (unsigned char)(*s) < 0xFE) {
+			/* 0x00-0x7F ASCII char */
+			/* 0x80-0xBF we're in the middle of a UTF-8 char */
+			/* overlong 1111 1110 or 1111 1111 */
+			uint32_t v = (unsigned char)(*s++);
+
+			/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+			 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+			 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+			 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+			 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+			unsigned char more = 1;
+			for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
+			v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
+
+			do {
+				unsigned char c = *s;
+				if ((c&0xC0) != 0x80) c = 0; /* must be 10xx xxxx */
+				if (c) s++;
+
+				v = (v << (uint32_t)(6u)) + (uint32_t)(c & 0x3Fu);
+			} while ((--more) != 0);
+
+			val->v.u = v;
+		}
+		else {
+			val->v.u = *s++;
+		}
 	}
 
 	*y = s;
@@ -202,8 +228,32 @@ static int c11yy_strl_write_utf8(uint8_t **dst,struct c11yy_struct_integer *val)
 	if (val->v.s < 0 || val->v.s > 0x7FFFFFFFll)
 		return 1;
 
-	// TODO: Encode UTF-8
-	*d++ = (uint8_t)val->v.u;
+	{
+		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+		uint32_t c = (uint32_t)val->v.u;
+		if (c >= 0x80) {
+			unsigned char more = 1;
+			{
+				uint32_t tmp = (uint32_t)(c) >> (uint32_t)(11u);
+				while (tmp != 0) { more++; tmp >>= (uint32_t)(5u); }
+				assert(more <= 5);
+			}
+
+			const uint8_t ib = 0xFC << (5 - more);
+			unsigned char *wr = d; d += 1+more;
+			do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
+			assert((uint32_t)(c) <= (uint32_t)((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
+			wr[0] = (unsigned char)(ib | (unsigned char)c);
+		}
+		else {
+			*d++ = (unsigned char)c;
+		}
+	}
+
 	*dst = d;
 	return 0;
 }
@@ -607,6 +657,7 @@ int main() {
 	}
 
 	if (c11yy_do_compile()) {
+		c11yylex_destroy();
 		c11yy_cleanup();
 		return 1;
 	}
