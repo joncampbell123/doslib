@@ -205,6 +205,8 @@ struct c11yy_string_objarray {
 	size_t					length,alloc,next;
 };
 
+#define c11yy_string_objarray_INIT { NULL, 0, 0, 0 }
+
 ///////////////////////////////////////////////////////
 
 #define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
@@ -223,21 +225,21 @@ static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
 
 ///////////////////////////////////////////////////////////
 
-static struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
-	struct c11yy_string_objarray *a = malloc(sizeof(struct c11yy_string_objarray));
-	if (a) {
+static int c11yy_string_objarray_init(struct c11yy_string_objarray *a) {
+	if (!a->array) {
 		const size_t init_len = 8;
 
-		memset(a,0,sizeof(*a));
-		a->array = malloc(sizeof(struct c11yy_string_obj) * init_len);
-		if (a->array) {
+		if ((a->array=malloc(sizeof(struct c11yy_string_obj) * init_len)) != NULL) {
 			a->alloc = init_len;
 			a->length = 0;
 			a->next = 0;
 		}
+		else {
+			return -1;
+		}
 	}
 
-	return a;
+	return 0;
 }
 
 static struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
@@ -282,7 +284,7 @@ static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_it
 	return NULL;
 }
 
-static unsigned int c11yy_string_objarray_newstr_extend_alloc(struct c11yy_string_objarray *a,size_t newlen) {
+static unsigned int c11yy_string_objarray_newstr_extend(struct c11yy_string_objarray *a,size_t newlen) {
 	/* assume a && a->array */
 	if (a->alloc < newlen) {
 		struct c11yy_string_obj *na = realloc(a->array, sizeof(struct c11yy_string_obj) * newlen);
@@ -322,7 +324,7 @@ static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string
 		if (r == NULL)
 			r = c11yy_string_objarray_newstr_init_next_length_item(a);
 
-		if (r == NULL && c11yy_string_objarray_newstr_extend_alloc(a,a->alloc + 8u + (a->alloc / 2u))) 
+		if (r == NULL && c11yy_string_objarray_newstr_extend(a,a->alloc + 8u + (a->alloc / 2u))) 
 			r = c11yy_string_objarray_newstr_init_next_length_item(a);
 
 		return r;
@@ -349,29 +351,19 @@ static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_strin
 	return NULL;
 }
 
-static struct c11yy_string_objarray *c11yy_string_objarray_do_free(struct c11yy_string_objarray *a) {
-	if (a) {
-		if (a->array) {
-			size_t i;
+static void c11yy_string_objarray_free(struct c11yy_string_objarray *a) {
+	if (a->array) {
+		size_t i;
 
-			for (i=0;i < a->length;i++)
-				c11yy_string_objarray_freestr_id(a,i);
+		for (i=0;i < a->length;i++)
+			c11yy_string_objarray_freestr_id(a,i);
 
-			free(a->array);
-		}
-
-		a->length = 0;
-		a->alloc = 0;
-		a->next = 0;
-
-		free(a);
+		free(a->array);
 	}
 
-	return NULL;
-}
-
-static void c11yy_string_objarray_free(struct c11yy_string_objarray **a) {
-	if (a) *a = c11yy_string_objarray_do_free(*a);
+	a->length = 0;
+	a->alloc = 0;
+	a->next = 0;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -477,7 +469,7 @@ uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
 
 //////////////////////////////////////////////////////////////////
 
-static struct c11yy_string_objarray *c11yy_stringarray = NULL;
+static struct c11yy_string_objarray c11yy_stringarray = c11yy_string_objarray_INIT;
 
 //////////////////////////////////////////////////////////////////
 
@@ -565,15 +557,15 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 		const size_t len = (size_t)(w - buf);
 		const uint32_t hash = c11yy_string_hash(buf,len);
 
-		st = c11yy_string_objarray_findstr(c11yy_stringarray,hash,buf,len);
+		st = c11yy_string_objarray_findstr(&c11yy_stringarray,hash,buf,len);
 		if (st) {
-			val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+			val->id = c11yy_string_objarray_str2id(&c11yy_stringarray,st);
 			free(buf);
 		}
 		else {
-			st = c11yy_string_objarray_newstr(c11yy_stringarray);
+			st = c11yy_string_objarray_newstr(&c11yy_stringarray);
 			if (st) {
-				val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+				val->id = c11yy_string_objarray_str2id(&c11yy_stringarray,st);
 				st->stype = stype;
 				st->str.s8 = buf;
 				st->hash = hash;
@@ -720,8 +712,8 @@ int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned
 ///////////////////////////////////////////////////////////
 
 static int c11yy_init(void) {
-	if (!c11yy_stringarray) {
-		if ((c11yy_stringarray=c11yy_string_objarray_alloc()) == NULL)
+	if (!c11yy_stringarray.array) {
+		if (c11yy_string_objarray_init(&c11yy_stringarray))
 			return 1;
 	}
 
