@@ -258,7 +258,7 @@ static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_ob
 	return c11yy_string_token_none;
 }
 
-static struct c11yy_string_obj *c11yy_string_objarray_newstr_scan(struct c11yy_string_objarray *a) {
+static struct c11yy_string_obj *c11yy_string_objarray_scan_for_empty_slot(struct c11yy_string_objarray *a) {
 	/* assume a && a->array */
 	while (a->next < a->length) {
 		struct c11yy_string_obj *o = a->array + a->next;
@@ -272,7 +272,7 @@ static struct c11yy_string_obj *c11yy_string_objarray_newstr_scan(struct c11yy_s
 	return NULL;
 }
 
-static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_item(struct c11yy_string_objarray *a) {
+static struct c11yy_string_obj *c11yy_string_objarray_init_next_length_item(struct c11yy_string_objarray *a) {
 	/* assume a && a->array */
 	if (a->length < a->alloc) {
 		struct c11yy_string_obj *o = a->array + a->length;
@@ -284,18 +284,19 @@ static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_it
 	return NULL;
 }
 
-static unsigned int c11yy_string_objarray_newstr_extend(struct c11yy_string_objarray *a,size_t newlen) {
+static int c11yy_string_objarray_extend(struct c11yy_string_objarray *a,size_t newlen) {
 	/* assume a && a->array */
 	if (a->alloc < newlen) {
-		struct c11yy_string_obj *na = realloc(a->array, sizeof(struct c11yy_string_obj) * newlen);
-		if (na) {
+		struct c11yy_string_obj *na;
+
+		if ((na=realloc(a->array, sizeof(struct c11yy_string_obj) * newlen)) != NULL) {
 			a->alloc = newlen;
 			a->array = na;
-			return 1;
+			return 0;
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
 static void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
@@ -308,8 +309,9 @@ static void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
 
 static void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id) {
 	if (a && a->array && id < a->length) {
-		struct c11yy_string_obj *st = c11yy_string_objarray_id2str(a,id);
-		if (st) {
+		struct c11yy_string_obj *st;
+
+		if ((st=c11yy_string_objarray_id2str(a,id)) != NULL) {
 			c11yy_string_obj_freestring(st);
 			memset(st,0,sizeof(*st));
 			a->next = id;
@@ -319,15 +321,12 @@ static void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11
 
 static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a) {
 	if (a && a->array) {
-		struct c11yy_string_obj *r = c11yy_string_objarray_newstr_scan(a);
+		struct c11yy_string_obj *r;
 
-		if (r == NULL)
-			r = c11yy_string_objarray_newstr_init_next_length_item(a);
-
-		if (r == NULL && c11yy_string_objarray_newstr_extend(a,a->alloc + 8u + (a->alloc / 2u))) 
-			r = c11yy_string_objarray_newstr_init_next_length_item(a);
-
-		return r;
+		if ((r=c11yy_string_objarray_scan_for_empty_slot(a)) != NULL) return r;
+		if ((r=c11yy_string_objarray_init_next_length_item(a)) != NULL) return r;
+		if (c11yy_string_objarray_extend(a,a->alloc + 8u + (a->alloc / 2u))) return NULL;
+		return c11yy_string_objarray_init_next_length_item(a);
 	}
 
 	return NULL;
