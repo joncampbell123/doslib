@@ -160,38 +160,33 @@ static int check_type(void);
 
 int yywrap(void)        /* called at end of input */
 {
-    return 1;           /* terminate now */
+	return 1;           /* terminate now */
 }
 
 static void comment(void)
 {
-    int c;
+	int c;
 
-    while ((c = input()) != 0)
-        if (c == '*')
-        {
-            while ((c = input()) == '*')
-                ;
+	while ((c=input()) != 0) {
+		if (c == '*') {
+			while ((c=input()) == '*');
+			if (c == '/') return;
+			if (c == 0) break;
+		}
+	}
 
-            if (c == '/')
-                return;
-
-            if (c == 0)
-                break;
-        }
-    c11yyerror("unterminated comment");
+	c11yyerror("unterminated comment");
 }
 
 static int check_type(void)
 {
-    switch (sym_type(yytext,yyleng))
-    {
-    case TYPEDEF_NAME:                /* previously defined */
-        return TYPEDEF_NAME;
-    case ENUMERATION_CONSTANT:        /* previously defined */
-        return ENUMERATION_CONSTANT;
-    default:                          /* includes undefined */
-        return IDENTIFIER;
-    }
+	switch (sym_type(yytext,yyleng)) {
+		case TYPEDEF_NAME:                /* previously defined */
+			return TYPEDEF_NAME;
+		case ENUMERATION_CONSTANT:        /* previously defined */
+			return ENUMERATION_CONSTANT;
+		default:                          /* includes undefined */
+			return IDENTIFIER;
+	}
 }
 
