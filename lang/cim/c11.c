@@ -652,13 +652,13 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 ////////////////////////////////////////////////////////////////////
 
 static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
-	memcpy(d,s,sizeof(*s));
+	*d = *s;
 	return 0;
 }
 
 static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
-		memcpy(d,s,sizeof(*s));
+		*d = *s;
 		d->intval.v.s = -d->intval.v.s;
 		d->intval.flags |= C11YY_INTF_SIGNED;
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
@@ -670,7 +670,7 @@ static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s)
 
 static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
-		memcpy(d,s,sizeof(*s));
+		*d = *s;
 		d->intval.flags |= C11YY_INTF_SIGNED;
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
 		return 0;
@@ -682,7 +682,7 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
 		/* do not update size */
-		memcpy(d,s,sizeof(*s));
+		*d = *s;
 		d->intval.v.u = ~d->intval.v.u;
 		d->intval.flags &= ~C11YY_INTF_SIGNED;
 		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
@@ -695,7 +695,7 @@ static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s
 static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s) {
 	if (s->base.t == I_CONSTANT) {
 		/* do not update size */
-		memset(d,0,sizeof(*d));
+		*d = *s;
 		d->base.t = s->base.t;
 		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
 		return 0;
