@@ -67,19 +67,7 @@ union c11yy_struct {
 	struct c11yy_struct_strliteral		strlitval;
 };
 
-#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
-
-static inline uint32_t c11yy_string_hash_begin() {
-	return c11yy_string_hash_init;
-}
-
-static inline uint32_t c11yy_string_hash_step(const uint32_t h,const uint8_t c) {
-	return ((h << (uint32_t)13ul) ^ (h >> (uint32_t)19ul) ^ (h >> (uint32_t)31u) ^ 1) + (uint32_t)c;
-}
-
-static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
-	return (uint32_t)(~h);
-}
+/////////////////////////////////////////////////////////////////////////////////////
 
 struct c11yy_string_obj {
 	enum c11yystringtype			stype;
@@ -93,24 +81,9 @@ struct c11yy_string_obj {
 	} str;
 };
 
-struct c11yy_string_objarray {
-	struct c11yy_string_obj*		array;
-	size_t					length,alloc,next;
-};
-
-struct c11yy_string_objarray *c11yy_string_objarray_alloc(void);
-struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l);
-struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id);
-c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
-void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id);
-void c11yy_string_objarray_freestr_obj(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
-struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a);
-void c11yy_string_objarray_free(struct c11yy_string_objarray **a);
-void c11yy_string_obj_freestring(struct c11yy_string_obj *st);
+/////////////////////////////////////////////////////////////////////////////////////////
 
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
-
-extern struct c11yy_string_objarray *c11yy_stringarray;
 

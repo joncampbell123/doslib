@@ -6,7 +6,33 @@
 #include "c11.l.h"
 #include "c11.y.h"
 
-struct c11yy_string_objarray *c11yy_stringarray = NULL;
+struct c11yy_string_objarray {
+	struct c11yy_string_obj*		array;
+	size_t					length,alloc,next;
+};
+
+#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
+
+static inline uint32_t c11yy_string_hash_begin() {
+	return c11yy_string_hash_init;
+}
+
+static inline uint32_t c11yy_string_hash_step(const uint32_t h,const uint8_t c) {
+	return ((h << (uint32_t)13ul) ^ (h >> (uint32_t)19ul) ^ (h >> (uint32_t)31u) ^ 1) + (uint32_t)c;
+}
+
+static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
+	return (uint32_t)(~h);
+}
+
+static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a);
+static struct c11yy_string_obj *c11yy_string_objarray_newstr_scan(struct c11yy_string_objarray *a);
+static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_item(struct c11yy_string_objarray *a);
+static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l);
+static struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id);
+static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
+
+static struct c11yy_string_objarray *c11yy_stringarray = NULL;
 
 static void c11yyskip(const char **y,unsigned int c) {
 	const char *s = *y;
@@ -519,7 +545,7 @@ int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned
 		return 1;
 }
 
-struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
+static struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
 	struct c11yy_string_objarray *a = malloc(sizeof(struct c11yy_string_objarray));
 	if (a) {
 		const size_t init_len = 8;
@@ -536,14 +562,14 @@ struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
 	return a;
 }
 
-struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
+static struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
 	if (a && a->array && id < a->length)
 		return a->array + id; /* pointer math equiv to &(a->array[id]) */
 
 	return NULL;
 }
 
-c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
+static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
 	if (a && a->array && st >= a->array) {
 		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(string_obj) */
 		if (i < a->length) return i;
@@ -592,7 +618,7 @@ static unsigned int c11yy_string_objarray_newstr_extend_alloc(struct c11yy_strin
 	return 0;
 }
 
-void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
+static void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
 	if (st) {
 		if (st->str.raw) free(st->str.raw);
 		st->str.raw = NULL;
@@ -600,7 +626,7 @@ void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
 	}
 }
 
-void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id) {
+static void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id) {
 	if (a && a->array && id < a->length) {
 		struct c11yy_string_obj *st = c11yy_string_objarray_id2str(a,id);
 		if (st) {
@@ -611,16 +637,7 @@ void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_stri
 	}
 }
 
-void c11yy_string_objarray_freestr_obj(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
-	if (a && a->array) {
-		const c11yy_string_token_id id = c11yy_string_objarray_str2id(a,st);
-		if (id != c11yy_string_token_none) a->next = id;
-		c11yy_string_obj_freestring(st);
-		memset(st,0,sizeof(*st));
-	}
-}
-
-struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a) {
+static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a) {
 	if (a && a->array) {
 		struct c11yy_string_obj *r = c11yy_string_objarray_newstr_scan(a);
 
@@ -636,7 +653,7 @@ struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarr
 	return NULL;
 }
 
-struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
+static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
 	if (a && a->array) {
 		struct c11yy_string_obj *sc = a->array;
 		size_t sl = a->length;
@@ -654,7 +671,7 @@ struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objar
 	return NULL;
 }
 
-struct c11yy_string_objarray *c11yy_string_objarray_do_free(struct c11yy_string_objarray *a) {
+static struct c11yy_string_objarray *c11yy_string_objarray_do_free(struct c11yy_string_objarray *a) {
 	if (a) {
 		if (a->array) {
 			size_t i;
@@ -675,7 +692,7 @@ struct c11yy_string_objarray *c11yy_string_objarray_do_free(struct c11yy_string_
 	return NULL;
 }
 
-void c11yy_string_objarray_free(struct c11yy_string_objarray **a) {
+static void c11yy_string_objarray_free(struct c11yy_string_objarray **a) {
 	if (a) *a = c11yy_string_objarray_do_free(*a);
 }
 
