@@ -472,11 +472,12 @@ static struct c11yy_string_objarray c11yy_stringarray = c11yy_string_objarray_IN
 
 //////////////////////////////////////////////////////////////////
 
-void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
+void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng) {
 	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
 	enum c11yystringtype stype = C11YY_STRT_LOCAL;
 	struct c11yy_struct_integer ival;
 	uint8_t *buf,*w;
+	size_t alloc;
 
 	val->id = c11yy_string_token_none;
 	val->t = STRING_LITERAL;
@@ -503,9 +504,9 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 	}
 
 	{
-		const size_t extra = 16; /* enough space for encoding and writing a NUL at end of loop */
-		size_t alloc = 64;
+		const size_t extra = 16u; /* enough space for encoding and writing a NUL at end of loop */
 
+		alloc = (yyleng >= 16ul/*min*/ ? (yyleng < 65535ul/*max*/ ? yyleng : 4096ul) : 16ul);
 		w = buf = malloc(alloc);
 		if (!buf) return;//err
 
@@ -555,6 +556,23 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 		struct c11yy_string_obj *st;
 		const size_t len = (size_t)(w - buf);
 		const uint32_t hash = c11yy_string_hash(buf,len);
+
+		if (len > 32768) {
+			free(buf);
+			return;//err
+		}
+
+		if (len < alloc) {
+			uint8_t *np = realloc(buf,len);
+			if (np) {
+				alloc = len;
+				buf = np;
+			}
+			else {
+				free(buf);
+				return;//err
+			}
+		}
 
 		st = c11yy_string_objarray_findstr(&c11yy_stringarray,hash,buf,len);
 		if (st) {
