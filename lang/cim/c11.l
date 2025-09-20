@@ -32,9 +32,9 @@ extern union c11yy_struct c11yylval;
 
 extern void c11yyerror(const char *);  /* prints grammar violation message */
 
-extern int sym_type(const char *);  /* returns type from symbol table */
+extern int sym_type(const char *,size_t len);  /* returns type from symbol table */
 
-#define sym_type(identifier) IDENTIFIER /* with no symbol table, fake it */
+#define sym_type(identifier,len) IDENTIFIER /* with no symbol table, fake it */
 
 static void comment(void);
 static int check_type(void);
@@ -104,7 +104,7 @@ static int check_type(void);
 {HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
 {HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ c11yy_init_strlit(&c11yylval.strlitval,yytext,yyleng); return STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ c11yy_init_strlit(&c11yylval.strlitval,yytext); return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
 ">>="					{ return RIGHT_ASSIGN; }
@@ -184,7 +184,7 @@ static void comment(void)
 
 static int check_type(void)
 {
-    switch (sym_type(yytext))
+    switch (sym_type(yytext,yyleng))
     {
     case TYPEDEF_NAME:                /* previously defined */
         return TYPEDEF_NAME;
