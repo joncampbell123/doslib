@@ -647,8 +647,6 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 		if (val->v.s < (int64_t)0)
 			val->flags |= C11YY_INTF_OVERFLOW;
 	}
-
-	fprintf(stderr,"%llu sz=%u f=%x\n",(unsigned long long)val->v.u,val->sz,val->flags);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -664,7 +662,6 @@ static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s)
 		d->intval.v.s = -d->intval.v.s;
 		d->intval.flags |= C11YY_INTF_SIGNED;
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
-		fprintf(stderr,"negate %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
 		return 0;
 	}
 
@@ -676,7 +673,6 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 		memcpy(d,s,sizeof(*s));
 		d->intval.flags |= C11YY_INTF_SIGNED;
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
-		fprintf(stderr,"pos %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
 		return 0;
 	}
 
@@ -690,7 +686,6 @@ static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s
 		d->intval.v.u = ~d->intval.v.u;
 		d->intval.flags &= ~C11YY_INTF_SIGNED;
 		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
-		fprintf(stderr,"bnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
 		return 0;
 	}
 
@@ -703,7 +698,6 @@ static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s
 		memset(d,0,sizeof(*d));
 		d->base.t = s->base.t;
 		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
-		fprintf(stderr,"lnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
 		return 0;
 	}
 
