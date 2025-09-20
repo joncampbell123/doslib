@@ -6,65 +6,7 @@
 #include "c11.l.h"
 #include "c11.y.h"
 
-struct c11yy_string_objarray {
-	struct c11yy_string_obj*		array;
-	size_t					length,alloc,next;
-};
-
-#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
-
-static inline uint32_t c11yy_string_hash_begin() {
-	return c11yy_string_hash_init;
-}
-
-static inline uint32_t c11yy_string_hash_step(const uint32_t h,const uint8_t c) {
-	return ((h << (uint32_t)13ul) ^ (h >> (uint32_t)19ul) ^ (h >> (uint32_t)31u) ^ 1) + (uint32_t)c;
-}
-
-static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
-	return (uint32_t)(~h);
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a);
-static struct c11yy_string_obj *c11yy_string_objarray_newstr_scan(struct c11yy_string_objarray *a);
-static struct c11yy_string_obj *c11yy_string_objarray_newstr_init_next_length_item(struct c11yy_string_objarray *a);
-static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l);
-static struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id);
-static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
-
-static struct c11yy_string_objarray *c11yy_stringarray = NULL;
-
-static void c11yyskip(const char **y,unsigned int c) {
-	const char *s = *y;
-
-	while (*s && c) {
-		s++;
-		c--;
-	}
-
-	*y = s;
-}
-
-static int c11yy_iconst_readc(const unsigned int base,const char **y) {
-	const char *s = *y;
-	unsigned char v;
-
-	if (*s >= '0' && *s <= '9')
-		v = (unsigned char)(*s - '0');
-	else if (*s >= 'a' && *s <= 'z')
-		v = (unsigned char)(*s + 10 - 'a');
-	else if (*s >= 'A' && *s <= 'Z')
-		v = (unsigned char)(*s + 10 - 'A');
-	else
-		return -1;
-
-	if (v < base) {
-		*y = ++s;
-		return (int)v;
-	}
-
-	return -1;
-}
+///////////////////////////////////////////////////////
 
 static uint8_t c11yy_iconstu_auto_size(uint64_t v) {
 	uint8_t sz = 0u;
@@ -84,24 +26,7 @@ static uint8_t c11yy_iconsts_auto_size(int64_t v) {
 		return c11yy_iconstu_auto_size((((uint64_t)(-v)) - (uint64_t)1ull) >> (uint64_t)7ull) + 8u;
 }
 
-static void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,const char **y) {
-	const uint64_t maxv = UINT64_MAX / (uint64_t)(base);
-	const char *s = *y;
-	int v;
-
-	val->v.u = 0;
-	while (*s) {
-		if ((v=c11yy_iconst_readc(base,&s)) < 0)
-			break;
-
-		if (val->v.u > maxv)
-			val->flags |= C11YY_INTF_OVERFLOW;
-
-		val->v.u = (val->v.u * ((uint64_t)base)) + ((uint64_t)(unsigned int)v);
-	}
-
-	*y = s;
-}
+////////////////////////////////////////////////////////////////////
 
 static void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
 	const char *s = *y;
@@ -145,6 +70,61 @@ static void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char 
 #undef LLF
 #undef LF
 #undef UF
+}
+
+////////////////////////////////////////////////////////////////////
+
+static void c11yyskip(const char **y,unsigned int c) {
+	const char *s = *y;
+
+	while (*s && c) {
+		s++;
+		c--;
+	}
+
+	*y = s;
+}
+
+////////////////////////////////////////////////////////
+
+static int c11yy_iconst_readc(const unsigned int base,const char **y) {
+	const char *s = *y;
+	unsigned char v;
+
+	if (*s >= '0' && *s <= '9')
+		v = (unsigned char)(*s - '0');
+	else if (*s >= 'a' && *s <= 'z')
+		v = (unsigned char)(*s + 10 - 'a');
+	else if (*s >= 'A' && *s <= 'Z')
+		v = (unsigned char)(*s + 10 - 'A');
+	else
+		return -1;
+
+	if (v < base) {
+		*y = ++s;
+		return (int)v;
+	}
+
+	return -1;
+}
+
+static void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer *val,const char **y) {
+	const uint64_t maxv = UINT64_MAX / (uint64_t)(base);
+	const char *s = *y;
+	int v;
+
+	val->v.u = 0;
+	while (*s) {
+		if ((v=c11yy_iconst_readc(base,&s)) < 0)
+			break;
+
+		if (val->v.u > maxv)
+			val->flags |= C11YY_INTF_OVERFLOW;
+
+		val->v.u = (val->v.u * ((uint64_t)base)) + ((uint64_t)(unsigned int)v);
+	}
+
+	*y = s;
 }
 
 static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_integer *val,const char **y) {
@@ -218,332 +198,30 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 	*y = s;
 }
 
-static void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **y) {
-	const char *s = *y;
+///////////////////////////////////////////////////////
 
-	if (*s == 'u') {
-		*st = C11YY_STRT_UTF16; s++;
-		if (*s == '8') {
-			*st = C11YY_STRT_UTF8; s++;
-		}
-	}
-	else if (*s == 'U') {
-		*st = C11YY_STRT_UTF32; s++;
-	}
-	else if (*s == 'L') {
-		*st = C11YY_STRT_UTF32; s++;
-	}
-
-	*y = s;
-}
-
-static int c11yy_strl_write_local(uint8_t **dst,struct c11yy_struct_integer *val) {
-	uint8_t *d = *dst;
-
-	if (val->v.s < 0 || val->v.s > 255)
-		return 1;
-
-	*d++ = (uint8_t)val->v.u;
-	*dst = d;
-	return 0;
-}
-
-static int c11yy_strl_write_utf8(uint8_t **dst,struct c11yy_struct_integer *val) {
-	uint8_t *d = *dst;
-
-	if (val->v.s < 0 || val->v.s > 0x7FFFFFFFll)
-		return 1;
-
-	{
-		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
-		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
-		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
-		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
-		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
-		uint32_t c = (uint32_t)val->v.u;
-		if (c >= 0x80) {
-			unsigned char more = 1;
-			{
-				uint32_t tmp = (uint32_t)(c) >> (uint32_t)(11u);
-				while (tmp != 0) { more++; tmp >>= (uint32_t)(5u); }
-				assert(more <= 5);
-			}
-
-			const uint8_t ib = 0xFC << (5 - more);
-			unsigned char *wr = d; d += 1+more;
-			do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
-			assert((uint32_t)(c) <= (uint32_t)((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
-			wr[0] = (unsigned char)(ib | (unsigned char)c);
-		}
-		else {
-			*d++ = (unsigned char)c;
-		}
-	}
-
-	*dst = d;
-	return 0;
-}
-
-static int c11yy_strl_write_utf16(uint8_t **dst,struct c11yy_struct_integer *val) {
-	uint16_t *d = (uint16_t*)(*dst);
-
-	if (val->v.s < 0 || val->v.s > 0x10FFFFll)
-		return 1;
-
-	// TODO: Encode UTF-16 including surrogate pairs
-	*d++ = (uint16_t)val->v.u;
-	*dst = (uint8_t*)d;
-	return 0;
-}
-
-static int c11yy_strl_write_utf32(uint8_t **dst,struct c11yy_struct_integer *val) {
-	uint32_t *d = (uint32_t*)(*dst);
-
-	if (val->v.s < 0 || val->v.s > 0xFFFFFFFFll)
-		return 1;
-
-	*d++ = (uint32_t)val->v.u;
-	*dst = (uint8_t*)d;
-	return 0;
-}
-
-uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
-	uint32_t h = c11yy_string_hash_begin();
-	while ((l--) != 0ul) h = c11yy_string_hash_step(h,*s++);
-	return c11yy_string_hash_end(h);
-}
-
-void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
-	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
-	enum c11yystringtype stype = C11YY_STRT_LOCAL;
-	struct c11yy_struct_integer ival;
-	uint8_t *buf,*w;
-
-	val->id = c11yy_string_token_none;
-	val->t = STRING_LITERAL;
-
-	if (*yytext == 'u') {
-		strw = c11yy_strl_write_utf16;
-		stype = C11YY_STRT_UTF16;
-		yytext++;
-		if (*yytext == '8') {
-			strw = c11yy_strl_write_utf8;
-			stype = C11YY_STRT_UTF8;
-			yytext++;
-		}
-	}
-	else if (*yytext == 'U') {
-		strw = c11yy_strl_write_utf32;
-		stype = C11YY_STRT_UTF32;
-		yytext++;
-	}
-	else if (*yytext == 'L') {
-		strw = c11yy_strl_write_utf16;
-		stype = C11YY_STRT_UTF16;
-		yytext++;
-	}
-
-	{
-		const size_t extra = 16; /* enough space for encoding and writing a NUL at end of loop */
-		size_t alloc = 64;
-
-		w = buf = malloc(alloc);
-		if (!buf) return;//err
-
-		while (*yytext) {
-			// trust the lexer has provided us properly formatted strings with escapes and possible whitespace between them
-			if (*yytext == '\"') {
-				yytext++;
-
-				while (*yytext) {
-					if (*yytext == '\"') {
-						yytext++;
-						break;//err
-					}
-
-					if ((w+extra) > (buf+alloc)) {
-						const size_t nal = alloc + 8u + (alloc / 2u);
-						const size_t wo = (size_t)(w - buf); /* realloc may move buffer */
-						uint8_t *np = realloc(buf,nal);
-						if (!np) {
-							free(buf);
-							return;//err
-						}
-						buf = np;
-						alloc = nal;
-						w = buf + wo; /* realloc may move buffer */
-					}
-
-					assert((w+extra) <= (buf+alloc));
-
-					c11yy_iconst_readchar(stype,&ival,&yytext);
-					if (strw(&w,&ival)) {
-						free(buf);
-						return;//err
-					}
-				}
-			}
-			else {
-				yytext++;
-			}
-		}
-
-		assert(w >= buf);
-		assert(w <= (buf+alloc));
-	}
-
-	{
-		struct c11yy_string_obj *st;
-		const size_t len = (size_t)(w - buf);
-		const uint32_t hash = c11yy_string_hash(buf,len);
-
-		st = c11yy_string_objarray_findstr(c11yy_stringarray,hash,buf,len);
-		if (st) {
-			val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
-			free(buf);
-		}
-		else {
-			st = c11yy_string_objarray_newstr(c11yy_stringarray);
-			if (st) {
-				val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
-				st->stype = stype;
-				st->str.s8 = buf;
-				st->hash = hash;
-				st->len = len;
-			}
-			else {
-				free(buf);
-				return;//err
-			}
-		}
-	}
-}
-
-void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch) {
-	/* lexmatch:
-	 * 'H' hexadecimal
-	 * 'N' decimal (starts with 1-9)
-	 * 'O' octal (starts with 0, or is just zero)
-	 * 'C' char constant
-	 */
-	val->sz = 0;
-	val->v.u = 0;
-	val->flags = C11YY_INTF_SIGNED; /* values are signed by default */
-	val->t = I_CONSTANT;
-
-	if (lexmatch == 'H') {
-		c11yyskip(&yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
-		c11yy_iconst_read(/*base*/16,val,&yytext);
-		c11yy_iconst_readsuffix(val,&yytext);
-	}
-	else if (lexmatch == 'N') {
-		c11yy_iconst_read(/*base*/10,val,&yytext);
-		c11yy_iconst_readsuffix(val,&yytext);
-	}
-	else if (lexmatch == 'O') {
-		c11yy_iconst_read(/*base*/8,val,&yytext); /* "0" is handled as octal, which is still correct parsing anyway */
-		c11yy_iconst_readsuffix(val,&yytext);
-	}
-	else if (lexmatch == 'C') {
-		enum c11yystringtype st = C11YY_STRT_LOCAL;
-
-		/* NTS: lexer syntax prevents 'u8' prefix */
-		c11yy_check_stringtype_prefix(&st,&yytext);
-
-		if (*yytext == '\'') {
-			yytext++;
-			c11yy_iconst_readchar(st,val,&yytext);
-			/* assume trailing ' */
-		}
-	}
-
-	{
-		const uint8_t sz = c11yy_iconstu_auto_size(val->v.u);
-		if (val->sz < sz) val->sz = sz;
-	}
-
-	/* this code never parses the leading minus sign, therefore everything parsed here is a nonnegative number,
-	 * therefore if signed and the leading bit is set, overflow happend. */
-	if (val->flags & C11YY_INTF_SIGNED) {
-		if (val->v.s < (int64_t)0)
-			val->flags |= C11YY_INTF_OVERFLOW;
-	}
-
-	fprintf(stderr,"%llu sz=%u f=%x\n",(unsigned long long)val->v.u,val->sz,val->flags);
-}
-
-static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
-	memcpy(d,s,sizeof(*s));
-	return 0;
-}
-
-static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
-	if (s->base.t == I_CONSTANT) {
-		memcpy(d,s,sizeof(*s));
-		d->intval.v.s = -d->intval.v.s;
-		d->intval.flags |= C11YY_INTF_SIGNED;
-		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
-		fprintf(stderr,"negate %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
-	if (s->base.t == I_CONSTANT) {
-		memcpy(d,s,sizeof(*s));
-		d->intval.flags |= C11YY_INTF_SIGNED;
-		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
-		fprintf(stderr,"pos %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s) {
-	if (s->base.t == I_CONSTANT) {
-		/* do not update size */
-		memcpy(d,s,sizeof(*s));
-		d->intval.v.u = ~d->intval.v.u;
-		d->intval.flags &= ~C11YY_INTF_SIGNED;
-		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
-		fprintf(stderr,"bnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s) {
-	if (s->base.t == I_CONSTANT) {
-		/* do not update size */
-		memset(d,0,sizeof(*d));
-		d->base.t = s->base.t;
-		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
-		fprintf(stderr,"lnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const union c11yy_struct *) = {
-	/* if FFMPEG has long used this kind of init than we should too */
-	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
-	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
-	[C11YY_UNOP_POS]  = c11yy_unary_op_pos,
-	[C11YY_UNOP_BNOT] = c11yy_unary_op_bnot,
-	[C11YY_UNOP_LNOT] = c11yy_unary_op_lnot
+struct c11yy_string_objarray {
+	struct c11yy_string_obj*		array;
+	size_t					length,alloc,next;
 };
 
-int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
-	if (unop < C11YY_UNOP__MAX)
-		return c11yy_unary_op[unop](d,s);
-	else
-		return 1;
+///////////////////////////////////////////////////////
+
+#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
+
+static inline uint32_t c11yy_string_hash_begin() {
+	return c11yy_string_hash_init;
 }
+
+static inline uint32_t c11yy_string_hash_step(const uint32_t h,const uint8_t c) {
+	return ((h << (uint32_t)13ul) ^ (h >> (uint32_t)19ul) ^ (h >> (uint32_t)31u) ^ 1) + (uint32_t)c;
+}
+
+static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
+	return (uint32_t)(~h);
+}
+
+///////////////////////////////////////////////////////////
 
 static struct c11yy_string_objarray *c11yy_string_objarray_alloc(void) {
 	struct c11yy_string_objarray *a = malloc(sizeof(struct c11yy_string_objarray));
@@ -696,6 +374,351 @@ static void c11yy_string_objarray_free(struct c11yy_string_objarray **a) {
 	if (a) *a = c11yy_string_objarray_do_free(*a);
 }
 
+///////////////////////////////////////////////////////////////////
+
+static void c11yy_check_stringtype_prefix(enum c11yystringtype *st,const char **y) {
+	const char *s = *y;
+
+	if (*s == 'u') {
+		*st = C11YY_STRT_UTF16; s++;
+		if (*s == '8') {
+			*st = C11YY_STRT_UTF8; s++;
+		}
+	}
+	else if (*s == 'U') {
+		*st = C11YY_STRT_UTF32; s++;
+	}
+	else if (*s == 'L') {
+		*st = C11YY_STRT_UTF32; s++;
+	}
+
+	*y = s;
+}
+
+////////////////////////////////////////////////////////////////////
+
+static int c11yy_strl_write_local(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint8_t *d = *dst;
+
+	if (val->v.s < 0 || val->v.s > 255)
+		return 1;
+
+	*d++ = (uint8_t)val->v.u;
+	*dst = d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf8(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint8_t *d = *dst;
+
+	if (val->v.s < 0 || val->v.s > 0x7FFFFFFFll)
+		return 1;
+
+	{
+		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+		uint32_t c = (uint32_t)val->v.u;
+		if (c >= 0x80) {
+			unsigned char more = 1;
+			{
+				uint32_t tmp = (uint32_t)(c) >> (uint32_t)(11u);
+				while (tmp != 0) { more++; tmp >>= (uint32_t)(5u); }
+				assert(more <= 5);
+			}
+
+			const uint8_t ib = 0xFC << (5 - more);
+			unsigned char *wr = d; d += 1+more;
+			do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
+			assert((uint32_t)(c) <= (uint32_t)((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
+			wr[0] = (unsigned char)(ib | (unsigned char)c);
+		}
+		else {
+			*d++ = (unsigned char)c;
+		}
+	}
+
+	*dst = d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf16(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint16_t *d = (uint16_t*)(*dst);
+
+	if (val->v.s < 0 || val->v.s > 0x10FFFFll)
+		return 1;
+
+	// TODO: Encode UTF-16 including surrogate pairs
+	*d++ = (uint16_t)val->v.u;
+	*dst = (uint8_t*)d;
+	return 0;
+}
+
+static int c11yy_strl_write_utf32(uint8_t **dst,struct c11yy_struct_integer *val) {
+	uint32_t *d = (uint32_t*)(*dst);
+
+	if (val->v.s < 0 || val->v.s > 0xFFFFFFFFll)
+		return 1;
+
+	*d++ = (uint32_t)val->v.u;
+	*dst = (uint8_t*)d;
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////
+
+uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
+	uint32_t h = c11yy_string_hash_begin();
+	while ((l--) != 0ul) h = c11yy_string_hash_step(h,*s++);
+	return c11yy_string_hash_end(h);
+}
+
+//////////////////////////////////////////////////////////////////
+
+static struct c11yy_string_objarray *c11yy_stringarray = NULL;
+
+//////////////////////////////////////////////////////////////////
+
+void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
+	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
+	enum c11yystringtype stype = C11YY_STRT_LOCAL;
+	struct c11yy_struct_integer ival;
+	uint8_t *buf,*w;
+
+	val->id = c11yy_string_token_none;
+	val->t = STRING_LITERAL;
+
+	if (*yytext == 'u') {
+		strw = c11yy_strl_write_utf16;
+		stype = C11YY_STRT_UTF16;
+		yytext++;
+		if (*yytext == '8') {
+			strw = c11yy_strl_write_utf8;
+			stype = C11YY_STRT_UTF8;
+			yytext++;
+		}
+	}
+	else if (*yytext == 'U') {
+		strw = c11yy_strl_write_utf32;
+		stype = C11YY_STRT_UTF32;
+		yytext++;
+	}
+	else if (*yytext == 'L') {
+		strw = c11yy_strl_write_utf16;
+		stype = C11YY_STRT_UTF16;
+		yytext++;
+	}
+
+	{
+		const size_t extra = 16; /* enough space for encoding and writing a NUL at end of loop */
+		size_t alloc = 64;
+
+		w = buf = malloc(alloc);
+		if (!buf) return;//err
+
+		while (*yytext) {
+			// trust the lexer has provided us properly formatted strings with escapes and possible whitespace between them
+			if (*yytext == '\"') {
+				yytext++;
+
+				while (*yytext) {
+					if (*yytext == '\"') {
+						yytext++;
+						break;//err
+					}
+
+					if ((w+extra) > (buf+alloc)) {
+						const size_t nal = alloc + 8u + (alloc / 2u);
+						const size_t wo = (size_t)(w - buf); /* realloc may move buffer */
+						uint8_t *np = realloc(buf,nal);
+						if (!np) {
+							free(buf);
+							return;//err
+						}
+						buf = np;
+						alloc = nal;
+						w = buf + wo; /* realloc may move buffer */
+					}
+
+					assert((w+extra) <= (buf+alloc));
+
+					c11yy_iconst_readchar(stype,&ival,&yytext);
+					if (strw(&w,&ival)) {
+						free(buf);
+						return;//err
+					}
+				}
+			}
+			else {
+				yytext++;
+			}
+		}
+
+		assert(w >= buf);
+		assert(w <= (buf+alloc));
+	}
+
+	{
+		struct c11yy_string_obj *st;
+		const size_t len = (size_t)(w - buf);
+		const uint32_t hash = c11yy_string_hash(buf,len);
+
+		st = c11yy_string_objarray_findstr(c11yy_stringarray,hash,buf,len);
+		if (st) {
+			val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+			free(buf);
+		}
+		else {
+			st = c11yy_string_objarray_newstr(c11yy_stringarray);
+			if (st) {
+				val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+				st->stype = stype;
+				st->str.s8 = buf;
+				st->hash = hash;
+				st->len = len;
+			}
+			else {
+				free(buf);
+				return;//err
+			}
+		}
+	}
+}
+
+////////////////////////////////////////////////////////
+
+void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch) {
+	/* lexmatch:
+	 * 'H' hexadecimal
+	 * 'N' decimal (starts with 1-9)
+	 * 'O' octal (starts with 0, or is just zero)
+	 * 'C' char constant
+	 */
+	val->sz = 0;
+	val->v.u = 0;
+	val->flags = C11YY_INTF_SIGNED; /* values are signed by default */
+	val->t = I_CONSTANT;
+
+	if (lexmatch == 'H') {
+		c11yyskip(&yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
+		c11yy_iconst_read(/*base*/16,val,&yytext);
+		c11yy_iconst_readsuffix(val,&yytext);
+	}
+	else if (lexmatch == 'N') {
+		c11yy_iconst_read(/*base*/10,val,&yytext);
+		c11yy_iconst_readsuffix(val,&yytext);
+	}
+	else if (lexmatch == 'O') {
+		c11yy_iconst_read(/*base*/8,val,&yytext); /* "0" is handled as octal, which is still correct parsing anyway */
+		c11yy_iconst_readsuffix(val,&yytext);
+	}
+	else if (lexmatch == 'C') {
+		enum c11yystringtype st = C11YY_STRT_LOCAL;
+
+		/* NTS: lexer syntax prevents 'u8' prefix */
+		c11yy_check_stringtype_prefix(&st,&yytext);
+
+		if (*yytext == '\'') {
+			yytext++;
+			c11yy_iconst_readchar(st,val,&yytext);
+			/* assume trailing ' */
+		}
+	}
+
+	{
+		const uint8_t sz = c11yy_iconstu_auto_size(val->v.u);
+		if (val->sz < sz) val->sz = sz;
+	}
+
+	/* this code never parses the leading minus sign, therefore everything parsed here is a nonnegative number,
+	 * therefore if signed and the leading bit is set, overflow happend. */
+	if (val->flags & C11YY_INTF_SIGNED) {
+		if (val->v.s < (int64_t)0)
+			val->flags |= C11YY_INTF_OVERFLOW;
+	}
+
+	fprintf(stderr,"%llu sz=%u f=%x\n",(unsigned long long)val->v.u,val->sz,val->flags);
+}
+
+////////////////////////////////////////////////////////////////////
+
+static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
+	memcpy(d,s,sizeof(*s));
+	return 0;
+}
+
+static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		memcpy(d,s,sizeof(*s));
+		d->intval.v.s = -d->intval.v.s;
+		d->intval.flags |= C11YY_INTF_SIGNED;
+		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
+		fprintf(stderr,"negate %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		memcpy(d,s,sizeof(*s));
+		d->intval.flags |= C11YY_INTF_SIGNED;
+		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
+		fprintf(stderr,"pos %lld sz %u\n",(signed long long)d->intval.v.s,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		/* do not update size */
+		memcpy(d,s,sizeof(*s));
+		d->intval.v.u = ~d->intval.v.u;
+		d->intval.flags &= ~C11YY_INTF_SIGNED;
+		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
+		fprintf(stderr,"bnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s) {
+	if (s->base.t == I_CONSTANT) {
+		/* do not update size */
+		memset(d,0,sizeof(*d));
+		d->base.t = s->base.t;
+		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
+		fprintf(stderr,"lnot %llu sz %u\n",(unsigned long long)d->intval.v.u,d->intval.sz);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const union c11yy_struct *) = {
+	/* if FFMPEG has long used this kind of init than we should too */
+	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
+	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
+	[C11YY_UNOP_POS]  = c11yy_unary_op_pos,
+	[C11YY_UNOP_BNOT] = c11yy_unary_op_bnot,
+	[C11YY_UNOP_LNOT] = c11yy_unary_op_lnot
+};
+
+int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
+	if (unop < C11YY_UNOP__MAX)
+		return c11yy_unary_op[unop](d,s);
+	else
+		return 1;
+}
+
+///////////////////////////////////////////////////////////
+
 static int c11yy_init(void) {
 	if (!c11yy_stringarray) {
 		if ((c11yy_stringarray=c11yy_string_objarray_alloc()) == NULL)
@@ -708,6 +731,8 @@ static int c11yy_init(void) {
 static void c11yy_cleanup(void) {
 	c11yy_string_objarray_free(&c11yy_stringarray);
 }
+
+/////////////////////////////////////////////////////////////
 
 int main() {
 	if (c11yy_init()) {
