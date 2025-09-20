@@ -8,5 +8,6 @@ void func() {
 	const long *strs = { L"Hello", L"World""How", L"Are" "You" };
 	const char *strs = { u8"Ｔｅｓｔｉｎｇ　１２３" };
 	const char *strs = { u8"Wide text Ｔｅｓｔｉｎｇ　１２３ is so vaporwave" };
+	const char *strs = { "Hello", "Hello", "Hello", "Hello", "\x48\x65\x6c\x6c\x6f" };
 }
 

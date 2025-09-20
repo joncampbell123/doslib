@@ -281,13 +281,19 @@ static int c11yy_strl_write_utf32(uint8_t **dst,struct c11yy_struct_integer *val
 	return 0;
 }
 
+uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
+	uint32_t h = c11yy_string_hash_begin();
+	while ((l--) != 0ul) h = c11yy_string_hash_step(h,*s++);
+	return c11yy_string_hash_end(h);
+}
+
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
-	struct c11yy_string_obj *st = c11yy_string_objarray_newstr(c11yy_stringarray);
 	enum c11yystringtype stype = C11YY_STRT_LOCAL;
 	struct c11yy_struct_integer ival;
+	uint8_t *buf,*w;
 
-	val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+	val->id = c11yy_string_token_none;
 	val->t = STRING_LITERAL;
 
 	if (*yytext == 'u') {
@@ -311,12 +317,9 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 		yytext++;
 	}
 
-	if (!st) return;
-
 	{
 		const size_t extra = 16; /* enough space for encoding and writing a NUL at end of loop */
 		size_t alloc = 64;
-		uint8_t *buf,*w;
 
 		w = buf = malloc(alloc);
 		if (!buf) return;//err
@@ -359,13 +362,34 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext) {
 			}
 		}
 
-		ival.v.u = 0;
-		strw(&w,&ival);
+		assert(w >= buf);
 		assert(w <= (buf+alloc));
+	}
 
-		st->len = (size_t)(w - buf);
-		st->stype = stype;
-		st->str.s8 = buf;
+	{
+		struct c11yy_string_obj *st;
+		const size_t len = (size_t)(w - buf);
+		const uint32_t hash = c11yy_string_hash(buf,len);
+
+		st = c11yy_string_objarray_findstr(c11yy_stringarray,hash,buf,len);
+		if (st) {
+			val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+			free(buf);
+		}
+		else {
+			st = c11yy_string_objarray_newstr(c11yy_stringarray);
+			if (st) {
+				val->id = c11yy_string_objarray_str2id(c11yy_stringarray,st);
+				st->stype = stype;
+				st->str.s8 = buf;
+				st->hash = hash;
+				st->len = len;
+			}
+			else {
+				free(buf);
+				return;//err
+			}
+		}
 	}
 }
 
@@ -607,6 +631,24 @@ struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarr
 			r = c11yy_string_objarray_newstr_init_next_length_item(a);
 
 		return r;
+	}
+
+	return NULL;
+}
+
+struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
+	if (a && a->array) {
+		struct c11yy_string_obj *sc = a->array;
+		size_t sl = a->length;
+
+		while ((sl--) != 0ul) {
+			if ((hash == (uint32_t)0 || hash == sc->hash) && sc->len == l && sc->str.raw) {
+				if (memcmp(sc->str.s8,s,l) == 0)
+					return sc;
+			}
+
+			sc++;
+		}
 	}
 
 	return NULL;

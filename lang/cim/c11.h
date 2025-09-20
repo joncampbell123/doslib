@@ -67,9 +67,24 @@ union c11yy_struct {
 	struct c11yy_struct_strliteral		strlitval;
 };
 
+#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
+
+static inline uint32_t c11yy_string_hash_begin() {
+	return c11yy_string_hash_init;
+}
+
+static inline uint32_t c11yy_string_hash_step(const uint32_t h,const uint8_t c) {
+	return ((h << (uint32_t)13ul) ^ (h >> (uint32_t)19ul) ^ (h >> (uint32_t)31u) ^ 1) + (uint32_t)c;
+}
+
+static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
+	return (uint32_t)(~h);
+}
+
 struct c11yy_string_obj {
 	enum c11yystringtype			stype;
 	uint16_t				len; /* in bytes -- we're not going to support strings >= 64KB long! */
+	uint32_t				hash;
 	union {
 		void*				raw;
 		uint8_t*			s8; /* local/UTF-8 */
@@ -84,6 +99,7 @@ struct c11yy_string_objarray {
 };
 
 struct c11yy_string_objarray *c11yy_string_objarray_alloc(void);
+struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l);
 struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id);
 c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st);
 void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id);
