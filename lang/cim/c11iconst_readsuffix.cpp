@@ -1,5 +1,8 @@
 
+extern "C" {
 #include "c11.h"
+}
+
 #include "c11.hpp"
 
 void c11yy_iconst_readsuffix(struct c11yy_struct_integer &val,const char* &s) {

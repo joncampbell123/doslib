@@ -116,4 +116,5 @@ extern int c11yy_check_type(const struct c11yy_identifier_obj *io);
 extern uint8_t c11yy_iconstu_auto_size(uint64_t v);
 extern uint8_t c11yy_iconsts_auto_size(int64_t v);
 extern void c11yyerror(const char *);  /* prints grammar violation message */
+int c11yy_char2digit(const char c);
 
