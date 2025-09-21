@@ -7,7 +7,7 @@ extern "C" {
 
 #include "c11.hpp"
 
-int64_t c11yy_read_utf8(const char* &s) {
+uint32_t c11yy_read_utf8(const char* &s) {
 	if ((unsigned char)(*s) >= 0xC0 && (unsigned char)(*s) < 0xFE) {
 		/* 0x00-0x7F ASCII char */
 		/* 0x80-0xBF we're in the middle of a UTF-8 char */
@@ -31,10 +31,10 @@ int64_t c11yy_read_utf8(const char* &s) {
 			v = (v << (uint32_t)(6u)) + (uint32_t)(c & 0x3Fu);
 		} while ((--more) != 0);
 
-		return (int64_t)v;
+		return v;
 	}
 	else if (*s) {
-		return (int64_t)((unsigned char)(*s++));
+		return (uint32_t)((unsigned char)(*s++));
 	}
 	else {
 		return 0;
