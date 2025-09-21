@@ -85,6 +85,8 @@ struct c11yy_identifier_obj *c11yy_ident_create(const uint32_t hash,const char *
 		memcpy(iob.s8,buf,len);
 	}
 
+	if (scope) *scope = sid;
+
 	const size_t id = sob.idents.size();
 	sob.idents.push_back(std::move(iob));
 	return &sob.idents[id];

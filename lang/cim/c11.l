@@ -180,13 +180,6 @@ static int do_ident(void)
 	c11yylval.identifier.id = c11yy_ident_to_id(io,sid);
 	c11yylval.identifier.scopeid = sid;
 
-	fprintf(stderr,"'%s' id=%lu itype=%u len=%lu scope=%lu\n",
-		(char*)io->s8,
-		(unsigned long)c11yylval.identifier.id,
-		io->itype,
-		(unsigned long)io->len,
-		(unsigned long)sid);
-
 	return c11yy_check_type(io);
 }
 
