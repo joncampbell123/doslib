@@ -10,21 +10,6 @@ extern "C" {
 
 #include "c11.hpp"
 
-#include <vector>
-
-std::vector<struct c11yy_string_obj> c11yy_string_table;
-
-static void c11yy_string_obj_free(struct c11yy_string_obj &o) {
-	if (o.str.raw) free(o.str.raw);
-	o.str.raw = NULL;
-	o.len = 0;
-}
-
-void c11yy_string_table_clear(void) {
-	for (auto &st : c11yy_string_table) c11yy_string_obj_free(st);
-	c11yy_string_table.clear();
-}
-
 ////////////////////////////////////////////////////////////////////
 
 static int c11yy_strl_write_local(uint8_t* &d,struct c11yy_struct_integer &val) {
@@ -188,6 +173,7 @@ extern "C" void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char
 		{
 			c11yy_string_table.emplace_back();
 			struct c11yy_string_obj &io = *c11yy_string_table.rbegin();
+			val->id = size_t(&io - c11yy_string_table.data());
 			io.str.raw = buf;
 			io.stype = stype;
 			io.hash = hash;

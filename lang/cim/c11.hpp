@@ -12,5 +12,12 @@ void c11yy_write_utf8(uint8_t* &d,uint32_t c);
 uint32_t c11yy_read_utf8(const char* &s);
 void c11yy_string_table_clear(void);
 
+#include <vector>
+
+extern std::vector<struct c11yy_string_obj> c11yy_string_table;
+
+void c11yy_string_obj_free(struct c11yy_string_obj &o);
+void c11yy_string_table_clear(void);
+
 #endif
 
