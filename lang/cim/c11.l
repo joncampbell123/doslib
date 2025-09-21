@@ -6,6 +6,7 @@
 %o  1117
 
 %option yylineno
+%option noyywrap
 
 O   [0-7]
 D   [0-9]
@@ -155,11 +156,6 @@ static int check_type(void);
 .					{ /* discard bad characters */ }
 
 %%
-
-int yywrap(void)        /* called at end of input */
-{
-	return 1;           /* terminate now */
-}
 
 static void comment(void)
 {
