@@ -31,11 +31,12 @@ static uint8_t c11yy_iconsts_auto_size(int64_t v) {
 ////////////////////////////////////////////////////////////////////
 
 static void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char **y) {
+	static constexpr uint8_t UF = 1u << 0u;
+	static constexpr uint8_t LF = 1u << 1u;
+	static constexpr uint8_t LLF = 1u << 2u;
 	const char *s = *y;
-	unsigned int f = 0;
-#define UF 0x1u
-#define LF 0x2u
-#define LLF 0x4u
+	uint8_t f = 0;
+
 	while (1) {
 		if (*s == 'u' || *s == 'U') {
 			s++;
@@ -69,9 +70,6 @@ static void c11yy_iconst_readsuffix(struct c11yy_struct_integer *val,const char 
 	}
 
 	*y = s;
-#undef LLF
-#undef LF
-#undef UF
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -202,7 +200,7 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 
 ///////////////////////////////////////////////////////
 
-#define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
+static constexpr uint32_t c11yy_string_hash_init = (uint32_t)0xA1272155ul;
 
 static inline uint32_t c11yy_string_hash_begin() {
 	return c11yy_string_hash_init;
