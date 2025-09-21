@@ -113,6 +113,7 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
 extern int c11yy_check_type(const struct c11yy_identifier_obj *io);
+extern uint32_t c11yy_string_hash(const uint8_t *s,size_t l);
 extern uint8_t c11yy_iconstu_auto_size(uint64_t v);
 extern uint8_t c11yy_iconsts_auto_size(int64_t v);
 extern void c11yyerror(const char *);  /* prints grammar violation message */
