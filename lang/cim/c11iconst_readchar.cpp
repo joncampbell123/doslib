@@ -42,7 +42,7 @@ void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_struct_int
 	}
 	else if (*s) {
 		if (st != C11YY_STRT_LOCAL)
-			c11yy_read_utf8(val,s);
+			val.v.s = c11yy_read_utf8(s);
 		else
 			val.v.u = *s++;
 	}
