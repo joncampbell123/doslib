@@ -32,6 +32,7 @@ WS  [ \t\v\n\f]
 extern union c11yy_struct c11yylval;
 
 static void comment(void);
+static int do_ident(void);
 %}
 
 %%
@@ -84,7 +85,7 @@ static void comment(void);
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ return c11yy_check_type(c11yy_init_ident(yytext,yyleng)); }
+{L}{A}*					{ return do_ident(); }
 
 {HP}{H}+{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'H'); return I_CONSTANT; }
 {NZ}{D}*{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'N'); return I_CONSTANT; }
@@ -165,5 +166,27 @@ static void comment(void)
 	}
 
 	c11yyerror("unterminated comment");
+}
+
+static int do_ident(void)
+{
+	struct c11yy_identifier_obj *io;
+	c11yy_scope_id sid;
+
+	if ((io=c11yy_init_ident(yytext,yyleng,&sid)) == NULL)
+		return IDENTIFIER;//err
+
+	c11yylval.identifier.t = IDENTIFIER;
+	c11yylval.identifier.id = c11yy_ident_to_id(io,sid);
+	c11yylval.identifier.scopeid = sid;
+
+	fprintf(stderr,"'%s' id=%lu itype=%u len=%lu scope=%lu\n",
+		(char*)io->s8,
+		(unsigned long)c11yylval.identifier.id,
+		io->itype,
+		(unsigned long)io->len,
+		(unsigned long)sid);
+
+	return c11yy_check_type(io);
 }
 

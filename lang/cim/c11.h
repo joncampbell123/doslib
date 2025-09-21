@@ -17,6 +17,21 @@ int c11yy_do_compile();
 typedef uint32_t c11yy_string_token_id;
 #define c11yy_string_token_none			( ~((uint32_t)(0u)) )
 
+enum c11yyidenttype {
+	C11YY_IDT_NONE=0,
+	C11YY_IDT_IDENTIFIER,
+	C11YY_IDT_TYPEDEF_NAME,
+	C11YY_IDT_ENUMERATION_CONSTANT,
+
+	C11YY_IDT__MAX
+};
+
+typedef uint32_t c11yy_identifier_id;
+#define c11yy_identifier_none			( ~((uint32_t)(0u)) )
+
+typedef uint32_t c11yy_scope_id;
+#define c11yy_scope_none			( ~((uint32_t)(0u)) )
+
 struct c11yy_struct_base {
 	unsigned int				t; /* from c11.y.h */
 };
@@ -28,7 +43,7 @@ struct c11yy_struct_base {
 #define C11YY_INTF_TRUNCATEOK			(1u << 4u) /* value can be truncated without issue */
 
 struct c11yy_struct_integer {
-	unsigned int				t; /* from c11.y.h == I_CONSTANT, ENUMERATION_CONSTANT */
+	unsigned int				t; /* from c11.y.h == I_CONSTANT */
 	union {
 		uint64_t			u;
 		int64_t				s;
@@ -55,11 +70,18 @@ struct c11yy_struct_strliteral {
 	c11yy_string_token_id			id;
 };
 
+struct c11yy_struct_identifier {
+	unsigned int				t; /* from c11.y.h == IDENTIFIER */
+	c11yy_identifier_id			id;
+	c11yy_scope_id				scopeid;
+};
+
 union c11yy_struct {
 	struct c11yy_struct_base		base;
 	struct c11yy_struct_integer		intval;
 	struct c11yy_struct_float		floatval;
 	struct c11yy_struct_strliteral		strlitval;
+	struct c11yy_struct_identifier		identifier;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -85,32 +107,20 @@ struct c11yy_string_obj {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-enum c11yyidenttype {
-	C11YY_IDT_NONE=0,
-	C11YY_IDT_IDENTIFIER,
-	C11YY_IDT_TYPEDEF_NAME,
-	C11YY_IDT_ENUMERATION_CONSTANT,
-
-	C11YY_IDT__MAX
-};
-
-typedef uint32_t c11yy_identifier_id;
-#define c11yy_identifier_none			( ~((uint32_t)(0u)) )
-
-typedef uint32_t c11yy_scope_id;
-#define c11yy_scope_none			( ~((uint32_t)(0u)) )
-
 struct c11yy_identifier_obj {
 	enum c11yyidenttype			itype;
 	uint8_t					len; /* in bytes -- we're not going to support identifiers >= 256 bytes long! */
+	uint32_t				hash;
 	uint8_t*				s8;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng);
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
+c11yy_identifier_id c11yy_ident_to_id(struct c11yy_identifier_obj *io,const c11yy_scope_id scope);
+struct c11yy_identifier_obj *c11yy_ident_lookup(const uint32_t hash,const char *buf,int len,c11yy_scope_id *scope);
+struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng,c11yy_scope_id *scope);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
 extern int c11yy_check_type(const struct c11yy_identifier_obj *io);
 extern uint32_t c11yy_string_hash(const uint8_t *s,size_t l);

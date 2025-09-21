@@ -10,11 +10,21 @@ void c11yy_check_stringtype_prefix(enum c11yystringtype &st,const char* &s);
 void c11yy_write_utf16(uint16_t* &d,uint32_t c);
 void c11yy_write_utf8(uint8_t* &d,uint32_t c);
 uint32_t c11yy_read_utf8(const char* &s);
+void c11yy_scopes_table_clear(void);
 void c11yy_string_table_clear(void);
 
 #include <vector>
 
 extern std::vector<struct c11yy_string_obj> c11yy_string_table;
+
+struct c11yy_scope_obj {
+	std::vector<c11yy_identifier_obj>	idents;
+
+						c11yy_scope_obj();
+						~c11yy_scope_obj();
+};
+
+extern std::vector<struct c11yy_scope_obj> c11yy_scope_table;
 
 void c11yy_string_obj_free(struct c11yy_string_obj &o);
 void c11yy_string_table_clear(void);
