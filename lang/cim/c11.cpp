@@ -12,34 +12,13 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 
-static int c11yy_iconst_readc(const unsigned int base,const char **y) {
-	const char *s = *y;
-	unsigned char v;
-
-	if (*s >= '0' && *s <= '9')
-		v = (unsigned char)(*s - '0');
-	else if (*s >= 'a' && *s <= 'z')
-		v = (unsigned char)(*s + 10 - 'a');
-	else if (*s >= 'A' && *s <= 'Z')
-		v = (unsigned char)(*s + 10 - 'A');
-	else
-		return -1;
-
-	if (v < base) {
-		*y = ++s;
-		return (int)v;
-	}
-
-	return -1;
-}
-
 static void c11yy_iconst_read(const unsigned int base,struct c11yy_struct_integer &val,const char* &s) {
 	const uint64_t maxv = UINT64_MAX / (uint64_t)(base);
 	int v;
 
 	val.v.u = 0;
 	while (*s) {
-		if ((v=c11yy_iconst_readc(base,&s)) < 0)
+		if ((v=c11yy_iconst_readc(base,s)) < 0)
 			break;
 
 		if (val.v.u > maxv)
@@ -72,7 +51,7 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 			case '4': case '5': case '6': case '7':
 				val.v.u = (unsigned int)esc - '0';
 				for (c=0;c < 2;c++) {
-					if ((v=c11yy_iconst_readc(/*base*/8,&s)) >= 0)
+					if ((v=c11yy_iconst_readc(/*base*/8,s)) >= 0)
 						val.v.u = (val.v.u * (uint64_t)8u) + ((uint64_t)(unsigned int)v);
 					else
 						break;
