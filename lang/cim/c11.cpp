@@ -10,10 +10,6 @@ extern "C" {
 
 #include "c11.hpp"
 
-///////////////////////////////////////////////////////
-
-const struct c11yy_struct_integer c11yy_struct_integer_I_CONSTANT_INIT = { /*t*/I_CONSTANT, /*v*/{ 0 }, /*sz*/0, /*flags*/C11YY_INTF_SIGNED };
-
 ////////////////////////////////////////////////////////////////////
 
 static void c11yy_iconst_readsuffix(struct c11yy_struct_integer &val,const char* &s) {
