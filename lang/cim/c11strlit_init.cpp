@@ -10,6 +10,21 @@ extern "C" {
 
 #include "c11.hpp"
 
+#include <vector>
+
+std::vector<struct c11yy_string_obj> c11yy_string_table;
+
+static void c11yy_string_obj_free(struct c11yy_string_obj &o) {
+	if (o.str.raw) free(o.str.raw);
+	o.str.raw = NULL;
+	o.len = 0;
+}
+
+void c11yy_string_table_clear(void) {
+	for (auto &st : c11yy_string_table) c11yy_string_obj_free(st);
+	c11yy_string_table.clear();
+}
+
 ////////////////////////////////////////////////////////////////////
 
 static int c11yy_strl_write_local(uint8_t* &d,struct c11yy_struct_integer &val) {
@@ -139,12 +154,16 @@ extern "C" void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char
 		const size_t len = (size_t)(w - buf);
 		const uint32_t hash = c11yy_string_hash(buf,len);
 
-		if (len > 32768) {
+		if (len >= 65535u) {
 			free(buf);
 			return;//err
 		}
 
-		if (len < alloc) {
+		if (len == 0) {
+			free(buf);
+			buf = NULL;
+		}
+		else if (len < alloc) {
 			uint8_t *np = (uint8_t*)realloc((void*)buf,len);
 			if (np) {
 				alloc = len;
@@ -156,30 +175,24 @@ extern "C" void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char
 			}
 		}
 
-		//TODO
-		free(buf);
+		for (const auto &st : c11yy_string_table) {
+			if (st.len == len && st.hash == hash) {
+				if (len == 0 || (len != 0 && memcmp(st.str.raw,buf,len) == 0)) {
+					val->id = size_t(&st - c11yy_string_table.data());
+					free(buf);
+					return;
+				}
+			}
+		}
 
-#if 0
-		st = c11yy_string_objarray_find(&c11yy_stringarray,hash,buf,len);
-		if (st) {
-			val->id = c11yy_string_objarray_to_id(&c11yy_stringarray,st);
-			free(buf);
+		{
+			c11yy_string_table.emplace_back();
+			struct c11yy_string_obj &io = *c11yy_string_table.rbegin();
+			io.str.raw = buf;
+			io.stype = stype;
+			io.hash = hash;
+			io.len = len;
 		}
-		else {
-			st = c11yy_string_objarray_new(&c11yy_stringarray);
-			if (st) {
-				val->id = c11yy_string_objarray_to_id(&c11yy_stringarray,st);
-				st->stype = stype;
-				st->str.s8 = buf;
-				st->hash = hash;
-				st->len = len;
-			}
-			else {
-				free(buf);
-				return;//err
-			}
-		}
-#endif
 	}
 }
 

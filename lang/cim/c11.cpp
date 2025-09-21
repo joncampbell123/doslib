@@ -35,6 +35,7 @@ static int c11yy_init(void) {
 }
 
 static void c11yy_cleanup(void) {
+	c11yy_string_table_clear();
 }
 
 /////////////////////////////////////////////////////////////
