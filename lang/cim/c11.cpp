@@ -53,26 +53,38 @@ static int c11yy_strl_write_utf8(uint8_t* &d,struct c11yy_struct_integer &val) {
 	return 0;
 }
 
-static int c11yy_strl_write_utf16(uint8_t* &dst,struct c11yy_struct_integer &val) {
-	uint16_t *d = (uint16_t*)dst;
+static void c11yy_write_utf16(uint16_t* &d,uint32_t c) {
+	if (c >= 0x10000l) {
+		/* surrogate pair */
+		*d++ = (uint16_t)((((c - 0x10000ul) >> 10ul) & 0x3FFul) + 0xD800ul);
+		*d++ = (uint16_t)(( (c - 0x10000ul)          & 0x3FFul) + 0xDC00ul);
+	}
+	else {
+		*d++ = (uint16_t)c;
+	}
+}
 
+static int c11yy_strl_write_utf16(uint8_t* &dst,struct c11yy_struct_integer &val) {
 	if (val.v.s < 0 || val.v.s > 0x10FFFFll)
 		return 1;
 
-	// TODO: Encode UTF-16 including surrogate pairs
-	*d++ = (uint16_t)val.v.u;
-	dst = (uint8_t*)d;
+	{
+		uint16_t *d = (uint16_t*)dst;
+		c11yy_write_utf16(d,val.v.u);
+		dst = (uint8_t*)d;
+	}
 	return 0;
 }
 
 static int c11yy_strl_write_utf32(uint8_t* &dst,struct c11yy_struct_integer &val) {
-	uint32_t *d = (uint32_t*)dst;
-
-	if (val.v.s < 0 || val.v.s > 0xFFFFFFFFll)
+	if (val.v.s < 0 || val.v.s > 0x7FFFFFFFll)
 		return 1;
 
-	*d++ = (uint32_t)val.v.u;
-	dst = (uint8_t*)d;
+	{
+		uint32_t *d = (uint32_t*)dst;
+		*d++ = (uint32_t)val.v.u;
+		dst = (uint8_t*)d;
+	}
 	return 0;
 }
 
