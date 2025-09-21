@@ -18,7 +18,7 @@ yyparser: c11.l.h c11.l.c c11.y.h c11.y.c
 %.o: %.cpp
 	g++ -std=c++11 -Wall -pedantic -D_POSIX_SOURCE -c -o $@ $<
 
-c11: c11.o c11.l.o c11.y.o c11iconst_sz.o
+c11: c11.o c11.l.o c11.y.o c11iconst_sz.o c11yyskip.o
 	g++ -o $@ $+
 
 clean:

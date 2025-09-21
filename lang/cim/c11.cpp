@@ -57,19 +57,6 @@ static void c11yy_iconst_readsuffix(struct c11yy_struct_integer &val,const char*
 
 ////////////////////////////////////////////////////////////////////
 
-static void c11yyskip(const char **y,unsigned int c) {
-	const char *s = *y;
-
-	while (*s && c) {
-		s++;
-		c--;
-	}
-
-	*y = s;
-}
-
-////////////////////////////////////////////////////////
-
 static int c11yy_iconst_readc(const unsigned int base,const char **y) {
 	const char *s = *y;
 	unsigned char v;
@@ -422,7 +409,7 @@ extern "C" void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *y
 	*val = c11yy_struct_integer_I_CONSTANT_INIT;
 
 	if (lexmatch == 'H') {
-		c11yyskip(&yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
+		c11yyskip(/*&*/yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
 		c11yy_iconst_read(/*base*/16,*val,/*&*/yytext);
 		c11yy_iconst_readsuffix(*val,/*&*/yytext);
 	}
