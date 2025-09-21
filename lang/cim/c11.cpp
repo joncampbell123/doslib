@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <assert.h>
 
+extern "C" {
 #include "c11.h"
 #include "c11.l.h"
 #include "c11.y.h"
+}
 
 ///////////////////////////////////////////////////////
 
@@ -200,49 +202,6 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 
 ///////////////////////////////////////////////////////
 
-struct c11yy_common_objarray {
-	size_t					length,alloc;
-};
-
-#define c11yy_common_objarray_INIT { 0, 0 }
-
-///////////////////////////////////////////////////////
-
-static int c11yy_common_objarray_resize(void **array,struct c11yy_common_objarray *a,const size_t elemsz,const size_t len) {
-	/* assume a && array && len != 0 */
-	void *na;
-
-	if ((na=realloc(*array,elemsz*len)) != NULL) {
-		a->alloc = len;
-		*array = na;
-		return 0;
-	}
-
-	return -1;
-}
-
-///////////////////////////////////////////////////////
-
-struct c11yy_string_objarray {
-	struct c11yy_common_objarray		carr;
-	struct c11yy_string_obj*		array;
-};
-
-#define c11yy_string_objarray_INIT { c11yy_common_objarray_INIT, NULL }
-
-void *c11yy_common_objarray_init(struct c11yy_common_objarray *a,const size_t elemsz,const size_t len) {
-	void *p;
-
-	if ((p=malloc(elemsz*len)) != NULL) {
-		a->alloc = len;
-		a->length = 0;
-	}
-
-	return p;
-}
-
-///////////////////////////////////////////////////////
-
 #define c11yy_string_hash_init ((uint32_t)0xA1272155ul)
 
 static inline uint32_t c11yy_string_hash_begin() {
@@ -257,108 +216,10 @@ static inline uint32_t c11yy_string_hash_end(const uint32_t h) {
 	return (uint32_t)(~h);
 }
 
-///////////////////////////////////////////////////////////
-
-static int c11yy_string_objarray_init(struct c11yy_string_objarray *a) {
-	if (!a->array) {
-		const size_t init_len = 8;
-		if ((a->array=c11yy_common_objarray_init(&(a->carr),sizeof(*(a->array)),init_len)) == NULL)
-			return -1;
-	}
-
-	return 0;
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_from_id(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
-	if (a && a->array && id < a->carr.length)
-		return a->array + id; /* pointer math equiv to &(a->array[id]) */
-
-	return NULL;
-}
-
-static c11yy_string_token_id c11yy_string_objarray_to_id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
-	if (a && a->array && st >= a->array) {
-		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(string_obj) */
-		if (i < a->carr.length) return i;
-	}
-
-	return c11yy_string_token_none;
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_init_next_length_item(struct c11yy_string_objarray *a) {
-	/* assume a && a->array */
-	if (a->carr.length < a->carr.alloc) {
-		struct c11yy_string_obj *o = a->array + a->carr.length;
-		memset(o,0,sizeof(*o));
-		a->carr.length++;
-		return o;
-	}
-
-	return NULL;
-}
-
-static int c11yy_string_objarray_extend(struct c11yy_string_objarray *a,size_t newlen) {
-	/* assume a && a->array && newlen != 0 */
-	if (a->carr.alloc < newlen)
-		return c11yy_common_objarray_resize((void**)(&(a->array)),&(a->carr),sizeof(*(a->array)),newlen);
-
-	return -1;
-}
-
-static void c11yy_string_obj_free(struct c11yy_string_obj *st) {
-	if (st) {
-		if (st->str.raw) free(st->str.raw);
-		st->str.raw = NULL;
-		st->len = 0;
-	}
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_new(struct c11yy_string_objarray *a) {
-	if (a && a->array) {
-		struct c11yy_string_obj *r;
-
-		if ((r=c11yy_string_objarray_init_next_length_item(a)) != NULL) return r;
-		if (c11yy_string_objarray_extend(a,a->carr.alloc + 8u + (a->carr.alloc / 2u))) return NULL;
-		return c11yy_string_objarray_init_next_length_item(a);
-	}
-
-	return NULL;
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_find(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
-	if (a && a->array) {
-		struct c11yy_string_obj *sc = a->array;
-		size_t sl = a->carr.length;
-
-		while ((sl--) != 0ul) {
-			if ((hash == (uint32_t)0 || hash == sc->hash) && sc->len == l && sc->str.raw) {
-				if (memcmp(sc->str.s8,s,l) == 0)
-					return sc;
-			}
-
-			sc++;
-		}
-	}
-
-	return NULL;
-}
-
-static void c11yy_string_objarray_free(struct c11yy_string_objarray *a) {
-	if (a->array) {
-		struct c11yy_string_obj *st = a->array;
-		size_t i = a->carr.length;
-
-		while ((i--) != (size_t)0u) {
-			c11yy_string_obj_free(st);
-			memset(st,0,sizeof(*st));
-			st++;
-		}
-
-		free(a->array);
-	}
-
-	a->carr.length = 0;
-	a->carr.alloc = 0;
+uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
+	uint32_t h = c11yy_string_hash_begin();
+	while ((l--) != 0ul) h = c11yy_string_hash_step(h,*s++);
+	return c11yy_string_hash_end(h);
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -456,18 +317,6 @@ static int c11yy_strl_write_utf32(uint8_t **dst,struct c11yy_struct_integer *val
 
 //////////////////////////////////////////////////////////////////
 
-uint32_t c11yy_string_hash(const uint8_t *s,size_t l) {
-	uint32_t h = c11yy_string_hash_begin();
-	while ((l--) != 0ul) h = c11yy_string_hash_step(h,*s++);
-	return c11yy_string_hash_end(h);
-}
-
-//////////////////////////////////////////////////////////////////
-
-static struct c11yy_string_objarray c11yy_stringarray = c11yy_string_objarray_INIT;
-
-//////////////////////////////////////////////////////////////////
-
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng) {
 	int (*strw)(uint8_t **dst,struct c11yy_struct_integer *val) = c11yy_strl_write_local;
 	enum c11yystringtype stype = C11YY_STRT_LOCAL;
@@ -502,8 +351,8 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 	{
 		const size_t extra = 16u; /* enough space for encoding and writing a NUL at end of loop */
 
-		alloc = (yyleng >= 16ul/*min*/ ? (yyleng < 65535ul/*max*/ ? yyleng : 4096ul) : 16ul);
-		w = buf = malloc(alloc);
+		alloc = ((unsigned long)yyleng >= 16ul/*min*/ ? ((unsigned long)yyleng < 65535ul/*max*/ ? (unsigned long)yyleng : 4096ul) : 16ul);
+		w = buf = (uint8_t*)malloc(alloc);
 		if (!buf) return;//err
 
 		while (*yytext) {
@@ -520,7 +369,7 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 					if ((w+extra) > (buf+alloc)) {
 						const size_t nal = alloc + 8u + (alloc / 2u);
 						const size_t wo = (size_t)(w - buf); /* realloc may move buffer */
-						uint8_t *np = realloc(buf,nal);
+						uint8_t *np = (uint8_t*)realloc((void*)buf,nal);
 						if (!np) {
 							free(buf);
 							return;//err
@@ -559,7 +408,7 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 		}
 
 		if (len < alloc) {
-			uint8_t *np = realloc(buf,len);
+			uint8_t *np = (uint8_t*)realloc((void*)buf,len);
 			if (np) {
 				alloc = len;
 				buf = np;
@@ -570,6 +419,10 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 			}
 		}
 
+		//TODO
+		free(buf);
+
+#if 0
 		st = c11yy_string_objarray_find(&c11yy_stringarray,hash,buf,len);
 		if (st) {
 			val->id = c11yy_string_objarray_to_id(&c11yy_stringarray,st);
@@ -589,6 +442,7 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 				return;//err
 			}
 		}
+#endif
 	}
 }
 
@@ -647,6 +501,12 @@ void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const
 
 ////////////////////////////////////////////////////////////////////
 
+extern "C" struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng) {
+	return NULL;
+}
+
+////////////////////////////////////////////////////////////////////
+
 static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
 	*d = *s;
 	return 0;
@@ -701,12 +561,11 @@ static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s
 }
 
 static int (* const c11yy_unary_op[C11YY_UNOP__MAX])(union c11yy_struct *,const union c11yy_struct *) = {
-	/* if FFMPEG has long used this kind of init than we should too */
-	[C11YY_UNOP_NONE] = c11yy_unary_op_none,
-	[C11YY_UNOP_NEG]  = c11yy_unary_op_neg,
-	[C11YY_UNOP_POS]  = c11yy_unary_op_pos,
-	[C11YY_UNOP_BNOT] = c11yy_unary_op_bnot,
-	[C11YY_UNOP_LNOT] = c11yy_unary_op_lnot
+	c11yy_unary_op_none,		// 0
+	c11yy_unary_op_neg,
+	c11yy_unary_op_pos,
+	c11yy_unary_op_bnot,
+	c11yy_unary_op_lnot
 };
 
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop) {
@@ -718,195 +577,11 @@ int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned
 
 ///////////////////////////////////////////////////////////
 
-struct c11yy_identifier_objarray {
-	struct c11yy_common_objarray		carr;
-	struct c11yy_identifier_obj*		array;
-};
-
-#define c11yy_identifier_objarray_INIT { c11yy_common_objarray, NULL }
-
-///////////////////////////////////////////////////////////
-
-static struct c11yy_identifier_obj *c11yy_identifier_objarray_from_id(struct c11yy_identifier_objarray *a,const c11yy_identifier_id id) {
-	if (a && a->array && id < a->carr.length)
-		return a->array + id; /* pointer math equiv to &(a->array[id]) */
-
-	return NULL;
-}
-
-static c11yy_identifier_id c11yy_identifier_objarray_to_id(struct c11yy_identifier_objarray *a,struct c11yy_identifier_obj *st) {
-	if (a && a->array && st >= a->array) {
-		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(identifier_obj) */
-		if (i < a->carr.length) return i;
-	}
-
-	return c11yy_identifier_none;
-}
-
-static void c11yy_identifier_obj_free(struct c11yy_identifier_obj *st) {
-	if (st) {
-		if (st->s8) free(st->s8);
-		st->itype = C11YY_IDT_NONE;
-		st->s8 = NULL;
-		st->len = 0;
-	}
-}
-
-static int c11yy_identifier_objarray_init(struct c11yy_identifier_objarray *a) {
-	if (!a->array) {
-		const size_t init_len = 8;
-		if ((a->array=c11yy_common_objarray_init(&(a->carr),sizeof(*(a->array)),init_len)) == NULL)
-			return -1;
-	}
-
-	return 0;
-}
-
-static void c11yy_identifier_objarray_free(struct c11yy_identifier_objarray *a) {
-	if (a->array) {
-		struct c11yy_identifier_obj *st = a->array;
-		size_t i = a->carr.length;
-
-		while ((i--) != (size_t)0u) {
-			c11yy_identifier_obj_free(st);
-			memset(st,0,sizeof(*st));
-			st++;
-		}
-
-		free(a->array);
-	}
-
-	a->carr.length = 0;
-	a->carr.alloc = 0;
-}
-
-///////////////////////////////////////////////////////////
-
-struct c11yy_scope_obj {
-	struct c11yy_identifier_objarray	ioa;
-};
-
-#define c11yy_scope_obj_INIT { c11yy_identifier_objarray_INIT }
-
-///////////////////////////////////////////////////////////
-
-struct c11yy_scope_objarray {
-	struct c11yy_common_objarray		carr;
-	struct c11yy_scope_obj*			array;
-};
-
-#define c11yy_scope_objarray_INIT { c11yy_common_objarray_INIT, NULL }
-
-///////////////////////////////////////////////////////////
-
-struct c11yy_scope_objarray			c11yy_scopearray;
-
-struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,const char lexmatch) {
-	return NULL;
-}
-
-///////////////////////////////////////////////////////////
-
-static struct c11yy_scope_obj *c11yy_scope_objarray_id2str(struct c11yy_scope_objarray *a,const c11yy_scope_id id) {
-	if (a && a->array && id < a->carr.length)
-		return a->array + id; /* pointer math equiv to &(a->array[id]) */
-
-	return NULL;
-}
-
-static c11yy_scope_id c11yy_scope_objarray_str2id(struct c11yy_scope_objarray *a,struct c11yy_scope_obj *st) {
-	if (a && a->array && st >= a->array) {
-		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(scope_obj) */
-		if (i < a->carr.length) return i;
-	}
-
-	return c11yy_scope_none;
-}
-
-static void c11yy_scope_obj_free(struct c11yy_scope_obj *st) {
-	if (st) {
-		c11yy_identifier_objarray_free(&(st->ioa));
-	}
-}
-
-static struct c11yy_scope_obj *c11yy_scope_objarray_init_next_length_item(struct c11yy_scope_objarray *a) {
-	/* assume a && a->array */
-	if (a->carr.length < a->carr.alloc) {
-		struct c11yy_scope_obj *o = a->array + a->carr.length;
-		memset(o,0,sizeof(*o));
-
-		if (c11yy_identifier_objarray_init(&(o->ioa)))
-			return NULL;
-
-		a->carr.length++;
-		return o;
-	}
-
-	return NULL;
-}
-
-static int c11yy_scope_objarray_extend(struct c11yy_scope_objarray *a,size_t newlen) {
-	/* assume a && a->array && newlen != 0 */
-	if (a->carr.alloc < newlen)
-		return c11yy_common_objarray_resize((void**)(&(a->array)),&(a->carr),sizeof(*(a->array)),newlen);
-
-	return -1;
-}
-
-static struct c11yy_scope_obj *c11yy_scope_objarray_new(struct c11yy_scope_objarray *a) {
-	if (a && a->array) {
-		struct c11yy_scope_obj *r;
-
-		if ((r=c11yy_scope_objarray_init_next_length_item(a)) != NULL) return r;
-		if (c11yy_scope_objarray_extend(a,a->carr.alloc + 8u + (a->carr.alloc / 2u))) return NULL;
-		return c11yy_scope_objarray_init_next_length_item(a);
-	}
-
-	return NULL;
-}
-
-static int c11yy_scope_objarray_init(struct c11yy_scope_objarray *a) {
-	if (!a->array) {
-		const size_t init_len = 8;
-		if ((a->array=c11yy_common_objarray_init(&(a->carr),sizeof(*(a->array)),init_len)) == NULL)
-			return -1;
-	}
-
-	return 0;
-}
-
-static void c11yy_scope_objarray_free(struct c11yy_scope_objarray *a) {
-	if (a->array) {
-		struct c11yy_scope_obj *st = a->array;
-		size_t i = a->carr.length;
-
-		while ((i--) != (size_t)0u) {
-			c11yy_scope_obj_free(st);
-			memset(st,0,sizeof(*st));
-			st++;
-		}
-
-		free(a->array);
-	}
-
-	a->carr.length = 0;
-	a->carr.alloc = 0;
-}
-
-///////////////////////////////////////////////////////////
-
 static int c11yy_init(void) {
-	if (c11yy_string_objarray_init(&c11yy_stringarray))
-		return 1;
-	if (c11yy_scope_objarray_init(&c11yy_scopearray))
-		return 1;
-
 	return 0;
 }
 
 static void c11yy_cleanup(void) {
-	c11yy_scope_objarray_free(&c11yy_scopearray);
-	c11yy_string_objarray_free(&c11yy_stringarray);
 }
 
 /////////////////////////////////////////////////////////////

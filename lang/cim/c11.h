@@ -104,7 +104,7 @@ struct c11yy_identifier_obj {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,const char lexmatch);
+struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng);
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);

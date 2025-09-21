@@ -15,8 +15,11 @@ yyparser: c11.l.h c11.l.c c11.y.h c11.y.c
 %.o: %.c
 	gcc -std=c11 -Wall -pedantic -c -o $@ $<
 
+%.o: %.cpp
+	g++ -std=c++11 -Wall -pedantic -c -o $@ $<
+
 c11: c11.o c11.l.o c11.y.o
-	gcc -o $@ $+
+	g++ -o $@ $+
 
 clean:
 	rm -fv c11.?.h c11.?.c *.y.output *.o c11
