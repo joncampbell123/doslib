@@ -37,6 +37,8 @@ struct c11yy_struct_integer {
 	uint8_t					flags;
 };
 
+extern const struct c11yy_struct_integer c11yy_struct_integer_I_CONSTANT_INIT;
+
 #define C11YY_FLOATF_NEGATIVE			(1u << 0u)
 #define C11YY_FLOATF_SPECIAL			(1u << 1u) /* i.e. NaN, inf, etc */
 

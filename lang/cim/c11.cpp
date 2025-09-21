@@ -10,6 +10,10 @@ extern "C" {
 
 ///////////////////////////////////////////////////////
 
+const struct c11yy_struct_integer c11yy_struct_integer_I_CONSTANT_INIT = { /*t*/I_CONSTANT, /*v*/{ 0 }, /*sz*/0, /*flags*/C11YY_INTF_SIGNED };
+
+///////////////////////////////////////////////////////
+
 static uint8_t c11yy_iconstu_auto_size(uint64_t v) {
 	uint8_t sz = 0u;
 
@@ -433,10 +437,7 @@ extern "C" void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *y
 	 * 'O' octal (starts with 0, or is just zero)
 	 * 'C' char constant
 	 */
-	val->sz = 0;
-	val->v.u = 0;
-	val->flags = C11YY_INTF_SIGNED; /* values are signed by default */
-	val->t = I_CONSTANT;
+	*val = c11yy_struct_integer_I_CONSTANT_INIT;
 
 	if (lexmatch == 'H') {
 		c11yyskip(&yytext,2); /* assume 0x or 0X because the lexer already did the matching, see *.l file pattern {HP} */
