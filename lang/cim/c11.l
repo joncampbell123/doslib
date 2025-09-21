@@ -31,10 +31,6 @@ WS  [ \t\v\n\f]
 
 extern union c11yy_struct c11yylval;
 
-extern void c11yyerror(const char *);  /* prints grammar violation message */
-
-extern int c11yy_check_type(const struct c11yy_identifier_obj *io);
-
 static void comment(void);
 %}
 
