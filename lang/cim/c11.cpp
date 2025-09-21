@@ -490,8 +490,7 @@ extern "C" struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int 
 	return NULL;
 }
 
-extern "C" int c11yy_check_type(const char *yytext,int yyleng) {
-	struct c11yy_identifier_obj *io = c11yy_init_ident(yytext,yyleng);
+extern "C" int c11yy_check_type(const struct c11yy_identifier_obj *io) {
 	if (io && io->itype < C11YY_IDT__MAX) return c11yy_itype_to_token[io->itype];
 	return IDENTIFIER;
 }
