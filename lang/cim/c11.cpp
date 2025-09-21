@@ -479,7 +479,7 @@ extern "C" void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *y
 
 ////////////////////////////////////////////////////////////////////
 
-static const unsigned int c11yy_itype_to_token[C11YY_IDT__MAX] = {
+static const uint16_t c11yy_itype_to_token[C11YY_IDT__MAX] = {
 	IDENTIFIER,				// C11YY_IDT_NONE = 0
 	IDENTIFIER,				// C11YY_IDT_IDENTIFIER
 	TYPEDEF_NAME,				// C11YY_IDT_TYPEDEF_NAME
