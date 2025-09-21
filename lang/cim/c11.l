@@ -33,10 +33,9 @@ extern union c11yy_struct c11yylval;
 
 extern void c11yyerror(const char *);  /* prints grammar violation message */
 
-extern int c11sym_type(const char *,size_t len);  /* returns type from symbol table */
+extern int c11yy_check_type(const char *yytext,int yyleng);
 
 static void comment(void);
-static int check_type(void);
 %}
 
 %%
@@ -89,7 +88,7 @@ static int check_type(void);
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ return check_type(); }
+{L}{A}*					{ return c11yy_check_type(yytext,yyleng); }
 
 {HP}{H}+{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'H'); return I_CONSTANT; }
 {NZ}{D}*{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'N'); return I_CONSTANT; }
@@ -170,19 +169,5 @@ static void comment(void)
 	}
 
 	c11yyerror("unterminated comment");
-}
-
-static int check_type(void)
-{
-	struct c11yy_identifier_obj *io = c11yy_init_ident(yytext,yyleng);
-	if (io) {
-		switch (io->itype) {
-			case C11YY_IDT_ENUMERATION_CONSTANT: return ENUMERATION_CONSTANT;
-			case C11YY_IDT_TYPEDEF_NAME: return TYPEDEF_NAME;
-			default: return IDENTIFIER;
-		}
-	}
-
-	return IDENTIFIER;
 }
 

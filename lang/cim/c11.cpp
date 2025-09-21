@@ -479,8 +479,21 @@ extern "C" void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *y
 
 ////////////////////////////////////////////////////////////////////
 
+static const unsigned int c11yy_itype_to_token[C11YY_IDT__MAX] = {
+	IDENTIFIER,				// C11YY_IDT_NONE = 0
+	IDENTIFIER,				// C11YY_IDT_IDENTIFIER
+	TYPEDEF_NAME,				// C11YY_IDT_TYPEDEF_NAME
+	ENUMERATION_CONSTANT			// C11YY_IDT_ENUMERATION_CONSTANT
+};
+
 extern "C" struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng) {
 	return NULL;
+}
+
+extern "C" int c11yy_check_type(const char *yytext,int yyleng) {
+	struct c11yy_identifier_obj *io = c11yy_init_ident(yytext,yyleng);
+	if (io && io->itype < C11YY_IDT__MAX) return c11yy_itype_to_token[io->itype];
+	return IDENTIFIER;
 }
 
 ////////////////////////////////////////////////////////////////////
