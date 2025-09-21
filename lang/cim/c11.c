@@ -202,10 +202,10 @@ static void c11yy_iconst_readchar(const enum c11yystringtype st,struct c11yy_str
 
 struct c11yy_string_objarray {
 	struct c11yy_string_obj*		array;
-	size_t					length,alloc,next;
+	size_t					length,alloc;
 };
 
-#define c11yy_string_objarray_INIT { NULL, 0, 0, 0 }
+#define c11yy_string_objarray_INIT { NULL, 0, 0 }
 
 ///////////////////////////////////////////////////////
 
@@ -232,7 +232,6 @@ static int c11yy_string_objarray_init(struct c11yy_string_objarray *a) {
 		if ((a->array=malloc(sizeof(struct c11yy_string_obj) * init_len)) != NULL) {
 			a->alloc = init_len;
 			a->length = 0;
-			a->next = 0;
 		}
 		else {
 			return -1;
@@ -242,14 +241,14 @@ static int c11yy_string_objarray_init(struct c11yy_string_objarray *a) {
 	return 0;
 }
 
-static struct c11yy_string_obj *c11yy_string_objarray_id2str(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
+static struct c11yy_string_obj *c11yy_string_objarray_from_id(struct c11yy_string_objarray *a,const c11yy_string_token_id id) {
 	if (a && a->array && id < a->length)
 		return a->array + id; /* pointer math equiv to &(a->array[id]) */
 
 	return NULL;
 }
 
-static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
+static c11yy_string_token_id c11yy_string_objarray_to_id(struct c11yy_string_objarray *a,struct c11yy_string_obj *st) {
 	if (a && a->array && st >= a->array) {
 		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(string_obj) */
 		if (i < a->length) return i;
@@ -258,26 +257,12 @@ static c11yy_string_token_id c11yy_string_objarray_str2id(struct c11yy_string_ob
 	return c11yy_string_token_none;
 }
 
-static struct c11yy_string_obj *c11yy_string_objarray_scan_for_empty_slot(struct c11yy_string_objarray *a) {
-	/* assume a && a->array */
-	while (a->next < a->length) {
-		struct c11yy_string_obj *o = a->array + a->next;
-
-		if (o->str.raw == NULL && o->len == 0)
-			return o;
-
-		a->next++;
-	}
-
-	return NULL;
-}
-
 static struct c11yy_string_obj *c11yy_string_objarray_init_next_length_item(struct c11yy_string_objarray *a) {
 	/* assume a && a->array */
 	if (a->length < a->alloc) {
 		struct c11yy_string_obj *o = a->array + a->length;
 		memset(o,0,sizeof(*o));
-		a->next = ++a->length;
+		a->length++;
 		return o;
 	}
 
@@ -299,7 +284,7 @@ static int c11yy_string_objarray_extend(struct c11yy_string_objarray *a,size_t n
 	return -1;
 }
 
-static void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
+static void c11yy_string_obj_free(struct c11yy_string_obj *st) {
 	if (st) {
 		if (st->str.raw) free(st->str.raw);
 		st->str.raw = NULL;
@@ -307,23 +292,10 @@ static void c11yy_string_obj_freestring(struct c11yy_string_obj *st) {
 	}
 }
 
-static void c11yy_string_objarray_freestr_id(struct c11yy_string_objarray *a,c11yy_string_token_id id) {
-	if (a && a->array && id < a->length) {
-		struct c11yy_string_obj *st;
-
-		if ((st=c11yy_string_objarray_id2str(a,id)) != NULL) {
-			c11yy_string_obj_freestring(st);
-			memset(st,0,sizeof(*st));
-			a->next = id;
-		}
-	}
-}
-
-static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string_objarray *a) {
+static struct c11yy_string_obj *c11yy_string_objarray_new(struct c11yy_string_objarray *a) {
 	if (a && a->array) {
 		struct c11yy_string_obj *r;
 
-		if ((r=c11yy_string_objarray_scan_for_empty_slot(a)) != NULL) return r;
 		if ((r=c11yy_string_objarray_init_next_length_item(a)) != NULL) return r;
 		if (c11yy_string_objarray_extend(a,a->alloc + 8u + (a->alloc / 2u))) return NULL;
 		return c11yy_string_objarray_init_next_length_item(a);
@@ -332,7 +304,7 @@ static struct c11yy_string_obj *c11yy_string_objarray_newstr(struct c11yy_string
 	return NULL;
 }
 
-static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
+static struct c11yy_string_obj *c11yy_string_objarray_find(struct c11yy_string_objarray *a,const uint32_t hash,const uint8_t *s,size_t l) {
 	if (a && a->array) {
 		struct c11yy_string_obj *sc = a->array;
 		size_t sl = a->length;
@@ -352,17 +324,19 @@ static struct c11yy_string_obj *c11yy_string_objarray_findstr(struct c11yy_strin
 
 static void c11yy_string_objarray_free(struct c11yy_string_objarray *a) {
 	if (a->array) {
+		struct c11yy_string_obj *st = a->array;
 		size_t i;
 
-		for (i=0;i < a->length;i++)
-			c11yy_string_objarray_freestr_id(a,i);
+		for (i=0;i < a->length;i++,st++) {
+			c11yy_string_obj_free(st);
+			memset(st,0,sizeof(*st));
+		}
 
 		free(a->array);
 	}
 
 	a->length = 0;
 	a->alloc = 0;
-	a->next = 0;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -574,15 +548,15 @@ void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,in
 			}
 		}
 
-		st = c11yy_string_objarray_findstr(&c11yy_stringarray,hash,buf,len);
+		st = c11yy_string_objarray_find(&c11yy_stringarray,hash,buf,len);
 		if (st) {
-			val->id = c11yy_string_objarray_str2id(&c11yy_stringarray,st);
+			val->id = c11yy_string_objarray_to_id(&c11yy_stringarray,st);
 			free(buf);
 		}
 		else {
-			st = c11yy_string_objarray_newstr(&c11yy_stringarray);
+			st = c11yy_string_objarray_new(&c11yy_stringarray);
 			if (st) {
-				val->id = c11yy_string_objarray_str2id(&c11yy_stringarray,st);
+				val->id = c11yy_string_objarray_to_id(&c11yy_stringarray,st);
 				st->stype = stype;
 				st->str.s8 = buf;
 				st->hash = hash;
@@ -722,16 +696,211 @@ int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned
 
 ///////////////////////////////////////////////////////////
 
-static int c11yy_init(void) {
-	if (!c11yy_stringarray.array) {
-		if (c11yy_string_objarray_init(&c11yy_stringarray))
-			return 1;
+struct c11yy_identifier_objarray {
+	struct c11yy_identifier_obj*		array;
+	size_t					length,alloc;
+};
+
+#define c11yy_identifier_objarray_INIT { NULL, 0, 0 }
+
+///////////////////////////////////////////////////////////
+
+static struct c11yy_identifier_obj *c11yy_identifier_objarray_from_id(struct c11yy_identifier_objarray *a,const c11yy_identifier_id id) {
+	if (a && a->array && id < a->length)
+		return a->array + id; /* pointer math equiv to &(a->array[id]) */
+
+	return NULL;
+}
+
+static c11yy_identifier_id c11yy_identifier_objarray_to_id(struct c11yy_identifier_objarray *a,struct c11yy_identifier_obj *st) {
+	if (a && a->array && st >= a->array) {
+		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(identifier_obj) */
+		if (i < a->length) return i;
+	}
+
+	return c11yy_identifier_none;
+}
+
+static void c11yy_identifier_obj_free(struct c11yy_identifier_obj *st) {
+	if (st) {
+		if (st->s8) free(st->s8);
+		st->itype = C11YY_IDT_NONE;
+		st->s8 = NULL;
+		st->len = 0;
+	}
+}
+
+static int c11yy_identifier_objarray_init(struct c11yy_identifier_objarray *a) {
+	if (!a->array) {
+		const size_t init_len = 8;
+
+		if ((a->array=malloc(sizeof(struct c11yy_identifier_obj) * init_len)) != NULL) {
+			a->alloc = init_len;
+			a->length = 0;
+		}
+		else {
+			return -1;
+		}
 	}
 
 	return 0;
 }
 
+static void c11yy_identifier_objarray_free(struct c11yy_identifier_objarray *a) {
+	if (a->array) {
+		struct c11yy_identifier_obj *st;
+		size_t i;
+
+		for (i=0;i < a->length;i++,st++) {
+			c11yy_identifier_obj_free(st);
+			memset(st,0,sizeof(*st));
+		}
+
+		free(a->array);
+	}
+
+	a->length = 0;
+	a->alloc = 0;
+}
+
+///////////////////////////////////////////////////////////
+
+struct c11yy_scope_obj {
+	struct c11yy_identifier_objarray	ioa;
+};
+
+#define c11yy_scope_obj_INIT { c11yy_identifier_objarray_INIT }
+
+///////////////////////////////////////////////////////////
+
+struct c11yy_scope_objarray {
+	struct c11yy_scope_obj*			array;
+	size_t					length,alloc;
+};
+
+#define c11yy_scope_objarray_INIT { NULL, 0, 0 }
+
+///////////////////////////////////////////////////////////
+
+struct c11yy_scope_objarray			c11yy_scopearray;
+
+struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,const char lexmatch) {
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////
+
+static struct c11yy_scope_obj *c11yy_scope_objarray_id2str(struct c11yy_scope_objarray *a,const c11yy_scope_id id) {
+	if (a && a->array && id < a->length)
+		return a->array + id; /* pointer math equiv to &(a->array[id]) */
+
+	return NULL;
+}
+
+static c11yy_scope_id c11yy_scope_objarray_str2id(struct c11yy_scope_objarray *a,struct c11yy_scope_obj *st) {
+	if (a && a->array && st >= a->array) {
+		const size_t i = (size_t)(st - a->array); /* equiv to ((uintptr_t)st - (uintptr_t)a->array) / (uintptr_t)sizoef(scope_obj) */
+		if (i < a->length) return i;
+	}
+
+	return c11yy_scope_none;
+}
+
+static void c11yy_scope_obj_free(struct c11yy_scope_obj *st) {
+	if (st) {
+		c11yy_identifier_objarray_free(&(st->ioa));
+	}
+}
+
+static struct c11yy_scope_obj *c11yy_scope_objarray_init_next_length_item(struct c11yy_scope_objarray *a) {
+	/* assume a && a->array */
+	if (a->length < a->alloc) {
+		struct c11yy_scope_obj *o = a->array + a->length;
+		memset(o,0,sizeof(*o));
+
+		if (c11yy_identifier_objarray_init(&(o->ioa)))
+			return NULL;
+
+		a->length++;
+		return o;
+	}
+
+	return NULL;
+}
+
+static int c11yy_scope_objarray_extend(struct c11yy_scope_objarray *a,size_t newlen) {
+	/* assume a && a->array */
+	if (a->alloc < newlen) {
+		struct c11yy_scope_obj *na;
+
+		if ((na=realloc(a->array, sizeof(struct c11yy_scope_obj) * newlen)) != NULL) {
+			a->alloc = newlen;
+			a->array = na;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+static struct c11yy_scope_obj *c11yy_scope_objarray_new(struct c11yy_scope_objarray *a) {
+	if (a && a->array) {
+		struct c11yy_scope_obj *r;
+
+		if ((r=c11yy_scope_objarray_init_next_length_item(a)) != NULL) return r;
+		if (c11yy_scope_objarray_extend(a,a->alloc + 8u + (a->alloc / 2u))) return NULL;
+		return c11yy_scope_objarray_init_next_length_item(a);
+	}
+
+	return NULL;
+}
+
+static int c11yy_scope_objarray_init(struct c11yy_scope_objarray *a) {
+	if (!a->array) {
+		const size_t init_len = 8;
+
+		if ((a->array=malloc(sizeof(struct c11yy_scope_obj) * init_len)) != NULL) {
+			a->alloc = init_len;
+			a->length = 0;
+		}
+		else {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static void c11yy_scope_objarray_free(struct c11yy_scope_objarray *a) {
+	if (a->array) {
+		struct c11yy_scope_obj *st = a->array;
+		size_t i;
+
+		for (i=0;i < a->length;i++,st++) {
+			c11yy_scope_obj_free(st);
+			memset(st,0,sizeof(*st));
+		}
+
+		free(a->array);
+	}
+
+	a->length = 0;
+	a->alloc = 0;
+}
+
+///////////////////////////////////////////////////////////
+
+static int c11yy_init(void) {
+	if (c11yy_string_objarray_init(&c11yy_stringarray))
+		return 1;
+	if (c11yy_scope_objarray_init(&c11yy_scopearray))
+		return 1;
+
+	return 0;
+}
+
 static void c11yy_cleanup(void) {
+	c11yy_scope_objarray_free(&c11yy_scopearray);
 	c11yy_string_objarray_free(&c11yy_stringarray);
 }
 

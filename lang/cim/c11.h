@@ -48,13 +48,6 @@ struct c11yy_struct_float {
 	uint8_t					sz; /* 0 if no size, else in bits */
 };
 
-enum c11yystringtype {
-	C11YY_STRT_LOCAL=0,			// no prefix given, in whatever non-unicode locale
-	C11YY_STRT_UTF8,			// UTF-8 encoding
-	C11YY_STRT_UTF16,			// UTF-16 encoding
-	C11YY_STRT_UTF32			// UTF-32 encoding
-};
-
 struct c11yy_struct_strliteral {
 	unsigned int				t; /* from c11.y.h == STRING_LITERAL */
 	c11yy_string_token_id			id;
@@ -68,6 +61,13 @@ union c11yy_struct {
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
+
+enum c11yystringtype {
+	C11YY_STRT_LOCAL=0,			// no prefix given, in whatever non-unicode locale
+	C11YY_STRT_UTF8,			// UTF-8 encoding
+	C11YY_STRT_UTF16,			// UTF-16 encoding
+	C11YY_STRT_UTF32			// UTF-32 encoding
+};
 
 struct c11yy_string_obj {
 	enum c11yystringtype			stype;
@@ -83,6 +83,28 @@ struct c11yy_string_obj {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
+enum c11yyidenttype {
+	C11YY_IDT_NONE=0,
+	C11YY_IDT_IDENTIFIER,
+	C11YY_IDT_TYPEDEF_NAME,
+	C11YY_IDT_ENUMERATION_CONSTANT
+};
+
+typedef uint32_t c11yy_identifier_id;
+#define c11yy_identifier_none			( ~((uint32_t)(0u)) )
+
+typedef uint32_t c11yy_scope_id;
+#define c11yy_scope_none			( ~((uint32_t)(0u)) )
+
+struct c11yy_identifier_obj {
+	enum c11yyidenttype			itype;
+	uint8_t					len; /* in bytes -- we're not going to support identifiers >= 256 bytes long! */
+	uint8_t*				s8;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,const char lexmatch);
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);

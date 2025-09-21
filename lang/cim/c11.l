@@ -32,9 +32,7 @@ extern union c11yy_struct c11yylval;
 
 extern void c11yyerror(const char *);  /* prints grammar violation message */
 
-extern int sym_type(const char *,size_t len);  /* returns type from symbol table */
-
-#define sym_type(identifier,len) IDENTIFIER /* with no symbol table, fake it */
+extern int c11sym_type(const char *,size_t len);  /* returns type from symbol table */
 
 static void comment(void);
 static int check_type(void);
@@ -180,13 +178,15 @@ static void comment(void)
 
 static int check_type(void)
 {
-	switch (sym_type(yytext,yyleng)) {
-		case TYPEDEF_NAME:                /* previously defined */
-			return TYPEDEF_NAME;
-		case ENUMERATION_CONSTANT:        /* previously defined */
-			return ENUMERATION_CONSTANT;
-		default:                          /* includes undefined */
-			return IDENTIFIER;
+	struct c11yy_identifier_obj *io = c11yy_init_ident(yytext,yyleng);
+	if (io) {
+		switch (io->itype) {
+			case C11YY_IDT_ENUMERATION_CONSTANT: return ENUMERATION_CONSTANT;
+			case C11YY_IDT_TYPEDEF_NAME: return TYPEDEF_NAME;
+			default: return IDENTIFIER;
+		}
 	}
+
+	return IDENTIFIER;
 }
 
