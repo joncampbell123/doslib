@@ -118,6 +118,9 @@ extern "C" int c11yy_check_type(const struct c11yy_identifier_obj *io) {
 ////////////////////////////////////////////////////////////////////
 
 extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yytext,const char lexmatch) {
+	const char *str = yytext;
+	int exponent = 0;
+
 	val->t = F_CONSTANT;
 	val->mant = 0;
 	val->exponent = 0;
@@ -128,8 +131,6 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 	 *      therefore this code does not need to worry about negative numbers. */
 
 	if (lexmatch == 'D') {
-		int exponent = 0;
-		const char *str = yytext;
 		const long double rv = strtold(yytext,(char**)(&yytext));
 		const long double nv = frexpl(rv,&exponent);
 		if (nv != 0.0l) {
@@ -137,20 +138,10 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 			val->exponent = exponent - 1;
 			val->mant = (uint64_t)floor((nv * 18446744073709551616.0l) + 0.5l);
 		}
-
-		fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx '%s'\n",
-			(double)rv,
-			(unsigned long)val->flags,
-			(unsigned int)val->sz,
-			(unsigned int)val->exponent,
-			(unsigned long long)val->mant,
-			str);
 	}
 	else if (lexmatch == 'H') {
-		const char *str = yytext;
 		unsigned char ldigit = 0;
 		unsigned char shf = 64;
-		int exponent = 0;
 		int v;
 
 		/* skip the "0x" */
@@ -231,16 +222,23 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 		}
 
 		val->exponent = exponent;
-
-		const long double rv = ldexpl((long double)val->mant,exponent - 63);
-		fprintf(stderr,"flth %.6f flags=%lx sz=%u exp=%d mant=0x%016llx '%s'\n",
-			(double)rv,
-			(unsigned long)val->flags,
-			(unsigned int)val->sz,
-			(unsigned int)val->exponent,
-			(unsigned long long)val->mant,
-			str);
 	}
+
+	if (*yytext == 'f' || *yytext == 'F') {
+		val->sz = 4; /* float */
+	}
+	else if (*yytext == 'l' || *yytext == 'L') {
+		val->sz = 10; /* long double */
+	}
+
+	const long double rv = ldexpl((long double)val->mant,val->exponent - 63);
+	fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx '%s'\n",
+		(double)rv,
+		(unsigned long)val->flags,
+		(unsigned int)val->sz,
+		(unsigned int)val->exponent,
+		(unsigned long long)val->mant,
+		str);
 }
 
 ////////////////////////////////////////////////////////////////////
