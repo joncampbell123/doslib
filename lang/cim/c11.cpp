@@ -136,7 +136,7 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 		if (nv != 0.0l) {
 			/* convert 0.5 <= x < 1.0 * (2^exponent) to IEEE representation */
 			val->exponent = exponent - 1;
-			val->mant = (uint64_t)floor((nv * 18446744073709551616.0l) + 0.5l);
+			val->mant = (uint64_t)floor((nv * 18446744073709551616.0l/*2^64*/) + 0.5l);
 		}
 	}
 	else if (lexmatch == 'H') {
