@@ -58,6 +58,12 @@ extern const struct c11yy_struct_integer c11yy_struct_integer_I_CONSTANT_INIT;
 #define C11YY_FLOATF_SPECIAL			(1u << 1u) /* i.e. NaN, inf, etc */
 
 struct c11yy_struct_float {
+	/* regardless of host format, this struct tracks floating point like the Intel 80-bit
+	 * "extended precision" format would including how normalization normally leaves the
+	 * 63rd bit of the mantissa set except for zero. Exponent is an int with a large enough
+	 * range that "subnormal" numbers do not occur and it goes way beyound the 80-bit format
+	 * exponent limits. The flags field is used to indicate whether it has special meaning
+	 * such as NaN. */
 	unsigned int				t; /* from c11.y.h == F_CONSTANT */
 	uint64_t				mant;
 	int					exponent;
