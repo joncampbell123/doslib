@@ -92,12 +92,12 @@ static int do_ident(void);
 "0"{O}*{IS}?				{ c11yy_init_iconst(&c11yylval.intval,yytext,'O'); return I_CONSTANT; }
 {CP}?"'"([^'\\\n]|{ES})+"'"		{ c11yy_init_iconst(&c11yylval.intval,yytext,'C'); return I_CONSTANT; }
 
-{D}+{E}{FS}?				{ return F_CONSTANT; }
-{D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
-{D}+"."{E}?{FS}?			{ return F_CONSTANT; }
-{HP}{H}+{P}{FS}?			{ return F_CONSTANT; }
-{HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
-{HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
+{D}+{E}{FS}?				{ c11yy_init_fconst(&c11yylval.floatval,yytext,'D'); return F_CONSTANT; }
+{D}*"."{D}+{E}?{FS}?			{ c11yy_init_fconst(&c11yylval.floatval,yytext,'D'); return F_CONSTANT; }
+{D}+"."{E}?{FS}?			{ c11yy_init_fconst(&c11yylval.floatval,yytext,'D'); return F_CONSTANT; }
+{HP}{H}+{P}{FS}?			{ c11yy_init_fconst(&c11yylval.floatval,yytext,'H'); return F_CONSTANT; }
+{HP}{H}*"."{H}+{P}{FS}?			{ c11yy_init_fconst(&c11yylval.floatval,yytext,'H'); return F_CONSTANT; }
+{HP}{H}+"."{P}{FS}?			{ c11yy_init_fconst(&c11yylval.floatval,yytext,'H'); return F_CONSTANT; }
 
 ({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ c11yy_init_strlit(&c11yylval.strlitval,yytext,yyleng); return STRING_LITERAL; }
 

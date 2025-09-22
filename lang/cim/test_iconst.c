@@ -10,6 +10,7 @@ void func() {
 	const char *strs = { u8"Wide text Ｔｅｓｔｉｎｇ　１２３ is so vaporwave" };
 	const char *strs = { "Hello", "Hello", "Hello", "Hello", "\x48\x65\x6c\x6c\x6f" };
 	const char *more;
+	float vals = { 0.0, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1e1, 1e3, 1e10 };
 	/* comment */
 }
 

@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -112,6 +113,35 @@ extern "C" c11yy_identifier_id c11yy_ident_to_id(struct c11yy_identifier_obj *io
 extern "C" int c11yy_check_type(const struct c11yy_identifier_obj *io) {
 	if (io && io->itype < C11YY_IDT__MAX) return c11yy_itype_to_token[io->itype];
 	return IDENTIFIER;
+}
+
+////////////////////////////////////////////////////////////////////
+
+extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yytext,const char lexmatch) {
+	val->t = F_CONSTANT;
+	val->mant = 0;
+	val->exponent = 0;
+	val->flags = 0;
+	val->sz = 0;
+
+	if (lexmatch == 'D') {
+		/* NTS: The lex syntax file does not consider a leading negative sign part of this number */
+		int exponent = 0;
+		const long double rv = strtold(yytext,(char**)(&yytext));
+		const long double nv = frexpl(rv,&exponent);
+		val->sz = 8; // assume double
+		if (nv != 0.0l) {
+			val->exponent = exponent - 1;
+			val->mant = (uint64_t)floor((nv * 18446744073709551616.0l) + 0.5l);
+		}
+
+		fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+			(double)rv,
+			(unsigned long)val->flags,
+			(unsigned int)val->sz,
+			(unsigned int)val->exponent,
+			(unsigned long long)val->mant);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////

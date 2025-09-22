@@ -117,6 +117,7 @@ struct c11yy_identifier_obj {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng);
+void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yytext,const char lexmatch);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
 c11yy_identifier_id c11yy_ident_to_id(struct c11yy_identifier_obj *io,const c11yy_scope_id scope);
 struct c11yy_identifier_obj *c11yy_ident_lookup(const uint32_t hash,const char *buf,int len,c11yy_scope_id *scope);
