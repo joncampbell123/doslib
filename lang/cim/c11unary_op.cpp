@@ -20,6 +20,11 @@ static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s)
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
 		return 0;
 	}
+	else if (s->base.t == F_CONSTANT) {
+		*d = *s;
+		d->floatval.flags ^= C11YY_FLOATF_NEGATIVE;
+		return 0;
+	}
 
 	return 1;
 }
@@ -29,6 +34,10 @@ static int c11yy_unary_op_pos(union c11yy_struct *d,const union c11yy_struct *s)
 		*d = *s;
 		d->intval.flags |= C11YY_INTF_SIGNED;
 		d->intval.sz = c11yy_iconsts_auto_size(d->intval.v.s);
+		return 0;
+	}
+	else if (s->base.t == F_CONSTANT) {
+		*d = *s;
 		return 0;
 	}
 
@@ -44,6 +53,7 @@ static int c11yy_unary_op_bnot(union c11yy_struct *d,const union c11yy_struct *s
 		d->intval.flags |= C11YY_INTF_TRUNCATEOK;
 		return 0;
 	}
+	/* never valid for F_CONSTANT (floating point) */
 
 	return 1;
 }
@@ -54,6 +64,13 @@ static int c11yy_unary_op_lnot(union c11yy_struct *d,const union c11yy_struct *s
 		*d = *s;
 		d->base.t = s->base.t;
 		d->intval.v.u = (s->intval.v.u == (uint64_t)0ull) ? 1u : 0u;
+		return 0;
+	}
+	else if (s->base.t == F_CONSTANT) {
+		/* float goes in, int goes out */
+		const bool cond = (s->floatval.mant == (uint64_t)0ull);
+		d->intval = c11yy_struct_integer_I_CONSTANT_INIT;
+		d->intval.v.u = cond ? 1u : 0u;
 		return 0;
 	}
 
