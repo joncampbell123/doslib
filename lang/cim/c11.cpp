@@ -129,6 +129,7 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 
 	if (lexmatch == 'D') {
 		int exponent = 0;
+		const char *str = yytext;
 		const long double rv = strtold(yytext,(char**)(&yytext));
 		const long double nv = frexpl(rv,&exponent);
 		if (nv != 0.0l) {
@@ -137,12 +138,13 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 			val->mant = (uint64_t)floor((nv * 18446744073709551616.0l) + 0.5l);
 		}
 
-		fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx '%s'\n",
 			(double)rv,
 			(unsigned long)val->flags,
 			(unsigned int)val->sz,
 			(unsigned int)val->exponent,
-			(unsigned long long)val->mant);
+			(unsigned long long)val->mant,
+			str);
 	}
 	else if (lexmatch == 'H') {
 		const char *str = yytext;
