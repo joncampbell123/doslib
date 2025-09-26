@@ -71,6 +71,8 @@ struct c11yy_struct_float {
 	uint8_t					sz; /* 0 if no size, else in bits */
 };
 
+extern const struct c11yy_struct_float c11yy_struct_float_F_CONSTANT_INIT;
+
 struct c11yy_struct_strliteral {
 	unsigned int				t; /* from c11.y.h == STRING_LITERAL */
 	c11yy_string_token_id			id;
