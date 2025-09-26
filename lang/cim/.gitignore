@@ -1,0 +1,8 @@
+*.o
+c11
+c11.l.c
+c11.l.h
+c11.y.c
+c11.y.h
+c11.y.output
+
