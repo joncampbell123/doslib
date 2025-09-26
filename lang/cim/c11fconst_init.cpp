@@ -11,15 +11,13 @@ extern "C" {
 
 #include "c11.hpp"
 
+const struct c11yy_struct_float c11yy_struct_float_F_CONSTANT_INIT = { /*t*/F_CONSTANT, /*mant*/0, /*exponent*/0, /*flags*/0, /*sz*/0 };
+
 extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yytext,const char lexmatch) {
 	const char *str = yytext;
 	int exponent = 0;
 
-	val->t = F_CONSTANT;
-	val->mant = 0;
-	val->exponent = 0;
-	val->flags = 0;
-	val->sz = 8; // assume double
+	*val = c11yy_struct_float_F_CONSTANT_INIT;
 
 	/* NTS: The lex syntax file does not consider a leading negative sign part of this number,
 	 *      therefore this code does not need to worry about negative numbers. */
