@@ -28,6 +28,7 @@ void func() {
 	const float a = 1.0 + 0.0;
 	const float a = -1.0 + 0.0;
 	const float a = -0.0 + 1.0;
+	const float a = 1.0 + -0.125;
 	/* comment */
 }
 
