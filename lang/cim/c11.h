@@ -98,6 +98,7 @@ extern const struct c11yy_struct_astnode c11yy_struct_astnode_INIT;
 union c11yy_struct {
 	struct c11yy_struct_base		base;
 	struct c11yy_struct_integer		intval;
+	struct c11yy_struct_astnode		astnode;
 	struct c11yy_struct_float		floatval;
 	struct c11yy_struct_strliteral		strlitval;
 	struct c11yy_struct_identifier		identifier;

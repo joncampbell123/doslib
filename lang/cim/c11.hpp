@@ -29,5 +29,14 @@ extern std::vector<struct c11yy_scope_obj> c11yy_scope_table;
 void c11yy_string_obj_free(struct c11yy_string_obj &o);
 void c11yy_string_table_clear(void);
 
+/* this is a typedef. we're going to allow private trees in addition to the global tree.
+ * of course the node IDs for ASTNODE refer then to the private tree. */
+typedef std::vector<union c11yy_struct> c11yy_astnode_array;
+
+extern c11yy_astnode_array c11yy_astnode;
+
+struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c11yy_astnode_id id);
+const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &anr,const c11yy_astnode_id id);
+
 #endif
 

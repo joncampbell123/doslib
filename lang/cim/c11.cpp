@@ -11,6 +11,8 @@ extern "C" {
 
 #include "c11.hpp"
 
+#include <stdexcept>
+
 std::vector<struct c11yy_scope_obj>		c11yy_scope_table;
 std::vector<c11yy_scope_id>			c11yy_scope_stack;
 
@@ -115,6 +117,20 @@ extern "C" c11yy_identifier_id c11yy_ident_to_id(struct c11yy_identifier_obj *io
 extern "C" int c11yy_check_type(const struct c11yy_identifier_obj *io) {
 	if (io && io->itype < C11YY_IDT__MAX) return c11yy_itype_to_token[io->itype];
 	return IDENTIFIER;
+}
+
+////////////////////////////////////////////////////////////////////
+
+c11yy_astnode_array c11yy_astnodes;
+
+struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c11yy_astnode_id id) {
+	if (id < anr.size()) return anr[id].astnode;
+	throw std::out_of_range("AST node ID out of range");
+}
+
+const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &anr,const c11yy_astnode_id id) {
+	if (id < anr.size()) return anr[id].astnode;
+	throw std::out_of_range("AST node ID out of range");
 }
 
 ////////////////////////////////////////////////////////////////////
