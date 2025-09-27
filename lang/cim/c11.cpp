@@ -123,14 +123,17 @@ extern "C" int c11yy_check_type(const struct c11yy_identifier_obj *io) {
 
 c11yy_astnode_array c11yy_astnodes;
 
-struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c11yy_astnode_id id) {
+template <typename R,typename A> static inline R &c11yy_astnode_ref_common(A &anr,const c11yy_astnode_id id) {
 	if (id < anr.size()) return anr[id].astnode;
 	throw std::out_of_range("AST node ID out of range");
 }
 
+struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c11yy_astnode_id id) {
+	return c11yy_astnode_ref_common<struct c11yy_struct_astnode,c11yy_astnode_array>(anr,id);
+}
+
 const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &anr,const c11yy_astnode_id id) {
-	if (id < anr.size()) return anr[id].astnode;
-	throw std::out_of_range("AST node ID out of range");
+	return c11yy_astnode_ref_common<const struct c11yy_struct_astnode,const c11yy_astnode_array>(anr,id);
 }
 
 ////////////////////////////////////////////////////////////////////
