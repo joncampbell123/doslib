@@ -36,6 +36,7 @@ void func() {
 	const float a = 0.5 - 1.0;
 	const float a = 1.0 - 2.0 - 2.0;
 	const float a = 1.0 - -1.0;
+	const float a = 0.0 - 1.0;
 	/* comment */
 }
 
