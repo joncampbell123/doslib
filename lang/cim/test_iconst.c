@@ -37,6 +37,25 @@ void func() {
 	const float a = 1.0 - 2.0 - 2.0;
 	const float a = 1.0 - -1.0;
 	const float a = 0.0 - 1.0;
+	const int a = 1 * 1;
+	const int a = 1 * 0;
+	const int a = 2 * 2;
+	const int a = -1 * 1;
+	const int a = -1 * -1;
+	const int a = -2 * 2;
+	const int a = -2 * -2;
+	const int a = 2 * 2 * 2 * 2;
+	const float a = 1.0 * 1.0;
+	const float a = 1.0 * 2.0;
+	const float a = 2.0 * 2.0;
+	const float a = 2.0 * 2.0 * 2.0 * 2.0;
+	const float a = 2.0 * -2.0;
+	const float a = 3.0 * 3.0;
+	const float a = 11.111111 * 0.1;
+	const float a = 11.111111 * 0.01;
+	const float a = 11.111111 * 0.1 * 0.1;
+	const float a = 1.0 * 0.0;
+	const float a = -1.0 * 0.0;
 	/* comment */
 }
 

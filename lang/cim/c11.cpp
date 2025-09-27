@@ -119,6 +119,131 @@ int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_f
 
 ////////////////////////////////////////////////////////////////////
 
+int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
+	d = a;
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	/* if either side is zero, the result is zero */
+	if ((a.flags^b.flags)&C11YY_FLOATF_NEGATIVE)
+		d.flags |= C11YY_FLOATF_NEGATIVE;
+	else
+		d.flags &= ~C11YY_FLOATF_NEGATIVE;
+
+	if (a.mant != 0ull && b.mant != 0ull) {
+		const uint64_t la = a.mant & (uint64_t)0xffffffffull;
+		const uint64_t lb = b.mant & (uint64_t)0xffffffffull;
+		const uint64_t ha = a.mant >> (uint64_t)32u;
+		const uint64_t hb = b.mant >> (uint64_t)32u;
+
+		/*         hb lb
+		 *         ha la
+		 *       x------
+		 *         aa aa           la * lb
+		 * +    bb bb ..           la * hb
+		 * +    cc cc ..           ha * lb
+		 * + dd dd .. ..           ha * hb
+		 *   -----------
+		 *
+		 *         12
+		 *       x 34
+		 *       ----
+		 *          8              4 * 2
+		 *         4.              4 * 1
+		 *         6.              3 * 2
+		 *        3..              3 * 1
+		 *       ----
+		 *        408
+		 *
+		 *         67
+		 *       x 89
+		 *       ----
+		 *         63              9 * 7
+		 *        54.              9 * 6
+		 *        56.              8 * 7
+		 *       48..              8 * 6
+		 *       ----
+		 *       5963
+		 */
+
+		const uint64_t aa = la * lb;
+		const uint64_t bb = la * hb;
+		const uint64_t cc = ha * lb;
+		const uint64_t dd = ha * hb;
+
+		uint64_t rl = aa;
+		uint64_t rh = dd;
+		{
+			const uint64_t t = rl + (bb << (uint64_t)32u);
+			if (t < rl) rh++;
+			rl = t;
+		}
+		{
+			const uint64_t t = rl + (cc << (uint64_t)32u);
+			if (t < rl) rh++;
+			rl = t;
+		}
+		rh += bb >> (uint64_t)32u;
+		rh += cc >> (uint64_t)32u;
+
+		fprintf(stderr,"0x%016llx * 0x%016llx = 0x%016llx%016llx (dd=0x%llx cc=0x%llx bb=0x%llx aa=0x%llx)\n",
+			(unsigned long long)a.mant,
+			(unsigned long long)b.mant,
+			(unsigned long long)rh,
+			(unsigned long long)rl,
+			(unsigned long long)dd,
+			(unsigned long long)cc,
+			(unsigned long long)bb,
+			(unsigned long long)aa);
+
+		/* result: 128-bit value, mantissa on bit 126 because 2^63 * 2^63 = 2^126 */
+		d.exponent = a.exponent + b.exponent + 1;
+		d.mant = rh;
+		if (d.mant == 0) {
+			d.mant = rl;
+			d.exponent -= 64;
+		}
+
+		if (d.mant != 0ull) {
+			while (!(d.mant & 0x8000000000000000ull)) {
+				d.mant = (d.mant << 1ull) + (rh >> 63ull);
+				d.exponent--;
+				rh <<= 1ull;
+			}
+		}
+	}
+	else {
+		d.exponent = 0;
+		d.mant = 0;
+	}
+
+	fprintf(stderr,"fltmul res %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)d.mant,d.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
+		(unsigned long)d.flags,
+		(unsigned int)d.sz,
+		(unsigned int)d.exponent,
+		(unsigned long long)d.mant);
+
+	fprintf(stderr,"    a %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)a.mant,a.exponent - 63) * (a.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
+		(unsigned long)a.flags,
+		(unsigned int)a.sz,
+		(unsigned int)a.exponent,
+		(unsigned long long)a.mant);
+
+	fprintf(stderr,"    b %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)b.mant,b.exponent - 63) * (b.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
+		(unsigned long)b.flags,
+		(unsigned int)b.sz,
+		(unsigned int)b.exponent,
+		(unsigned long long)b.mant);
+
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
 int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
 	d = a;
 
@@ -141,6 +266,8 @@ int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 
 	return 0;
 }
+
+////////////////////////////////////////////////////////////////////
 
 int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
 	d = a;
@@ -167,6 +294,32 @@ int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 
 ////////////////////////////////////////////////////////////////////
 
+int c11yy_mul_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
+	d = a;
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
+		d.v.s = a.v.s * b.v.s;
+		d.flags |= C11YY_INTF_SIGNED;
+
+		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
+		if (d.sz < sz) d.sz = sz;
+	}
+	else {
+		d.v.u = a.v.u * b.v.u;
+
+		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
+		if (d.sz < sz) d.sz = sz;
+	}
+
+	fprintf(stderr,"imul %lld\n",(signed long long)d.v.s);
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
 extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_add_iconst(d->intval,a->intval,b->intval);
@@ -183,6 +336,17 @@ extern "C" int c11yy_sub(union c11yy_struct *d,const union c11yy_struct *a,const
 		return c11yy_sub_iconst(d->intval,a->intval,b->intval);
 	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
 		return c11yy_addsub_fconst(d->floatval,a->floatval,b->floatval,C11YY_FLOATF_NEGATIVE);
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
+extern "C" int c11yy_mul(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_mul_iconst(d->intval,a->intval,b->intval);
+	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
+		return c11yy_mul_fconst(d->floatval,a->floatval,b->floatval);
 
 	return 1;
 }
