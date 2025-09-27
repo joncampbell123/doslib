@@ -119,6 +119,65 @@ int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_f
 
 ////////////////////////////////////////////////////////////////////
 
+void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t &a,const uint64_t &b) {
+	const uint64_t la = a & (uint64_t)0xffffffffull;
+	const uint64_t lb = b & (uint64_t)0xffffffffull;
+	const uint64_t ha = a >> (uint64_t)32u;
+	const uint64_t hb = b >> (uint64_t)32u;
+
+	/*         hb lb
+	 *         ha la
+	 *       x------
+	 *         aa aa           la * lb
+	 * +    bb bb ..           la * hb
+	 * +    cc cc ..           ha * lb
+	 * + dd dd .. ..           ha * hb
+	 *   -----------
+	 *
+	 *         12
+	 *       x 34
+	 *       ----
+	 *          8              4 * 2
+	 *         4.              4 * 1
+	 *         6.              3 * 2
+	 *        3..              3 * 1
+	 *       ----
+	 *        408
+	 *
+	 *         67
+	 *       x 89
+	 *       ----
+	 *         63              9 * 7
+	 *        54.              9 * 6
+	 *        56.              8 * 7
+	 *       48..              8 * 6
+	 *       ----
+	 *       5963
+	 */
+
+	const uint64_t aa = la * lb;
+	const uint64_t bb = la * hb;
+	const uint64_t cc = ha * lb;
+	const uint64_t dd = ha * hb;
+
+	uint64_t rl = aa;
+	uint64_t rh = dd;
+	{
+		const uint64_t t = rl + (bb << (uint64_t)32u);
+		if (t < rl) rh++;
+		rl = t;
+	}
+	{
+		const uint64_t t = rl + (cc << (uint64_t)32u);
+		if (t < rl) rh++;
+		rl = t;
+	}
+	f_rh = rh + (bb >> (uint64_t)32u) + (cc >> (uint64_t)32u);
+	f_rl = rl;
+}
+
+////////////////////////////////////////////////////////////////////
+
 int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
 	d = a;
 
@@ -132,84 +191,30 @@ int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 		d.flags &= ~C11YY_FLOATF_NEGATIVE;
 
 	if (a.mant != 0ull && b.mant != 0ull) {
-		const uint64_t la = a.mant & (uint64_t)0xffffffffull;
-		const uint64_t lb = b.mant & (uint64_t)0xffffffffull;
-		const uint64_t ha = a.mant >> (uint64_t)32u;
-		const uint64_t hb = b.mant >> (uint64_t)32u;
-
-		/*         hb lb
-		 *         ha la
-		 *       x------
-		 *         aa aa           la * lb
-		 * +    bb bb ..           la * hb
-		 * +    cc cc ..           ha * lb
-		 * + dd dd .. ..           ha * hb
-		 *   -----------
-		 *
-		 *         12
-		 *       x 34
-		 *       ----
-		 *          8              4 * 2
-		 *         4.              4 * 1
-		 *         6.              3 * 2
-		 *        3..              3 * 1
-		 *       ----
-		 *        408
-		 *
-		 *         67
-		 *       x 89
-		 *       ----
-		 *         63              9 * 7
-		 *        54.              9 * 6
-		 *        56.              8 * 7
-		 *       48..              8 * 6
-		 *       ----
-		 *       5963
-		 */
-
-		const uint64_t aa = la * lb;
-		const uint64_t bb = la * hb;
-		const uint64_t cc = ha * lb;
-		const uint64_t dd = ha * hb;
-
-		uint64_t rl = aa;
-		uint64_t rh = dd;
-		{
-			const uint64_t t = rl + (bb << (uint64_t)32u);
-			if (t < rl) rh++;
-			rl = t;
-		}
-		{
-			const uint64_t t = rl + (cc << (uint64_t)32u);
-			if (t < rl) rh++;
-			rl = t;
-		}
-		rh += bb >> (uint64_t)32u;
-		rh += cc >> (uint64_t)32u;
-
-		fprintf(stderr,"0x%016llx * 0x%016llx = 0x%016llx%016llx (dd=0x%llx cc=0x%llx bb=0x%llx aa=0x%llx)\n",
-			(unsigned long long)a.mant,
-			(unsigned long long)b.mant,
-			(unsigned long long)rh,
-			(unsigned long long)rl,
-			(unsigned long long)dd,
-			(unsigned long long)cc,
-			(unsigned long long)bb,
-			(unsigned long long)aa);
+		uint64_t rh,rl;
 
 		/* result: 128-bit value, mantissa on bit 126 because 2^63 * 2^63 = 2^126 */
+		multiply64x64to128(/*&*/rh,/*&*/rl,a.mant,b.mant);
 		d.exponent = a.exponent + b.exponent + 1;
 		d.mant = rh;
-		if (d.mant == 0) {
+		if (d.mant == 0ull) {
 			d.mant = rl;
 			d.exponent -= 64;
+			rl = 0;
 		}
 
 		if (d.mant != 0ull) {
 			while (!(d.mant & 0x8000000000000000ull)) {
-				d.mant = (d.mant << 1ull) + (rh >> 63ull);
+				d.mant = (d.mant << 1ull) | (rl >> 63ull);
 				d.exponent--;
-				rh <<= 1ull;
+				rl <<= 1ull;
+			}
+		}
+		/* rounding */
+		if (rl & 0x8000000000000000ull) {
+			if ((++d.mant) == (uint64_t)0ull) {
+				d.mant = (uint64_t)0x8000000000000000ull;
+				d.exponent++;
 			}
 		}
 	}

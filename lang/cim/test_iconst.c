@@ -56,6 +56,8 @@ void func() {
 	const float a = 11.111111 * 0.1 * 0.1;
 	const float a = 1.0 * 0.0;
 	const float a = -1.0 * 0.0;
+	const float a = 2e10 * 1e10;
+	const float a = 2e100 * 1e100;
 	/* comment */
 }
 
