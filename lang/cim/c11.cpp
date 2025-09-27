@@ -13,6 +13,41 @@ extern "C" {
 
 #include <stdexcept>
 
+////////////////////////////////////////////////////////////////////
+
+extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT) {
+		*d = *a;
+
+		if (d->intval.sz < a->intval.sz)
+			d->intval.sz = a->intval.sz;
+		if (d->intval.sz < b->intval.sz)
+			d->intval.sz = b->intval.sz;
+
+		if ((a->intval.flags&C11YY_INTF_SIGNED) || (b->intval.flags&C11YY_INTF_SIGNED)) {
+			d->intval.v.s = a->intval.v.s + b->intval.v.s;
+			d->intval.flags |= C11YY_INTF_SIGNED;
+
+			const uint8_t sz = c11yy_iconsts_auto_size(d->intval.v.s);
+			if (d->intval.sz < sz)
+				d->intval.sz = sz;
+		}
+		else {
+			d->intval.v.u = a->intval.v.u + b->intval.v.u;
+
+			const uint8_t sz = c11yy_iconstu_auto_size(d->intval.v.u);
+			if (d->intval.sz < sz)
+				d->intval.sz = sz;
+		}
+
+		return 0;
+	}
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
 std::vector<struct c11yy_scope_obj>		c11yy_scope_table;
 std::vector<c11yy_scope_id>			c11yy_scope_stack;
 

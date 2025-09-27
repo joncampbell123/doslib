@@ -13,7 +13,7 @@ yyparser: c11.l.h c11.l.c c11.y.h c11.y.c
 
 C11OBJ = c11.o c11iconst_sz.o c11yyskip.o c11iconst.o c11iconst_readsuffix.o c11iconst_readc.o c11iconst_read.o c11char2digit.o c11readutf8.o c11iconst_readchar.o c11stringhash.o c11strlitprefix.o c11writeutf8.o c11writeutf16.o c11strlit_init.o c11iconst_init.o c11unary_op.o c11strobj.o c11stringtable.o c11fconst_init.o c11fconst.o c11astnode.o
 
-$(C11OBJ): c11.l.h c11.y.h
+$(C11OBJ): c11.l.h c11.y.h c11.h
 
 c11: $(C11OBJ) c11.l.o c11.y.o
 	g++ -lm -o $@ $+

@@ -87,8 +87,16 @@ struct c11yy_struct_identifier {
 	c11yy_scope_id				scopeid;
 };
 
+enum c11yy_astnode_op {
+	ASTOP_NONE=0,				// 0
+	ASTOP_NEGATE,
+
+	ASTOP__MAX
+};
+
 struct c11yy_struct_astnode {
 	unsigned int				t; /* from c11.y.h == ASTNODE */
+	enum c11yy_astnode_op			op;
 	c11yy_astnode_id			next;
 	c11yy_astnode_id			child;
 };
@@ -149,4 +157,6 @@ extern uint8_t c11yy_iconstu_auto_size(uint64_t v);
 extern uint8_t c11yy_iconsts_auto_size(int64_t v);
 extern void c11yyerror(const char *);  /* prints grammar violation message */
 int c11yy_char2digit(const char c);
+
+int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b);
 
