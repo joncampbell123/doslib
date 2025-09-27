@@ -15,32 +15,40 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 
+int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
+	/* assume already normalized */
+	if (a.exponent < b.exponent) {
+		const unsigned int shf = (unsigned int)(b.exponent - a.exponent);
+		exp = b.exponent;
+		if (shf < 64u) ama = a.mant >> (uint64_t)shf;
+		else ama = 0u;
+		bma = b.mant;
+	}
+	else if (b.exponent < a.exponent) {
+		const unsigned int shf = (unsigned int)(a.exponent - b.exponent);
+		exp = a.exponent;
+		if (shf < 64u) bma = b.mant >> (uint64_t)shf;
+		else bma = 0u;
+		ama = a.mant;
+	}
+	else {
+		exp = a.exponent;
+		ama = a.mant;
+		bma = b.mant;
+	}
+
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
 int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
 	uint64_t ama,bma;
 	int exp;
 
 	d = a;
-
-	/* assume already normalized */
-	ama = a.mant;
-	bma = b.mant;
-
-	/* line up to largest exponent */
-	if (a.exponent < b.exponent) {
-		const unsigned int shf = (unsigned int)(b.exponent - a.exponent);
-		exp = b.exponent;
-		if (shf < 64u) ama >>= (uint64_t)shf;
-		else ama = 0u;
-	}
-	else if (b.exponent < a.exponent) {
-		const unsigned int shf = (unsigned int)(a.exponent - b.exponent);
-		exp = a.exponent;
-		if (shf < 64u) bma >>= (uint64_t)shf;
-		else bma = 0u;
-	}
-	else {
-		exp = a.exponent;
-	}
+	if (c11yy_fconst_match_mantissa_prep(exp,ama,bma,a,b))
+		return 1;
 
 	/* if a+b mantissa would overflow, then shift again */
 	uint64_t sm = ama+bma;
