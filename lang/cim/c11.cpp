@@ -42,7 +42,7 @@ int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const 
 
 ////////////////////////////////////////////////////////////////////
 
-int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
+int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,unsigned int aflags) {
 	uint64_t ama,bma,sm;
 	int exp;
 
@@ -50,10 +50,16 @@ int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 	if (c11yy_fconst_match_mantissa_prep(exp,ama,bma,a,b))
 		return 1;
 
-	/* pos + pos = add mantissa
+	/* addition:
+	 * pos + pos = add mantissa
 	 * neg + neg = add mantissa
-	 * pos + neg or neg + pos = subtract mantissa */
-	if ((a.flags^b.flags)&C11YY_FLOATF_NEGATIVE) {
+	 * pos + neg or neg + pos = subtract mantissa
+	 *
+	 * subtraction:
+	 * pos + pos = subtract mantissa
+	 * neg + neg = subtract mantissa
+	 * pos + neg or neg + pos = add mantissa */
+	if ((a.flags^b.flags^aflags)&C11YY_FLOATF_NEGATIVE) {
 		if (ama < bma) {
 			d.flags ^= C11YY_FLOATF_NEGATIVE;
 			sm = bma - ama;
@@ -86,7 +92,8 @@ int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 	d.exponent = exp;
 	d.mant = sm;
 
-	fprintf(stderr,"fltadd res %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+	fprintf(stderr,"flt%s res %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(aflags & C11YY_FLOATF_NEGATIVE) ? "sub" : "add",
 		(double)ldexpl((long double)d.mant,d.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
 		(unsigned long)d.flags,
 		(unsigned int)d.sz,
@@ -94,14 +101,14 @@ int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 		(unsigned long long)d.mant);
 
 	fprintf(stderr,"    a %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
-		(double)ldexpl((long double)a.mant,a.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
+		(double)ldexpl((long double)a.mant,a.exponent - 63) * (a.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
 		(unsigned long)a.flags,
 		(unsigned int)a.sz,
 		(unsigned int)a.exponent,
 		(unsigned long long)a.mant);
 
 	fprintf(stderr,"    b %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
-		(double)ldexpl((long double)b.mant,b.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
+		(double)ldexpl((long double)b.mant,b.exponent - 63) * (b.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
 		(unsigned long)b.flags,
 		(unsigned int)b.sz,
 		(unsigned int)b.exponent,
@@ -135,13 +142,48 @@ int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	return 0;
 }
 
+int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
+	d = a;
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
+		d.v.s = a.v.s - b.v.s;
+		d.flags |= C11YY_INTF_SIGNED;
+
+		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
+		if (d.sz < sz) d.sz = sz;
+	}
+	else {
+		d.v.u = a.v.u - b.v.u;
+
+		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
+		if (d.sz < sz) d.sz = sz;
+	}
+
+	fprintf(stderr,"isub %lld\n",(signed long long)d.v.s);
+	return 0;
+}
+
 ////////////////////////////////////////////////////////////////////
 
 extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_add_iconst(d->intval,a->intval,b->intval);
 	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
-		return c11yy_add_fconst(d->floatval,a->floatval,b->floatval);
+		return c11yy_addsub_fconst(d->floatval,a->floatval,b->floatval,0);
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
+extern "C" int c11yy_sub(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_sub_iconst(d->intval,a->intval,b->intval);
+	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
+		return c11yy_addsub_fconst(d->floatval,a->floatval,b->floatval,C11YY_FLOATF_NEGATIVE);
 
 	return 1;
 }

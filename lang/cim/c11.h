@@ -159,4 +159,5 @@ extern void c11yyerror(const char *);  /* prints grammar violation message */
 int c11yy_char2digit(const char c);
 
 int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b);
+int c11yy_sub(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b);
 

@@ -120,7 +120,7 @@ multiplicative_expression
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression { if (c11yy_add(&($$),&($1),&($3))) return 1; }
-	| additive_expression '-' multiplicative_expression
+	| additive_expression '-' multiplicative_expression { if (c11yy_sub(&($$),&($1),&($3))) return 1; }
 	;
 
 shift_expression
