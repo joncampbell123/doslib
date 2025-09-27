@@ -12,6 +12,9 @@ void func() {
 	const char *more;
 	float vals = { 0.0, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1e1, 1e3, 1e10, 0x0p0, 0x1p-1, 0x1p0, 0x1p1, 0x2p0, 0x3p0, 0x4p0, 0x6p0, 0xFp0, 0x3fp0, 0xFFFp0, 0x0.8p0, 0x0.8p1, 0x1.0p0, 0x1.0000p0, 0x1.8p0, 0x1.0p1, 0x1.0000p1, 0x1.8p1, 0x1.ffp1, 0x10000000000000002p0, -1.0, -2.0, 1.0f, 1.0F, 1.0l, 1.0L };
 	const int a = 4 + 3;
+	const int a = 4 + 4 + 4 + 4;
+	const int a = 1 + 2 + 3 + 4;
+	const int a = -1 + -2 + -3 + -4;
 	/* comment */
 }
 
