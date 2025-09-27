@@ -15,33 +15,32 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 
-extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
-	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT) {
-		*d = *a;
+int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
+	d = a;
 
-		if (d->intval.sz < a->intval.sz)
-			d->intval.sz = a->intval.sz;
-		if (d->intval.sz < b->intval.sz)
-			d->intval.sz = b->intval.sz;
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
 
-		if ((a->intval.flags&C11YY_INTF_SIGNED) || (b->intval.flags&C11YY_INTF_SIGNED)) {
-			d->intval.v.s = a->intval.v.s + b->intval.v.s;
-			d->intval.flags |= C11YY_INTF_SIGNED;
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
+		d.v.s = a.v.s + b.v.s;
+		d.flags |= C11YY_INTF_SIGNED;
 
-			const uint8_t sz = c11yy_iconsts_auto_size(d->intval.v.s);
-			if (d->intval.sz < sz)
-				d->intval.sz = sz;
-		}
-		else {
-			d->intval.v.u = a->intval.v.u + b->intval.v.u;
-
-			const uint8_t sz = c11yy_iconstu_auto_size(d->intval.v.u);
-			if (d->intval.sz < sz)
-				d->intval.sz = sz;
-		}
-
-		return 0;
+		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
+		if (d.sz < sz) d.sz = sz;
 	}
+	else {
+		d.v.u = a.v.u + b.v.u;
+
+		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
+		if (d.sz < sz) d.sz = sz;
+	}
+
+	return 0;
+}
+
+extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_add_iconst(d->intval,a->intval,b->intval);
 
 	return 1;
 }
