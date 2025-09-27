@@ -15,6 +15,11 @@ void func() {
 	const int a = 4 + 4 + 4 + 4;
 	const int a = 1 + 2 + 3 + 4;
 	const int a = -1 + -2 + -3 + -4;
+	const float a = 1.0 + 1.0;
+	const float a = 1.0 + 1.0 + 1.0 + 1.0;
+	const float a = 1.0 + 0.5 + 0.25 + 0.125;
+	const float a = 0.0001 + 0.0001 + 0.0001 + 0.0001;
+	const float a = 65536.0 + 1.0 + 1.0 + 1.0 + 1.0;
 	/* comment */
 }
 

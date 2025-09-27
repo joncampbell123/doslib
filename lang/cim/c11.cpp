@@ -15,6 +15,74 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 
+int c11yy_add_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
+	uint64_t ama,bma;
+	int exp;
+
+	d = a;
+
+	/* assume already normalized */
+	ama = a.mant;
+	bma = b.mant;
+
+	/* line up to largest exponent */
+	if (a.exponent < b.exponent) {
+		const unsigned int shf = (unsigned int)(b.exponent - a.exponent);
+		exp = b.exponent;
+		if (shf < 64u) ama >>= (uint64_t)shf;
+		else ama = 0u;
+	}
+	else if (b.exponent < a.exponent) {
+		const unsigned int shf = (unsigned int)(a.exponent - b.exponent);
+		exp = a.exponent;
+		if (shf < 64u) bma >>= (uint64_t)shf;
+		else bma = 0u;
+	}
+	else {
+		exp = a.exponent;
+	}
+
+	/* if a+b mantissa would overflow, then shift again */
+	uint64_t sm = ama+bma;
+	if (sm < ama) {
+		const unsigned char carry = (unsigned char)ama&(unsigned char)bma&(unsigned char)1u;/*if both LSB*/
+		sm = (ama >> (uint64_t)1u) + (bma >> (uint64_t)1u);
+		if (carry) sm++;
+		exp++;
+	}
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	d.exponent = exp;
+	d.mant = sm;
+
+	fprintf(stderr,"fltadd res %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)d.mant,d.exponent - 63),
+		(unsigned long)d.flags,
+		(unsigned int)d.sz,
+		(unsigned int)d.exponent,
+		(unsigned long long)d.mant);
+
+	fprintf(stderr,"    a %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)a.mant,a.exponent - 63),
+		(unsigned long)a.flags,
+		(unsigned int)a.sz,
+		(unsigned int)a.exponent,
+		(unsigned long long)a.mant);
+
+	fprintf(stderr,"    b %.6f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
+		(double)ldexpl((long double)b.mant,b.exponent - 63),
+		(unsigned long)b.flags,
+		(unsigned int)b.sz,
+		(unsigned int)b.exponent,
+		(unsigned long long)b.mant);
+
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
 int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
 	d = a;
 
@@ -38,9 +106,13 @@ int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	return 0;
 }
 
+////////////////////////////////////////////////////////////////////
+
 extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_add_iconst(d->intval,a->intval,b->intval);
+	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
+		return c11yy_add_fconst(d->floatval,a->floatval,b->floatval);
 
 	return 1;
 }
