@@ -32,6 +32,9 @@ typedef uint32_t c11yy_identifier_id;
 typedef uint32_t c11yy_scope_id;
 #define c11yy_scope_none			( ~((uint32_t)(0u)) )
 
+typedef uint32_t c11yy_astnode_id;
+#define c11yy_astnode_none			( ~((uint32_t)(0u)) )
+
 struct c11yy_struct_base {
 	unsigned int				t; /* from c11.y.h */
 };
@@ -83,6 +86,14 @@ struct c11yy_struct_identifier {
 	c11yy_identifier_id			id;
 	c11yy_scope_id				scopeid;
 };
+
+struct c11yy_struct_astnode {
+	unsigned int				t; /* from c11.y.h == ASTNODE */
+	c11yy_astnode_id			next;
+	c11yy_astnode_id			child;
+};
+
+extern const struct c11yy_struct_astnode c11yy_struct_astnode_INIT;
 
 union c11yy_struct {
 	struct c11yy_struct_base		base;

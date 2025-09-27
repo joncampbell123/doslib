@@ -18,6 +18,8 @@
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
+%token  ASTNODE
+
 %{
 #include "c11.h"
 #include "c11.l.h"
