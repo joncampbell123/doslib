@@ -318,7 +318,6 @@ int c11yy_div_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 
 		/* both tmp and cnv have bit 63 set at this point */
 		while (1) {
-//			fprintf(stderr,"l1 mant=%llx tmp=%llx cmv=%llx bset=%llx\n",(unsigned long long)d.mant,(unsigned long long)tmp,(unsigned long long)cmv,(unsigned long long)bset);
 			if (tmp >= cmv) {
 				d.mant |= bset;
 				bset >>= 1u;
@@ -335,7 +334,6 @@ int c11yy_div_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 		}
 
 		while (tmp != 0ull) {
-//			fprintf(stderr,"l2 mant=%llx tmp=%llx cmv=%llx bset=%llx\n",(unsigned long long)d.mant,(unsigned long long)tmp,(unsigned long long)cmv,(unsigned long long)bset);
 			if (tmp >= cmv) {
 				d.mant |= bset;
 				tmp -= cmv;
