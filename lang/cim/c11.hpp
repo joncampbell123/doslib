@@ -43,6 +43,9 @@ int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 int c11yy_div_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b);
 int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
 int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
+int c11yy_mul_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
+int c11yy_div_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
+int c11yy_mod_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
 int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,unsigned int aflags);
 int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b);
 
