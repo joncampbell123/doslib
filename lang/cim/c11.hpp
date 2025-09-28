@@ -38,5 +38,7 @@ extern c11yy_astnode_array c11yy_astnode;
 struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c11yy_astnode_id id);
 const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &anr,const c11yy_astnode_id id);
 
+void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t a,const uint64_t b);
+
 #endif
 
