@@ -39,6 +39,7 @@ struct c11yy_struct_astnode &c11yy_astnode_ref(c11yy_astnode_array &anr,const c1
 const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &anr,const c11yy_astnode_id id);
 
 void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t a,const uint64_t b);
+int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b);
 
 #endif
 

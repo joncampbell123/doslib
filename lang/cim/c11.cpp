@@ -15,33 +15,6 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 
-int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b) {
-	/* assume already normalized */
-	if (a.exponent < b.exponent) {
-		const unsigned int shf = (unsigned int)(b.exponent - a.exponent);
-		exp = b.exponent;
-		if (shf < 64u) ama = a.mant >> (uint64_t)shf;
-		else ama = 0u;
-		bma = b.mant;
-	}
-	else if (b.exponent < a.exponent) {
-		const unsigned int shf = (unsigned int)(a.exponent - b.exponent);
-		exp = a.exponent;
-		if (shf < 64u) bma = b.mant >> (uint64_t)shf;
-		else bma = 0u;
-		ama = a.mant;
-	}
-	else {
-		exp = a.exponent;
-		ama = a.mant;
-		bma = b.mant;
-	}
-
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////////
-
 int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,unsigned int aflags) {
 	uint64_t ama,bma,sm;
 	int exp;
