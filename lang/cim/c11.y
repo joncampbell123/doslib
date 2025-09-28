@@ -113,7 +113,7 @@ cast_expression
 multiplicative_expression
 	: cast_expression
 	| multiplicative_expression '*' cast_expression { if (c11yy_mul(&($$),&($1),&($3))) return 1; }
-	| multiplicative_expression '/' cast_expression
+	| multiplicative_expression '/' cast_expression { if (c11yy_div(&($$),&($1),&($3))) return 1; }
 	| multiplicative_expression '%' cast_expression
 	;
 

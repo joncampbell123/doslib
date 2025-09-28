@@ -363,6 +363,37 @@ int c11yy_mul_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 
 ////////////////////////////////////////////////////////////////////
 
+int c11yy_div_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
+	d = a;
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
+		if (b.v.s == 0ll) return 1;
+		d.v.s = a.v.s / b.v.s;
+		d.flags |= C11YY_INTF_SIGNED;
+
+		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
+		if (d.sz < sz) d.sz = sz;
+	}
+	else {
+		if (b.v.u == 0ull) return 1;
+		d.v.u = a.v.u / b.v.u;
+
+		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
+		if (d.sz < sz) d.sz = sz;
+	}
+
+	fprintf(stderr,"%lld / %lld -> %lld\n",
+		(signed long long)a.v.s,
+		(signed long long)b.v.s,
+		(signed long long)d.v.s);
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
 extern "C" int c11yy_add(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_add_iconst(d->intval,a->intval,b->intval);
@@ -390,6 +421,15 @@ extern "C" int c11yy_mul(union c11yy_struct *d,const union c11yy_struct *a,const
 		return c11yy_mul_iconst(d->intval,a->intval,b->intval);
 	if (a->base.t == F_CONSTANT && b->base.t == F_CONSTANT)
 		return c11yy_mul_fconst(d->floatval,a->floatval,b->floatval);
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
+extern "C" int c11yy_div(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_div_iconst(d->intval,a->intval,b->intval);
 
 	return 1;
 }
