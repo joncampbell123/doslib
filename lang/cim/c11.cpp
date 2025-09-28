@@ -258,6 +258,7 @@ int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 
 	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
 		d.v.s = a.v.s + b.v.s;
+		if (d.v.s < a.v.s) d.flags |= C11YY_INTF_OVERFLOW;
 		d.flags |= C11YY_INTF_SIGNED;
 
 		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
@@ -265,6 +266,7 @@ int c11yy_add_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	}
 	else {
 		d.v.u = a.v.u + b.v.u;
+		if (d.v.u < a.v.u) d.flags |= C11YY_INTF_OVERFLOW;
 
 		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
 		if (d.sz < sz) d.sz = sz;
@@ -283,6 +285,7 @@ int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 
 	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
 		d.v.s = a.v.s - b.v.s;
+		if (d.v.s > a.v.s) d.flags |= C11YY_INTF_OVERFLOW;
 		d.flags |= C11YY_INTF_SIGNED;
 
 		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
@@ -290,6 +293,7 @@ int c11yy_sub_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	}
 	else {
 		d.v.u = a.v.u - b.v.u;
+		if (d.v.u > a.v.u) d.flags |= C11YY_INTF_OVERFLOW;
 
 		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
 		if (d.sz < sz) d.sz = sz;
