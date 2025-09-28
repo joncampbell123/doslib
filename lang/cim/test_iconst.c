@@ -71,6 +71,8 @@ void func() {
 	const float a = 1.0 / 0.75;
 	const float a = 11.11111111 / 10.0;
 	const float a = 1234.56789 / 1000.0;
+	const float a = 1e1000 / 1e999;
+	const float a = 1.234e1000 / 1.234e999;
 	/* comment */
 }
 
