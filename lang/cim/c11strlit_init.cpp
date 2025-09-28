@@ -135,7 +135,6 @@ extern "C" void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char
 	}
 
 	{
-		struct c11yy_string_obj *st;
 		const size_t len = (size_t)(w - buf);
 		const uint32_t hash = c11yy_string_hash(buf,len);
 
