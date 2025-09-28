@@ -358,7 +358,6 @@ int c11yy_mul_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 		if (d.sz < sz) d.sz = sz;
 	}
 
-	fprintf(stderr,"imul %lld\n",(signed long long)d.v.s);
 	return 0;
 }
 
