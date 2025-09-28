@@ -63,6 +63,14 @@ void func() {
 	const int a = 1234 / 12;
 	const int a = -1234 / -12;
 	const int a = -1234 / 12;
+	const float a = 1.0 / 1.0;
+	const float a = 1.0 / 2.0;
+	const float a = 16.0 / 4.0;
+	const float a = -16.0 / 8.0;
+	const float a = 3.0 / 2.0;
+	const float a = 1.0 / 0.75;
+	const float a = 11.11111111 / 10.0;
+	const float a = 1234.56789 / 1000.0;
 	/* comment */
 }
 
