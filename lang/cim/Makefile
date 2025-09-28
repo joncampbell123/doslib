@@ -16,7 +16,7 @@ C11OBJ = c11.o c11iconst_sz.o c11yyskip.o c11iconst.o c11iconst_readsuffix.o c11
 $(C11OBJ): c11.l.h c11.y.h c11.h
 
 c11: $(C11OBJ) c11.l.o c11.y.o
-	g++ -lm -o $@ $+
+	g++ -lm -o $@ $+ -lgmp
 
 clean:
 	rm -fv c11.?.h c11.?.c *.y.output *.o c11

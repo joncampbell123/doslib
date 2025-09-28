@@ -119,7 +119,11 @@ int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_f
 
 ////////////////////////////////////////////////////////////////////
 
-void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t &a,const uint64_t &b) {
+#if 1//DEBUG use libgmp to check our work
+#include <gmp.h>
+#endif
+
+void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t a,const uint64_t b) {
 	const uint64_t la = a & (uint64_t)0xffffffffull;
 	const uint64_t lb = b & (uint64_t)0xffffffffull;
 	const uint64_t ha = a >> (uint64_t)32u;
@@ -174,6 +178,41 @@ void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t &a,const ui
 	}
 	f_rh = rh + (bb >> (uint64_t)32u) + (cc >> (uint64_t)32u);
 	f_rl = rl;
+
+#if 1//DEBUG use libgmp to check our work
+	{
+		mpz_t ma,mb,mr;
+
+		mpz_init_set_ui(ma,(uint32_t)(a >> (uint64_t)32u));
+		mpz_mul_2exp(ma,ma,32);
+		mpz_add_ui(ma,ma,(uint32_t)a);
+
+		mpz_init_set_ui(mb,(uint32_t)(b >> (uint64_t)32u));
+		mpz_mul_2exp(mb,mb,32);
+		mpz_add_ui(mb,mb,(uint32_t)b);
+
+		mpz_init(mr);
+		mpz_mul(mr,ma,mb);
+
+		uint64_t chk_lo  = (uint32_t)mpz_get_ui(mr);
+		mpz_div_2exp(mr,mr,32);
+		chk_lo += (uint64_t)((uint32_t)mpz_get_ui(mr)) << (uint64_t)32u;
+		mpz_div_2exp(mr,mr,32);
+
+		uint64_t chk_hi  = (uint32_t)mpz_get_ui(mr);
+		mpz_div_2exp(mr,mr,32);
+		chk_hi += (uint64_t)((uint32_t)mpz_get_ui(mr)) << (uint64_t)32u;
+
+		mpz_clear(ma);
+		mpz_clear(mb);
+		mpz_clear(mr);
+
+		if (f_rh != chk_hi || f_rl != chk_lo) {
+			fprintf(stderr,"64x64 multiply fail:    Got 0x16%llx16%llx\n",(unsigned long long)f_rh,(unsigned long long)f_rl);
+			fprintf(stderr,"                     Should 0x16%llx16%llx\n",(unsigned long long)chk_hi,(unsigned long long)chk_lo);
+		}
+	}
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////
