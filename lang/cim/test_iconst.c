@@ -92,6 +92,36 @@ void func() {
 	const int a = 2 == 2;
 	const int a = 1 != 2;
 	const int a = 2 != 2;
+	const int a = 1.0 == 1.0;
+	const int a = 1.0 != 1.0;
+	const int a = 1.0 < 2.0;
+	const int a = 1.0 < 1.0;
+	const int a = 1.0 <= 1.0;
+	const int a = 2.0 > 1.0;
+	const int a = 1.0 > 1.0;
+	const int a = 0.5 > 1.0;
+	const int a = 2.0 >= 1.0;
+	const int a = 1.0 >= 1.0;
+	const int a = 0.5 >= 1.0;
+	const int a = -2.0 < -1.0;
+	const int a = -1.0 < -1.0;
+	const int a = -0.5 < -1.0;
+	const int a = -2.0 > -1.0;
+	const int a = -1.0 > -1.0;
+	const int a = -0.5 > -1.0;
+	const int a = -1.0 >= -1.0;
+	const int a = -1.0 == -1.0;
+	const int a = -1.0 == 1.0;
+	const int a = 2.0 > 0.0;
+	const int a = 2.0 < 0.0;
+	const int a = 2.0 == 0.0;
+	const int a = 0.0 < 2.0;
+	const int a = 0.0 > 2.0;
+	const int a = 0.0 == 0.0;
+	const int a = -0.0 == 0.0;
+	const int a = -2.0 < 0.0;
+	const int a = -2.0 < -0.0;
+	const int a = 0.0 > -2.0;
 	/* comment */
 }
 
