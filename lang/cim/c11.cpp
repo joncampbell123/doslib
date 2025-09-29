@@ -74,17 +74,29 @@ int c11yy_shl_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	if (d.sz < a.sz) d.sz = a.sz;
 	if (d.sz < b.sz) d.sz = b.sz;
 
-	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
-		d.v.s = a.v.s << b.v.s;
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED))
 		d.flags |= C11YY_INTF_SIGNED;
 
-		const uint8_t sz = c11yy_iconsts_auto_size(d.v.s);
-		if (d.sz < sz) d.sz = sz;
+	if (b.v.u <= 63ll) {
+		if (b.v.u != 0ll) {
+			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - b.v.u);
+			if (a.v.u & chkmsk) d.flags |= C11YY_INTF_OVERFLOW;
+			d.v.s = a.v.s << b.v.s;
+		}
 	}
 	else {
-		d.v.u = a.v.u << b.v.u;
+		d.flags |= C11YY_INTF_OVERFLOW;
+		d.v.s = 0;
+	}
 
-		const uint8_t sz = c11yy_iconstu_auto_size(d.v.u);
+	{
+		uint8_t sz;
+
+		if (d.flags & C11YY_INTF_SIGNED)
+			sz = c11yy_iconsts_auto_size(d.v.s);
+		else
+			sz = c11yy_iconstu_auto_size(d.v.u);
+
 		if (d.sz < sz) d.sz = sz;
 	}
 
@@ -105,11 +117,17 @@ int c11yy_shr_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 	if (d.sz < b.sz) d.sz = b.sz;
 
 	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
-		d.v.s = a.v.s >> b.v.s;
 		d.flags |= C11YY_INTF_SIGNED;
+		if (b.v.u <= 63ull)
+			d.v.s = a.v.s >> b.v.s;
+		else
+			d.v.s = a.v.s >> 63ll;
 	}
 	else {
-		d.v.u = a.v.u >> b.v.u;
+		if (b.v.u <= 63ull)
+			d.v.u = a.v.u >> b.v.u;
+		else
+			d.v.u = 0;
 	}
 
 	return 0;
