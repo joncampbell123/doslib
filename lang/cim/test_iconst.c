@@ -76,6 +76,10 @@ void func() {
 	const int a = 5 % 2;
 	const int a = 4 % 2;
 	const int a = -5 % 2;
+	const int a = 1u << 1u;
+	const int a = 4u >> 1u;
+	const int a = 1 << 1;
+	const int a = 4 >> 1;
 	/* comment */
 }
 

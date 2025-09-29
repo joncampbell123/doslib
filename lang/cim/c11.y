@@ -125,8 +125,8 @@ additive_expression
 
 shift_expression
 	: additive_expression
-	| shift_expression LEFT_OP additive_expression
-	| shift_expression RIGHT_OP additive_expression
+	| shift_expression LEFT_OP additive_expression { if (c11yy_shl(&($$),&($1),&($3))) return 1; }
+	| shift_expression RIGHT_OP additive_expression { if (c11yy_shr(&($$),&($1),&($3))) return 1; }
 	;
 
 relational_expression
