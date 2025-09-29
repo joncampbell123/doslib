@@ -224,7 +224,6 @@ extern "C" int c11yy_cmp_fconst(struct c11yy_struct_integer &d,const struct c11y
 
 	d.v.u = cond ? 1 : 0;
 	d.sz = 1;
-	fprintf(stderr,"fcmp op%u %u\n",(unsigned int)op,(unsigned int)d.v.u);
 	return 0;
 }
 
