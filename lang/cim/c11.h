@@ -23,6 +23,14 @@ enum c11yy_cmpop {
 	C11YY_CMPOP__MAX
 };
 
+enum c11yy_binop {
+	C11YY_BINOP_AND=0,			// 0
+	C11YY_BINOP_XOR,
+	C11YY_BINOP_OR,
+
+	C11YY_BINOP__MAX
+};
+
 int c11yy_do_compile();
 
 typedef uint32_t c11yy_string_token_id;
@@ -178,4 +186,6 @@ int c11yy_shl(union c11yy_struct *d,const union c11yy_struct *a,const union c11y
 int c11yy_shr(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b);
 
 int c11yy_cmp(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_cmpop op);
+
+int c11yy_binop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_binop op);
 

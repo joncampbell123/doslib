@@ -145,17 +145,17 @@ equality_expression
 
 and_expression
 	: equality_expression
-	| and_expression '&' equality_expression
+	| and_expression '&' equality_expression { if (c11yy_binop(&($$),&($1),&($3),C11YY_BINOP_AND)) return 1; }
 	;
 
 exclusive_or_expression
 	: and_expression
-	| exclusive_or_expression '^' and_expression
+	| exclusive_or_expression '^' and_expression { if (c11yy_binop(&($$),&($1),&($3),C11YY_BINOP_XOR)) return 1; }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
-	| inclusive_or_expression '|' exclusive_or_expression
+	| inclusive_or_expression '|' exclusive_or_expression { if (c11yy_binop(&($$),&($1),&($3),C11YY_BINOP_OR)) return 1; }
 	;
 
 logical_and_expression
