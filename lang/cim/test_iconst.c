@@ -136,6 +136,9 @@ void func() {
 	const int a = 9 && 0;
 	const int a = 1 ? 4 : 8;
 	const int a = 0 ? 4 : 8;
+	const int a = 1.0 ? 4 : 8;
+	const int a = 0.5 ? 4 : 8;
+	const int a = 0.0 ? 4 : 8;
 	/* comment */
 }
 

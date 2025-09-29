@@ -121,6 +121,11 @@ extern "C" int c11yy_ternary(union c11yy_struct *d,const union c11yy_struct *a,c
 		else *d = *c;
 		return 0;
 	}
+	else if (a->base.t == F_CONSTANT) {
+		if (a->floatval.mant != 0ull) *d = *b;
+		else *d = *c;
+		return 0;
+	}
 
 	return 1;
 }
