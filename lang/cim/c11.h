@@ -197,3 +197,5 @@ int c11yy_cmp(union c11yy_struct *d,const union c11yy_struct *a,const union c11y
 int c11yy_binop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_binop op);
 int c11yy_logop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_logop op);
 
+int c11yy_ternary(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const union c11yy_struct *c);
+

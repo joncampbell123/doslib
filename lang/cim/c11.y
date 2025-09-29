@@ -170,7 +170,7 @@ logical_or_expression
 
 conditional_expression
 	: logical_or_expression
-	| logical_or_expression '?' expression ':' conditional_expression
+	| logical_or_expression '?' expression ':' conditional_expression { if (c11yy_ternary(&($$),&($1),&($3),&($5))) return 1; }
 	;
 
 assignment_expression
