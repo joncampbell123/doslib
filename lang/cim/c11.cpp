@@ -68,41 +68,6 @@ extern "C" int c11yy_mod(union c11yy_struct *d,const union c11yy_struct *a,const
 
 ////////////////////////////////////////////////////////////////////
 
-int c11yy_shl_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
-	d = a;
-
-	if (d.sz < a.sz) d.sz = a.sz;
-	if (d.sz < b.sz) d.sz = b.sz;
-
-	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED))
-		d.flags |= C11YY_INTF_SIGNED;
-
-	if (b.v.u <= 63ll) {
-		if (b.v.u != 0ll) {
-			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - b.v.u);
-			if (a.v.u & chkmsk) d.flags |= C11YY_INTF_OVERFLOW;
-			d.v.s = a.v.s << b.v.s;
-		}
-	}
-	else {
-		d.flags |= C11YY_INTF_OVERFLOW;
-		d.v.s = 0;
-	}
-
-	{
-		uint8_t sz;
-
-		if (d.flags & C11YY_INTF_SIGNED)
-			sz = c11yy_iconsts_auto_size(d.v.s);
-		else
-			sz = c11yy_iconstu_auto_size(d.v.u);
-
-		if (d.sz < sz) d.sz = sz;
-	}
-
-	return 0;
-}
-
 extern "C" int c11yy_shl(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_shl_iconst(d->intval,a->intval,b->intval);
@@ -110,121 +75,13 @@ extern "C" int c11yy_shl(union c11yy_struct *d,const union c11yy_struct *a,const
 	return 1;
 }
 
-int c11yy_shr_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b) {
-	d = a;
-
-	if (d.sz < a.sz) d.sz = a.sz;
-	if (d.sz < b.sz) d.sz = b.sz;
-
-	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
-		d.flags |= C11YY_INTF_SIGNED;
-		if (b.v.u <= 63ull)
-			d.v.s = a.v.s >> b.v.s;
-		else
-			d.v.s = a.v.s >> 63ll;
-	}
-	else {
-		if (b.v.u <= 63ull)
-			d.v.u = a.v.u >> b.v.u;
-		else
-			d.v.u = 0;
-	}
-
-	return 0;
-}
+////////////////////////////////////////////////////////////////////
 
 extern "C" int c11yy_shr(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_shr_iconst(d->intval,a->intval,b->intval);
 
 	return 1;
-}
-
-////////////////////////////////////////////////////////////////////
-
-extern "C" int c11yy_cmp_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b,const enum c11yy_cmpop op) {
-	bool cond;
-
-	d = c11yy_struct_integer_I_CONSTANT_INIT;
-
-	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
-		switch (op) {
-			case C11YY_CMPOP_LT: cond = a.v.s <  b.v.s; break;
-			case C11YY_CMPOP_GT: cond = a.v.s >  b.v.s; break;
-			case C11YY_CMPOP_LE: cond = a.v.s <= b.v.s; break;
-			case C11YY_CMPOP_GE: cond = a.v.s >= b.v.s; break;
-			case C11YY_CMPOP_EQ: cond = a.v.s == b.v.s; break;
-			case C11YY_CMPOP_NE: cond = a.v.s != b.v.s; break;
-			default: return 1;
-		};
-	}
-	else {
-		switch (op) {
-			case C11YY_CMPOP_LT: cond = a.v.u <  b.v.u; break;
-			case C11YY_CMPOP_GT: cond = a.v.u >  b.v.u; break;
-			case C11YY_CMPOP_LE: cond = a.v.u <= b.v.u; break;
-			case C11YY_CMPOP_GE: cond = a.v.u >= b.v.u; break;
-			case C11YY_CMPOP_EQ: cond = a.v.u == b.v.u; break;
-			case C11YY_CMPOP_NE: cond = a.v.u != b.v.u; break;
-			default: return 1;
-		};
-	}
-
-	d.v.u = cond ? 1 : 0;
-	d.sz = 1;
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////////
-
-extern "C" int c11yy_cmp_fconst(struct c11yy_struct_integer &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,const enum c11yy_cmpop op) {
-	bool cond,gt/*a>b*/,eq/*a==b*/;
-
-	d = c11yy_struct_integer_I_CONSTANT_INIT;
-
-	/* apparently -0.0 == 0.0 is true */
-	eq = a.exponent ==
-		b.exponent && a.mant == b.mant &&
-		(((a.flags^b.flags)&C11YY_FLOATF_NEGATIVE) == 0/*same sign*/ || a.mant == 0ull/*zero--remember by this point a.mant==b.mant*/);
-
-	if (((a.flags^b.flags)&C11YY_FLOATF_NEGATIVE) == 0) { /* same sign, both positive or negative */
-		/* +a +b or -a -b */
-		if (eq) {
-			gt = false;
-		}
-		else {
-			const bool nx = !!(a.flags&C11YY_FLOATF_NEGATIVE);
-			if (a.mant == 0ull)
-				gt = nx; /* a > b if a == 0 and b < 0. a < b if a == 0 and b > 0. */
-			else if (a.exponent != b.exponent)
-				gt = (a.exponent > b.exponent) ^ nx; /* larger exponent wins if positive, smaller exponent wins if negative */
-			else
-				gt = (a.mant > b.mant) ^ nx; /* larger mantissa wins if positive, smaller mantissa wins if negative */
-		}
-	}
-	/* since the sign is not the same, assume eq == false */
-	else if (a.flags&C11YY_FLOATF_NEGATIVE) { /* a negative, b positive */
-		/* -a +b */
-		gt = false;
-	}
-	else if (b.flags&C11YY_FLOATF_NEGATIVE) { /* b negative, a positive */
-		/* +a -b */
-		gt = !eq; /* a > b if b < 0, unless equal because of 0.0 == -0.0 case */
-	}
-
-	switch (op) {
-		case C11YY_CMPOP_LT: cond = !gt && !eq; break;
-		case C11YY_CMPOP_GT: cond =  gt && !eq; break;
-		case C11YY_CMPOP_LE: cond = !gt ||  eq; break;
-		case C11YY_CMPOP_GE: cond =  gt ||  eq; break;
-		case C11YY_CMPOP_EQ: cond =         eq; break;
-		case C11YY_CMPOP_NE: cond =        !eq; break;
-		default: return 1;
-	};
-
-	d.v.u = cond ? 1 : 0;
-	d.sz = 1;
-	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////

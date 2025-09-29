@@ -48,6 +48,10 @@ int c11yy_div_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_in
 int c11yy_mod_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
 int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,unsigned int aflags);
 int c11yy_fconst_match_mantissa_prep(int &exp,uint64_t &ama,uint64_t &bma,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b);
+int c11yy_shl_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
+int c11yy_shr_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b);
+int c11yy_cmp_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b,const enum c11yy_cmpop op);
+int c11yy_cmp_fconst(struct c11yy_struct_integer &d,const struct c11yy_struct_float &a,const struct c11yy_struct_float &b,const enum c11yy_cmpop op);
 
 #endif
 
