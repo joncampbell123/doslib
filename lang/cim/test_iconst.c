@@ -80,6 +80,18 @@ void func() {
 	const int a = 4u >> 1u;
 	const int a = 1 << 1;
 	const int a = 4 >> 1;
+	const int a = 1 < 2;
+	const int a = 2 < 1;
+	const int a = 1 > 2;
+	const int a = 2 > 1;
+	const int a = 1 <= 2;
+	const int a = 2 <= 1;
+	const int a = 1 >= 2;
+	const int a = 2 >= 1;
+	const int a = 1 == 2;
+	const int a = 2 == 2;
+	const int a = 1 != 2;
+	const int a = 2 != 2;
 	/* comment */
 }
 

@@ -142,6 +142,52 @@ extern "C" int c11yy_shr(union c11yy_struct *d,const union c11yy_struct *a,const
 
 ////////////////////////////////////////////////////////////////////
 
+extern "C" int c11yy_cmp_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b,const enum c11yy_cmpop op) {
+	bool cond;
+
+	d = a;
+
+	if (d.sz < a.sz) d.sz = a.sz;
+	if (d.sz < b.sz) d.sz = b.sz;
+
+	if ((a.flags&C11YY_INTF_SIGNED) || (b.flags&C11YY_INTF_SIGNED)) {
+		d.flags |= C11YY_INTF_SIGNED;
+
+		switch (op) {
+			case C11YY_CMPOP_LT: cond = a.v.s <  b.v.s; break;
+			case C11YY_CMPOP_GT: cond = a.v.s >  b.v.s; break;
+			case C11YY_CMPOP_LE: cond = a.v.s <= b.v.s; break;
+			case C11YY_CMPOP_GE: cond = a.v.s >= b.v.s; break;
+			case C11YY_CMPOP_EQ: cond = a.v.s == b.v.s; break;
+			case C11YY_CMPOP_NE: cond = a.v.s != b.v.s; break;
+			default: return 1;
+		};
+	}
+	else {
+		switch (op) {
+			case C11YY_CMPOP_LT: cond = a.v.u <  b.v.u; break;
+			case C11YY_CMPOP_GT: cond = a.v.u >  b.v.u; break;
+			case C11YY_CMPOP_LE: cond = a.v.u <= b.v.u; break;
+			case C11YY_CMPOP_GE: cond = a.v.u >= b.v.u; break;
+			case C11YY_CMPOP_EQ: cond = a.v.u == b.v.u; break;
+			case C11YY_CMPOP_NE: cond = a.v.u != b.v.u; break;
+			default: return 1;
+		};
+	}
+
+	d.v.u = cond ? 1 : 0;
+	return 0;
+}
+
+extern "C" int c11yy_cmp(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_cmpop op) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_cmp_iconst(d->intval,a->intval,b->intval,op);
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
 std::vector<struct c11yy_scope_obj>		c11yy_scope_table;
 std::vector<c11yy_scope_id>			c11yy_scope_stack;
 

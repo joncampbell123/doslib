@@ -131,16 +131,16 @@ shift_expression
 
 relational_expression
 	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	| relational_expression '<' shift_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_LT)) return 1; }
+	| relational_expression '>' shift_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_GT)) return 1; }
+	| relational_expression LE_OP shift_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_LE)) return 1; }
+	| relational_expression GE_OP shift_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_GE)) return 1; }
 	;
 
 equality_expression
 	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
+	| equality_expression EQ_OP relational_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_EQ)) return 1; }
+	| equality_expression NE_OP relational_expression { if (c11yy_cmp(&($$),&($1),&($3),C11YY_CMPOP_NE)) return 1; }
 	;
 
 and_expression
