@@ -55,7 +55,7 @@ int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 		d.exponent = 0;
 		d.mant = 0;
 	}
-
+#if 0
 	fprintf(stderr,"fltmul res %.60f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
 		(double)ldexpl((long double)d.mant,d.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
 		(unsigned long)d.flags,
@@ -76,7 +76,7 @@ int c11yy_mul_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_floa
 		(unsigned int)b.sz,
 		(unsigned int)b.exponent,
 		(unsigned long long)b.mant);
-
+#endif
 	return 0;
 }
 

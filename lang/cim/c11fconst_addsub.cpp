@@ -60,7 +60,7 @@ int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_f
 
 	d.exponent = exp;
 	d.mant = sm;
-
+#if 0
 	fprintf(stderr,"flt%s res %.60f flags=%lx sz=%u exp=%d mant=0x%016llx\n",
 		(aflags & C11YY_FLOATF_NEGATIVE) ? "sub" : "add",
 		(double)ldexpl((long double)d.mant,d.exponent - 63) * (d.flags&C11YY_FLOATF_NEGATIVE ? -1.0 : 1.0),
@@ -82,7 +82,7 @@ int c11yy_addsub_fconst(struct c11yy_struct_float &d,const struct c11yy_struct_f
 		(unsigned int)b.sz,
 		(unsigned int)b.exponent,
 		(unsigned long long)b.mant);
-
+#endif
 	return 0;
 }
 

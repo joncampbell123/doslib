@@ -120,7 +120,7 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 	else if (*yytext == 'l' || *yytext == 'L') {
 		val->sz = 10; /* long double */
 	}
-
+#if 0
 	const long double rv = ldexpl((long double)val->mant,val->exponent - 63);
 	fprintf(stderr,"flt %.6f flags=%lx sz=%u exp=%d mant=0x%016llx '%s'\n",
 		(double)rv,
@@ -129,5 +129,6 @@ extern "C" void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yyt
 		(unsigned int)val->exponent,
 		(unsigned long long)val->mant,
 		str);
+#endif
 }
 
