@@ -139,6 +139,10 @@ void func() {
 	const int a = 1.0 ? 4 : 8;
 	const int a = 0.5 ? 4 : 8;
 	const int a = 0.0 ? 4 : 8;
+	const int a = (4);
+	const int a = (4 * 3);
+	const int a = (4 * 3) * 2;
+	const int a = ((4) * 3) * 2;
 	/* comment */
 }
 

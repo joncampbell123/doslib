@@ -35,7 +35,7 @@ primary_expression
 	: IDENTIFIER
 	| constant
 	| string
-	| '(' expression ')'
+	| '(' expression ')' { $$ = $2; }
 	| generic_selection
 	;
 
