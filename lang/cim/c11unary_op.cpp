@@ -8,8 +8,7 @@ extern "C" {
 #include "c11.hpp"
 
 static int c11yy_unary_op_none(union c11yy_struct *d,const union c11yy_struct *s) {
-	*d = *s;
-	return 0;
+	return 1;
 }
 
 static int c11yy_unary_op_neg(union c11yy_struct *d,const union c11yy_struct *s) {
