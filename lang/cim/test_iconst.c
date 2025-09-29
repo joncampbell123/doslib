@@ -128,6 +128,12 @@ void func() {
 	const int a = 1 ^ 2;
 	const int a = 3 | 7;
 	const int a = 3 ^ 7;
+	const int a = 1 || 1;
+	const int a = 1 || 0;
+	const int a = 0 || 0;
+	const int a = 1 && 1;
+	const int a = 1 && 0;
+	const int a = 9 && 0;
 	/* comment */
 }
 

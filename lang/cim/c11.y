@@ -160,12 +160,12 @@ inclusive_or_expression
 
 logical_and_expression
 	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
+	| logical_and_expression AND_OP inclusive_or_expression { if (c11yy_logop(&($$),&($1),&($3),C11YY_LOGOP_AND)) return 1; }
 	;
 
 logical_or_expression
 	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
+	| logical_or_expression OR_OP logical_and_expression { if (c11yy_logop(&($$),&($1),&($3),C11YY_LOGOP_OR)) return 1; }
 	;
 
 conditional_expression

@@ -113,9 +113,35 @@ int c11yy_binop_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_
 	return 0;
 }
 
+////////////////////////////////////////////////////////////////////
+
 extern "C" int c11yy_binop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_binop op) {
 	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
 		return c11yy_binop_iconst(d->intval,a->intval,b->intval,op);
+
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
+int c11yy_logop_iconst(struct c11yy_struct_integer &d,const struct c11yy_struct_integer &a,const struct c11yy_struct_integer &b,const enum c11yy_logop op) {
+	d = c11yy_struct_integer_I_CONSTANT_INIT;
+	d.sz = 1;
+
+	switch (op) {
+		case C11YY_LOGOP_AND: d.v.u = ((a.v.u != 0ull) && (b.v.u != 0ull)) ? 1 : 0; break;
+		case C11YY_LOGOP_OR:  d.v.u = ((a.v.u != 0ull) || (b.v.u != 0ull)) ? 1 : 0; break;
+		default: return 1;
+	}
+
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////
+
+extern "C" int c11yy_logop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_logop op) {
+	if (a->base.t == I_CONSTANT && b->base.t == I_CONSTANT)
+		return c11yy_logop_iconst(d->intval,a->intval,b->intval,op);
 
 	return 1;
 }
