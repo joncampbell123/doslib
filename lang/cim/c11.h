@@ -56,7 +56,7 @@ typedef uint32_t c11yy_identifier_id;
 #define c11yy_identifier_none			( ~((uint32_t)(0u)) )
 
 typedef uint32_t c11yy_scope_id;
-#define c11yy_scope_none			( ~((uint32_t)(0u)) )
+#define c11yy_scope_none			( ((uint32_t)(0u)) )
 
 typedef uint32_t c11yy_astnode_id;
 #define c11yy_astnode_none			( ~((uint32_t)(0u)) )
@@ -162,7 +162,6 @@ struct c11yy_string_obj {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 struct c11yy_identifier_obj {
-	enum c11yyidenttype			itype;
 	uint8_t					len; /* in bytes -- we're not going to support identifiers >= 256 bytes long! */
 	uint32_t				hash;
 	uint8_t*				s8;
@@ -173,11 +172,7 @@ struct c11yy_identifier_obj {
 void c11yy_init_strlit(struct c11yy_struct_strliteral *val,const char *yytext,int yyleng);
 void c11yy_init_fconst(struct c11yy_struct_float *val,const char *yytext,const char lexmatch);
 void c11yy_init_iconst(struct c11yy_struct_integer *val,const char *yytext,const char lexmatch);
-c11yy_identifier_id c11yy_ident_to_id(struct c11yy_identifier_obj *io,const c11yy_scope_id scope);
-struct c11yy_identifier_obj *c11yy_ident_lookup(const uint32_t hash,const char *buf,int len,c11yy_scope_id *scope);
-struct c11yy_identifier_obj *c11yy_init_ident(const char *yytext,int yyleng,c11yy_scope_id *scope);
 int c11yy_unary(union c11yy_struct *d,const union c11yy_struct *s,const unsigned int unop);
-extern int c11yy_check_type(const struct c11yy_identifier_obj *io);
 extern uint32_t c11yy_string_hash(const uint8_t *s,size_t l);
 extern uint8_t c11yy_iconstu_auto_size(uint64_t v);
 extern uint8_t c11yy_iconsts_auto_size(int64_t v);
@@ -198,4 +193,6 @@ int c11yy_binop(union c11yy_struct *d,const union c11yy_struct *a,const union c1
 int c11yy_logop(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const enum c11yy_logop op);
 
 int c11yy_ternary(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const union c11yy_struct *c);
+
+c11yy_scope_id c11yy_init_undef_ident(const char *buf,int len);
 

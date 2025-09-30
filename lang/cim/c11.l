@@ -170,16 +170,14 @@ static void comment(void)
 
 static int do_ident(void)
 {
-	struct c11yy_identifier_obj *io;
-	c11yy_scope_id sid;
-
-	if ((io=c11yy_init_ident(yytext,yyleng,&sid)) == NULL)
-		return IDENTIFIER;//err
-
+	/* always return as identifier. the .y file will change it later to enum or typedef */
+	/* through scoped symbol lookup. the original way the .l and .y files were laid out as */
+	/* found online would make it impossible to support the case where at a global scope the */
+	/* C file declares "typedef unsigned int x" and then within main() declares "int x" for */
+	/* example, which is supported by GCC. */
 	c11yylval.identifier.t = IDENTIFIER;
-	c11yylval.identifier.id = c11yy_ident_to_id(io,sid);
-	c11yylval.identifier.scopeid = sid;
-
-	return c11yy_check_type(io);
+	c11yylval.identifier.scopeid = c11yy_scope_none;
+	c11yylval.identifier.id = c11yy_init_undef_ident(yytext,yyleng);
+	return IDENTIFIER;
 }
 

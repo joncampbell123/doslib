@@ -16,10 +16,9 @@ void c11yy_string_table_clear(void);
 #include <vector>
 
 extern std::vector<struct c11yy_string_obj> c11yy_string_table;
+extern std::vector<c11yy_identifier_obj> c11yy_ident_table;
 
 struct c11yy_scope_obj {
-	std::vector<c11yy_identifier_obj>	idents;
-
 						c11yy_scope_obj();
 						~c11yy_scope_obj();
 };
