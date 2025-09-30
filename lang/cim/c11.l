@@ -170,12 +170,10 @@ static void comment(void)
 
 static int do_ident(void)
 {
-	/* always return as identifier. the .y file will change it later to enum or typedef */
-	/* through scoped symbol lookup. the original way the .l and .y files were laid out as */
-	/* found online would make it impossible to support the case where at a global scope the */
-	/* C file declares "typedef unsigned int x" and then within main() declares "int x" for */
-	/* example, which is supported by GCC. */
-	c11yylval.identifier.t = IDENTIFIER;
+	/* TODO: if already a symbol, look up the symbol and scope and fill it in, else leave them "none" */
+	/*       so that this code can return whether it is an IDENTIFIER, TYPEDEF_NAME, or ENUMERATION_CONSTANT */
+	c11yylval.identifier.t = IDENTIFIER; /* this is always identifier to make the union handling easier */
+	c11yylval.identifier.symid = c11yy_symbol_none;
 	c11yylval.identifier.scopeid = c11yy_scope_none;
 	c11yylval.identifier.id = c11yy_init_undef_ident(yytext,yyleng);
 	return IDENTIFIER;

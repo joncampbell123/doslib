@@ -236,16 +236,9 @@ const struct c11yy_struct_astnode &c11yy_astnode_ref(const c11yy_astnode_array &
 static int c11yy_init(void) {
 	/* assume not yet init */
 	{
-		/* "undefined" scope for identifiers by default, corresponds to c11yy_scope_none */
-		struct c11yy_scope_obj so;
-		const size_t i = c11yy_scope_table.size(); assert(i == 0u);
-		c11yy_scope_table.push_back(std::move(so));
-		c11yy_scope_stack.push_back(i);
-	}
-	{
 		/* global scope */
 		struct c11yy_scope_obj so;
-		const size_t i = c11yy_scope_table.size(); assert(i == 1u);
+		const size_t i = c11yy_scope_table.size(); assert(i == 0u);
 		c11yy_scope_table.push_back(std::move(so));
 		c11yy_scope_stack.push_back(i);
 	}

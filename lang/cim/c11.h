@@ -56,7 +56,10 @@ typedef uint32_t c11yy_identifier_id;
 #define c11yy_identifier_none			( ~((uint32_t)(0u)) )
 
 typedef uint32_t c11yy_scope_id;
-#define c11yy_scope_none			( ((uint32_t)(0u)) )
+#define c11yy_scope_none			( ~((uint32_t)(0u)) )
+
+typedef uint32_t c11yy_symbol_id;
+#define c11yy_symbol_none			( ~((uint32_t)(0u)) )
 
 typedef uint32_t c11yy_astnode_id;
 #define c11yy_astnode_none			( ~((uint32_t)(0u)) )
@@ -110,6 +113,7 @@ struct c11yy_struct_strliteral {
 struct c11yy_struct_identifier {
 	unsigned int				t; /* from c11.y.h == IDENTIFIER */
 	c11yy_identifier_id			id;
+	c11yy_symbol_id				symid;
 	c11yy_scope_id				scopeid;
 };
 
