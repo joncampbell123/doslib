@@ -207,7 +207,7 @@ c11yy_identifier_id c11yy_ident_to_id(const struct c11yy_identifier_obj *io) {
 	return c11yy_identifier_none;
 }
 
-extern "C" c11yy_identifier_id c11yy_init_undef_ident(const char *buf,int len) {
+extern "C" c11yy_identifier_id c11yy_init_ident(const char *buf,int len) {
 	const uint32_t hash = c11yy_string_hash((uint8_t*)buf,len);
 	const struct c11yy_identifier_obj *st = c11yy_ident_lookup(hash,buf,len);
 	if (!st) st = c11yy_ident_create(hash,buf,len);

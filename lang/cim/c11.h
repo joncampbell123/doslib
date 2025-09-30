@@ -198,5 +198,5 @@ int c11yy_logop(union c11yy_struct *d,const union c11yy_struct *a,const union c1
 
 int c11yy_ternary(union c11yy_struct *d,const union c11yy_struct *a,const union c11yy_struct *b,const union c11yy_struct *c);
 
-c11yy_scope_id c11yy_init_undef_ident(const char *buf,int len);
+c11yy_scope_id c11yy_init_ident(const char *buf,int len);
 

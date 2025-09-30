@@ -175,7 +175,7 @@ static int do_ident(void)
 	c11yylval.identifier.t = IDENTIFIER; /* this is always identifier to make the union handling easier */
 	c11yylval.identifier.symid = c11yy_symbol_none;
 	c11yylval.identifier.scopeid = c11yy_scope_none;
-	c11yylval.identifier.id = c11yy_init_undef_ident(yytext,yyleng);
+	c11yylval.identifier.id = c11yy_init_ident(yytext,yyleng);
 	return IDENTIFIER;
 }
 
