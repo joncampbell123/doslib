@@ -950,6 +950,16 @@ struct pptok_state_t {
 	~pptok_state_t();
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
+typedef bool (*cb_include_accept_path_t)(const std::string &p);
+typedef source_file_object* (*cb_include_search_t)(pptok_state_t &pst,lgtok_state_t &lst,const token_t &t,unsigned int fl);
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool cb_include_accept_path_default(const std::string &/*p*/);
+source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl);
+
 ////////////////////////////////////////////////////////////////////
 
 int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
@@ -4880,16 +4890,6 @@ go_again:
 
 	return 1;
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-typedef bool (*cb_include_accept_path_t)(const std::string &p);
-typedef source_file_object* (*cb_include_search_t)(pptok_state_t &pst,lgtok_state_t &lst,const token_t &t,unsigned int fl);
-
-//////////////////////////////////////////////////////////////////////////////
-//
-bool cb_include_accept_path_default(const std::string &/*p*/);
-source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl);
 
 //////////////////////////////////////////////////////////////////////////////
 
