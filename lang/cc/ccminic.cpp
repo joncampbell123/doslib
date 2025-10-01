@@ -6351,133 +6351,6 @@ void parameter_t::common_move(parameter_t &o) {
 		addrmask_t					current_packing = addrmask_none;
 		std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
-		cc_state_t() {
-			assert(scopes.empty());
-			assert(scope_global == scope_id_t(0));
-			scopes.resize(scope_global+1); // make sure global scope exists
-
-			assert(scope_stack.empty());
-			scope_stack.push_back(scope_global);
-		}
-
-		bool arrange_symbols(void) {
-			for (auto &sg : segments) {
-				if (sg.align == addrmask_none)
-					sg.align = addrmask_make(1);
-			}
-
-			for (auto &sym : symbols) {
-				if (sym.part_of_segment == segment_none)
-					sym.part_of_segment = decide_sym_segment(sym);
-
-				if (sym.part_of_segment != segment_none) {
-					segment_t &se = segref(sym.part_of_segment);
-
-					const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
-					const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
-
-					if (sym.offset == data_offset_none && (sym.flags & symbol_t::FL_DEFINED) &&
-						(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
-						!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
-						am != addrmask_none) {
-
-						if (sym.sym_type == symbol_t::VARIABLE ||
-							sym.sym_type == symbol_t::CONST ||
-							sym.sym_type == symbol_t::STR) {
-
-							/* stack must align to largest alignment of symbol */
-							se.align &= am;
-
-							/* next symbol align and assign */
-							se.next_alloc = (se.next_alloc + (~am)) & am;
-							sym.offset = se.next_alloc;
-							se.next_alloc += sz;
-						}
-					}
-				}
-			}
-
-			for (auto &sg : segments) {
-				if (sg.size == data_size_none)
-					sg.size = 0;
-				if (sg.size < sg.next_alloc)
-					sg.size = sg.next_alloc;
-			}
-
-			return true;
-		}
-
-		bool init(void) {
-			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
-			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
-			current_packing = default_packing;
-
-			{
-				const segment_id_t s = code_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::CODE;
-				so.flags = segment_t::FL_READABLE | segment_t::FL_EXECUTABLE;
-				default_segment_setup(so);
-				io.copy_from("CODE");
-			}
-
-			{
-				const segment_id_t s = const_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::CONST;
-				so.flags = segment_t::FL_READABLE;
-				default_segment_setup(so);
-				io.copy_from("CONST");
-			}
-
-			{
-				const segment_id_t s = conststr_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::CONST;
-				so.flags = segment_t::FL_READABLE;
-				default_segment_setup(so);
-				io.copy_from("CONST:str");
-			}
-
-			{
-				const segment_id_t s = data_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::DATA;
-				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
-				default_segment_setup(so);
-				io.copy_from("DATA");
-			}
-
-			{
-				const segment_id_t s = stack_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::STACK;
-				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
-				default_segment_setup(so);
-				io.copy_from("STACK");
-			}
-
-			{
-				const segment_id_t s = bss_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::BSS;
-				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
-				default_segment_setup(so);
-				io.copy_from("BSS");
-			}
-
-			{
-				const segment_id_t s = fardata_segment = new_segment(); segment_t &so = segref(s);
-				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
-				so.type = segment_t::type_t::DATA;
-				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
-				default_segment_setup(so);
-				io.copy_from("FARDATA");
-			}
-
-			return true;
-		}
-
 		struct enumerator_t {
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none;
@@ -6589,22 +6462,6 @@ void parameter_t::common_move(parameter_t &o) {
 				next_alloc = x.next_alloc; x.next_alloc = 0;
 			}
 		};
-
-		void default_segment_setup(segment_t &so) {
-			if (target_cpu == CPU_INTEL_X86) {
-				if (target_cpusub == CPU_SUB_X86_16) {
-					so.limit = data_size_t(0x10000u); // 64KB
-					so.use = segment_t::use_t::X86_16; // 16-bit
-				}
-				else if (target_cpusub == CPU_SUB_X86_32) {
-					so.limit = data_size_t(0x100000000ull); // 4GB
-					so.use = segment_t::use_t::X86_32; // 32-bit
-				}
-				else {
-					so.use = segment_t::use_t::X86_64; // 64-bit
-				}
-			}
-		}
 
 		struct symbol_t {
 			enum type_t {
@@ -6735,6 +6592,149 @@ void parameter_t::common_move(parameter_t &o) {
 		void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
 		void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+
+		cc_state_t() {
+			assert(scopes.empty());
+			assert(scope_global == scope_id_t(0));
+			scopes.resize(scope_global+1); // make sure global scope exists
+
+			assert(scope_stack.empty());
+			scope_stack.push_back(scope_global);
+		}
+
+		void default_segment_setup(segment_t &so) {
+			if (target_cpu == CPU_INTEL_X86) {
+				if (target_cpusub == CPU_SUB_X86_16) {
+					so.limit = data_size_t(0x10000u); // 64KB
+					so.use = segment_t::use_t::X86_16; // 16-bit
+				}
+				else if (target_cpusub == CPU_SUB_X86_32) {
+					so.limit = data_size_t(0x100000000ull); // 4GB
+					so.use = segment_t::use_t::X86_32; // 32-bit
+				}
+				else {
+					so.use = segment_t::use_t::X86_64; // 64-bit
+				}
+			}
+		}
+
+		bool arrange_symbols(void) {
+			for (auto &sg : segments) {
+				if (sg.align == addrmask_none)
+					sg.align = addrmask_make(1);
+			}
+
+			for (auto &sym : symbols) {
+				if (sym.part_of_segment == segment_none)
+					sym.part_of_segment = decide_sym_segment(sym);
+
+				if (sym.part_of_segment != segment_none) {
+					segment_t &se = segref(sym.part_of_segment);
+
+					const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+					const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
+
+					if (sym.offset == data_offset_none && (sym.flags & symbol_t::FL_DEFINED) &&
+						(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
+						!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
+						am != addrmask_none) {
+
+						if (sym.sym_type == symbol_t::VARIABLE ||
+							sym.sym_type == symbol_t::CONST ||
+							sym.sym_type == symbol_t::STR) {
+
+							/* stack must align to largest alignment of symbol */
+							se.align &= am;
+
+							/* next symbol align and assign */
+							se.next_alloc = (se.next_alloc + (~am)) & am;
+							sym.offset = se.next_alloc;
+							se.next_alloc += sz;
+						}
+					}
+				}
+			}
+
+			for (auto &sg : segments) {
+				if (sg.size == data_size_none)
+					sg.size = 0;
+				if (sg.size < sg.next_alloc)
+					sg.size = sg.next_alloc;
+			}
+
+			return true;
+		}
+
+		bool init(void) {
+			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
+			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
+			current_packing = default_packing;
+
+			{
+				const segment_id_t s = code_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CODE;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_EXECUTABLE;
+				default_segment_setup(so);
+				io.copy_from("CODE");
+			}
+
+			{
+				const segment_id_t s = const_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CONST;
+				so.flags = segment_t::FL_READABLE;
+				default_segment_setup(so);
+				io.copy_from("CONST");
+			}
+
+			{
+				const segment_id_t s = conststr_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::CONST;
+				so.flags = segment_t::FL_READABLE;
+				default_segment_setup(so);
+				io.copy_from("CONST:str");
+			}
+
+			{
+				const segment_id_t s = data_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::DATA;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+				default_segment_setup(so);
+				io.copy_from("DATA");
+			}
+
+			{
+				const segment_id_t s = stack_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::STACK;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+				default_segment_setup(so);
+				io.copy_from("STACK");
+			}
+
+			{
+				const segment_id_t s = bss_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::BSS;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE | segment_t::FL_NOTINEXE;
+				default_segment_setup(so);
+				io.copy_from("BSS");
+			}
+
+			{
+				const segment_id_t s = fardata_segment = new_segment(); segment_t &so = segref(s);
+				const identifier_id_t i = so.name = identifier.alloc(); identifier_t &io = identifier(i);
+				so.type = segment_t::type_t::DATA;
+				so.flags = segment_t::FL_READABLE | segment_t::FL_WRITEABLE;
+				default_segment_setup(so);
+				io.copy_from("FARDATA");
+			}
+
+			return true;
+		}
 
 		std::string ddip_list_to_str(const ddip_list_t &dl) {
 			std::string r;
