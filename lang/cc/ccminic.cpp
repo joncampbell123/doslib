@@ -5956,6 +5956,8 @@ struct declaration_specifiers_t {
 	void common_copy(const declaration_specifiers_t &o);
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
 bool declaration_specifiers_t::empty(void) const {
 	return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
 		type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 &&
@@ -5995,12 +5997,16 @@ void declaration_specifiers_t::common_copy(const declaration_specifiers_t &o) {
 	count = o.count;
 }
 
-	struct pointer_t {
-		type_qualifier_t			tq = 0;
+//////////////////////////////////////////////////////////////////////////////
 
-		bool operator==(const pointer_t &o) const;
-		bool operator!=(const pointer_t &o) const;
-	};
+struct pointer_t {
+	type_qualifier_t			tq = 0;
+
+	bool operator==(const pointer_t &o) const;
+	bool operator!=(const pointer_t &o) const;
+};
+
+//////////////////////////////////////////////////////////////////////////////
 
 bool pointer_t::operator==(const pointer_t &o) const {
 	return tq == o.tq;
@@ -6009,6 +6015,8 @@ bool pointer_t::operator==(const pointer_t &o) const {
 bool pointer_t::operator!=(const pointer_t &o) const {
 	return !(*this == o);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 	struct parameter_t;
 
@@ -6030,6 +6038,8 @@ bool pointer_t::operator!=(const pointer_t &o) const {
 		void common_move(ddip_t &o);
 		bool empty(void) const;
 	};
+
+//////////////////////////////////////////////////////////////////////////////
 
 ddip_t::ddip_t() { }
 ddip_t::ddip_t(const ddip_t &x) { common_copy(x); }
@@ -6059,6 +6069,8 @@ bool ddip_t::empty(void) const {
 	return ptr.empty() && arraydef.empty() && parameters.empty() && dd_flags == 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 	class ddip_list_t : public std::vector<ddip_t> {
 	public:
 		using BT = std::vector<ddip_t>;
@@ -6071,8 +6083,12 @@ bool ddip_t::empty(void) const {
 		ddip_t *funcparampair(void);
 	};
 
+//////////////////////////////////////////////////////////////////////////////
+
 ddip_list_t::ddip_list_t() : BT() { }
 ddip_list_t::~ddip_list_t() { }
+
+//////////////////////////////////////////////////////////////////////////////
 
 	struct declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
@@ -6098,6 +6114,8 @@ ddip_list_t::~ddip_list_t() { }
 
 		~declarator_t();
 	};
+
+//////////////////////////////////////////////////////////////////////////////
 
 declarator_t::declarator_t() { }
 declarator_t::declarator_t(const declarator_t &x) { common_copy(x); }
@@ -6126,6 +6144,8 @@ declarator_t::~declarator_t() {
 	ast_node.release(expr);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 	ddip_t *ddip_list_t::funcparampair(void) {
 		if (!empty()) {
 			size_t si = size() - 1u;
@@ -6138,6 +6158,8 @@ declarator_t::~declarator_t() {
 
 		return NULL;
 	}
+
+//////////////////////////////////////////////////////////////////////////////
 
 	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
 		if (!to.parameters.empty() || !from.parameters.empty())
@@ -6166,6 +6188,8 @@ declarator_t::~declarator_t() {
 
 		return false;
 	}
+
+//////////////////////////////////////////////////////////////////////////////
 
 	void ddip_list_t::addcombine(ddip_t &&x) {
 		if (x.empty())
@@ -6221,6 +6245,8 @@ declarator_t::~declarator_t() {
 		push_back(x);
 	}
 
+//////////////////////////////////////////////////////////////////////////////
+
 	struct declaration_t {
 		declaration_specifiers_t	spec;
 		std::vector<declarator_t>	declor;
@@ -6235,6 +6261,8 @@ declarator_t::~declarator_t() {
 
 		~declaration_t();
 	};
+
+//////////////////////////////////////////////////////////////////////////////
 
 declarator_t &declaration_t::new_declarator(void) {
 	const size_t i = declor.size();
@@ -6254,6 +6282,8 @@ void declaration_t::common_move(declaration_t &o) {
 declaration_t::~declaration_t() {
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 	struct parameter_t {
 		declaration_specifiers_t		spec;
 		declarator_t				decl;
@@ -6268,6 +6298,8 @@ declaration_t::~declaration_t() {
 		void common_copy(const parameter_t &o);
 		void common_move(parameter_t &o);
 	};
+
+//////////////////////////////////////////////////////////////////////////////
 
 parameter_t::parameter_t() { }
 parameter_t::parameter_t(const parameter_t &x) { common_copy(x); }
@@ -6285,6 +6317,8 @@ void parameter_t::common_move(parameter_t &o) {
 	spec = std::move(o.spec);
 	decl = std::move(o.decl);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 	struct cc_state_t {
 		/* target settings */
