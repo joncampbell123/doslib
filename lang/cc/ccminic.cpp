@@ -25,14 +25,318 @@
 # define O_BINARY 0
 #endif
 
-	static constexpr size_t no_source_file = ~size_t(0);
-	static_assert( ~no_source_file == size_t(0), "oops" );
+////////////////////////////////////////////////////////////////////
 
-	static constexpr int errno_return(int e) {
-		return (e >= 0) ? (-e) : (e); /* whether errno values are positive or negative, return as negative */
-	}
+typedef int32_t unicode_char_t;
+static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
+static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
+static constexpr unicode_char_t unicode_nothing = unicode_char_t(-3l);
+static constexpr unicode_char_t unicode_bad_escape = unicode_char_t(-4l);
 
-	//////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+static constexpr size_t no_source_file = ~size_t(0);
+static_assert( ~no_source_file == size_t(0), "oops" );
+
+static constexpr int errno_return(int e) {
+	return (e >= 0) ? (-e) : (e); /* whether errno values are positive or negative, return as negative */
+}
+
+////////////////////////////////////////////////////////////////////
+
+enum class token_type_t:unsigned int {
+	none=0,					// 0
+	eof,
+	plus,
+	plusplus,
+	minus,
+	minusminus,				// 5
+	semicolon,
+	equal,
+	equalequal,
+	tilde,
+	ampersand,				// 10
+	ampersandampersand,
+	pipe,
+	pipepipe,
+	caret,
+	integer,				// 15
+	floating,
+	charliteral,
+	strliteral,
+	identifier,
+	comma,					// 20
+	pipeequals,
+	caretequals,
+	ampersandequals,
+	plusequals,
+	minusequals,				// 25
+	star,
+	forwardslash,
+	starequals,
+	forwardslashequals,
+	percent,				// 30
+	percentequals,
+	exclamationequals,
+	exclamation,
+	question,
+	colon,					// 35
+	lessthan,
+	lessthanlessthan,
+	lessthanlessthanequals,
+	lessthanequals,
+	lessthanequalsgreaterthan,		// 40
+	greaterthan,
+	greaterthangreaterthan,
+	greaterthangreaterthanequals,
+	greaterthanequals,
+	minusrightanglebracket,			// 45
+	minusrightanglebracketstar,
+	period,
+	periodstar,
+	opensquarebracket,
+	closesquarebracket,			// 50
+	opencurlybracket,
+	closecurlybracket,
+	openparenthesis,
+	closeparenthesis,
+	coloncolon,				// 55
+	ppidentifier,
+	r_alignas,
+	r_alignof,
+	r_auto,
+	r_bool,					// 60
+	r_break,
+	r_case,
+	r_char,
+	r_const,
+	r_constexpr,				// 65
+	r_continue,
+	r_default,
+	r_do,
+	r_double,
+	r_else,					// 70
+	r_enum,
+	r_extern,
+	r_false,
+	r_float,
+	r_for,					// 75
+	r_goto,
+	r_if,
+	r_inline,
+	r_int,
+	r_long,					// 80
+	r_nullptr,
+	r_register,
+	r_restrict,
+	r_return,
+	r_short,				// 85
+	r_signed,
+	r_sizeof,
+	r_static,
+	r_static_assert,
+	r_struct,				// 90
+	r_switch,
+	r_thread_local,
+	r_true,
+	r_typedef,
+	r_typeof,				// 95
+	r_typeof_unqual,
+	r_union,
+	r_unsigned,
+	r_void,
+	r_volatile,				// 100
+	r_while,
+	r__Alignas,
+	r__Alignof,
+	r__Atomic,
+	r__BitInt,				// 105
+	r__Bool,
+	r__Complex,
+	r__Decimal128,
+	r__Decimal32,
+	r__Decimal64,				// 110
+	r__Generic,
+	r__Imaginary,
+	r__Noreturn,
+	r__Static_assert,
+	r__Thread_local,			// 115
+	r_char8_t,
+	r_char16_t,
+	r_char32_t,
+	r_consteval,
+	r_constinit,				// 120
+	r_namespace,
+	r_template,
+	r_typeid,
+	r_typename,
+	r_using,				// 125
+	r_wchar_t,
+	r_ppif,
+	r_ppifdef,
+	r_ppdefine,
+	r_ppundef,				// 130
+	r_ppelse,
+	backslash,
+	r_ppelif,
+	r_ppelifdef,
+	r_ppifndef,				// 135
+	r_ppinclude,
+	r_pperror,
+	r_ppwarning,
+	r_ppline,
+	r_pppragma,				// 140
+	ellipsis,
+	r___LINE__,
+	r___FILE__,
+	r___VA_OPT__,
+	r___VA_ARGS__,				// 145
+	opensquarebracketopensquarebracket,
+	closesquarebracketclosesquarebracket,
+	r_intmax_t,
+	r_uintmax_t,
+	r_int8_t,				// 150
+	r_uint8_t,
+	r_int16_t,
+	r_uint16_t,
+	r_int32_t,
+	r_uint32_t,				// 155
+	r_int64_t,
+	r_uint64_t,
+	r_int_least8_t,
+	r_uint_least8_t,
+	r_int_least16_t,			// 160
+	r_uint_least16_t,
+	r_int_least32_t,
+	r_uint_least32_t,
+	r_int_least64_t,
+	r_uint_least64_t,			// 165
+	r_int_fast8_t,
+	r_uint_fast8_t,
+	r_int_fast16_t,
+	r_uint_fast16_t,
+	r_int_fast32_t,				// 170
+	r_uint_fast32_t,
+	r_int_fast64_t,
+	r_uint_fast64_t,
+	r_intptr_t,
+	r_uintptr_t,				// 175
+	r_size_t,
+	r_ssize_t,
+	r_near,
+	r_far,
+	r_huge,					// 180
+	r___pascal,
+	r___watcall,
+	r___stdcall,
+	r___cdecl,
+	r___syscall,				// 185
+	r___fastcall,
+	r___safecall,
+	r___thiscall,
+	r___vectorcall,
+	r___fortran,				// 190
+	r___attribute__,
+	r___declspec,
+	r_asm, /* GNU asm/__asm__ */
+	r___asm, /* MSVC/OpenWatcom _asm __asm */
+	r___asm_text,				// 195
+	newline,
+	pound,
+	poundpound,
+	backslashnewline,
+	r_macro_paramref,			// 200
+	r_ppendif,
+	r_ppelifndef,
+	r_ppembed,
+	r_ppinclude_next,
+	anglestrliteral,			// 205
+	r___func__,
+	r___FUNCTION__,
+	op_ternary,
+	op_comma,
+	op_logical_or,				// 210
+	op_logical_and,
+	op_binary_or,
+	op_binary_xor,
+	op_binary_and,
+	op_equals,				// 215
+	op_not_equals,
+	op_lessthan,
+	op_greaterthan,
+	op_lessthan_equals,
+	op_greaterthan_equals,			// 220
+	op_leftshift,
+	op_rightshift,
+	op_add,
+	op_subtract,
+	op_multiply,				// 225
+	op_divide,
+	op_modulus,
+	op_pre_increment,
+	op_pre_decrement,
+	op_address_of,				// 230
+	op_pointer_deref,
+	op_negate,
+	op_binary_not,
+	op_logical_not,
+	op_sizeof,				// 235
+	op_member_ref,
+	op_ptr_ref,
+	op_post_increment,
+	op_post_decrement,
+	op_array_ref,				// 240
+	op_assign,
+	op_multiply_assign,
+	op_divide_assign,
+	op_modulus_assign,
+	op_add_assign,				// 245
+	op_subtract_assign,
+	op_leftshift_assign,
+	op_rightshift_assign,
+	op_and_assign,
+	op_xor_assign,				// 250
+	op_or_assign,
+	op_declaration,
+	op_compound_statement,
+	op_label,
+	op_default_label,			// 255
+	op_case_statement,
+	op_if_statement,
+	op_else_statement,
+	op_switch_statement,
+	op_break,				// 260
+	op_continue,
+	op_goto,
+	op_return,
+	op_while_statement,
+	op_do_while_statement,			// 265
+	op_for_statement,
+	op_none,
+	op_function_call,
+	op_array_define,
+	op_typecast,				// 270
+	op_dinit_array,
+	op_dinit_field,
+	op_gcc_range,
+	op_bitfield_range,
+	op_symbol,				// 275
+	r___int8,
+	r___int16,
+	r___int32,
+	r___int64,
+	op_alignof,				// 280
+	r__declspec,
+	r___pragma,
+	op_pragma,
+	r__Pragma,
+	op_end_asm,				// 285
+	whitespace,
+
+	__MAX__
+};
+
+//////////////////////////////////////////////////////////////////
 
 #define CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
 	/* no copy */ \
@@ -42,143 +346,344 @@
 	sfclass(sfclass &&x) { common_move(x); } \
 	virtual sfclass &operator=(sfclass &&x) { common_move(x); return *this; }
 
-	struct source_file_object {
-		enum {
-			IF_BASE=0,
-			IF_FD=1
-		};
+//////////////////////////////////////////////////////////////
 
-		unsigned int			iface;
+struct position_t {
+	uint16_t			col;
+	uint16_t			row;
+	uint32_t			ofs;
 
-		virtual const char*		getname(void);
-		virtual ssize_t			read(void *,size_t);
-		virtual void			close(void);
+	position_t() : col(0),row(0),ofs(0) { }
+	position_t(const unsigned int row) : col(1),row(row),ofs(0) { }
+};
 
-						source_file_object(const unsigned int iface=IF_BASE);
-		virtual				~source_file_object();
+////////////////////////////////////////////////////////////////////
 
-						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
-		void				common_move(source_file_object &);
+struct ident2token_t {
+	const char*		str;
+	uint16_t		len; /* more than enough */
+	uint16_t		token; /* make larger in case more than 65535 tokens defined */
+};
+
+//////////////////////////////////////////////////////////////////
+
+struct source_file_object {
+	enum {
+		IF_BASE=0,
+		IF_FD=1
 	};
 
-	////////////////////////////////////////////////////////////
+	unsigned int			iface;
 
-	source_file_object::source_file_object(const unsigned int new_iface) : iface(new_iface) {
-	}
+	virtual const char*		getname(void);
+	virtual ssize_t			read(void *,size_t);
+	virtual void			close(void);
 
-	source_file_object::~source_file_object() {
-	}
+	source_file_object(const unsigned int iface=IF_BASE);
+	virtual				~source_file_object();
 
-	const char* source_file_object::getname(void) {
-		return "(null)";
-	}
+	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
+	void				common_move(source_file_object &);
+};
 
-	ssize_t source_file_object::read(void *,size_t) {
-		return ssize_t(errno_return(ENOSYS));
-	}
+//////////////////////////////////////////////////////////////
 
-	void source_file_object::close(void) {
-	}
+struct source_fd : public source_file_object {
+	virtual const char*		getname(void);
+	virtual ssize_t			read(void *buffer,size_t count);
+	virtual void			close(void);
 
-	void source_file_object::common_move(source_file_object &) {
-	}
+	source_fd();
+	source_fd(const int new_fd/*takes ownership*/,const std::string &new_name);
+	virtual				~source_fd();
 
-	//////////////////////////////////////////////////////////////
+	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
+	void				common_move(source_fd &x);
 
-	struct position_t {
-		uint16_t			col;
-		uint16_t			row;
-		uint32_t			ofs;
+	std::string			name;
+	int				fd = -1;
+};
 
-		position_t() : col(0),row(0),ofs(0) { }
-		position_t(const unsigned int row) : col(1),row(row),ofs(0) { }
+//////////////////////////////////////////////////////////////
+
+struct source_null_file : public source_file_object {
+	virtual const char*		getname(void) { return "null"; }
+	virtual ssize_t			read(void *,size_t) { return 0; }
+	virtual void			close(void) { }
+
+	source_null_file() { }
+	virtual				~source_null_file() { }
+
+	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_null_file);
+};
+
+////////////////////////////////////////////////////////////////////
+
+struct rbuf {
+	unsigned char*			base = NULL;
+	unsigned char*			data = NULL;
+	unsigned char*			end = NULL;
+	unsigned char*			fence = NULL;
+	int				err = 0;
+	unsigned int			flags = 0;
+	position_t			pos;
+
+	static constexpr unsigned int	PFL_EOF = 1u << 0u;
+
+	size_t				source_file = no_source_file;
+
+	rbuf();
+	~rbuf();
+
+	rbuf(const rbuf &x) = delete;
+	rbuf &operator=(const rbuf &x) = delete;
+
+	rbuf(rbuf &&x);
+	rbuf &operator=(rbuf &&x);
+
+	void set_source_file(const size_t i);
+	void common_move(rbuf &x);
+
+	size_t buffer_size(void) const;
+	size_t data_offset(void) const;
+	size_t data_avail(void) const;
+	size_t can_write(void) const;
+	bool sanity_check(void) const;
+	void free(void);
+	unsigned char peekb(const size_t ofs=0);
+	void discardb(size_t count=1);
+	unsigned char getb(void);
+	bool allocate(const size_t sz=4096);
+	void flush(void);
+	void lazy_flush(void);
+	void pos_track(const unsigned char c);
+	void pos_track(const unsigned char *from,const unsigned char *to);
+};
+
+////////////////////////////////////////////////////////////////////
+
+struct source_file_t {
+	std::string		path;
+	uint16_t		refcount = 0;
+
+	bool			empty(void) const;
+	void			clear(void);
+};
+
+////////////////////////////////////////////////////////////////////
+
+struct floating_value_t {
+	enum class type_t:unsigned char {
+		NONE=0,			// 0
+		FLOAT,
+		DOUBLE,
+		LONGDOUBLE,
+
+		__MAX__
 	};
 
-	//////////////////////////////////////////////////////////////
+	uint64_t				mantissa;
+	int32_t					exponent;
+	unsigned char				flags;
+	type_t					type;
 
-	struct source_fd : public source_file_object {
-		virtual const char*		getname(void);
-		virtual ssize_t			read(void *buffer,size_t count);
-		virtual void			close(void);
+	static constexpr unsigned int		FL_NAN        = (1u << 0u);
+	static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
+	static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
 
-						source_fd();
-						source_fd(const int new_fd/*takes ownership*/,const std::string &new_name);
-		virtual				~source_fd();
+	static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
 
-						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
-		void				common_move(source_fd &x);
+	std::string to_str(void) const;
+	void init(void);
+	void setsn(const uint64_t m,const int32_t e);
+	void normalize(void);
+};
 
-		std::string			name;
-		int				fd = -1;
+////////////////////////////////////////////////////////////////////
+
+struct integer_value_t {
+	enum class type_t:unsigned char {
+		NONE=0,			// 0
+		BOOL,
+		CHAR,
+		SHORT,
+		INT,
+		LONG,			// 5
+		LONGLONG,
+
+		__MAX__
 	};
 
-	////////////////////////////////////////////////////////////////
+	union {
+		uint64_t			u;
+		int64_t				v;
+	} v;
+	unsigned char				flags;
+	type_t					type;
 
-	source_fd::source_fd() {
-	}
+	static constexpr unsigned int		FL_SIGNED     = (1u << 0u);
+	static constexpr unsigned int		FL_OVERFLOW   = (1u << 1u);
 
-	source_fd::source_fd(const int new_fd/*takes ownership*/,const std::string &new_name) : source_file_object(IF_FD), name(new_name), fd(new_fd) {
-	}
+	std::string to_str(void) const;
+	void init(void);
+};
 
-	source_fd::~source_fd() {
-		close();
-	}
+///////////////////////////////////////////////////////
 
-	void source_fd::common_move(source_fd &x) {
-		name = std::move(x.name);
-		fd = x.fd; x.fd = -1;
-	}
+template <class obj_t,typename id_t,const id_t none> class obj_pool {
+	public:
+		obj_pool() { }
+		~obj_pool() { }
+	public:
+		obj_t &operator()(const id_t id) {
+			return _lookup(id);
+		}
+	public:
+		id_t alloc(void) {
+			obj_t &a = __internal_alloc();
+			a.clear().addref();
+			return next++;
+		}
 
-	const char* source_fd::getname(void) {
-		return name.c_str();
-	}
+		void assign(id_t &d,const id_t s) {
+			if (d != none) _lookup(d).release();
+			d = s;
+			if (d != none) _lookup(d).addref();
+		}
 
-	ssize_t source_fd::read(void *buffer,size_t count) {
-		if (fd >= 0) {
-			const int r = ::read(fd,buffer,count);
-			if (r >= 0) {
-				assert(size_t(r) <= count);
-				return r;
-			}
-			else {
-				return ssize_t(errno_return(r));
+		void assignmove(id_t &d,id_t &s) {
+			if (d != none) _lookup(d).release();
+			d = s;
+			s = none;
+		}
+
+		id_t returnmove(id_t &s) {
+			const id_t r = s;
+			s = none;
+			return r;
+		}
+
+		void release(id_t &d) {
+			if (d != none) _lookup(d).release();
+			d = none;
+		}
+
+		void refcount_check(void) {
+			for (size_t i=0;i < pool.size();i++) {
+				if (pool[i].ref != 0) {
+					fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
+							pool[i].ref,
+							pool[i].to_str().c_str());
+				}
 			}
 		}
 
-		return ssize_t(errno_return(EBADF));
-	}
+		void update_next(obj_t *p) {
+			if (p >= &pool[0]) {
+				const size_t i = p - &pool[0];
+				if (i < pool.size()) next = i;
+			}
+		}
 
-	void source_fd::close(void) {
-		if (fd >= 0) {
-			::close(fd);
-			fd = -1;
+		obj_t& __internal_alloc() {
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+			while (next < pool.size() && pool[next].ref != 0)
+				next++;
+#endif
+			if (next == pool.size())
+				pool.resize(pool.size()+(pool.size()/2u)+16u);
+
+			assert(next < pool.size());
+			assert(pool[next].ref == 0);
+			return pool[next];
+		}
+	public:
+		id_t next = id_t(0);
+	private:
+		inline obj_t &_lookup(const id_t id) {
+#if 1//DEBUG
+			if (id < pool.size()) {
+				if (pool[id].ref == 0)
+					throw std::out_of_range("object not initialized");
+
+				return pool[id];
+			}
+
+			throw std::out_of_range("object out of range");
+#else
+			return pool[id];
+#endif
+		}
+	private:
+		std::vector<obj_t> pool;
+};
+
+////////////////////////////////////////////////////////////////////
+
+source_file_object::source_file_object(const unsigned int new_iface) : iface(new_iface) {
+}
+
+source_file_object::~source_file_object() {
+}
+
+const char* source_file_object::getname(void) {
+	return "(null)";
+}
+
+ssize_t source_file_object::read(void *,size_t) {
+	return ssize_t(errno_return(ENOSYS));
+}
+
+void source_file_object::close(void) {
+}
+
+void source_file_object::common_move(source_file_object &) {
+}
+
+////////////////////////////////////////////////////////////////
+
+source_fd::source_fd() {
+}
+
+source_fd::source_fd(const int new_fd/*takes ownership*/,const std::string &new_name) : source_file_object(IF_FD), name(new_name), fd(new_fd) {
+}
+
+source_fd::~source_fd() {
+	close();
+}
+
+void source_fd::common_move(source_fd &x) {
+	name = std::move(x.name);
+	fd = x.fd; x.fd = -1;
+}
+
+const char* source_fd::getname(void) {
+	return name.c_str();
+}
+
+ssize_t source_fd::read(void *buffer,size_t count) {
+	if (fd >= 0) {
+		const int r = ::read(fd,buffer,count);
+		if (r >= 0) {
+			assert(size_t(r) <= count);
+			return r;
+		}
+		else {
+			return ssize_t(errno_return(r));
 		}
 	}
 
-	//////////////////////////////////////////////////////////////
+	return ssize_t(errno_return(EBADF));
+}
 
-	struct source_null_file : public source_file_object {
-		virtual const char*		getname(void) { return "null"; }
-		virtual ssize_t			read(void *,size_t) { return 0; }
-		virtual void			close(void) { }
+void source_fd::close(void) {
+	if (fd >= 0) {
+		::close(fd);
+		fd = -1;
+	}
+}
 
-						source_null_file() { }
-		virtual				~source_null_file() { }
-
-						CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_null_file);
-	};
-
-	////////////////////////////////////////////////////////////////////
-
-	struct source_file_t {
-		std::string		path;
-		uint16_t		refcount = 0;
-
-		bool			empty(void) const;
-		void			clear(void);
-	};
-
-	std::vector<source_file_t> source_files;
+////////////////////////////////////////////////////////////////////
 
 bool source_file_t::empty(void) const {
 	return refcount == 0 && path.empty();
@@ -189,96 +694,59 @@ void source_file_t::clear(void) {
 	refcount = 0;
 }
 
-	size_t alloc_source_file(const std::string &path) {
-		size_t i=0;
+////////////////////////////////////////////////////////////////////
 
-		for (;i < source_files.size();i++) {
-			if (source_files[i].path == path)
-				return i;
-		}
+std::vector<source_file_t> source_files;
 
-		assert(i == source_files.size());
+size_t alloc_source_file(const std::string &path) {
+	size_t i=0;
 
-		{
-			source_file_t nt;
-			nt.path = path;
-			source_files.push_back(std::move(nt));
-		}
-
-		return i;
+	for (;i < source_files.size();i++) {
+		if (source_files[i].path == path)
+			return i;
 	}
 
-	void clear_source_file(const size_t i) {
-		if (i < source_files.size())
-			source_files[i].clear();
+	assert(i == source_files.size());
+
+	{
+		source_file_t nt;
+		nt.path = path;
+		source_files.push_back(std::move(nt));
 	}
 
-	void release_source_file(const size_t i) {
-		if (i < source_files.size()) {
-			if (source_files[i].refcount > 0)
-				source_files[i].refcount--;
-			if (source_files[i].refcount == 0)
-				clear_source_file(i);
-		}
-	}
+	return i;
+}
 
-	void addref_source_file(const size_t i) {
-		if (i < source_files.size())
-			source_files[i].refcount++;
-	}
+void clear_source_file(const size_t i) {
+	if (i < source_files.size())
+		source_files[i].clear();
+}
 
-	void source_file_refcount_check(void) {
-		for (size_t i=0;i < source_files.size();i++) {
-			if (source_files[i].refcount != 0) {
-				fprintf(stderr,"Leftover refcount=%u for source '%s'\n",
+void release_source_file(const size_t i) {
+	if (i < source_files.size()) {
+		if (source_files[i].refcount > 0)
+			source_files[i].refcount--;
+		if (source_files[i].refcount == 0)
+			clear_source_file(i);
+	}
+}
+
+void addref_source_file(const size_t i) {
+	if (i < source_files.size())
+		source_files[i].refcount++;
+}
+
+void source_file_refcount_check(void) {
+	for (size_t i=0;i < source_files.size();i++) {
+		if (source_files[i].refcount != 0) {
+			fprintf(stderr,"Leftover refcount=%u for source '%s'\n",
 					source_files[i].refcount,
 					source_files[i].path.c_str());
-			}
 		}
 	}
+}
 
-	////////////////////////////////////////////////////////////////////
-
-	struct rbuf {
-		unsigned char*			base = NULL;
-		unsigned char*			data = NULL;
-		unsigned char*			end = NULL;
-		unsigned char*			fence = NULL;
-		int				err = 0;
-		unsigned int			flags = 0;
-		position_t			pos;
-
-		static const unsigned int	PFL_EOF = 1u << 0u;
-
-		size_t				source_file = no_source_file;
-
-		rbuf();
-		~rbuf();
-
-		rbuf(const rbuf &x) = delete;
-		rbuf &operator=(const rbuf &x) = delete;
-
-		rbuf(rbuf &&x);
-		rbuf &operator=(rbuf &&x);
-
-		void set_source_file(const size_t i);
-		void common_move(rbuf &x);
-
-		size_t buffer_size(void) const;
-		size_t data_offset(void) const;
-		size_t data_avail(void) const;
-		size_t can_write(void) const;
-		bool sanity_check(void) const;
-		void free(void);
-		unsigned char peekb(const size_t ofs=0);
-		void discardb(size_t count=1);
-		unsigned char getb(void);
-		bool allocate(const size_t sz=4096);
-		void flush(void);
-		void lazy_flush(void);
-		void pos_track(const unsigned char c);
-		void pos_track(const unsigned char *from,const unsigned char *to);
-	};
+////////////////////////////////////////////////////////////////////
 
 rbuf::rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
 rbuf::~rbuf() { free(); }
@@ -404,471 +872,177 @@ void rbuf::pos_track(const unsigned char *from,const unsigned char *to) {
 	while (from < to) pos_track(*from++);
 }
 
-	static int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo) {
-		assert(buf.base != NULL);
-		assert(buf.sanity_check());
-		buf.lazy_flush();
+////////////////////////////////////////////////////////////////////
 
-		const size_t to_rd = buf.can_write();
-		if (to_rd != size_t(0)) {
-			const ssize_t rd = sfo.read(buf.end,to_rd);
-			if (rd > 0) {
-				buf.end += rd;
-				assert(buf.sanity_check());
-			}
-			else if (rd < 0) {
-				return (buf.err=errno_return(rd));
-			}
-			else {
-				buf.flags |= rbuf::PFL_EOF;
-				return 0;
-			}
-		}
-		else if (buf.err) {
-			return buf.err;
-		}
-		else if (buf.flags & rbuf::PFL_EOF) {
-			return 0;
-		}
+int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo) {
+	assert(buf.base != NULL);
+	assert(buf.sanity_check());
+	buf.lazy_flush();
 
-		return 1;
-	}
-
-	typedef int32_t unicode_char_t;
-	static constexpr unicode_char_t unicode_eof = unicode_char_t(-1l);
-	static constexpr unicode_char_t unicode_invalid = unicode_char_t(-2l);
-	static constexpr unicode_char_t unicode_nothing = unicode_char_t(-3l);
-	static constexpr unicode_char_t unicode_bad_escape = unicode_char_t(-4l);
-
-	void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
-		if (c < unicode_char_t(0)) {
-			/* do nothing */
+	const size_t to_rd = buf.can_write();
+	if (to_rd != size_t(0)) {
+		const ssize_t rd = sfo.read(buf.end,to_rd);
+		if (rd > 0) {
+			buf.end += rd;
+			assert(buf.sanity_check());
 		}
-		else if (c >= 0x10000l) {
-			/* surrogate pair */
-			if ((w+2) <= f) {
-				*w++ = (uint16_t)((((c - 0x10000l) >> 10l) & 0x3FFl) + 0xD800l);
-				*w++ = (uint16_t)(( (c - 0x10000l)         & 0x3FFl) + 0xDC00l);
-			}
+		else if (rd < 0) {
+			return (buf.err=errno_return(rd));
 		}
 		else {
-			if (w < f) *w++ = (uint16_t)c;
+			buf.flags |= rbuf::PFL_EOF;
+			return 0;
 		}
 	}
-
-	void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c) {
-		if (c < unicode_char_t(0)) {
-			/* do nothing */
-		}
-		else if (c <= unicode_char_t(0x7Fu)) {
-			if (w < f) *w++ = (unsigned char)(c&0xFFu);
-		}
-		else if (c <= unicode_char_t(0x7FFFFFFFul)) {
-			/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
-			 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
-			 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
-			 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
-			 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
-			unsigned char more = 1;
-			{
-				uint32_t tmp = uint32_t(c) >> uint32_t(11u);
-				while (tmp != 0) { more++; tmp >>= uint32_t(5u); }
-				assert(more <= 5);
-			}
-
-			const uint8_t ib = 0xFC << (5 - more);
-			if ((w+1+more) > f) return;
-			unsigned char *wr = w; w += 1+more; assert(w <= f);
-			do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
-			assert(uint32_t(c) <= uint32_t((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
-			wr[0] = (unsigned char)(ib | (unsigned char)c);
-		}
+	else if (buf.err) {
+		return buf.err;
+	}
+	else if (buf.flags & rbuf::PFL_EOF) {
+		return 0;
 	}
 
-	std::string utf8_to_str(const unicode_char_t c) {
-		unsigned char tmp[64],*w=tmp;
+	return 1;
+}
 
-		utf8_to_str(/*&*/w,/*fence*/tmp+sizeof(tmp),c);
-		assert(w < (tmp+sizeof(tmp)));
-		*w++ = 0;
+////////////////////////////////////////////////////////////////////
 
-		return std::string((char*)tmp);
+void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
+	if (c < unicode_char_t(0)) {
+		/* do nothing */
 	}
-
-	unicode_char_t getcnu(rbuf &buf,source_file_object &sfo) { /* non-unicode */
-		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-		if (buf.data_avail() == 0) return unicode_eof;
-		return unicode_char_t(buf.getb());
-	}
-
-	unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f) {
-		if (p >= f) return unicode_eof;
-
-		if ((p+2) <= f && (p[0]&0xDC00u) == 0xD800u && (p[1]&0xDC00u) == 0xDC00u) {
-			const uint32_t v = uint32_t(((p[0]&0x3FFul) << 10ul) + (p[1]&0x3FFul) + 0x10000ul); p += 2;
-			return unicode_char_t(v);
+	else if (c >= 0x10000l) {
+		/* surrogate pair */
+		if ((w+2) <= f) {
+			*w++ = (uint16_t)((((c - 0x10000l) >> 10l) & 0x3FFl) + 0xD800l);
+			*w++ = (uint16_t)(( (c - 0x10000l)         & 0x3FFl) + 0xDC00l);
 		}
-
-		return unicode_char_t(*p++);
 	}
+	else {
+		if (w < f) *w++ = (uint16_t)c;
+	}
+}
 
-	unicode_char_t p_utf8_decode(const unsigned char* &p,const unsigned char* const f) {
-		if (p >= f) return unicode_eof;
-
-		uint32_t v = *p++;
-		if (v <  0x80) return v; /* 0x00-0x7F ASCII char */
-		if (v <  0xC0) return unicode_invalid; /* 0x80-0xBF we're in the middle of a UTF-8 char */
-		if (v >= 0xFE) return unicode_invalid; /* overlong 1111 1110 or 1111 1111 */
-
+void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c) {
+	if (c < unicode_char_t(0)) {
+		/* do nothing */
+	}
+	else if (c <= unicode_char_t(0x7Fu)) {
+		if (w < f) *w++ = (unsigned char)(c&0xFFu);
+	}
+	else if (c <= unicode_char_t(0x7FFFFFFFul)) {
 		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
 		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
 		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
 		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
 		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
 		unsigned char more = 1;
-		for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
-		v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
+		{
+			uint32_t tmp = uint32_t(c) >> uint32_t(11u);
+			while (tmp != 0) { more++; tmp >>= uint32_t(5u); }
+			assert(more <= 5);
+		}
 
-		do {
-			if (p >= f) return unicode_invalid;
-			const unsigned char c = *p;
-			if ((c&0xC0) != 0x80) return unicode_invalid; /* must be 10xx xxxx */
-			p++; v = (v << uint32_t(6u)) + uint32_t(c & 0x3Fu);
-		} while ((--more) != 0);
+		const uint8_t ib = 0xFC << (5 - more);
+		if ((w+1+more) > f) return;
+		unsigned char *wr = w; w += 1+more; assert(w <= f);
+		do { wr[more] = (unsigned char)(0x80u | ((unsigned char)(c&0x3F))); c >>= 6u; } while ((--more) != 0);
+		assert(uint32_t(c) <= uint32_t((0x80u|(ib>>1u))^0xFFu)); /* 0xC0 0xE0 0xF0 0xF8 0xFC -> 0xE0 0xF0 0xF8 0xFC 0xFE -> 0x1F 0x0F 0x07 0x03 0x01 */
+		wr[0] = (unsigned char)(ib | (unsigned char)c);
+	}
+}
 
-		assert(v <= uint32_t(0x7FFFFFFFu));
+std::string utf8_to_str(const unicode_char_t c) {
+	unsigned char tmp[64],*w=tmp;
+
+	utf8_to_str(/*&*/w,/*fence*/tmp+sizeof(tmp),c);
+	assert(w < (tmp+sizeof(tmp)));
+	*w++ = 0;
+
+	return std::string((char*)tmp);
+}
+
+unicode_char_t getcnu(rbuf &buf,source_file_object &sfo) { /* non-unicode */
+	if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+	if (buf.data_avail() == 0) return unicode_eof;
+	return unicode_char_t(buf.getb());
+}
+
+unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f) {
+	if (p >= f) return unicode_eof;
+
+	if ((p+2) <= f && (p[0]&0xDC00u) == 0xD800u && (p[1]&0xDC00u) == 0xDC00u) {
+		const uint32_t v = uint32_t(((p[0]&0x3FFul) << 10ul) + (p[1]&0x3FFul) + 0x10000ul); p += 2;
 		return unicode_char_t(v);
 	}
 
-	unicode_char_t getc(rbuf &buf,source_file_object &sfo) {
-		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-		if (buf.data_avail() == 0) return unicode_eof;
+	return unicode_char_t(*p++);
+}
 
-		/* 0xxx xxxx                                                    0x00000000-0x0000007F
-		 * 110x xxxx 10xx xxxx                                          0x00000080-0x000007FF
-		 * 1110 xxxx 10xx xxxx 10xx xxxx                                0x00000800-0x0000FFFF
-		 * 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx                      0x00010000-0x001FFFFF
-		 * 1111 10xx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx            0x00200000-0x03FFFFFF
-		 * 1111 110x 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx  0x04000000-0x7FFFFFFF */
+unicode_char_t p_utf8_decode(const unsigned char* &p,const unsigned char* const f) {
+	if (p >= f) return unicode_eof;
 
-		/* read UTF-8 char */
-		uint32_t v = buf.getb();
-		if (v <  0x80) return v; /* 0x00-0x7F ASCII char */
-		if (v <  0xC0) return unicode_invalid; /* 0x80-0xBF we're in the middle of a UTF-8 char */
-		if (v >= 0xFE) return unicode_invalid; /* overlong 1111 1110 or 1111 1111 */
+	uint32_t v = *p++;
+	if (v <  0x80) return v; /* 0x00-0x7F ASCII char */
+	if (v <  0xC0) return unicode_invalid; /* 0x80-0xBF we're in the middle of a UTF-8 char */
+	if (v >= 0xFE) return unicode_invalid; /* overlong 1111 1110 or 1111 1111 */
 
-		/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
-		 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
-		 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
-		 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
-		 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
-		unsigned char more = 1;
-		for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
-		v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
+	/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+	 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+	 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+	 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+	 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+	unsigned char more = 1;
+	for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
+	v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
 
-		do {
-			const unsigned char c = buf.peekb();
-			if ((c&0xC0) != 0x80) return unicode_invalid; /* must be 10xx xxxx */
-			buf.discardb(); v = (v << uint32_t(6u)) + uint32_t(c & 0x3Fu);
-		} while ((--more) != 0);
+	do {
+		if (p >= f) return unicode_invalid;
+		const unsigned char c = *p;
+		if ((c&0xC0) != 0x80) return unicode_invalid; /* must be 10xx xxxx */
+		p++; v = (v << uint32_t(6u)) + uint32_t(c & 0x3Fu);
+	} while ((--more) != 0);
 
-		assert(v <= uint32_t(0x7FFFFFFFu));
-		return unicode_char_t(v);
-	}
+	assert(v <= uint32_t(0x7FFFFFFFu));
+	return unicode_char_t(v);
+}
 
-	////////////////////////////////////////////////////////////////////
+unicode_char_t getc(rbuf &buf,source_file_object &sfo) {
+	if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+	if (buf.data_avail() == 0) return unicode_eof;
 
-	enum class token_type_t:unsigned int {
-		none=0,					// 0
-		eof,
-		plus,
-		plusplus,
-		minus,
-		minusminus,				// 5
-		semicolon,
-		equal,
-		equalequal,
-		tilde,
-		ampersand,				// 10
-		ampersandampersand,
-		pipe,
-		pipepipe,
-		caret,
-		integer,				// 15
-		floating,
-		charliteral,
-		strliteral,
-		identifier,
-		comma,					// 20
-		pipeequals,
-		caretequals,
-		ampersandequals,
-		plusequals,
-		minusequals,				// 25
-		star,
-		forwardslash,
-		starequals,
-		forwardslashequals,
-		percent,				// 30
-		percentequals,
-		exclamationequals,
-		exclamation,
-		question,
-		colon,					// 35
-		lessthan,
-		lessthanlessthan,
-		lessthanlessthanequals,
-		lessthanequals,
-		lessthanequalsgreaterthan,		// 40
-		greaterthan,
-		greaterthangreaterthan,
-		greaterthangreaterthanequals,
-		greaterthanequals,
-		minusrightanglebracket,			// 45
-		minusrightanglebracketstar,
-		period,
-		periodstar,
-		opensquarebracket,
-		closesquarebracket,			// 50
-		opencurlybracket,
-		closecurlybracket,
-		openparenthesis,
-		closeparenthesis,
-		coloncolon,				// 55
-		ppidentifier,
-		r_alignas,
-		r_alignof,
-		r_auto,
-		r_bool,					// 60
-		r_break,
-		r_case,
-		r_char,
-		r_const,
-		r_constexpr,				// 65
-		r_continue,
-		r_default,
-		r_do,
-		r_double,
-		r_else,					// 70
-		r_enum,
-		r_extern,
-		r_false,
-		r_float,
-		r_for,					// 75
-		r_goto,
-		r_if,
-		r_inline,
-		r_int,
-		r_long,					// 80
-		r_nullptr,
-		r_register,
-		r_restrict,
-		r_return,
-		r_short,				// 85
-		r_signed,
-		r_sizeof,
-		r_static,
-		r_static_assert,
-		r_struct,				// 90
-		r_switch,
-		r_thread_local,
-		r_true,
-		r_typedef,
-		r_typeof,				// 95
-		r_typeof_unqual,
-		r_union,
-		r_unsigned,
-		r_void,
-		r_volatile,				// 100
-		r_while,
-		r__Alignas,
-		r__Alignof,
-		r__Atomic,
-		r__BitInt,				// 105
-		r__Bool,
-		r__Complex,
-		r__Decimal128,
-		r__Decimal32,
-		r__Decimal64,				// 110
-		r__Generic,
-		r__Imaginary,
-		r__Noreturn,
-		r__Static_assert,
-		r__Thread_local,			// 115
-		r_char8_t,
-		r_char16_t,
-		r_char32_t,
-		r_consteval,
-		r_constinit,				// 120
-		r_namespace,
-		r_template,
-		r_typeid,
-		r_typename,
-		r_using,				// 125
-		r_wchar_t,
-		r_ppif,
-		r_ppifdef,
-		r_ppdefine,
-		r_ppundef,				// 130
-		r_ppelse,
-		backslash,
-		r_ppelif,
-		r_ppelifdef,
-		r_ppifndef,				// 135
-		r_ppinclude,
-		r_pperror,
-		r_ppwarning,
-		r_ppline,
-		r_pppragma,				// 140
-		ellipsis,
-		r___LINE__,
-		r___FILE__,
-		r___VA_OPT__,
-		r___VA_ARGS__,				// 145
-		opensquarebracketopensquarebracket,
-		closesquarebracketclosesquarebracket,
-		r_intmax_t,
-		r_uintmax_t,
-		r_int8_t,				// 150
-		r_uint8_t,
-		r_int16_t,
-		r_uint16_t,
-		r_int32_t,
-		r_uint32_t,				// 155
-		r_int64_t,
-		r_uint64_t,
-		r_int_least8_t,
-		r_uint_least8_t,
-		r_int_least16_t,			// 160
-		r_uint_least16_t,
-		r_int_least32_t,
-		r_uint_least32_t,
-		r_int_least64_t,
-		r_uint_least64_t,			// 165
-		r_int_fast8_t,
-		r_uint_fast8_t,
-		r_int_fast16_t,
-		r_uint_fast16_t,
-		r_int_fast32_t,				// 170
-		r_uint_fast32_t,
-		r_int_fast64_t,
-		r_uint_fast64_t,
-		r_intptr_t,
-		r_uintptr_t,				// 175
-		r_size_t,
-		r_ssize_t,
-		r_near,
-		r_far,
-		r_huge,					// 180
-		r___pascal,
-		r___watcall,
-		r___stdcall,
-		r___cdecl,
-		r___syscall,				// 185
-		r___fastcall,
-		r___safecall,
-		r___thiscall,
-		r___vectorcall,
-		r___fortran,				// 190
-		r___attribute__,
-		r___declspec,
-		r_asm, /* GNU asm/__asm__ */
-		r___asm, /* MSVC/OpenWatcom _asm __asm */
-		r___asm_text,				// 195
-		newline,
-		pound,
-		poundpound,
-		backslashnewline,
-		r_macro_paramref,			// 200
-		r_ppendif,
-		r_ppelifndef,
-		r_ppembed,
-		r_ppinclude_next,
-		anglestrliteral,			// 205
-		r___func__,
-		r___FUNCTION__,
-		op_ternary,
-		op_comma,
-		op_logical_or,				// 210
-		op_logical_and,
-		op_binary_or,
-		op_binary_xor,
-		op_binary_and,
-		op_equals,				// 215
-		op_not_equals,
-		op_lessthan,
-		op_greaterthan,
-		op_lessthan_equals,
-		op_greaterthan_equals,			// 220
-		op_leftshift,
-		op_rightshift,
-		op_add,
-		op_subtract,
-		op_multiply,				// 225
-		op_divide,
-		op_modulus,
-		op_pre_increment,
-		op_pre_decrement,
-		op_address_of,				// 230
-		op_pointer_deref,
-		op_negate,
-		op_binary_not,
-		op_logical_not,
-		op_sizeof,				// 235
-		op_member_ref,
-		op_ptr_ref,
-		op_post_increment,
-		op_post_decrement,
-		op_array_ref,				// 240
-		op_assign,
-		op_multiply_assign,
-		op_divide_assign,
-		op_modulus_assign,
-		op_add_assign,				// 245
-		op_subtract_assign,
-		op_leftshift_assign,
-		op_rightshift_assign,
-		op_and_assign,
-		op_xor_assign,				// 250
-		op_or_assign,
-		op_declaration,
-		op_compound_statement,
-		op_label,
-		op_default_label,			// 255
-		op_case_statement,
-		op_if_statement,
-		op_else_statement,
-		op_switch_statement,
-		op_break,				// 260
-		op_continue,
-		op_goto,
-		op_return,
-		op_while_statement,
-		op_do_while_statement,			// 265
-		op_for_statement,
-		op_none,
-		op_function_call,
-		op_array_define,
-		op_typecast,				// 270
-		op_dinit_array,
-		op_dinit_field,
-		op_gcc_range,
-		op_bitfield_range,
-		op_symbol,				// 275
-		r___int8,
-		r___int16,
-		r___int32,
-		r___int64,
-		op_alignof,				// 280
-		r__declspec,
-		r___pragma,
-		op_pragma,
-		r__Pragma,
-		op_end_asm,				// 285
-		whitespace,
+	/* 0xxx xxxx                                                    0x00000000-0x0000007F
+	 * 110x xxxx 10xx xxxx                                          0x00000080-0x000007FF
+	 * 1110 xxxx 10xx xxxx 10xx xxxx                                0x00000800-0x0000FFFF
+	 * 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx                      0x00010000-0x001FFFFF
+	 * 1111 10xx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx            0x00200000-0x03FFFFFF
+	 * 1111 110x 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx 10xx xxxx  0x04000000-0x7FFFFFFF */
 
-		__MAX__
-	};
+	/* read UTF-8 char */
+	uint32_t v = buf.getb();
+	if (v <  0x80) return v; /* 0x00-0x7F ASCII char */
+	if (v <  0xC0) return unicode_invalid; /* 0x80-0xBF we're in the middle of a UTF-8 char */
+	if (v >= 0xFE) return unicode_invalid; /* overlong 1111 1110 or 1111 1111 */
+
+	/* 110x xxxx = 2 (1 more) mask 0x1F bits 5 + 6*1 = 11
+	 * 1110 xxxx = 3 (2 more) mask 0x0F bits 4 + 6*2 = 16
+	 * 1111 0xxx = 4 (3 more) mask 0x07 bits 3 + 6*3 = 21
+	 * 1111 10xx = 5 (4 more) mask 0x03 bits 2 + 6*4 = 26
+	 * 1111 110x = 6 (5 more) mask 0x01 bits 1 + 6*5 = 31 */
+	unsigned char more = 1;
+	for (unsigned char c=(unsigned char)v;(c&0xFFu) >= 0xE0u;) { c <<= 1u; more++; } assert(more <= 5);
+	v &= 0x3Fu >> more; /* 1 2 3 4 5 -> 0x1F 0x0F 0x07 0x03 0x01 */
+
+	do {
+		const unsigned char c = buf.peekb();
+		if ((c&0xC0) != 0x80) return unicode_invalid; /* must be 10xx xxxx */
+		buf.discardb(); v = (v << uint32_t(6u)) + uint32_t(c & 0x3Fu);
+	} while ((--more) != 0);
+
+	assert(v <= uint32_t(0x7FFFFFFFu));
+	return unicode_char_t(v);
+}
+
+////////////////////////////////////////////////////////////////////
 
 // str_name[] = "token" str_name_len = strlen("token")
 // str_ppname[] = "#token" str_ppname_len = strlen("#token") str_name = str_ppname + 1 = "token" str_name_len = strlen("token")
@@ -879,660 +1053,631 @@ void rbuf::pos_track(const unsigned char *from,const unsigned char *to) {
 #define DEFXUU(name) static const char str___##name##__[] = "__" #name "__"; static constexpr size_t str___##name##___len = sizeof(str___##name##__) - 1
 // identifiers and/or #identifiers
 #define DEFB(name) static const char strpp_##name[] = "#"#name; static constexpr size_t strpp_##name##_len = sizeof(strpp_##name) - 1; static const char * const str_##name = (strpp_##name)+1; static constexpr size_t str_##name##_len = strpp_##name##_len - 1
-	DEFX(alignas);
-	DEFX(alignof);
-	DEFX(auto);
-	DEFX(bool);
-	DEFX(break);
-	DEFX(case);
-	DEFX(char);
-	DEFX(const);
-	DEFX(constexpr);
-	DEFX(continue);
-	DEFX(default);
-	DEFX(do);
-	DEFX(double);
-	DEFB(else);
-	DEFX(enum);
-	DEFX(extern);
-	DEFX(false); 
-	DEFX(float);
-	DEFX(for);
-	DEFX(goto);
-	DEFB(if);
-	DEFX(int);
-	DEFX(long);
-	DEFX(nullptr);
-	DEFX(register);
-	DEFX(restrict);
-	DEFX(return);
-	DEFX(short);
-	DEFX(signed);
-	DEFX(sizeof);
-	DEFX(static);
-	DEFX(static_assert);
-	DEFX(struct);
-	DEFX(switch);
-	DEFX(thread_local);
-	DEFX(true);
-	DEFX(typedef);
-	DEFX(typeof);
-	DEFX(typeof_unqual);
-	DEFX(union);
-	DEFX(unsigned);
-	DEFX(void);
-	DEFX(while);
-	DEFX(_Alignas);
-	DEFX(_Alignof);
-	DEFX(_Atomic);
-	DEFX(_BitInt);
-	DEFX(_Bool);
-	DEFX(_Complex);
-	DEFX(_Decimal128);
-	DEFX(_Decimal32);
-	DEFX(_Decimal64);
-	DEFX(_Generic);
-	DEFX(_Imaginary);
-	DEFX(_Noreturn);
-	DEFX(_Static_assert);
-	DEFX(_Thread_local);
-	DEFX(char8_t);
-	DEFX(char16_t);
-	DEFX(char32_t);
-	DEFX(consteval);
-	DEFX(constinit);
-	DEFX(namespace);
-	DEFX(template);
-	DEFX(typeid);
-	DEFX(typename);
-	DEFX(using);
-	DEFX(wchar_t);
-	DEFB(ifdef);
-	DEFB(define);
-	DEFB(undef);
-	DEFB(elif);
-	DEFB(elifdef);
-	DEFB(ifndef);
-	DEFB(include);
-	DEFB(error);
-	DEFB(warning);
-	DEFB(line);
-	DEFB(pragma);
-	DEFB(embed);
-	DEFB(include_next);
-	DEFXUU(LINE);
-	DEFXUU(FILE);
-	DEFXUU(VA_OPT);
-	DEFXUU(VA_ARGS);
-	DEFX(intmax_t);
-	DEFX(uintmax_t);
-	DEFX(int8_t);
-	DEFX(uint8_t);
-	DEFX(int16_t);
-	DEFX(uint16_t);
-	DEFX(int32_t);
-	DEFX(uint32_t);
-	DEFX(int64_t);
-	DEFX(uint64_t);
-	DEFX(int_least8_t);
-	DEFX(uint_least8_t);
-	DEFX(int_least16_t);
-	DEFX(uint_least16_t);
-	DEFX(int_least32_t);
-	DEFX(uint_least32_t);
-	DEFX(int_least64_t);
-	DEFX(uint_least64_t);
-	DEFX(int_fast8_t);
-	DEFX(uint_fast8_t);
-	DEFX(int_fast16_t);
-	DEFX(uint_fast16_t);
-	DEFX(int_fast32_t);
-	DEFX(uint_fast32_t);
-	DEFX(int_fast64_t);
-	DEFX(uint_fast64_t);
-	DEFX(intptr_t);
-	DEFX(uintptr_t);
-	DEFX(size_t);
-	DEFX(ssize_t);
-	DEFX(near);
-	DEFX(far);
-	DEFX(huge);
-	DEFX(__pascal);
-	DEFX(__watcall);
-	DEFX(__stdcall);
-	DEFX(__cdecl);
-	DEFX(__syscall);
-	DEFX(__fastcall);
-	DEFX(__safecall);
-	DEFX(__thiscall);
-	DEFX(__vectorcall);
-	DEFX(__fortran);
-	DEFX(__attribute__);
-	DEFX(__declspec);
-	DEFB(endif);
-	DEFB(elifndef);
-	DEFXUU(func);
-	DEFXUU(FUNCTION);
-	DEFX(__int8);
-	DEFX(__int16);
-	DEFX(__int32);
-	DEFX(__int64);
-	DEFX(_declspec);
-	DEFX(__pragma);
-	DEFX(_Pragma);
+DEFX(alignas);
+DEFX(alignof);
+DEFX(auto);
+DEFX(bool);
+DEFX(break);
+DEFX(case);
+DEFX(char);
+DEFX(const);
+DEFX(constexpr);
+DEFX(continue);
+DEFX(default);
+DEFX(do);
+DEFX(double);
+DEFB(else);
+DEFX(enum);
+DEFX(extern);
+DEFX(false); 
+DEFX(float);
+DEFX(for);
+DEFX(goto);
+DEFB(if);
+DEFX(int);
+DEFX(long);
+DEFX(nullptr);
+DEFX(register);
+DEFX(restrict);
+DEFX(return);
+DEFX(short);
+DEFX(signed);
+DEFX(sizeof);
+DEFX(static);
+DEFX(static_assert);
+DEFX(struct);
+DEFX(switch);
+DEFX(thread_local);
+DEFX(true);
+DEFX(typedef);
+DEFX(typeof);
+DEFX(typeof_unqual);
+DEFX(union);
+DEFX(unsigned);
+DEFX(void);
+DEFX(while);
+DEFX(_Alignas);
+DEFX(_Alignof);
+DEFX(_Atomic);
+DEFX(_BitInt);
+DEFX(_Bool);
+DEFX(_Complex);
+DEFX(_Decimal128);
+DEFX(_Decimal32);
+DEFX(_Decimal64);
+DEFX(_Generic);
+DEFX(_Imaginary);
+DEFX(_Noreturn);
+DEFX(_Static_assert);
+DEFX(_Thread_local);
+DEFX(char8_t);
+DEFX(char16_t);
+DEFX(char32_t);
+DEFX(consteval);
+DEFX(constinit);
+DEFX(namespace);
+DEFX(template);
+DEFX(typeid);
+DEFX(typename);
+DEFX(using);
+DEFX(wchar_t);
+DEFB(ifdef);
+DEFB(define);
+DEFB(undef);
+DEFB(elif);
+DEFB(elifdef);
+DEFB(ifndef);
+DEFB(include);
+DEFB(error);
+DEFB(warning);
+DEFB(line);
+DEFB(pragma);
+DEFB(embed);
+DEFB(include_next);
+DEFXUU(LINE);
+DEFXUU(FILE);
+DEFXUU(VA_OPT);
+DEFXUU(VA_ARGS);
+DEFX(intmax_t);
+DEFX(uintmax_t);
+DEFX(int8_t);
+DEFX(uint8_t);
+DEFX(int16_t);
+DEFX(uint16_t);
+DEFX(int32_t);
+DEFX(uint32_t);
+DEFX(int64_t);
+DEFX(uint64_t);
+DEFX(int_least8_t);
+DEFX(uint_least8_t);
+DEFX(int_least16_t);
+DEFX(uint_least16_t);
+DEFX(int_least32_t);
+DEFX(uint_least32_t);
+DEFX(int_least64_t);
+DEFX(uint_least64_t);
+DEFX(int_fast8_t);
+DEFX(uint_fast8_t);
+DEFX(int_fast16_t);
+DEFX(uint_fast16_t);
+DEFX(int_fast32_t);
+DEFX(uint_fast32_t);
+DEFX(int_fast64_t);
+DEFX(uint_fast64_t);
+DEFX(intptr_t);
+DEFX(uintptr_t);
+DEFX(size_t);
+DEFX(ssize_t);
+DEFX(near);
+DEFX(far);
+DEFX(huge);
+DEFX(__pascal);
+DEFX(__watcall);
+DEFX(__stdcall);
+DEFX(__cdecl);
+DEFX(__syscall);
+DEFX(__fastcall);
+DEFX(__safecall);
+DEFX(__thiscall);
+DEFX(__vectorcall);
+DEFX(__fortran);
+DEFX(__attribute__);
+DEFX(__declspec);
+DEFB(endif);
+DEFB(elifndef);
+DEFXUU(func);
+DEFXUU(FUNCTION);
+DEFX(__int8);
+DEFX(__int16);
+DEFX(__int32);
+DEFX(__int64);
+DEFX(_declspec);
+DEFX(__pragma);
+DEFX(_Pragma);
 // asm, _asm, __asm, __asm__
-	static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
-	static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
-	static const char * const str__asm = str___asm__+1;    static constexpr size_t str__asm_len = sizeof(str___asm__) - 1 - 2 - 1;
-	static const char * const str_asm = str___asm__+2;     static constexpr size_t str_asm_len = sizeof(str___asm__) - 1 - 2 - 2;
+static const char         str___asm__[] = "__asm__";   static constexpr size_t str___asm___len = sizeof(str___asm__) - 1;
+static const char * const str___asm = str___asm__;     static constexpr size_t str___asm_len = sizeof(str___asm__) - 1 - 2;
+static const char * const str__asm = str___asm__+1;    static constexpr size_t str__asm_len = sizeof(str___asm__) - 1 - 2 - 1;
+static const char * const str_asm = str___asm__+2;     static constexpr size_t str_asm_len = sizeof(str___asm__) - 1 - 2 - 2;
 // volatile, __volatile__
-	static const char         str___volatile__[] = "__volatile__";   static constexpr size_t str___volatile___len = sizeof(str___volatile__) - 1;
-	static const char * const str_volatile = str___volatile__+2;     static constexpr size_t str_volatile_len = sizeof(str___volatile__) - 1 - 2 - 2;
+static const char         str___volatile__[] = "__volatile__";   static constexpr size_t str___volatile___len = sizeof(str___volatile__) - 1;
+static const char * const str_volatile = str___volatile__+2;     static constexpr size_t str_volatile_len = sizeof(str___volatile__) - 1 - 2 - 2;
 // inline, _inline, __inline, __inline__
-	static const char         str___inline__[] = "__inline__";   static constexpr size_t str___inline___len = sizeof(str___inline__) - 1;
-	static const char * const str___inline = str___inline__;     static constexpr size_t str___inline_len = sizeof(str___inline__) - 1 - 2;
-	static const char * const str__inline = str___inline__+1;    static constexpr size_t str__inline_len = sizeof(str___inline__) - 1 - 2 - 1;
-	static const char * const str_inline = str___inline__+2;     static constexpr size_t str_inline_len = sizeof(str___inline__) - 1 - 2 - 2;
+static const char         str___inline__[] = "__inline__";   static constexpr size_t str___inline___len = sizeof(str___inline__) - 1;
+static const char * const str___inline = str___inline__;     static constexpr size_t str___inline_len = sizeof(str___inline__) - 1 - 2;
+static const char * const str__inline = str___inline__+1;    static constexpr size_t str__inline_len = sizeof(str___inline__) - 1 - 2 - 1;
+static const char * const str_inline = str___inline__+2;     static constexpr size_t str_inline_len = sizeof(str___inline__) - 1 - 2 - 2;
 #undef DEFX
 
-	struct ident2token_t {
-		const char*		str;
-		uint16_t		len; /* more than enough */
-		uint16_t		token; /* make larger in case more than 65535 tokens defined */
-	};
+////////////////////////////////////////////////////////////////////
 
 #define X(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##name) }
 #define XAS(name,tok) { str_##name, str_##name##_len, uint16_t(token_type_t::r_##tok) }
 #define XUU(name) { str___##name##__, str___##name##___len, uint16_t(token_type_t::r___##name##__) }
 #define XPP(name) { str_##name, str_##name##_len, uint16_t(token_type_t::r_pp##name) }
-	static const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time (er, well, actually lgtok time to be used by preprocessor)
-		XUU(LINE),
-		XUU(FILE),
-		XAS(asm,      asm),
-		XAS(__asm__,  asm),
-		XAS(_asm,     __asm),
-		XAS(__asm,    __asm),
-		X(__pragma),
-		X(_Pragma)
-	};
-	static constexpr size_t ident2tok_pp_length = sizeof(ident2tok_pp) / sizeof(ident2tok_pp[0]);
+const ident2token_t ident2tok_pp[] = { // normal tokens, preprocessor time (er, well, actually lgtok time to be used by preprocessor)
+	XUU(LINE),
+	XUU(FILE),
+	XAS(asm,      asm),
+	XAS(__asm__,  asm),
+	XAS(_asm,     __asm),
+	XAS(__asm,    __asm),
+	X(__pragma),
+	X(_Pragma)
+};
+const size_t ident2tok_pp_length = sizeof(ident2tok_pp) / sizeof(ident2tok_pp[0]);
 
-	static const ident2token_t ident2tok_cc[] = { // normal tokens, compile time
-		X(alignas),
-		X(alignof),
-		X(auto),
-		X(bool),
-		X(break),
-		X(case),
-		X(char),
-		X(const),
-		X(constexpr),
-		X(continue),
-		X(default),
-		X(do),
-		X(double),
-		X(else),
-		X(enum),
-		X(extern),
-		X(false),
-		X(float),
-		X(for),
-		X(goto),
-		X(if),
-		X(inline),
-		X(int),
-		X(long),
-		X(nullptr),
-		X(register),
-		X(restrict),
-		X(return),
-		X(short),
-		X(signed),
-		X(sizeof),
-		X(static),
-		X(static_assert),
-		X(struct),
-		X(switch),
-		X(thread_local),
-		X(true),
-		X(typedef),
-		X(typeof),
-		X(typeof_unqual),
-		X(union),
-		X(unsigned),
-		X(void),
-		X(while),
-		X(_Alignas),
-		X(_Alignof),
-		X(_Atomic),
-		X(_BitInt),
-		X(_Bool),
-		X(_Complex),
-		X(_Decimal128),
-		X(_Decimal32),
-		X(_Decimal64),
-		X(_Generic),
-		X(_Imaginary),
-		X(_Noreturn),
-		X(_Static_assert),
-		X(_Thread_local),
-		X(char8_t),
-		X(char16_t),
-		X(char32_t),
-		X(consteval),
-		X(constinit),
-		X(namespace),
-		X(template),
-		X(typeid),
-		X(typename),
-		X(using),
-		X(wchar_t),
-		X(intmax_t),
-		X(uintmax_t),
-		X(int8_t),
-		X(uint8_t),
-		X(int16_t),
-		X(uint16_t),
-		X(int32_t),
-		X(uint32_t),
-		X(int64_t),
-		X(uint64_t),
-		X(int_least8_t),
-		X(uint_least8_t),
-		X(int_least16_t),
-		X(uint_least16_t),
-		X(int_least32_t),
-		X(uint_least32_t),
-		X(int_least64_t),
-		X(uint_least64_t),
-		X(int_fast8_t),
-		X(uint_fast8_t),
-		X(int_fast16_t),
-		X(uint_fast16_t),
-		X(int_fast32_t),
-		X(uint_fast32_t),
-		X(int_fast64_t),
-		X(uint_fast64_t),
-		X(intptr_t),
-		X(uintptr_t),
-		X(size_t),
-		X(ssize_t),
-		X(near),
-		X(far),
-		X(huge),
-		X(__pascal),
-		X(__watcall),
-		X(__stdcall),
-		X(__cdecl),
-		X(__syscall),
-		X(__fastcall),
-		X(__safecall),
-		X(__thiscall),
-		X(__vectorcall),
-		X(__fortran),
-		X(__attribute__),
-		X(__declspec),
-		X(_declspec),
-		XAS(inline,       inline),
-		XAS(_inline,      inline),
-		XAS(__inline,     inline),
-		XAS(__inline__,   inline),
-		XAS(volatile,     volatile),
-		XAS(__volatile__, volatile),
-		XUU(func),
-		XUU(FUNCTION),
-		X(__int8),
-		X(__int16),
-		X(__int32),
-		X(__int64)
-	};
-	static constexpr size_t ident2tok_cc_length = sizeof(ident2tok_cc) / sizeof(ident2tok_cc[0]);
+const ident2token_t ident2tok_cc[] = { // normal tokens, compile time
+	X(alignas),
+	X(alignof),
+	X(auto),
+	X(bool),
+	X(break),
+	X(case),
+	X(char),
+	X(const),
+	X(constexpr),
+	X(continue),
+	X(default),
+	X(do),
+	X(double),
+	X(else),
+	X(enum),
+	X(extern),
+	X(false),
+	X(float),
+	X(for),
+	X(goto),
+	X(if),
+	X(inline),
+	X(int),
+	X(long),
+	X(nullptr),
+	X(register),
+	X(restrict),
+	X(return),
+	X(short),
+	X(signed),
+	X(sizeof),
+	X(static),
+	X(static_assert),
+	X(struct),
+	X(switch),
+	X(thread_local),
+	X(true),
+	X(typedef),
+	X(typeof),
+	X(typeof_unqual),
+	X(union),
+	X(unsigned),
+	X(void),
+	X(while),
+	X(_Alignas),
+	X(_Alignof),
+	X(_Atomic),
+	X(_BitInt),
+	X(_Bool),
+	X(_Complex),
+	X(_Decimal128),
+	X(_Decimal32),
+	X(_Decimal64),
+	X(_Generic),
+	X(_Imaginary),
+	X(_Noreturn),
+	X(_Static_assert),
+	X(_Thread_local),
+	X(char8_t),
+	X(char16_t),
+	X(char32_t),
+	X(consteval),
+	X(constinit),
+	X(namespace),
+	X(template),
+	X(typeid),
+	X(typename),
+	X(using),
+	X(wchar_t),
+	X(intmax_t),
+	X(uintmax_t),
+	X(int8_t),
+	X(uint8_t),
+	X(int16_t),
+	X(uint16_t),
+	X(int32_t),
+	X(uint32_t),
+	X(int64_t),
+	X(uint64_t),
+	X(int_least8_t),
+	X(uint_least8_t),
+	X(int_least16_t),
+	X(uint_least16_t),
+	X(int_least32_t),
+	X(uint_least32_t),
+	X(int_least64_t),
+	X(uint_least64_t),
+	X(int_fast8_t),
+	X(uint_fast8_t),
+	X(int_fast16_t),
+	X(uint_fast16_t),
+	X(int_fast32_t),
+	X(uint_fast32_t),
+	X(int_fast64_t),
+	X(uint_fast64_t),
+	X(intptr_t),
+	X(uintptr_t),
+	X(size_t),
+	X(ssize_t),
+	X(near),
+	X(far),
+	X(huge),
+	X(__pascal),
+	X(__watcall),
+	X(__stdcall),
+	X(__cdecl),
+	X(__syscall),
+	X(__fastcall),
+	X(__safecall),
+	X(__thiscall),
+	X(__vectorcall),
+	X(__fortran),
+	X(__attribute__),
+	X(__declspec),
+	X(_declspec),
+	XAS(inline,       inline),
+	XAS(_inline,      inline),
+	XAS(__inline,     inline),
+	XAS(__inline__,   inline),
+	XAS(volatile,     volatile),
+	XAS(__volatile__, volatile),
+	XUU(func),
+	XUU(FUNCTION),
+	X(__int8),
+	X(__int16),
+	X(__int32),
+	X(__int64)
+};
+const size_t ident2tok_cc_length = sizeof(ident2tok_cc) / sizeof(ident2tok_cc[0]);
 
-	static const ident2token_t ppident2tok[] = { // preprocessor tokens
-		XPP(if),
-		XPP(ifdef),
-		XPP(define),
-		XPP(undef),
-		XPP(else),
-		XPP(elif),
-		XPP(elifdef),
-		XPP(ifndef),
-		XPP(include),
-		XPP(error),
-		XPP(warning),
-		XPP(line),
-		XPP(pragma),
-		XPP(endif),
-		XPP(elifndef),
-		XPP(embed),
-		XPP(include_next)
-	};
-	static constexpr size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
+const ident2token_t ppident2tok[] = { // preprocessor tokens
+	XPP(if),
+	XPP(ifdef),
+	XPP(define),
+	XPP(undef),
+	XPP(else),
+	XPP(elif),
+	XPP(elifdef),
+	XPP(ifndef),
+	XPP(include),
+	XPP(error),
+	XPP(warning),
+	XPP(line),
+	XPP(pragma),
+	XPP(endif),
+	XPP(elifndef),
+	XPP(embed),
+	XPP(include_next)
+};
+const size_t ppident2tok_length = sizeof(ppident2tok) / sizeof(ppident2tok[0]);
 #undef XPP
 #undef XUU
 #undef XAS
 #undef X
 
-	static const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
-		"none",					// 0
-		"eof",
-		"plus",
-		"plusplus",
-		"minus",
-		"minusminus",				// 5
-		"semicolon",
-		"equal",
-		"equalequal",
-		"tilde",
-		"ampersand",				// 10
-		"ampersandampersand",
-		"pipe",
-		"pipepipe",
-		"caret",
-		"integer",				// 15
-		"floating",
-		"charliteral",
-		"strliteral",
-		"identifier",
-		"comma",				// 20
-		"pipeequals",
-		"caretequals",
-		"ampersandequals",
-		"plusequals",
-		"minusequals",				// 25
-		"star",
-		"forwardslash",
-		"starequals",
-		"forwardslashequals",
-		"percent",				// 30
-		"percentequals",
-		"exclamationequals",
-		"exclamation",
-		"question",
-		"colon",				// 35
-		"lessthan",
-		"lessthanlessthan",
-		"lessthanlessthanequals",
-		"lessthanequals",
-		"lessthanequalsgreaterthan",		// 40
-		"greaterthan",
-		"greaterthangreaterthan",
-		"greaterthangreaterthanequals",
-		"greaterthanequals",
-		"minusrightanglebracket",		// 45
-		"minusrightanglebracketstar",
-		"period",
-		"periodstar",
-		"opensquarebracket",
-		"closesquarebracket",			// 50
-		"opencurlybracket",
-		"closecurlybracket",
-		"openparenthesis",
-		"closeparenthesis",
-		"coloncolon",				// 55
-		"ppidentifier",
-		str_alignas,
-		str_alignof,
-		str_auto,
-		str_bool,				// 60
-		str_break,
-		str_case,
-		str_char,
-		str_const,
-		str_constexpr,				// 65
-		str_continue,
-		str_default,
-		str_do,
-		str_double,
-		str_else,				// 70
-		str_enum,
-		str_extern,
-		str_false,
-		str_float,
-		str_for,				// 75
-		str_goto,
-		str_if,
-		str___inline__,
-		str_int,
-		str_long,				// 80
-		str_nullptr,
-		str_register,
-		str_restrict,
-		str_return,
-		str_short,				// 85
-		str_signed,
-		str_sizeof,
-		str_static,
-		str_static_assert,
-		str_struct,				// 90
-		str_switch,
-		str_thread_local,
-		str_true,
-		str_typedef,
-		str_typeof,				// 95
-		str_typeof_unqual,
-		str_union,
-		str_unsigned,
-		str_void,
-		str___volatile__,			// 100
-		str_while,
-		str__Alignas,
-		str__Alignof,
-		str__Atomic,
-		str__BitInt,				// 105
-		str__Bool,
-		str__Complex,
-		str__Decimal128,
-		str__Decimal32,
-		str__Decimal64,				// 110
-		str__Generic,
-		str__Imaginary,
-		str__Noreturn,
-		str__Static_assert,
-		str__Thread_local,			// 115
-		str_char8_t,
-		str_char16_t,
-		str_char32_t,
-		str_consteval,
-		str_constinit,				// 120
-		str_namespace,
-		str_template,
-		str_typeid,
-		str_typename,
-		str_using,				// 125
-		str_wchar_t,
-		strpp_if,
-		strpp_ifdef,
-		strpp_define,
-		strpp_undef,				// 130
-		strpp_else,
-		"backslash",
-		strpp_elif,
-		strpp_elifdef,
-		strpp_ifndef,				// 135
-		strpp_include,
-		strpp_error,
-		strpp_warning,
-		strpp_line,
-		strpp_pragma,				// 140
-		"ellipsis",
-		str___LINE__,
-		str___FILE__,
-		str___VA_OPT__,
-		str___VA_ARGS__,			// 145
-		"opensquarebracketopensquarebracket",
-		"closesquarebracketclosesquarebracket",
-		str_intmax_t,
-		str_uintmax_t,
-		str_int8_t,				// 150
-		str_uint8_t,
-		str_int16_t,
-		str_uint16_t,
-		str_int32_t,
-		str_uint32_t,				// 155
-		str_int64_t,
-		str_uint64_t,
-		str_int_least8_t,
-		str_uint_least8_t,
-		str_int_least16_t,			// 160
-		str_uint_least16_t,
-		str_int_least32_t,
-		str_uint_least32_t,
-		str_int_least64_t,
-		str_uint_least64_t,			// 165
-		str_int_fast8_t,
-		str_uint_fast8_t,
-		str_int_fast16_t,
-		str_uint_fast16_t,
-		str_int_fast32_t,			// 170
-		str_uint_fast32_t,
-		str_int_fast64_t,
-		str_uint_fast64_t,
-		str_intptr_t,
-		str_uintptr_t,				// 175
-		str_size_t,
-		str_ssize_t,
-		str_near,
-		str_far,
-		str_huge,				// 180
-		str___pascal,
-		str___watcall,
-		str___stdcall,
-		str___cdecl,
-		str___syscall,				// 185
-		str___fastcall,
-		str___safecall,
-		str___thiscall,
-		str___vectorcall,
-		str___fortran,				// 190
-		str___attribute__,
-		str___declspec,
-		"asm",
-		"__asm",
-		"asm_text",				// 195
-		"newline",
-		"pound",
-		"poundpound",
-		"backslashnewline",
-		"macro_paramref",			// 200
-		strpp_endif,
-		strpp_elifndef,
-		strpp_embed,
-		strpp_include_next,
-		"anglestrliteral",			// 205
-		"__func__",
-		"__FUNCTION__",
-		"op:ternary",
-		"op:comma",
-		"op:log-or",				// 210
-		"op:log-and",
-		"op:bin-or",
-		"op:bin-xor",
-		"op:bin-and",
-		"op:equals",				// 215
-		"op:notequals",
-		"op:lessthan",
-		"op:greaterthan",
-		"op:lessthan_equals",
-		"op:greaterthan_equals",		// 220
-		"op:leftshift",
-		"op:rightshift",
-		"op:add",
-		"op:subtract",
-		"op:multiply",				// 225
-		"op:divide",
-		"op:modulus",
-		"op:++inc",
-		"op:--dec",
-		"op:addrof",				// 230
-		"op:ptrderef",
-		"op:negate",
-		"op:bin-not",
-		"op:log-not",
-		"op:sizeof",				// 235
-		"op:member_ref",
-		"op:ptr_ref",
-		"op:inc++",
-		"op:dec--",
-		"op:arrayref",				// 240
-		"op:assign",
-		"op:multiply_assign",
-		"op:divide_assign",
-		"op:modulus_assign",
-		"op:add_assign"	,			// 245
-		"op:subtract_assign",
-		"op:leftshift_assign",
-		"op:rightshift_assign",
-		"op:and_assign",
-		"op:xor_assign",			// 250
-		"op:or_assign",
-		"op:declaration",
-		"op:compound_statement",
-		"op:label",
-		"op:default_label",			// 255
-		"op:case_statement",
-		"op:if_statement",
-		"op:else_statement",
-		"op:switch_statement",
-		"op:break",				// 260
-		"op:continue",
-		"op:goto",
-		"op:return",
-		"op:while_statement",
-		"op:do_while_statement",		// 265
-		"op:for_statement",
-		"op:none",
-		"op:function_call",
-		"op:array_define",
-		"op:typecast",				// 270
-		"op:dinit_array",
-		"op:dinit_field",
-		"op:gcc-range",
-		"op:bitfield-range",
-		"op:symbol",				// 275
-		"__int8",
-		"__int16",
-		"__int32",
-		"__int64",
-		"op:alignof",				// 280
-		str__declspec,
-		str___pragma,
-		"op:pragma",
-		str__Pragma,
-		"op:end-asm",				// 285
-		"whitespace"
-	};
+const char *token_type_t_strlist[size_t(token_type_t::__MAX__)] = {
+	"none",					// 0
+	"eof",
+	"plus",
+	"plusplus",
+	"minus",
+	"minusminus",				// 5
+	"semicolon",
+	"equal",
+	"equalequal",
+	"tilde",
+	"ampersand",				// 10
+	"ampersandampersand",
+	"pipe",
+	"pipepipe",
+	"caret",
+	"integer",				// 15
+	"floating",
+	"charliteral",
+	"strliteral",
+	"identifier",
+	"comma",				// 20
+	"pipeequals",
+	"caretequals",
+	"ampersandequals",
+	"plusequals",
+	"minusequals",				// 25
+	"star",
+	"forwardslash",
+	"starequals",
+	"forwardslashequals",
+	"percent",				// 30
+	"percentequals",
+	"exclamationequals",
+	"exclamation",
+	"question",
+	"colon",				// 35
+	"lessthan",
+	"lessthanlessthan",
+	"lessthanlessthanequals",
+	"lessthanequals",
+	"lessthanequalsgreaterthan",		// 40
+	"greaterthan",
+	"greaterthangreaterthan",
+	"greaterthangreaterthanequals",
+	"greaterthanequals",
+	"minusrightanglebracket",		// 45
+	"minusrightanglebracketstar",
+	"period",
+	"periodstar",
+	"opensquarebracket",
+	"closesquarebracket",			// 50
+	"opencurlybracket",
+	"closecurlybracket",
+	"openparenthesis",
+	"closeparenthesis",
+	"coloncolon",				// 55
+	"ppidentifier",
+	str_alignas,
+	str_alignof,
+	str_auto,
+	str_bool,				// 60
+	str_break,
+	str_case,
+	str_char,
+	str_const,
+	str_constexpr,				// 65
+	str_continue,
+	str_default,
+	str_do,
+	str_double,
+	str_else,				// 70
+	str_enum,
+	str_extern,
+	str_false,
+	str_float,
+	str_for,				// 75
+	str_goto,
+	str_if,
+	str___inline__,
+	str_int,
+	str_long,				// 80
+	str_nullptr,
+	str_register,
+	str_restrict,
+	str_return,
+	str_short,				// 85
+	str_signed,
+	str_sizeof,
+	str_static,
+	str_static_assert,
+	str_struct,				// 90
+	str_switch,
+	str_thread_local,
+	str_true,
+	str_typedef,
+	str_typeof,				// 95
+	str_typeof_unqual,
+	str_union,
+	str_unsigned,
+	str_void,
+	str___volatile__,			// 100
+	str_while,
+	str__Alignas,
+	str__Alignof,
+	str__Atomic,
+	str__BitInt,				// 105
+	str__Bool,
+	str__Complex,
+	str__Decimal128,
+	str__Decimal32,
+	str__Decimal64,				// 110
+	str__Generic,
+	str__Imaginary,
+	str__Noreturn,
+	str__Static_assert,
+	str__Thread_local,			// 115
+	str_char8_t,
+	str_char16_t,
+	str_char32_t,
+	str_consteval,
+	str_constinit,				// 120
+	str_namespace,
+	str_template,
+	str_typeid,
+	str_typename,
+	str_using,				// 125
+	str_wchar_t,
+	strpp_if,
+	strpp_ifdef,
+	strpp_define,
+	strpp_undef,				// 130
+	strpp_else,
+	"backslash",
+	strpp_elif,
+	strpp_elifdef,
+	strpp_ifndef,				// 135
+	strpp_include,
+	strpp_error,
+	strpp_warning,
+	strpp_line,
+	strpp_pragma,				// 140
+	"ellipsis",
+	str___LINE__,
+	str___FILE__,
+	str___VA_OPT__,
+	str___VA_ARGS__,			// 145
+	"opensquarebracketopensquarebracket",
+	"closesquarebracketclosesquarebracket",
+	str_intmax_t,
+	str_uintmax_t,
+	str_int8_t,				// 150
+	str_uint8_t,
+	str_int16_t,
+	str_uint16_t,
+	str_int32_t,
+	str_uint32_t,				// 155
+	str_int64_t,
+	str_uint64_t,
+	str_int_least8_t,
+	str_uint_least8_t,
+	str_int_least16_t,			// 160
+	str_uint_least16_t,
+	str_int_least32_t,
+	str_uint_least32_t,
+	str_int_least64_t,
+	str_uint_least64_t,			// 165
+	str_int_fast8_t,
+	str_uint_fast8_t,
+	str_int_fast16_t,
+	str_uint_fast16_t,
+	str_int_fast32_t,			// 170
+	str_uint_fast32_t,
+	str_int_fast64_t,
+	str_uint_fast64_t,
+	str_intptr_t,
+	str_uintptr_t,				// 175
+	str_size_t,
+	str_ssize_t,
+	str_near,
+	str_far,
+	str_huge,				// 180
+	str___pascal,
+	str___watcall,
+	str___stdcall,
+	str___cdecl,
+	str___syscall,				// 185
+	str___fastcall,
+	str___safecall,
+	str___thiscall,
+	str___vectorcall,
+	str___fortran,				// 190
+	str___attribute__,
+	str___declspec,
+	"asm",
+	"__asm",
+	"asm_text",				// 195
+	"newline",
+	"pound",
+	"poundpound",
+	"backslashnewline",
+	"macro_paramref",			// 200
+	strpp_endif,
+	strpp_elifndef,
+	strpp_embed,
+	strpp_include_next,
+	"anglestrliteral",			// 205
+	"__func__",
+	"__FUNCTION__",
+	"op:ternary",
+	"op:comma",
+	"op:log-or",				// 210
+	"op:log-and",
+	"op:bin-or",
+	"op:bin-xor",
+	"op:bin-and",
+	"op:equals",				// 215
+	"op:notequals",
+	"op:lessthan",
+	"op:greaterthan",
+	"op:lessthan_equals",
+	"op:greaterthan_equals",		// 220
+	"op:leftshift",
+	"op:rightshift",
+	"op:add",
+	"op:subtract",
+	"op:multiply",				// 225
+	"op:divide",
+	"op:modulus",
+	"op:++inc",
+	"op:--dec",
+	"op:addrof",				// 230
+	"op:ptrderef",
+	"op:negate",
+	"op:bin-not",
+	"op:log-not",
+	"op:sizeof",				// 235
+	"op:member_ref",
+	"op:ptr_ref",
+	"op:inc++",
+	"op:dec--",
+	"op:arrayref",				// 240
+	"op:assign",
+	"op:multiply_assign",
+	"op:divide_assign",
+	"op:modulus_assign",
+	"op:add_assign"	,			// 245
+	"op:subtract_assign",
+	"op:leftshift_assign",
+	"op:rightshift_assign",
+	"op:and_assign",
+	"op:xor_assign",			// 250
+	"op:or_assign",
+	"op:declaration",
+	"op:compound_statement",
+	"op:label",
+	"op:default_label",			// 255
+	"op:case_statement",
+	"op:if_statement",
+	"op:else_statement",
+	"op:switch_statement",
+	"op:break",				// 260
+	"op:continue",
+	"op:goto",
+	"op:return",
+	"op:while_statement",
+	"op:do_while_statement",		// 265
+	"op:for_statement",
+	"op:none",
+	"op:function_call",
+	"op:array_define",
+	"op:typecast",				// 270
+	"op:dinit_array",
+	"op:dinit_field",
+	"op:gcc-range",
+	"op:bitfield-range",
+	"op:symbol",				// 275
+	"__int8",
+	"__int16",
+	"__int32",
+	"__int64",
+	"op:alignof",				// 280
+	str__declspec,
+	str___pragma,
+	"op:pragma",
+	str__Pragma,
+	"op:end-asm",				// 285
+	"whitespace"
+};
 
-	static const char *token_type_t_str(const token_type_t t) {
-		return (t < token_type_t::__MAX__) ? token_type_t_strlist[size_t(t)] : "";
-	}
+const char *token_type_t_str(const token_type_t t) {
+	return (t < token_type_t::__MAX__) ? token_type_t_strlist[size_t(t)] : "";
+}
 
-	struct floating_value_t {
-		enum class type_t:unsigned char {
-			NONE=0,			// 0
-			FLOAT,
-			DOUBLE,
-			LONGDOUBLE,
-
-			__MAX__
-		};
-
-		uint64_t				mantissa;
-		int32_t					exponent;
-		unsigned char				flags;
-		type_t					type;
-
-		static constexpr unsigned int		FL_NAN        = (1u << 0u);
-		static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
-		static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
-
-		static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
-
-		std::string to_str(void) const;
-		void init(void);
-		void setsn(const uint64_t m,const int32_t e);
-		void normalize(void);
-	};
+////////////////////////////////////////////////////////////////////
 
 std::string floating_value_t::to_str(void) const {
 	std::string s;
@@ -1585,32 +1730,7 @@ void floating_value_t::normalize(void) {
 	}
 }
 
-	struct integer_value_t {
-		enum class type_t:unsigned char {
-			NONE=0,			// 0
-			BOOL,
-			CHAR,
-			SHORT,
-			INT,
-			LONG,			// 5
-			LONGLONG,
-
-			__MAX__
-		};
-
-		union {
-			uint64_t			u;
-			int64_t				v;
-		} v;
-		unsigned char				flags;
-		type_t					type;
-
-		static constexpr unsigned int		FL_SIGNED     = (1u << 0u);
-		static constexpr unsigned int		FL_OVERFLOW   = (1u << 1u);
-
-		std::string to_str(void) const;
-		void init(void);
-	};
+////////////////////////////////////////////////////////////////////
 
 std::string integer_value_t::to_str(void) const {
 	std::string s;
@@ -1642,97 +1762,7 @@ std::string integer_value_t::to_str(void) const {
 
 void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 
-	///////////////////////////////////////////////////////
-
-	template <class obj_t,typename id_t,const id_t none> class obj_pool {
-		public:
-			obj_pool() { }
-			~obj_pool() { }
-		public:
-			obj_t &operator()(const id_t id) {
-				return _lookup(id);
-			}
-		public:
-			id_t alloc(void) {
-				obj_t &a = __internal_alloc();
-				a.clear().addref();
-				return next++;
-			}
-
-			void assign(id_t &d,const id_t s) {
-				if (d != none) _lookup(d).release();
-				d = s;
-				if (d != none) _lookup(d).addref();
-			}
-
-			void assignmove(id_t &d,id_t &s) {
-				if (d != none) _lookup(d).release();
-				d = s;
-				s = none;
-			}
-
-			id_t returnmove(id_t &s) {
-				const id_t r = s;
-				s = none;
-				return r;
-			}
-
-			void release(id_t &d) {
-				if (d != none) _lookup(d).release();
-				d = none;
-			}
-
-			void refcount_check(void) {
-				for (size_t i=0;i < pool.size();i++) {
-					if (pool[i].ref != 0) {
-						fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
-							pool[i].ref,
-							pool[i].to_str().c_str());
-					}
-				}
-			}
-
-			void update_next(obj_t *p) {
-				if (p >= &pool[0]) {
-					const size_t i = p - &pool[0];
-					if (i < pool.size()) next = i;
-				}
-			}
-
-			obj_t& __internal_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-				while (next < pool.size() && pool[next].ref != 0)
-					next++;
-#endif
-				if (next == pool.size())
-					pool.resize(pool.size()+(pool.size()/2u)+16u);
-
-				assert(next < pool.size());
-				assert(pool[next].ref == 0);
-				return pool[next];
-			}
-		public:
-			id_t next = id_t(0);
-		private:
-			inline obj_t &_lookup(const id_t id) {
-#if 1//DEBUG
-				if (id < pool.size()) {
-					if (pool[id].ref == 0)
-						throw std::out_of_range("object not initialized");
-
-					return pool[id];
-				}
-
-				throw std::out_of_range("object out of range");
-#else
-				return pool[id];
-#endif
-			}
-		private:
-			std::vector<obj_t> pool;
-	};
-
-	///////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
 
 	struct csliteral_t {
 		enum type_t {
