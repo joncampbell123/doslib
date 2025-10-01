@@ -80,9 +80,17 @@ static constexpr unsigned int segment_none = ~((unsigned int)0u);
 typedef size_t symbol_id_t;
 static constexpr size_t symbol_none = ~size_t(0);
 
+typedef unsigned char bitfield_pos_t;
+static constexpr bitfield_pos_t bitfield_pos_none = bitfield_pos_t(0xFFu);
+
 static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
 	return ~(sz - addrmask_t(1u));
 }
+
+struct pack_state_t {
+	addrmask_t				align_limit = addrmask_none;
+	std::string				identifier;
+};
 
 struct declaration_t;
 struct parameter_t;
@@ -100,6 +108,16 @@ static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
 static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
 static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
 static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
+
+/////////////////////////////////////////////////////////////////////
+
+enum cpp11attr_namespace_t {
+	CPP11ATTR_NS_NONE=0,
+	CPP11ATTR_NS_GNU,
+	CPP11ATTR_NS_GSL,
+	CPP11ATTR_NS_MSVC,
+	CPP11ATTR_NS_UNKNOWN
+};
 
 /////////////////////////////////////////////////////////////////////
 
@@ -6329,22 +6347,9 @@ void parameter_t::common_move(parameter_t &o) {
 		data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
 		data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
 
-		struct pack_state_t {
-			addrmask_t				align_limit = addrmask_none;
-			std::string				identifier;
-		};
-
 		addrmask_t					default_packing = addrmask_none;
 		addrmask_t					current_packing = addrmask_none;
 		std::vector<pack_state_t>			packing_stack; /* #pragma pack */
-
-		enum cpp11attr_namespace_t {
-			CPP11ATTR_NS_NONE=0,
-			CPP11ATTR_NS_GNU,
-			CPP11ATTR_NS_GSL,
-			CPP11ATTR_NS_MSVC,
-			CPP11ATTR_NS_UNKNOWN
-		};
 
 		cc_state_t() {
 			assert(scopes.empty());
@@ -6501,9 +6506,6 @@ void parameter_t::common_move(parameter_t &o) {
 				ast_node.release(expr);
 			}
 		};
-
-		typedef unsigned char bitfield_pos_t;
-		static constexpr bitfield_pos_t bitfield_pos_none = bitfield_pos_t(0xFFu);
 
 		struct structfield_t {
 			declaration_specifiers_t		spec;
@@ -9027,7 +9029,7 @@ again:
 		return false;
 	}
 
-	cc_state_t::cpp11attr_namespace_t cc_state_t::cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv) {
+	cpp11attr_namespace_t cc_state_t::cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv) {
 		if (nsv.empty()) {
 			return CPP11ATTR_NS_NONE;
 		}
@@ -9098,7 +9100,7 @@ again:
 	}
 
 	int cc_state_t::cpp11_attribute_parse(declspec_t &dsc,const position_t &pos) {
-		cc_state_t::cpp11attr_namespace_t ns = CPP11ATTR_NS_NONE;
+		cpp11attr_namespace_t ns = CPP11ATTR_NS_NONE;
 		std::vector<identifier_id_t> nsv;
 		bool nsv_using = false;
 		int r;
