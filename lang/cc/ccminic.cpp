@@ -9162,8 +9162,8 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		bool init(void);
 
-		lgtok_state_t	lst;
-		pptok_state_t	pst;
+		lgtok_state_t		lst;
+		pptok_state_t		pst;
 		rbuf*			buf = NULL;
 		source_file_object*	sfo = NULL;
 		int			err = 0;
@@ -9171,7 +9171,7 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 		std::vector<token_t>	cc_tq;
 		size_t			cc_tq_tail = 0;
 
-		bool			ignore_whitespace = true;
+		bool			cc_ignore_whitespace = true;
 
 		void cc_tq_ft(void) {
 			token_t t(token_type_t::eof);
@@ -9183,7 +9183,7 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 						err = r;
 				}
 
-				if (ignore_whitespace && err == 0) {
+				if (cc_ignore_whitespace && err == 0) {
 					if (t.type == token_type_t::newline)
 						continue;
 				}
