@@ -35,11 +35,82 @@ static constexpr unicode_char_t unicode_bad_escape = unicode_char_t(-4l);
 
 ////////////////////////////////////////////////////////////////////
 
+typedef unsigned int ast_node_id_t;
+static constexpr ast_node_id_t ast_node_none = ~ast_node_id_t(0u);
+
+////////////////////////////////////////////////////////////////////
+
 static constexpr size_t no_source_file = ~size_t(0);
 static_assert( ~no_source_file == size_t(0), "oops" );
 
 static constexpr int errno_return(int e) {
 	return (e >= 0) ? (-e) : (e); /* whether errno values are positive or negative, return as negative */
+}
+
+///////////////////////////////////////////////////////////////////
+
+typedef uint64_t data_size_t;
+static constexpr data_size_t data_size_none = ~data_size_t(0u);
+static_assert( ~data_size_none == data_size_t(0u), "oops" );
+
+typedef uint64_t data_offset_t;
+static constexpr data_offset_t data_offset_none = ~data_offset_t(0u);
+static_assert( ~data_offset_none == data_offset_t(0u), "oops" );
+
+typedef uint64_t addrmask_t;
+static constexpr addrmask_t addrmask_none(0u);
+
+typedef unsigned int type_specifier_t;
+typedef unsigned int type_qualifier_t;
+
+static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
+	return ~(sz - addrmask_t(1u));
+}
+
+///////////////////////////////////////////////////////////////////
+
+struct data_type_t {
+	data_size_t			size;
+	addrmask_t			align;
+};
+
+struct data_var_type_t {
+	data_type_t			t;
+	type_specifier_t		ts;
+};
+
+struct data_ptr_type_t {
+	data_type_t			t;
+	type_qualifier_t		tq;
+};
+
+struct data_type_set_ptr_t {
+	data_ptr_type_t			dt_ptr;
+	data_ptr_type_t			dt_ptr_near;
+	data_ptr_type_t			dt_ptr_far;
+	data_ptr_type_t			dt_ptr_huge;
+	data_var_type_t			dt_size_t;
+	data_var_type_t			dt_intptr_t;
+};
+
+struct data_type_set_t {
+	/* base integer/float types */
+	data_var_type_t			dt_bool;
+	data_var_type_t			dt_char;
+	data_var_type_t			dt_short;
+	data_var_type_t			dt_int;
+	data_var_type_t			dt_long;
+	data_var_type_t			dt_longlong;
+	data_var_type_t			dt_float;
+	data_var_type_t			dt_double;
+	data_var_type_t			dt_longdouble;
+};
+
+////////////////////////////////////////////////////////////////////
+
+template <class T> void typ_delete(T *p) {
+	if (p) delete p;
+	p = NULL;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -5288,8 +5359,6 @@ try_again_w_token:
 		"sz64"
 	};
 
-	typedef unsigned int type_specifier_t;
-
 #define X(c) static constexpr type_specifier_t TS_##c = 1u << TSI_##c
 	X(VOID);			// 0
 	X(CHAR);
@@ -5339,8 +5408,6 @@ try_again_w_token:
 		"restrict"		// 5
 	};
 
-	typedef unsigned int type_qualifier_t;
-
 #define X(c) static constexpr type_qualifier_t TQ_##c = 1u << TQI_##c
 	X(CONST);
 	X(VOLATILE);
@@ -5349,62 +5416,6 @@ try_again_w_token:
 	X(HUGE);
 	X(RESTRICT);
 #undef X
-
-	///////////////////////////////////////
-
-	typedef uint64_t data_size_t;
-	static constexpr data_size_t data_size_none = ~data_size_t(0u);
-	static_assert( ~data_size_none == data_size_t(0u), "oops" );
-
-	typedef uint64_t data_offset_t;
-	static constexpr data_offset_t data_offset_none = ~data_offset_t(0u);
-	static_assert( ~data_offset_none == data_offset_t(0u), "oops" );
-
-	typedef uint64_t addrmask_t;
-	static constexpr addrmask_t addrmask_none(0u);
-
-	static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
-		return ~(sz - addrmask_t(1u));
-	}
-
-	///////////////////////////////////////
-
-	struct data_type_t {
-		data_size_t			size;
-		addrmask_t			align;
-	};
-
-	struct data_var_type_t {
-		data_type_t			t;
-		type_specifier_t		ts;
-	};
-
-	struct data_ptr_type_t {
-		data_type_t			t;
-		type_qualifier_t		tq;
-	};
-
-	struct data_type_set_ptr_t {
-		data_ptr_type_t			dt_ptr;
-		data_ptr_type_t			dt_ptr_near;
-		data_ptr_type_t			dt_ptr_far;
-		data_ptr_type_t			dt_ptr_huge;
-		data_var_type_t			dt_size_t;
-		data_var_type_t			dt_intptr_t;
-	};
-
-	struct data_type_set_t {
-		/* base integer/float types */
-		data_var_type_t			dt_bool;
-		data_var_type_t			dt_char;
-		data_var_type_t			dt_short;
-		data_var_type_t			dt_int;
-		data_var_type_t			dt_long;
-		data_var_type_t			dt_longlong;
-		data_var_type_t			dt_float;
-		data_var_type_t			dt_double;
-		data_var_type_t			dt_longdouble;
-	};
 
 	/* default */
 	const data_type_set_t data_types_default = {
@@ -5614,9 +5625,6 @@ try_again_w_token:
 
 	///////////////////////////////////////
 
-	typedef unsigned int ast_node_id_t;
-	static constexpr ast_node_id_t ast_node_none = ~ast_node_id_t(0u);
-
 	struct ast_node_t {
 		token_t			t;
 		ast_node_id_t		next = ast_node_none;
@@ -5643,17 +5651,6 @@ try_again_w_token:
 		std::string to_str(void) const;
 	};
 
-void ast_node_t::common_move(ast_node_t &o) {
-	t = std::move(o.t);
-	ref = o.ref; o.ref = 0;
-	next = o.next; o.next = ast_node_none;
-	child = o.child; o.child = ast_node_none;
-}
-
-std::string ast_node_t::to_str(void) const {
-	return std::string(); // TODO
-}
-
 	using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
 	class ast_node_pool : public ast_node_pool_t {
 		public:
@@ -5675,103 +5672,114 @@ std::string ast_node_t::to_str(void) const {
 			}
 	};
 
-	static ast_node_pool ast_node;
+ast_node_pool ast_node;
 
-	void ast_node_t::arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s) {
-		for (auto &id : d)
-			if (id != ast_node_none)
-				ast_node(id).release();
+void ast_node_t::common_move(ast_node_t &o) {
+	t = std::move(o.t);
+	ref = o.ref; o.ref = 0;
+	next = o.next; o.next = ast_node_none;
+	child = o.child; o.child = ast_node_none;
+}
 
-		d = s;
+std::string ast_node_t::to_str(void) const {
+	return std::string(); // TODO
+}
 
-		for (auto &id : d)
-			if (id != ast_node_none)
-				ast_node(id).addref();
-	}
+void ast_node_t::arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s) {
+	for (auto &id : d)
+		if (id != ast_node_none)
+			ast_node(id).release();
 
-	void ast_node_t::arrayrelease(std::vector<ast_node_id_t> &d) {
-		for (auto &id : d)
-			if (id != ast_node_none)
-				ast_node(id).release();
-	}
+	d = s;
 
-	ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
-		if (child != n) ast_node.assign(/*to*/child,/*from*/n);
-		return *this;
-	}
+	for (auto &id : d)
+		if (id != ast_node_none)
+			ast_node(id).addref();
+}
 
-	ast_node_t &ast_node_t::set_next(const ast_node_id_t n) {
-		if (next != n) ast_node.assign(/*to*/next,/*from*/n);
-		return *this;
-	}
+void ast_node_t::arrayrelease(std::vector<ast_node_id_t> &d) {
+	for (auto &id : d)
+		if (id != ast_node_none)
+			ast_node(id).release();
+}
 
-	ast_node_t &ast_node_t::clear_and_move_assign(token_t &tt) {
-		ref = 0;
-		t = std::move(tt);
-		set_next(ast_node_none);
-		set_child(ast_node_none);
-		ast_node.update_next(this);
-		return *this;
-	}
+ast_node_t &ast_node_t::set_child(const ast_node_id_t n) {
+	if (child != n) ast_node.assign(/*to*/child,/*from*/n);
+	return *this;
+}
 
-	ast_node_t &ast_node_t::clear(const token_type_t tt) {
-		ref = 0;
-		t = token_t(tt);
-		set_next(ast_node_none);
-		set_child(ast_node_none);
-		ast_node.update_next(this);
-		return *this;
-	}
+ast_node_t &ast_node_t::set_next(const ast_node_id_t n) {
+	if (next != n) ast_node.assign(/*to*/next,/*from*/n);
+	return *this;
+}
 
-	ast_node_t &ast_node_t::addref(void) {
-		ref++;
-		return *this;
-	}
+ast_node_t &ast_node_t::clear_and_move_assign(token_t &tt) {
+	ref = 0;
+	t = std::move(tt);
+	set_next(ast_node_none);
+	set_child(ast_node_none);
+	ast_node.update_next(this);
+	return *this;
+}
 
-	ast_node_t &ast_node_t::release(void) {
-		if (ref == 0) throw std::runtime_error("ast_node attempt to release when ref == 0");
-		if (--ref == 0) clear(token_type_t::none);
-		return *this;
-	}
+ast_node_t &ast_node_t::clear(const token_type_t tt) {
+	ref = 0;
+	t = token_t(tt);
+	set_next(ast_node_none);
+	set_child(ast_node_none);
+	ast_node.update_next(this);
+	return *this;
+}
 
-	//////////////////////////////////////////////////
+ast_node_t &ast_node_t::addref(void) {
+	ref++;
+	return *this;
+}
 
-	/* declspec flags */
-	static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
-	static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
-	static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
-	static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
+ast_node_t &ast_node_t::release(void) {
+	if (ref == 0) throw std::runtime_error("ast_node attempt to release when ref == 0");
+	if (--ref == 0) clear(token_type_t::none);
+	return *this;
+}
 
-	struct declspec_t { // parsing results of __declspec()
-		addrmask_t				align = addrmask_none;
-		unsigned int				dcs_flags = 0;
-	};
+//////////////////////////////////////////////////
 
-	struct declaration_specifiers_t {
-		storage_class_t				storage_class = 0;
-		type_specifier_t			type_specifier = 0;
-		type_qualifier_t			type_qualifier = 0;
-		symbol_id_t				type_identifier_symbol = symbol_none;
-		data_size_t				size = data_size_none;
-		addrmask_t				align = addrmask_none;
-		unsigned int				dcs_flags = 0;
-		std::vector<symbol_id_t>		enum_list;
-		unsigned int				count = 0;
+/* declspec flags */
+static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
+static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
+static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
+static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
 
-		bool empty(void) const;
+struct declspec_t { // parsing results of __declspec()
+	addrmask_t				align = addrmask_none;
+	unsigned int				dcs_flags = 0;
+};
 
-		declaration_specifiers_t();
-		declaration_specifiers_t(const declaration_specifiers_t &x);
-		declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
-		declaration_specifiers_t(declaration_specifiers_t &&x);
-		declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
+struct declaration_specifiers_t {
+	storage_class_t				storage_class = 0;
+	type_specifier_t			type_specifier = 0;
+	type_qualifier_t			type_qualifier = 0;
+	symbol_id_t				type_identifier_symbol = symbol_none;
+	data_size_t				size = data_size_none;
+	addrmask_t				align = addrmask_none;
+	unsigned int				dcs_flags = 0;
+	std::vector<symbol_id_t>		enum_list;
+	unsigned int				count = 0;
 
-		~declaration_specifiers_t();
+	bool empty(void) const;
 
-		void common_move(declaration_specifiers_t &o);
+	declaration_specifiers_t();
+	declaration_specifiers_t(const declaration_specifiers_t &x);
+	declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
+	declaration_specifiers_t(declaration_specifiers_t &&x);
+	declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
 
-		void common_copy(const declaration_specifiers_t &o);
-	};
+	~declaration_specifiers_t();
+
+	void common_move(declaration_specifiers_t &o);
+
+	void common_copy(const declaration_specifiers_t &o);
+};
 
 bool declaration_specifiers_t::empty(void) const {
 	return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
@@ -13157,11 +13165,6 @@ common_error:
 			return r;
 
 		return 1;
-	}
-
-	template <class T> void typ_delete(T *p) {
-		if (p) delete p;
-		p = NULL;
 	}
 
 enum test_mode_t {
