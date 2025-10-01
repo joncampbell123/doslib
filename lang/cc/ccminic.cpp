@@ -801,7 +801,7 @@ struct csliteral_t {
 		__MAX__
 	};
 
-	const unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
+	static const unsigned char unit_size[type_t::__MAX__];
 
 	type_t			type = CHAR;
 	void*			data = NULL;
@@ -2913,6 +2913,10 @@ std::string integer_value_t::to_str(void) const {
 }
 
 void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
+
+////////////////////////////////////////////////////////////////////
+
+const unsigned char csliteral_t::unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
 
 ////////////////////////////////////////////////////////////////////
 
