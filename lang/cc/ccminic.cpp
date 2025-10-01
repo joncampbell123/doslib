@@ -7654,6 +7654,519 @@ data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 	return data_size_none;
 }
 
+bool is_ast_strconstexpr(token_t &t) {
+	switch (t.type) {
+		case token_type_t::strliteral:
+			return true;
+		case token_type_t::op_symbol:
+			if (t.v.symbol != symbol_none) {
+				symbol_t &so = symbol(t.v.symbol);
+				if (so.sym_type == symbol_t::STR && (so.spec.type_qualifier & TQ_CONST))
+					return true;
+			}
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool is_ast_constexpr(token_t &t) {
+	switch (t.type) {
+		case token_type_t::integer:
+			return true;
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_to_bool(integer_value_t &iv) {
+	return iv.v.u != 0ull;
+}
+
+bool ast_constexpr_to_bool(token_t &t) {
+	switch (t.type) {
+		case token_type_t::integer:
+			return ast_constexpr_to_bool(t.v.integer);
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref) {
+	switch (op.type) {
+		case token_type_t::op_symbol:
+			{
+				if (op.v.symbol != symbol_none) {
+					auto &sym = symbol(op.v.symbol);
+					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+						return false;
+
+					data_size_t sz = calc_sizeof(sym.spec,sym.ddip,ptr_deref);
+					if (sz != data_size_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+		case token_type_t::op_declaration:
+			{
+				declaration_t *decl = op.v.declaration;
+				assert(decl != NULL);
+
+				if (decl->declor.size() == 1) {
+					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0].ddip);
+					if (sz != data_size_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref) {
+	switch (op.type) {
+		case token_type_t::op_symbol:
+			{
+				if (op.v.symbol != symbol_none) {
+					auto &sym = symbol(op.v.symbol);
+					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
+						return false;
+
+					addrmask_t sz = calc_alignof(sym.spec,sym.ddip,ptr_deref);
+					if (sz != addrmask_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+		case token_type_t::op_declaration:
+			{
+				declaration_t *decl = op.v.declaration;
+				assert(decl != NULL);
+
+				if (decl->declor.size() == 1) {
+					addrmask_t sz = calc_alignof(decl->spec,decl->declor[0].ddip);
+					if (sz != addrmask_none) {
+						r = token_t(token_type_t::integer);
+						r.v.integer.v.u = sz;
+						r.v.integer.flags = 0;
+						return true;
+					}
+				}
+				break;
+			}
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				/* negative or over-large shift? NOPE.
+				 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
+				 * the shift instructions only use the number of LSB bits relevent to the data
+				 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
+				 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
+				 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
+				if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
+					return false;
+
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = op1.v.integer.v.v << op2.v.integer.v.v;
+				else
+					r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				/* negative or over-large shift? NOPE.
+				 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
+				 * the shift instructions only use the number of LSB bits relevent to the data
+				 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
+				 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
+				 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
+				if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
+					return false;
+
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = op1.v.integer.v.v >> op2.v.integer.v.v;
+				else
+					r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = (op1.v.integer.v.v <= op2.v.integer.v.v) ? 1 : 0;
+				else
+					r.v.integer.v.u = (op1.v.integer.v.u <= op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = (op1.v.integer.v.v >= op2.v.integer.v.v) ? 1 : 0;
+				else
+					r.v.integer.v.u = (op1.v.integer.v.u >= op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = (op1.v.integer.v.v < op2.v.integer.v.v) ? 1 : 0;
+				else
+					r.v.integer.v.u = (op1.v.integer.v.u < op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.u = (op1.v.integer.v.v > op2.v.integer.v.v) ? 1 : 0;
+				else
+					r.v.integer.v.u = (op1.v.integer.v.u > op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (op1.v.integer.v.u == op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (op1.v.integer.v.u != op2.v.integer.v.u) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_binary_not(token_t &r,token_t &op) {
+	/* TODO: type promotion/conversion */
+	switch (op.type) {
+		case token_type_t::integer:
+			r = op;
+			r.v.integer.v.u = ~r.v.integer.v.u;
+			return true;
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_logical_not(token_t &r,token_t &op) {
+	/* TODO: type promotion/conversion */
+	switch (op.type) {
+		case token_type_t::integer:
+			r = op;
+			r.v.integer.v.u = ast_constexpr_to_bool(op.v.integer) ? 0 : 1;
+			return true;
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_negate(token_t &r,token_t &op) {
+	/* TODO: type promotion/conversion */
+	switch (op.type) {
+		case token_type_t::integer:
+			r = op;
+			r.v.integer.v.v = -r.v.integer.v.v;
+			r.v.integer.flags |= integer_value_t::FL_SIGNED;
+			return true;
+		default:
+			break;
+	};
+
+	return false;
+}
+
+bool ast_constexpr_add(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u += op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u -= op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) || ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.v |= op2.v.integer.v.v;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.v ^= op2.v.integer.v.v;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) && ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.v &= op2.v.integer.v.v;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.v *= op2.v.integer.v.v;
+				else
+					r.v.integer.v.u *= op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				/* divide by zero? NOPE! */
+				if (op2.v.integer.v.u == 0ull)
+					return false;
+
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.v /= op2.v.integer.v.v;
+				else
+					r.v.integer.v.u /= op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				/* divide by zero? NOPE! */
+				if (op2.v.integer.v.u == 0ull)
+					return false;
+
+				r = op1;
+				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
+					r.v.integer.v.v %= op2.v.integer.v.v;
+				else
+					r.v.integer.v.u %= op2.v.integer.v.u;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
@@ -7760,8 +8273,6 @@ data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 		int gnu_attribute_parse(declspec_t &dsc,const position_t &pos);
 		int cpp11_attribute_parse(declspec_t &dsc,const position_t &pos);
 		int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
-		bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
-		bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
 		int cpp11_attribute_namespace_parse(bool &nsv_using,std::vector<identifier_id_t> &nsv);
 		cpp11attr_namespace_t cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv);
 		int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
@@ -7808,32 +8319,6 @@ data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 		int statement(ast_node_id_t &aroot);
 		int external_declaration(void);
 		int translation_unit(void);
-
-		bool is_ast_constexpr(token_t &t);
-		bool is_ast_strconstexpr(token_t &t);
-		bool ast_constexpr_to_bool(integer_value_t &iv);
-		bool ast_constexpr_to_bool(token_t &t);
-		bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_binary_not(token_t &r,token_t &op);
-		bool ast_constexpr_logical_not(token_t &r,token_t &op);
-		bool ast_constexpr_negate(token_t &r,token_t &op);
-		bool ast_constexpr_add(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2);
-		bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2);
 	};
 
 bool cc_state_t::arrange_symbols(void) {
@@ -7948,517 +8433,6 @@ bool cc_state_t::init(void) {
 
 	return true;
 }
-
-	bool cc_state_t::is_ast_strconstexpr(token_t &t) {
-		switch (t.type) {
-			case token_type_t::strliteral:
-				return true;
-			case token_type_t::op_symbol:
-				if (t.v.symbol != symbol_none) {
-					symbol_t &so = symbol(t.v.symbol);
-					if (so.sym_type == symbol_t::STR && (so.spec.type_qualifier & TQ_CONST))
-						return true;
-				}
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::is_ast_constexpr(token_t &t) {
-		switch (t.type) {
-			case token_type_t::integer:
-				return true;
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_to_bool(integer_value_t &iv) {
-		return iv.v.u != 0ull;
-	}
-
-	bool cc_state_t::ast_constexpr_to_bool(token_t &t) {
-		switch (t.type) {
-			case token_type_t::integer:
-				return ast_constexpr_to_bool(t.v.integer);
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref) {
-		switch (op.type) {
-			case token_type_t::op_symbol:
-			{
-				if (op.v.symbol != symbol_none) {
-					auto &sym = symbol(op.v.symbol);
-					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
-						return false;
-
-					data_size_t sz = calc_sizeof(sym.spec,sym.ddip,ptr_deref);
-					if (sz != data_size_none) {
-						r = token_t(token_type_t::integer);
-						r.v.integer.v.u = sz;
-						r.v.integer.flags = 0;
-						return true;
-					}
-				}
-				break;
-			}
-			case token_type_t::op_declaration:
-			{
-				declaration_t *decl = op.v.declaration;
-				assert(decl != NULL);
-
-				if (decl->declor.size() == 1) {
-					data_size_t sz = calc_sizeof(decl->spec,decl->declor[0].ddip);
-					if (sz != data_size_none) {
-						r = token_t(token_type_t::integer);
-						r.v.integer.v.u = sz;
-						r.v.integer.flags = 0;
-						return true;
-					}
-				}
-				break;
-			}
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref) {
-		switch (op.type) {
-			case token_type_t::op_symbol:
-			{
-				if (op.v.symbol != symbol_none) {
-					auto &sym = symbol(op.v.symbol);
-					if (sym.sym_type == symbol_t::FUNCTION || sym.sym_type == symbol_t::NONE)
-						return false;
-
-					addrmask_t sz = calc_alignof(sym.spec,sym.ddip,ptr_deref);
-					if (sz != addrmask_none) {
-						r = token_t(token_type_t::integer);
-						r.v.integer.v.u = sz;
-						r.v.integer.flags = 0;
-						return true;
-					}
-				}
-				break;
-			}
-			case token_type_t::op_declaration:
-			{
-				declaration_t *decl = op.v.declaration;
-				assert(decl != NULL);
-
-				if (decl->declor.size() == 1) {
-					addrmask_t sz = calc_alignof(decl->spec,decl->declor[0].ddip);
-					if (sz != addrmask_none) {
-						r = token_t(token_type_t::integer);
-						r.v.integer.v.u = sz;
-						r.v.integer.flags = 0;
-						return true;
-					}
-				}
-				break;
-			}
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					/* negative or over-large shift? NOPE.
-					 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
-					 * the shift instructions only use the number of LSB bits relevent to the data
-					 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
-					 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
-					 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
-					if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
-						return false;
-
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = op1.v.integer.v.v << op2.v.integer.v.v;
-					else
-						r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					/* negative or over-large shift? NOPE.
-					 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
-					 * the shift instructions only use the number of LSB bits relevent to the data
-					 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
-					 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
-					 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
-					if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
-						return false;
-
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = op1.v.integer.v.v >> op2.v.integer.v.v;
-					else
-						r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_lessthan_equals(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = (op1.v.integer.v.v <= op2.v.integer.v.v) ? 1 : 0;
-					else
-						r.v.integer.v.u = (op1.v.integer.v.u <= op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_greaterthan_equals(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = (op1.v.integer.v.v >= op2.v.integer.v.v) ? 1 : 0;
-					else
-						r.v.integer.v.u = (op1.v.integer.v.u >= op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = (op1.v.integer.v.v < op2.v.integer.v.v) ? 1 : 0;
-					else
-						r.v.integer.v.u = (op1.v.integer.v.u < op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.u = (op1.v.integer.v.v > op2.v.integer.v.v) ? 1 : 0;
-					else
-						r.v.integer.v.u = (op1.v.integer.v.u > op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u = (op1.v.integer.v.u == op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u = (op1.v.integer.v.u != op2.v.integer.v.u) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_binary_not(token_t &r,token_t &op) {
-		/* TODO: type promotion/conversion */
-		switch (op.type) {
-			case token_type_t::integer:
-				r = op;
-				r.v.integer.v.u = ~r.v.integer.v.u;
-				return true;
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_logical_not(token_t &r,token_t &op) {
-		/* TODO: type promotion/conversion */
-		switch (op.type) {
-			case token_type_t::integer:
-				r = op;
-				r.v.integer.v.u = ast_constexpr_to_bool(op.v.integer) ? 0 : 1;
-				return true;
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_negate(token_t &r,token_t &op) {
-		/* TODO: type promotion/conversion */
-		switch (op.type) {
-			case token_type_t::integer:
-				r = op;
-				r.v.integer.v.v = -r.v.integer.v.v;
-				r.v.integer.flags |= integer_value_t::FL_SIGNED;
-				return true;
-			default:
-				break;
-		};
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_add(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u += op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u -= op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) || ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_binary_or(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.v |= op2.v.integer.v.v;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.v ^= op2.v.integer.v.v;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) && ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					r.v.integer.v.v &= op2.v.integer.v.v;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.v *= op2.v.integer.v.v;
-					else
-						r.v.integer.v.u *= op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_divide(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					/* divide by zero? NOPE! */
-					if (op2.v.integer.v.u == 0ull)
-						return false;
-
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.v /= op2.v.integer.v.v;
-					else
-						r.v.integer.v.u /= op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
-
-	bool cc_state_t::ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
-		/* TODO: type promotion/conversion */
-		if (op1.type == op2.type) {
-			switch (op1.type) {
-				case token_type_t::integer:
-					/* divide by zero? NOPE! */
-					if (op2.v.integer.v.u == 0ull)
-						return false;
-
-					r = op1;
-					if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-						r.v.integer.v.v %= op2.v.integer.v.v;
-					else
-						r.v.integer.v.u %= op2.v.integer.v.u;
-					return true;
-				default:
-					break;
-			};
-		}
-
-		return false;
-	}
 
 	void cc_state_t::ast_node_strliteral_to_symbol(ast_node_t &erootnode) {
 		symbol_id_t sid = symbol_none;
