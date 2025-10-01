@@ -6513,13 +6513,13 @@ enumerator_t &enumerator_t::operator=(enumerator_t &&x) { common_move(x); return
 void enumerator_t::common_copy(const enumerator_t &o) {
 	identifier.assign(/*to*/name,/*from*/o.name);
 	ast_node.assign(/*to*/expr,/*from*/o.expr);
-	pos = pos;
+	pos = o.pos;
 }
 
 void enumerator_t::common_move(enumerator_t &o) {
 	identifier.assignmove(/*to*/name,/*from*/o.name);
 	ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-	pos = std::move(pos);
+	pos = std::move(o.pos);
 }
 
 enumerator_t::~enumerator_t() {
