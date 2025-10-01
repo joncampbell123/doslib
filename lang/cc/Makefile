@@ -1,9 +1,12 @@
 
 all: ccminic
 
-ccminic: ccminic.cpp
-	g++ -g3 -O0 -std=c++11 -Wall -pedantic -Wextra -o $@ $<
+ccminic: ccminic.o cctoken.o
+	g++ -std=c++11 -o $@ $+
+
+%.o: %.cpp
+	g++ -g3 -O0 -std=c++11 -Wall -pedantic -Wextra -c -o $@ $+
 
 clean:
-	rm -f ccminic
+	rm -f ccminic *.o
 
