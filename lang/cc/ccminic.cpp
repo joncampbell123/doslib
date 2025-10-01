@@ -9168,12 +9168,12 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 		source_file_object*	sfo = NULL;
 		int			err = 0;
 
-		std::vector<token_t>	tq;
-		size_t			tq_tail = 0;
+		std::vector<token_t>	cc_tq;
+		size_t			cc_tq_tail = 0;
 
 		bool			ignore_whitespace = true;
 
-		void tq_ft(void) {
+		void cc_tq_ft(void) {
 			token_t t(token_type_t::eof);
 			int r;
 
@@ -9191,39 +9191,39 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 				break;
 			} while (1);
 
-			tq.push_back(std::move(t));
+			cc_tq.push_back(std::move(t));
 		}
 
-		void tq_refill(const size_t i=1) {
-			while (tq.size() < (i+tq_tail))
-				tq_ft();
+		void cc_tq_refill(const size_t i=1) {
+			while (cc_tq.size() < (i+cc_tq_tail))
+				cc_tq_ft();
 		}
 
-		const token_t &tq_peek(const size_t i=0) {
-			tq_refill(i+1);
-			assert((tq_tail+i) < tq.size());
-			return tq[tq_tail+i];
+		const token_t &cc_tq_peek(const size_t i=0) {
+			cc_tq_refill(i+1);
+			assert((cc_tq_tail+i) < cc_tq.size());
+			return cc_tq[cc_tq_tail+i];
 		}
 
-		void tq_discard(const size_t i=1) {
-			tq_refill(i);
-			tq_tail += i;
-			assert(tq_tail <= tq.size());
+		void cc_tq_discard(const size_t i=1) {
+			cc_tq_refill(i);
+			cc_tq_tail += i;
+			assert(cc_tq_tail <= cc_tq.size());
 
-			if (tq_tail == tq.size()) {
-				tq_tail = 0;
-				tq.clear();
+			if (cc_tq_tail == cc_tq.size()) {
+				cc_tq_tail = 0;
+				cc_tq.clear();
 			}
 		}
 
-		token_t &tq_get(void) {
-			tq_refill();
-			assert(tq_tail < tq.size());
-			return tq[tq_tail++];
+		token_t &cc_tq_get(void) {
+			cc_tq_refill();
+			assert(cc_tq_tail < cc_tq.size());
+			return cc_tq[cc_tq_tail++];
 		}
 
 		int chkerr(void) {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
 				return err; /* 0 or negative */
 
@@ -9372,7 +9372,7 @@ bool cc_state_t::init(void) {
 		iv.flags = integer_value_t::FL_SIGNED;
 
 		if ((spec.type_specifier & (TS_INT|TS_LONG|TS_LONGLONG|TS_CHAR)) == 0)
-			CCERR_RET(EINVAL,tq_peek().pos,"Enumeration list must use integer type");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Enumeration list must use integer type");
 
 		if (spec.type_specifier & TS_UNSIGNED)
 			iv.flags &= ~integer_value_t::FL_SIGNED;
@@ -9380,21 +9380,21 @@ bool cc_state_t::init(void) {
 		/* caller already ate the { */
 
 		do {
-			if (tq_peek().type == token_type_t::closecurlybracket) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::closecurlybracket) {
+				cc_tq_discard();
 				break;
 			}
 
 			enumerator_t en;
 
-			en.pos = tq_peek().pos;
-			if (tq_peek().type != token_type_t::identifier || tq_peek().v.identifier == identifier_none)
-				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
+			en.pos = cc_tq_peek().pos;
+			if (cc_tq_peek().type != token_type_t::identifier || cc_tq_peek().v.identifier == identifier_none)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Identifier expected");
 
-			identifier.assign(/*to*/en.name,/*from*/tq_get().v.identifier);
+			identifier.assign(/*to*/en.name,/*from*/cc_tq_get().v.identifier);
 
-			if (tq_peek().type == token_type_t::equal) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::equal) {
+				cc_tq_discard();
 
 				if ((r=conditional_expression(en.expr)) < 1)
 					return r;
@@ -9437,12 +9437,12 @@ bool cc_state_t::init(void) {
 
 				enum_list.push_back(sl.sid);
 			}
-			if (tq_peek().type == token_type_t::closecurlybracket) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::closecurlybracket) {
+				cc_tq_discard();
 				break;
 			}
-			else if (tq_peek().type == token_type_t::comma) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::comma) {
+				cc_tq_discard();
 			}
 			else {
 				return errno_return(EINVAL);
@@ -9453,7 +9453,7 @@ bool cc_state_t::init(void) {
 	}
 
 	bool cc_state_t::declaration_specifiers_check(const unsigned int token_offset) {
-		const token_t &t = tq_peek(token_offset);
+		const token_t &t = cc_tq_peek(token_offset);
 
 		switch (t.type) {
 			case token_type_t::r_typedef: return true;
@@ -9537,23 +9537,23 @@ bool cc_state_t::init(void) {
 	}
 
 	int cc_state_t::cpp11_attribute_namespace_parse(bool &nsv_using,std::vector<identifier_id_t> &nsv) {
-		if (tq_peek().type == token_type_t::coloncolon) {
+		if (cc_tq_peek().type == token_type_t::coloncolon) {
 			if (nsv_using)
-				CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
 
-			tq_discard();
-			if (tq_peek().type != token_type_t::identifier)
-				CCERR_RET(EINVAL,tq_peek().pos,"Expected identifier");
+			cc_tq_discard();
+			if (cc_tq_peek().type != token_type_t::identifier)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected identifier");
 		}
 
-		while (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::coloncolon) {
+		while (cc_tq_peek(0).type == token_type_t::identifier && cc_tq_peek(1).type == token_type_t::coloncolon) {
 			if (nsv_using)
-				CCERR_RET(EINVAL,tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Cannot mix using namespace: and namespace:: in [[attribute]]");
 
 			identifier_id_t idv = identifier_none;
-			identifier.assign(idv,tq_peek(0).v.identifier);
+			identifier.assign(idv,cc_tq_peek(0).v.identifier);
 			nsv.push_back(idv);
-			tq_discard(2);
+			cc_tq_discard(2);
 		}
 
 		return 1;
@@ -9564,8 +9564,8 @@ bool cc_state_t::init(void) {
 
 		/* align(#). probably requires a number and no expressions allowed in Microsoft C/C++,
 		 * but our extension is to allow an expression here */
-		if (tq_get().type != token_type_t::openparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+		if (cc_tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Opening parenthesis expected");
 
 		ast_node_id_t expr = ast_node_none;
 
@@ -9576,15 +9576,15 @@ bool cc_state_t::init(void) {
 
 		ast_node_t &an = ast_node(expr);
 		if (an.t.type != token_type_t::integer)
-			CCERR_RET(EINVAL,tq_peek().pos,"Not a number or does not reduce to a number");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Not a number or does not reduce to a number");
 
 		if (an.t.v.integer.v.u & (an.t.v.integer.v.u - 1ull))
-			CCERR_RET(EINVAL,tq_peek().pos,"Alignas expression not a power of 2");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Alignas expression not a power of 2");
 
 		align = addrmask_make(an.t.v.integer.v.u);
 
-		if (tq_get().type != token_type_t::closeparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+		if (cc_tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing parenthesis expected");
 
 		ast_node.release(expr);
 		return 1;
@@ -9600,21 +9600,21 @@ bool cc_state_t::init(void) {
 
 		// [[ has already been taken, we should be at the open parens
 
-		if (tq_peek().type == token_type_t::r_using) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::r_using) {
+			cc_tq_discard();
 
 			std::vector<identifier_id_t> nsv;
 			if ((r=cpp11_attribute_namespace_parse(nsv_using,nsv)) < 1)
 				return r;
 
-			if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+			if (cc_tq_peek(0).type == token_type_t::identifier && cc_tq_peek(1).type == token_type_t::colon) {
 				identifier_id_t idv = identifier_none;
-				identifier.assign(idv,tq_peek(0).v.identifier);
+				identifier.assign(idv,cc_tq_peek(0).v.identifier);
 				nsv.push_back(idv);
-				tq_discard(2);
+				cc_tq_discard(2);
 			}
 			else {
-				CCERR_RET(EINVAL,tq_peek().pos,"Expected final identifier: at the end of using");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected final identifier: at the end of using");
 			}
 
 			ns = cpp11_attribute_identify_namespace(nsv);
@@ -9642,8 +9642,8 @@ bool cc_state_t::init(void) {
 					identifier.release(i);
 			}
 
-			if (tq_peek().type == token_type_t::identifier) {
-				token_t w = std::move(tq_get());
+			if (cc_tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(cc_tq_get());
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned" && ns == CPP11ATTR_NS_GNU) {
@@ -9663,32 +9663,32 @@ bool cc_state_t::init(void) {
 					dsc.dcs_flags |= DCS_FL_NAKED;
 				}
 				else {
-					CCERR_RET(EINVAL,tq_peek().pos,"Unknown [[attribute]] %s",identifier(w.v.identifier).to_str().c_str());
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Unknown [[attribute]] %s",identifier(w.v.identifier).to_str().c_str());
 				}
 
-				if (tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
+				if (cc_tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
 					/* OK */
 				}
-				else if (tq_peek().type == token_type_t::comma) {
-					tq_discard();
+				else if (cc_tq_peek().type == token_type_t::comma) {
+					cc_tq_discard();
 					/* good */
 				}
 				else {
-					CCERR_RET(EINVAL,tq_peek().pos,"comma or closing paran expected");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"comma or closing paran expected");
 				}
 			}
-			else if (tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
+			else if (cc_tq_peek().type == token_type_t::closesquarebracketclosesquarebracket) {
 				break;
 			}
 			else {
 				// FIXME: Unknown attributes are supposed to be ignored
-				CCERR_RET(EINVAL,tq_peek().pos,"error parsing [[attribute]]");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"error parsing [[attribute]]");
 			}
 		} while(1);
 
 		// closing parens expected
-		if (tq_get().type != token_type_t::closesquarebracketclosesquarebracket)
-			CCERR_RET(EINVAL,tq_peek().pos,"Closing ]] expected");
+		if (cc_tq_get().type != token_type_t::closesquarebracketclosesquarebracket)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing ]] expected");
 
 		return 1;
 	}
@@ -9699,14 +9699,14 @@ bool cc_state_t::init(void) {
 		(void)pos;
 
 		// __attribute__ has already been taken, we should be at the open parens
-		if (tq_get().type != token_type_t::openparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
-		if (tq_get().type != token_type_t::openparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+		if (cc_tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Opening parenthesis expected");
+		if (cc_tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Opening parenthesis expected");
 
 		do {
-			if (tq_peek().type == token_type_t::identifier) {
-				token_t w = std::move(tq_get());
+			if (cc_tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(cc_tq_get());
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "aligned") {
@@ -9726,35 +9726,35 @@ bool cc_state_t::init(void) {
 					dsc.dcs_flags |= DCS_FL_NAKED;
 				}
 				else {
-					CCERR_RET(EINVAL,tq_peek().pos,"Unknown __attribute__");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Unknown __attribute__");
 				}
 
-				if (tq_peek().type == token_type_t::closeparenthesis) {
+				if (cc_tq_peek().type == token_type_t::closeparenthesis) {
 					/* OK */
 				}
-				else if (tq_peek().type == token_type_t::comma) {
-					tq_discard();
+				else if (cc_tq_peek().type == token_type_t::comma) {
+					cc_tq_discard();
 					/* good */
 				}
 				else {
-					CCERR_RET(EINVAL,tq_peek().pos,"comma or closing paran expected");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"comma or closing paran expected");
 				}
 			}
-			else if (tq_peek().type == token_type_t::closeparenthesis) {
+			else if (cc_tq_peek().type == token_type_t::closeparenthesis) {
 				break;
 			}
 			else {
 				// FIXME: Unknown attributes are supposed to be ignored
 				//        GCC issues a warning for unknown attributes
-				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __attribute__");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"error parsing __attribute__");
 			}
 		} while(1);
 
 		// closing parens expected
-		if (tq_get().type != token_type_t::closeparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
-		if (tq_get().type != token_type_t::closeparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+		if (cc_tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing parenthesis expected");
+		if (cc_tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing parenthesis expected");
 
 		return 1;
 	}
@@ -9765,12 +9765,12 @@ bool cc_state_t::init(void) {
 		(void)pos;
 
 		// __declspec has already been taken, we should be at the open parens
-		if (tq_get().type != token_type_t::openparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Opening parenthesis expected");
+		if (cc_tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Opening parenthesis expected");
 
 		do {
-			if (tq_peek().type == token_type_t::identifier) {
-				token_t w = std::move(tq_get());
+			if (cc_tq_peek().type == token_type_t::identifier) {
+				token_t w = std::move(cc_tq_get());
 				assert(w.type == token_type_t::identifier);
 
 				if (identifier(w.v.identifier) == "align") {
@@ -9791,20 +9791,20 @@ bool cc_state_t::init(void) {
 				}
 				else {
 					/* should we ignore unknown ones? Does Microsoft C/C++ ignore unknown ones? */
-					CCERR_RET(EINVAL,tq_peek().pos,"Unknown __declspec");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Unknown __declspec");
 				}
 			}
-			else if (tq_peek().type == token_type_t::closeparenthesis) {
+			else if (cc_tq_peek().type == token_type_t::closeparenthesis) {
 				break;
 			}
 			else {
-				CCERR_RET(EINVAL,tq_peek().pos,"error parsing __declspec");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"error parsing __declspec");
 			}
 		} while(1);
 
 		// closing parens expected
-		if (tq_get().type != token_type_t::closeparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+		if (cc_tq_get().type != token_type_t::closeparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing parenthesis expected");
 
 		return 1;
 	}
@@ -9865,7 +9865,7 @@ bool cc_state_t::init(void) {
 	}
 
 	int cc_state_t::declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec) {
-		const position_t pos = tq_peek().pos;
+		const position_t pos = cc_tq_peek().pos;
 		addrmask_t ds_align = addrmask_none;
 		type_specifier_t builtin_ts = 0;
 		int r;
@@ -9881,12 +9881,12 @@ bool cc_state_t::init(void) {
 #define X(d,m) \
 	{ \
 		XCHK(d,m); \
-		tq_discard(); \
+		cc_tq_discard(); \
 		continue; \
 	}
 
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			switch (t.type) {
 				case token_type_t::r_typedef:		X(ds.storage_class,SC_TYPEDEF);
@@ -9901,7 +9901,7 @@ bool cc_state_t::init(void) {
 
 				case token_type_t::r_alignas:
 				case token_type_t::r__Alignas:
-					tq_discard();
+					cc_tq_discard();
 					ds.count++;
 
 					if ((r=declspec_alignas(ds_align,pos)) < 1)
@@ -9914,7 +9914,7 @@ bool cc_state_t::init(void) {
 					{
 						declspec_t dcl;
 
-						tq_discard();
+						cc_tq_discard();
 						ds.count++;
 
 						if ((r=ms_declspec_parse(dcl,pos)) < 1)
@@ -9938,7 +9938,7 @@ bool cc_state_t::init(void) {
 					{
 						declspec_t dcl;
 
-						tq_discard();
+						cc_tq_discard();
 						ds.count++;
 
 						if ((r=gnu_attribute_parse(dcl,pos)) < 1)
@@ -9962,7 +9962,7 @@ bool cc_state_t::init(void) {
 					{
 						declspec_t dcl;
 
-						tq_discard();
+						cc_tq_discard();
 						ds.count++;
 
 						if ((r=cpp11_attribute_parse(dcl,pos)) < 1)
@@ -9989,7 +9989,7 @@ bool cc_state_t::init(void) {
 		} while (1);
 
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			switch (t.type) {
 				case token_type_t::r_void:		X(ds.type_specifier,TS_VOID);
@@ -10015,14 +10015,14 @@ bool cc_state_t::init(void) {
 							CCERR_RET(EINVAL,pos,"declarator specifier 'long long' already specified");
 
 						ds.type_specifier = (ds.type_specifier & (~TS_LONG)) | TS_LONGLONG;
-						tq_discard();
+						cc_tq_discard();
 					}
 					else {
 						if (ds.type_specifier & TS_LONG)
 							CCERR_RET(EINVAL,pos,"declarator specifier 'long' already specified");
 
 						ds.type_specifier |= TS_LONG;
-						tq_discard();
+						cc_tq_discard();
 					}
 					continue;
 
@@ -10066,7 +10066,7 @@ common_builtin:
 						break;
 
 					ds.type_specifier |= TS_MATCH_BUILTIN;
-					tq_discard();
+					cc_tq_discard();
 					ds.count++;
 					continue;
 common_error:
@@ -10087,7 +10087,7 @@ common_error:
 
 						ds.type_specifier |= TS_MATCH_TYPEDEF;
 						ds.type_identifier_symbol = sid;
-						tq_discard();
+						cc_tq_discard();
 						ds.count++;
 					}
 					continue;
@@ -10103,7 +10103,7 @@ common_error:
 					ds.storage_class &= ~SC_TYPEDEF;
 
 					ds.type_specifier |= TS_ENUM;
-					tq_discard();
+					cc_tq_discard();
 
 					/* enum { list }
 					 * enum identifier { list }
@@ -10119,11 +10119,11 @@ common_error:
 						eds.storage_class = SC_CONSTEXPR;
 						eds.type_qualifier = TQ_CONST;
 
-						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
+						if (cc_tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/declor.name,/*from*/cc_tq_get().v.identifier);
 
-						if (tq_peek().type == token_type_t::colon) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::colon) {
+							cc_tq_discard();
 
 							eds.type_specifier &= ~TS_INT;
 							if ((r=declaration_specifiers_parse(eds)) < 1)
@@ -10132,8 +10132,8 @@ common_error:
 
 						sl.pos = pos;
 						sl.st = symbol_t::ENUM;
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::opencurlybracket) {
+							cc_tq_discard();
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
@@ -10171,7 +10171,7 @@ common_error:
 						break;
 
 					ds.type_specifier |= TS_STRUCT;
-					tq_discard();
+					cc_tq_discard();
 
 					{
 						addrmask_t struct_align = addrmask_none;
@@ -10183,10 +10183,10 @@ common_error:
 						 * struct identifier { list }
 						 * struct identifier */
 						do {
-							switch (tq_peek().type) {
+							switch (cc_tq_peek().type) {
 								case token_type_t::r_alignas:
 								case token_type_t::r__Alignas:
-									tq_discard();
+									cc_tq_discard();
 									ds.count++;
 
 									if ((r=declspec_alignas(struct_align,pos)) < 1)
@@ -10199,7 +10199,7 @@ common_error:
 									{
 										declspec_t dcl;
 
-										tq_discard();
+										cc_tq_discard();
 										ds.count++;
 
 										if ((r=ms_declspec_parse(dcl,pos)) < 1)
@@ -10220,7 +10220,7 @@ common_error:
 									{
 										declspec_t dcl;
 
-										tq_discard();
+										cc_tq_discard();
 										ds.count++;
 
 										if ((r=gnu_attribute_parse(dcl,pos)) < 1)
@@ -10241,7 +10241,7 @@ common_error:
 									{
 										declspec_t dcl;
 
-										tq_discard();
+										cc_tq_discard();
 										ds.count++;
 
 										if ((r=cpp11_attribute_parse(dcl,pos)) < 1)
@@ -10263,8 +10263,8 @@ common_error:
 							break;
 						} while(1);
 
-						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/name,/*from*/tq_get().v.identifier);
+						if (cc_tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/name,/*from*/cc_tq_get().v.identifier);
 
 						if (!(ds.storage_class & SC_TYPEDEF))
 							identifier.assignmove(/*to*/declor.name,/*from*/name);
@@ -10276,8 +10276,8 @@ common_error:
 
 						sl.pos = pos;
 						sl.st = symbol_t::STRUCT;
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::opencurlybracket) {
+							cc_tq_discard();
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
@@ -10294,8 +10294,8 @@ common_error:
 							}
 
 							do {
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
+								if (cc_tq_peek().type == token_type_t::closecurlybracket) {
+									cc_tq_discard();
 									break;
 								}
 
@@ -10380,7 +10380,7 @@ common_error:
 						break;
 
 					ds.type_specifier |= TS_UNION;
-					tq_discard();
+					cc_tq_discard();
 
 					/* union { list }
 					 * union identifier { list }
@@ -10390,13 +10390,13 @@ common_error:
 						declarator_t declor;
 						symbol_lookup_t sl;
 
-						if (tq_peek().type == token_type_t::identifier)
-							identifier.assign(/*to*/declor.name,/*from*/tq_get().v.identifier);
+						if (cc_tq_peek().type == token_type_t::identifier)
+							identifier.assign(/*to*/declor.name,/*from*/cc_tq_get().v.identifier);
 
 						sl.pos = pos;
 						sl.st = symbol_t::UNION;
-						if (tq_peek().type == token_type_t::opencurlybracket) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::opencurlybracket) {
+							cc_tq_discard();
 
 							if (!(declspec & DECLSPEC_ALLOW_DEF))
 								CCERR_RET(EINVAL,pos,"not allowed to define types here");
@@ -10413,8 +10413,8 @@ common_error:
 							}
 
 							do {
-								if (tq_peek().type == token_type_t::closecurlybracket) {
-									tq_discard();
+								if (cc_tq_peek().type == token_type_t::closecurlybracket) {
+									cc_tq_discard();
 									break;
 								}
 
@@ -10549,11 +10549,11 @@ common_error:
 		 *   *** const * const
 		 *
 		 *   and so on */
-		while (tq_peek().type == token_type_t::star) {
+		while (cc_tq_peek().type == token_type_t::star) {
 			declaration_specifiers_t ds;
 			pointer_t p;
 
-			tq_discard();
+			cc_tq_discard();
 
 			if ((r=declaration_specifiers_parse(ds,DECLSPEC_OPTIONAL)) < 1)
 				return r;
@@ -10597,36 +10597,36 @@ common_error:
 		if ((r=pointer_parse(tdp.ptr)) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::openparenthesis) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::openparenthesis) {
+			cc_tq_discard();
 
 			/* WARNING: pushes to vector which causes reallocation which will make references to array elements stale */
 			if ((r=direct_declarator_inner_parse(sdp,dd,pos,flags)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::closeparenthesis)
-				CCERR_RET(EINVAL,tq_peek().pos,"Closing parenthesis expected");
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing parenthesis expected");
 		}
 		else {
 			assert(dd.name == identifier_none);
-			if (tq_peek().type == token_type_t::identifier && tq_peek().v.identifier != identifier_none) {
-				if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,tq_peek().pos,"Identifier not allowed here");
-				identifier.assign(/*to*/dd.name,/*from*/tq_get().v.identifier);
+			if (cc_tq_peek().type == token_type_t::identifier && cc_tq_peek().v.identifier != identifier_none) {
+				if (flags & DIRDECL_NO_IDENTIFIER) CCERR_RET(EINVAL,cc_tq_peek().pos,"Identifier not allowed here");
+				identifier.assign(/*to*/dd.name,/*from*/cc_tq_get().v.identifier);
 			}
 			else if (flags & DIRDECL_ALLOW_ABSTRACT) {
 				dd.name = identifier_none;
 			}
 			else {
-				CCERR_RET(EINVAL,tq_peek().pos,"Identifier expected");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Identifier expected");
 			}
 		}
 
-		while (tq_peek().type == token_type_t::opensquarebracket) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::opensquarebracket) {
+			cc_tq_discard();
 
 			/* NTS: "[]" is acceptable */
 			ast_node_id_t expr = ast_node_none;
-			if (tq_peek().type != token_type_t::closesquarebracket) {
+			if (cc_tq_peek().type != token_type_t::closesquarebracket) {
 				if ((r=conditional_expression(expr)) < 1)
 					return r;
 
@@ -10634,12 +10634,12 @@ common_error:
 			}
 
 			tdp.arraydef.push_back(std::move(expr));
-			if (tq_get().type != token_type_t::closesquarebracket)
-				CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
+			if (cc_tq_get().type != token_type_t::closesquarebracket)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing square bracket expected");
 		}
 
-		if (tq_peek().type == token_type_t::openparenthesis) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::openparenthesis) {
+			cc_tq_discard();
 
 			/* NTS: "()" is acceptable */
 			tdp.dd_flags |= declarator_t::FL_FUNCTION;
@@ -10649,10 +10649,10 @@ common_error:
 				if (!sdp[0].ptr.empty())
 					tdp.dd_flags |= declarator_t::FL_FUNCTION_POINTER;
 
-			if (tq_peek().type != token_type_t::closeparenthesis) {
+			if (cc_tq_peek().type != token_type_t::closeparenthesis) {
 				do {
-					if (tq_peek().type == token_type_t::ellipsis) {
-						tq_discard();
+					if (cc_tq_peek().type == token_type_t::ellipsis) {
+						cc_tq_discard();
 
 						tdp.dd_flags |= declarator_t::FL_ELLIPSIS;
 
@@ -10684,22 +10684,22 @@ common_error:
 							}
 						}
 
-						if (tq_peek().type == token_type_t::equal) {
+						if (cc_tq_peek().type == token_type_t::equal) {
 							/* if no declaration specifiers were given (just a bare identifier
 							 * aka the old 1980s syntax), then you shouldn't be allowed to define
 							 * a default value. */
 							if (p.spec.empty())
 								return errno_return(EINVAL);
 
-							tq_discard();
+							cc_tq_discard();
 							if ((r=initializer(p.decl.expr)) < 1)
 								return r;
 						}
 					}
 
 					tdp.parameters.push_back(std::move(p));
-					if (tq_peek().type == token_type_t::comma) {
-						tq_discard();
+					if (cc_tq_peek().type == token_type_t::comma) {
+						cc_tq_discard();
 						continue;
 					}
 
@@ -10707,8 +10707,8 @@ common_error:
 				} while (1);
 			}
 
-			if (tq_get().type != token_type_t::closeparenthesis)
-				CCERR_RET(EINVAL,tq_peek().pos,"Expected closing parenthesis");
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected closing parenthesis");
 		}
 
 		dp.addcombine(std::move(tdp));
@@ -10719,7 +10719,7 @@ common_error:
 	}
 
 	int cc_state_t::direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags) {
-		position_t pos = tq_peek().pos;
+		position_t pos = cc_tq_peek().pos;
 		int r;
 
 		/* direct declarator
@@ -10862,7 +10862,7 @@ common_error:
 			 */
 			if (type == 0) {
 				do {
-					if (tq_peek().type == token_type_t::opencurlybracket || tq_peek().type == token_type_t::semicolon) {
+					if (cc_tq_peek().type == token_type_t::opencurlybracket || cc_tq_peek().type == token_type_t::semicolon) {
 						break;
 					}
 					else {
@@ -10915,16 +10915,16 @@ common_error:
 								}
 							}
 
-							if (tq_peek().type == token_type_t::comma) {
-								tq_discard();
+							if (cc_tq_peek().type == token_type_t::comma) {
+								cc_tq_discard();
 								continue;
 							}
 
 							break;
 						} while(1);
 
-						if (tq_peek().type == token_type_t::semicolon) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::semicolon) {
+							cc_tq_discard();
 							continue;
 						}
 
@@ -10932,7 +10932,7 @@ common_error:
 					}
 				} while (1);
 
-				if (tq_peek().type != token_type_t::opencurlybracket && !(*parameters).empty()) {
+				if (cc_tq_peek().type != token_type_t::opencurlybracket && !(*parameters).empty()) {
 					/* no body of the function? */
 					CCerr(pos,"Identifier-only parameter list only permitted if the function has a body");
 					return errno_return(EINVAL);
@@ -10972,10 +10972,10 @@ common_error:
 	int cc_state_t::struct_bitfield_validate(token_t &t) {
 		if (t.type == token_type_t::integer) {
 			if (t.v.integer.v.v < 0ll || t.v.integer.v.v >= 255ll)
-				CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Bitfield value out of range");
 		}
 		else {
-			CCERR_RET(EINVAL,tq_peek().pos,"Bitfield range is not a constant integer expression");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Bitfield range is not a constant integer expression");
 		}
 
 		return 1;
@@ -10988,8 +10988,8 @@ common_error:
 		if ((r=direct_declarator_parse(ds,declor)) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::colon) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::colon) {
+			cc_tq_discard();
 
 			/* This compiler extension: Take the GCC range syntax and make our own
 			 * extension that allows specifying the explicit range of bits that make
@@ -10999,8 +10999,8 @@ common_error:
 			 * [a ... b]  bit field starting at a, extends to b inclusive.
 			 *            For example [ 4 ... 7 ] means a 4-bit field, LSB at bit 4,
 			 *            MSB at bit 7. */
-			if (tq_peek().type == token_type_t::opensquarebracket) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::opensquarebracket) {
+				cc_tq_discard();
 
 				bf_length = 1;
 
@@ -11017,8 +11017,8 @@ common_error:
 				bf_start = bitfield_pos_t(ean1.t.v.integer.v.u);
 				ast_node(expr1).release();
 
-				if (tq_peek().type == token_type_t::ellipsis) {
-					tq_discard();
+				if (cc_tq_peek().type == token_type_t::ellipsis) {
+					cc_tq_discard();
 
 					ast_node_id_t expr2 = ast_node_none;
 					if ((r=conditional_expression(expr2)) < 1)
@@ -11031,13 +11031,13 @@ common_error:
 
 					assert(ean2.t.type == token_type_t::integer);
 					bf_length = bitfield_pos_t(ean2.t.v.integer.v.u) + 1u;
-					if (bf_length <= bf_start) CCERR_RET(EINVAL,tq_peek().pos,"Invalid bitfield range");
+					if (bf_length <= bf_start) CCERR_RET(EINVAL,cc_tq_peek().pos,"Invalid bitfield range");
 					bf_length -= bf_start;
 					ast_node(expr2).release();
 				}
 
-				if (tq_get().type != token_type_t::closesquarebracket)
-					CCERR_RET(EINVAL,tq_peek().pos,"Closing square bracket expected");
+				if (cc_tq_get().type != token_type_t::closesquarebracket)
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Closing square bracket expected");
 			}
 			else {
 				ast_node_id_t expr = ast_node_none;
@@ -11057,7 +11057,7 @@ common_error:
 
 		/* No, you cannot typedef wihtin a C struct (but you can a C++ struct) */
 		if (ds.storage_class & SC_TYPEDEF)
-			CCERR_RET(EINVAL,tq_peek().pos,"Cannot typedef in a struct or union");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Cannot typedef in a struct or union");
 
 		/* anon enums and unions are OK, GCC allows it */
 		if (declor.name == identifier_none) {
@@ -11066,13 +11066,13 @@ common_error:
 			else if (ds.type_specifier & TS_UNION)
 				{ /* None. Later stages of struct/union handling will merge anon union fields in and detect conflicts later. */ }
 			else
-				CCERR_RET(EINVAL,tq_peek().pos,"Anonymous struct field not allowed here");
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Anonymous struct field not allowed here");
 		}
 
 		symbol_t &sym = symbol(sid);
 
 		if (sym.identifier_exists(declor.name))
-			CCERR_RET(EEXIST,tq_peek().pos,"Struct/union field already defined");
+			CCERR_RET(EEXIST,cc_tq_peek().pos,"Struct/union field already defined");
 
 		const size_t sfi = sym.fields.size();
 		sym.fields.resize(sfi + 1u);
@@ -11088,20 +11088,20 @@ common_error:
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
 		int r;
 
-		if (	tq_peek().type == token_type_t::strliteral ||
-			tq_peek().type == token_type_t::charliteral ||
-			tq_peek().type == token_type_t::integer ||
-			tq_peek().type == token_type_t::floating) {
+		if (	cc_tq_peek().type == token_type_t::strliteral ||
+			cc_tq_peek().type == token_type_t::charliteral ||
+			cc_tq_peek().type == token_type_t::integer ||
+			cc_tq_peek().type == token_type_t::floating) {
 			assert(aroot == ast_node_none);
-			aroot = ast_node.alloc(tq_get());
+			aroot = ast_node.alloc(cc_tq_get());
 		}
-		else if (tq_peek().type == token_type_t::identifier) {
+		else if (cc_tq_peek().type == token_type_t::identifier) {
 			/* if we can make it a symbol ref, do it */
 			symbol_id_t sid;
 
 			assert(aroot == ast_node_none);
-			if ((sid=lookup_symbol(tq_peek().v.identifier,symbol_t::VARIABLE)) != symbol_none) {
-				token_t srt = std::move(tq_get());
+			if ((sid=lookup_symbol(cc_tq_peek().v.identifier,symbol_t::VARIABLE)) != symbol_none) {
+				token_t srt = std::move(cc_tq_get());
 				srt.clear_v();
 				srt.type = token_type_t::op_symbol;
 				srt.v.symbol = sid;
@@ -11109,25 +11109,25 @@ common_error:
 			}
 			else {
 // If it's not in the symbol table, it's unknown, not defined
-// aroot = ast_node.alloc(tq_get());
-				if (tq_peek().v.identifier != identifier_none)
-					CCERR_RET(ENOENT,tq_peek().pos,"'%s' not declared in this scope",identifier(tq_peek().v.identifier).to_str().c_str());
+// aroot = ast_node.alloc(cc_tq_get());
+				if (cc_tq_peek().v.identifier != identifier_none)
+					CCERR_RET(ENOENT,cc_tq_peek().pos,"'%s' not declared in this scope",identifier(cc_tq_peek().v.identifier).to_str().c_str());
 				else
-					CCERR_RET(ENOENT,tq_peek().pos,"<anon> not declared in this scope");
+					CCERR_RET(ENOENT,cc_tq_peek().pos,"<anon> not declared in this scope");
 			}
 		}
-		else if (tq_peek().type == token_type_t::openparenthesis) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::openparenthesis) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			if ((r=expression(aroot)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::closeparenthesis)
-				CCERR_RET(EINVAL,tq_peek().pos,"Subexpression is missing closing parenthesis");
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Subexpression is missing closing parenthesis");
 		}
 		else {
-			CCERR_RET(EINVAL,tq_peek().pos,"Expected primary expression");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected primary expression");
 		}
 
 		return 1;
@@ -11141,8 +11141,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::openparenthesis) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::openparenthesis) {
+				cc_tq_discard();
 
 				ast_node_id_t expr = aroot; aroot = ast_node_none;
 
@@ -11150,7 +11150,7 @@ common_error:
 				ast_node(aroot).set_child(expr); ast_node(expr).release();
 
 				do {
-					if (tq_peek().type == token_type_t::closeparenthesis)
+					if (cc_tq_peek().type == token_type_t::closeparenthesis)
 						break;
 
 					ast_node_id_t nexpr = ast_node_none;
@@ -11162,11 +11162,11 @@ common_error:
 					ast_node(expr).set_next(nexpr); ast_node(nexpr).release();
 					expr = nexpr;
 
-					if (tq_peek().type == token_type_t::closeparenthesis) {
+					if (cc_tq_peek().type == token_type_t::closeparenthesis) {
 						break;
 					}
-					else if (tq_peek().type == token_type_t::comma) {
-						tq_discard();
+					else if (cc_tq_peek().type == token_type_t::comma) {
+						cc_tq_discard();
 						continue;
 					}
 					else {
@@ -11174,11 +11174,11 @@ common_error:
 					}
 				} while (1);
 
-				if (tq_get().type != token_type_t::closeparenthesis)
+				if (cc_tq_get().type != token_type_t::closeparenthesis)
 					return errno_return(EINVAL);
 			}
-			else if (tq_peek().type == token_type_t::opensquarebracket) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::opensquarebracket) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11191,11 +11191,11 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 
-				if (tq_get().type != token_type_t::closesquarebracket)
+				if (cc_tq_get().type != token_type_t::closesquarebracket)
 					return errno_return(EINVAL);
 			}
-			else if (tq_peek().type == token_type_t::period) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::period) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11208,8 +11208,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::minusrightanglebracket) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::minusrightanglebracket) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11222,16 +11222,16 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::plusplus) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::plusplus) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
 				aroot = ast_node.alloc(token_type_t::op_post_increment);
 				ast_node(aroot).set_child(expr1); ast_node(expr1).release();
 			}
-			else if (tq_peek().type == token_type_t::minusminus) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::minusminus) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11251,8 +11251,8 @@ common_error:
 		int depth = 0;
 		int r;
 
-		if (tq_peek().type == token_type_t::openparenthesis) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::openparenthesis) {
+			cc_tq_discard();
 			depth++;
 		}
 
@@ -11296,8 +11296,8 @@ common_error:
 			}
 		}
 
-		while (depth > 0 && tq_peek().type == token_type_t::closeparenthesis) {
-			tq_discard();
+		while (depth > 0 && cc_tq_peek().type == token_type_t::closeparenthesis) {
+			cc_tq_discard();
 			depth--;
 		}
 
@@ -11308,8 +11308,8 @@ common_error:
 #define nextexpr postfix_expression
 		int r;
 
-		if (tq_peek().type == token_type_t::plusplus) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::plusplus) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_pre_increment);
@@ -11320,8 +11320,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::minusminus) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::minusminus) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_pre_decrement);
@@ -11332,8 +11332,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::ampersand) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::ampersand) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_address_of);
@@ -11344,8 +11344,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::ampersandampersand) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::ampersandampersand) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_address_of);
@@ -11359,8 +11359,8 @@ common_error:
 			ast_node(aroot).set_child(aroot2); ast_node(aroot2).release();
 			ast_node(aroot2).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::star) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::star) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_pointer_deref);
@@ -11371,15 +11371,15 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::plus) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::plus) {
+			cc_tq_discard();
 
 			/* So basically +4, right? Which we can just treat as a no-op */
 			if ((r=cast_expression(aroot)) < 1)
 				return r;
 		}
-		else if (tq_peek().type == token_type_t::minus) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::minus) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_negate);
@@ -11390,8 +11390,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::tilde) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::tilde) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_binary_not);
@@ -11402,8 +11402,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::exclamation) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::exclamation) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_logical_not);
@@ -11414,8 +11414,8 @@ common_error:
 
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
-		else if (tq_peek().type == token_type_t::r_sizeof) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::r_sizeof) {
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_sizeof);
@@ -11423,9 +11423,9 @@ common_error:
 			if ((r=typeid_or_expr_parse(aroot)) < 1)
 				return r;
 		}
-		else if (tq_peek().type == token_type_t::r_alignof) {
+		else if (cc_tq_peek().type == token_type_t::r_alignof) {
 
-			tq_discard();
+			cc_tq_discard();
 
 			assert(aroot == ast_node_none);
 			aroot = ast_node.alloc(token_type_t::op_alignof);
@@ -11445,8 +11445,8 @@ common_error:
 #define nextexpr unary_expression
 		int r;
 
-		if (tq_peek(0).type == token_type_t::openparenthesis && declaration_specifiers_check(1)) {
-			tq_discard(); /* toss the open parenthesis */
+		if (cc_tq_peek(0).type == token_type_t::openparenthesis && declaration_specifiers_check(1)) {
+			cc_tq_discard(); /* toss the open parenthesis */
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
 
@@ -11468,7 +11468,7 @@ common_error:
 
 			ast_node(aroot).set_child(decl); ast_node(decl).release();
 
-			if (tq_get().type != token_type_t::closeparenthesis)
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 
 			ast_node_id_t nxt = ast_node_none;
@@ -11494,8 +11494,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::star) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::star) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11508,8 +11508,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::forwardslash) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::forwardslash) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11522,8 +11522,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::percent) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::percent) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11552,8 +11552,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::plus) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::plus) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11566,8 +11566,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::minus) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::minus) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11596,8 +11596,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::lessthanlessthan) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::lessthanlessthan) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11610,8 +11610,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::greaterthangreaterthan) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::greaterthangreaterthan) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11640,8 +11640,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::lessthan) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::lessthan) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11654,8 +11654,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::greaterthan) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::greaterthan) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11668,8 +11668,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::lessthanequals) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::lessthanequals) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11682,8 +11682,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::greaterthanequals) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::greaterthanequals) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11712,8 +11712,8 @@ common_error:
 			return r;
 
 		do {
-			if (tq_peek().type == token_type_t::equalequal) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::equalequal) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11726,8 +11726,8 @@ common_error:
 
 				ast_node(expr1).set_next(expr2); ast_node(expr2).release();
 			}
-			else if (tq_peek().type == token_type_t::exclamationequals) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::exclamationequals) {
+				cc_tq_discard();
 
 				ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11755,8 +11755,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::ampersand) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::ampersand) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11780,8 +11780,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::caret) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::caret) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11805,8 +11805,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::pipe) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::pipe) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11830,8 +11830,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::ampersandampersand) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::ampersandampersand) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11855,8 +11855,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::pipepipe) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::pipepipe) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -11880,15 +11880,15 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::question) {
+		if (cc_tq_peek().type == token_type_t::question) {
 			ast_node_id_t cond_expr = aroot; aroot = ast_node_none;
-			tq_discard();
+			cc_tq_discard();
 
 			ast_node_id_t true_expr = ast_node_none;
 			if ((r=expression(true_expr)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::colon)
+			if (cc_tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
 			ast_node_id_t false_expr = ast_node_none;
@@ -11912,9 +11912,9 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		switch (tq_peek().type) {
+		switch (cc_tq_peek().type) {
 			case token_type_t::equal:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_assign);
@@ -11922,7 +11922,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::starequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_multiply_assign);
@@ -11930,7 +11930,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::forwardslashequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_divide_assign);
@@ -11938,7 +11938,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::percentequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_modulus_assign);
@@ -11946,7 +11946,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::plusequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_add_assign);
@@ -11954,7 +11954,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::minusequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_subtract_assign);
@@ -11962,7 +11962,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::lessthanlessthanequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_leftshift_assign);
@@ -11970,7 +11970,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::greaterthangreaterthanequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_rightshift_assign);
@@ -11978,7 +11978,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::ampersandequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_and_assign);
@@ -11986,7 +11986,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::caretequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_xor_assign);
@@ -11994,7 +11994,7 @@ common_error:
 				ast_node(to).set_next(from); ast_node(from).release();
 				break;
 			case token_type_t::pipeequals:
-				tq_discard();
+				cc_tq_discard();
 				if ((r=assignment_expression(from)) < 1)
 					return r;
 				to = aroot; aroot = ast_node.alloc(token_type_t::op_or_assign);
@@ -12016,8 +12016,8 @@ common_error:
 		if ((r=nextexpr(aroot)) < 1)
 			return r;
 
-		while (tq_peek().type == token_type_t::comma) {
-			tq_discard();
+		while (cc_tq_peek().type == token_type_t::comma) {
+			cc_tq_discard();
 
 			ast_node_id_t expr1 = aroot; aroot = ast_node_none;
 
@@ -12041,27 +12041,27 @@ common_error:
 
 		/* the equals sign has already been consumed */
 
-		if (tq_peek().type == token_type_t::opencurlybracket) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::opencurlybracket) {
+			cc_tq_discard();
 
 			ast_node_id_t nex = ast_node_none;
 			aroot = ast_node.alloc(token_type_t::op_array_define);
 
 			do {
-				if (tq_peek().type == token_type_t::closecurlybracket)
+				if (cc_tq_peek().type == token_type_t::closecurlybracket)
 					break;
 
 				ast_node_id_t expr = ast_node_none,s_expr = ast_node_none;
 				bool c99_dinit = false;
 
-				if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
+				if (cc_tq_peek(0).type == token_type_t::identifier && cc_tq_peek(1).type == token_type_t::colon) {
 					/* field: expression
 					 *
 					 * means the same as .field = expression but is an old GCC syntax */
-					ast_node_id_t asq = ast_node.alloc(tq_get()); /* and then the ident */
+					ast_node_id_t asq = ast_node.alloc(cc_tq_get()); /* and then the ident */
 					ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_field);
 					ast_node(op).set_child(asq); ast_node(asq).release();
-					tq_discard();
+					cc_tq_discard();
 					s_expr = asq;
 					expr = op;
 
@@ -12075,8 +12075,8 @@ common_error:
 				}
 				else {
 					do {
-						if (tq_peek().type == token_type_t::opensquarebracket) {
-							tq_discard();
+						if (cc_tq_peek().type == token_type_t::opensquarebracket) {
+							cc_tq_discard();
 
 							ast_node_id_t asq = ast_node_none;
 							if ((r=conditional_expression(asq)) < 1)
@@ -12084,13 +12084,13 @@ common_error:
 
 							ast_node_reduce(asq);
 
-							if (tq_peek().type == token_type_t::ellipsis) {
+							if (cc_tq_peek().type == token_type_t::ellipsis) {
 								/* GNU GCC extension: first ... last ranges */
 								/* valid in case statements:
 								 *   case 1 ... 3:
 								 * valid in designated initializers:
 								 *   int[] = { [1 ... 3] = 5 } */
-								tq_discard();
+								cc_tq_discard();
 
 								ast_node_id_t op1 = asq;
 								ast_node_id_t op2 = ast_node_none;
@@ -12105,7 +12105,7 @@ common_error:
 								ast_node(op1).set_next(op2); ast_node(op2).release();
 							}
 
-							if (tq_get().type != token_type_t::closesquarebracket)
+							if (cc_tq_get().type != token_type_t::closesquarebracket)
 								return errno_return(EINVAL);
 
 							ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_array);
@@ -12121,10 +12121,10 @@ common_error:
 
 							c99_dinit = true;
 						}
-						else if (tq_peek(0).type == token_type_t::period && tq_peek(1).type == token_type_t::identifier) {
-							tq_discard(); /* eat the '.' */
+						else if (cc_tq_peek(0).type == token_type_t::period && cc_tq_peek(1).type == token_type_t::identifier) {
+							cc_tq_discard(); /* eat the '.' */
 
-							ast_node_id_t asq = ast_node.alloc(tq_get()); /* and then the ident */
+							ast_node_id_t asq = ast_node.alloc(cc_tq_get()); /* and then the ident */
 							ast_node_id_t op = ast_node.alloc(token_type_t::op_dinit_field);
 							ast_node(op).set_child(asq); ast_node(asq).release();
 
@@ -12144,8 +12144,8 @@ common_error:
 					} while (1);
 
 					if (c99_dinit) {
-						if (tq_get().type != token_type_t::equal)
-							CCERR_RET(EINVAL,tq_peek().pos,"Expected equal sign");
+						if (cc_tq_get().type != token_type_t::equal)
+							CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected equal sign");
 
 						ast_node_id_t i_expr = ast_node_none;
 						if ((r=initializer(i_expr)) < 1)
@@ -12169,15 +12169,15 @@ common_error:
 				ast_node(expr).release();
 				nex = expr;
 
-				if (tq_peek().type == token_type_t::comma)
-					tq_discard();
-				else if (tq_peek().type == token_type_t::closecurlybracket)
+				if (cc_tq_peek().type == token_type_t::comma)
+					cc_tq_discard();
+				else if (cc_tq_peek().type == token_type_t::closecurlybracket)
 					break;
 				else
 					return errno_return(EINVAL);
 			} while (1);
 
-			if (tq_get().type != token_type_t::closecurlybracket)
+			if (cc_tq_get().type != token_type_t::closecurlybracket)
 				return errno_return(EINVAL);
 		}
 		else {
@@ -12206,13 +12206,13 @@ common_error:
 		 * Use C rules where they are only allowed at the top of the compound statement.
 		 * Not C++ rules where you can just do it wherever. */
 		do {
-			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
-				CCERR_RET(EINVAL,tq_peek().pos,"Missing closing curly brace } in compound statement");
+			if (cc_tq_peek().type == token_type_t::eof || cc_tq_peek().type == token_type_t::none)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"Missing closing curly brace } in compound statement");
 
-			if (tq_peek().type == token_type_t::semicolon)
+			if (cc_tq_peek().type == token_type_t::semicolon)
 				break;
 
-			if (tq_peek().type == token_type_t::closecurlybracket)
+			if (cc_tq_peek().type == token_type_t::closecurlybracket)
 				return 1; /* do not discard, let the calling function take care of it */
 
 			if (!declaration_specifiers_check())
@@ -12229,7 +12229,7 @@ common_error:
 				declarator_t declor;
 				symbol_lookup_t sl;
 
-				sl.pos = tq_peek().pos;
+				sl.pos = cc_tq_peek().pos;
 				if ((r=declaration_inner_parse(spec,declor)) < 1)
 					return r;
 
@@ -12253,20 +12253,20 @@ common_error:
 					}
 				}
 
-				if (tq_peek().type == token_type_t::comma) {
-					tq_discard();
+				if (cc_tq_peek().type == token_type_t::comma) {
+					cc_tq_discard();
 					continue;
 				}
 
 				break;
 			} while(1);
 
-			if (tq_peek().type == token_type_t::semicolon) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::semicolon) {
+				cc_tq_discard();
 				continue;
 			}
 
-			CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Missing semicolon");
 		} while (1);
 
 		return 1;
@@ -12285,12 +12285,12 @@ common_error:
 	}
 
 	int cc_state_t::do_pragma_comma_or_closeparens(void) {
-		if (tq_peek().type == token_type_t::comma)
-			tq_discard();
-		else if (tq_peek().type == token_type_t::closeparenthesis)
+		if (cc_tq_peek().type == token_type_t::comma)
+			cc_tq_discard();
+		else if (cc_tq_peek().type == token_type_t::closeparenthesis)
 			return 1;
 		else
-			CCERR_RET(EINVAL,tq_peek().pos,"Expected comma");
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected comma");
 
 		return 1;
 	}
@@ -12298,10 +12298,10 @@ common_error:
 	int cc_state_t::do_pragma(void) {
 		int r;
 
-		if (tq_peek().type == token_type_t::identifier) {
+		if (cc_tq_peek().type == token_type_t::identifier) {
 			identifier_id_t id = identifier_none;
-			identifier.assign(id,tq_peek().v.identifier);
-			tq_discard();
+			identifier.assign(id,cc_tq_peek().v.identifier);
+			cc_tq_discard();
 
 			if (identifier(id) == "pack") {
 				enum todo_t {
@@ -12315,23 +12315,23 @@ common_error:
 
 				identifier.assign(id,identifier_none);
 
-				if (tq_peek().type != token_type_t::openparenthesis)
-					CCERR_RET(EINVAL,tq_peek().pos,"Open parens expected");
-				tq_discard();
+				if (cc_tq_peek().type != token_type_t::openparenthesis)
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Open parens expected");
+				cc_tq_discard();
 
-				if (tq_peek().type == token_type_t::identifier) {
+				if (cc_tq_peek().type == token_type_t::identifier) {
 					identifier_id_t id = identifier_none;
-					identifier.assign(id,tq_peek().v.identifier);
+					identifier.assign(id,cc_tq_peek().v.identifier);
 
 					if (identifier(id) == "push") {
 						todo = DO_PUSH;
-						tq_discard();
+						cc_tq_discard();
 						if ((r=do_pragma_comma_or_closeparens()) < 1)
 							return r;
 					}
 					else if (identifier(id) == "pop") {
 						todo = DO_POP;
-						tq_discard();
+						cc_tq_discard();
 						if ((r=do_pragma_comma_or_closeparens()) < 1)
 							return r;
 					}
@@ -12339,22 +12339,22 @@ common_error:
 					identifier.assign(id,identifier_none);
 				}
 
-				if (tq_peek().type == token_type_t::identifier) {
-					idname = identifier(tq_peek().v.identifier).to_str();
-					tq_discard();
+				if (cc_tq_peek().type == token_type_t::identifier) {
+					idname = identifier(cc_tq_peek().v.identifier).to_str();
+					cc_tq_discard();
 					if ((r=do_pragma_comma_or_closeparens()) < 1)
 						return r;
 				}
 
-				if (tq_peek().type == token_type_t::integer) {
-					if (tq_peek().v.integer.v.v < 1)
-						CCERR_RET(EINVAL,tq_peek().pos,"Invalid packing value");
+				if (cc_tq_peek().type == token_type_t::integer) {
+					if (cc_tq_peek().v.integer.v.v < 1)
+						CCERR_RET(EINVAL,cc_tq_peek().pos,"Invalid packing value");
 
-					const unsigned long long n = tq_peek().v.integer.v.u;
-					tq_discard();
+					const unsigned long long n = cc_tq_peek().v.integer.v.u;
+					cc_tq_discard();
 
 					if (n & (n - 1u))
-						CCERR_RET(EINVAL,tq_peek().pos,"Packing value not a power of 2");
+						CCERR_RET(EINVAL,cc_tq_peek().pos,"Packing value not a power of 2");
 
 					pack = addrmask_make(n);
 					if ((r=do_pragma_comma_or_closeparens()) < 1)
@@ -12367,9 +12367,9 @@ common_error:
 					(pack != addrmask_none) ? ((~pack) + 1ul) : 0ul);
 #endif
 
-				if (tq_peek().type != token_type_t::closeparenthesis)
-					CCERR_RET(EINVAL,tq_peek().pos,"Close parens expected");
-				tq_discard();
+				if (cc_tq_peek().type != token_type_t::closeparenthesis)
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Close parens expected");
+				cc_tq_discard();
 
 				if (todo == DO_PUSH) {
 					pack_state_t p;
@@ -12428,35 +12428,35 @@ common_error:
 		int r;
 
 		do {
-			if (tq_peek().type == token_type_t::op_pragma) {
+			if (cc_tq_peek().type == token_type_t::op_pragma) {
 				/* whatever is not parsed, read and discard.
 				 * assume parsing code has counted parenthesis properly */
 				int parens = 1;
 
-				tq_discard();
-				if (tq_get().type != token_type_t::openparenthesis)
-					CCERR_RET(EBADF,tq_peek().pos,"op pragma without open parens");
+				cc_tq_discard();
+				if (cc_tq_get().type != token_type_t::openparenthesis)
+					CCERR_RET(EBADF,cc_tq_peek().pos,"op pragma without open parens");
 
 				if ((r=do_pragma()) < 1)
 					return r;
 
 				do {
-					const auto &t = tq_peek();
+					const auto &t = cc_tq_peek();
 
 					if (t.type == token_type_t::eof || t.type == token_type_t::none) {
-						CCERR_RET(EBADF,tq_peek().pos,"op pragma unexpected end");
+						CCERR_RET(EBADF,cc_tq_peek().pos,"op pragma unexpected end");
 					}
 					else if (t.type == token_type_t::openparenthesis) {
-						tq_discard();
+						cc_tq_discard();
 						parens++;
 					}
 					else if (t.type == token_type_t::closeparenthesis) {
-						tq_discard();
+						cc_tq_discard();
 						parens--;
 						if (parens == 0) break;
 					}
 					else {
-						tq_discard();
+						cc_tq_discard();
 					}
 				} while(1);
 			}
@@ -12469,33 +12469,33 @@ common_error:
 	}
 
 	int cc_state_t::asm_statement_gcc_colon_section(std::vector<token_t> &tokens,int &parens) {
-		if (tq_get().type != token_type_t::colon)
-			CCERR_RET(EINVAL,tq_peek().pos,"colon expected");
+		if (cc_tq_get().type != token_type_t::colon)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"colon expected");
 
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			if (t.type == token_type_t::eof || t.type == token_type_t::none)
 				CCERR_RET(EINVAL,t.pos,"Unexpected end");
 
 			if (t.type == token_type_t::openparenthesis) {
 				parens++;
-				tokens.push_back(std::move(tq_get()));
+				tokens.push_back(std::move(cc_tq_get()));
 			}
 			else if (t.type == token_type_t::closeparenthesis) {
 				assert(parens > 0);
 				if (--parens == 0) {
-					tq_discard();
+					cc_tq_discard();
 					break;
 				}
 
-				tokens.push_back(std::move(tq_get()));
+				tokens.push_back(std::move(cc_tq_get()));
 			}
 			else if (t.type == token_type_t::colon && parens == 1) {
 				break;
 			}
 			else {
-				tokens.push_back(std::move(tq_get()));
+				tokens.push_back(std::move(cc_tq_get()));
 			}
 		} while(1);
 
@@ -12528,50 +12528,50 @@ common_error:
 
 		(void)aroot;
 
-		tq_discard(); /* discard asm */
+		cc_tq_discard(); /* discard asm */
 
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			if (t.type == token_type_t::r_inline) {
 				flags |= FL_INLINE;
-				tq_discard();
+				cc_tq_discard();
 			}
 			else if (t.type == token_type_t::r_volatile) {
 				flags |= FL_VOLATILE;
-				tq_discard();
+				cc_tq_discard();
 			}
 			else if (t.type == token_type_t::r_goto) {
 				flags |= FL_GOTO;
-				tq_discard();
+				cc_tq_discard();
 			}
 			else {
 				break;
 			}
 		} while(1);
 
-		if (tq_get().type != token_type_t::openparenthesis)
-			CCERR_RET(EINVAL,tq_peek().pos,"Expected open parenthesis");
+		if (cc_tq_get().type != token_type_t::openparenthesis)
+			CCERR_RET(EINVAL,cc_tq_peek().pos,"Expected open parenthesis");
 
 		parens = 1;
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			if (t.type == token_type_t::eof || t.type == token_type_t::none)
 				CCERR_RET(EINVAL,t.pos,"Unexpected end");
 
 			if (t.type == token_type_t::openparenthesis) {
 				parens++;
-				asm_tokens.push_back(std::move(tq_get()));
+				asm_tokens.push_back(std::move(cc_tq_get()));
 			}
 			else if (t.type == token_type_t::closeparenthesis) {
 				assert(parens > 0);
 				if (--parens == 0) {
-					tq_discard();
+					cc_tq_discard();
 					break;
 				}
 
-				asm_tokens.push_back(std::move(tq_get()));
+				asm_tokens.push_back(std::move(cc_tq_get()));
 			}
 			else if (t.type == token_type_t::colon && parens == 1) {
 				break;
@@ -12582,7 +12582,7 @@ common_error:
 				if (cst.length != cst.units())
 					CCERR_RET(EINVAL,t.pos,"asm() may not contain wide character strings");
 
-				asm_tokens.push_back(std::move(tq_get()));
+				asm_tokens.push_back(std::move(cc_tq_get()));
 			}
 			else {
 				CCERR_RET(EINVAL,t.pos,"Unexpected token");
@@ -12612,8 +12612,8 @@ common_error:
 		}
 
 		if (parens == 1) {
-			if (tq_get().type != token_type_t::closeparenthesis)
-				CCERR_RET(EINVAL,tq_peek().pos,"expected closing parenthesis");
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
+				CCERR_RET(EINVAL,cc_tq_peek().pos,"expected closing parenthesis");
 
 			parens--;
 		}
@@ -12658,19 +12658,19 @@ common_error:
 
 		(void)aroot;
 
-		tq_discard();
+		cc_tq_discard();
 		do {
-			const token_t &t = tq_peek();
+			const token_t &t = cc_tq_peek();
 
 			if (t.type == token_type_t::eof || t.type == token_type_t::none || t.type == token_type_t::r___asm)
 				break;
 
 			if (t.type == token_type_t::op_end_asm) {
-				tq_discard();
+				cc_tq_discard();
 				break;
 			}
 
-			asm_tokens.push_back(std::move(tq_get()));
+			asm_tokens.push_back(std::move(cc_tq_get()));
 		} while(1);
 
 #if 0//DEBUG
@@ -12686,25 +12686,25 @@ common_error:
 	int cc_state_t::statement(ast_node_id_t &aroot) {
 		int r;
 
-		if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
+		if (cc_tq_peek().type == token_type_t::eof || cc_tq_peek().type == token_type_t::none)
 			return errno_return(EINVAL);
 
 		if ((r=check_for_pragma()) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::r___asm) {
+		if (cc_tq_peek().type == token_type_t::r___asm) {
 			if ((r=msasm_statement(aroot)) < 1)
 				return r;
 		}
-		else if (tq_peek().type == token_type_t::r_asm) {
+		else if (cc_tq_peek().type == token_type_t::r_asm) {
 			if ((r=asm_statement(aroot)) < 1)
 				return r;
 		}
-		else if (tq_peek().type == token_type_t::semicolon) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::semicolon) {
+			cc_tq_discard();
 		}
-		else if (tq_peek().type == token_type_t::opencurlybracket) {
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::opencurlybracket) {
+			cc_tq_discard();
 
 			push_new_scope();
 
@@ -12722,14 +12722,14 @@ common_error:
 
 			pop_scope();
 		}
-		else if (tq_peek(0).type == token_type_t::r_switch && tq_peek(1).type == token_type_t::openparenthesis) {
-			tq_discard(2);
+		else if (cc_tq_peek(0).type == token_type_t::r_switch && cc_tq_peek(1).type == token_type_t::openparenthesis) {
+			cc_tq_discard(2);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=expression(expr)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::closeparenthesis)
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 
 			ast_node_id_t stmt = ast_node_none;
@@ -12740,14 +12740,14 @@ common_error:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 		}
-		else if (tq_peek(0).type == token_type_t::r_if && tq_peek(1).type == token_type_t::openparenthesis) {
-			tq_discard(2);
+		else if (cc_tq_peek(0).type == token_type_t::r_if && cc_tq_peek(1).type == token_type_t::openparenthesis) {
+			cc_tq_discard(2);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=expression(expr)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::closeparenthesis)
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 
 			ast_node_id_t stmt = ast_node_none;
@@ -12758,8 +12758,8 @@ common_error:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 
-			if (tq_peek().type == token_type_t::r_else) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::r_else) {
+				cc_tq_discard();
 
 				ast_node_id_t elst = ast_node_none;
 				if ((r=statement(elst)) < 1)
@@ -12768,14 +12768,14 @@ common_error:
 				ast_node(stmt).set_next(elst); ast_node(elst).release();
 			}
 		}
-		else if (tq_peek(0).type == token_type_t::r_while && tq_peek(1).type == token_type_t::openparenthesis) {
-			tq_discard(2);
+		else if (cc_tq_peek(0).type == token_type_t::r_while && cc_tq_peek(1).type == token_type_t::openparenthesis) {
+			cc_tq_discard(2);
 
 			ast_node_id_t expr = ast_node_none;
 			if ((r=expression(expr)) < 1)
 				return r;
 
-			if (tq_get().type != token_type_t::closeparenthesis)
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 
 			ast_node_id_t stmt = ast_node_none;
@@ -12786,8 +12786,8 @@ common_error:
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 			ast_node(expr).set_next(stmt); ast_node(stmt).release();
 		}
-		else if (tq_peek(0).type == token_type_t::r_for && tq_peek(1).type == token_type_t::openparenthesis) {
-			tq_discard(2);
+		else if (cc_tq_peek(0).type == token_type_t::r_for && cc_tq_peek(1).type == token_type_t::openparenthesis) {
+			cc_tq_discard(2);
 
 			ast_node_id_t initexpr = ast_node_none;
 			ast_node_id_t loopexpr = ast_node_none;
@@ -12800,14 +12800,14 @@ common_error:
 			if ((r=expression_statement(loopexpr)) < 1)
 				return r;
 
-			if (tq_peek().type != token_type_t::closeparenthesis) {
+			if (cc_tq_peek().type != token_type_t::closeparenthesis) {
 				if ((r=expression(iterexpr)) < 1)
 					return r;
 			}
 			if (iterexpr == ast_node_none)
 				iterexpr = ast_node.alloc(token_type_t::op_none);
 
-			if (tq_get().type != token_type_t::closeparenthesis)
+			if (cc_tq_get().type != token_type_t::closeparenthesis)
 				return errno_return(EINVAL);
 
 			if ((r=statement(stmt)) < 1)
@@ -12819,30 +12819,30 @@ common_error:
 			ast_node(loopexpr).set_next(iterexpr); ast_node(iterexpr).release();
 			if (stmt != ast_node_none) { ast_node(iterexpr).set_next(stmt); ast_node(stmt).release(); }
 		}
-		else if (tq_peek(0).type == token_type_t::identifier && tq_peek(1).type == token_type_t::colon) {
-			ast_node_id_t label = ast_node.alloc(tq_get()); /* eats tq_peek(0); */
+		else if (cc_tq_peek(0).type == token_type_t::identifier && cc_tq_peek(1).type == token_type_t::colon) {
+			ast_node_id_t label = ast_node.alloc(cc_tq_get()); /* eats cc_tq_peek(0); */
 			aroot = ast_node.alloc(token_type_t::op_label);
 			ast_node(aroot).set_child(label); ast_node(label).release();
-			tq_discard(); /* eats the ':' */
+			cc_tq_discard(); /* eats the ':' */
 		}
-		else if (tq_peek(0).type == token_type_t::r_default && tq_peek(1).type == token_type_t::colon) {
+		else if (cc_tq_peek(0).type == token_type_t::r_default && cc_tq_peek(1).type == token_type_t::colon) {
 			aroot = ast_node.alloc(token_type_t::op_default_label);
-			tq_discard(2);
+			cc_tq_discard(2);
 		}
-		else if (tq_peek().type == token_type_t::r_case) { /* case constant_expression : */
-			tq_discard();
+		else if (cc_tq_peek().type == token_type_t::r_case) { /* case constant_expression : */
+			cc_tq_discard();
 			ast_node_id_t expr = ast_node_none;
 
 			if ((r=conditional_expression(expr)) < 1)
 				return r;
 
-			if (tq_peek().type == token_type_t::ellipsis) {
+			if (cc_tq_peek().type == token_type_t::ellipsis) {
 				/* GNU GCC extension: first ... last ranges */
 				/* valid in case statements:
 				 *   case 1 ... 3:
 				 * valid in designated initializers:
 				 *   int[] = { [1 ... 3] = 5 } */
-				tq_discard();
+				cc_tq_discard();
 
 				ast_node_id_t op1 = expr;
 				ast_node_id_t op2 = ast_node_none;
@@ -12855,56 +12855,56 @@ common_error:
 				ast_node(op1).set_next(op2); ast_node(op2).release();
 			}
 
-			if (tq_get().type != token_type_t::colon)
+			if (cc_tq_get().type != token_type_t::colon)
 				return errno_return(EINVAL);
 
 			aroot = ast_node.alloc(token_type_t::op_case_statement);
 			ast_node(aroot).set_child(expr); ast_node(expr).release();
 		}
 		else {
-			if (tq_peek().type == token_type_t::r_break) {
+			if (cc_tq_peek().type == token_type_t::r_break) {
 				aroot = ast_node.alloc(token_type_t::op_break);
-				tq_discard();
+				cc_tq_discard();
 			}
-			else if (tq_peek().type == token_type_t::r_continue) {
+			else if (cc_tq_peek().type == token_type_t::r_continue) {
 				aroot = ast_node.alloc(token_type_t::op_continue);
-				tq_discard();
+				cc_tq_discard();
 			}
-			else if (tq_peek(0).type == token_type_t::r_goto && tq_peek(1).type == token_type_t::identifier) {
-				tq_discard();
-				ast_node_id_t label = ast_node.alloc(tq_get());
+			else if (cc_tq_peek(0).type == token_type_t::r_goto && cc_tq_peek(1).type == token_type_t::identifier) {
+				cc_tq_discard();
+				ast_node_id_t label = ast_node.alloc(cc_tq_get());
 				aroot = ast_node.alloc(token_type_t::op_goto);
 				ast_node(aroot).set_child(label); ast_node(label).release();
 			}
-			else if (tq_peek().type == token_type_t::r_do) {
-				tq_discard();
+			else if (cc_tq_peek().type == token_type_t::r_do) {
+				cc_tq_discard();
 
 				ast_node_id_t stmt = ast_node_none;
 				if ((r=statement(stmt)) < 1)
 					return r;
 
-				if (tq_get().type != token_type_t::r_while)
+				if (cc_tq_get().type != token_type_t::r_while)
 					return errno_return(EINVAL);
 
-				if (tq_get().type != token_type_t::openparenthesis)
+				if (cc_tq_get().type != token_type_t::openparenthesis)
 					return errno_return(EINVAL);
 
 				ast_node_id_t expr = ast_node_none;
 				if ((r=expression(expr)) < 1)
 					return r;
 
-				if (tq_get().type != token_type_t::closeparenthesis)
+				if (cc_tq_get().type != token_type_t::closeparenthesis)
 					return errno_return(EINVAL);
 
 				aroot = ast_node.alloc(token_type_t::op_do_while_statement);
 				ast_node(aroot).set_child(stmt); ast_node(stmt).release();
 				ast_node(stmt).set_next(expr); ast_node(expr).release();
 			}
-			else if (tq_peek().type == token_type_t::r_return) {
+			else if (cc_tq_peek().type == token_type_t::r_return) {
 				aroot = ast_node.alloc(token_type_t::op_return);
-				tq_discard();
+				cc_tq_discard();
 
-				if (tq_peek().type != token_type_t::semicolon) {
+				if (cc_tq_peek().type != token_type_t::semicolon) {
 					ast_node_id_t expr = ast_node_none;
 					if ((r=expression(expr)) < 1)
 						return r;
@@ -12917,8 +12917,8 @@ common_error:
 					return r;
 			}
 
-			if (tq_peek().type == token_type_t::semicolon)
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::semicolon)
+				cc_tq_discard();
 			else
 				return errno_return(EINVAL);
 		}
@@ -12946,11 +12946,11 @@ common_error:
 
 		/* OK, now statements */
 		do {
-			if (tq_peek().type == token_type_t::eof || tq_peek().type == token_type_t::none)
+			if (cc_tq_peek().type == token_type_t::eof || cc_tq_peek().type == token_type_t::none)
 				return errno_return(EINVAL);
 
-			if (tq_peek().type == token_type_t::closecurlybracket) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::closecurlybracket) {
+				cc_tq_discard();
 				break;
 			}
 
@@ -12987,8 +12987,8 @@ common_error:
 		if ((r=chkerr()) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::equal) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::equal) {
+			cc_tq_discard();
 
 			if ((r=initializer(declor.expr)) < 1)
 				return r;
@@ -13023,19 +13023,19 @@ common_error:
 			symbol_lookup_t sl;
 			declarator_t &declor = declion.new_declarator();
 
-			sl.pos = tq_peek().pos;
+			sl.pos = cc_tq_peek().pos;
 			if ((r=declaration_inner_parse(declion.spec,declor)) < 1)
 				return r;
 
-			if (tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::opencurlybracket && (declor.flags & declarator_t::FL_FUNCTION)) {
+				cc_tq_discard();
 
 				if (declor.flags & declarator_t::FL_FUNCTION_POINTER)
-					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed for function pointers");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Function body not allowed for function pointers");
 				if (declor.expr != ast_node_none)
-					CCERR_RET(EINVAL,tq_peek().pos,"Function body cannot coexist with initializer expression");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Function body cannot coexist with initializer expression");
 				if (count != 0)
-					CCERR_RET(EINVAL,tq_peek().pos,"Function body not allowed here");
+					CCERR_RET(EINVAL,cc_tq_peek().pos,"Function body not allowed here");
 
 				sl.flags |= symbol_t::FL_DEFINED;
 				if ((r=prep_symbol_lookup(sl,declion.spec,declor)) < 1)
@@ -13127,8 +13127,8 @@ common_error:
 			}
 
 			count++;
-			if (tq_peek().type == token_type_t::comma) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::comma) {
+				cc_tq_discard();
 				continue;
 			}
 
@@ -13140,12 +13140,12 @@ common_error:
 		debug_dump_declaration("  ",declion);
 #endif
 
-		if (tq_peek().type == token_type_t::semicolon) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::semicolon) {
+			cc_tq_discard();
 			return 1;
 		}
 
-		CCERR_RET(EINVAL,tq_peek().pos,"Missing semicolon");
+		CCERR_RET(EINVAL,cc_tq_peek().pos,"Missing semicolon");
 	}
 
 	int cc_state_t::struct_field_layout(symbol_id_t sid) {
@@ -13165,11 +13165,11 @@ common_error:
 
 			addrmask_t al = calc_alignofmask((*fi).spec,(*fi).ddip);
 			if (al == addrmask_none)
-				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine alignment of field ")+name).c_str());
+				CCERR_RET(EINVAL,cc_tq_peek().pos,(std::string("cannot determine alignment of field ")+name).c_str());
 
 			data_size_t sz = calc_sizeof((*fi).spec,(*fi).ddip);
 			if (sz == data_size_none || sz == 0)
-				CCERR_RET(EINVAL,tq_peek().pos,(std::string("cannot determine size of field ")+name).c_str());
+				CCERR_RET(EINVAL,cc_tq_peek().pos,(std::string("cannot determine size of field ")+name).c_str());
 
 			/* store the spec, this code may loop over bitfield entries of the same type.
 			 * this ref will not change even when fi is later incremented, by design. */
@@ -13229,7 +13229,7 @@ common_error:
 					bit_start += (*fi).bf_length;
 
 					if ((*fi).bf_start >= bits_allowed || ((*fi).bf_start+(*fi).bf_length) > bits_allowed)
-						CCERR_RET(ERANGE,tq_peek().pos,
+						CCERR_RET(ERANGE,cc_tq_peek().pos,
 							"bitfield range [%u...%u] does not fit in data type [0...%u]",
 							(*fi).bf_start,(*fi).bf_start+(*fi).bf_length-1,bits_allowed-1);
 				}
@@ -13327,16 +13327,16 @@ common_error:
 #endif
 
 			count++;
-			if (tq_peek().type == token_type_t::comma) {
-				tq_discard();
+			if (cc_tq_peek().type == token_type_t::comma) {
+				cc_tq_discard();
 				continue;
 			}
 
 			break;
 		} while(1);
 
-		if (tq_peek().type == token_type_t::semicolon) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::semicolon) {
+			cc_tq_discard();
 			return 1;
 		}
 
@@ -13354,8 +13354,8 @@ common_error:
 		if ((r=check_for_pragma()) < 1)
 			return r;
 
-		if (tq_peek().type == token_type_t::semicolon) {
-			tq_discard();
+		if (cc_tq_peek().type == token_type_t::semicolon) {
+			cc_tq_discard();
 			return 1;
 		}
 		if ((r=chkerr()) < 1)
@@ -13369,16 +13369,16 @@ common_error:
 	int cc_state_t::translation_unit(void) {
 		int r;
 
-		if (tq_peek().type == token_type_t::none || tq_peek().type == token_type_t::eof)
+		if (cc_tq_peek().type == token_type_t::none || cc_tq_peek().type == token_type_t::eof)
 			return err; /* 0 or negative */
 
-		if (tq_peek().type == token_type_t::r___asm) {
+		if (cc_tq_peek().type == token_type_t::r___asm) {
 			ast_node_id_t aroot = ast_node_none;
 
 			if ((r=msasm_statement(aroot)) < 1)
 				return r;
 		}
-		else if (tq_peek().type == token_type_t::r_asm) {
+		else if (cc_tq_peek().type == token_type_t::r_asm) {
 			ast_node_id_t aroot = ast_node_none;
 
 			if ((r=asm_statement(aroot)) < 1)
