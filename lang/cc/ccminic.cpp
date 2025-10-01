@@ -9295,6 +9295,14 @@ token_t &cc_tq_get(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_o
 	return cc_tq[cc_tq_tail++];
 }
 
+int cc_chkerr(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo) {
+	const token_t &t = cc_tq_peek(pst,lst,buf,sfo);
+	if (t.type == token_type_t::none || t.type == token_type_t::eof || cc_err < 0)
+		return cc_err; /* 0 or negative */
+
+	return 1;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 	struct cc_state_t {
@@ -9316,11 +9324,7 @@ token_t &cc_tq_get(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_o
 		}
 
 		int cc_chkerr(void) {
-			const token_t &t = cc_tq_peek();
-			if (t.type == token_type_t::none || t.type == token_type_t::eof || cc_err < 0)
-				return cc_err; /* 0 or negative */
-
-			return 1;
+			return ::cc_chkerr(pst,lst,buf,sfo);
 		}
 
 		int do_pragma(void);
