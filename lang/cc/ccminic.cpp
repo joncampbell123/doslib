@@ -116,6 +116,96 @@ template <class T> void typ_delete(T *p) {
 	p = NULL;
 }
 
+///////////////////////////////////////////////////////
+
+template <class obj_t,typename id_t,const id_t none> class obj_pool {
+	public:
+		obj_pool() { }
+		~obj_pool() { }
+	public:
+		obj_t &operator()(const id_t id) {
+			return _lookup(id);
+		}
+	public:
+		id_t alloc(void) {
+			obj_t &a = __internal_alloc();
+			a.clear().addref();
+			return next++;
+		}
+
+		void assign(id_t &d,const id_t s) {
+			if (d != none) _lookup(d).release();
+			d = s;
+			if (d != none) _lookup(d).addref();
+		}
+
+		void assignmove(id_t &d,id_t &s) {
+			if (d != none) _lookup(d).release();
+			d = s;
+			s = none;
+		}
+
+		id_t returnmove(id_t &s) {
+			const id_t r = s;
+			s = none;
+			return r;
+		}
+
+		void release(id_t &d) {
+			if (d != none) _lookup(d).release();
+			d = none;
+		}
+
+		void refcount_check(void) {
+			for (size_t i=0;i < pool.size();i++) {
+				if (pool[i].ref != 0) {
+					fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
+							pool[i].ref,
+							pool[i].to_str().c_str());
+				}
+			}
+		}
+
+		void update_next(obj_t *p) {
+			if (p >= &pool[0]) {
+				const size_t i = p - &pool[0];
+				if (i < pool.size()) next = i;
+			}
+		}
+
+		obj_t& __internal_alloc() {
+#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
+			while (next < pool.size() && pool[next].ref != 0)
+				next++;
+#endif
+			if (next == pool.size())
+				pool.resize(pool.size()+(pool.size()/2u)+16u);
+
+			assert(next < pool.size());
+			assert(pool[next].ref == 0);
+			return pool[next];
+		}
+	public:
+		id_t next = id_t(0);
+	private:
+		inline obj_t &_lookup(const id_t id) {
+#if 1//DEBUG
+			if (id < pool.size()) {
+				if (pool[id].ref == 0)
+					throw std::out_of_range("object not initialized");
+
+				return pool[id];
+			}
+
+			throw std::out_of_range("object out of range");
+#else
+			return pool[id];
+#endif
+		}
+	private:
+		std::vector<obj_t> pool;
+};
+
 ////////////////////////////////////////////////////////////////////
 
 enum class token_type_t:unsigned int {
@@ -644,96 +734,6 @@ struct csliteral_t {
 	bool shrinkfit(void);
 	std::string makestring(void) const;
 	std::string to_str(void) const;
-};
-
-///////////////////////////////////////////////////////
-
-template <class obj_t,typename id_t,const id_t none> class obj_pool {
-	public:
-		obj_pool() { }
-		~obj_pool() { }
-	public:
-		obj_t &operator()(const id_t id) {
-			return _lookup(id);
-		}
-	public:
-		id_t alloc(void) {
-			obj_t &a = __internal_alloc();
-			a.clear().addref();
-			return next++;
-		}
-
-		void assign(id_t &d,const id_t s) {
-			if (d != none) _lookup(d).release();
-			d = s;
-			if (d != none) _lookup(d).addref();
-		}
-
-		void assignmove(id_t &d,id_t &s) {
-			if (d != none) _lookup(d).release();
-			d = s;
-			s = none;
-		}
-
-		id_t returnmove(id_t &s) {
-			const id_t r = s;
-			s = none;
-			return r;
-		}
-
-		void release(id_t &d) {
-			if (d != none) _lookup(d).release();
-			d = none;
-		}
-
-		void refcount_check(void) {
-			for (size_t i=0;i < pool.size();i++) {
-				if (pool[i].ref != 0) {
-					fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
-							pool[i].ref,
-							pool[i].to_str().c_str());
-				}
-			}
-		}
-
-		void update_next(obj_t *p) {
-			if (p >= &pool[0]) {
-				const size_t i = p - &pool[0];
-				if (i < pool.size()) next = i;
-			}
-		}
-
-		obj_t& __internal_alloc() {
-#if 1//SET TO ZERO TO MAKE SURE DEALLOCATED NODES STAY DEALLOCATED
-			while (next < pool.size() && pool[next].ref != 0)
-				next++;
-#endif
-			if (next == pool.size())
-				pool.resize(pool.size()+(pool.size()/2u)+16u);
-
-			assert(next < pool.size());
-			assert(pool[next].ref == 0);
-			return pool[next];
-		}
-	public:
-		id_t next = id_t(0);
-	private:
-		inline obj_t &_lookup(const id_t id) {
-#if 1//DEBUG
-			if (id < pool.size()) {
-				if (pool[id].ref == 0)
-					throw std::out_of_range("object not initialized");
-
-				return pool[id];
-			}
-
-			throw std::out_of_range("object out of range");
-#else
-			return pool[id];
-#endif
-		}
-	private:
-		std::vector<obj_t> pool;
 };
 
 ////////////////////////////////////////////////////////////////////
