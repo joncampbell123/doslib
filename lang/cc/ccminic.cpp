@@ -66,6 +66,9 @@ typedef unsigned int type_qualifier_t;
 typedef size_t csliteral_id_t;
 static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
 
+typedef size_t identifier_id_t;
+static constexpr identifier_id_t identifier_none = ~size_t(0u);
+
 static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
 	return ~(sz - addrmask_t(1u));
 }
@@ -734,6 +737,40 @@ struct csliteral_t {
 	bool shrinkfit(void);
 	std::string makestring(void) const;
 	std::string to_str(void) const;
+};
+
+/////////////////////////////////////////////////////////////////////
+
+struct identifier_t {
+	unsigned char*		data = NULL;
+	size_t			length = 0;
+	unsigned int		ref = 0;
+
+	identifier_t &clear(void);
+	identifier_t &addref(void);
+	identifier_t &release(void);
+	identifier_t();
+	identifier_t(const identifier_t &x) = delete;
+	identifier_t &operator=(const identifier_t &x) = delete;
+	identifier_t(identifier_t &&x);
+	identifier_t &operator=(identifier_t &&x);
+	~identifier_t();
+
+	void free_data(void);
+	void free(void);
+	void common_move(identifier_t &other);
+	bool copy_from(const unsigned char *in_data,const size_t in_length);
+	bool copy_from(const std::string &s);
+	std::string to_str(void) const;
+
+	bool operator==(const identifier_t &rhs) const;
+	inline bool operator!=(const identifier_t &rhs) const { return !(*this == rhs); }
+
+	bool operator==(const csliteral_t &rhs) const;
+	inline bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
+
+	bool operator==(const std::string &rhs) const;
+	inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -2107,104 +2144,94 @@ std::string csliteral_t::to_str(void) const {
 	return s;
 }
 
-/////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 
-	struct identifier_t {
-		unsigned char*		data = NULL;
-		size_t			length = 0;
-		unsigned int		ref = 0;
+identifier_t &identifier_t::clear(void) {
+	free_data();
+	return *this;
+}
 
-		identifier_t &clear(void) {
-			free_data();
-			return *this;
-		}
+identifier_t &identifier_t::addref(void) {
+	ref++;
+	return *this;
+}
 
-		identifier_t &addref(void) {
-			ref++;
-			return *this;
-		}
+identifier_t &identifier_t::release(void) {
+	if (ref == 0) throw std::runtime_error("identifier attempt to release when ref == 0");
+	if (--ref == 0) clear();
+	return *this;
+}
 
-		identifier_t &release(void) {
-			if (ref == 0) throw std::runtime_error("identifier attempt to release when ref == 0");
-			if (--ref == 0) clear();
-			return *this;
-		}
+identifier_t::identifier_t() { }
+identifier_t::identifier_t(identifier_t &&x) { common_move(x); }
+identifier_t &identifier_t::operator=(identifier_t &&x) { common_move(x); return *this; }
 
-		identifier_t() { }
-		identifier_t(const identifier_t &x) = delete;
-		identifier_t &operator=(const identifier_t &x) = delete;
-		identifier_t(identifier_t &&x) { common_move(x); }
-		identifier_t &operator=(identifier_t &&x) { common_move(x); return *this; }
+identifier_t::~identifier_t() { free(); }
 
-		~identifier_t() { free(); }
+void identifier_t::free_data(void) {
+	if (data) { ::free(data); data = NULL; }
+	length = 0;
+}
 
-		void free_data(void) {
-			if (data) { ::free(data); data = NULL; }
-			length = 0;
-		}
+void identifier_t::free(void) {
+	if (ref != 0) fprintf(stderr,"WARNING: identifier str free() to object with %u outstanding references\n",ref);
+	ref = 0;
 
-		void free(void) {
-			if (ref != 0) fprintf(stderr,"WARNING: identifier str free() to object with %u outstanding references\n",ref);
-			ref = 0;
+	free_data();
+}
 
-			free_data();
-		}
+void identifier_t::common_move(identifier_t &other) {
+	ref = other.ref; other.ref = 0;
+	data = other.data; other.data = NULL;
+	length = other.length; other.length = 0;
+}
 
-		void common_move(identifier_t &other) {
-			ref = other.ref; other.ref = 0;
-			data = other.data; other.data = NULL;
-			length = other.length; other.length = 0;
-		}
+bool identifier_t::copy_from(const unsigned char *in_data,const size_t in_length) {
+	free_data();
 
-		bool copy_from(const unsigned char *in_data,const size_t in_length) {
-			free_data();
+	if (in_length != 0 && in_length < 4096) {
+		data = (unsigned char*)::malloc(in_length);
+		if (data == NULL) return false;
+		memcpy(data,in_data,in_length);
+		length = in_length;
+	}
 
-			if (in_length != 0 && in_length < 4096) {
-				data = (unsigned char*)::malloc(in_length);
-				if (data == NULL) return false;
-				memcpy(data,in_data,in_length);
-				length = in_length;
-			}
+	return true;
+}
 
-			return true;
-		}
+bool identifier_t::copy_from(const std::string &s) {
+	return copy_from((const unsigned char*)s.c_str(),s.length());
+}
 
-		bool copy_from(const std::string &s) {
-			return copy_from((const unsigned char*)s.c_str(),s.length());
-		}
+std::string identifier_t::to_str(void) const {
+	if (data != NULL && length != 0) return std::string((char*)data,length);
+	return std::string();
+}
 
-		std::string to_str(void) const {
-			if (data != NULL && length != 0) return std::string((char*)data,length);
-			return std::string();
-		}
+bool identifier_t::operator==(const identifier_t &rhs) const {
+	if (length != rhs.length) return false;
+	if (length != 0) return memcmp(data,rhs.data,length) == 0;
+	return true;
+}
 
-		bool operator==(const identifier_t &rhs) const {
-			if (length != rhs.length) return false;
-			if (length != 0) return memcmp(data,rhs.data,length) == 0;
-			return true;
-		}
-		bool operator!=(const identifier_t &rhs) const { return !(*this == rhs); }
+bool identifier_t::operator==(const csliteral_t &rhs) const {
+	if (length != rhs.length) return false;
+	if (length != 0) return memcmp(data,rhs.data,length) == 0;
+	return true;
+}
 
-		bool operator==(const csliteral_t &rhs) const {
-			if (length != rhs.length) return false;
-			if (length != 0) return memcmp(data,rhs.data,length) == 0;
-			return true;
-		}
-		bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
+bool identifier_t::operator==(const std::string &rhs) const {
+	if (length != rhs.length()) return false;
+	if (length != 0) return memcmp(data,rhs.data(),length) == 0;
+	return true;
+}
 
-		bool operator==(const std::string &rhs) const {
-			if (length != rhs.length()) return false;
-			if (length != 0) return memcmp(data,rhs.data(),length) == 0;
-			return true;
-		}
-		inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
-	};
+/////////////////////////////////////////////////////////////////////
 
-	typedef size_t identifier_id_t;
-	static constexpr identifier_id_t identifier_none = ~size_t(0u);
-	static obj_pool<identifier_t,identifier_id_t,identifier_none> identifier;
+using identifier_pool_t = obj_pool<identifier_t,identifier_id_t,identifier_none>;
+identifier_pool_t identifier;
 
-	//////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 
 	void CCerr(const position_t &pos,const char *fmt,...) {
 		va_list va;
