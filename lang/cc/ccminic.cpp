@@ -1215,6 +1215,97 @@ struct structfield_t {
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct segment_t {
+	enum class type_t {
+		NONE=0,
+		CODE,
+		CONST,
+		DATA,
+		BSS,
+		STACK
+	};
+
+	enum class use_t {
+		NONE=0,
+
+		X86_16=1,
+		X86_32,
+		X86_64
+	};
+
+	static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
+	static constexpr unsigned int FL_READABLE = 1u << 1u;
+	static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
+	static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
+	static constexpr unsigned int FL_PRIVATE = 1u << 4u;
+	static constexpr unsigned int FL_FLAT = 1u << 5u;
+
+	addrmask_t				align = addrmask_none;
+	identifier_id_t				name = identifier_none;
+	type_t					type = type_t::NONE;
+	use_t					use = use_t::NONE;
+	data_size_t				limit = data_size_none;
+	data_size_t				size = data_size_none;
+	unsigned int				flags = 0;
+	data_offset_t				next_alloc = 0;
+
+	segment_t();
+	segment_t(const segment_t &) = delete;
+	segment_t &operator=(const segment_t &) = delete;
+	segment_t(segment_t &&x);
+	segment_t &operator=(segment_t &&x);
+	~segment_t();
+
+	void common_move(segment_t &x);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct symbol_t {
+	enum type_t {
+		NONE=0,
+		VARIABLE,
+		FUNCTION,
+		TYPEDEF,
+		STRUCT,
+		UNION,
+		CONST,
+		ENUM,
+		STR
+	};
+
+	static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
+	static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
+	static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
+	static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
+	static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
+	static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
+
+	declaration_specifiers_t		spec;
+	ddip_list_t				ddip;
+	std::vector<structfield_t>		fields;
+	identifier_id_t				name = identifier_none;
+	ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
+	scope_id_t				scope = scope_none;
+	scope_id_t				parent_of_scope = scope_none;
+	segment_id_t				part_of_segment = segment_none;
+	data_offset_t				offset = data_offset_none;
+	enum type_t				sym_type = NONE;
+	unsigned int				flags = 0;
+
+	symbol_t();
+	symbol_t(const symbol_t &) = delete;
+	symbol_t &operator=(const symbol_t &) = delete;
+	symbol_t(symbol_t &&x);
+	symbol_t &operator=(symbol_t &&x);
+	~symbol_t();
+
+	void common_move(symbol_t &x);
+	bool identifier_exists(const identifier_id_t &id);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 enum target_cpu_t {
 	CPU_NONE=0,			// 0
 	CPU_INTEL_X86,
@@ -6430,134 +6521,62 @@ void structfield_t::common_move(structfield_t &x) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct segment_t {
-	enum class type_t {
-		NONE=0,
-		CODE,
-		CONST,
-		DATA,
-		BSS,
-		STACK
-	};
+segment_t::segment_t() { }
+segment_t::segment_t(segment_t &&x) { common_move(x); }
+segment_t &segment_t::operator=(segment_t &&x) { common_move(x); return *this; }
 
-	enum class use_t {
-		NONE=0,
+segment_t::~segment_t() {
+	identifier.release(name);
+}
 
-		X86_16=1,
-		X86_32,
-		X86_64
-	};
-
-	static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
-	static constexpr unsigned int FL_READABLE = 1u << 1u;
-	static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
-	static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
-	static constexpr unsigned int FL_PRIVATE = 1u << 4u;
-	static constexpr unsigned int FL_FLAT = 1u << 5u;
-
-	addrmask_t				align = addrmask_none;
-	identifier_id_t				name = identifier_none;
-	type_t					type = type_t::NONE;
-	use_t					use = use_t::NONE;
-	data_size_t				limit = data_size_none;
-	data_size_t				size = data_size_none;
-	unsigned int				flags = 0;
-	data_offset_t				next_alloc = 0;
-
-	segment_t() { }
-	segment_t(const segment_t &) = delete;
-	segment_t &operator=(const segment_t &) = delete;
-	segment_t(segment_t &&x) { common_move(x); }
-	segment_t &operator=(segment_t &&x) { common_move(x); return *this; }
-
-	~segment_t() {
-		identifier.release(name);
-	}
-
-	void common_move(segment_t &x) {
-		align = x.align; x.align = addrmask_none;
-		identifier.assignmove(/*to*/name,/*from*/x.name);
-		type = x.type; x.type = type_t::NONE;
-		use = x.use; x.use = use_t::NONE;
-		limit = x.limit; x.limit = addrmask_none;
-		size = x.size; x.size = data_size_none;
-		flags = x.flags; x.flags = 0;
-		next_alloc = x.next_alloc; x.next_alloc = 0;
-	}
-};
+void segment_t::common_move(segment_t &x) {
+	align = x.align; x.align = addrmask_none;
+	identifier.assignmove(/*to*/name,/*from*/x.name);
+	type = x.type; x.type = type_t::NONE;
+	use = x.use; x.use = use_t::NONE;
+	limit = x.limit; x.limit = addrmask_none;
+	size = x.size; x.size = data_size_none;
+	flags = x.flags; x.flags = 0;
+	next_alloc = x.next_alloc; x.next_alloc = 0;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct symbol_t {
-	enum type_t {
-		NONE=0,
-		VARIABLE,
-		FUNCTION,
-		TYPEDEF,
-		STRUCT,
-		UNION,
-		CONST,
-		ENUM,
-		STR
-	};
+symbol_t::symbol_t() { }
+symbol_t::symbol_t(symbol_t &&x) { common_move(x); }
+symbol_t &symbol_t::operator=(symbol_t &&x) { common_move(x); return *this; }
 
-	static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
-	static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
-	static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
-	static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
-	static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
-	static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
+symbol_t::~symbol_t() {
+	ast_node.release(expr);
+	identifier.release(name);
+}
 
-	declaration_specifiers_t		spec;
-	ddip_list_t				ddip;
-	std::vector<structfield_t>		fields;
-	identifier_id_t				name = identifier_none;
-	ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
-	scope_id_t				scope = scope_none;
-	scope_id_t				parent_of_scope = scope_none;
-	segment_id_t				part_of_segment = segment_none;
-	data_offset_t				offset = data_offset_none;
-	enum type_t				sym_type = NONE;
-	unsigned int				flags = 0;
+void symbol_t::common_move(symbol_t &x) {
+	spec = std::move(x.spec);
+	ddip = std::move(x.ddip);
+	fields = std::move(x.fields);
+	identifier.assignmove(/*to*/name,/*from*/x.name);
+	ast_node.assignmove(/*to*/expr,/*from*/x.expr);
+	scope = x.scope; x.scope = scope_none;
+	parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
+	part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
+	offset = x.offset; x.offset = data_offset_none;
+	sym_type = x.sym_type; x.sym_type = NONE;
+	flags = x.flags; x.flags = 0;
+}
 
-	symbol_t() { }
-	symbol_t(const symbol_t &) = delete;
-	symbol_t &operator=(const symbol_t &) = delete;
-	symbol_t(symbol_t &&x) { common_move(x); }
-	symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
-
-	~symbol_t() {
-		ast_node.release(expr);
-		identifier.release(name);
-	}
-
-	void common_move(symbol_t &x) {
-		spec = std::move(x.spec);
-		ddip = std::move(x.ddip);
-		fields = std::move(x.fields);
-		identifier.assignmove(/*to*/name,/*from*/x.name);
-		ast_node.assignmove(/*to*/expr,/*from*/x.expr);
-		scope = x.scope; x.scope = scope_none;
-		parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
-		part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
-		offset = x.offset; x.offset = data_offset_none;
-		sym_type = x.sym_type; x.sym_type = NONE;
-		flags = x.flags; x.flags = 0;
-	}
-
-	bool identifier_exists(const identifier_id_t &id) {
-		if (id != identifier_none) {
-			for (const auto &f : fields) {
-				if (f.name != identifier_none) {
-					if (identifier(f.name) == identifier(id))
-						return true;
-				}
+bool symbol_t::identifier_exists(const identifier_id_t &id) {
+	if (id != identifier_none) {
+		for (const auto &f : fields) {
+			if (f.name != identifier_none) {
+				if (identifier(f.name) == identifier(id))
+					return true;
 			}
 		}
-
-		return false;
 	}
-};
+
+	return false;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
