@@ -738,6 +738,11 @@ template <class obj_t,typename id_t,const id_t none> class obj_pool {
 
 ////////////////////////////////////////////////////////////////////
 
+using csliteral_pool_t = obj_pool<csliteral_t,csliteral_id_t,csliteral_none>;
+csliteral_pool_t csliteral;
+
+////////////////////////////////////////////////////////////////////
+
 source_file_object::source_file_object(const unsigned int new_iface) : iface(new_iface) {
 }
 
@@ -2081,10 +2086,6 @@ std::string csliteral_t::to_str(void) const {
 
 	return s;
 }
-
-////////////////////////////////////////////////////////////////////
-
-obj_pool<csliteral_t,csliteral_id_t,csliteral_none> csliteral;
 
 ////////////////////////////////////////////////////////////////////
 
