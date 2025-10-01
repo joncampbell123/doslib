@@ -132,6 +132,15 @@ struct data_type_set_t {
 	data_var_type_t			dt_longdouble;
 };
 
+struct lgtok_state_t {
+	unsigned int		flags = FL_NEWLINE;
+	unsigned int		curlies = 0;
+
+	static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
+	static constexpr unsigned int FL_NEWLINE = (1u << 1u);
+	static constexpr unsigned int FL_ARROWSTR = (1u << 2u); /* <string> in #include <string> */
+};
+
 ////////////////////////////////////////////////////////////////////
 
 template <class T> void typ_delete(T *p) {
@@ -2781,15 +2790,6 @@ int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const cslitera
 }
 
 ////////////////////////////////////////////////////////////////////
-
-	struct lgtok_state_t {
-		unsigned int		flags = FL_NEWLINE;
-		unsigned int		curlies = 0;
-
-		static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
-		static constexpr unsigned int FL_NEWLINE = (1u << 1u);
-		static constexpr unsigned int FL_ARROWSTR = (1u << 2u); /* <string> in #include <string> */
-	};
 
 	int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		(void)lst;
