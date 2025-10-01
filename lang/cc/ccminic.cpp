@@ -6335,22 +6335,24 @@ void parameter_t::common_move(parameter_t &o) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+/* target settings */
+target_cpu_t					target_cpu = CPU_NONE;
+target_cpu_sub_t				target_cpusub = CPU_SUB_NONE;
+target_cpu_rev_t				target_cpurev = CPU_REV_NONE;
+
+/* data types */
+data_type_set_t					data_types = data_types_default;
+data_type_set_ptr_t				data_types_ptr_code = data_ptr_types_default;
+data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
+data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
+
+addrmask_t					default_packing = addrmask_none;
+addrmask_t					current_packing = addrmask_none;
+std::vector<pack_state_t>			packing_stack; /* #pragma pack */
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
-		/* target settings */
-		target_cpu_t					target_cpu = CPU_NONE;
-		target_cpu_sub_t				target_cpusub = CPU_SUB_NONE;
-		target_cpu_rev_t				target_cpurev = CPU_REV_NONE;
-
-		/* data types */
-		data_type_set_t					data_types = data_types_default;
-		data_type_set_ptr_t				data_types_ptr_code = data_ptr_types_default;
-		data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
-		data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
-
-		addrmask_t					default_packing = addrmask_none;
-		addrmask_t					current_packing = addrmask_none;
-		std::vector<pack_state_t>			packing_stack; /* #pragma pack */
-
 		struct enumerator_t {
 			identifier_id_t				name = identifier_none;
 			ast_node_id_t				expr = ast_node_none;
