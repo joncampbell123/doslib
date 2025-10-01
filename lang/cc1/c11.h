@@ -133,10 +133,37 @@ struct c11yy_struct_astnode {
 
 extern const struct c11yy_struct_astnode c11yy_struct_astnode_INIT;
 
+#define C11YY_TYPESPECF_VOID			(1u <<  0u)
+#define C11YY_TYPESPECF_CHAR			(1u <<  1u)
+#define C11YY_TYPESPECF_SHORT			(1u <<  2u)
+#define C11YY_TYPESPECF_INT			(1u <<  3u)
+#define C11YY_TYPESPECF_LONG			(1u <<  4u)
+#define C11YY_TYPESPECF_FLOAT			(1u <<  5u)
+#define C11YY_TYPESPECF_DOUBLE			(1u <<  6u)
+#define C11YY_TYPESPECF_SIGNED			(1u <<  7u)
+#define C11YY_TYPESPECF_UNSIGNED		(1u <<  8u)
+#define C11YY_TYPESPECF_BOOL			(1u <<  9u)
+#define C11YY_TYPESPECF_COMPLEX			(1u << 10u)
+#define C11YY_TYPESPECF_IMAGINARY		(1u << 11u)
+#define C11YY_TYPESPECF_ATOMIC			(1u << 12u)
+#define C11YY_TYPESPECF_STRUCT			(1u << 13u)
+#define C11YY_TYPESPECF_UNION			(1u << 14u)
+#define C11YY_TYPESPECF_ENUM			(1u << 15u)
+#define C11YY_TYPESPECF_TYPEDEF			(1u << 16u)
+
+struct c11yy_struct_typespec {
+	unsigned int				t; /* from c11.y.h == TYPESPEC */
+	uint32_t				flags;
+	c11yy_identifier_id			id;
+};
+
+extern const struct c11yy_struct_typespec c11yy_struct_typespec_INIT;
+
 union c11yy_struct {
 	struct c11yy_struct_base		base;
 	struct c11yy_struct_integer		intval;
 	struct c11yy_struct_astnode		astnode;
+	struct c11yy_struct_typespec		typespec;
 	struct c11yy_struct_float		floatval;
 	struct c11yy_struct_strliteral		strlitval;
 	struct c11yy_struct_identifier		identifier;

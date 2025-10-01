@@ -18,7 +18,7 @@
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
-%token  ASTNODE
+%token  ASTNODE TYPESPEC
 
 %{
 #include "c11.h"
@@ -240,7 +240,7 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID
+	: VOID { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_VOID; }
 	| CHAR
 	| SHORT
 	| INT
