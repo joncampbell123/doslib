@@ -87,6 +87,12 @@ struct declaration_t;
 
 /////////////////////////////////////////////////////////////////////
 
+static constexpr unsigned int CBIS_USER_HEADER = (1u << 0u);
+static constexpr unsigned int CBIS_SYS_HEADER = (1u << 1u);
+static constexpr unsigned int CBIS_NEXT = (1u << 2u);
+
+/////////////////////////////////////////////////////////////////////
+
 #define CCERR_RET(code,pos,...) \
 	do { \
 		CCerr(pos,__VA_ARGS__); \
@@ -1248,6 +1254,23 @@ int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo) {
 	}
 
 	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void path_slash_translate(std::string &path) {
+	for (auto &c : path) {
+		if (c == '\\') c = '/';
+	}
+}
+
+std::string path_combine(const std::string &base,const std::string &rel) {
+	if (!base.empty() && !rel.empty())
+		return base + "/" + rel;
+	if (!rel.empty())
+		return rel;
+
+	return std::string();
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -4860,531 +4883,520 @@ go_again:
 
 //////////////////////////////////////////////////////////////////////////////
 
-	static constexpr unsigned int CBIS_USER_HEADER = (1u << 0u);
-	static constexpr unsigned int CBIS_SYS_HEADER = (1u << 1u);
-	static constexpr unsigned int CBIS_NEXT = (1u << 2u);
+typedef bool (*cb_include_accept_path_t)(const std::string &p);
+typedef source_file_object* (*cb_include_search_t)(pptok_state_t &pst,lgtok_state_t &lst,const token_t &t,unsigned int fl);
 
-	static void path_slash_translate(std::string &path) {
-		for (auto &c : path) {
-			if (c == '\\') c = '/';
-		}
-	}
+//////////////////////////////////////////////////////////////////////////////
+//
+bool cb_include_accept_path_default(const std::string &/*p*/);
+source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl);
 
-	static std::string path_combine(const std::string &base,const std::string &rel) {
-		if (!base.empty() && !rel.empty())
-			return base + "/" + rel;
-		if (!rel.empty())
-			return rel;
+//////////////////////////////////////////////////////////////////////////////
 
-		return std::string();
-	}
+std::vector<std::string> cb_include_search_paths;
+cb_include_search_t cb_include_search = cb_include_search_default;
+cb_include_accept_path_t cb_include_accept_path = cb_include_accept_path_default;
 
-	std::vector<std::string> cb_include_search_paths;
+bool cb_include_accept_path_default(const std::string &/*p*/) {
+	return true;
+}
 
-	typedef bool (*cb_include_accept_path_t)(const std::string &p);
+source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl) {
+	source_file_object *sfo = NULL;
 
-	static bool cb_include_accept_path_default(const std::string &/*p*/) {
-		return true;
-	}
-
-	cb_include_accept_path_t cb_include_accept_path = cb_include_accept_path_default;
-
-	typedef source_file_object* (*cb_include_search_t)(pptok_state_t &pst,lgtok_state_t &lst,const token_t &t,unsigned int fl);
-
-	static source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl) {
-		source_file_object *sfo = NULL;
-
-		if (fl & CBIS_USER_HEADER) {
-			std::string path = csliteral(t.v.csliteral).makestring(); path_slash_translate(path);
-			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
-				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
-				if (fd >= 0) {
-					sfo = new source_fd(fd/*takes ownership*/,path);
-					assert(sfo->iface == source_file_object::IF_FD);
-					return sfo;
-				}
+	if (fl & CBIS_USER_HEADER) {
+		std::string path = csliteral(t.v.csliteral).makestring(); path_slash_translate(path);
+		if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
+			const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
+			if (fd >= 0) {
+				sfo = new source_fd(fd/*takes ownership*/,path);
+				assert(sfo->iface == source_file_object::IF_FD);
+				return sfo;
 			}
 		}
-
-		for (auto ipi=cb_include_search_paths.begin();ipi!=cb_include_search_paths.end();ipi++) {
-			std::string path = path_combine(*ipi,csliteral(t.v.csliteral).makestring()); path_slash_translate(path);
-			if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
-				const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
-				if (fd >= 0) {
-					sfo = new source_fd(fd/*takes ownership*/,path);
-					assert(sfo->iface == source_file_object::IF_FD);
-					return sfo;
-				}
-			}
-		}
-
-		return NULL;
 	}
 
-	cb_include_search_t cb_include_search = cb_include_search_default;
+	for (auto ipi=cb_include_search_paths.begin();ipi!=cb_include_search_paths.end();ipi++) {
+		std::string path = path_combine(*ipi,csliteral(t.v.csliteral).makestring()); path_slash_translate(path);
+		if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
+			const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
+			if (fd >= 0) {
+				sfo = new source_fd(fd/*takes ownership*/,path);
+				assert(sfo->iface == source_file_object::IF_FD);
+				return sfo;
+			}
+		}
+	}
 
-	int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-		int r;
+	return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int r;
 
 try_again:
-		if (!pst.include_stk.empty()) {
-			pptok_state_t::include_t &i = pst.include_stk.top();
-			if ((r=pptok_lgtok(pst,lst,i.rb,*i.sfo,t)) < 0)
-				return r;
-
-			if (r == 0) {
-				pst.include_pop();
-				goto try_again;
-			}
-		}
-		else {
-			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-				return r;
-		}
-
-		return 1;
-	}
-
-	/* returns <= 1 as normal, > 1 if it handled the pragma by itself */
-	int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
-		(void)pragma;
-		(void)pst;
-		(void)lst;
-
-		if (pragma.empty())
-			return 1;
-
-		if (pragma[0].type == token_type_t::identifier) {
-			if (identifier(pragma[0].v.identifier) == "once") {
-				// TODO
-				return 2;
-			}
-		}
-
-		return 1;
-	}
-
-	int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-		int r;
-
-#define TRY_AGAIN \
-		if (t.type != token_type_t::none) \
-			goto try_again_w_token; \
-		else \
-			goto try_again;
-
-try_again:
-		if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+	if (!pst.include_stk.empty()) {
+		pptok_state_t::include_t &i = pst.include_stk.top();
+		if ((r=pptok_lgtok(pst,lst,i.rb,*i.sfo,t)) < 0)
 			return r;
 
-try_again_w_token:
-		switch (t.type) {
-			case token_type_t::r___LINE__:
-				if (!pst.condb_true())
-					goto try_again;
-				t.type = token_type_t::integer;
-				t.v.integer.init();
-				t.v.integer.v.u = t.pos.row;
-				break;
-			case token_type_t::r___FILE__:
-				if (!pst.condb_true())
-					goto try_again;
-				t.type = token_type_t::strliteral;
-				t.v.csliteral = csliteral.alloc();
-				{
-					const char *name = sfo.getname();
-					if (name) {
-						const size_t l = strlen(name);
-
-						if (!csliteral(t.v.csliteral).alloc(l))
-							return errno_return(ENOMEM);
-
-						assert(csliteral(t.v.csliteral).length == l);
-						memcpy(csliteral(t.v.csliteral).data,name,l);
-					}
-				}
-				break;
-			case token_type_t::r_ppdefine:
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_define(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppundef:
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_undef(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppifdef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,true)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppifndef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,false)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppelifdef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,true)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppelifndef:
-				if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,false)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppelse:
-				if ((r=pptok_else(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppendif:
-				if ((r=pptok_endif(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppif:
-				if ((r=pptok_if(pst,lst,buf,sfo,t,true)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppelif:
-				if ((r=pptok_if(pst,lst,buf,sfo,t,false)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_pperror:
-			case token_type_t::r_ppwarning:
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_errwarn(pst,lst,buf,sfo,t,t.type == token_type_t::r_pperror)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppline:
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_line(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				TRY_AGAIN; /* does not fall through */
-			case token_type_t::r_ppinclude: {
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (t.type == token_type_t::strliteral) {
-					source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
-					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
-						return errno_return(ENOENT);
-					}
-					pst.include_push(sfo);
-					goto try_again;
-				}
-				else if (t.type == token_type_t::anglestrliteral) {
-					source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
-					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
-					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
-						return errno_return(ENOENT);
-					}
-					pst.include_push(sfo);
-					goto try_again;
-				}
-				goto try_again_w_token; }
-			case token_type_t::r_ppinclude_next: {
-				if (!pst.condb_true())
-					goto try_again;
-				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (t.type == token_type_t::strliteral) {
-					source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
-					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include_next \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
-						return errno_return(ENOENT);
-					}
-					pst.include_push(sfo);
-					goto try_again;
-				}
-				else if (t.type == token_type_t::anglestrliteral) {
-					source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
-					if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
-					if (sfo == NULL) {
-						fprintf(stderr,"Unable to #include_next <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
-						return errno_return(ENOENT);
-					}
-					pst.include_push(sfo);
-					goto try_again;
-				}
-				goto try_again_w_token; }
-			case token_type_t::r__Pragma: { /* Newer C _Pragma("") */
-				std::vector<token_t> pragma;
-				token_t pp = std::move(t);
-				int parens = 0;
-
-				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (t.type != token_type_t::openparenthesis) {
-					fprintf(stderr,"_Pragma missing open parens\n");
-					return errno_return(ENOENT);
-				}
-
-				/* Allow macro string substitution */
-				/* TODO: Can you use _Pragma with "strings" " pasted" " together"? */
-				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (t.type != token_type_t::strliteral) {
-					fprintf(stderr,"_Pragma missing string literal\n");
-					return errno_return(ENOENT);
-				}
-				if (csliteral(t.v.csliteral).length != csliteral(t.v.csliteral).units()) {
-					fprintf(stderr,"_Pragma string literal cannot be wide char format\n");
-					return errno_return(ENOENT);
-				}
-
-				source_null_file sfonull;
-				rbuf parseme;
-
-				if ((r=rbuf_copy_csliteral(parseme,t.v.csliteral)) < 1)
-					return errno_return(ENOMEM);
-
-				parseme.source_file = t.source_file;
-				parseme.pos = t.pos;
-
-				do {
-					/* no substitution here */
-					r = lgtok(lst,parseme,sfonull,t);
-					if (r == 0)/*eof*/
-						break;
-					else if (r < 0)
-						return r;
-
-					/* offsets from our own parseme buf don't make sense in the context of the source file */
-					t.pos = pp.pos;
-
-					if (t.type == token_type_t::newline) {
-						pragma.push_back(std::move(t));
-					}
-					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
-						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
-					}
-					else {
-						if (t.type == token_type_t::openparenthesis)
-							parens++;
-						else if (t.type == token_type_t::closeparenthesis)
-							parens--;
-
-						pragma.push_back(std::move(t));
-					}
-				} while (1);
-
-				if (parens != 0) {
-					fprintf(stderr,"Parenthesis mismatch in pragma\n");
-					return errno_return(EINVAL);
-				}
-
-				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-				if (t.type != token_type_t::closeparenthesis) {
-					fprintf(stderr,"_Pragma missing close parens\n");
-					return errno_return(ENOENT);
-				}
-
-				if (!pst.condb_true())
-					goto try_again;
-
-				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
-					return r;
-
-				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
-				if (r == 1) {
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
-
-					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
-						pst.macro_expansion.push_front(std::move(*i));
-
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
-					pp.type = token_type_t::op_pragma;
-					t = std::move(pp);
-					return 1;
-				}
-
-				goto try_again; }
-			case token_type_t::r___pragma: { /* Microsoft C/C++ __pragma() */
-				std::vector<token_t> pragma;
-				token_t pp = std::move(t);
-				int parens = 1;
-
-				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
-					return r;
-
-				/* if it is not __pragma(...) then pass the tokens directly down */
-				if (t.type != token_type_t::openparenthesis) {
-					pptok_lgtok_ungetch(pst,t);
-					t = std::move(pp);
-					return 1;
-				}
-
-				do {
-					/* allow substitution as we work */
-					if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
-						return r;
-
-					if (t.type == token_type_t::newline) {
-						pragma.push_back(std::move(t));
-					}
-					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
-						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
-					}
-					else {
-						if (t.type == token_type_t::openparenthesis) {
-							parens++;
-						}
-						else if (t.type == token_type_t::closeparenthesis) {
-							parens--;
-							if (parens == 0) break;
-						}
-
-						pragma.push_back(std::move(t));
-					}
-				} while (1);
-
-				if (parens != 0) {
-					fprintf(stderr,"Parenthesis mismatch in pragma\n");
-					return errno_return(EINVAL);
-				}
-
-				if (!pst.condb_true())
-					goto try_again;
-
-				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
-					return r;
-
-				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
-				if (r == 1) {
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
-
-					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
-						pst.macro_expansion.push_front(std::move(*i));
-
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
-					pp.type = token_type_t::op_pragma;
-					t = std::move(pp);
-					return 1;
-				}
-
-				goto try_again; }
-			case token_type_t::r_pppragma: { /* Standard #pragma */
-				std::vector<token_t> pragma;
-				token_t pp = std::move(t);
-				int parens = 0;
-
-				/* eh, no, we're not going to directly support substitution here
-				 *
-				 * #pragma ...
-				 * #pragma ... \
-				 *         ... \
-				 *         ... */
-				do {
-					if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
-						return r;
-
-					if (t.type == token_type_t::newline) {
-						t = token_t();
-						break;
-					}
-					else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
-						pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
-					}
-					else {
-						if (t.type == token_type_t::openparenthesis)
-							parens++;
-						else if (t.type == token_type_t::closeparenthesis)
-							parens--;
-
-						pragma.push_back(std::move(t));
-					}
-				} while (1);
-
-				if (parens != 0) {
-					fprintf(stderr,"Parenthesis mismatch in pragma\n");
-					return errno_return(EINVAL);
-				}
-
-				if (!pst.condb_true())
-					goto try_again;
-
-				if ((r=pptok_pragma(pst,lst,pragma)) < 1)
-					return r;
-
-				/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
-				if (r == 1) {
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
-
-					for (auto i=pragma.rbegin();i!=pragma.rend();i++)
-						pst.macro_expansion.push_front(std::move(*i));
-
-					pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
-					pp.type = token_type_t::op_pragma;
-					t = std::move(pp);
-					return 1;
-				}
-
-				goto try_again; }
-			case token_type_t::identifier: { /* macro substitution */
-				if (!pst.condb_true())
-					goto try_again;
-
-				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
-				if (macro) {
-					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
-						return r;
-
-					pst.macro_expansion_counter++;
-					goto try_again;
-				}
-				break; }
-			default:
-				if (!pst.condb_true())
-					goto try_again;
-
-				break;
+		if (r == 0) {
+			pst.include_pop();
+			goto try_again;
 		}
+	}
+	else {
+		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+			return r;
+	}
+
+	return 1;
+}
+
+/* returns <= 1 as normal, > 1 if it handled the pragma by itself */
+int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
+	(void)pragma;
+	(void)pst;
+	(void)lst;
+
+	if (pragma.empty())
+		return 1;
+
+	if (pragma[0].type == token_type_t::identifier) {
+		if (identifier(pragma[0].v.identifier) == "once") {
+			// TODO
+			return 2;
+		}
+	}
+
+	return 1;
+}
+
+int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int r;
+
+#define TRY_AGAIN \
+	if (t.type != token_type_t::none) \
+	goto try_again_w_token; \
+	else \
+	goto try_again;
+
+try_again:
+	if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+		return r;
+
+try_again_w_token:
+	switch (t.type) {
+		case token_type_t::r___LINE__:
+			if (!pst.condb_true())
+				goto try_again;
+			t.type = token_type_t::integer;
+			t.v.integer.init();
+			t.v.integer.v.u = t.pos.row;
+			break;
+		case token_type_t::r___FILE__:
+			if (!pst.condb_true())
+				goto try_again;
+			t.type = token_type_t::strliteral;
+			t.v.csliteral = csliteral.alloc();
+			{
+				const char *name = sfo.getname();
+				if (name) {
+					const size_t l = strlen(name);
+
+					if (!csliteral(t.v.csliteral).alloc(l))
+						return errno_return(ENOMEM);
+
+					assert(csliteral(t.v.csliteral).length == l);
+					memcpy(csliteral(t.v.csliteral).data,name,l);
+				}
+			}
+			break;
+		case token_type_t::r_ppdefine:
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_define(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppundef:
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_undef(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppifdef:
+			if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,true)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppifndef:
+			if ((r=pptok_ifdef(pst,lst,buf,sfo,t,true,false)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppelifdef:
+			if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,true)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppelifndef:
+			if ((r=pptok_ifdef(pst,lst,buf,sfo,t,false,false)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppelse:
+			if ((r=pptok_else(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppendif:
+			if ((r=pptok_endif(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppif:
+			if ((r=pptok_if(pst,lst,buf,sfo,t,true)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppelif:
+			if ((r=pptok_if(pst,lst,buf,sfo,t,false)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_pperror:
+		case token_type_t::r_ppwarning:
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_errwarn(pst,lst,buf,sfo,t,t.type == token_type_t::r_pperror)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppline:
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_line(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			TRY_AGAIN; /* does not fall through */
+		case token_type_t::r_ppinclude: {
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type == token_type_t::strliteral) {
+				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
+				if (sfo == NULL) {
+					fprintf(stderr,"Unable to #include \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
+					return errno_return(ENOENT);
+				}
+				pst.include_push(sfo);
+				goto try_again;
+			}
+			else if (t.type == token_type_t::anglestrliteral) {
+				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER);
+				if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
+				if (sfo == NULL) {
+					fprintf(stderr,"Unable to #include <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
+					return errno_return(ENOENT);
+				}
+				pst.include_push(sfo);
+				goto try_again;
+			}
+			goto try_again_w_token; }
+		case token_type_t::r_ppinclude_next: {
+			if (!pst.condb_true())
+				goto try_again;
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type == token_type_t::strliteral) {
+				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
+				if (sfo == NULL) {
+					fprintf(stderr,"Unable to #include_next \"%s\"\n",csliteral(t.v.csliteral).makestring().c_str());
+					return errno_return(ENOENT);
+				}
+				pst.include_push(sfo);
+				goto try_again;
+			}
+			else if (t.type == token_type_t::anglestrliteral) {
+				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_SYS_HEADER|CBIS_NEXT);
+				if (sfo == NULL) sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER|CBIS_NEXT);
+				if (sfo == NULL) {
+					fprintf(stderr,"Unable to #include_next <%s>\n",csliteral(t.v.csliteral).makestring().c_str());
+					return errno_return(ENOENT);
+				}
+				pst.include_push(sfo);
+				goto try_again;
+			}
+			goto try_again_w_token; }
+		case token_type_t::r__Pragma: { /* Newer C _Pragma("") */
+			std::vector<token_t> pragma;
+			token_t pp = std::move(t);
+			int parens = 0;
+
+			if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type != token_type_t::openparenthesis) {
+				fprintf(stderr,"_Pragma missing open parens\n");
+				return errno_return(ENOENT);
+			}
+
+			/* Allow macro string substitution */
+			/* TODO: Can you use _Pragma with "strings" " pasted" " together"? */
+			if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type != token_type_t::strliteral) {
+				fprintf(stderr,"_Pragma missing string literal\n");
+				return errno_return(ENOENT);
+			}
+			if (csliteral(t.v.csliteral).length != csliteral(t.v.csliteral).units()) {
+				fprintf(stderr,"_Pragma string literal cannot be wide char format\n");
+				return errno_return(ENOENT);
+			}
+
+			source_null_file sfonull;
+			rbuf parseme;
+
+			if ((r=rbuf_copy_csliteral(parseme,t.v.csliteral)) < 1)
+				return errno_return(ENOMEM);
+
+			parseme.source_file = t.source_file;
+			parseme.pos = t.pos;
+
+			do {
+				/* no substitution here */
+				r = lgtok(lst,parseme,sfonull,t);
+				if (r == 0)/*eof*/
+					break;
+				else if (r < 0)
+					return r;
+
+				/* offsets from our own parseme buf don't make sense in the context of the source file */
+				t.pos = pp.pos;
+
+				if (t.type == token_type_t::newline) {
+					pragma.push_back(std::move(t));
+				}
+				else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+					pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+				}
+				else {
+					if (t.type == token_type_t::openparenthesis)
+						parens++;
+					else if (t.type == token_type_t::closeparenthesis)
+						parens--;
+
+					pragma.push_back(std::move(t));
+				}
+			} while (1);
+
+			if (parens != 0) {
+				fprintf(stderr,"Parenthesis mismatch in pragma\n");
+				return errno_return(EINVAL);
+			}
+
+			if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+			if (t.type != token_type_t::closeparenthesis) {
+				fprintf(stderr,"_Pragma missing close parens\n");
+				return errno_return(ENOENT);
+			}
+
+			if (!pst.condb_true())
+				goto try_again;
+
+			if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+				return r;
+
+			/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+			if (r == 1) {
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
+				for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+					pst.macro_expansion.push_front(std::move(*i));
+
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
+				pp.type = token_type_t::op_pragma;
+				t = std::move(pp);
+				return 1;
+			}
+
+			goto try_again; }
+		case token_type_t::r___pragma: { /* Microsoft C/C++ __pragma() */
+			std::vector<token_t> pragma;
+			token_t pp = std::move(t);
+			int parens = 1;
+
+			if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			/* if it is not __pragma(...) then pass the tokens directly down */
+			if (t.type != token_type_t::openparenthesis) {
+				pptok_lgtok_ungetch(pst,t);
+				t = std::move(pp);
+				return 1;
+			}
+
+			do {
+				/* allow substitution as we work */
+				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				if (t.type == token_type_t::newline) {
+					pragma.push_back(std::move(t));
+				}
+				else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+					pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+				}
+				else {
+					if (t.type == token_type_t::openparenthesis) {
+						parens++;
+					}
+					else if (t.type == token_type_t::closeparenthesis) {
+						parens--;
+						if (parens == 0) break;
+					}
+
+					pragma.push_back(std::move(t));
+				}
+			} while (1);
+
+			if (parens != 0) {
+				fprintf(stderr,"Parenthesis mismatch in pragma\n");
+				return errno_return(EINVAL);
+			}
+
+			if (!pst.condb_true())
+				goto try_again;
+
+			if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+				return r;
+
+			/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+			if (r == 1) {
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
+				for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+					pst.macro_expansion.push_front(std::move(*i));
+
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
+				pp.type = token_type_t::op_pragma;
+				t = std::move(pp);
+				return 1;
+			}
+
+			goto try_again; }
+		case token_type_t::r_pppragma: { /* Standard #pragma */
+			std::vector<token_t> pragma;
+			token_t pp = std::move(t);
+			int parens = 0;
+
+			/* eh, no, we're not going to directly support substitution here
+			 *
+			 * #pragma ...
+			 * #pragma ... \
+			 *         ... \
+			 *         ... */
+			do {
+				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				if (t.type == token_type_t::newline) {
+					t = token_t();
+					break;
+				}
+				else if (t.type == token_type_t::backslashnewline) { /* \ + newline continues the macro past newline */
+					pragma.push_back(std::move(token_t(token_type_t::newline,t.pos,t.source_file)));
+				}
+				else {
+					if (t.type == token_type_t::openparenthesis)
+						parens++;
+					else if (t.type == token_type_t::closeparenthesis)
+						parens--;
+
+					pragma.push_back(std::move(t));
+				}
+			} while (1);
+
+			if (parens != 0) {
+				fprintf(stderr,"Parenthesis mismatch in pragma\n");
+				return errno_return(EINVAL);
+			}
+
+			if (!pst.condb_true())
+				goto try_again;
+
+			if ((r=pptok_pragma(pst,lst,pragma)) < 1)
+				return r;
+
+			/* pptok_pragma handled it by itself if r > 1, else just return it to the C compiler layer above */
+			if (r == 1) {
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::closeparenthesis)));
+
+				for (auto i=pragma.rbegin();i!=pragma.rend();i++)
+					pst.macro_expansion.push_front(std::move(*i));
+
+				pst.macro_expansion.push_front(std::move(token_t(token_type_t::openparenthesis)));
+				pp.type = token_type_t::op_pragma;
+				t = std::move(pp);
+				return 1;
+			}
+
+			goto try_again; }
+		case token_type_t::identifier: { /* macro substitution */
+			if (!pst.condb_true())
+				goto try_again;
+
+			const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
+			if (macro) {
+				if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
+					return r;
+
+				pst.macro_expansion_counter++;
+				goto try_again;
+			}
+			break; }
+		default:
+			if (!pst.condb_true())
+				goto try_again;
+
+			break;
+	}
 
 #undef TRY_AGAIN
 
-		return 1;
-	}
+	return 1;
+}
 
-	int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-		int r;
+//////////////////////////////////////////////////////////////////////////////
 
-		if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
-			return r;
+int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int r;
 
-		/* it might be a reserved keyword, check */
-		if (t.type == token_type_t::identifier) {
-			for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
-				if (identifier(t.v.identifier).length == i2t->len) {
-					if (!memcmp(identifier(t.v.identifier).data,i2t->str,i2t->len)) {
-						t.clear_v();
-						t.type = token_type_t(i2t->token);
-						return 1;
-					}
+	if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+		return r;
+
+	/* it might be a reserved keyword, check */
+	if (t.type == token_type_t::identifier) {
+		for (const ident2token_t *i2t=ident2tok_cc;i2t < (ident2tok_cc+ident2tok_cc_length);i2t++) {
+			if (identifier(t.v.identifier).length == i2t->len) {
+				if (!memcmp(identifier(t.v.identifier).data,i2t->str,i2t->len)) {
+					t.clear_v();
+					t.type = token_type_t(i2t->token);
+					return 1;
 				}
 			}
 		}
-
-		return 1;
 	}
 
-	///////////////////////////////////////
+	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 	enum storage_class_idx_t {
 		SCI_TYPEDEF,		// 0
