@@ -872,6 +872,80 @@ struct pptok_macro_t {
 
 ////////////////////////////////////////////////////////////////////
 
+struct pptok_state_t {
+	static constexpr size_t macro_bucket_count = 4096u / sizeof(char*); /* power of 2 */
+	static_assert((macro_bucket_count & (macro_bucket_count - 1)) == 0, "must be power of 2"); /* is power of 2 */
+
+	struct pptok_macro_ent_t {
+		pptok_macro_t		ment;
+		identifier_id_t		name = identifier_none;
+		pptok_macro_ent_t*	next;
+
+		pptok_macro_ent_t();
+		pptok_macro_ent_t(const pptok_macro_ent_t &) = delete;
+		pptok_macro_ent_t &operator=(const pptok_macro_ent_t &) = delete;
+		pptok_macro_ent_t(pptok_macro_ent_t &&) = delete;
+		pptok_macro_ent_t &operator=(pptok_macro_ent_t &&) = delete;
+		~pptok_macro_ent_t();
+	};
+
+	struct cond_block_t {
+		enum {
+			WAITING=0,	/* false, waiting for elseif/else */
+			IS_TRUE,	/* true, next elseif/else switches to done. #else && WAITING == IS_TRUE */
+			DONE		/* state was IS_TRUE, skip anything else */
+		};
+		unsigned char		state = WAITING;
+		unsigned char		flags = 0;
+		static constexpr unsigned char FL_ELSE = 1u << 0u;
+	};
+
+	/* recursion stack, for #include */
+	struct include_t {
+		source_file_object*	sfo = NULL;
+		rbuf			rb;
+	};
+
+	std::stack<include_t>		include_stk;
+	std::stack<cond_block_t>	cond_block;
+
+	unsigned int macro_expansion_counter = 0; /* to prevent runaway expansion */
+	std::deque<token_t> macro_expansion;
+
+	pptok_macro_ent_t* macro_buckets[macro_bucket_count] = { NULL };
+
+	void include_push(source_file_object *sfo);
+	void include_pop(void);
+	void include_popall(void);
+	bool condb_true(void) const;
+	const pptok_macro_ent_t* lookup_macro(const identifier_id_t &i) const;
+	bool create_macro(const identifier_id_t i,pptok_macro_t &m);
+	bool delete_macro(const identifier_id_t i);
+	void free_macro_bucket(const unsigned int bucket);
+	void free_macros(void);
+
+	static uint8_t macro_hash_id(const unsigned char *data,const size_t len);
+
+	inline uint8_t macro_hash_id(const identifier_t &i) const {
+		return macro_hash_id(i.data,i.length);
+	}
+
+	uint8_t macro_hash_id(const identifier_id_t &i) const;
+
+	static uint8_t macro_hash_id(const csliteral_t &i) {
+		return macro_hash_id((const unsigned char*)i.data,i.length);
+	}
+
+	pptok_state_t();
+	pptok_state_t(const pptok_state_t &) = delete;
+	pptok_state_t &operator=(const pptok_state_t &) = delete;
+	pptok_state_t(pptok_state_t &&) = delete;
+	pptok_state_t &operator=(pptok_state_t &&) = delete;
+	~pptok_state_t();
+};
+
+////////////////////////////////////////////////////////////////////
+
 int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
 	dbuf.free();
 
@@ -3385,193 +3459,146 @@ void pptok_macro_t::common_move(pptok_macro_t &o) {
 	parameters = std::move(o.parameters);
 }
 
-	struct pptok_state_t {
-		struct pptok_macro_ent_t {
-			pptok_macro_t		ment;
-			identifier_id_t		name = identifier_none;
-			pptok_macro_ent_t*	next;
+////////////////////////////////////////////////////////////////////
 
-			pptok_macro_ent_t() { }
-			pptok_macro_ent_t(const pptok_macro_ent_t &) = delete;
-			pptok_macro_ent_t &operator=(const pptok_macro_ent_t &) = delete;
-			pptok_macro_ent_t(pptok_macro_ent_t &&) = delete;
-			pptok_macro_ent_t &operator=(pptok_macro_ent_t &&) = delete;
-			~pptok_macro_ent_t() {
-				identifier.release(name);
-			}
-		};
-		struct cond_block_t {
-			enum {
-				WAITING=0,	/* false, waiting for elseif/else */
-				IS_TRUE,	/* true, next elseif/else switches to done. #else && WAITING == IS_TRUE */
-				DONE		/* state was IS_TRUE, skip anything else */
-			};
-			unsigned char		state = WAITING;
-			unsigned char		flags = 0;
-			static constexpr unsigned char FL_ELSE = 1u << 0u;
-		};
+uint8_t pptok_state_t::macro_hash_id(const identifier_id_t &i) const {
+	return macro_hash_id(identifier(i));
+}
 
-		/* recursion stack, for #include */
-		struct include_t {
-			source_file_object*	sfo = NULL;
-			rbuf			rb;
-		};
+pptok_state_t::pptok_macro_ent_t::pptok_macro_ent_t() { }
+pptok_state_t::pptok_macro_ent_t::~pptok_macro_ent_t() {
+	identifier.release(name);
+}
 
-		std::stack<include_t>		include_stk;
-		std::stack<cond_block_t>	cond_block;
+void pptok_state_t::include_push(source_file_object *sfo) {
+	if (sfo != NULL) {
+		include_t i;
+		i.sfo = sfo;
+		i.rb.set_source_file(alloc_source_file(sfo->getname()));
+		assert(i.rb.allocate());
+		include_stk.push(std::move(i));
+	}
+}
 
-		void include_push(source_file_object *sfo) {
-			if (sfo != NULL) {
-				include_t i;
-				i.sfo = sfo;
-				i.rb.set_source_file(alloc_source_file(sfo->getname()));
-				assert(i.rb.allocate());
-				include_stk.push(std::move(i));
-			}
-		}
+void pptok_state_t::include_pop(void) {
+	if (!include_stk.empty()) {
+		include_t &e = include_stk.top();
+		e.rb.set_source_file(no_source_file);
+		if (e.sfo) delete e.sfo;
+		include_stk.pop();
+	}
+}
 
-		void include_pop(void) {
-			if (!include_stk.empty()) {
-				include_t &e = include_stk.top();
-				e.rb.set_source_file(no_source_file);
-				if (e.sfo) delete e.sfo;
-				include_stk.pop();
-			}
-		}
+void pptok_state_t::include_popall(void) {
+	while (!include_stk.empty()) {
+		include_t &e = include_stk.top();
+		e.rb.set_source_file(no_source_file);
+		if (e.sfo) delete e.sfo;
+		include_stk.pop();
+	}
+}
 
-		void include_popall(void) {
-			while (!include_stk.empty()) {
-				include_t &e = include_stk.top();
-				e.rb.set_source_file(no_source_file);
-				if (e.sfo) delete e.sfo;
-				include_stk.pop();
-			}
-		}
+bool pptok_state_t::condb_true(void) const {
+	if (cond_block.empty())
+		return true;
+	else
+		return cond_block.top().state == cond_block_t::IS_TRUE;
+}
 
-		bool condb_true(void) const {
-			if (cond_block.empty())
+const pptok_state_t::pptok_macro_ent_t* pptok_state_t::lookup_macro(const identifier_id_t &i) const {
+	const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
+	while (p != NULL) {
+		if (identifier(p->name) == identifier(i))
+			return p;
+
+		p = p->next;
+	}
+
+	return NULL;
+}
+
+bool pptok_state_t::create_macro(const identifier_id_t i,pptok_macro_t &m) {
+	pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
+
+	while ((*p) != NULL) {
+		if (identifier((*p)->name) == identifier(i)) {
+			/* already exists. */
+			/* this is an error, unless the attempt re-states the same macro and definition,
+			 * which is not an error.
+			 *
+			 * not an error:
+			 *
+			 * #define X 5
+			 * #define X 5
+			 *
+			 * error:
+			 *
+			 * #define X 5
+			 * #define X 4 */
+			if (	(*p)->ment.tokens == m.tokens &&
+					(*p)->ment.parameters == m.parameters &&
+					(*p)->ment.flags == m.flags)
 				return true;
-			else
-				return cond_block.top().state == cond_block_t::IS_TRUE;
-		}
-
-		unsigned int macro_expansion_counter = 0; /* to prevent runaway expansion */
-		std::deque<token_t> macro_expansion;
-
-		const pptok_macro_ent_t* lookup_macro(const identifier_id_t &i) const {
-			const pptok_macro_ent_t *p = macro_buckets[macro_hash_id(i)];
-			while (p != NULL) {
-				if (identifier(p->name) == identifier(i))
-					return p;
-
-				p = p->next;
-			}
-
-			return NULL;
-		}
-
-		bool create_macro(const identifier_id_t i,pptok_macro_t &m) {
-			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
-
-			while ((*p) != NULL) {
-				if (identifier((*p)->name) == identifier(i)) {
-					/* already exists. */
-					/* this is an error, unless the attempt re-states the same macro and definition,
-					 * which is not an error.
-					 *
-					 * not an error:
-					 *
-					 * #define X 5
-					 * #define X 5
-					 *
-					 * error:
-					 *
-					 * #define X 5
-					 * #define X 4 */
-					if (	(*p)->ment.tokens == m.tokens &&
-						(*p)->ment.parameters == m.parameters &&
-						(*p)->ment.flags == m.flags)
-						return true;
-
-					return false;
-				}
-
-				p = &((*p)->next);
-			}
-
-			(*p) = new pptok_macro_ent_t;
-			(*p)->ment = std::move(m);
-			identifier.assign(/*to*/(*p)->name,/*from*/i);
-			(*p)->next = NULL;
-			return true;
-		}
-
-		bool delete_macro(const identifier_id_t i) {
-			pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
-			while ((*p) != NULL) {
-				if (identifier((*p)->name) == identifier(i)) {
-					pptok_macro_ent_t* d = *p;
-					(*p) = (*p)->next;
-					delete d;
-					return true;
-				}
-
-				p = &((*p)->next);
-			}
 
 			return false;
 		}
 
-		static constexpr size_t macro_bucket_count = 4096u / sizeof(char*); /* power of 2 */
-		static_assert((macro_bucket_count & (macro_bucket_count - 1)) == 0, "must be power of 2"); /* is power of 2 */
+		p = &((*p)->next);
+	}
 
-		void free_macro_bucket(const unsigned int bucket) {
-			pptok_macro_ent_t *d;
+	(*p) = new pptok_macro_ent_t;
+	(*p)->ment = std::move(m);
+	identifier.assign(/*to*/(*p)->name,/*from*/i);
+	(*p)->next = NULL;
+	return true;
+}
 
-			while ((d=macro_buckets[bucket]) != NULL) {
-				macro_buckets[bucket] = d->next;
-				delete d;
-			}
+bool pptok_state_t::delete_macro(const identifier_id_t i) {
+	pptok_macro_ent_t **p = &macro_buckets[macro_hash_id(i)];
+	while ((*p) != NULL) {
+		if (identifier((*p)->name) == identifier(i)) {
+			pptok_macro_ent_t* d = *p;
+			(*p) = (*p)->next;
+			delete d;
+			return true;
 		}
 
-		void free_macros(void) {
-			for (unsigned int i=0;i < macro_bucket_count;i++)
-				free_macro_bucket(i);
-		}
+		p = &((*p)->next);
+	}
 
-		static uint8_t macro_hash_id(const unsigned char *data,const size_t len) {
-			unsigned int h = 0x2222;
+	return false;
+}
 
-			for (size_t c=0;c < len;c++)
-				h = (h ^ (h << 9)) + data[c];
+void pptok_state_t::free_macro_bucket(const unsigned int bucket) {
+	pptok_macro_ent_t *d;
 
-			h ^= (h >> 16);
-			h ^= ~(h >> 8);
-			h ^= (h >> 4) ^ 3;
-			return h & (macro_bucket_count - 1u);
-		}
+	while ((d=macro_buckets[bucket]) != NULL) {
+		macro_buckets[bucket] = d->next;
+		delete d;
+	}
+}
 
-		inline uint8_t macro_hash_id(const identifier_t &i) const {
-			return macro_hash_id(i.data,i.length);
-		}
+void pptok_state_t::free_macros(void) {
+	for (unsigned int i=0;i < macro_bucket_count;i++)
+		free_macro_bucket(i);
+}
 
-		inline uint8_t macro_hash_id(const identifier_id_t &i) const {
-			return macro_hash_id(identifier(i));
-		}
+uint8_t pptok_state_t::macro_hash_id(const unsigned char *data,const size_t len) {
+	unsigned int h = 0x2222;
 
-		static uint8_t macro_hash_id(const csliteral_t &i) {
-			return macro_hash_id((const unsigned char*)i.data,i.length);
-		}
+	for (size_t c=0;c < len;c++)
+		h = (h ^ (h << 9)) + data[c];
 
-		pptok_macro_ent_t* macro_buckets[macro_bucket_count] = { NULL };
+	h ^= (h >> 16);
+	h ^= ~(h >> 8);
+	h ^= (h >> 4) ^ 3;
+	return h & (macro_bucket_count - 1u);
+}
 
-		pptok_state_t() { }
-		pptok_state_t(const pptok_state_t &) = delete;
-		pptok_state_t &operator=(const pptok_state_t &) = delete;
-		pptok_state_t(pptok_state_t &&) = delete;
-		pptok_state_t &operator=(pptok_state_t &&) = delete;
-		~pptok_state_t() { include_popall(); free_macros(); }
-	};
+pptok_state_t::pptok_state_t() { }
+pptok_state_t::~pptok_state_t() { include_popall(); free_macros(); }
+
+////////////////////////////////////////////////////////////////////
 
 	int pptok_lgtok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 		if (!pst.macro_expansion.empty()) {
