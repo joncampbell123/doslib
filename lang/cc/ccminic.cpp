@@ -63,6 +63,9 @@ static constexpr addrmask_t addrmask_none(0u);
 typedef unsigned int type_specifier_t;
 typedef unsigned int type_qualifier_t;
 
+typedef size_t csliteral_id_t;
+static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
+
 static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
 	return ~(sz - addrmask_t(1u));
 }
@@ -597,6 +600,50 @@ struct integer_value_t {
 
 	std::string to_str(void) const;
 	void init(void);
+};
+
+///////////////////////////////////////////////////////
+
+struct csliteral_t {
+	enum type_t {
+		CHAR=0,
+		UTF8, /* multibyte */
+		UNICODE16,
+		UNICODE32,
+
+		__MAX__
+	};
+
+	const unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
+
+	type_t			type = CHAR;
+	void*			data = NULL;
+	size_t			length = 0; /* in bytes */
+	size_t			allocated = 0;
+	unsigned int		ref = 0;
+
+	inline bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
+	inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
+
+	csliteral_t &clear(void);
+	csliteral_t &addref(void);
+	csliteral_t &release(void);
+	void free(void);
+	bool copy_from(const csliteral_t &x);
+	const char *as_char(void) const;
+	const unsigned char *as_binary(void) const;
+	const unsigned char *as_utf8(void) const;
+	const uint16_t *as_u16(void) const;
+	const uint32_t *as_u32(void) const;
+	bool operator==(const csliteral_t &rhs) const;
+	bool operator==(const std::string &rhs) const;
+	size_t unitsize(void) const;
+	size_t units(void) const;
+	bool alloc(const size_t sz);
+	static std::string to_escape(const uint32_t c);
+	bool shrinkfit(void);
+	std::string makestring(void) const;
+	std::string to_str(void) const;
 };
 
 ///////////////////////////////////////////////////////
@@ -1833,50 +1880,6 @@ std::string integer_value_t::to_str(void) const {
 
 void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 
-///////////////////////////////////////////////////////
-
-struct csliteral_t {
-	enum type_t {
-		CHAR=0,
-		UTF8, /* multibyte */
-		UNICODE16,
-		UNICODE32,
-
-		__MAX__
-	};
-
-	const unsigned char unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
-
-	type_t			type = CHAR;
-	void*			data = NULL;
-	size_t			length = 0; /* in bytes */
-	size_t			allocated = 0;
-	unsigned int		ref = 0;
-
-	inline bool operator!=(const csliteral_t &rhs) const { return !(*this == rhs); }
-	inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
-
-	csliteral_t &clear(void);
-	csliteral_t &addref(void);
-	csliteral_t &release(void);
-	void free(void);
-	bool copy_from(const csliteral_t &x);
-	const char *as_char(void) const;
-	const unsigned char *as_binary(void) const;
-	const unsigned char *as_utf8(void) const;
-	const uint16_t *as_u16(void) const;
-	const uint32_t *as_u32(void) const;
-	bool operator==(const csliteral_t &rhs) const;
-	bool operator==(const std::string &rhs) const;
-	size_t unitsize(void) const;
-	size_t units(void) const;
-	bool alloc(const size_t sz);
-	static std::string to_escape(const uint32_t c);
-	bool shrinkfit(void);
-	std::string makestring(void) const;
-	std::string to_str(void) const;
-};
-
 ////////////////////////////////////////////////////////////////////
 
 csliteral_t &csliteral_t::clear(void) {
@@ -2081,29 +2084,29 @@ std::string csliteral_t::to_str(void) const {
 
 ////////////////////////////////////////////////////////////////////
 
-	typedef size_t csliteral_id_t;
-	static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
-	static obj_pool<csliteral_t,csliteral_id_t,csliteral_none> csliteral;
+obj_pool<csliteral_t,csliteral_id_t,csliteral_none> csliteral;
 
-	int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
-		dbuf.free();
+////////////////////////////////////////////////////////////////////
 
-		if (csid == csliteral_none)
-			return 1;
+int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
+	dbuf.free();
 
-		csliteral_t &cslit = csliteral(csid);
-		if (cslit.length == 0)
-			return 1;
-
-		if (!dbuf.allocate(std::max(cslit.length,size_t(128)))) /*allocate will reject small amounts*/
-			return errno_return(ENOMEM);
-
-		memcpy(dbuf.data,cslit.data,cslit.length);
-		dbuf.end = dbuf.data + cslit.length;
+	if (csid == csliteral_none)
 		return 1;
-	}
 
-	/////////////////////////////////////////////////
+	csliteral_t &cslit = csliteral(csid);
+	if (cslit.length == 0)
+		return 1;
+
+	if (!dbuf.allocate(std::max(cslit.length,size_t(128)))) /*allocate will reject small amounts*/
+		return errno_return(ENOMEM);
+
+	memcpy(dbuf.data,cslit.data,cslit.length);
+	dbuf.end = dbuf.data + cslit.length;
+	return 1;
+}
+
+/////////////////////////////////////////////////
 
 	struct identifier_t {
 		unsigned char*		data = NULL;
