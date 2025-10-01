@@ -3600,6 +3600,56 @@ pptok_state_t::~pptok_state_t() { include_popall(); free_macros(); }
 
 ////////////////////////////////////////////////////////////////////
 
+bool pptok_define_asm_allowed_token(const token_t &t) {
+	switch (t.type) {
+		/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
+		 *      even so, make sure! */
+		case token_type_t::r_ppif:
+		case token_type_t::r_ppifdef:
+		case token_type_t::r_ppelse:
+		case token_type_t::r_ppelif:
+		case token_type_t::r_ppelifdef:
+		case token_type_t::r_ppendif:
+		case token_type_t::r_ppifndef:
+		case token_type_t::r_ppelifndef:
+			return false;
+		default:
+			break;
+	}
+
+	return true;
+}
+
+bool pptok_define_allowed_token(const token_t &t) {
+	switch (t.type) {
+		/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
+		 *      even so, make sure! */
+		case token_type_t::r_ppif:
+		case token_type_t::r_ppifdef:
+		case token_type_t::r_ppdefine:
+		case token_type_t::r_ppundef:
+		case token_type_t::r_ppelse:
+		case token_type_t::r_ppelif:
+		case token_type_t::r_ppelifdef:
+		case token_type_t::r_ppendif:
+		case token_type_t::r_ppifndef:
+		case token_type_t::r_ppelifndef:
+		case token_type_t::r_ppinclude:
+		case token_type_t::r_pperror:
+		case token_type_t::r_ppwarning:
+		case token_type_t::r_ppline:
+		case token_type_t::r_pppragma:
+		case token_type_t::r_ppembed:
+			return false;
+		default:
+			break;
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////
+
 int pptok_lgtok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	if (!pst.macro_expansion.empty()) {
 		t = std::move(pst.macro_expansion.front());
@@ -4280,54 +4330,6 @@ int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_obje
 
 	pst.cond_block.pop();
 	return 1;
-}
-
-bool pptok_define_asm_allowed_token(const token_t &t) {
-	switch (t.type) {
-		/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
-		 *      even so, make sure! */
-		case token_type_t::r_ppif:
-		case token_type_t::r_ppifdef:
-		case token_type_t::r_ppelse:
-		case token_type_t::r_ppelif:
-		case token_type_t::r_ppelifdef:
-		case token_type_t::r_ppendif:
-		case token_type_t::r_ppifndef:
-		case token_type_t::r_ppelifndef:
-			return false;
-		default:
-			break;
-	}
-
-	return true;
-}
-
-bool pptok_define_allowed_token(const token_t &t) {
-	switch (t.type) {
-		/* NTS: lgtok() parsing pretty much prevents these tokens entirely within a #define.
-		 *      even so, make sure! */
-		case token_type_t::r_ppif:
-		case token_type_t::r_ppifdef:
-		case token_type_t::r_ppdefine:
-		case token_type_t::r_ppundef:
-		case token_type_t::r_ppelse:
-		case token_type_t::r_ppelif:
-		case token_type_t::r_ppelifdef:
-		case token_type_t::r_ppendif:
-		case token_type_t::r_ppifndef:
-		case token_type_t::r_ppelifndef:
-		case token_type_t::r_ppinclude:
-		case token_type_t::r_pperror:
-		case token_type_t::r_ppwarning:
-		case token_type_t::r_ppline:
-		case token_type_t::r_pppragma:
-		case token_type_t::r_ppembed:
-			return false;
-		default:
-			break;
-	}
-
-	return true;
 }
 
 int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
