@@ -6660,6 +6660,24 @@ segment_id_t		fardata_segment = segment_none;
 
 //////////////////////////////////////////////////////////////////////////////
 
+void default_segment_setup(segment_t &so) {
+	if (target_cpu == CPU_INTEL_X86) {
+		if (target_cpusub == CPU_SUB_X86_16) {
+			so.limit = data_size_t(0x10000u); // 64KB
+			so.use = segment_t::use_t::X86_16; // 16-bit
+		}
+		else if (target_cpusub == CPU_SUB_X86_32) {
+			so.limit = data_size_t(0x100000000ull); // 4GB
+			so.use = segment_t::use_t::X86_32; // 32-bit
+		}
+		else {
+			so.use = segment_t::use_t::X86_64; // 64-bit
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
@@ -6686,22 +6704,6 @@ segment_id_t		fardata_segment = segment_none;
 		void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
 		void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
-
-		void default_segment_setup(segment_t &so) {
-			if (target_cpu == CPU_INTEL_X86) {
-				if (target_cpusub == CPU_SUB_X86_16) {
-					so.limit = data_size_t(0x10000u); // 64KB
-					so.use = segment_t::use_t::X86_16; // 16-bit
-				}
-				else if (target_cpusub == CPU_SUB_X86_32) {
-					so.limit = data_size_t(0x100000000ull); // 4GB
-					so.use = segment_t::use_t::X86_32; // 32-bit
-				}
-				else {
-					so.use = segment_t::use_t::X86_64; // 64-bit
-				}
-			}
-		}
 
 		bool arrange_symbols(void) {
 			for (auto &sg : segments) {
