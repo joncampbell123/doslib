@@ -83,6 +83,9 @@ static constexpr size_t symbol_none = ~size_t(0);
 typedef unsigned char bitfield_pos_t;
 static constexpr bitfield_pos_t bitfield_pos_none = bitfield_pos_t(0xFFu);
 
+static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
+static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
+
 static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
 	return ~(sz - addrmask_t(1u));
 }
@@ -6625,6 +6628,40 @@ void scope_t::common_move(scope_t &x) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
+static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
+
+static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
+static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct symbol_lookup_t {
+	symbol_t::type_t st = symbol_t::NONE;
+	scope_id_t cursco = scope_none;
+	symbol_id_t sid = symbol_none;
+	unsigned int flags = 0;
+	position_t pos;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector<segment_t>	segments;
+std::vector<symbol_t>	symbols;
+
+std::vector<scope_t>	scopes;
+std::vector<scope_id_t>	scope_stack;
+
+segment_id_t		code_segment = segment_none;
+segment_id_t		const_segment = segment_none;
+segment_id_t		conststr_segment = segment_none;
+segment_id_t		data_segment = segment_none;
+segment_id_t		stack_segment = segment_none;
+segment_id_t		bss_segment = segment_none;
+segment_id_t		fardata_segment = segment_none;
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
@@ -6880,26 +6917,6 @@ void scope_t::common_move(scope_t &x) {
 		std::vector<token_t>	tq;
 		size_t			tq_tail = 0;
 
-		static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
-		static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
-
-		static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
-		static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
-
-		std::vector<segment_t>	segments;
-		std::vector<symbol_t>	symbols;
-
-		std::vector<scope_t>	scopes;
-		std::vector<scope_id_t>	scope_stack;
-
-		segment_id_t		code_segment = segment_none;
-		segment_id_t		const_segment = segment_none;
-		segment_id_t		conststr_segment = segment_none;
-		segment_id_t		data_segment = segment_none;
-		segment_id_t		stack_segment = segment_none;
-		segment_id_t		bss_segment = segment_none;
-		segment_id_t		fardata_segment = segment_none;
-
 		bool			ignore_whitespace = true;
 
 		void tq_ft(void) {
@@ -7125,14 +7142,6 @@ void scope_t::common_move(scope_t &x) {
 				return symbol_t::VARIABLE;
 		}
 
-		struct symbol_lookup_t {
-			symbol_t::type_t st = symbol_t::NONE;
-			scope_id_t cursco = scope_none;
-			symbol_id_t sid = symbol_none;
-			unsigned int flags = 0;
-			position_t pos;
-		};
-
 		int prep_symbol_lookup(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor) {
 			if (sl.st == symbol_t::NONE) sl.st = classify_symbol(spec,declor);
 			sl.cursco = current_scope();
@@ -7357,9 +7366,6 @@ exists:
 
 			return segment_none;
 		}
-
-		static constexpr size_t ptr_deref_sizeof_addressof = ~size_t(0);
-		static_assert( (~ptr_deref_sizeof_addressof) == size_t(0), "oops" );
 
 		int do_pragma(void);
 		int check_for_pragma(void);
