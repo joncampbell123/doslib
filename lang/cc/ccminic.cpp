@@ -9315,7 +9315,7 @@ token_t &cc_tq_get(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_o
 			return ::cc_tq_get(pst,lst,buf,sfo);
 		}
 
-		int chkerr(void) {
+		int cc_chkerr(void) {
 			const token_t &t = cc_tq_peek();
 			if (t.type == token_type_t::none || t.type == token_type_t::eof || cc_err < 0)
 				return cc_err; /* 0 or negative */
@@ -10885,7 +10885,7 @@ common_error:
 
 						if ((r=declaration_specifiers_parse(s_spec)) < 1)
 							return r;
-						if ((r=chkerr()) < 1)
+						if ((r=cc_chkerr()) < 1)
 							return r;
 
 						do {
@@ -11277,7 +11277,7 @@ common_error:
 		if (typespec) {
 			std::unique_ptr<declaration_t> declion(new declaration_t);
 
-			if ((r=chkerr()) < 1)
+			if ((r=cc_chkerr()) < 1)
 				return r;
 			if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
 				return r;
@@ -11465,7 +11465,7 @@ common_error:
 
 			std::unique_ptr<declaration_t> declion(new declaration_t);
 
-			if ((r=chkerr()) < 1)
+			if ((r=cc_chkerr()) < 1)
 				return r;
 			if ((r=declaration_specifiers_parse((*declion).spec)) < 1)
 				return r;
@@ -12235,7 +12235,7 @@ common_error:
 
 			declaration_specifiers_t spec;
 
-			if ((r=chkerr()) < 1)
+			if ((r=cc_chkerr()) < 1)
 				return r;
 			if ((r=declaration_specifiers_parse(spec,DECLSPEC_ALLOW_DEF)) < 1)
 				return r;
@@ -12999,7 +12999,7 @@ common_error:
 
 		if ((r=declarator_parse(spec,declor)) < 1)
 			return r;
-		if ((r=chkerr()) < 1)
+		if ((r=cc_chkerr()) < 1)
 			return r;
 
 		if (cc_tq_peek().type == token_type_t::equal) {
@@ -13031,7 +13031,7 @@ common_error:
 
 		if ((r=declaration_specifiers_parse(declion.spec,DECLSPEC_ALLOW_DEF)) < 1)
 			return r;
-		if ((r=chkerr()) < 1)
+		if ((r=cc_chkerr()) < 1)
 			return r;
 
 		do {
@@ -13320,7 +13320,7 @@ common_error:
 
 		if ((r=declaration_specifiers_parse(spec,DECLSPEC_ALLOW_DEF)) < 1)
 			return r;
-		if ((r=chkerr()) < 1)
+		if ((r=cc_chkerr()) < 1)
 			return r;
 
 #if 0//DEBUG
@@ -13333,7 +13333,7 @@ common_error:
 
 			if ((r=struct_declarator_parse(sid,spec,declor)) < 1)
 				return r;
-			if ((r=chkerr()) < 1)
+			if ((r=cc_chkerr()) < 1)
 				return r;
 
 #if 0//DEBUG
@@ -13373,7 +13373,7 @@ common_error:
 			cc_tq_discard();
 			return 1;
 		}
-		if ((r=chkerr()) < 1)
+		if ((r=cc_chkerr()) < 1)
 			return r;
 		if ((r=declaration_parse(declion)) < 1)
 			return r;
