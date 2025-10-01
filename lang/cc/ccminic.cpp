@@ -6470,111 +6470,115 @@ struct segment_t {
 
 //////////////////////////////////////////////////////////////////////////////
 
-	struct cc_state_t {
+struct symbol_t {
+	enum type_t {
+		NONE=0,
+		VARIABLE,
+		FUNCTION,
+		TYPEDEF,
+		STRUCT,
+		UNION,
+		CONST,
+		ENUM,
+		STR
+	};
 
-		struct symbol_t {
-			enum type_t {
-				NONE=0,
-				VARIABLE,
-				FUNCTION,
-				TYPEDEF,
-				STRUCT,
-				UNION,
-				CONST,
-				ENUM,
-				STR
-			};
+	static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
+	static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
+	static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
+	static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
+	static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
+	static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
 
-			static constexpr unsigned int FL_DEFINED = 1u << 0u; /* function body, variable without extern */
-			static constexpr unsigned int FL_DECLARED = 1u << 1u; /* function without body, variable with extern */
-			static constexpr unsigned int FL_PARAMETER = 1u << 2u; /* within scope of function, parameter value */
-			static constexpr unsigned int FL_STACK = 1u << 3u; /* exists on the stack */
-			static constexpr unsigned int FL_ELLIPSIS = 1u << 4u; /* function has ellipsis param */
-			static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 5u; /* it's a variable you can can call like a function, a function pointer */
+	declaration_specifiers_t		spec;
+	ddip_list_t				ddip;
+	std::vector<structfield_t>		fields;
+	identifier_id_t				name = identifier_none;
+	ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
+	scope_id_t				scope = scope_none;
+	scope_id_t				parent_of_scope = scope_none;
+	segment_id_t				part_of_segment = segment_none;
+	data_offset_t				offset = data_offset_none;
+	enum type_t				sym_type = NONE;
+	unsigned int				flags = 0;
 
-			declaration_specifiers_t		spec;
-			ddip_list_t				ddip;
-			std::vector<structfield_t>		fields;
-			identifier_id_t				name = identifier_none;
-			ast_node_id_t				expr = ast_node_none; /* variable init, function body, etc */
-			scope_id_t				scope = scope_none;
-			scope_id_t				parent_of_scope = scope_none;
-			segment_id_t				part_of_segment = segment_none;
-			data_offset_t				offset = data_offset_none;
-			enum type_t				sym_type = NONE;
-			unsigned int				flags = 0;
+	symbol_t() { }
+	symbol_t(const symbol_t &) = delete;
+	symbol_t &operator=(const symbol_t &) = delete;
+	symbol_t(symbol_t &&x) { common_move(x); }
+	symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
 
-			symbol_t() { }
-			symbol_t(const symbol_t &) = delete;
-			symbol_t &operator=(const symbol_t &) = delete;
-			symbol_t(symbol_t &&x) { common_move(x); }
-			symbol_t &operator=(symbol_t &&x) { common_move(x); return *this; }
+	~symbol_t() {
+		ast_node.release(expr);
+		identifier.release(name);
+	}
 
-			~symbol_t() {
-				ast_node.release(expr);
-				identifier.release(name);
-			}
+	void common_move(symbol_t &x) {
+		spec = std::move(x.spec);
+		ddip = std::move(x.ddip);
+		fields = std::move(x.fields);
+		identifier.assignmove(/*to*/name,/*from*/x.name);
+		ast_node.assignmove(/*to*/expr,/*from*/x.expr);
+		scope = x.scope; x.scope = scope_none;
+		parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
+		part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
+		offset = x.offset; x.offset = data_offset_none;
+		sym_type = x.sym_type; x.sym_type = NONE;
+		flags = x.flags; x.flags = 0;
+	}
 
-			void common_move(symbol_t &x) {
-				spec = std::move(x.spec);
-				ddip = std::move(x.ddip);
-				fields = std::move(x.fields);
-				identifier.assignmove(/*to*/name,/*from*/x.name);
-				ast_node.assignmove(/*to*/expr,/*from*/x.expr);
-				scope = x.scope; x.scope = scope_none;
-				parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
-				part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
-				offset = x.offset; x.offset = data_offset_none;
-				sym_type = x.sym_type; x.sym_type = NONE;
-				flags = x.flags; x.flags = 0;
-			}
-
-			bool identifier_exists(const identifier_id_t &id) {
-				if (id != identifier_none) {
-					for (const auto &f : fields) {
-						if (f.name != identifier_none) {
-							if (identifier(f.name) == identifier(id))
-								return true;
-						}
-					}
+	bool identifier_exists(const identifier_id_t &id) {
+		if (id != identifier_none) {
+			for (const auto &f : fields) {
+				if (f.name != identifier_none) {
+					if (identifier(f.name) == identifier(id))
+						return true;
 				}
-
-				return false;
 			}
-		};
+		}
 
-		struct scope_t {
-			struct decl_t {
-				declaration_specifiers_t	spec;
-				declarator_t			declor;
-			};
+		return false;
+	}
+};
 
-			ast_node_id_t				root = ast_node_none;
-			std::vector<decl_t>			localdecl;
-			std::vector<symbol_id_t>		symbols;
+//////////////////////////////////////////////////////////////////////////////
 
-			scope_t() { }
-			scope_t(const scope_t &) = delete;
-			scope_t &operator=(const scope_t &) = delete;
-			scope_t(scope_t &&x) { common_move(x); }
-			scope_t &operator=(scope_t &&x) { common_move(x); return *this; }
+struct scope_t {
+	struct decl_t {
+		declaration_specifiers_t	spec;
+		declarator_t			declor;
+	};
 
-			~scope_t() {
-				ast_node.release(root);
-			}
+	ast_node_id_t				root = ast_node_none;
+	std::vector<decl_t>			localdecl;
+	std::vector<symbol_id_t>		symbols;
 
-			decl_t &new_localdecl(void) {
-				const size_t r = localdecl.size();
-				localdecl.resize(r+1u);
-				return localdecl[r];
-			}
+	scope_t() { }
+	scope_t(const scope_t &) = delete;
+	scope_t &operator=(const scope_t &) = delete;
+	scope_t(scope_t &&x) { common_move(x); }
+	scope_t &operator=(scope_t &&x) { common_move(x); return *this; }
 
-			void common_move(scope_t &x) {
-				ast_node.assignmove(/*to*/root,/*from*/x.root);
-				localdecl = std::move(x.localdecl);
-				symbols = std::move(x.symbols);
-			}
-		};
+	~scope_t() {
+		ast_node.release(root);
+	}
+
+	decl_t &new_localdecl(void) {
+		const size_t r = localdecl.size();
+		localdecl.resize(r+1u);
+		return localdecl[r];
+	}
+
+	void common_move(scope_t &x) {
+		ast_node.assignmove(/*to*/root,/*from*/x.root);
+		localdecl = std::move(x.localdecl);
+		symbols = std::move(x.symbols);
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+	struct cc_state_t {
 
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
@@ -10983,29 +10987,29 @@ common_error:
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
-		if (sym.sym_type == cc_state_t::symbol_t::NONE)
+		if (sym.sym_type == symbol_t::NONE)
 			return;
 
 		fprintf(stderr,"%s%s%ssymbol#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&sym-&symbols[0]));
 		switch (sym.sym_type) {
-			case cc_state_t::symbol_t::VARIABLE: fprintf(stderr," variable"); break;
-			case cc_state_t::symbol_t::FUNCTION: fprintf(stderr," function"); break;
-			case cc_state_t::symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
-			case cc_state_t::symbol_t::STRUCT: fprintf(stderr," struct"); break;
-			case cc_state_t::symbol_t::UNION: fprintf(stderr," union"); break;
-			case cc_state_t::symbol_t::CONST: fprintf(stderr," const"); break;
-			case cc_state_t::symbol_t::ENUM: fprintf(stderr," enum"); break;
-			case cc_state_t::symbol_t::STR: fprintf(stderr," str"); break;
+			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
+			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
+			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
+			case symbol_t::STRUCT: fprintf(stderr," struct"); break;
+			case symbol_t::UNION: fprintf(stderr," union"); break;
+			case symbol_t::CONST: fprintf(stderr," const"); break;
+			case symbol_t::ENUM: fprintf(stderr," enum"); break;
+			case symbol_t::STR: fprintf(stderr," str"); break;
 			default: break;
 		};
 		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
 		else fprintf(stderr," <anon>");
-		if (sym.flags & cc_state_t::symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
-		if (sym.flags & cc_state_t::symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
-		if (sym.flags & cc_state_t::symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
-		if (sym.flags & cc_state_t::symbol_t::FL_STACK) fprintf(stderr," STACK");
-		if (sym.flags & cc_state_t::symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
-		if (sym.flags & cc_state_t::symbol_t::FL_FUNCTION_POINTER) fprintf(stderr," FUNCTION-POINTER");
+		if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
+		if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
+		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
+		if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
+		if (sym.flags & symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
+		if (sym.flags & symbol_t::FL_FUNCTION_POINTER) fprintf(stderr," FUNCTION-POINTER");
 
 		if (sym.scope == scope_none) fprintf(stderr," scope:none");
 		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
