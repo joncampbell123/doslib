@@ -1306,6 +1306,29 @@ struct symbol_t {
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct scope_t {
+	struct decl_t {
+		declaration_specifiers_t	spec;
+		declarator_t			declor;
+	};
+
+	ast_node_id_t				root = ast_node_none;
+	std::vector<decl_t>			localdecl;
+	std::vector<symbol_id_t>		symbols;
+
+	scope_t();
+	scope_t(const scope_t &) = delete;
+	scope_t &operator=(const scope_t &) = delete;
+	scope_t(scope_t &&x);
+	scope_t &operator=(scope_t &&x);
+	~scope_t();
+
+	decl_t &new_localdecl(void);
+	void common_move(scope_t &x);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 enum target_cpu_t {
 	CPU_NONE=0,			// 0
 	CPU_INTEL_X86,
@@ -6580,43 +6603,29 @@ bool symbol_t::identifier_exists(const identifier_id_t &id) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct scope_t {
-	struct decl_t {
-		declaration_specifiers_t	spec;
-		declarator_t			declor;
-	};
+scope_t::scope_t() { }
+scope_t::scope_t(scope_t &&x) { common_move(x); }
+scope_t &scope_t::operator=(scope_t &&x) { common_move(x); return *this; }
 
-	ast_node_id_t				root = ast_node_none;
-	std::vector<decl_t>			localdecl;
-	std::vector<symbol_id_t>		symbols;
+scope_t::~scope_t() {
+	ast_node.release(root);
+}
 
-	scope_t() { }
-	scope_t(const scope_t &) = delete;
-	scope_t &operator=(const scope_t &) = delete;
-	scope_t(scope_t &&x) { common_move(x); }
-	scope_t &operator=(scope_t &&x) { common_move(x); return *this; }
+scope_t::decl_t &scope_t::new_localdecl(void) {
+	const size_t r = localdecl.size();
+	localdecl.resize(r+1u);
+	return localdecl[r];
+}
 
-	~scope_t() {
-		ast_node.release(root);
-	}
-
-	decl_t &new_localdecl(void) {
-		const size_t r = localdecl.size();
-		localdecl.resize(r+1u);
-		return localdecl[r];
-	}
-
-	void common_move(scope_t &x) {
-		ast_node.assignmove(/*to*/root,/*from*/x.root);
-		localdecl = std::move(x.localdecl);
-		symbols = std::move(x.symbols);
-	}
-};
+void scope_t::common_move(scope_t &x) {
+	ast_node.assignmove(/*to*/root,/*from*/x.root);
+	localdecl = std::move(x.localdecl);
+	symbols = std::move(x.symbols);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
 	struct cc_state_t {
-
 		int CCstep(rbuf &buf,source_file_object &sfo);
 		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
 		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
