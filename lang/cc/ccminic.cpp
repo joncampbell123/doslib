@@ -12334,7 +12334,7 @@ common_error:
 			}
 
 			aroot = ast_node.alloc(token_type_t::op_compound_statement);
-			ast_node(aroot).set_child(cur); ast_node(cur).release();
+			if (cur != ast_node_none) { ast_node(aroot).set_child(cur); ast_node(cur).release(); }
 			ast_node(aroot).t.v.scope = current_scope();
 
 			pop_scope();

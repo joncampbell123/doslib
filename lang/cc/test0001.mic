@@ -1015,7 +1015,6 @@ global_level:
 typedef unsigned int typedef_scope1_t;
 
 void scopefunc1() {
-	int typedef_scope1_t;
-	int b;
+	int typedef_scope1_t; /* GCC supports this case (using the same name in a subscope) and so should we */
 }
 
