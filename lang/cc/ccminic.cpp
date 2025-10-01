@@ -83,6 +83,8 @@ static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 
 	return ~(sz - addrmask_t(1u));
 }
 
+struct declaration_t;
+
 /////////////////////////////////////////////////////////////////////
 
 #define CCERR_RET(code,pos,...) \
@@ -789,6 +791,49 @@ struct identifier_t {
 
 	bool operator==(const std::string &rhs) const;
 	inline bool operator!=(const std::string &rhs) const { return !(*this == rhs); }
+};
+
+/////////////////////////////////////////////////////////////////////
+
+struct token_t {
+	token_type_t		type = token_type_t::none;
+	position_t		pos;
+	size_t			source_file = no_source_file; /* index into source file array to indicate token source or -1 */
+
+	token_t();
+	~token_t();
+	token_t(const token_t &t);
+	token_t(token_t &&t);
+	token_t(const token_type_t t);
+	token_t(const token_type_t t,const position_t &n_pos,const size_t n_source_file);
+	token_t &operator=(const token_t &t);
+	token_t &operator=(token_t &&t);
+
+	void set_source_file(const size_t i);
+	bool operator==(const token_t &t) const;
+
+	inline bool operator!=(const token_t &t) const { return !(*this == t); }
+
+	union v_t {
+		integer_value_t		integer; /* token_type_t::integer */
+		floating_value_t	floating; /* token_type_t::floating */
+		csliteral_id_t		csliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
+		size_t			paramref; /* token_type_t::r_macro_paramref */
+		declaration_t*		declaration; /* token_type_t::op_declaration */
+		identifier_id_t		identifier;
+		symbol_id_t		symbol;/* token_type_t::op_symbol */
+		scope_id_t		scope; /* token_type_t::op_compound_statement */
+		void*			general_ptr; /* for use in clearing general ppinter */
+	} v;
+
+	std::string to_str(void) const;
+	void clear_v(void);
+
+	private:
+	void common_delete(void);
+	void common_init(void);
+	void common_copy(const token_t &x);
+	void common_move(token_t &x);
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -2264,235 +2309,211 @@ void CCerr(const position_t &pos,const char *fmt,...) {
 	fprintf(stderr,"\n");
 }
 
-/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
-	struct declaration_t;
+token_t::token_t() : pos(1) { common_init(); }
+token_t::~token_t() { common_delete(); }
+token_t::token_t(const token_t &t) { common_copy(t); }
+token_t::token_t(token_t &&t) { common_move(t); }
+token_t::token_t(const token_type_t t) : type(t) { common_init(); }
+token_t::token_t(const token_type_t t,const position_t &n_pos,const size_t n_source_file) : type(t), pos(n_pos) { set_source_file(n_source_file); common_init(); }
+token_t &token_t::operator=(const token_t &t) { common_copy(t); return *this; }
+token_t &token_t::operator=(token_t &&t) { common_move(t); return *this; }
 
-	struct token_t {
-		token_type_t		type = token_type_t::none;
-		position_t		pos;
-		size_t			source_file = no_source_file; /* index into source file array to indicate token source or -1 */
+void token_t::set_source_file(const size_t i) {
+	if (i == source_file) return;
 
-		token_t() : pos(1) { common_init(); }
-		~token_t() { common_delete(); }
-		token_t(const token_t &t) { common_copy(t); }
-		token_t(token_t &&t) { common_move(t); }
-		token_t(const token_type_t t) : type(t) { common_init(); }
-		token_t(const token_type_t t,const position_t &n_pos,const size_t n_source_file) : type(t), pos(n_pos) { set_source_file(n_source_file); common_init(); }
-		token_t &operator=(const token_t &t) { common_copy(t); return *this; }
-		token_t &operator=(token_t &&t) { common_move(t); return *this; }
+	if (source_file != no_source_file) {
+		release_source_file(source_file);
+		source_file = no_source_file;
+	}
 
-		void set_source_file(const size_t i) {
-			if (i == source_file) return;
+	if (i < source_files.size()) {
+		source_file = i;
+		addref_source_file(source_file);
+	}
+}
 
-			if (source_file != no_source_file) {
-				release_source_file(source_file);
-				source_file = no_source_file;
-			}
+bool token_t::operator==(const token_t &t) const {
+	if (type != t.type)
+		return false;
 
-			if (i < source_files.size()) {
-				source_file = i;
-				addref_source_file(source_file);
-			}
-		}
-
-		bool operator==(const token_t &t) const {
-			if (type != t.type)
+	switch (type) {
+		case token_type_t::integer:
+			if (v.integer.v.u != t.v.integer.v.u)
 				return false;
+			if (v.integer.flags != t.v.integer.flags)
+				return false;
+			break;
+		default:
+			break;
+	}
 
-			switch (type) {
-				case token_type_t::integer:
-					if (v.integer.v.u != t.v.integer.v.u)
-						return false;
-					if (v.integer.flags != t.v.integer.flags)
-						return false;
-					break;
-				default:
-					break;
-			}
+	return true;
+}
 
-			return true;
-		}
-		bool operator!=(const token_t &t) const {
-			return !(*this == t);
-		}
+std::string token_t::to_str(void) const {
+	std::string s = token_type_t_str(type);
 
-		union v_t {
-			integer_value_t		integer; /* token_type_t::integer */
-			floating_value_t	floating; /* token_type_t::floating */
-			csliteral_id_t		csliteral; /* token_type_t::charliteral/strliteral/identifier/asm */
-			size_t			paramref; /* token_type_t::r_macro_paramref */
-			declaration_t*		declaration; /* token_type_t::op_declaration */
-			identifier_id_t		identifier;
-			symbol_id_t		symbol;/* token_type_t::op_symbol */
-			scope_id_t		scope; /* token_type_t::op_compound_statement */
-			void*			general_ptr; /* for use in clearing general ppinter */
-		} v;
+	switch (type) {
+		case token_type_t::integer:
+			s += "("; s += v.integer.to_str(); s += ")";
+			break;
+		case token_type_t::floating:
+			s += "("; s += v.floating.to_str(); s += ")";
+			break;
+		case token_type_t::charliteral:
+		case token_type_t::strliteral:
+		case token_type_t::anglestrliteral:
+			s += "("; s += csliteral(v.csliteral).to_str(); s += ")";
+			break;
+		case token_type_t::r_macro_paramref: {
+			char tmp[64];
+			sprintf(tmp,"(%u)",(unsigned int)v.paramref);
+			s += tmp;
+			break; }
+		case token_type_t::identifier:
+		case token_type_t::ppidentifier:
+		case token_type_t::r___asm_text:
+			s += "("; if (v.identifier != identifier_none) s += identifier(v.identifier).to_str(); s += ")";
+			break;
+		case token_type_t::op_compound_statement:
+			s += "("; if (v.scope != scope_none) s += std::string("scope #")+std::to_string((unsigned long)v.scope); s += ")";
+			break;
+		case token_type_t::op_symbol:
+			s += "("; if (v.symbol != symbol_none) s += std::string("symbol #")+std::to_string((unsigned long)v.symbol); s += ")";
+			break;
+		default:
+			break;
+	}
 
-		std::string to_str(void) const {
-			std::string s = token_type_t_str(type);
+	return s;
+}
 
-			switch (type) {
-				case token_type_t::integer:
-					s += "("; s += v.integer.to_str(); s += ")";
-					break;
-				case token_type_t::floating:
-					s += "("; s += v.floating.to_str(); s += ")";
-					break;
-				case token_type_t::charliteral:
-				case token_type_t::strliteral:
-				case token_type_t::anglestrliteral:
-					s += "("; s += csliteral(v.csliteral).to_str(); s += ")";
-					break;
-				case token_type_t::r_macro_paramref: {
-					char tmp[64];
-					sprintf(tmp,"(%u)",(unsigned int)v.paramref);
-					s += tmp;
-					break; }
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
-					s += "("; if (v.identifier != identifier_none) s += identifier(v.identifier).to_str(); s += ")";
-					break;
-				case token_type_t::op_compound_statement:
-					s += "("; if (v.scope != scope_none) s += std::string("scope #")+std::to_string((unsigned long)v.scope); s += ")";
-					break;
-				case token_type_t::op_symbol:
-					s += "("; if (v.symbol != symbol_none) s += std::string("symbol #")+std::to_string((unsigned long)v.symbol); s += ")";
-					break;
-				default:
-					break;
-			}
+void token_t::clear_v(void) {
+	common_delete();
+}
 
-			return s;
-		}
+void token_t::common_delete(void) {
+	switch (type) {
+		case token_type_t::charliteral:
+		case token_type_t::strliteral:
+		case token_type_t::anglestrliteral:
+			csliteral.release(v.csliteral);
+			break;
+		case token_type_t::op_declaration:
+			typ_delete(v.declaration);
+			break;
+		case token_type_t::identifier:
+		case token_type_t::ppidentifier:
+		case token_type_t::r___asm_text:
+			identifier.release(v.identifier);
+			break;
+		default:
+			break;
+	}
 
-		void clear_v(void) {
-			common_delete();
-		}
+	set_source_file(no_source_file);
+}
 
-private:
-		void common_delete(void) {
-			switch (type) {
-				case token_type_t::charliteral:
-				case token_type_t::strliteral:
-				case token_type_t::anglestrliteral:
-					csliteral.release(v.csliteral);
-					break;
-				case token_type_t::op_declaration:
-					typ_delete(v.declaration);
-					break;
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
-					identifier.release(v.identifier);
-					break;
-				default:
-					break;
-			}
+void token_t::common_init(void) {
+	switch (type) {
+		case token_type_t::integer:
+			v.integer.init();
+			break;
+		case token_type_t::floating:
+			v.floating.init();
+			break;
+		case token_type_t::charliteral:
+		case token_type_t::strliteral:
+		case token_type_t::anglestrliteral:
+			v.csliteral = csliteral_none;
+			break;
+		case token_type_t::op_declaration:
+			v.general_ptr = NULL;
+			static_assert( offsetof(v_t,general_ptr) == offsetof(v_t,declaration), "oops" );
+			break;
+		case token_type_t::identifier:
+		case token_type_t::ppidentifier:
+		case token_type_t::r___asm_text:
+			v.identifier = identifier_none;
+			break;
+		case token_type_t::op_compound_statement:
+			v.scope = scope_none;
+			break;
+		case token_type_t::op_symbol:
+			v.symbol = symbol_none;
+			break;
+		default:
+			break;
+	}
+}
 
-			set_source_file(no_source_file);
-		}
+void token_t::common_copy(const token_t &x) {
+	assert(&x != this);
 
-		void common_init(void) {
-			switch (type) {
-				case token_type_t::integer:
-					v.integer.init();
-					break;
-				case token_type_t::floating:
-					v.floating.init();
-					break;
-				case token_type_t::charliteral:
-				case token_type_t::strliteral:
-				case token_type_t::anglestrliteral:
-					v.csliteral = csliteral_none;
-					break;
-				case token_type_t::op_declaration:
-					v.general_ptr = NULL;
-					static_assert( offsetof(v_t,general_ptr) == offsetof(v_t,declaration), "oops" );
-					break;
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
-					v.identifier = identifier_none;
-					break;
-				case token_type_t::op_compound_statement:
-					v.scope = scope_none;
-					break;
-				case token_type_t::op_symbol:
-					v.symbol = symbol_none;
-					break;
-				default:
-					break;
-			}
-		}
+	common_delete();
 
-		void common_copy(const token_t &x) {
-			assert(&x != this);
+	set_source_file(x.source_file);
+	type = x.type;
+	pos = x.pos;
 
-			common_delete();
+	common_init();
 
-			set_source_file(x.source_file);
-			type = x.type;
-			pos = x.pos;
+	switch (type) {
+		case token_type_t::charliteral:
+		case token_type_t::strliteral:
+		case token_type_t::anglestrliteral:
+			csliteral.assign(/*to*/v.csliteral,/*from*/x.v.csliteral);
+			break;
+		case token_type_t::op_declaration:
+			throw std::runtime_error("Copy constructor not available");
+			break;
+		case token_type_t::identifier:
+		case token_type_t::ppidentifier:
+		case token_type_t::r___asm_text:
+			identifier.assign(/*to*/v.identifier,/*from*/x.v.identifier);
+			break;
+		default:
+			v = x.v;
+			break;
+	}
+}
 
-			common_init();
+void token_t::common_move(token_t &x) {
+	common_delete();
 
-			switch (type) {
-				case token_type_t::charliteral:
-				case token_type_t::strliteral:
-				case token_type_t::anglestrliteral:
-					csliteral.assign(/*to*/v.csliteral,/*from*/x.v.csliteral);
-					break;
-				case token_type_t::op_declaration:
-					throw std::runtime_error("Copy constructor not available");
-					break;
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
-					identifier.assign(/*to*/v.identifier,/*from*/x.v.identifier);
-					break;
-				default:
-					v = x.v;
-					break;
-			}
-		}
+	source_file = x.source_file; x.source_file = no_source_file;
+	type = x.type; x.type = token_type_t::none;
+	pos = x.pos; x.pos = position_t();
 
-		void common_move(token_t &x) {
-			common_delete();
+	common_init();
 
-			source_file = x.source_file; x.source_file = no_source_file;
-			type = x.type; x.type = token_type_t::none;
-			pos = x.pos; x.pos = position_t();
+	switch (type) {
+		case token_type_t::charliteral:
+		case token_type_t::strliteral:
+		case token_type_t::anglestrliteral:
+			csliteral.assignmove(/*to*/v.csliteral,/*from*/x.v.csliteral);
+			break;
+		case token_type_t::identifier:
+		case token_type_t::ppidentifier:
+		case token_type_t::r___asm_text:
+			identifier.assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
+			break;
+		case token_type_t::op_compound_statement:
+			v.scope = x.v.scope; x.v.scope = scope_none;
+			break;
+		case token_type_t::op_symbol:
+			v.symbol = x.v.symbol; x.v.symbol = symbol_none;
+			break;
+		default:
+			v = x.v;
+			memset(&x.v,0,sizeof(x.v)); /* x.type == none so pointers no longer matter */
+			break;
+	}
+}
 
-			common_init();
-
-			switch (type) {
-				case token_type_t::charliteral:
-				case token_type_t::strliteral:
-				case token_type_t::anglestrliteral:
-					csliteral.assignmove(/*to*/v.csliteral,/*from*/x.v.csliteral);
-					break;
-				case token_type_t::identifier:
-				case token_type_t::ppidentifier:
-				case token_type_t::r___asm_text:
-					identifier.assignmove(/*to*/v.identifier,/*from*/x.v.identifier);
-					break;
-				case token_type_t::op_compound_statement:
-					v.scope = x.v.scope; x.v.scope = scope_none;
-					break;
-				case token_type_t::op_symbol:
-					v.symbol = x.v.symbol; x.v.symbol = symbol_none;
-					break;
-				default:
-					v = x.v;
-					memset(&x.v,0,sizeof(x.v)); /* x.type == none so pointers no longer matter */
-					break;
-			}
-		}
-	};
-
-	////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
 	bool is_newline(const unsigned char b) {
 		return b == '\r' || b == '\n';
