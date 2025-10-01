@@ -94,6 +94,14 @@ static constexpr unsigned int CBIS_NEXT = (1u << 2u);
 
 /////////////////////////////////////////////////////////////////////
 
+/* declspec flags */
+static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
+static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
+static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
+static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
+
+/////////////////////////////////////////////////////////////////////
+
 #define CCERR_RET(code,pos,...) \
 	do { \
 		CCerr(pos,__VA_ARGS__); \
@@ -146,6 +154,13 @@ struct lgtok_state_t {
 	static constexpr unsigned int FL_MSASM = (1u << 0u); /* __asm ... */
 	static constexpr unsigned int FL_NEWLINE = (1u << 1u);
 	static constexpr unsigned int FL_ARROWSTR = (1u << 2u); /* <string> in #include <string> */
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct declspec_t { // parsing results of __declspec()
+	addrmask_t				align = addrmask_none;
+	unsigned int				dcs_flags = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -5917,17 +5932,6 @@ ast_node_t &ast_node_t::release(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/* declspec flags */
-static constexpr unsigned int			DCS_FL_DEPRECATED = 1u << 0u;
-static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
-static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
-static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
-
-struct declspec_t { // parsing results of __declspec()
-	addrmask_t				align = addrmask_none;
-	unsigned int				dcs_flags = 0;
-};
-
 struct declaration_specifiers_t {
 	storage_class_t				storage_class = 0;
 	type_specifier_t			type_specifier = 0;
@@ -5946,11 +5950,9 @@ struct declaration_specifiers_t {
 	declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
 	declaration_specifiers_t(declaration_specifiers_t &&x);
 	declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
-
 	~declaration_specifiers_t();
 
 	void common_move(declaration_specifiers_t &o);
-
 	void common_copy(const declaration_specifiers_t &o);
 };
 
