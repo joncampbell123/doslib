@@ -743,6 +743,26 @@ csliteral_pool_t csliteral;
 
 ////////////////////////////////////////////////////////////////////
 
+int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
+	dbuf.free();
+
+	if (csid == csliteral_none)
+		return 1;
+
+	csliteral_t &cslit = csliteral(csid);
+	if (cslit.length == 0)
+		return 1;
+
+	if (!dbuf.allocate(std::max(cslit.length,size_t(128)))) /*allocate will reject small amounts*/
+		return errno_return(ENOMEM);
+
+	memcpy(dbuf.data,cslit.data,cslit.length);
+	dbuf.end = dbuf.data + cslit.length;
+	return 1;
+}
+
+////////////////////////////////////////////////////////////////////
+
 source_file_object::source_file_object(const unsigned int new_iface) : iface(new_iface) {
 }
 
@@ -2085,26 +2105,6 @@ std::string csliteral_t::to_str(void) const {
 	s += tmp;
 
 	return s;
-}
-
-////////////////////////////////////////////////////////////////////
-
-int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
-	dbuf.free();
-
-	if (csid == csliteral_none)
-		return 1;
-
-	csliteral_t &cslit = csliteral(csid);
-	if (cslit.length == 0)
-		return 1;
-
-	if (!dbuf.allocate(std::max(cslit.length,size_t(128)))) /*allocate will reject small amounts*/
-		return errno_return(ENOMEM);
-
-	memcpy(dbuf.data,cslit.data,cslit.length);
-	dbuf.end = dbuf.data + cslit.length;
-	return 1;
 }
 
 /////////////////////////////////////////////////
