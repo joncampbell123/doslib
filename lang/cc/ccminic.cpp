@@ -1248,9 +1248,7 @@ struct segment_t {
 	type_t					type = type_t::NONE;
 	use_t					use = use_t::NONE;
 	data_size_t				limit = data_size_none;
-	data_size_t				size = data_size_none;
 	unsigned int				flags = 0;
-	data_offset_t				next_alloc = 0;
 
 	segment_t();
 	segment_t(const segment_t &) = delete;
@@ -1292,7 +1290,6 @@ struct symbol_t {
 	scope_id_t				scope = scope_none;
 	scope_id_t				parent_of_scope = scope_none;
 	segment_id_t				part_of_segment = segment_none;
-	data_offset_t				offset = data_offset_none;
 	enum type_t				sym_type = NONE;
 	unsigned int				flags = 0;
 
@@ -6561,9 +6558,7 @@ void segment_t::common_move(segment_t &x) {
 	type = x.type; x.type = type_t::NONE;
 	use = x.use; x.use = use_t::NONE;
 	limit = x.limit; x.limit = addrmask_none;
-	size = x.size; x.size = data_size_none;
 	flags = x.flags; x.flags = 0;
-	next_alloc = x.next_alloc; x.next_alloc = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -6586,7 +6581,6 @@ void symbol_t::common_move(symbol_t &x) {
 	scope = x.scope; x.scope = scope_none;
 	parent_of_scope = x.parent_of_scope; x.parent_of_scope = scope_none;
 	part_of_segment = x.part_of_segment; x.part_of_segment = segment_none;
-	offset = x.offset; x.offset = data_offset_none;
 	sym_type = x.sym_type; x.sym_type = NONE;
 	flags = x.flags; x.flags = 0;
 }
@@ -6721,7 +6715,7 @@ segment_id_t		fardata_segment = segment_none;
 					const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
 					const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
 
-					if (sym.offset == data_offset_none && (sym.flags & symbol_t::FL_DEFINED) &&
+					if ((sym.flags & symbol_t::FL_DEFINED) &&
 						(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
 						!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
 						am != addrmask_none) {
@@ -6732,21 +6726,9 @@ segment_id_t		fardata_segment = segment_none;
 
 							/* stack must align to largest alignment of symbol */
 							se.align &= am;
-
-							/* next symbol align and assign */
-							se.next_alloc = (se.next_alloc + (~am)) & am;
-							sym.offset = se.next_alloc;
-							se.next_alloc += sz;
 						}
 					}
 				}
-			}
-
-			for (auto &sg : segments) {
-				if (sg.size == data_size_none)
-					sg.size = 0;
-				if (sg.size < sg.next_alloc)
-					sg.size = sg.next_alloc;
 			}
 
 			return true;
@@ -11032,8 +11014,6 @@ common_error:
 			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
 		if (s.limit != data_size_none)
 			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.limit,(unsigned long long)s.limit);
-		if (s.size != data_size_none)
-			fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.size,(unsigned long long)s.size);
 	}
 
 	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
@@ -11072,9 +11052,6 @@ common_error:
 			fprintf(stderr," segment=#%u:'%s'",
 				(unsigned int)(&so - &segments[0]),
 				(so.name != identifier_none) ? identifier(so.name).to_str().c_str() : "(none)");
-		}
-		if (sym.offset != data_offset_none) {
-			fprintf(stderr," offset=0x%llx",(unsigned long long)sym.offset);
 		}
 
 		{
