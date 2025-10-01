@@ -7681,6 +7681,45 @@ data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 	return data_size_none;
 }
 
+////////////////////////////////////////////////////////////////////
+
+bool arrange_symbols(void) {
+	for (auto &sg : segments) {
+		if (sg.align == addrmask_none)
+			sg.align = addrmask_make(1);
+	}
+
+	for (auto &sym : symbols) {
+		if (sym.part_of_segment == segment_none)
+			sym.part_of_segment = decide_sym_segment(sym);
+
+		if (sym.part_of_segment != segment_none) {
+			segment_t &se = segref(sym.part_of_segment);
+
+			const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+			const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
+
+			if ((sym.flags & symbol_t::FL_DEFINED) &&
+					(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
+					!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
+					am != addrmask_none) {
+
+				if (sym.sym_type == symbol_t::VARIABLE ||
+						sym.sym_type == symbol_t::CONST ||
+						sym.sym_type == symbol_t::STR) {
+
+					/* stack must align to largest alignment of symbol */
+					se.align &= am;
+				}
+			}
+		}
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////
+
 bool is_ast_strconstexpr(token_t &t) {
 	switch (t.type) {
 		case token_type_t::strliteral:
@@ -9121,7 +9160,6 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 
 	struct cc_state_t {
 		int CCstep(rbuf &buf,source_file_object &sfo);
-		bool arrange_symbols(void);
 		bool init(void);
 
 		lgtok_state_t	lst;
@@ -9246,41 +9284,6 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 		int external_declaration(void);
 		int translation_unit(void);
 	};
-
-bool cc_state_t::arrange_symbols(void) {
-	for (auto &sg : segments) {
-		if (sg.align == addrmask_none)
-			sg.align = addrmask_make(1);
-	}
-
-	for (auto &sym : symbols) {
-		if (sym.part_of_segment == segment_none)
-			sym.part_of_segment = decide_sym_segment(sym);
-
-		if (sym.part_of_segment != segment_none) {
-			segment_t &se = segref(sym.part_of_segment);
-
-			const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
-			const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
-
-			if ((sym.flags & symbol_t::FL_DEFINED) &&
-					(sym.flags & (symbol_t::FL_PARAMETER|symbol_t::FL_STACK)) == 0 &&
-					!(sym.part_of_segment == stack_segment) && sz != data_size_none &&
-					am != addrmask_none) {
-
-				if (sym.sym_type == symbol_t::VARIABLE ||
-						sym.sym_type == symbol_t::CONST ||
-						sym.sym_type == symbol_t::STR) {
-
-					/* stack must align to largest alignment of symbol */
-					se.align &= am;
-				}
-			}
-		}
-	}
-
-	return true;
-}
 
 bool cc_state_t::init(void) {
 	assert(scopes.empty());
@@ -13674,7 +13677,7 @@ int main(int argc,char **argv) {
 
 			while ((r=ccst.CCstep(rb,*sfo)) > 0);
 
-			if (!ccst.arrange_symbols())
+			if (!arrange_symbols())
 				fprintf(stderr,"Failed to arrange symbols\n");
 
 			debug_dump_general("");
