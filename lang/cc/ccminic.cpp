@@ -174,16 +174,20 @@
 		std::string		path;
 		uint16_t		refcount = 0;
 
-		bool empty(void) const {
-			return refcount == 0 && path.empty();
-		}
-		void clear(void) {
-			path.clear();
-			refcount = 0;
-		}
+		bool			empty(void) const;
+		void			clear(void);
 	};
 
 	std::vector<source_file_t> source_files;
+
+bool source_file_t::empty(void) const {
+	return refcount == 0 && path.empty();
+}
+
+void source_file_t::clear(void) {
+	path.clear();
+	refcount = 0;
+}
 
 	size_t alloc_source_file(const std::string &path) {
 		size_t i=0;
@@ -248,133 +252,157 @@
 
 		size_t				source_file = no_source_file;
 
-		rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
-		~rbuf() { free(); }
+		rbuf();
+		~rbuf();
 
 		rbuf(const rbuf &x) = delete;
 		rbuf &operator=(const rbuf &x) = delete;
 
-		rbuf(rbuf &&x) { common_move(x); }
-		rbuf &operator=(rbuf &&x) { common_move(x); return *this; }
+		rbuf(rbuf &&x);
+		rbuf &operator=(rbuf &&x);
 
-		void set_source_file(const size_t i) {
-			if (i == source_file) return;
+		void set_source_file(const size_t i);
+		void common_move(rbuf &x);
 
-			if (source_file != no_source_file) {
-				release_source_file(source_file);
-				source_file = no_source_file;
-			}
-
-			if (i < source_files.size()) {
-				source_file = i;
-				addref_source_file(source_file);
-			}
-		}
-
-		void common_move(rbuf &x) {
-			assert(x.sanity_check());
-			base  = x.base;  x.base = NULL;
-			data  = x.data;  x.data = NULL;
-			end   = x.end;   x.end = NULL;
-			fence = x.fence; x.fence = NULL;
-			flags = x.flags; x.flags = 0;
-			err   = x.err;   x.err = 0;
-			pos   = x.pos;
-			source_file = x.source_file; x.source_file = no_source_file;
-			assert(sanity_check());
-		}
-
-		size_t buffer_size(void) const {
-			return size_t(fence - base);
-		}
-
-		size_t data_offset(void) const {
-			return size_t(data - base);
-		}
-
-		size_t data_avail(void) const {
-			return size_t(end - data);
-		}
-
-		size_t can_write(void) const {
-			return size_t(fence - end);
-		}
-
-		bool sanity_check(void) const {
-			return (base <= data) && (data <= end) && (end <= fence);
-		}
-
-		void free(void) {
-			if (base) {
-				set_source_file(no_source_file);
-				::free((void*)base);
-				base = data = end = fence = NULL;
-			}
-		}
-
-		unsigned char peekb(const size_t ofs=0) {
-			if ((data+ofs) < end) return data[ofs];
-			return 0;
-		}
-
-		void discardb(size_t count=1) {
-			while (data < end && count > 0) {
-				pos_track(*data++);
-				count--;
-			}
-		}
-
-		unsigned char getb(void) {
-			if (data < end) { pos_track(*data); return *data++; }
-			return 0;
-		}
-
-		bool allocate(const size_t sz=4096) {
-			if (base != NULL || sz < 64 || sz > 1024*1024)
-				return false;
-
-			if ((base=data=end=(unsigned char*)::malloc(sz+1)) == NULL)
-				return false;
-
-			fence = base + sz;
-			*fence = 0;
-			return true;
-		}
-
-		void flush(void) {
-			if (data_offset() != 0) {
-				const size_t mv = data_avail();
-
-				assert(sanity_check());
-				if (mv != 0) memmove(base,data,mv);
-				data = base;
-				end = data + mv;
-				assert(sanity_check());
-			}
-		}
-
-		void lazy_flush(void) {
-			if (data_offset() >= (buffer_size()/2))
-				flush();
-		}
-
-		void pos_track(const unsigned char c) {
-			pos.ofs++;
-			if (c == '\r') {
-			}
-			else if (c == '\n') {
-				pos.col=1;
-				pos.row++;
-			}
-			else if (c < 0x80 || c >= 0xc0) {
-				pos.col++;
-			}
-		}
-
-		void pos_track(const unsigned char *from,const unsigned char *to) {
-			while (from < to) pos_track(*from++);
-		}
+		size_t buffer_size(void) const;
+		size_t data_offset(void) const;
+		size_t data_avail(void) const;
+		size_t can_write(void) const;
+		bool sanity_check(void) const;
+		void free(void);
+		unsigned char peekb(const size_t ofs=0);
+		void discardb(size_t count=1);
+		unsigned char getb(void);
+		bool allocate(const size_t sz=4096);
+		void flush(void);
+		void lazy_flush(void);
+		void pos_track(const unsigned char c);
+		void pos_track(const unsigned char *from,const unsigned char *to);
 	};
+
+rbuf::rbuf() { pos.col=1; pos.row=1; pos.ofs=0; }
+rbuf::~rbuf() { free(); }
+
+rbuf::rbuf(rbuf &&x) { common_move(x); }
+rbuf &rbuf::operator=(rbuf &&x) { common_move(x); return *this; }
+
+void rbuf::set_source_file(const size_t i) {
+	if (i == source_file) return;
+
+	if (source_file != no_source_file) {
+		release_source_file(source_file);
+		source_file = no_source_file;
+	}
+
+	if (i < source_files.size()) {
+		source_file = i;
+		addref_source_file(source_file);
+	}
+}
+
+void rbuf::common_move(rbuf &x) {
+	assert(x.sanity_check());
+	base  = x.base;  x.base = NULL;
+	data  = x.data;  x.data = NULL;
+	end   = x.end;   x.end = NULL;
+	fence = x.fence; x.fence = NULL;
+	flags = x.flags; x.flags = 0;
+	err   = x.err;   x.err = 0;
+	pos   = x.pos;
+	source_file = x.source_file; x.source_file = no_source_file;
+	assert(sanity_check());
+}
+
+size_t rbuf::buffer_size(void) const {
+	return size_t(fence - base);
+}
+
+size_t rbuf::data_offset(void) const {
+	return size_t(data - base);
+}
+
+size_t rbuf::data_avail(void) const {
+	return size_t(end - data);
+}
+
+size_t rbuf::can_write(void) const {
+	return size_t(fence - end);
+}
+
+bool rbuf::sanity_check(void) const {
+	return (base <= data) && (data <= end) && (end <= fence);
+}
+
+void rbuf::free(void) {
+	if (base) {
+		set_source_file(no_source_file);
+		::free((void*)base);
+		base = data = end = fence = NULL;
+	}
+}
+
+unsigned char rbuf::peekb(const size_t ofs) {
+	if ((data+ofs) < end) return data[ofs];
+	return 0;
+}
+
+void rbuf::discardb(size_t count) {
+	while (data < end && count > 0) {
+		pos_track(*data++);
+		count--;
+	}
+}
+
+unsigned char rbuf::getb(void) {
+	if (data < end) { pos_track(*data); return *data++; }
+	return 0;
+}
+
+bool rbuf::allocate(const size_t sz) {
+	if (base != NULL || sz < 64 || sz > 1024*1024)
+		return false;
+
+	if ((base=data=end=(unsigned char*)::malloc(sz+1)) == NULL)
+		return false;
+
+	fence = base + sz;
+	*fence = 0;
+	return true;
+}
+
+void rbuf::flush(void) {
+	if (data_offset() != 0) {
+		const size_t mv = data_avail();
+
+		assert(sanity_check());
+		if (mv != 0) memmove(base,data,mv);
+		data = base;
+		end = data + mv;
+		assert(sanity_check());
+	}
+}
+
+void rbuf::lazy_flush(void) {
+	if (data_offset() >= (buffer_size()/2))
+		flush();
+}
+
+void rbuf::pos_track(const unsigned char c) {
+	pos.ofs++;
+	if (c == '\r') {
+	}
+	else if (c == '\n') {
+		pos.col=1;
+		pos.row++;
+	}
+	else if (c < 0x80 || c >= 0xc0) {
+		pos.col++;
+	}
+}
+
+void rbuf::pos_track(const unsigned char *from,const unsigned char *to) {
+	while (from < to) pos_track(*from++);
+}
 
 	static int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo) {
 		assert(buf.base != NULL);
@@ -1500,57 +1528,62 @@
 
 		static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
 
-		std::string to_str(void) const {
-			std::string s;
-			char tmp[256];
-
-			if (!(flags & FL_NAN)) {
-				sprintf(tmp,"v=0x%llx e=%ld ",(unsigned long long)mantissa,(long)exponent);
-				s += tmp;
-
-				sprintf(tmp,"%.20f",ldexp(double(mantissa),(int)exponent-63));
-				s += tmp;
-			}
-			else {
-				s += "NaN";
-			}
-
-			s += " t=\"";
-			switch (type) {
-				case type_t::NONE:       s += "none"; break;
-				case type_t::FLOAT:      s += "float"; break;
-				case type_t::DOUBLE:     s += "double"; break;
-				case type_t::LONGDOUBLE: s += "long double"; break;
-				default: break;
-			}
-			s += "\"";
-
-			if (flags & FL_NEGATIVE) s += " negative";
-			if (flags & FL_OVERFLOW) s += " overflow";
-
-			return s;
-		}
-
-		void init(void) { flags = 0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
-
-		void setsn(const uint64_t m,const int32_t e) {
-			mantissa = m;
-			exponent = e+63;
-			normalize();
-		}
-
-		void normalize(void) {
-			if (mantissa != uint64_t(0)) {
-				while (!(mantissa & mant_msb)) {
-					mantissa <<= uint64_t(1ull);
-					exponent--;
-				}
-			}
-			else {
-				exponent = 0;
-			}
-		}
+		std::string to_str(void) const;
+		void init(void);
+		void setsn(const uint64_t m,const int32_t e);
+		void normalize(void);
 	};
+
+std::string floating_value_t::to_str(void) const {
+	std::string s;
+	char tmp[256];
+
+	if (!(flags & FL_NAN)) {
+		sprintf(tmp,"v=0x%llx e=%ld ",(unsigned long long)mantissa,(long)exponent);
+		s += tmp;
+
+		sprintf(tmp,"%.20f",ldexp(double(mantissa),(int)exponent-63));
+		s += tmp;
+	}
+	else {
+		s += "NaN";
+	}
+
+	s += " t=\"";
+	switch (type) {
+		case type_t::NONE:       s += "none"; break;
+		case type_t::FLOAT:      s += "float"; break;
+		case type_t::DOUBLE:     s += "double"; break;
+		case type_t::LONGDOUBLE: s += "long double"; break;
+		default: break;
+	}
+	s += "\"";
+
+	if (flags & FL_NEGATIVE) s += " negative";
+	if (flags & FL_OVERFLOW) s += " overflow";
+
+	return s;
+}
+
+void floating_value_t::init(void) { flags = 0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
+
+void floating_value_t::setsn(const uint64_t m,const int32_t e) {
+	mantissa = m;
+	exponent = e+63;
+	normalize();
+}
+
+void floating_value_t::normalize(void) {
+	if (mantissa != uint64_t(0)) {
+		while (!(mantissa & mant_msb)) {
+			mantissa <<= uint64_t(1ull);
+			exponent--;
+		}
+	}
+	else {
+		exponent = 0;
+	}
+}
 
 	struct integer_value_t {
 		enum class type_t:unsigned char {
@@ -1575,36 +1608,39 @@
 		static constexpr unsigned int		FL_SIGNED     = (1u << 0u);
 		static constexpr unsigned int		FL_OVERFLOW   = (1u << 1u);
 
-		std::string to_str(void) const {
-			std::string s;
-			char tmp[192];
-
-			s += "v=";
-			if (flags & FL_SIGNED) sprintf(tmp,"%lld/0x%llx",(signed long long)v.v,(unsigned long long)v.u);
-			else sprintf(tmp,"%llu/0x%llx",(unsigned long long)v.u,(unsigned long long)v.u);
-			s += tmp;
-
-			s += " t=\"";
-			switch (type) {
-				case type_t::NONE:       s += "none"; break;
-				case type_t::BOOL:       s += "bool"; break;
-				case type_t::CHAR:       s += "char"; break;
-				case type_t::SHORT:      s += "short"; break;
-				case type_t::INT:        s += "int"; break;
-				case type_t::LONG:       s += "long"; break;
-				case type_t::LONGLONG:   s += "longlong"; break;
-				default: break;
-			}
-			s += "\"";
-
-			if (flags & FL_SIGNED) s += " signed";
-			if (flags & FL_OVERFLOW) s += " overflow";
-
-			return s;
-		}
-
-		void init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
+		std::string to_str(void) const;
+		void init(void);
 	};
+
+std::string integer_value_t::to_str(void) const {
+	std::string s;
+	char tmp[192];
+
+	s += "v=";
+	if (flags & FL_SIGNED) sprintf(tmp,"%lld/0x%llx",(signed long long)v.v,(unsigned long long)v.u);
+	else sprintf(tmp,"%llu/0x%llx",(unsigned long long)v.u,(unsigned long long)v.u);
+	s += tmp;
+
+	s += " t=\"";
+	switch (type) {
+		case type_t::NONE:       s += "none"; break;
+		case type_t::BOOL:       s += "bool"; break;
+		case type_t::CHAR:       s += "char"; break;
+		case type_t::SHORT:      s += "short"; break;
+		case type_t::INT:        s += "int"; break;
+		case type_t::LONG:       s += "long"; break;
+		case type_t::LONGLONG:   s += "longlong"; break;
+		default: break;
+	}
+	s += "\"";
+
+	if (flags & FL_SIGNED) s += " signed";
+	if (flags & FL_OVERFLOW) s += " overflow";
+
+	return s;
+}
+
+void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 
 	///////////////////////////////////////////////////////
 
@@ -3141,22 +3177,27 @@ try_again:	t = token_t();
 		static constexpr unsigned int	FL_NO_VA_ARGS = 1u << 2u; /* set if GNU args... used instead */
 		static constexpr unsigned int	FL_STRINGIFY = 1u << 3u; /* uses #parameter to stringify */
 
-		pptok_macro_t() { }
-		pptok_macro_t(const pptok_macro_t &) = delete;
-		pptok_macro_t &operator=(const pptok_macro_t &) = delete;
-		pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
-		pptok_macro_t &operator=(pptok_macro_t &&x) { common_move(x); return *this; }
-		~pptok_macro_t() {
-			for (auto &pid : parameters) identifier.release(pid);
-			parameters.clear();
-		}
+		pptok_macro_t();
+		pptok_macro_t(pptok_macro_t &&x);
+		pptok_macro_t &operator=(pptok_macro_t &&x);
+		~pptok_macro_t();
 
-		void common_move(pptok_macro_t &o) {
-			flags = o.flags; o.flags = 0;
-			tokens = std::move(o.tokens);
-			parameters = std::move(o.parameters);
-		}
+		void common_move(pptok_macro_t &o);
 	};
+
+pptok_macro_t::pptok_macro_t() { }
+pptok_macro_t::pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
+pptok_macro_t &pptok_macro_t::operator=(pptok_macro_t &&x) { common_move(x); return *this; }
+pptok_macro_t::~pptok_macro_t() {
+	for (auto &pid : parameters) identifier.release(pid);
+	parameters.clear();
+}
+
+void pptok_macro_t::common_move(pptok_macro_t &o) {
+	flags = o.flags; o.flags = 0;
+	tokens = std::move(o.tokens);
+	parameters = std::move(o.parameters);
+}
 
 	struct pptok_state_t {
 		struct pptok_macro_ent_t {
@@ -5568,17 +5609,20 @@ try_again_w_token:
 		static void arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s);
 		static void arrayrelease(std::vector<ast_node_id_t> &d);
 
-		void common_move(ast_node_t &o) {
-			t = std::move(o.t);
-			ref = o.ref; o.ref = 0;
-			next = o.next; o.next = ast_node_none;
-			child = o.child; o.child = ast_node_none;
-		}
-
-		std::string to_str(void) const {
-			return std::string(); // TODO
-		}
+		void common_move(ast_node_t &o);
+		std::string to_str(void) const;
 	};
+
+void ast_node_t::common_move(ast_node_t &o) {
+	t = std::move(o.t);
+	ref = o.ref; o.ref = 0;
+	next = o.next; o.next = ast_node_none;
+	child = o.child; o.child = ast_node_none;
+}
+
+std::string ast_node_t::to_str(void) const {
+	return std::string(); // TODO
+}
 
 	using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
 	class ast_node_pool : public ast_node_pool_t {
@@ -5684,57 +5728,74 @@ try_again_w_token:
 		std::vector<symbol_id_t>		enum_list;
 		unsigned int				count = 0;
 
-		bool empty(void) const {
-			return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
-				type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 &&
-				align == addrmask_none && dcs_flags == 0 && size == data_size_none;
-		}
+		bool empty(void) const;
 
-		declaration_specifiers_t() { }
-		declaration_specifiers_t(const declaration_specifiers_t &x) { common_copy(x); }
-		declaration_specifiers_t &operator=(const declaration_specifiers_t &x) { common_copy(x); return *this; }
-		declaration_specifiers_t(declaration_specifiers_t &&x) { common_move(x); }
-		declaration_specifiers_t &operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
+		declaration_specifiers_t();
+		declaration_specifiers_t(const declaration_specifiers_t &x);
+		declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
+		declaration_specifiers_t(declaration_specifiers_t &&x);
+		declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
 
-		~declaration_specifiers_t() {
-		}
+		~declaration_specifiers_t();
 
-		void common_move(declaration_specifiers_t &o) {
-			storage_class = o.storage_class; o.storage_class = 0;
-			type_specifier = o.type_specifier; o.type_specifier = 0;
-			type_qualifier = o.type_qualifier; o.type_qualifier = 0;
-			type_identifier_symbol = o.type_identifier_symbol;
-			size = o.size; o.size = data_size_none;
-			align = o.align; o.align = addrmask_none;
-			dcs_flags = o.dcs_flags; o.dcs_flags = 0;
-			enum_list = std::move(o.enum_list);
-			count = o.count; o.count = 0;
-		}
+		void common_move(declaration_specifiers_t &o);
 
-		void common_copy(const declaration_specifiers_t &o) {
-			storage_class = o.storage_class;
-			type_specifier = o.type_specifier;
-			type_qualifier = o.type_qualifier;
-			type_identifier_symbol = o.type_identifier_symbol;
-			size = o.size;
-			align = o.align;
-			dcs_flags = o.dcs_flags;
-			enum_list = o.enum_list;
-			count = o.count;
-		}
+		void common_copy(const declaration_specifiers_t &o);
 	};
+
+bool declaration_specifiers_t::empty(void) const {
+	return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
+		type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 &&
+		align == addrmask_none && dcs_flags == 0 && size == data_size_none;
+}
+
+declaration_specifiers_t::declaration_specifiers_t() { }
+declaration_specifiers_t::declaration_specifiers_t(const declaration_specifiers_t &x) { common_copy(x); }
+declaration_specifiers_t &declaration_specifiers_t::operator=(const declaration_specifiers_t &x) { common_copy(x); return *this; }
+declaration_specifiers_t::declaration_specifiers_t(declaration_specifiers_t &&x) { common_move(x); }
+declaration_specifiers_t &declaration_specifiers_t::operator=(declaration_specifiers_t &&x) { common_move(x); return *this; }
+
+declaration_specifiers_t::~declaration_specifiers_t() {
+}
+
+void declaration_specifiers_t::common_move(declaration_specifiers_t &o) {
+	storage_class = o.storage_class; o.storage_class = 0;
+	type_specifier = o.type_specifier; o.type_specifier = 0;
+	type_qualifier = o.type_qualifier; o.type_qualifier = 0;
+	type_identifier_symbol = o.type_identifier_symbol;
+	size = o.size; o.size = data_size_none;
+	align = o.align; o.align = addrmask_none;
+	dcs_flags = o.dcs_flags; o.dcs_flags = 0;
+	enum_list = std::move(o.enum_list);
+	count = o.count; o.count = 0;
+}
+
+void declaration_specifiers_t::common_copy(const declaration_specifiers_t &o) {
+	storage_class = o.storage_class;
+	type_specifier = o.type_specifier;
+	type_qualifier = o.type_qualifier;
+	type_identifier_symbol = o.type_identifier_symbol;
+	size = o.size;
+	align = o.align;
+	dcs_flags = o.dcs_flags;
+	enum_list = o.enum_list;
+	count = o.count;
+}
 
 	struct pointer_t {
 		type_qualifier_t			tq = 0;
 
-		bool operator==(const pointer_t &o) const {
-			return tq == o.tq;
-		}
-
-		bool operator!=(const pointer_t &o) const {
-			return !(*this == o);
-		}
+		bool operator==(const pointer_t &o) const;
+		bool operator!=(const pointer_t &o) const;
 	};
+
+bool pointer_t::operator==(const pointer_t &o) const {
+	return tq == o.tq;
+}
+
+bool pointer_t::operator!=(const pointer_t &o) const {
+	return !(*this == o);
+}
 
 	struct parameter_t;
 
@@ -5744,46 +5805,61 @@ try_again_w_token:
 		std::vector<parameter_t>	parameters;
 		unsigned int			dd_flags = 0;
 
-		ddip_t() { }
-		ddip_t(const ddip_t &x) { common_copy(x); }
-		ddip_t &operator=(const ddip_t &x) { common_copy(x); return *this; }
-		ddip_t(ddip_t &&x) { common_move(x); }
-		ddip_t &operator=(ddip_t &&x) { common_move(x); return *this; }
+		ddip_t();
+		ddip_t(const ddip_t &x);
+		ddip_t &operator=(const ddip_t &x);
+		ddip_t(ddip_t &&x);
+		ddip_t &operator=(ddip_t &&x);
 
-		~ddip_t() {
-			ast_node_t::arrayrelease(arraydef);
-		}
+		~ddip_t();
 
-		void common_copy(const ddip_t &o) {
-			ptr = o.ptr;
-			ast_node_t::arraycopy(arraydef,o.arraydef);
-			parameters = o.parameters;
-			dd_flags = o.dd_flags;
-		}
-
-		void common_move(ddip_t &o) {
-			ptr = std::move(o.ptr);
-			arraydef = std::move(o.arraydef);
-			parameters = std::move(o.parameters);
-			dd_flags = o.dd_flags; o.dd_flags = 0;
-		}
-
-		bool empty(void) const {
-			return ptr.empty() && arraydef.empty() && parameters.empty() && dd_flags == 0;
-		}
+		void common_copy(const ddip_t &o);
+		void common_move(ddip_t &o);
+		bool empty(void) const;
 	};
+
+ddip_t::ddip_t() { }
+ddip_t::ddip_t(const ddip_t &x) { common_copy(x); }
+ddip_t &ddip_t::operator=(const ddip_t &x) { common_copy(x); return *this; }
+ddip_t::ddip_t(ddip_t &&x) { common_move(x); }
+ddip_t &ddip_t::operator=(ddip_t &&x) { common_move(x); return *this; }
+
+ddip_t::~ddip_t() {
+	ast_node_t::arrayrelease(arraydef);
+}
+
+void ddip_t::common_copy(const ddip_t &o) {
+	ptr = o.ptr;
+	ast_node_t::arraycopy(arraydef,o.arraydef);
+	parameters = o.parameters;
+	dd_flags = o.dd_flags;
+}
+
+void ddip_t::common_move(ddip_t &o) {
+	ptr = std::move(o.ptr);
+	arraydef = std::move(o.arraydef);
+	parameters = std::move(o.parameters);
+	dd_flags = o.dd_flags; o.dd_flags = 0;
+}
+
+bool ddip_t::empty(void) const {
+	return ptr.empty() && arraydef.empty() && parameters.empty() && dd_flags == 0;
+}
 
 	class ddip_list_t : public std::vector<ddip_t> {
 	public:
 		using BT = std::vector<ddip_t>;
 	public:
-		ddip_list_t() : BT() { }
-		~ddip_list_t() { }
+		ddip_list_t();
+		~ddip_list_t();
 	public:
 		void addcombine(ddip_t &&x);
 		void addcombine(const ddip_t &x);
 		ddip_t *funcparampair(void);
 	};
+
+ddip_list_t::ddip_list_t() : BT() { }
+ddip_list_t::~ddip_list_t() { }
 
 	struct declarator_t {
 		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
@@ -5797,33 +5873,45 @@ try_again_w_token:
 
 		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
 
-		declarator_t() { }
-		declarator_t(const declarator_t &x) { common_copy(x); }
-		declarator_t &operator=(const declarator_t &x) { common_copy(x); return *this; }
-		declarator_t(declarator_t &&x) { common_move(x); }
-		declarator_t &operator=(declarator_t &&x) { common_move(x); return *this; }
+		declarator_t();
+		declarator_t(const declarator_t &x);
+		declarator_t &operator=(const declarator_t &x);
+		declarator_t(declarator_t &&x);
+		declarator_t &operator=(declarator_t &&x);
 
-		void common_copy(const declarator_t &o) {
-			ddip = o.ddip;
-			identifier.assign(/*to*/name,/*from*/o.name);
-			symbol = o.symbol;
-			flags = o.flags;
-			ast_node.assign(/*to*/expr,/*from*/o.expr);
-		}
+		void common_copy(const declarator_t &o);
 
-		void common_move(declarator_t &o) {
-			ddip = std::move(o.ddip);
-			identifier.assignmove(/*to*/name,/*from*/o.name);
-			symbol = o.symbol; o.symbol = symbol_none;
-			flags = o.flags; o.flags = 0;
-			ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-		}
+		void common_move(declarator_t &o);
 
-		~declarator_t() {
-			identifier.release(name);
-			ast_node.release(expr);
-		}
+		~declarator_t();
 	};
+
+declarator_t::declarator_t() { }
+declarator_t::declarator_t(const declarator_t &x) { common_copy(x); }
+declarator_t &declarator_t::operator=(const declarator_t &x) { common_copy(x); return *this; }
+declarator_t::declarator_t(declarator_t &&x) { common_move(x); }
+declarator_t &declarator_t::operator=(declarator_t &&x) { common_move(x); return *this; }
+
+void declarator_t::common_copy(const declarator_t &o) {
+	ddip = o.ddip;
+	identifier.assign(/*to*/name,/*from*/o.name);
+	symbol = o.symbol;
+	flags = o.flags;
+	ast_node.assign(/*to*/expr,/*from*/o.expr);
+}
+
+void declarator_t::common_move(declarator_t &o) {
+	ddip = std::move(o.ddip);
+	identifier.assignmove(/*to*/name,/*from*/o.name);
+	symbol = o.symbol; o.symbol = symbol_none;
+	flags = o.flags; o.flags = 0;
+	ast_node.assignmove(/*to*/expr,/*from*/o.expr);
+}
+
+declarator_t::~declarator_t() {
+	identifier.release(name);
+	ast_node.release(expr);
+}
 
 	ddip_t *ddip_list_t::funcparampair(void) {
 		if (!empty()) {
@@ -5924,48 +6012,66 @@ try_again_w_token:
 		declaration_specifiers_t	spec;
 		std::vector<declarator_t>	declor;
 
-		declarator_t &new_declarator(void) {
-			const size_t i = declor.size();
-			declor.resize(i+1);
-			return declor[i];
-		}
+		declarator_t &new_declarator(void);
 
-		declaration_t() { }
-		declaration_t(const declaration_t &) = delete;
-		declaration_t &operator=(const declaration_t &) = delete;
-		declaration_t(declaration_t &&x) { common_move(x); }
-		declaration_t &operator=(declaration_t &&x) { common_move(x); return *this; }
+		declaration_t();
+		declaration_t(declaration_t &&x);
+		declaration_t &operator=(declaration_t &&x);
 
-		void common_move(declaration_t &o) {
-			spec = std::move(o.spec);
-			declor = std::move(o.declor);
-		}
+		void common_move(declaration_t &o);
 
-		~declaration_t() {
-		}
+		~declaration_t();
 	};
+
+declarator_t &declaration_t::new_declarator(void) {
+	const size_t i = declor.size();
+	declor.resize(i+1);
+	return declor[i];
+}
+
+declaration_t::declaration_t() { }
+declaration_t::declaration_t(declaration_t &&x) { common_move(x); }
+declaration_t &declaration_t::operator=(declaration_t &&x) { common_move(x); return *this; }
+
+void declaration_t::common_move(declaration_t &o) {
+	spec = std::move(o.spec);
+	declor = std::move(o.declor);
+}
+
+declaration_t::~declaration_t() {
+}
 
 	struct parameter_t {
 		declaration_specifiers_t		spec;
 		declarator_t				decl;
 
-		parameter_t() { }
-		parameter_t(const parameter_t &x) { common_copy(x); }
-		parameter_t &operator=(const parameter_t &x) { common_copy(x); return *this; }
-		parameter_t(parameter_t &&x) { common_move(x); }
-		parameter_t &operator=(parameter_t &&x) { common_move(x); return *this; }
-		~parameter_t() { }
+		parameter_t();
+		parameter_t(const parameter_t &x);
+		parameter_t &operator=(const parameter_t &x);
+		parameter_t(parameter_t &&x);
+		parameter_t &operator=(parameter_t &&x);
+		~parameter_t();
 
-		void common_copy(const parameter_t &o) {
-			spec = o.spec;
-			decl = o.decl;
-		}
-
-		void common_move(parameter_t &o) {
-			spec = std::move(o.spec);
-			decl = std::move(o.decl);
-		}
+		void common_copy(const parameter_t &o);
+		void common_move(parameter_t &o);
 	};
+
+parameter_t::parameter_t() { }
+parameter_t::parameter_t(const parameter_t &x) { common_copy(x); }
+parameter_t &parameter_t::operator=(const parameter_t &x) { common_copy(x); return *this; }
+parameter_t::parameter_t(parameter_t &&x) { common_move(x); }
+parameter_t &parameter_t::operator=(parameter_t &&x) { common_move(x); return *this; }
+parameter_t::~parameter_t() { }
+
+void parameter_t::common_copy(const parameter_t &o) {
+	spec = o.spec;
+	decl = o.decl;
+}
+
+void parameter_t::common_move(parameter_t &o) {
+	spec = std::move(o.spec);
+	decl = std::move(o.decl);
+}
 
 	struct cc_state_t {
 		/* target settings */
