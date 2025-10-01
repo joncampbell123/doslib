@@ -241,21 +241,21 @@ storage_class_specifier
 
 type_specifier
 	: VOID { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_VOID; }
-	| CHAR
-	| SHORT
-	| INT
-	| LONG
-	| FLOAT
-	| DOUBLE
-	| SIGNED
-	| UNSIGNED
-	| BOOL
-	| COMPLEX
-	| IMAGINARY	  	/* non-mandated extension */
+	| CHAR { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_CHAR; }
+	| SHORT { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_SHORT; }
+	| INT { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_INT; }
+	| LONG { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_LONG; }
+	| FLOAT { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_FLOAT; }
+	| DOUBLE { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_DOUBLE; }
+	| SIGNED { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_SIGNED; }
+	| UNSIGNED { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_UNSIGNED; }
+	| BOOL { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_BOOL; }
+	| COMPLEX { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_COMPLEX; }
+	| IMAGINARY { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_IMAGINARY; }
 	| atomic_type_specifier
 	| struct_or_union_specifier
 	| enum_specifier
-	| TYPEDEF_NAME		/* after it has been defined as such */
+	| TYPEDEF_NAME { $$.typespec = c11yy_struct_typespec_INIT; $$.typespec.flags = C11YY_TYPESPECF_TYPEDEF; $$.typespec.id = $1.identifier.id; }
 	;
 
 struct_or_union_specifier
