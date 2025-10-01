@@ -69,9 +69,27 @@ static constexpr csliteral_id_t csliteral_none = ~csliteral_id_t(0u);
 typedef size_t identifier_id_t;
 static constexpr identifier_id_t identifier_none = ~size_t(0u);
 
+typedef unsigned int scope_id_t;
+static constexpr unsigned int scope_none = ~((unsigned int)0u);
+static constexpr unsigned int scope_global = 0;
+
+typedef unsigned int segment_id_t;
+static constexpr unsigned int segment_none = ~((unsigned int)0u);
+
+typedef size_t symbol_id_t;
+static constexpr size_t symbol_none = ~size_t(0);
+
 static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 2*/) {
 	return ~(sz - addrmask_t(1u));
 }
+
+/////////////////////////////////////////////////////////////////////
+
+#define CCERR_RET(code,pos,...) \
+	do { \
+		CCerr(pos,__VA_ARGS__); \
+		return errno_return(code); \
+	} while(0)
 
 ///////////////////////////////////////////////////////////////////
 
@@ -2233,39 +2251,22 @@ identifier_pool_t identifier;
 
 /////////////////////////////////////////////////////////////////////
 
-	void CCerr(const position_t &pos,const char *fmt,...) {
-		va_list va;
+void CCerr(const position_t &pos,const char *fmt,...) {
+	va_list va;
 
-		fprintf(stderr,"Error");
-		if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
-		fprintf(stderr,": ");
+	fprintf(stderr,"Error");
+	if (pos.row > 0 || pos.col > 0) fprintf(stderr,"(%d,%d)",pos.row,pos.col);
+	fprintf(stderr,": ");
 
-		va_start(va,fmt);
-		vfprintf(stderr,fmt,va);
-		va_end(va);
-		fprintf(stderr,"\n");
-	}
+	va_start(va,fmt);
+	vfprintf(stderr,fmt,va);
+	va_end(va);
+	fprintf(stderr,"\n");
+}
 
-#define CCERR_RET(code,pos,...) \
-	do { \
-		CCerr(pos,__VA_ARGS__); \
-		return errno_return(code); \
-	} while(0)
+/////////////////////////////////////////////////////////////////////
 
 	struct declaration_t;
-
-	typedef unsigned int scope_id_t;
-	static constexpr unsigned int scope_none = ~((unsigned int)0u);
-	static constexpr unsigned int scope_global = 0;
-
-	typedef unsigned int segment_id_t;
-	static constexpr unsigned int segment_none = ~((unsigned int)0u);
-
-	typedef size_t symbol_id_t;
-	static constexpr size_t symbol_none = ~size_t(0);
-
-	/* this is defined here, declared at the bottom, to over come the "incomplete type" on delete issues */
-	template <class T> void typ_delete(T *p);
 
 	struct token_t {
 		token_type_t		type = token_type_t::none;
