@@ -1,0 +1,820 @@
++ - ++ -- ; = == != ! ~ & && | || ^ |= ^= &= += -= * / \ *= /= % %= ? : < << <<= <= <=> > >> >>= >= . -> .* ->* [ ] { } ( ) :: 0 1 2 3 4 5 6 7 8 9 00 01 02 03 04 05 06 07 0x0 0x1 0x2 0x3 0x4 0x5 0x6 0x7 0x8 0x9 0xA 0xB 0xC 0xD 0xE 0xF 0b0 0b1 1u 2u 3u 1l 2l 3l 1ll 3ll 5ll 10 11 12 13 14 15 100 101 102 1000 1001 1009 10000 10009 1000000000000 1234567890123456789 1111111111111111111111111111111111111111 0b0 0b000 0b1010 0b0101 0777 1234'5678'9012 0xFFFF'FFFF'FFFF'FFFF 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 8.5 9.0 9.5 10.0 10.5 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 0.00001 0.00000000000000000000000000000000000000001 10.0 100000.0 100000000000.0 100000000000000000000000000.0 10000000000000000000000000000000000000000000000000.0 1e0 1e1 1e2 1e3 1e4 1e-1 1e-2 1e-3 1e-4 1.0f 1.0d 1.0l 'a' 'b' 'c' 'd' 'aa' 'ab' 'cd' 'abcd' '\t' '\011' '\x09' '\x0f' '\xf0' '\xff' "a" "b" "c" "abc" "abcdefg" "long string meant to test reallocation logic to see if it works correctly this string should well exceed 128 bytes to test that logic blah blah blah blah blah blah" identifier _identifier longer_identifier even_very_much_longer_should_exceed_32_chars_to_test_fill_in_code_blah_blah u8"a" u8"b" u8"abcdef" u"a" u"b" u"abcdef" u"longer string blah blah blah overrun the base blah blah" L"a" L"b" L"abcd" L"longer string" L"longer string that will cause realloc to call blah blah blah" u"これからはじめる人や、もういちどはじめる人へ、役立つ情報をお届けします。" U"これからはじめる人や、もういちどはじめる人へ、役立つ情報をお届けします。" u8"これからはじめる人や、もういちどはじめる人へ、役立つ情報をお届けします。" u"😊😘" U"😊😘" u8"😊😘" u'a' U'a' u8'a' u'abcd' U'abcd' u8'abcd' u'す' U'す' u8'す'
+1,2,3,4,5,6,7,8,a,b,c,d,e,f,g
+\x\y\z
+xyz\
+abc
+,
+&= ^= |= <<= >>= *= /= %= += -= = ? :
+||
+&&
+|
+^
+&
+== !=
+< <= > >=
+<=>
+<< >>
++ -
+* / %
+.* ->*
+&a
+*a
+(type)
+! ~
++a -a
+++a --a
+. ->
+a[]
+a()
+type() type{}
+a++ a--
+::
+#ident ident #ident
+alignas alignof auto bool break case char const
+constexpr continue default do double else enum extern false float for goto if inline int long
+nullptr
+register
+restrict
+return
+short
+signed
+sizeof
+static
+static_assert
+struct
+switch
+thread_local
+true
+typedef
+typeof
+typeof_unqual
+union
+unsigned
+void
+volatile
+while
+_Alignas
+_Alignof
+_Atomic
+_BitInt
+_Bool
+_Complex
+_Decimal128
+_Decimal32
+_Decimal64
+_Generic
+_Imaginary
+_Noreturn
+_Static_assert
+_Thread_local
+char8_t
+char16_t
+char32_t
+consteval
+constinit
+namespace
+template
+typeid
+typename
+using
+wchar_t
+#define A
+#define B ( 4 )
+#define C (4 )
+#define D ( 4)
+#define E (4)
+#define F (x,y)
+#define G "hello" "world"
+#define H(x,y) ((x)+(y))
+#define X
+hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
+#undef X
+#undef X
+hello 4 X 4 A
+#include
+#include <something.h>
+#include "something.h"
+#include <add/x/y/something.h>
+#include "add/x/y/something.h"
+#include_next
+#include_next <else.h>
+#include_next "else.h"
+#include_next <and/else.h>
+#include_next "and/else.h"
+#error
+#error cannot define anything for fun
+#error "cannot #define anything for fun"
+#warning
+#warning cannot define anything for fun
+#warning "cannot #define anything for fun"
+#pragma
+#pragma justignorethis
+#embed
+#embed <hello>
+#embed "hello"
+#warning hello
+#warning hello
+#warning hello
+#warning hello
+#warning hello
+#warning hello
+#ifdef NOTR
+# warning hello
+#endif
+#define NOTR
+#ifdef NOTR
+# warning hello
+#endif
+#define LINE1 2002
+#warning hello
+token#paste
+token##paste
+__LINE__
+__FILE__
+__VA_OPT__
+__VA_ARGS__
+...
+"string \
+literal"
+"string\n\
+literal"
+int x/* comment */ = 5;
+int x/* multiple
+   line
+   comment */ = 5;
+int x/* comment /* with /* nesting */ in */ here */ = 5;
+int x = 5;// comment
+int x = 5;// another comment
+int x = 5;
+[ ] [[ ]]
+intmax_t
+uintmax_t
+int8_t
+uint8_t
+int16_t
+uint16_t
+int32_t
+uint32_t
+int64_t
+uint64_t
+int_least8_t
+uint_least8_t
+int_least16_t
+uint_least16_t
+int_least32_t
+uint_least32_t
+int_least64_t
+uint_least64_t
+int_fast8_t
+uint_fast8_t
+int_fast16_t
+uint_fast16_t
+int_fast32_t
+uint_fast32_t
+int_fast64_t
+uint_fast64_t
+intptr_t
+uintptr_t
+size_t
+ssize_t
+near
+far
+huge
+__pascal
+__watcall
+__stdcall
+__cdecl
+__syscall
+__fastcall
+__safecall
+__thiscall
+__vectorcall
+__fortran
+__attribute__
+__declspec
+asm
+_asm
+__asm
+__asm__
+__volatile__
+inline
+_inline
+__inline
+__inline__
+asm("mov eax,esi")
+asm("l1: jmp far [somewhere] ; comment")
+asm("movl %1, %0\n"
+    "add $1, %0"
+    : "=r" (dst)
+    : "r" (src));
+asm("movl %1, %0\n"
+    "add $1, %0"
+    : "=r" (dst)
+    : "r" (src)
+    : "cc");
+_asm mov eax,esi
+__asm mov eax,esi
+__asm mov eax,asi __asm mov [somewhere],eax __asm nop
+__asm mov eax,esi ; comment __asm mov [somewhere],eax ; another comment __asm nop ; yay
+asm("nop");
+__asm__("nop");
+__asm__ __volatile__("nop");
+__asm__ volatile inline goto ("nop");
+__asm nop
+__asm mov eax,esi
+hello;
+__asm { nop }; int x;
+__asm { mov eax,esi }; int x;
+__asm {
+	nop
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm	nop
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm {
+		nop
+		cli
+		sti
+	}
+	mov	eax,esi
+}
+__asm {
+	nop
+	__asm {
+		nop
+		cli
+		__asm {
+			sti
+			pop	cs
+		}
+		sti
+	}
+	mov	eax,esi
+}
+__asm {
+	nop
+l1:	nop
+l2:	jmp
+}
+hello;
+__asm {
+	.386p
+	.flat
+	nop
+	mov	eax,0x12345678
+	mov	eax,12345678h
+	mov	eax,1234AB55h
+	mov	eax,0ABCDEF1h
+	mov	eax,ABCDEF01h
+	mov	ax,@fardata
+}
+#define X1 something \
+something else
+#define X2 something /* C comment
+that spans lines */ else
+X1;
+X2;
+Hello;
+#define XX X1 X2
+XX;
+#define X3 (a,b,c) xyz
+#define X4(a,b,c) a,b,c,xyz
+#define X5(_a123,_b456,___c789) xyz
+#define X6(a,b,c) x y z a b c 1 2 3 c b a
+X4(1,2,3); X6(1,2,3); X4(,,); X6(,,);
+X4(1 2 3,4 5 6,7 8 9);
+X4(4*3+2,((4*2),2),1); /* the comma inside parenthesis should NOT split the parameter */
+#define TRIPS(a,b,c) a,b,c,a,b,c,a,b,c
+#define TRIP2(a,b,c) TRIPS(a+b,b+c,c+a)
+TRIP2(1,2,3); 1,2,3;
+#define XV1(a,b,...) a,b
+#define XV2(a,b,...) a,b,__VA_ARGS__
+#define XV3(a,b,...) __VA_ARGS__,a,b,__VA_ARGS__
+#define XV4(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__
+#define XV5(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__ __VA_OPT__(,"and more")
+#define XV6(a,b,...) a,b __VA_OPT__(,) __VA_ARGS__ __VA_OPT__(,((4+3),2)+1)
+#define XVG1(a,b,...) a,b,##__VA_ARGS__
+XV1(1,2);
+XV1(1,2,3,4,5);
+XV2(1,2);
+XV2(1,2,3,4,5);
+XV3(1,2,3,4,5);
+XV4(1,2);
+XV4(1,2,3,4,5);
+XV5(1,2);
+XV5(1,2,3,4,5);
+XV6(1,2);
+XV6(1,2,3,4,5);
+XVG1(1,2);
+XVG1(1,2,3,4,5);
+#define XVGA1(a,b,args...) a,b,args
+#define XVGA2(a,b,anything...) a,b,anything
+#define XVGA3(a,b,anything...) a,b,anything __VA_ARGS__ /* GNU args... use means __VA_ARGS__ is not valid */
+XVGA1(1,2);
+XVGA1(1,2,3,4,5);
+XVGA2(1,2);
+XVGA2(1,2,3,4,5);
+XVGA3(1,2);
+XVGA3(1,2,3,4,5);
+
+#ifdef A
+should see this;
+#endif
+
+#ifndef A
+should not see this;
+#endif
+
+#ifdef NOTEXIST
+should not see this;
+#endif
+
+#ifndef NOTEXIST
+should see this;
+#endif
+
+#ifdef A
+# ifdef B
+should see this;
+# endif
+should also see this;
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# endif
+nor this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# endif
+nor this
+#else
+you should see this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#else
+you should see this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#elifdef A
+you should see this
+#else
+you should not see this
+#endif
+
+#ifdef NOTEXIST
+# ifdef A
+should not see this
+# else
+should not see this
+# endif
+nor this
+#elifndef A
+you should not see this
+#elifndef NOTEXIST2
+you should see this
+#else
+you should not see this
+#endif
+
+#if 1
+you should see this
+#endif
+
+#if 0
+you should not see this
+#endif
+
+#if defined(A)
+you should see this
+#endif
+
+#if defined(NOTEXIST)
+you should not see this
+#endif
+
+#if 4
+you should see this B
+#endif
+
+#if -4
+you should see this B
+#endif
+
+#if +4
+you should see this B
+#endif
+
+#if !4
+you should not see this B
+#endif
+
+#if !0
+you should see this B
+#endif
+
+#if 0 || 0
+you should not see this B
+#endif
+
+#if 0 || 1
+you should see this B
+#endif
+
+#if 0 && 0
+you should not see this B
+#endif
+
+#if 0 && 1
+you should not see this B
+#endif
+
+#if 1 && 1
+you should see this B
+#endif
+
+#if 1 && 0 || 0
+you should not see this B
+#endif
+
+#if 1 && 0 || 1
+you should see this B
+#endif
+
+#if 0|1
+you should see this B
+#endif
+
+#if 1^1
+you should not see this B
+#endif
+
+#if 1^2
+you should see this B
+#endif
+
+#if 1&2
+you should not see this B
+#endif
+
+#if 1&1
+you should see this B
+#endif
+
+#if 1 == 1
+you should see this B
+#endif
+
+#if 1 == 2
+you should not see this B
+#endif
+
+#if 1 != 1
+you should not see this B
+#endif
+
+#if 1 != 2
+you should see this B
+#endif
+
+#if 1 < 2
+you should see this B
+#endif
+
+#if 1 < 0
+you should not see this B
+#endif
+
+#if 2 > 1
+you should see this B
+#endif
+
+#if 0 > 1
+you should not see this B
+#endif
+
+#if 2 >= 1
+you should see this B
+#endif
+
+#if 1 >= 1
+you should see this B
+#endif
+
+#if 0 >= 1
+you should not see this B
+#endif
+
+#if 0 <= 1
+you should see this B
+#endif
+
+#if 1 <= 1
+you should see this B
+#endif
+
+#if 2 <= 1
+you should not see this B
+#endif
+
+#if 1 << 1 == 2
+you should see this B
+#endif
+
+#if 2 >> 1 == 1
+you should see this B
+#endif
+
+#if 1 << 1 == 3
+you should not see this B
+#endif
+
+#if 2 >> 1 == 9
+you should not see this B
+#endif
+
+#if 1 + 1 == 2
+you should see this B
+#endif
+
+#if 1 + 1 == 3
+you should not see this B
+#endif
+
+#if 2 - 1 == 1
+you should see this B
+#endif
+
+#if 2 - 2 == 1
+you should not see this B
+#endif
+
+#if -4 + 4 == 0
+you should see this B
+#endif
+
+#if -4 == -4
+you should see this B
+#endif
+
+#if 4*4 == 16
+you should see this B
+#endif
+
+#if 4*4*4 == 64
+you should see this B
+#endif
+
+#if 16/4 == 4
+you should see this B
+#endif
+
+#if 16%4 == 0
+you should see this B
+#endif
+
+#if (1) == 1
+you should see this B
+#endif
+
+#if (1+1) == 2
+you should see this B
+#endif
+
+#if (1+2) == 2
+you should not see this B
+#endif
+
+#if (1+1)+1 == 3
+you should see this B
+#endif
+
+#if ((1+1)+1) == 3
+you should see this B
+#endif
+
+#if ((1+1)+1)+1 == 4
+you should see this B
+#endif
+
+#if B == 4
+you should see this B
+#endif
+
+#if B+B == 8
+you should see this B
+#endif
+
+#if H(3,4) == 7
+you should see this H(3,4)
+#endif
+
+#if H(3,H(4,5)) == 12
+you should see this H(3,H(4,5))
+#endif
+
+#if H(3,H(4,5)) == 13
+you should not see this H(3,H(4,5))
+#endif
+
+#if !0
+you should see this
+#endif
+
+#if !1
+you should not see this
+#endif
+
+#if ~0
+you should see this
+#endif
+
+#if ~~0
+you should not see this
+#endif
+
+#if !!1
+you should see this
+#endif
+
+#if !!0
+you should not see this
+#endif
+
+#if !0 == 1
+you should see this
+#endif
+
+#if !1 == 0
+you should see this
+#endif
+
+#if !(0+0) == 1
+you should see this
+#endif
+
+#if !(0+1) == 0
+you should see this
+#endif
+
+/* If you define the same macro again, it's an error, unless the re-definition
+   restates what was already defined, which is then silently ignores. This is
+   what actual C compilers do. */
+#define AGAIN ABC
+#define AGAIN ABC
+#define AGAIN  ABC
+
+#define AG2 4
+#define AG2  4
+
+#define FREETYPE_H "ft2/ft.h"
+#include FREETYPE_H
+
+#define FREETYPE2_H <ft2/ft2.h>
+#include FREETYPE2_H
+
+#define BIN1 "ft1.ttf"
+#embed BIN1
+
+__FUNCTION__
+__func__
+
+hello();
+hello_again(12345);
+
+#define XYZ1(a) #a
+XYZ1(a)
+XYZ1((a))
+XYZ1( a )
+XYZ1( ( a ) )
+XYZ1(a b)
+XYZ1(a b c d 1 2 3 4)
+XYZ1((a)(b))
+XYZ1((a) (b))
+XYZ1((a) ( b ))
+XYZ1( (a)  ( b )   )
+XYZ1( #define #if something )
+
+#define XYZ2(a,b) #a #b
+XYZ2(a,b)
+XYZ2(a a,b b)
+
+#define XYZ3(a,...) #a #__VA_ARGS__
+XYZ3(a)
+XYZ3(a,b)
+XYZ3(a,b,c,d,e,f,g)
+
+#define XYZ4(a,b,...) #a #b #__VA_ARGS__
+XYZ4(a,b)
+XYZ4(a,b,c,d,e,f,g)
+
+#define XYZ5(a,b,...) #a #b __VA_OPT__(a) #__VA_ARGS__
+XYZ5(a,b)
+XYZ5(a,b,c,d,e,f,g)
+
+#define XYZ6(a,b,...) #a #b __VA_OPT__(#a "x" #b) #__VA_ARGS__
+XYZ6(a,b)
+XYZ6(a,b,c,d,e,f,g)
+XYZ6("a",b)
+XYZ6("\\",b)
+XYZ6("\"",b)
+XYZ6("a\tb\nc",b)
+
+#define AAA 69
+__asm mov eax,AAA __asm mov eax,[esi+AAA-4]
+
+/* parameter macro expansio not allowed in __asm anymore, but we do allow simple macro substitution */
+#define BBB funcy
+__asm mov eax,BBB(5) __asm mov eax,BBB([esi+4])
+
+/* parameter macro expansio not allowed in __asm anymore, but we do allow simple macro substitution */
+#define BBA codethis
+__asm mov BBA(eax,BBB(5)) __asm mov BBA([esi+BBB(ebx+5)],BBB(99+3))
+
+#ifdef AAA
+__asm {
+	inc	eax
+	dec	eax
+}
+__asm {
+	mov	al,'x'
+	inc	al
+}
+__asm {
+	db	"testing 123"
+}
+__asm {
+	mov	al,'y'
+	{
+		nop
+	}
+}
+#endif
+
+__asm inc eax
+#ifdef AAA
+__asm dec eax
+#endif
+
+#define CCC \
+__asm inc ebx __asm inc ecx
+
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+
+#define CCC \
+__asm inc ebx \
+__asm inc ecx
+
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+
+#define CCC \
+__asm { \
+ inc ebx \
+ inc ecx \
+}
+__asm inc eax
+CCC
+__asm inc edx
+#undef CCC
+
+#line 12345
+This should appear line 12345
+
+/* apparently GCC allows this */
+#define XYZ 123
+#line XYZ
+This should appear line 123
+
+/* FIXME: #line filename not supported yet though parsed */
+#line 123 "test1.mic"
+This should appear line 123 test1.mic
+

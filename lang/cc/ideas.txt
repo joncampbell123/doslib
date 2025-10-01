@@ -1,0 +1,358 @@
+
+Like C, but without the preprocessor macro system.
+Unless you ask for it, you can code pure naked code without a runtime.
+Include source code with an include("path") rather than #include.
+
+Inspired by Node.js, include() can return a value from the header like
+require() returns whatever the Node module returns.
+
+Instead of #ifdef, #if, etc. you write compile-time C-like code to manage
+things and define runtime code too. Yes, you'll do an if(WIN32) { ... } instead of
+#ifdef WIN32. Yay.
+
+Near, far, pointers on x86 because I intend this compiler to support
+DOS and Win16 development. For 386 and higher targets, you can define
+near pointers with 32-bit offsets, and FAR pointers with 32-bit offsets
+(48-bit 16:32) i.e. if you intend to use Flat Real Mode (setting up
+Flat Real Mode of course is handled by a library you include, not built-in).
+
+Want Open Watcom style "huge" pointers? That's an include() away.
+
+include() may also contain compile-time code to specify libraries to load
+at link time.
+
+Functions C-like but extra syntax if you want to do things like define a
+function that accepts specific parameters to/from CPU registers.
+
+Allow C++ style pass-by-reference functions &parameters.
+
+Named function parameters (inspired by Python) except that name=value would
+be awkward to implement in a C-like syntax, so it would be name:value instead.
+Example:
+
+int do_something(int code,int value,long param) {
+	...
+}
+
+int main() {
+	int y = do_something(code:5,value:19,param:300);
+}
+
+Also inspired by Python, the function parameter list can specify * to mean
+that parameters past that point MUST be filled in by name.
+
+int do_something(int code,*,int value,long param) {
+	...
+}
+
+int main() {
+	int not_allowed = do_something(5,19,30); /* not allowed! */
+	int this_is_ok = do_something(code:5,value:19,param:300); /* OK */
+	int also_ok = do_something(5,value:19,param:300); /* "code" preceeds * while value and param must be named ,this is OK too */
+}
+
+The only exception to the rule is the ellipsis, which must not be named
+because that would make no sense even if past the * marker.
+
+By default, all named parameters must be filled in to call a function
+properly. In the case of do_something(int code,int value,long param),
+it is an error to fail to specify all parameters:
+
+    do_something(code:5); /* error: value and param must be given values */
+
+Inspired by C++, the function can specify default values for parameters.
+
+int do_something(int code,int value=0,long param=-1) {
+	...
+}
+
+If a parameter is not specified, then the default value is passed on call.
+
+Like C++, if a function is called with positional parameters (without named
+parameters), then once a default value is specified for a parameter, all
+parameters after that must specify a default parameter.
+
+    do_something(5); /* OK, value == 0, param == -1 */
+    do_something(5,0); /* OK, param == -1 */
+
+Non-contiguous parameters having default values are allowed. If called with
+positional parameters, all values up to the last non-default param must be
+filled in.
+
+int do_something(int code=0,int value,long param=-1,long param2=-1,long param3=-1) {
+	...
+}
+
+    do_something(5); /* error: value must be specified, param has default value */
+    do_something(5,3); /* OK: code == 5, value == 3, param == -1, etc. */
+    do_something(5,3,100); /* OK: code == 5, value == 3, param == 100, param2 == -1 and so on */
+
+int do_something(int code=0,int value,long param=-1,long flags,long param2=-1,long param3=-1) {
+    ...
+}
+
+    do_something(5); /* error: value and flags must be filled in */
+    do_something(5,0); /* error: flags must be filled in */
+    do_something(5,0,-1,32); /* OK: code==5, value==0, param==-1, flags==32, param2==-1,param3==-1*/
+
+If called with named parameters, all parameters with no default value must be filled in.
+
+int do_something(int code=0,int value,long param=-1,long param2=-1,long param3=-1) {
+	...
+}
+
+    do_something(value:3); /* OK: code == 0, param == -1, and so on */
+    do_something(code:9); /* error: value must be filled in */
+
+int do_something(int code=0,int value,long param=-1,long flags,long param2=-1,long param3=-1) {
+    ...
+}
+
+    do_something(value:3); /* error: flags must be filled in */
+    do_something(value:3,flags:32); /* OK: code==0,value==3,param==-1,flags==32, etc */
+
+The default value of a parameter can be a constant or the return value of a
+compile time function call. A runtime function call is also allowed to return
+a value, if that is done, a function declaration must be listed in compile
+order prior to the function definition or declaration using it in the
+parameter list. The functions will be called in an undefined order to
+determine the default parameter value. Whether the runtime default parameter
+causes any significant performance cost or dependencies or not is entirely up
+to you.
+
+To support assembly language calls and interaction, the parameter list may
+specify that the parameter is associated with a CPU register on entry, and the
+return value may specify an association with a CPU register to fill on exit.
+
+/* external assembly language code (x86) will fill EAX with code, EBX with value, and it expects a return value in EAX */
+int cpu_register(eax) do_something(int cpu_register(eax) code,int cpu_register(ebx) value) {
+    return code + (value << 16);
+}
+
+If this function is called by other C code, then that C code will use the same
+calling convention, provided that the function declaration did not differ in
+any way between source files, of course.
+
+CPU registers may also be listed C++ style pass by reference if a more complex
+interaction is required. CPU flags count as a register, though in a more
+restricted manner. To guarantee sure CPU flags are returned from a function as
+expected, make the assignment the last step in the function before returning.
+CPU instructions between the assignment and return can change CPU flags.
+The compiler must emit a warning in that case if it cannot preserve the flags
+register during any additional code before return.
+
+cpu::flags() assignment, depending on the target, register named and value or
+whether it is constant, may be converted to a specialized CPU instruction
+instead of more general flags manipulation. cpu::flags() with no parameters
+will evaluate to the entire flags register.
+
+/* The exact names in the CPU namespace differ depending on the target. This
+example depicts a 32-bit Intel 386 target. Because of the names involved, you
+should NOT include the CPU namespace in your code with "using namespace cpu;",
+that is a bad idea. */
+
+void do_something(int cpu::register(eax) &code,int cpu::register(ebx) &value) {
+	if (code == 6) {
+		code = 0;
+		value = 1000;
+		cpu::flags(cpu::CF) = 0; /* this will compile to CLC */
+	}
+	else {
+		code = -1;
+		value = -1;
+		cpu::flags(cpu::CF) = 1; /* this will compile to STC */
+	}
+}
+
+/* x86 cpu::flags assignment specialization:
+
+   cpu::CF = CLC/STC
+   cpu::IF = CLI/STI
+
+   If value read and saved to an appropriately sized integer on stack within
+   a functional scope { ... } and restored on exiting the scope:
+
+   PUSHF
+   (functional scope)
+   POPF
+
+   Therefore a block of code that must execute with interrupts disabled could:
+
+   {
+       unsigned int saved_fl = cpu::flags();
+       cpu::flags(cpu::IF) = 0
+       ...
+       cpu::flags() = saved_fl;
+   }
+
+   To produce:
+
+   PUSHF
+   CLI
+   ...
+   POPF (which restores the IF flag)
+
+   * VM86 warning: There is a known issue with Windows in which POPF does not
+     notify the VM86 monitor that interrupts have been re-enabled except for
+     an Intel extension added in the Pentium processor called the Virtual
+     Interrupt Flag. If the code does not work properly in that environment,
+     add cpu::flags(cpu::IF) = 1 before the cpu::flags() = saved_fl to instead
+     produce:
+
+     PUSHF
+     CLI
+     ...
+     STI
+     POPF
+
+   Everything else: PUSHF, POP (E)AX, (operation(s) on AX), PUSH (E)AX, POPF.
+   For code size and performance, use sparingly.
+
+   Depending on the environment and stack, the compiler may also opt to PUSHF
+   at function entry, and direct CPU flag modifications to the memory image
+   on stack to be applied on return at POPF before return, especially if the
+   function declares a variable on stack that is assigned the value of
+   cpu::flags().
+
+Due to optimization, multiple steps of arithmetic cannot rely on CPU flags
+between the steps unless a compiler::barrier() is placed between the steps
+to ensure that the two operations occur exactly in the order written.
+
+As a more general method of using carry between arithmetic, use
+cpu::add_and_check_carry(), which adds two numbers together and then returns a
+boolean to indicate whether carry occurred. This is only available if the
+target has an ADD instruction that uses a CPU flag register of some kind to
+signal carry, otherwise, it is not available.
+
+    /* behaves like:
+       inline bool cpu::add_and_check_carry(unsigned int &a,const unsigned int b);
+       a += b; return if carry occurred. */
+
+    void addc(unsigned int &c,const unsigned int d) {
+        if (cpu::add_and_check_carry(c,d)) /* becomes ADD EAX,EBX, JNC skip1, XOR EAX,EAX, NOT EAX, [skip1 label] */
+            c = ~0u;
+    }
+
+    Optimization: If the return value is ignored, the compiler never emits "JNC" nor any code that would run if carry.
+
+If the CPU supports an add with carry, then it should also provide
+cpu::add_carry_and_check_carry().
+
+    /* behaves like:
+       inline bool cpu::add_carry_and_check_carry(unsigned int &a,const unsigned int b,const bool carry);
+       a += b+carry; return if carry occurred */
+
+    void addcc(unsigned int &c,const unsigned int d) {
+        /* Becomes:
+
+           ADD EAX,EBX
+           ADC EAX,EBX
+           JNC skip1
+           XOR EAX,EAX
+           NOT EAX
+    skip1:
+
+           Compiler optimization, if the return value is stored to a variable,
+           especially const, and then immediately used in the next, never modified,
+           never referenced again, the compiler can just combine them together as
+           show in the x86 ASM above. */
+        const bool cr = cpu::add_and_check_carry(c,d);
+        if (cpu::add_carry_and_check_carry(c,d,cr))
+            c = ~0u;
+    }
+
+Name spacing is supported using the C++ style :: syntax. To allow multiple
+headers to get along where they might conflict. name spacing is recommended.
+
+The compiler itself will provide for compile-time code the compiler namespace including the
+include() function.
+
+Compile time functions must be defined using the "compiletime" attribute. Compile-time code
+allows if() statements that act upon compile-time variables and macros as a substitute for
+the C preprocessor macro system. Compile-time code has the power to conditionally define
+functions, variables, and conditionally include headers and modules. Compile-time code must
+not use any values or call any functions that cannot be run or evaluated at compile time
+including runtime values such as loading address, system state, or runtime functions like malloc
+or printf.
+
+Code at the global level (outside of a function block) is implicitly
+compile-time. If statements that use ifdef() to detect macros is evaluated at
+compile time and can be used to omit code from the compiled binary.
+
+compiletime is not the same as C11 constexpr where code intended to run on the target is being
+evaluated at compile time.
+
+built-in compile time functions include:
+
+compiler::error(...)
+compiler::warning(...)
+compiler::include(...)
+compiler::undef(...)
+compiler::ifdef(...)
+compiler::defval(...)
+compiler::define(...)
+compiler::exists(...)    To test if a function or variable exists
+compiler::barrier()
+typeof(...)
+sizeof(...)
+alignof(...) or _Alignof(...)
+
+As a substitute for the C macro system, compile time code may conditionally
+define functions and variables and conditionally include other headers. Macro
+names are strings and can therefore contain characters not normally allowed in
+an identifier, and there is a type associated with it. Macros can hold
+integer, float, string, or compiler::none. none is distinct from nullptr_t
+in case of targets where a null pointer is NOT zero however unlikely that is.
+If used at runtime, compiler::none evaluates as a zero.
+
+using namespace compiler;
+
+include("stdint.h");
+
+if (ifdef("WIN32")) {
+	include("windows.h");
+	define("WINVER") = 3;
+	define("PLATFORM") = "WINDOWS";
+	typedef uint16_t textchar_t;
+}
+else {
+	define("PLATFORM") = "LINUX";
+	define("UTF-8"); /* default define value is 1 */
+	typedef uint8_t textchar_t;
+}
+
+...
+
+undef("PLATFORM");
+
+Operator override function definitions, just like C++, though not as messy.
+That includes - + * / % < > == and so on.
+
+Obviously to avoid the overhead of a function call per operator use, the
+function should be inline. Constexpr where possible. Compile time where
+possible as well!
+
+struct fraction_t {
+	uint32_t	whole = 0; /* yes, we're going to allow C11/C++11 init assignment too */
+	uint32_t	frac = 0;
+
+	inline constexpr fraction_t &operator+(const fraction_t &other) {
+		cpu::add_carry_and_check_carry( whole, other.whole, cpu::add_and_check_carry(frac,other.frac) );
+		return compiler::this_instance; /* C++ style *this is also acceptable */
+	}
+};
+
+...
+
+	fraction_t a = { whole: 1 }; /* a.whole = 1, a.frac = 0 */
+	fraction_t b = { whole: 2, frac: uint32_t(0x80000000) }; /* b.whole = 2, frac = 0x80000000 */
+
+	...
+
+	fraction_t c = a + b; /* becomes c.whole = 3, c.frac = 0x80000000 */
+
+	...
+
+	a += b; /* becomes a.whole = 3, c.frac = 0x80000000 */
+	a += b; /* becomes a.whole = 6, c.frac = 0x00000000 (frac carries over into whole) */
+

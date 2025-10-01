@@ -1,0 +1,1014 @@
+
+static int c;
+static long int d;
+static long double ldoubleme;
+static int *ic;
+static float *fi;
+static int (x);
+static long ((y));
+static int* ((z));
+static int* ((*zz));
+static const int * const volatile ((* const zzz));
+static near int x1;
+static far int x2;
+static huge int x3;
+static restrict int x4;
+static constexpr int x5 = 5;
+static int c0,d0;
+static long int c1,*d1;
+static long int *c2,**d2,e2,f2,g2,h2,i2;
+static int c6 = 4;
+static int cc = 4,ddd = 6,ee = 12.34,ff = cc;
+static const char *sss = "Hello world";
+static const char sss2[] = "Hello world";
+static int c8 = 6;;;
+static int d0a = -4;
+static int d1a = 4 ? 2 : 1;
+static int d2a = 4 ? 3 ? 2 : 1 : 0;
+static int d3a = 4 ? 3,2 : 1;
+static int d4a = 8 ? 7,6,5,4,3,2 : 1;
+static int d4ab= 8 ? "hello world",2 : 1;
+static int d4ac= 8 ? 2,"hello world" : 1;
+static int d5a = 7 || 3;
+static int d5ab= 0 || 3;
+static int d5ac= 0 || 0;
+static int d5ad= 3 || 0;
+static int d5ae=-1 || 0;
+static int d6a = 1 || 2 || 3;
+static int d7a = 1 || 2 || 3 || 4 || 5 || 6 || 7 || 8 || 9 || 10;
+static int d7ab= 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0 || 0;
+static int d8a = 1 || 2 || 3 ? 4 || 5 : 6 || 7;
+static int d9a = 1 && 2;
+static int da = 1 && 2 && 3 && 4 && 5 && 6 && 7 && 8 && 9;
+static int db = 1 && 2 || 3 && 4;
+static int db1= 0 && 1;
+static int db2= 3 && 0;
+static int dc = 1|2;
+static int dd = 1|2|3|4|5|6|7|8;
+static int de = 1|2 && 3|4 || 5|6;
+static int df = 1^2;
+static int dg = 1^2^3^4^5^6;
+static int dh = 1^2|3^4;
+static int di = 1&2;
+static int dj = 1&2&3&4&5&6&7&8;
+static int dk = 1&2^3&4|5&6;
+static int dl = 1 == 2;
+static int dl2= 2 == 2;
+static int dm = 1 != 2;
+static int dn = 2 == 2 == 1;
+static int doo = 1|2 == 3 && 4^5|6 != 7;
+static int dp = 1 < 2;
+static int dq = 1 > 2;
+static int dr = 1 <= 2;
+static int ds = 1 >= 2;
+static int dt = 1 < 2 < 3 < 4 < 5;
+static int du = 1 < 2 > 3 <= 4 >= 5;
+static int dv = 1 << 1;
+static int dw = 1 >> 1;
+static int dw2= 2 >> 1;
+static int dx = 1 << 2|3;
+static int dy = 1 << 2 << 3 << 4 << 5 << 6;
+static int dz = 1 >> 2 >> 3 >> 4 >> 5 >> 6;
+static int daa = 1 << 2 >> 3 << 4 >> 5;
+static int dab = 1 + 2;
+static int dac = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
+static int dad = 1 - 2;
+static int dae = 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10;
+static int daf = 1 + 2 - 3 + 4 - 5 + 6 - 7 + 8 - 9 + 10;
+static int dag = 1 * 2;
+static int dah = 1 * 2 * 3 * 4;
+static int dai = 100 / 2;
+static int daj = 10000 / 2 / 3 / 4;
+static int div0a = 123 / 0; /* do not reduce this! */
+static int div0b = 4 * ((123*5 + 5) / 0);
+static int daj2=((4 * 4) / 2) + 5;
+static int dak = 1 % 2;
+static int dal = 1 % 2 % 3 % 4;
+static int dam = 4 * 4 / 3 % 4;
+static int dan = ++dam;
+static int dao = --dam;
+static int dap = ++ ++dam;
+static int dap2= ++ dam ++;
+static int daq = -- --dam;
+static int daq2= -- dam --;
+static int dar = &daq;
+static int das = &&daq;
+static int dat = *daq;
+static int dau = **daq;
+static int dav = +daq;
+static int daw = -daq;
+static int daw2= -5;
+static int daw3= -(-5);
+static int dax = ~daq;
+static int dax2= ~0;
+static int dax3= ~1;
+static int dax4= ~~0;
+static int dax5= ~~1;
+static int day = ~~daq;
+static int daz = !daq;
+static int daz2= !0;
+static int daz3= !1;
+static int daz4= !!0;
+static int daz5= !!1;
+static int daz6= !!12345;
+static int dba = !!daq;
+static int dbb = sizeof daq;
+static int dbc = sizeof ~daq;
+static int dbd = sizeof(daq);
+static int dbda = alignof(daq);
+static int dbe = sizeof(~daq);
+static int dbf = daq++;
+static int dbg = daq++ ++;
+static int dbh = daq--;
+static int dbi = daq-- --;
+static int dbj = daq.x;
+static int dbk = daq.x.y.z;
+static int dbl = daq->x;
+static int dbm = daq->x->y->z;
+static int dbn = (daq);
+static int dbo = (dax*day)*daz;
+static int dbp = (dax+day)*daz;
+static int dbq = dax+day*daz;
+static int dbr = (((dax+day)*daz)/dbf)+(dba*dbb);
+static int dbs = dba[5];
+static int dbt = dba[dbb+dbc];
+static int dbu = dba[3][5];
+static int dbv = dba[dbb+dbc][4+dbd];
+static int dbw = (*(dba+3))[dbb][dbc][dbd][dbe][dbf];
+static int ddda[4];
+static int dbz[4][5][6][dba];
+static int dca[dba+dbb*dbc][dbd+dbe][((dbf+dbg)*dbh)+5][dbg];
+static int dcb[];
+static int dcc[][][][];
+static int dcd();
+static int dce(int x);
+static int dcf(int x,float y);
+static int dcg(int x,float y,int z,char *a,const char *b,const char * const c);
+static int dch(int a,int b,...);
+static int dci(int x=5,int y=x*3);
+static int dcj(a,b) int a; int b; { }
+static int dck(a,b,c,d,e,f,g,h,i,j,k) int a,b,c; float d,e,f; double g,h; const char *i,*j,*k; { }
+static int dcl(a,b,c,...) int a; float b; const char c; { }
+static int dcm(int (*a),int (*b)(int c));
+static int dcn(int a,int b),e(int f,int g);
+static int dco() { }
+static int e0(int a) { }
+static int xaaa = y = 5;
+static int xaab = (y=5);
+static int xaac = (y*=6);
+static int xaad = (y/=6);
+static int xaae = (y%=6);
+static int xaaf = (y+=3);
+static int xaag = (y-=3);
+static int xaah = (y<<=2);
+static int xaai = (y>>=2);
+static int xaaj = (y&=3);
+static int xaak = (y^=3);
+static int xaal = (y|=3);
+static char xacc = 5;
+static long xacd = 6;
+static short xace = 7;
+static long long xacf = 8;
+extern int xaea;
+extern int xaea;
+int xaea;
+static int daaa(int a,int b) {
+	int c = 3,x = 3;
+	long d = 5 + a*b+c+x,dd = d*d;
+	float fa = 3.3,fb = fa*3,fc = fa*3+fb,fd = 4.44;
+	double fda = 2.22,fdb = 1.11,fdc = 33.33,fdd = 44.44;
+	const char *px,**py,* const * const pz;
+	char arr[5],arb[11];
+	int* (*func)(int x,int y,float z);
+	int* (* const *func1)(const int x,int z,int* (*xyz)(int a,int b),float** (* const abcd)(float z),char a[5][b+c],int* aa[6][b+c],int xx=3,...);
+	int (*func2)(int a=4,int b=2,int c=a+b,...);
+	int some_external_function(int x);
+
+	xaea = 4;
+	c = x + 4; c = (x)+(d/fa)*fb; c |= 3;
+	x |= c + x;
+
+	{
+		int yo_dawg = 5;
+		yo_dawg += x;
+	}
+
+	x |= 3;
+
+	{
+		int nest = 5;
+		nest++;
+		{
+			int nest2 = nest + 1;
+			nest2++; nest2*=3;
+			{
+				int nest3 = nest2 + 1;
+				nest3/=2;
+			}
+		}
+	}
+
+	label1: x |= 3;
+	label2: label3: x -= 4;
+
+	if (1) x += 3;
+	if (x == 2 || c == (d/4)) x += 5;
+	if (c == d) { x += 2; c /= 4+d; }
+	if (c == d) x += 3; else x -= 3;
+	if (c == d || fa == fb) { x += 3; d /= 4; } else { x -= 3; d *= 7; }
+
+	if (c == 2)
+		x += 3;
+	else if (c == 3)
+		x += 5;
+	else if (c == 4)
+		x += 6;
+	else
+		x += 7;
+
+	switch (c) {
+		case 3: x += 4; break;;;;;
+		case 7: x += 3; goto label1;
+		default: x += 2; break;
+	}
+
+	return;
+	return 3;
+	return (3+x)*y;
+}
+int some_external_function(int x);
+static int dddb(int a) {
+	int x = 1,y = 0,z = 0;
+	while (a-- > 0) x += x;
+	while (a-- > 0) { x += x; }
+	do { x += x; } while (a-- > 0);
+	do x += x; while (a-- > 0);
+	for (x=0;x < 5;x++) y = (y*2)+1;
+	for (x=0;x < 5;) { y = (y*2)+1; z++; }
+	for (x=0;x < 5;);
+	for (x=0;;);
+	for (;;);
+	for (;;) z++;
+	for (x=0;x < 5;x++,z++) z++;
+	return x;
+}
+static int roundto1(int x) {
+	x -= x % 5;
+	return x;
+}
+static int roundto(int x,int y) {
+	x -= x % y;
+	return x;
+}
+
+int printf(const char *fmt,...);
+
+static int (*dddb_p)(int a) = dddb;
+static int (*dddb_p2[3])(int a);
+static int dddb_p2sz = sizeof(dddb_p2);
+static int doody(int,int,int a = 5,char*,const char * const,int[],int[5],int[3][5]) {
+	int* (*funcptr)();
+	int (*func1)();
+	roundto(9);
+	(*funcptr)();
+	func1()();
+	func1()()()()();
+	func1()[5]();
+	roundto(a,10);
+	printf("Hello world %s\n","dude",4,2,2*3,((a*5)+3)/2);
+	printf("Hello world %s\n","dude",4*2,2*2,2*3*2,((a*5)+3)/2);
+	(*funcptr)(&a,a+5);
+	return 5;
+}
+static int xld1s = sizeof(long double);
+static int xld1a = alignof(long double);
+static int x1a1a = sizeof(int);
+static int x1a1aa = alignof(int);
+static int x1a1a2= sizeof(short);
+static int x1a1a2a= alignof(short);
+static int x1a1a3= sizeof(char);
+static int x1a1a3a= alignof(char);
+static int x1a1a4= sizeof(long);
+static int x1a1a4a= alignof(long);
+static int x1a1a5= sizeof(long long);
+static int x1a1a5a= alignof(long long);
+static int x1a1b = sizeof(int*);
+static int x1a1ba= alignof(int*);
+static int x1a1c = sizeof(const int* const*);
+static int x1a1ca= alignof(const int* const*);
+static int x1a1d = sizeof(int[3]);
+static int x1a1e = sizeof(int[3][3]);
+static int x1a1f = sizeof(int*[3][3]);
+static int x1a1g = sizeof(const int);
+static int x1a1h[] = { 1 };
+static int x1a1i[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+static int x1a1i2[] = { 1, 2*2, 3*3, 4*4 };
+static int x1a1j[] = { dba, dbb, dbc+dbd, dbe*dbf, dbg*dbh+dbi };
+static int x1a1k[] = { dba, dbb, { 1, 2, 3, 4 }, c, d };
+static int x1a1l[] = { dba, dbb, { 1, 2, 3, 4, { dax*dax, day*day, daz*daz } }, dbc, dbd };
+static int daaba(int a) {
+	return (long)(a);
+}
+static int daabb(char a,char b) {
+	return (long)(int)(a+b);
+}
+enum test { A, B, C, D } xoooo2;
+static int xoooo2sz = sizeof(xoooo2);
+static int xoooo2sz2 = sizeof(enum test);
+enum test xoooo;
+enum test2 { AA=1, AB, AC=100, AD=AA*400, AD2, AD3, AE=AA+AB+AC+AD, AF=1?AC:AB, AG=0?AC:AB, AH=1?1?AD:AC:AB } xoooo3;
+enum { BA, BB, BC, BD } xoooo4;
+struct test_declare;
+struct tests;
+union testu;
+struct tests { } xxxxxxx;
+struct tests xooo5,*xxxxy,**xxxxxz;
+struct test2s { char cc; int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo6;
+struct test3 { char cc; int a; struct another { int x,y,z; } one; } xooo7;
+struct { char cc; int a,b,c; int z; } xooo8;
+union utest_declr;
+union utest xooo9;
+union utest { } xooo10;
+union utest2 { int a; int b,c; float d[3]; int x:1,y:3,z:7; } xooo11;
+union { int a,b,c; int z; } xooo12;
+struct test4 { int x; union { struct { int x,y; } i; struct { float a,b; } f; } un; } t;
+struct test5 {
+	int a;
+	int (*func1)(int a,int b);
+} x00012;
+enum test;
+enum test3e {
+	CA,
+	CB,
+	CC,
+	CD,
+	CE
+};
+void enumcall1(enum test);
+void enumcall2(enum test2);
+void enumcall3(enum test3e);
+struct test6;
+struct test6 {
+	int a;
+	int (*funct1)(int a,int b);
+};
+union utest3 {
+	int a,b;
+};
+struct {
+	int a,b;
+};
+union {
+	int a,b;
+};
+static const char *x00013 = "hello\xff";
+static const char *x00014 = "Hello really long string constant likely to cause reallocation as it parses it into memory blah blah blah blah blah blah\n";
+static const short *x00015a = u"Hello world\n";
+static const long *x00015b = U"Hello world\n";
+struct test7 { int a, b, c; } x00015 = { 1, 2, 3 };
+struct test8 { int a[3], b[5], c[7]; } x00016 = { {1,2,3}, {1,2,3,4,5}, {1,2,3,4,5,6,7} };
+static int x00017[] = { 10, 20, [5] = 50, [50][5] = 500, [500][50][5] = 5000, 60, 70 };
+struct test9 { int a, test, b; } x00018 = { .a = 5, .b = 7*8, .test = ((23*5)/3)+2 };
+struct test10 { int a, test, b; } x00019 = { a: 5, b: 7*8, c: dba*dbb };
+static inline int d00020() { return 3; }
+static constexpr inline int d00021() { return 4; }
+
+#define X(x) static int d000022(int y) { return y*x; }
+X(1);
+
+static int d000023(int x) {
+	static const int s = 50;
+	switch (x) {
+		case 0:
+			return 0;
+		case 1 ... 3:
+			return 1;
+		case 4 ... 19:
+			return 2;
+		case 20 ... s:
+			return 3;
+		default:
+			break;
+	};
+
+	return x;
+}
+
+int forward_declaration_1(int a,int b);
+int forward_declaration_1(int a,int b);
+
+static int x00024[] = { 2, 3, [5] = 4, [10 ... 19] = 5 };
+
+static int tt2af = 6;
+struct tt2a {
+	int	tt2af,x,y,z;
+	int	a,b,c;
+	int*	(* const funcptr)(int x,int y);
+};
+
+struct tt2 {
+	unsigned int	x:4;
+	unsigned int	y:3;
+	unsigned int	z:1;
+	unsigned int	a:3;
+	unsigned int	b:2;
+	unsigned int	h:1,i:1,j:1;
+};
+
+struct tt2 tt2va;
+
+struct tt2b {
+	unsigned int	x:4;
+	unsigned int	y:3;
+	unsigned int	z:1;
+	unsigned int	a:3;
+	unsigned int	b:2;
+	unsigned int	h:1,i:1,j:1;
+} tt2vb;
+
+struct tt2b2 {
+	unsigned int	cx:CB;
+	unsigned int	cy:CC;
+	unsigned int	cz:CD;
+	unsigned int	ca:CE;
+} tt2vb2;
+
+/* This is our extension to the struct bitfield syntax that allows explicit bitfield length and starting bit.
+   For consistency reasons, the syntax within the brackets are exactly the same as GCC's range syntax for case statements and designated init lists.
+   The syntax is [LSB bit position ... MSB bit position]. [4 ... 7] for example declares a 4-bit field starting at bit 4 with the MSB at bit 7. */
+struct tt3 {
+	unsigned int	x:[0 ... 3];
+	unsigned int	y:[4 ... 6];
+	unsigned int	z:[7];
+	unsigned int	a:[8 ... 10];
+	unsigned int	b:[11 ... 12];
+	unsigned int	h:[13],i:[14],j:[15];
+};
+
+#define BF(x) [((x)*5) ... (((x)*5)+4)]
+
+struct tt4 {
+	unsigned int	x:BF(0);
+	unsigned int	y:BF(1);
+	unsigned int	z:BF(2);
+	unsigned int	a:BF(3);
+	unsigned int	b:BF(4);
+};
+
+struct tt4b2 {
+	unsigned int	cx:[CA ... CB];
+	unsigned int	cy:[CB ... CC];
+	unsigned int	cz:[CC ... CD];
+	unsigned int	ca:[CD ... CE];
+} tt4vb2;
+
+typedef struct {
+	unsigned int	x,y;
+} tt5;
+
+typedef struct tt5b_t {
+	unsigned int	x,y;
+} tt5b;
+
+typedef unsigned int tdu1;
+typedef struct tdu2_t { int a; int b; } tdu2;
+typedef unsigned int *tdu3;
+typedef tdu3 *tdu3b;
+typedef tdu1 tdu4;
+typedef tdu1 *tdu5;
+typedef unsigned int tdu6[5];
+typedef tdu6 tdu7[3];
+typedef tdu7 tdu8[15];
+typedef tdu6 *tdu9[7];
+typedef tdu9 *tdu10[9];
+typedef tdu1* (*tdu11)(tdu1 *x,tdu10 *y);
+typedef tdu11 tdu12[4];
+
+static int tdu8sz = sizeof(tdu8);
+static int tdu10sz = sizeof(tdu10);
+static int tdu12sz = sizeof(tdu12);
+static int tdu12sa = alignof(tdu12);
+
+static tdu1 xyz123 = 3;
+static tt5b_t xyzabc = { x: 4, y: 3 };
+static tdu2_t xyz110 = { a: 3, b: 5 };
+static tdu3 xyz111 = &xyz123;
+static tdu3b xyz111b = &xyz111;
+static tdu4 xyz112 = 123;
+static tdu5 xyz113 = &xyz123;
+static tdu6 xyz114 = { 1, 2, 3, 4, 5 };
+static tdu7 xyz115;
+static tdu8 xyz116;
+static tdu8* xyz116b;
+static unsigned int (*xyz116c)[15][3][5];
+static unsigned int *xyz116d[4];
+static unsigned int (*xyz116e)[4];
+static unsigned int *(xyz116f)[4];
+static unsigned int* (*xyz116g)[4];
+static tdu9 xyz117;
+static tdu10 xyz118;
+static tdu11 xyz119;
+static tdu12 xyz120;
+static unsigned int xsz1 = sizeof(int);
+static unsigned int xsz1a = alignof(int);
+static unsigned int xsz2 = sizeof(tdu1);
+static unsigned int xsz2a = alignof(tdu1);
+static unsigned int xyz121 = (unsigned int)5;
+static unsigned int xyz122 = (tdu1)5;
+static size_t sz1 = 8;
+static size_t sz2 = sizeof(size_t);
+static size_t sz2a = alignof(size_t);
+static size_t sz3 = (size_t)8;
+static ssize_t sz4 = 8;
+static ssize_t sz5 = sizeof(ssize_t);
+static ssize_t sz5a = alignof(ssize_t);
+static ssize_t sz6 = (ssize_t)8;
+static __int8 szi1 = 8;
+static __int16 szi2 = 8;
+static __int32 szi3 = 8;
+static __int64 szi4 = 8;
+static signed __int8 szi5 = 8;
+static signed __int16 szi6 = 8;
+static signed __int32 szi7 = 8;
+static signed __int64 szi8 = 8;
+static unsigned __int8 szi9 = 8;
+static unsigned __int16 szi10 = 8;
+static unsigned __int32 szi11 = 8;
+static unsigned __int64 szi12 = 8;
+static int8_t szi13 = 8;
+static int16_t szi14 = 8;
+static int32_t szi15 = 8;
+static int64_t szi16 = 8;
+static uint8_t szi17 = 8;
+static uint16_t szi18 = 8;
+static uint32_t szi19 = 8;
+static uint64_t szi20 = 8;
+static uintptr_t szi21 = 8;
+static intptr_t szi22 = 8;
+static uintptr_t szi23 = (uintptr_t)8;
+static intptr_t szi24 = (intptr_t)8;
+static uintptr_t szi25 = sizeof(uintptr_t);
+static uintptr_t szi25a = alignof(uintptr_t);
+static intptr_t szi26 = sizeof(intptr_t);
+static intptr_t szi26a = alignof(intptr_t);
+
+char *(*(nastyname)())[10] /* https://www.educative.io/blog/decoding-c-declarations */
+{
+	char *(*p)[10];
+
+	return p;
+}
+
+int funcretfunc_sub(int x,int y) {
+	return x+y;
+}
+
+int (*(funcretfunc)(int x))(int,int) {
+	return &funcretfunc_sub;
+}
+
+tdu1 trf1() {
+	return 5;
+}
+
+tdu1 trf2(tdu1 x,tdu1 *y) {
+	return x + *y;
+}
+
+enum :char {
+	DA,
+	DB,
+	DC,
+	DD,
+	DE
+} xe1;
+
+enum test4e:char {
+	EA,
+	EB,
+	EC,
+	ED,
+	EE
+} xe2;
+
+enum test5e:unsigned char {
+	FA,
+	FB,
+	FC,
+	FD,
+	FE
+} xe3;
+
+typedef enum test6e {
+	GA,
+	GB,
+	GC
+} xe4;
+
+static int funcyar[FA][FB+FA][FC+FB*FA];
+static int funcyarx[FA][FB+FA][FC+FB*FA+dac];
+
+static int funk1(funcytown) int (*funcytown)(int (*fu1)(int (*fu2)(int))); { }
+static int funk2(funcytown) int (*funcytown)(int* (*fu1)(int* (*fu2)(int))); { }
+static int funk3(funcytown) int (*funcytown)(int* (*)(int* (*)(int))); { }
+static int funk4(funcytown) int (*funcytown)(int* (*fu1[])(int* (*fu2[])(int))); { }
+static int funk5(funcytown) int (*funcytown)(int* (*fu1[5])(int* (*fu2[5])(int))); { }
+static int funk6(funcytown) int (*funcytown)(int* (*fu1[5][5])(int* (*fu2[5][5])(int))); { }
+static int (*funy1a[])();
+static int (*funy1b[5])();
+static int (*funy1c[5][3])();
+static int (*funy1d[5][3])(int* (*f1)(int* c[]));
+static int (*funy1e[5][3])(int* (*)(int* []));
+static int (*funy1f[5][3])(int* (*)(int* [10]));
+static int ((funy1g[5]));
+static int ((funy1h)[5]);
+static int* (*funy1i);
+static int* ((*funy1ia));
+static int* ((((*funy1ib))));
+static int* (*funy1j[5]);
+static int (*funy1k)[5];
+static int* funy1kb[5];
+
+int forward_declaration_1(int a,int b) {
+	return a+b;
+}
+
+int fwd1(int a,int b);
+
+int fwd1(int a,int b) {
+	return a+b;
+}
+
+int fwd1(int a,int b);
+
+int fwd1call1(int a,int b) {
+	return fwd1(5,4);
+}
+
+int fwd1call2(int a,int b) {
+	return fwd1(a,b);
+}
+
+int fwd1call3(int a,int b) {
+	return fwd1(a*b,b*a);
+}
+
+int fwd1call4(int a,int b) {
+	return fwd1(2*2,4*4);
+}
+
+enum negatives { NA, NB, NC, ND=-5, NE, NF, NG, NH=-10000, NI };
+
+const int constA = 5;
+const int constB = 5 * 5 + 3;
+constexpr int constC = constA*constB;
+const int constD = constA + constB + constC;
+
+static int fromConst1[constD];
+
+static int* (* (*funcedup1[4])(int x,int y));
+static int**** (** (***funcedup2)[4][3])[2];
+static int (** (** (*funcedup3)[5])[6])[7];
+
+typedef int (** (** (*funcedup4_t)[5])[6])[7];
+funcedup4_t funcedup4l;
+funcedup4_t *funcedup4p;
+funcedup4_t funcedup4[4];
+
+static int funcedup4sz1 = sizeof(funcedup4_t);
+static int funcedup4sz2 = sizeof(funcedup4l);
+static int funcedup4sz3 = sizeof(funcedup4p);
+static int funcedup4sz4 = sizeof(funcedup4);
+
+typedef int arrarr1_t[4][5][6][7];
+static arrarr1_t arrarr1a;
+static arrarr1_t arrarr1b[3];
+static arrarr1_t arrarr1c[2][3];
+static arrarr1_t arrarr1d[1][2][3];
+
+static alignas(0) uint16_t align1;
+static alignas(1) uint16_t align1b; /* this specifies alignment less than natural and should not change anything */
+static alignas(2) uint16_t align1c;
+static alignas(4) uint16_t align2;
+static alignas(256) uint16_t align3;
+static int alignt0 = alignof(uint16_t);
+static int alignt1 = alignof(int);
+static alignas(int) uint16_t align4;
+static alignas(long long) uint16_t align5;
+static alignas(alignof(align3)) int align6;
+static alignas(align3) int align7;
+static alignas(2) int align7b;
+static _Alignas(4) uint16_t align8;
+static _Alignas(512) uint16_t align9;
+static _Alignas(1) uint64_t align10a;
+static _Alignas(2) uint64_t align10b;
+static _Alignas(4) uint64_t align10c;
+static _Alignas(8) uint64_t align10d;
+static _Alignas(16) uint64_t align10e;
+
+static int *ptrdef1;
+static int ptrdef1a = 5;
+static int ptrdef1b = *ptrdef1;
+static int ptrdef1c = sizeof(ptrdef1);
+static int ptrdef1d = sizeof(*ptrdef1);
+static int ptrdef1e = sizeof(ptrdef1b);
+static int ptrdef1f = alignof(ptrdef1);
+static int ptrdef1g = alignof(*ptrdef1);
+static int ptrdef1h = alignof(ptrdef1b);
+static int ptrdef1i = sizeof(int[4]);
+static int ptrdef1j = sizeof(ptrdef1a);
+static int ptrdef1k = sizeof(&ptrdef1a);
+static int ptrdef1l = sizeof(&&ptrdef1a);
+static int ***ptrdef2;
+static int ptrdef2a = sizeof(ptrdef2);
+static int ptrdef2b = sizeof(*ptrdef2);
+static int ptrdef2c = sizeof(**ptrdef2);
+static int ptrdef2d = sizeof(***ptrdef2);
+static int ptrdef2e = sizeof(****ptrdef2);
+static int **(**ptrdef3)[4];
+static int ptrdef3a = sizeof(ptrdef3);
+static int ptrdef3b = sizeof(*ptrdef3);
+static int ptrdef3c = sizeof(**ptrdef3);
+static int ptrdef3d = sizeof(***ptrdef3);
+static int ptrdef3e = sizeof(****ptrdef3);
+static int ptrdef3f = sizeof(*****ptrdef3);
+static int **(**ptrdef4[4]);
+static int ptrdef4a = sizeof(ptrdef4);
+static int ptrdef4b = sizeof(*ptrdef4);
+static int ptrdef4c = sizeof(**ptrdef4);
+static int ptrdef4d = sizeof(***ptrdef4);
+static int ptrdef4e = sizeof(****ptrdef4);
+static int ptrdef4f = sizeof(*****ptrdef4);
+static int ****ptrdef5[4];
+static int ptrdef5a = sizeof(ptrdef5);
+static int ptrdef5b = sizeof(*ptrdef5);
+static int ptrdef5c = sizeof(**ptrdef5);
+static int ptrdef5d = sizeof(***ptrdef5);
+static int ptrdef5e = sizeof(****ptrdef5);
+static int ptrdef5f = sizeof(*****ptrdef5);
+static int (**ptrdef6)[4];
+static int ptrdef6a = sizeof(ptrdef6);
+static int ptrdef6b = sizeof(*ptrdef6);
+static int ptrdef6c = sizeof(**ptrdef6);
+static int ptrdef6d = sizeof(***ptrdef6);
+typedef int **ptrdef7_t;
+static ptrdef7_t ptrdef7[4];
+static int ptrdef7a = sizeof(ptrdef7);
+static int ptrdef7b = sizeof(*ptrdef7);
+static int ptrdef7c = sizeof(**ptrdef7);
+static int ptrdef7d = sizeof(***ptrdef7);
+static int **ptrdef8[4];
+static int ptrdef8a = sizeof(ptrdef8);
+static int ptrdef8b = sizeof(*ptrdef8);
+static int ptrdef8c = sizeof(**ptrdef8);
+static int ptrdef8d = sizeof(***ptrdef8);
+
+union uni1_t { char a; int b; long c; float d; double e; long long f; long double g; } uni1;
+
+struct stalign1a_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+};
+
+typedef struct stalign1b_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+};
+
+struct stalign1a_t stalign1aa;
+alignas(64) struct stalign1a_t stalign1ab;
+alignas(256) struct stalign1a_t stalign1ac;
+
+static struct stalign1a_t stalign1aa1;
+static alignas(64) struct stalign1a_t stalign1ab1;
+static alignas(256) struct stalign1a_t stalign1ac1;
+
+static stalign1b_t stalign1ba;
+static alignas(64) stalign1b_t stalign1bb;
+static alignas(256) stalign1b_t stalign1bc;
+
+alignas(128) struct stalign2a_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2a;
+
+struct alignas(128) stalign2b_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2b;
+
+static __declspec(align(8)) char msalign1;
+static __declspec( align(1024) ) short msalign2;
+static __declspec( align( ((2*4)<<1) ) ) short msalign3; /* Microsoft C/C++ probably doesn't support expressions there, but we do */
+static _declspec(align(8)) char msalign4;
+static _declspec( align(1024) ) short msalign5;
+static _declspec( align( ((2*4)<<1) ) ) short msalign6; /* Microsoft C/C++ probably doesn't support expressions there, but we do */
+static __declspec(deprecated) int msdeprecated1;
+static __declspec(dllimport) int msdllimport1;
+static __declspec(dllexport) int msdllexport1;
+static __declspec(naked) int msnaked1;
+static __attribute__(( aligned(32) )) int gnualign1;
+static __attribute__(( deprecated )) int gnualign2;
+static __attribute__(( naked )) int gnualign3;
+static __attribute__(( naked, deprecated, aligned(64) )) int gnualign4;
+
+__declspec(align(128)) struct stalign2am_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2am;
+
+struct __declspec(align(128)) stalign2bm_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign2bm;
+
+ __attribute__(( aligned(128) )) struct stgnualign4_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign4a;
+
+struct __attribute__(( aligned(128) )) stgnualign5_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign5b;
+
+static [[ ::gnu::aligned(32) ]] int cpp11align1;
+static [[ deprecated ]] int cpp11align2;
+static [[ gnu::naked ]] int cpp11align3;
+static [[ gnu::naked, gnu::deprecated, gnu::aligned(64) ]] int cpp11align4;
+
+ [[ gnu::aligned(128) ]] struct stcpp11align4_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign4acpp11;
+
+struct [[ gnu::aligned(128) ]] stcpp11align5_t {
+	alignas(4) char		a,b;
+	alignas(4) short	c,d;
+	alignas(2) int		e,f;
+	alignas(32) long long	g,h;
+} stalign5bcpp11;
+
+
+static [[ using gnu: aligned(32) ]] int cpp11align1g;
+static [[ using gnu: deprecated ]] int cpp11align2g;
+static [[ using gnu: naked ]] int cpp11align3g;
+static [[ using gnu: naked, deprecated, aligned(64) ]] int cpp11align4g;
+
+/* Standard C */
+#pragma once
+#pragma once \
+        once \
+        again \
+        once \
+        again
+#pragma twice
+#pragma twice again
+#define PR1 again
+#pragma twice PR1 PR1
+#pragma multiple lines \
+        twice PR1 \
+        PR1 (PR1)
+/* Microsoft C/C++ */
+__pragma(once)
+__pragma(twice)
+__pragma(twice again)
+__pragma(twice PR1 PR1)
+__pragma(multiple lines \
+        twice PR1 \
+        PR1 (PR1))
+/* Newer C */
+_Pragma("once")
+_Pragma("twice")
+_Pragma("twice again")
+_Pragma("twice again (and again)")
+_Pragma("once(\"hey\") \\ hello")
+_Pragma("multiple lines\ntwice again\nagain\nagain")
+/* You're supposed to be able to use __pragma and _Pragma in macros, where that was impossible with #pragma */
+#define PRAG1 __pragma(twice)
+#define PRAG2 __pragma(twice(well))
+#define PRAG3 _Pragma("twice")
+#define PRAG4 _Pragma("twice(well)")
+PRAG1
+PRAG2
+PRAG3
+PRAG4
+#define PRAG5 "twice(well,5)"
+#define PRAG6 twice(well,77)
+_Pragma(PRAG5)
+__pragma(PRAG6)
+
+#pragma pack(push)
+#pragma pack(pop)
+
+#pragma pack(push,1)
+#pragma pack(pop)
+
+#pragma pack(push,2)
+#pragma pack(push,1)
+#pragma pack(pop)
+#pragma pack(pop)
+
+#pragma pack(push,4)
+#pragma pack(push,1)
+#pragma pack(pop,2)
+#pragma pack(pop)
+
+#pragma pack(push,4)
+#pragma pack(push,test,1)
+#pragma pack(pop,test,2)
+#pragma pack(pop)
+
+#pragma pack(push,4)
+#pragma pack(push,test,1)
+#pragma pack(pop,test)
+#pragma pack(pop)
+
+#pragma pack(push,4)
+#pragma pack(push,test,1)
+#pragma pack(push,ignoreme,2)
+#pragma pack(pop,test)
+#pragma pack(pop)
+#pragma pack(pop)
+
+#pragma pack(4)
+#pragma pack() /* uhm, so Microsoft's site implies that [n] is optional, so, we're going to allow pack() to mean default packing */
+
+struct packstruct1a {
+	char	c;
+	short	s;
+	long	l;
+};
+
+#pragma pack(push,2)
+struct packstruct1b {
+	char	c;
+	short	s;
+	long	l;
+};
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct packstruct1c {
+	char	c;
+	short	s;
+	long	l;
+};
+#pragma pack(pop)
+
+__declspec(naked) void asmfunc1() {
+	__asm nop
+	__asm {
+		nop
+		nop
+		mov	al,5Ah
+		mov	ebx,[esi+5]
+		ret
+	}
+	__asm nop __asm nop __asm ret ; with comments
+}
+
+void asmfunc2() {
+	unsigned int d=0,s=3;
+
+	asm("nop");
+	__asm__("nop");
+	__asm__ volatile("nop");
+	__asm__ __volatile__("nop");
+	__asm__ volatile inline("nop");
+	__asm__ __volatile__ __inline__("nop");
+	__asm__("nop" : "=r" (d) : "r" (s) : "cc");
+	asm goto ("nop" : "=r" (d) : "r" (s) : "cc" : gotolabel);
+	asm goto ("nop" : "=r" (d) : "r" (s) : "cc" : gotolabel, anotherlabel);
+gotolabel:
+	s++;
+anotherlabel:
+	s--;
+}
+
+__asm {
+global_level:
+	nop
+	cli
+	sti
+	ret
+}
+
