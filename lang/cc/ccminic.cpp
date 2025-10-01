@@ -974,6 +974,48 @@ struct pptok_state_t {
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct ast_node_t {
+	token_t			t;
+	ast_node_id_t		next = ast_node_none;
+	ast_node_id_t		child = ast_node_none;
+	unsigned int		ref = 0;
+
+	ast_node_t&		set_child(const ast_node_id_t n);
+	ast_node_t&		set_next(const ast_node_id_t n);
+	ast_node_t&		addref(void);
+	ast_node_t&		release(void);
+	ast_node_t&		clear_and_move_assign(token_t &tt);
+	ast_node_t&		clear(const token_type_t t);
+
+	ast_node_t() { }
+	ast_node_t(const ast_node_t &) = delete;
+	ast_node_t &operator=(const ast_node_t &) = delete;
+	ast_node_t(ast_node_t &&x) { common_move(x); }
+	ast_node_t &operator=(ast_node_t &&x) { common_move(x); return *this; }
+
+	static void arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s);
+	static void arrayrelease(std::vector<ast_node_id_t> &d);
+
+	void common_move(ast_node_t &o);
+	std::string to_str(void) const;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
+class ast_node_pool : public ast_node_pool_t {
+	public:
+		using pool_t = ast_node_pool_t;
+	public:
+		ast_node_pool();
+		~ast_node_pool();
+	public:
+		ast_node_id_t alloc(token_type_t t=token_type_t::none);
+		ast_node_id_t alloc(token_t &t);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 enum target_cpu_t {
 	CPU_NONE=0,			// 0
 	CPU_INTEL_X86,
@@ -5783,48 +5825,6 @@ int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sf
 
 	return 1;
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-struct ast_node_t {
-	token_t			t;
-	ast_node_id_t		next = ast_node_none;
-	ast_node_id_t		child = ast_node_none;
-	unsigned int		ref = 0;
-
-	ast_node_t&		set_child(const ast_node_id_t n);
-	ast_node_t&		set_next(const ast_node_id_t n);
-	ast_node_t&		addref(void);
-	ast_node_t&		release(void);
-	ast_node_t&		clear_and_move_assign(token_t &tt);
-	ast_node_t&		clear(const token_type_t t);
-
-	ast_node_t() { }
-	ast_node_t(const ast_node_t &) = delete;
-	ast_node_t &operator=(const ast_node_t &) = delete;
-	ast_node_t(ast_node_t &&x) { common_move(x); }
-	ast_node_t &operator=(ast_node_t &&x) { common_move(x); return *this; }
-
-	static void arraycopy(std::vector<ast_node_id_t> &d,const std::vector<ast_node_id_t> &s);
-	static void arrayrelease(std::vector<ast_node_id_t> &d);
-
-	void common_move(ast_node_t &o);
-	std::string to_str(void) const;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
-using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
-class ast_node_pool : public ast_node_pool_t {
-	public:
-		using pool_t = ast_node_pool_t;
-	public:
-		ast_node_pool();
-		~ast_node_pool();
-	public:
-		ast_node_id_t alloc(token_type_t t=token_type_t::none);
-		ast_node_id_t alloc(token_t &t);
-};
 
 //////////////////////////////////////////////////////////////////////////////
 
