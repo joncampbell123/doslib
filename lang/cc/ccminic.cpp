@@ -1181,6 +1181,40 @@ struct parameter_t {
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct enumerator_t {
+	identifier_id_t				name = identifier_none;
+	ast_node_id_t				expr = ast_node_none;
+	position_t				pos;
+
+	enumerator_t();
+	enumerator_t(const enumerator_t &x);
+	enumerator_t &operator=(const enumerator_t &x);
+	enumerator_t(enumerator_t &&x);
+	enumerator_t &operator=(enumerator_t &&x);
+
+	void common_copy(const enumerator_t &o);
+	void common_move(enumerator_t &o);
+	~enumerator_t();
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct structfield_t {
+	declaration_specifiers_t		spec;
+	ddip_list_t				ddip;
+	identifier_id_t				name = identifier_none;
+	data_offset_t				offset = data_offset_none;
+	bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
+
+	structfield_t();
+	structfield_t(structfield_t &&x);
+	structfield_t &operator=(structfield_t &&x);
+	~structfield_t();
+	void common_move(structfield_t &x);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 enum target_cpu_t {
 	CPU_NONE=0,			// 0
 	CPU_INTEL_X86,
@@ -6352,63 +6386,47 @@ std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct enumerator_t {
-	identifier_id_t				name = identifier_none;
-	ast_node_id_t				expr = ast_node_none;
-	position_t				pos;
+enumerator_t::enumerator_t() { }
+enumerator_t::enumerator_t(const enumerator_t &x) { common_copy(x); }
+enumerator_t &enumerator_t::operator=(const enumerator_t &x) { common_copy(x); return *this; }
+enumerator_t::enumerator_t(enumerator_t &&x) { common_move(x); }
+enumerator_t &enumerator_t::operator=(enumerator_t &&x) { common_move(x); return *this; }
 
-	enumerator_t() { }
-	enumerator_t(const enumerator_t &x) { common_copy(x); }
-	enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
-	enumerator_t(enumerator_t &&x) { common_move(x); }
-	enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
+void enumerator_t::common_copy(const enumerator_t &o) {
+	identifier.assign(/*to*/name,/*from*/o.name);
+	ast_node.assign(/*to*/expr,/*from*/o.expr);
+	pos = pos;
+}
 
-	void common_copy(const enumerator_t &o) {
-		identifier.assign(/*to*/name,/*from*/o.name);
-		ast_node.assign(/*to*/expr,/*from*/o.expr);
-		pos = pos;
-	}
+void enumerator_t::common_move(enumerator_t &o) {
+	identifier.assignmove(/*to*/name,/*from*/o.name);
+	ast_node.assignmove(/*to*/expr,/*from*/o.expr);
+	pos = std::move(pos);
+}
 
-	void common_move(enumerator_t &o) {
-		identifier.assignmove(/*to*/name,/*from*/o.name);
-		ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-		pos = std::move(pos);
-	}
-
-	~enumerator_t() {
-		identifier.release(name);
-		ast_node.release(expr);
-	}
-};
+enumerator_t::~enumerator_t() {
+	identifier.release(name);
+	ast_node.release(expr);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct structfield_t {
-	declaration_specifiers_t		spec;
-	ddip_list_t				ddip;
-	identifier_id_t				name = identifier_none;
-	data_offset_t				offset = data_offset_none;
-	bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
+structfield_t::structfield_t() { }
+structfield_t::structfield_t(structfield_t &&x) { common_move(x); }
+structfield_t &structfield_t::operator=(structfield_t &&x) { common_move(x); return *this; }
 
-	structfield_t() { }
-	structfield_t(const structfield_t &) = delete;
-	structfield_t &operator=(const structfield_t &) = delete;
-	structfield_t(structfield_t &&x) { common_move(x); }
-	structfield_t &operator=(structfield_t &&x) { common_move(x); return *this; }
+structfield_t::~structfield_t() {
+	identifier.release(name);
+}
 
-	~structfield_t() {
-		identifier.release(name);
-	}
-
-	void common_move(structfield_t &x) {
-		spec = std::move(x.spec);
-		ddip = std::move(x.ddip);
-		identifier.assignmove(/*to*/name,/*from*/x.name);
-		offset = x.offset;
-		bf_start = x.bf_start;
-		bf_length = x.bf_length;
-	}
-};
+void structfield_t::common_move(structfield_t &x) {
+	spec = std::move(x.spec);
+	ddip = std::move(x.ddip);
+	identifier.assignmove(/*to*/name,/*from*/x.name);
+	offset = x.offset;
+	bf_start = x.bf_start;
+	bf_length = x.bf_length;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
