@@ -1012,3 +1012,10 @@ global_level:
 	ret
 }
 
+typedef unsigned int typedef_scope1_t;
+
+void scopefunc1() {
+	int typedef_scope1_t;
+	int b;
+}
+

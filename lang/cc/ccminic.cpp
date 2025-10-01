@@ -9232,7 +9232,7 @@ common_error:
 					CCERR_RET(EINVAL,pos,"Extra specifiers for builtin type");
 
 				case token_type_t::identifier:
-					if (ds.type_specifier & TS_MATCH_TYPEDEF)
+					if (ds.type_specifier != 0)
 						break;
 
 					{
@@ -9255,6 +9255,8 @@ common_error:
 					ds.count++;
 					if (ds.type_specifier & TS_ENUM)
 						CCERR_RET(EINVAL,pos,"declarator specifier 'enum' already specified");
+					if (ds.type_specifier != 0)
+						break;
 
 					/* typedef is ignored here */
 					ds.storage_class &= ~SC_TYPEDEF;
@@ -9324,6 +9326,8 @@ common_error:
 					ds.count++;
 					if (ds.type_specifier & TS_STRUCT)
 						CCERR_RET(EINVAL,pos,"declarator specifier 'struct' already specified");
+					if (ds.type_specifier != 0)
+						break;
 
 					ds.type_specifier |= TS_STRUCT;
 					tq_discard();
@@ -9531,6 +9535,8 @@ common_error:
 
 					if (ds.type_specifier & TS_UNION)
 						CCERR_RET(EINVAL,pos,"declarator specifier 'union' already specified");
+					if (ds.type_specifier != 0)
+						break;
 
 					ds.type_specifier |= TS_UNION;
 					tq_discard();
