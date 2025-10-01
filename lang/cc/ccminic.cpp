@@ -6652,15 +6652,6 @@ void scope_t::common_move(scope_t &x) {
 		void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
 		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 
-		cc_state_t() {
-			assert(scopes.empty());
-			assert(scope_global == scope_id_t(0));
-			scopes.resize(scope_global+1); // make sure global scope exists
-
-			assert(scope_stack.empty());
-			scope_stack.push_back(scope_global);
-		}
-
 		void default_segment_setup(segment_t &so) {
 			if (target_cpu == CPU_INTEL_X86) {
 				if (target_cpusub == CPU_SUB_X86_16) {
@@ -6725,6 +6716,13 @@ void scope_t::common_move(scope_t &x) {
 		}
 
 		bool init(void) {
+			assert(scopes.empty());
+			assert(scope_global == scope_id_t(0));
+			scopes.resize(scope_global+1); // make sure global scope exists
+
+			assert(scope_stack.empty());
+			scope_stack.push_back(scope_global);
+
 			/* NTS: GCC x86_64 doesn't enforce a maximum packing by default, only if you use #pragma pack
 			 *      Microsoft C++ uses a default maximum according to /Zp or the default of 8 */
 			current_packing = default_packing;
