@@ -9246,59 +9246,73 @@ bool			cc_ignore_whitespace = true;
 
 //////////////////////////////////////////////////////////////////////////////
 
+void cc_tq_ft(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo) {
+	token_t t(token_type_t::eof);
+	int r;
+
+	do {
+		if (cc_err == 0) {
+			if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
+				cc_err = r;
+		}
+
+		if (cc_ignore_whitespace && cc_err == 0) {
+			if (t.type == token_type_t::newline)
+				continue;
+		}
+
+		break;
+	} while (1);
+
+	cc_tq.push_back(std::move(t));
+}
+
+void cc_tq_refill(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo,const size_t i=1) {
+	while (cc_tq.size() < (i+cc_tq_tail))
+		cc_tq_ft(pst,lst,buf,sfo);
+}
+
+const token_t &cc_tq_peek(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo,const size_t i=0) {
+	cc_tq_refill(pst,lst,buf,sfo,i+1);
+	assert((cc_tq_tail+i) < cc_tq.size());
+	return cc_tq[cc_tq_tail+i];
+}
+
+void cc_tq_discard(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo,const size_t i=1) {
+	cc_tq_refill(pst,lst,buf,sfo,i);
+	cc_tq_tail += i;
+	assert(cc_tq_tail <= cc_tq.size());
+
+	if (cc_tq_tail == cc_tq.size()) {
+		cc_tq_tail = 0;
+		cc_tq.clear();
+	}
+}
+
+token_t &cc_tq_get(pptok_state_t &pst,lgtok_state_t &lst,rbuf* buf,source_file_object* sfo) {
+	cc_tq_refill(pst,lst,buf,sfo);
+	assert(cc_tq_tail < cc_tq.size());
+	return cc_tq[cc_tq_tail++];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
 		lgtok_state_t		lst;
 		pptok_state_t		pst;
 		rbuf*			buf = NULL;
 		source_file_object*	sfo = NULL;
 
-		void cc_tq_ft(void) {
-			token_t t(token_type_t::eof);
-			int r;
-
-			do {
-				if (cc_err == 0) {
-					if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
-						cc_err = r;
-				}
-
-				if (cc_ignore_whitespace && cc_err == 0) {
-					if (t.type == token_type_t::newline)
-						continue;
-				}
-
-				break;
-			} while (1);
-
-			cc_tq.push_back(std::move(t));
-		}
-
-		void cc_tq_refill(const size_t i=1) {
-			while (cc_tq.size() < (i+cc_tq_tail))
-				cc_tq_ft();
-		}
-
 		const token_t &cc_tq_peek(const size_t i=0) {
-			cc_tq_refill(i+1);
-			assert((cc_tq_tail+i) < cc_tq.size());
-			return cc_tq[cc_tq_tail+i];
+			return ::cc_tq_peek(pst,lst,buf,sfo,i);
 		}
 
 		void cc_tq_discard(const size_t i=1) {
-			cc_tq_refill(i);
-			cc_tq_tail += i;
-			assert(cc_tq_tail <= cc_tq.size());
-
-			if (cc_tq_tail == cc_tq.size()) {
-				cc_tq_tail = 0;
-				cc_tq.clear();
-			}
+			::cc_tq_discard(pst,lst,buf,sfo,i);
 		}
 
 		token_t &cc_tq_get(void) {
-			cc_tq_refill();
-			assert(cc_tq_tail < cc_tq.size());
-			return cc_tq[cc_tq_tail++];
+			return ::cc_tq_get(pst,lst,buf,sfo);
 		}
 
 		int chkerr(void) {
