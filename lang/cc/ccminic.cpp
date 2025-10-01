@@ -6352,118 +6352,125 @@ std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct enumerator_t {
+	identifier_id_t				name = identifier_none;
+	ast_node_id_t				expr = ast_node_none;
+	position_t				pos;
+
+	enumerator_t() { }
+	enumerator_t(const enumerator_t &x) { common_copy(x); }
+	enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
+	enumerator_t(enumerator_t &&x) { common_move(x); }
+	enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
+
+	void common_copy(const enumerator_t &o) {
+		identifier.assign(/*to*/name,/*from*/o.name);
+		ast_node.assign(/*to*/expr,/*from*/o.expr);
+		pos = pos;
+	}
+
+	void common_move(enumerator_t &o) {
+		identifier.assignmove(/*to*/name,/*from*/o.name);
+		ast_node.assignmove(/*to*/expr,/*from*/o.expr);
+		pos = std::move(pos);
+	}
+
+	~enumerator_t() {
+		identifier.release(name);
+		ast_node.release(expr);
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct structfield_t {
+	declaration_specifiers_t		spec;
+	ddip_list_t				ddip;
+	identifier_id_t				name = identifier_none;
+	data_offset_t				offset = data_offset_none;
+	bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
+
+	structfield_t() { }
+	structfield_t(const structfield_t &) = delete;
+	structfield_t &operator=(const structfield_t &) = delete;
+	structfield_t(structfield_t &&x) { common_move(x); }
+	structfield_t &operator=(structfield_t &&x) { common_move(x); return *this; }
+
+	~structfield_t() {
+		identifier.release(name);
+	}
+
+	void common_move(structfield_t &x) {
+		spec = std::move(x.spec);
+		ddip = std::move(x.ddip);
+		identifier.assignmove(/*to*/name,/*from*/x.name);
+		offset = x.offset;
+		bf_start = x.bf_start;
+		bf_length = x.bf_length;
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct segment_t {
+	enum class type_t {
+		NONE=0,
+		CODE,
+		CONST,
+		DATA,
+		BSS,
+		STACK
+	};
+
+	enum class use_t {
+		NONE=0,
+
+		X86_16=1,
+		X86_32,
+		X86_64
+	};
+
+	static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
+	static constexpr unsigned int FL_READABLE = 1u << 1u;
+	static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
+	static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
+	static constexpr unsigned int FL_PRIVATE = 1u << 4u;
+	static constexpr unsigned int FL_FLAT = 1u << 5u;
+
+	addrmask_t				align = addrmask_none;
+	identifier_id_t				name = identifier_none;
+	type_t					type = type_t::NONE;
+	use_t					use = use_t::NONE;
+	data_size_t				limit = data_size_none;
+	data_size_t				size = data_size_none;
+	unsigned int				flags = 0;
+	data_offset_t				next_alloc = 0;
+
+	segment_t() { }
+	segment_t(const segment_t &) = delete;
+	segment_t &operator=(const segment_t &) = delete;
+	segment_t(segment_t &&x) { common_move(x); }
+	segment_t &operator=(segment_t &&x) { common_move(x); return *this; }
+
+	~segment_t() {
+		identifier.release(name);
+	}
+
+	void common_move(segment_t &x) {
+		align = x.align; x.align = addrmask_none;
+		identifier.assignmove(/*to*/name,/*from*/x.name);
+		type = x.type; x.type = type_t::NONE;
+		use = x.use; x.use = use_t::NONE;
+		limit = x.limit; x.limit = addrmask_none;
+		size = x.size; x.size = data_size_none;
+		flags = x.flags; x.flags = 0;
+		next_alloc = x.next_alloc; x.next_alloc = 0;
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
-		struct enumerator_t {
-			identifier_id_t				name = identifier_none;
-			ast_node_id_t				expr = ast_node_none;
-			position_t				pos;
-
-			enumerator_t() { }
-			enumerator_t(const enumerator_t &x) { common_copy(x); }
-			enumerator_t &operator=(const enumerator_t &x) { common_copy(x); return *this; }
-			enumerator_t(enumerator_t &&x) { common_move(x); }
-			enumerator_t &operator=(enumerator_t &&x) { common_move(x); return *this; }
-
-			void common_copy(const enumerator_t &o) {
-				identifier.assign(/*to*/name,/*from*/o.name);
-				ast_node.assign(/*to*/expr,/*from*/o.expr);
-				pos = pos;
-			}
-
-			void common_move(enumerator_t &o) {
-				identifier.assignmove(/*to*/name,/*from*/o.name);
-				ast_node.assignmove(/*to*/expr,/*from*/o.expr);
-				pos = std::move(pos);
-			}
-
-			~enumerator_t() {
-				identifier.release(name);
-				ast_node.release(expr);
-			}
-		};
-
-		struct structfield_t {
-			declaration_specifiers_t		spec;
-			ddip_list_t				ddip;
-			identifier_id_t				name = identifier_none;
-			data_offset_t				offset = data_offset_none;
-			bitfield_pos_t				bf_start = bitfield_pos_none,bf_length = bitfield_pos_none;
-
-			structfield_t() { }
-			structfield_t(const structfield_t &) = delete;
-			structfield_t &operator=(const structfield_t &) = delete;
-			structfield_t(structfield_t &&x) { common_move(x); }
-			structfield_t &operator=(structfield_t &&x) { common_move(x); return *this; }
-
-			~structfield_t() {
-				identifier.release(name);
-			}
-
-			void common_move(structfield_t &x) {
-				spec = std::move(x.spec);
-				ddip = std::move(x.ddip);
-				identifier.assignmove(/*to*/name,/*from*/x.name);
-				offset = x.offset;
-				bf_start = x.bf_start;
-				bf_length = x.bf_length;
-			}
-		};
-
-		struct segment_t {
-			enum class type_t {
-				NONE=0,
-				CODE,
-				CONST,
-				DATA,
-				BSS,
-				STACK
-			};
-
-			enum class use_t {
-				NONE=0,
-
-				X86_16=1,
-				X86_32,
-				X86_64
-			};
-
-			static constexpr unsigned int FL_NOTINEXE = 1u << 0u; /* not stored in EXE i.e. stack */
-			static constexpr unsigned int FL_READABLE = 1u << 1u;
-			static constexpr unsigned int FL_WRITEABLE = 1u << 2u;
-			static constexpr unsigned int FL_EXECUTABLE = 1u << 3u;
-			static constexpr unsigned int FL_PRIVATE = 1u << 4u;
-			static constexpr unsigned int FL_FLAT = 1u << 5u;
-
-			addrmask_t				align = addrmask_none;
-			identifier_id_t				name = identifier_none;
-			type_t					type = type_t::NONE;
-			use_t					use = use_t::NONE;
-			data_size_t				limit = data_size_none;
-			data_size_t				size = data_size_none;
-			unsigned int				flags = 0;
-			data_offset_t				next_alloc = 0;
-
-			segment_t() { }
-			segment_t(const segment_t &) = delete;
-			segment_t &operator=(const segment_t &) = delete;
-			segment_t(segment_t &&x) { common_move(x); }
-			segment_t &operator=(segment_t &&x) { common_move(x); return *this; }
-
-			~segment_t() {
-				identifier.release(name);
-			}
-
-			void common_move(segment_t &x) {
-				align = x.align; x.align = addrmask_none;
-				identifier.assignmove(/*to*/name,/*from*/x.name);
-				type = x.type; x.type = type_t::NONE;
-				use = x.use; x.use = use_t::NONE;
-				limit = x.limit; x.limit = addrmask_none;
-				size = x.size; x.size = data_size_none;
-				flags = x.flags; x.flags = 0;
-				next_alloc = x.next_alloc; x.next_alloc = 0;
-			}
-		};
 
 		struct symbol_t {
 			enum type_t {
@@ -10941,29 +10948,29 @@ common_error:
 		fprintf(stderr,"%s%s%ssegment#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&s-&segments[0]));
 
 		switch (s.type) {
-			case cc_state_t::segment_t::type_t::CODE: fprintf(stderr," code"); break;
-			case cc_state_t::segment_t::type_t::CONST: fprintf(stderr," const"); break;
-			case cc_state_t::segment_t::type_t::DATA: fprintf(stderr," data"); break;
-			case cc_state_t::segment_t::type_t::BSS: fprintf(stderr," bss"); break;
-			case cc_state_t::segment_t::type_t::STACK: fprintf(stderr," stack"); break;
+			case segment_t::type_t::CODE: fprintf(stderr," code"); break;
+			case segment_t::type_t::CONST: fprintf(stderr," const"); break;
+			case segment_t::type_t::DATA: fprintf(stderr," data"); break;
+			case segment_t::type_t::BSS: fprintf(stderr," bss"); break;
+			case segment_t::type_t::STACK: fprintf(stderr," stack"); break;
 			default: break;
 		};
 
 		switch (s.use) {
-			case cc_state_t::segment_t::use_t::X86_16: fprintf(stderr," X86:16"); break;
-			case cc_state_t::segment_t::use_t::X86_32: fprintf(stderr," X86:32"); break;
-			case cc_state_t::segment_t::use_t::X86_64: fprintf(stderr," X86:64"); break;
+			case segment_t::use_t::X86_16: fprintf(stderr," X86:16"); break;
+			case segment_t::use_t::X86_32: fprintf(stderr," X86:32"); break;
+			case segment_t::use_t::X86_64: fprintf(stderr," X86:64"); break;
 			default: break;
 		};
 
 		if (s.name != identifier_none) fprintf(stderr," '%s'",identifier(s.name).to_str().c_str());
 		else fprintf(stderr," <anon>");
-		if (s.flags & cc_state_t::segment_t::FL_NOTINEXE) fprintf(stderr," NOTINEXE");
-		if (s.flags & cc_state_t::segment_t::FL_READABLE) fprintf(stderr," READABLE");
-		if (s.flags & cc_state_t::segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
-		if (s.flags & cc_state_t::segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
-		if (s.flags & cc_state_t::segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
-		if (s.flags & cc_state_t::segment_t::FL_FLAT) fprintf(stderr," FLAT");
+		if (s.flags & segment_t::FL_NOTINEXE) fprintf(stderr," NOTINEXE");
+		if (s.flags & segment_t::FL_READABLE) fprintf(stderr," READABLE");
+		if (s.flags & segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
+		if (s.flags & segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
+		if (s.flags & segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
+		if (s.flags & segment_t::FL_FLAT) fprintf(stderr," FLAT");
 
 		fprintf(stderr,"\n");
 
