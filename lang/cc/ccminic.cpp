@@ -7155,6 +7155,33 @@ std::string ddip_list_to_str(const ddip_list_t &dl) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+void debug_dump_general(const std::string prefix,const std::string &name=std::string());
+void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name=std::string());
+void debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name=std::string());
+void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
+void debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name=std::string());
+void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
+void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
+void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
+void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
+void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name=std::string());
+void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
+void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
+void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
+void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name=std::string());
+void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name=std::string());
+void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
+void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
+void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
+void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+
+//////////////////////////////////////////////////////////////////////////////
+
 addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0) {
 	addrmask_t data_talign = addrmask_none;
 	addrmask_t data_calcalign;
@@ -8165,34 +8192,935 @@ bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
 	return false;
 }
 
+void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string()) {
+#define OP_ONE_PARAM_TEVAL ast_node_id_t op1 = erootnode.child
+
+#define OP_TWO_PARAM_TEVAL ast_node_id_t op1 = erootnode.child; \
+	ast_node_id_t op2 = ast_node(op1).next
+
+	if (eroot == ast_node_none)
+		return;
+
+#if 1//DEBUG
+	if (prefix.empty()) {
+		fprintf(stderr,"%senum expr (reducing node#%lu):\n",prefix.c_str(),(unsigned long)eroot);
+		debug_dump_ast(prefix+"  ",eroot);
+	}
+#endif
+
+again:
+	for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
+		ast_node_reduce(ast_node(n).child,prefix+"  ");
+
+	if (eroot != ast_node_none) {
+		/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
+		ast_node_t &erootnode = ast_node(eroot);
+		switch (erootnode.t.type) {
+			case token_type_t::op_sizeof:
+				{
+					size_t ptrdref = 0;
+					OP_ONE_PARAM_TEVAL;
+					do {
+						assert(op1 != ast_node_none);
+						ast_node_t &an = ast_node(op1);
+
+						if (an.t.type == token_type_t::op_binary_not) {
+							op1 = an.child;
+						}
+						else if (an.t.type == token_type_t::op_pointer_deref) {
+							op1 = an.child;
+							ptrdref++;
+						}
+						else if (an.t.type == token_type_t::op_address_of) {
+							op1 = an.child;
+							ptrdref = ptr_deref_sizeof_addressof;
+
+							while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
+								op1 = ast_node(op1).child;
+
+							break;
+						}
+						else {
+							break;
+						}
+					} while(1);
+					if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t,ptrdref)) {
+						erootnode.set_child(ast_node_none);
+						goto again;
+					}
+					break;
+				}
+
+			case token_type_t::op_alignof:
+				{
+					size_t ptrdref = 0;
+					OP_ONE_PARAM_TEVAL;
+					do {
+						assert(op1 != ast_node_none);
+						ast_node_t &an = ast_node(op1);
+
+						if (an.t.type == token_type_t::op_binary_not) {
+							op1 = an.child;
+						}
+						else if (an.t.type == token_type_t::op_pointer_deref) {
+							op1 = an.child;
+							ptrdref++;
+						}
+						else if (an.t.type == token_type_t::op_address_of) {
+							op1 = an.child;
+							ptrdref = ptr_deref_sizeof_addressof;
+
+							while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
+								op1 = ast_node(op1).child;
+
+							break;
+						}
+						else {
+							break;
+						}
+					} while(1);
+					if (ast_constexpr_alignof(erootnode.t,ast_node(op1).t,ptrdref)) {
+						erootnode.set_child(ast_node_none);
+						goto again;
+					}
+					break;
+				}
+
+			case token_type_t::op_negate:
+				{
+					OP_ONE_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t)) {
+						if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_binary_not:
+				{
+					OP_ONE_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t)) {
+						if (ast_constexpr_binary_not(erootnode.t,ast_node(op1).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_logical_not:
+				{
+					OP_ONE_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t)) {
+						if (ast_constexpr_logical_not(erootnode.t,ast_node(op1).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_leftshift:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_leftshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_rightshift:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_rightshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_lessthan_equals:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_lessthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_greaterthan_equals:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_greaterthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_lessthan:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_lessthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_greaterthan:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_greaterthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_equals:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_not_equals:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_not_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_add:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_add(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_subtract:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_subtract(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_logical_or:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_logical_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_binary_or:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_binary_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_binary_xor:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_binary_xor(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_logical_and:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_logical_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_binary_and:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_binary_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_multiply:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_multiply(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_divide:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_divide(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_modulus:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
+						if (ast_constexpr_modulus(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
+							erootnode.set_child(ast_node_none);
+							goto again;
+						}
+					}
+					break;
+				}
+
+			case token_type_t::op_comma:
+				{
+					OP_TWO_PARAM_TEVAL;
+					if (is_ast_constexpr(ast_node(op1).t) || is_ast_strconstexpr(ast_node(op1).t)) {
+						ast_node_id_t nn = ast_node.returnmove(erootnode.next);
+						op1 = ast_node.returnmove(erootnode.child);
+						op2 = ast_node.returnmove(ast_node(op1).next);
+
+						ast_node.assignmove(eroot,op2);
+
+						ast_node(eroot).set_next(nn);
+						ast_node.release(op2);
+						ast_node.release(op1);
+						ast_node.release(nn);
+						goto again;
+					}
+					break;
+				}
+
+			case token_type_t::op_ternary:
+				{
+					if (is_ast_constexpr(ast_node(erootnode.child).t)) {
+						ast_node_id_t nn = ast_node.returnmove(erootnode.next);
+						ast_node_id_t cn = ast_node.returnmove(erootnode.child);
+						ast_node_id_t tc = ast_node.returnmove(ast_node(cn).next);
+						ast_node_id_t fc = ast_node.returnmove(ast_node(tc).next);
+
+						if (ast_constexpr_to_bool(ast_node(cn).t))
+							ast_node.assignmove(eroot,tc);
+						else
+							ast_node.assignmove(eroot,fc);
+
+						ast_node(eroot).set_next(nn);
+						ast_node.release(fc);
+						ast_node.release(tc);
+						ast_node.release(cn);
+						ast_node.release(nn);
+						goto again;
+					}
+					break;
+				}
+
+			case token_type_t::op_symbol:
+				{
+					symbol_t &sym = symbol(ast_node(eroot).t.v.symbol);
+					if (sym.sym_type == symbol_t::CONST) {
+						if (sym.expr != ast_node_none) {
+							/* non-destructive copy the token from the symbol.
+							 * this will not work if the node has children or sibling (next) */
+							if (ast_node(sym.expr).child == ast_node_none && ast_node(sym.expr).next == ast_node_none) {
+								ast_node(eroot).t = ast_node(sym.expr).t;
+								goto again;
+							}
+						}
+					}
+					break;
+				}
+
+			default:
+				{
+					for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
+						ast_node_reduce(ast_node(n).next,"  ");
+					break;
+				}
+		}
+	}
+
+#if 1//DEBUG
+	if (prefix.empty()) {
+		fprintf(stderr,"%senum expr (reduce-complete):\n",prefix.c_str());
+		debug_dump_ast(prefix+"  ",eroot);
+	}
+#endif
+#undef OP_TWO_PARAM_TEVAL
+#undef OP_ONE_PARAM_TEVAL
+}
+
+void ast_node_strliteral_to_symbol(ast_node_t &erootnode) {
+	symbol_id_t sid = symbol_none;
+
+	const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
+
+	if (sid == symbol_none)
+		sid = match_str_symbol(csl);
+
+	if (sid == symbol_none) {
+		sid = new_symbol(identifier_none);//anonymous symbol
+
+		symbol_t &so = symbol(sid);
+		so.sym_type = symbol_t::STR;
+		so.part_of_segment = conststr_segment;
+		so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
+
+		const ast_node_id_t sroot = ast_node.alloc();
+		ast_node_t &srootnode = ast_node(sroot);
+		srootnode.t = std::move(erootnode.t);
+
+		switch (csl.unitsize()) {
+			case 1:
+				so.spec.type_specifier = TS_CHAR;
+				break;
+			case 2:
+				so.spec.type_specifier = TS_INT|TS_SZ16;
+				break;
+			case 4:
+				so.spec.type_specifier = TS_INT|TS_SZ32;
+				break;
+			default:
+				abort();
+		}
+
+		so.spec.type_qualifier = TQ_CONST;
+		so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
+		so.spec.align = addrmask_make(csl.unitsize());
+		so.expr = sroot;
+	}
+	else {
+		erootnode.t.clear_v();
+	}
+
+	erootnode.t.type = token_type_t::op_symbol;
+	erootnode.t.v.symbol = sid;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name) {
+	fprintf(stderr,"%s%s%svar type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	if (dt.t.size != data_size_none)
+		fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
+	if (dt.t.align != addrmask_none)
+		fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
+
+	if (dt.ts != 0) {
+		fprintf(stderr,"%s  type:",prefix.c_str());
+		for (unsigned int x=0;x < TSI__MAX;x++) { if (dt.ts&(1u<<x)) fprintf(stderr," %s",type_specifier_idx_t_str[x]); }
+		fprintf(stderr,"\n");
+	}
+}
+
+void debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name) {
+	fprintf(stderr,"%s%s%sptr type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	if (dt.t.size != data_size_none)
+		fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
+	if (dt.t.align != addrmask_none)
+		fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
+
+	if (dt.tq != 0) {
+		fprintf(stderr,"%s  qualifiers:",prefix.c_str());
+		for (unsigned int x=0;x < TQI__MAX;x++) { if (dt.tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+		fprintf(stderr,"\n");
+	}
+}
+
+void debug_dump_general(const std::string prefix,const std::string &name) {
+	fprintf(stderr,"%s%s%sgeneral info:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
+	fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
+	fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
+
+	fprintf(stderr,"%s  default packing: ",prefix.c_str());
+	if (default_packing != addrmask_none)
+		fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~default_packing) + 1ull,(unsigned long long)(~default_packing) + 1ull);
+	else
+		fprintf(stderr,"none\n");
+
+	fprintf(stderr,"%s  current packing: ",prefix.c_str());
+	if (current_packing != addrmask_none)
+		fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~current_packing) + 1ull,(unsigned long long)(~current_packing) + 1ull);
+	else
+		fprintf(stderr,"none\n");
+
+	debug_dump_data_type_set(prefix+"  ",data_types);
+	debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_code,"code");
+	debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_data,"data");
+	debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_stack,"stack");
+}
+
+void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name) {
+	fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	debug_dump_var_type(prefix+"  ",dts.dt_bool,"bool");
+	debug_dump_var_type(prefix+"  ",dts.dt_char,"char");
+	debug_dump_var_type(prefix+"  ",dts.dt_short,"short");
+	debug_dump_var_type(prefix+"  ",dts.dt_int,"int");
+	debug_dump_var_type(prefix+"  ",dts.dt_long,"long");
+	debug_dump_var_type(prefix+"  ",dts.dt_longlong,"longlong");
+	debug_dump_var_type(prefix+"  ",dts.dt_float,"float");
+	debug_dump_var_type(prefix+"  ",dts.dt_double,"double");
+	debug_dump_var_type(prefix+"  ",dts.dt_longdouble,"longdouble");
+}
+
+void debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name) {
+	fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr,"ptr");
+	debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_near,"near ptr");
+	debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_far,"far ptr");
+	debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_huge,"huge ptr");
+	debug_dump_var_type(prefix+"  ",dtsp.dt_size_t,"size_t");
+	debug_dump_var_type(prefix+"  ",dtsp.dt_intptr_t,"intptr_t");
+}
+
+void debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
+	fprintf(stderr,"%s",prefix.c_str());
+
+	if (en.name != identifier_none) fprintf(stderr,"'%s'",identifier(en.name).to_str().c_str());
+	else fprintf(stderr,"?");
+	fprintf(stderr,"\n");
+
+	if (en.expr != ast_node_none) {
+		fprintf(stderr,"%s  expr:\n",prefix.c_str());
+		debug_dump_ast(prefix+"    ",en.expr);
+	}
+}
+
+void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name) {
+	if (flags != 0) {
+		fprintf(stderr,"%s%s%sdeclspec:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+		if (flags & DCS_FL_DEPRECATED) fprintf(stderr," deprecated");
+		if (flags & DCS_FL_DLLIMPORT) fprintf(stderr," dllimport");
+		if (flags & DCS_FL_DLLEXPORT) fprintf(stderr," dllexport");
+		if (flags & DCS_FL_NAKED) fprintf(stderr," naked");
+		fprintf(stderr,"\n");
+	}
+}
+
+void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
+	if (ds.empty()) return;
+
+	fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
+	for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
+	for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
+	for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
+	if (ds.type_identifier_symbol != symbol_none) {
+		symbol_t &sym = symbol(ds.type_identifier_symbol);
+		fprintf(stderr," symbol#%lu",(unsigned long)ds.type_identifier_symbol);
+		if (sym.name != identifier_none)
+			fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
+		else
+			fprintf(stderr," <anon>");
+	}
+	fprintf(stderr,"\n");
+
+	if (ds.align != addrmask_none)
+		fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~ds.align) + 1ull,(unsigned long long)(~ds.align) + 1ull);
+
+	if (ds.size != data_size_none)
+		fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)ds.size,(unsigned long long)ds.size);
+
+	debug_dump_declaration_specifier_flags(prefix+"  ",ds.dcs_flags);
+
+	if (!ds.enum_list.empty()) {
+		fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
+		for (auto &sid : ds.enum_list)
+			debug_dump_symbol(prefix+"    ",symbol(sid));
+	}
+}
+
+void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
+	if (ptr.empty()) return;
+
+	fprintf(stderr,"%s%s%spointer(s):",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	for (auto i=ptr.begin();i!=ptr.end();i++) {
+		fprintf(stderr," *");
+		for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
+	}
+	fprintf(stderr,"\n");
+}
+
+void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
+	if (arraydef.empty()) return;
+
+	fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	for (const auto &expr : arraydef) {
+		if (expr != ast_node_none) debug_dump_ast(prefix+"  ",expr);
+		else fprintf(stderr,"%s  <none>\n",prefix.c_str());
+	}
+}
+
+void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
+	fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	debug_dump_declaration_specifiers(prefix+"  ",p.spec);
+
+	if (p.decl.name != identifier_none)
+		fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.name).to_str().c_str());
+
+	if (p.decl.symbol != symbol_none)
+		fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
+
+	debug_dump_ddip(prefix+"  ",p.decl.ddip);
+
+	if (p.decl.expr != ast_node_none) {
+		fprintf(stderr,"%s  expr:\n",prefix.c_str());
+		debug_dump_ast(prefix+"    ",p.decl.expr);
+	}
+}
+
+void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name) {
+	fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	debug_dump_pointer(prefix+"  ",ddip.ptr);
+	debug_dump_arraydef(prefix+"  ",ddip.arraydef);
+
+	if (ddip.dd_flags & declarator_t::FL_FUNCTION_POINTER)
+		fprintf(stderr,"%s  is function pointer\n",prefix.c_str());
+	else if (ddip.dd_flags & declarator_t::FL_FUNCTION)
+		fprintf(stderr,"%s  is function\n",prefix.c_str());
+
+	if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
+		fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
+
+	for (auto &ppp : ddip.parameters)
+		debug_dump_parameter(prefix+"  ",ppp);
+}
+
+void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name) {
+	if (ddip.empty())
+		return;
+
+	fprintf(stderr,"%s%s%sptr/array pairs:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+	if (!ddip.empty())
+		fprintf(stderr,"%s  representation: %s\n",prefix.c_str(),ddip_list_to_str(ddip).c_str());
+
+	for (auto &sdip : ddip)
+		debug_dump_ddip(prefix+"  ",sdip);
+}
+
+void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name) {
+	if (ddecl.flags & declarator_t::FL_FUNCTION_POINTER)
+		fprintf(stderr,"%s%s%sfunction pointer direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	else if (ddecl.flags & declarator_t::FL_FUNCTION)
+		fprintf(stderr,"%s%s%sfunction direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	else
+		fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+	if (ddecl.name != identifier_none)
+		fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
+
+	if (ddecl.symbol != symbol_none)
+		fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)ddecl.symbol);
+
+	debug_dump_ddip(prefix+"  ",ddecl.ddip);
+
+	if (ddecl.flags & declarator_t::FL_ELLIPSIS)
+		fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
+}
+
+void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
+	if (declr.flags & declarator_t::FL_FUNCTION_POINTER)
+		fprintf(stderr,"%s%s%sfunction pointer declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	else if (declr.flags & declarator_t::FL_FUNCTION)
+		fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	else
+		fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+	debug_dump_direct_declarator(prefix+"  ",declr);
+
+	if (declr.expr != ast_node_none) {
+		fprintf(stderr,"%s  expr:\n",prefix.c_str());
+		debug_dump_ast(prefix+"    ",declr.expr);
+	}
+}
+
+void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
+	fprintf(stderr,"%s%s%sdeclaration:{\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	debug_dump_declaration_specifiers(prefix+"  ",decl.spec);
+
+	for (auto &declr : decl.declor)
+		debug_dump_declarator(prefix+"  ",declr);
+
+	fprintf(stderr,"%s}\n",prefix.c_str());
+}
+
+void debug_dump_ast(const std::string prefix,ast_node_id_t r) {
+	unsigned int count = 0;
+
+	while (r != ast_node_none) {
+		const auto &n = ast_node(r);
+		fprintf(stderr,"%s%s[%u]\n",prefix.c_str(),n.t.to_str().c_str(),count);
+
+		if (n.t.type == token_type_t::op_declaration) {
+			if (n.t.v.declaration)
+				debug_dump_declaration(prefix+"  ",*n.t.v.declaration);
+		}
+		else if (n.t.type == token_type_t::op_symbol) {
+			if (n.t.v.symbol != symbol_none) {
+				symbol_t &sym = symbol(n.t.v.symbol);
+				fprintf(stderr,"%s  identifier: ",prefix.c_str());
+				if (sym.name != identifier_none) fprintf(stderr,"%s\n",identifier(sym.name).to_str().c_str());
+				else fprintf(stderr,"<anon>\n");
+
+				if (sym.sym_type == symbol_t::STR && sym.expr != ast_node_none) {
+					ast_node_t &sa = ast_node(sym.expr);
+					if (sa.t.type == token_type_t::strliteral && sa.t.v.csliteral != csliteral_none) {
+						fprintf(stderr,"%s    string: %s\n",prefix.c_str(),csliteral(sa.t.v.csliteral).to_str().c_str());
+					}
+				}
+			}
+		}
+
+		debug_dump_ast(prefix+"  ",n.child);
+		r = n.next;
+		count++;
+	}
+}
+
+void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name) {
+	fprintf(stderr,"%s%s%sscope:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+
+	for (auto sid : sco.symbols) {
+		symbol_t &sym = symbol(sid);
+		debug_dump_symbol(prefix+"  ",sym);
+	}
+
+	for (auto &decl : sco.localdecl) {
+		fprintf(stderr,"%s  decl:\n",prefix.c_str());
+		debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
+		debug_dump_declarator(prefix+"    ",decl.declor);
+	}
+
+	if (sco.root != ast_node_none) {
+		fprintf(stderr,"%s  expr:\n",prefix.c_str());
+		debug_dump_ast(prefix+"    ",sco.root);
+	}
+}
+
+void debug_dump_scope_table(const std::string prefix,const std::string &name) {
+	fprintf(stderr,"%s%s%sscope table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	for (auto si=scopes.begin();si!=scopes.end();si++)
+		debug_dump_scope(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-scopes.begin())));
+}
+
+void debug_dump_segment_table(const std::string prefix,const std::string &name) {
+	fprintf(stderr,"%s%s%ssegment table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	for (auto si=segments.begin();si!=segments.end();si++)
+		debug_dump_segment(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-segments.begin())));
+}
+
+void debug_dump_structfield(const std::string prefix,structfield_t &field,const std::string &name) {
+	fprintf(stderr,"%s%s%sfield:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	if (field.name != identifier_none) fprintf(stderr," '%s'",identifier(field.name).to_str().c_str());
+	else fprintf(stderr," <anon>");
+	fprintf(stderr,"\n");
+
+	debug_dump_declaration_specifiers(prefix+"  ",field.spec);
+	debug_dump_ddip(prefix+"  ",field.ddip);
+
+	if (field.offset != data_offset_none)
+		fprintf(stderr,"%s  offset: %lu\n",prefix.c_str(),(unsigned long)field.offset);
+
+	if (field.bf_start != bitfield_pos_none || field.bf_length != bitfield_pos_none) {
+		fprintf(stderr,"%s  bitfield:",prefix.c_str());
+
+		if (field.bf_start != bitfield_pos_none)
+			fprintf(stderr," start=%u",field.bf_start);
+		if (field.bf_length != bitfield_pos_none)
+			fprintf(stderr," length=%u",field.bf_length);
+		if (field.bf_start != bitfield_pos_none && field.bf_length != bitfield_pos_none) {
+			if (field.bf_length > 1)
+				fprintf(stderr," [%u...%u]",field.bf_start,field.bf_start+field.bf_length-1);
+			else
+				fprintf(stderr," [%u]",field.bf_start);
+		}
+
+		fprintf(stderr,"\n");
+	}
+}
+
+void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name) {
+	fprintf(stderr,"%s%s%ssegment#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&s-&segments[0]));
+
+	switch (s.type) {
+		case segment_t::type_t::CODE: fprintf(stderr," code"); break;
+		case segment_t::type_t::CONST: fprintf(stderr," const"); break;
+		case segment_t::type_t::DATA: fprintf(stderr," data"); break;
+		case segment_t::type_t::BSS: fprintf(stderr," bss"); break;
+		case segment_t::type_t::STACK: fprintf(stderr," stack"); break;
+		default: break;
+	};
+
+	switch (s.use) {
+		case segment_t::use_t::X86_16: fprintf(stderr," X86:16"); break;
+		case segment_t::use_t::X86_32: fprintf(stderr," X86:32"); break;
+		case segment_t::use_t::X86_64: fprintf(stderr," X86:64"); break;
+		default: break;
+	};
+
+	if (s.name != identifier_none) fprintf(stderr," '%s'",identifier(s.name).to_str().c_str());
+	else fprintf(stderr," <anon>");
+	if (s.flags & segment_t::FL_NOTINEXE) fprintf(stderr," NOTINEXE");
+	if (s.flags & segment_t::FL_READABLE) fprintf(stderr," READABLE");
+	if (s.flags & segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
+	if (s.flags & segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
+	if (s.flags & segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
+	if (s.flags & segment_t::FL_FLAT) fprintf(stderr," FLAT");
+
+	fprintf(stderr,"\n");
+
+	if (s.align != addrmask_none)
+		fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
+	if (s.limit != data_size_none)
+		fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.limit,(unsigned long long)s.limit);
+}
+
+void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
+	if (sym.sym_type == symbol_t::NONE)
+		return;
+
+	fprintf(stderr,"%s%s%ssymbol#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&sym-&symbols[0]));
+	switch (sym.sym_type) {
+		case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
+		case symbol_t::FUNCTION: fprintf(stderr," function"); break;
+		case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
+		case symbol_t::STRUCT: fprintf(stderr," struct"); break;
+		case symbol_t::UNION: fprintf(stderr," union"); break;
+		case symbol_t::CONST: fprintf(stderr," const"); break;
+		case symbol_t::ENUM: fprintf(stderr," enum"); break;
+		case symbol_t::STR: fprintf(stderr," str"); break;
+		default: break;
+	};
+	if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
+	else fprintf(stderr," <anon>");
+	if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
+	if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
+	if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
+	if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
+	if (sym.flags & symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
+	if (sym.flags & symbol_t::FL_FUNCTION_POINTER) fprintf(stderr," FUNCTION-POINTER");
+
+	if (sym.scope == scope_none) fprintf(stderr," scope:none");
+	else if (sym.scope == scope_global) fprintf(stderr," scope:global");
+	else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
+
+	if (sym.parent_of_scope != scope_none) fprintf(stderr," parent-of-scope:%lu",(unsigned long)sym.parent_of_scope);
+
+	if (sym.part_of_segment != segment_none) {
+		const segment_t &so = segref(sym.part_of_segment);
+		fprintf(stderr," segment=#%u:'%s'",
+				(unsigned int)(&so - &segments[0]),
+				(so.name != identifier_none) ? identifier(so.name).to_str().c_str() : "(none)");
+	}
+
+	{
+		const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
+		if (sz != data_size_none) fprintf(stderr," size=0x%llx(%llx)",(unsigned long long)sz,(unsigned long long)sz);
+	}
+
+	{
+		const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
+		if (am != addrmask_none) fprintf(stderr," symalign=0x%llx(%llx)",(unsigned long long)(~am) + 1ull,(unsigned long long)(~am) + 1ull);
+	}
+
+	fprintf(stderr,"\n");
+
+	debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
+	debug_dump_ddip(prefix+"  ",sym.ddip);
+
+	for (auto &f : sym.fields)
+		debug_dump_structfield(prefix+"  ",f);
+
+	if (sym.parent_of_scope != scope_none) {
+		scope_t &sco = scope(sym.parent_of_scope);
+		for (auto &decl : sco.localdecl) {
+			fprintf(stderr,"%s  decl (as parent of scope):\n",prefix.c_str());
+			debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
+			debug_dump_declarator(prefix+"    ",decl.declor);
+		}
+	}
+
+	if (sym.expr != ast_node_none) {
+		fprintf(stderr,"%s  expr:\n",prefix.c_str());
+		debug_dump_ast(prefix+"    ",sym.expr);
+	}
+}
+
+void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
+	fprintf(stderr,"%s%s%ssymbol table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
+	for (auto &symbol : symbols) debug_dump_symbol(prefix+"  ",symbol);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 	struct cc_state_t {
 		int CCstep(rbuf &buf,source_file_object &sfo);
-		void debug_dump_ast(const std::string prefix,ast_node_id_t r);
-		void debug_dump_general(const std::string prefix,const std::string &name=std::string());
-		void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
-		void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name=std::string());
-		void debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name=std::string());
-		void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
-		void debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name=std::string());
-		void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
-		void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
-		void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
-		void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
-		void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name=std::string());
-		void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
-		void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
-		void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
-		void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name=std::string());
-		void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name=std::string());
-		void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
-		void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
-		void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
-		void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
-		void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
-		void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
-		void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 		bool arrange_symbols(void);
 		bool init(void);
 
@@ -8282,8 +9210,6 @@ bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2) {
 		int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
 		int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
 		int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
-		void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
-		void ast_node_strliteral_to_symbol(ast_node_t &erootnode);
 		int asm_statement(ast_node_id_t &aroot);
 		int struct_bitfield_validate(token_t &t);
 		int struct_field_layout(symbol_id_t sid);
@@ -8433,476 +9359,6 @@ bool cc_state_t::init(void) {
 
 	return true;
 }
-
-	void cc_state_t::ast_node_strliteral_to_symbol(ast_node_t &erootnode) {
-		symbol_id_t sid = symbol_none;
-
-		const csliteral_t &csl = csliteral(erootnode.t.v.csliteral);
-
-		if (sid == symbol_none)
-			sid = match_str_symbol(csl);
-
-		if (sid == symbol_none) {
-			sid = new_symbol(identifier_none);//anonymous symbol
-
-			symbol_t &so = symbol(sid);
-			so.sym_type = symbol_t::STR;
-			so.part_of_segment = conststr_segment;
-			so.flags = symbol_t::FL_DEFINED | symbol_t::FL_DECLARED;
-
-			const ast_node_id_t sroot = ast_node.alloc();
-			ast_node_t &srootnode = ast_node(sroot);
-			srootnode.t = std::move(erootnode.t);
-
-			switch (csl.unitsize()) {
-				case 1:
-					so.spec.type_specifier = TS_CHAR;
-					break;
-				case 2:
-					so.spec.type_specifier = TS_INT|TS_SZ16;
-					break;
-				case 4:
-					so.spec.type_specifier = TS_INT|TS_SZ32;
-					break;
-				default:
-					abort();
-			}
-
-			so.spec.type_qualifier = TQ_CONST;
-			so.spec.size = csl.length + csl.unitsize();/*string+NUL*/
-			so.spec.align = addrmask_make(csl.unitsize());
-			so.expr = sroot;
-		}
-		else {
-			erootnode.t.clear_v();
-		}
-
-		erootnode.t.type = token_type_t::op_symbol;
-		erootnode.t.v.symbol = sid;
-	}
-
-	void cc_state_t::ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) { /* destructive reduce */
-#define OP_ONE_PARAM_TEVAL ast_node_id_t op1 = erootnode.child
-
-#define OP_TWO_PARAM_TEVAL ast_node_id_t op1 = erootnode.child; \
-                     ast_node_id_t op2 = ast_node(op1).next
-
-		if (eroot == ast_node_none)
-			return;
-
-#if 1//DEBUG
-		if (prefix.empty()) {
-			fprintf(stderr,"%senum expr (reducing node#%lu):\n",prefix.c_str(),(unsigned long)eroot);
-			debug_dump_ast(prefix+"  ",eroot);
-		}
-#endif
-
-again:
-		for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
-			ast_node_reduce(ast_node(n).child,prefix+"  ");
-
-		if (eroot != ast_node_none) {
-			/* WARNING: stale references will occur if any code during this switch statement creates new AST nodes */
-			ast_node_t &erootnode = ast_node(eroot);
-			switch (erootnode.t.type) {
-				case token_type_t::op_sizeof:
-					{
-						size_t ptrdref = 0;
-						OP_ONE_PARAM_TEVAL;
-						do {
-							assert(op1 != ast_node_none);
-							ast_node_t &an = ast_node(op1);
-
-							if (an.t.type == token_type_t::op_binary_not) {
-								op1 = an.child;
-							}
-							else if (an.t.type == token_type_t::op_pointer_deref) {
-								op1 = an.child;
-								ptrdref++;
-							}
-							else if (an.t.type == token_type_t::op_address_of) {
-								op1 = an.child;
-								ptrdref = ptr_deref_sizeof_addressof;
-
-								while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
-									op1 = ast_node(op1).child;
-
-								break;
-							}
-							else {
-								break;
-							}
-						} while(1);
-						if (ast_constexpr_sizeof(erootnode.t,ast_node(op1).t,ptrdref)) {
-							erootnode.set_child(ast_node_none);
-							goto again;
-						}
-						break;
-					}
-
-				case token_type_t::op_alignof:
-					{
-						size_t ptrdref = 0;
-						OP_ONE_PARAM_TEVAL;
-						do {
-							assert(op1 != ast_node_none);
-							ast_node_t &an = ast_node(op1);
-
-							if (an.t.type == token_type_t::op_binary_not) {
-								op1 = an.child;
-							}
-							else if (an.t.type == token_type_t::op_pointer_deref) {
-								op1 = an.child;
-								ptrdref++;
-							}
-							else if (an.t.type == token_type_t::op_address_of) {
-								op1 = an.child;
-								ptrdref = ptr_deref_sizeof_addressof;
-
-								while (op1 != ast_node_none && ast_node(op1).t.type == token_type_t::op_address_of)
-									op1 = ast_node(op1).child;
-
-								break;
-							}
-							else {
-								break;
-							}
-						} while(1);
-						if (ast_constexpr_alignof(erootnode.t,ast_node(op1).t,ptrdref)) {
-							erootnode.set_child(ast_node_none);
-							goto again;
-						}
-						break;
-					}
-
-				case token_type_t::op_negate:
-					{
-						OP_ONE_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t)) {
-							if (ast_constexpr_negate(erootnode.t,ast_node(op1).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_binary_not:
-					{
-						OP_ONE_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t)) {
-							if (ast_constexpr_binary_not(erootnode.t,ast_node(op1).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_logical_not:
-					{
-						OP_ONE_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t)) {
-							if (ast_constexpr_logical_not(erootnode.t,ast_node(op1).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_leftshift:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_leftshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_rightshift:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_rightshift(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_lessthan_equals:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_lessthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_greaterthan_equals:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_greaterthan_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_lessthan:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_lessthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_greaterthan:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_greaterthan(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_equals:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_not_equals:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_not_equals(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_add:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_add(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_subtract:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_subtract(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_logical_or:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_logical_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_binary_or:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_binary_or(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_binary_xor:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_binary_xor(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_logical_and:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_logical_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_binary_and:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_binary_and(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_multiply:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_multiply(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_divide:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_divide(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_modulus:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) && is_ast_constexpr(ast_node(op2).t)) {
-							if (ast_constexpr_modulus(erootnode.t,ast_node(op1).t,ast_node(op2).t)) {
-								erootnode.set_child(ast_node_none);
-								goto again;
-							}
-						}
-						break;
-					}
-
-				case token_type_t::op_comma:
-					{
-						OP_TWO_PARAM_TEVAL;
-						if (is_ast_constexpr(ast_node(op1).t) || is_ast_strconstexpr(ast_node(op1).t)) {
-							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
-							op1 = ast_node.returnmove(erootnode.child);
-							op2 = ast_node.returnmove(ast_node(op1).next);
-
-							ast_node.assignmove(eroot,op2);
-
-							ast_node(eroot).set_next(nn);
-							ast_node.release(op2);
-							ast_node.release(op1);
-							ast_node.release(nn);
-							goto again;
-						}
-						break;
-					}
-
-				case token_type_t::op_ternary:
-					{
-						if (is_ast_constexpr(ast_node(erootnode.child).t)) {
-							ast_node_id_t nn = ast_node.returnmove(erootnode.next);
-							ast_node_id_t cn = ast_node.returnmove(erootnode.child);
-							ast_node_id_t tc = ast_node.returnmove(ast_node(cn).next);
-							ast_node_id_t fc = ast_node.returnmove(ast_node(tc).next);
-
-							if (ast_constexpr_to_bool(ast_node(cn).t))
-								ast_node.assignmove(eroot,tc);
-							else
-								ast_node.assignmove(eroot,fc);
-
-							ast_node(eroot).set_next(nn);
-							ast_node.release(fc);
-							ast_node.release(tc);
-							ast_node.release(cn);
-							ast_node.release(nn);
-							goto again;
-						}
-						break;
-					}
-
-				case token_type_t::op_symbol:
-					{
-						symbol_t &sym = symbol(ast_node(eroot).t.v.symbol);
-						if (sym.sym_type == symbol_t::CONST) {
-							if (sym.expr != ast_node_none) {
-								/* non-destructive copy the token from the symbol.
-								 * this will not work if the node has children or sibling (next) */
-								if (ast_node(sym.expr).child == ast_node_none && ast_node(sym.expr).next == ast_node_none) {
-									ast_node(eroot).t = ast_node(sym.expr).t;
-									goto again;
-								}
-							}
-						}
-						break;
-					}
-
-				default:
-					{
-						for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
-							ast_node_reduce(ast_node(n).next,"  ");
-						break;
-					}
-			}
-		}
-
-#if 1//DEBUG
-		if (prefix.empty()) {
-			fprintf(stderr,"%senum expr (reduce-complete):\n",prefix.c_str());
-			debug_dump_ast(prefix+"  ",eroot);
-		}
-#endif
-#undef OP_TWO_PARAM_TEVAL
-#undef OP_ONE_PARAM_TEVAL
-	}
 
 	int cc_state_t::enumerator_list_parse(declaration_specifiers_t &spec,std::vector<symbol_id_t> &enum_list) {
 		integer_value_t iv;
@@ -10624,459 +11080,6 @@ common_error:
 		sf.bf_length = bf_length;
 		identifier.assign(/*to*/sf.name,/*from*/declor.name);
 		return 1;
-	}
-
-	void cc_state_t::debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name) {
-		fprintf(stderr,"%s%s%svar type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		if (dt.t.size != data_size_none)
-			fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
-		if (dt.t.align != addrmask_none)
-			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
-
-		if (dt.ts != 0) {
-			fprintf(stderr,"%s  type:",prefix.c_str());
-			for (unsigned int x=0;x < TSI__MAX;x++) { if (dt.ts&(1u<<x)) fprintf(stderr," %s",type_specifier_idx_t_str[x]); }
-			fprintf(stderr,"\n");
-		}
-	}
-
-	void cc_state_t::debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name) {
-		fprintf(stderr,"%s%s%sptr type:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		if (dt.t.size != data_size_none)
-			fprintf(stderr,"%s  size: 0x%llx (%lld)\n",prefix.c_str(),(unsigned long long)dt.t.size,(unsigned long long)dt.t.size);
-		if (dt.t.align != addrmask_none)
-			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~dt.t.align) + 1ull,(unsigned long long)(~dt.t.align) + 1ull);
-
-		if (dt.tq != 0) {
-			fprintf(stderr,"%s  qualifiers:",prefix.c_str());
-			for (unsigned int x=0;x < TQI__MAX;x++) { if (dt.tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-			fprintf(stderr,"\n");
-		}
-	}
-
-	void cc_state_t::debug_dump_general(const std::string prefix,const std::string &name) {
-		fprintf(stderr,"%s%s%sgeneral info:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		fprintf(stderr,"%s  target cpu: %s\n",prefix.c_str(),target_cpu_str_t[target_cpu]);
-		fprintf(stderr,"%s  target cpu rev: %s\n",prefix.c_str(),target_cpu_rev_str_t[target_cpurev]);
-		fprintf(stderr,"%s  target cpu sub: %s\n",prefix.c_str(),target_cpu_sub_str_t[target_cpusub]);
-
-		fprintf(stderr,"%s  default packing: ",prefix.c_str());
-		if (default_packing != addrmask_none)
-			fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~default_packing) + 1ull,(unsigned long long)(~default_packing) + 1ull);
-		else
-			fprintf(stderr,"none\n");
-
-		fprintf(stderr,"%s  current packing: ",prefix.c_str());
-		if (current_packing != addrmask_none)
-			fprintf(stderr,"0x%llx (%llu)\n",(unsigned long long)(~current_packing) + 1ull,(unsigned long long)(~current_packing) + 1ull);
-		else
-			fprintf(stderr,"none\n");
-
-		debug_dump_data_type_set(prefix+"  ",data_types);
-		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_code,"code");
-		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_data,"data");
-		debug_dump_data_type_set_ptr(prefix+"  ",data_types_ptr_stack,"stack");
-	}
-
-	void cc_state_t::debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name) {
-		fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_var_type(prefix+"  ",dts.dt_bool,"bool");
-		debug_dump_var_type(prefix+"  ",dts.dt_char,"char");
-		debug_dump_var_type(prefix+"  ",dts.dt_short,"short");
-		debug_dump_var_type(prefix+"  ",dts.dt_int,"int");
-		debug_dump_var_type(prefix+"  ",dts.dt_long,"long");
-		debug_dump_var_type(prefix+"  ",dts.dt_longlong,"longlong");
-		debug_dump_var_type(prefix+"  ",dts.dt_float,"float");
-		debug_dump_var_type(prefix+"  ",dts.dt_double,"double");
-		debug_dump_var_type(prefix+"  ",dts.dt_longdouble,"longdouble");
-	}
-
-	void cc_state_t::debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name) {
-		fprintf(stderr,"%s%s%sdata types:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr,"ptr");
-		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_near,"near ptr");
-		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_far,"far ptr");
-		debug_dump_ptr_type(prefix+"  ",dtsp.dt_ptr_huge,"huge ptr");
-		debug_dump_var_type(prefix+"  ",dtsp.dt_size_t,"size_t");
-		debug_dump_var_type(prefix+"  ",dtsp.dt_intptr_t,"intptr_t");
-	}
-
-	void cc_state_t::debug_dump_enumerator(const std::string prefix,enumerator_t &en) {
-		fprintf(stderr,"%s",prefix.c_str());
-
-		if (en.name != identifier_none) fprintf(stderr,"'%s'",identifier(en.name).to_str().c_str());
-		else fprintf(stderr,"?");
-		fprintf(stderr,"\n");
-
-		if (en.expr != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",en.expr);
-		}
-	}
-
-	void cc_state_t::debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name) {
-		if (flags != 0) {
-			fprintf(stderr,"%s%s%sdeclspec:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-			if (flags & DCS_FL_DEPRECATED) fprintf(stderr," deprecated");
-			if (flags & DCS_FL_DLLIMPORT) fprintf(stderr," dllimport");
-			if (flags & DCS_FL_DLLEXPORT) fprintf(stderr," dllexport");
-			if (flags & DCS_FL_NAKED) fprintf(stderr," naked");
-			fprintf(stderr,"\n");
-		}
-	}
-
-	void cc_state_t::debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds) {
-		if (ds.empty()) return;
-
-		fprintf(stderr,"%sdeclaration_specifiers:",prefix.c_str());
-		for (unsigned int i=0;i < SCI__MAX;i++) { if (ds.storage_class&(1u<<i)) fprintf(stderr," %s",storage_class_idx_t_str[i]); }
-		for (unsigned int i=0;i < TSI__MAX;i++) { if (ds.type_specifier&(1u<<i)) fprintf(stderr," %s",type_specifier_idx_t_str[i]); }
-		for (unsigned int i=0;i < TQI__MAX;i++) { if (ds.type_qualifier&(1u<<i)) fprintf(stderr," %s",type_qualifier_idx_t_str[i]); }
-		if (ds.type_identifier_symbol != symbol_none) {
-			symbol_t &sym = symbol(ds.type_identifier_symbol);
-			fprintf(stderr," symbol#%lu",(unsigned long)ds.type_identifier_symbol);
-			if (sym.name != identifier_none)
-				fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
-			else
-				fprintf(stderr," <anon>");
-		}
-		fprintf(stderr,"\n");
-
-		if (ds.align != addrmask_none)
-			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~ds.align) + 1ull,(unsigned long long)(~ds.align) + 1ull);
-
-		if (ds.size != data_size_none)
-			fprintf(stderr,"%s  size: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)ds.size,(unsigned long long)ds.size);
-
-		debug_dump_declaration_specifier_flags(prefix+"  ",ds.dcs_flags);
-
-		if (!ds.enum_list.empty()) {
-			fprintf(stderr,"%s  enum_list:\n",prefix.c_str());
-			for (auto &sid : ds.enum_list)
-				debug_dump_symbol(prefix+"    ",symbol(sid));
-		}
-	}
-
-	void cc_state_t::debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name) {
-		if (ptr.empty()) return;
-
-		fprintf(stderr,"%s%s%spointer(s):",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (auto i=ptr.begin();i!=ptr.end();i++) {
-			fprintf(stderr," *");
-			for (unsigned int x=0;x < TQI__MAX;x++) { if ((*i).tq&(1u<<x)) fprintf(stderr," %s",type_qualifier_idx_t_str[x]); }
-		}
-		fprintf(stderr,"\n");
-	}
-
-	void cc_state_t::debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name) {
-		if (arraydef.empty()) return;
-
-		fprintf(stderr,"%s%s%sarraydef(s):\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (const auto &expr : arraydef) {
-			if (expr != ast_node_none) debug_dump_ast(prefix+"  ",expr);
-			else fprintf(stderr,"%s  <none>\n",prefix.c_str());
-		}
-	}
-
-	void cc_state_t::debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name) {
-		fprintf(stderr,"%s%s%sparameter:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_declaration_specifiers(prefix+"  ",p.spec);
-
-		if (p.decl.name != identifier_none)
-			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(p.decl.name).to_str().c_str());
-
-		if (p.decl.symbol != symbol_none)
-			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)p.decl.symbol);
-
-		debug_dump_ddip(prefix+"  ",p.decl.ddip);
-
-		if (p.decl.expr != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",p.decl.expr);
-		}
-	}
-
-	void cc_state_t::debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name) {
-		fprintf(stderr,"%s%s%sptr/array pair:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_pointer(prefix+"  ",ddip.ptr);
-		debug_dump_arraydef(prefix+"  ",ddip.arraydef);
-
-		if (ddip.dd_flags & declarator_t::FL_FUNCTION_POINTER)
-			fprintf(stderr,"%s  is function pointer\n",prefix.c_str());
-		else if (ddip.dd_flags & declarator_t::FL_FUNCTION)
-			fprintf(stderr,"%s  is function\n",prefix.c_str());
-
-		if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
-			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
-
-		for (auto &ppp : ddip.parameters)
-			debug_dump_parameter(prefix+"  ",ppp);
-	}
-
-	void cc_state_t::debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name) {
-		if (ddip.empty())
-			return;
-
-		fprintf(stderr,"%s%s%sptr/array pairs:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-
-		if (!ddip.empty())
-			fprintf(stderr,"%s  representation: %s\n",prefix.c_str(),ddip_list_to_str(ddip).c_str());
-
-		for (auto &sdip : ddip)
-			debug_dump_ddip(prefix+"  ",sdip);
-	}
-
-	void cc_state_t::debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name) {
-		if (ddecl.flags & declarator_t::FL_FUNCTION_POINTER)
-			fprintf(stderr,"%s%s%sfunction pointer direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else if (ddecl.flags & declarator_t::FL_FUNCTION)
-			fprintf(stderr,"%s%s%sfunction direct declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else
-			fprintf(stderr,"%s%s%sdirect declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-
-		if (ddecl.name != identifier_none)
-			fprintf(stderr,"%s  identifier: '%s'\n",prefix.c_str(),identifier(ddecl.name).to_str().c_str());
-
-		if (ddecl.symbol != symbol_none)
-			fprintf(stderr,"%s  symbol: #%lu\n",prefix.c_str(),(unsigned long)ddecl.symbol);
-
-		debug_dump_ddip(prefix+"  ",ddecl.ddip);
-
-		if (ddecl.flags & declarator_t::FL_ELLIPSIS)
-			fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
-	}
-
-	void cc_state_t::debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name) {
-		if (declr.flags & declarator_t::FL_FUNCTION_POINTER)
-			fprintf(stderr,"%s%s%sfunction pointer declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else if (declr.flags & declarator_t::FL_FUNCTION)
-			fprintf(stderr,"%s%s%sfunction declarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		else
-			fprintf(stderr,"%s%s%sdeclarator:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-
-		debug_dump_direct_declarator(prefix+"  ",declr);
-
-		if (declr.expr != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",declr.expr);
-		}
-	}
-
-	void cc_state_t::debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name) {
-		fprintf(stderr,"%s%s%sdeclaration:{\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		debug_dump_declaration_specifiers(prefix+"  ",decl.spec);
-
-		for (auto &declr : decl.declor)
-			debug_dump_declarator(prefix+"  ",declr);
-
-		fprintf(stderr,"%s}\n",prefix.c_str());
-	}
-
-	void cc_state_t::debug_dump_ast(const std::string prefix,ast_node_id_t r) {
-		unsigned int count = 0;
-
-		while (r != ast_node_none) {
-			const auto &n = ast_node(r);
-			fprintf(stderr,"%s%s[%u]\n",prefix.c_str(),n.t.to_str().c_str(),count);
-
-			if (n.t.type == token_type_t::op_declaration) {
-				if (n.t.v.declaration)
-					debug_dump_declaration(prefix+"  ",*n.t.v.declaration);
-			}
-			else if (n.t.type == token_type_t::op_symbol) {
-				if (n.t.v.symbol != symbol_none) {
-					symbol_t &sym = symbol(n.t.v.symbol);
-					fprintf(stderr,"%s  identifier: ",prefix.c_str());
-					if (sym.name != identifier_none) fprintf(stderr,"%s\n",identifier(sym.name).to_str().c_str());
-					else fprintf(stderr,"<anon>\n");
-
-					if (sym.sym_type == symbol_t::STR && sym.expr != ast_node_none) {
-						ast_node_t &sa = ast_node(sym.expr);
-						if (sa.t.type == token_type_t::strliteral && sa.t.v.csliteral != csliteral_none) {
-							fprintf(stderr,"%s    string: %s\n",prefix.c_str(),csliteral(sa.t.v.csliteral).to_str().c_str());
-						}
-					}
-				}
-			}
-
-			debug_dump_ast(prefix+"  ",n.child);
-			r = n.next;
-			count++;
-		}
-	}
-
-	void cc_state_t::debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name) {
-		fprintf(stderr,"%s%s%sscope:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-
-		for (auto sid : sco.symbols) {
-			symbol_t &sym = symbol(sid);
-			debug_dump_symbol(prefix+"  ",sym);
-		}
-
-		for (auto &decl : sco.localdecl) {
-			fprintf(stderr,"%s  decl:\n",prefix.c_str());
-			debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
-			debug_dump_declarator(prefix+"    ",decl.declor);
-		}
-
-		if (sco.root != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",sco.root);
-		}
-	}
-
-	void cc_state_t::debug_dump_scope_table(const std::string prefix,const std::string &name) {
-		fprintf(stderr,"%s%s%sscope table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (auto si=scopes.begin();si!=scopes.end();si++)
-			debug_dump_scope(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-scopes.begin())));
-	}
-
-	void cc_state_t::debug_dump_segment_table(const std::string prefix,const std::string &name) {
-		fprintf(stderr,"%s%s%ssegment table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (auto si=segments.begin();si!=segments.end();si++)
-			debug_dump_segment(prefix+"  ",*si,std::string("#")+std::to_string((unsigned int)(si-segments.begin())));
-	}
-
-	void cc_state_t::debug_dump_structfield(const std::string prefix,structfield_t &field,const std::string &name) {
-		fprintf(stderr,"%s%s%sfield:",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		if (field.name != identifier_none) fprintf(stderr," '%s'",identifier(field.name).to_str().c_str());
-		else fprintf(stderr," <anon>");
-		fprintf(stderr,"\n");
-
-		debug_dump_declaration_specifiers(prefix+"  ",field.spec);
-		debug_dump_ddip(prefix+"  ",field.ddip);
-
-		if (field.offset != data_offset_none)
-			fprintf(stderr,"%s  offset: %lu\n",prefix.c_str(),(unsigned long)field.offset);
-
-		if (field.bf_start != bitfield_pos_none || field.bf_length != bitfield_pos_none) {
-			fprintf(stderr,"%s  bitfield:",prefix.c_str());
-
-			if (field.bf_start != bitfield_pos_none)
-				fprintf(stderr," start=%u",field.bf_start);
-			if (field.bf_length != bitfield_pos_none)
-				fprintf(stderr," length=%u",field.bf_length);
-			if (field.bf_start != bitfield_pos_none && field.bf_length != bitfield_pos_none) {
-				if (field.bf_length > 1)
-					fprintf(stderr," [%u...%u]",field.bf_start,field.bf_start+field.bf_length-1);
-				else
-					fprintf(stderr," [%u]",field.bf_start);
-			}
-
-			fprintf(stderr,"\n");
-		}
-	}
-
-	void cc_state_t::debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name) {
-		fprintf(stderr,"%s%s%ssegment#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&s-&segments[0]));
-
-		switch (s.type) {
-			case segment_t::type_t::CODE: fprintf(stderr," code"); break;
-			case segment_t::type_t::CONST: fprintf(stderr," const"); break;
-			case segment_t::type_t::DATA: fprintf(stderr," data"); break;
-			case segment_t::type_t::BSS: fprintf(stderr," bss"); break;
-			case segment_t::type_t::STACK: fprintf(stderr," stack"); break;
-			default: break;
-		};
-
-		switch (s.use) {
-			case segment_t::use_t::X86_16: fprintf(stderr," X86:16"); break;
-			case segment_t::use_t::X86_32: fprintf(stderr," X86:32"); break;
-			case segment_t::use_t::X86_64: fprintf(stderr," X86:64"); break;
-			default: break;
-		};
-
-		if (s.name != identifier_none) fprintf(stderr," '%s'",identifier(s.name).to_str().c_str());
-		else fprintf(stderr," <anon>");
-		if (s.flags & segment_t::FL_NOTINEXE) fprintf(stderr," NOTINEXE");
-		if (s.flags & segment_t::FL_READABLE) fprintf(stderr," READABLE");
-		if (s.flags & segment_t::FL_WRITEABLE) fprintf(stderr," WRITEABLE");
-		if (s.flags & segment_t::FL_EXECUTABLE) fprintf(stderr," EXECUTABLE");
-		if (s.flags & segment_t::FL_PRIVATE) fprintf(stderr," PRIVATE");
-		if (s.flags & segment_t::FL_FLAT) fprintf(stderr," FLAT");
-
-		fprintf(stderr,"\n");
-
-		if (s.align != addrmask_none)
-			fprintf(stderr,"%s  alignment: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)(~s.align) + 1ull,(unsigned long long)(~s.align) + 1ull);
-		if (s.limit != data_size_none)
-			fprintf(stderr,"%s  limit: 0x%llx (%llu)\n",prefix.c_str(),(unsigned long long)s.limit,(unsigned long long)s.limit);
-	}
-
-	void cc_state_t::debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name) {
-		if (sym.sym_type == symbol_t::NONE)
-			return;
-
-		fprintf(stderr,"%s%s%ssymbol#%lu",prefix.c_str(),name.c_str(),name.empty()?"":" ",size_t(&sym-&symbols[0]));
-		switch (sym.sym_type) {
-			case symbol_t::VARIABLE: fprintf(stderr," variable"); break;
-			case symbol_t::FUNCTION: fprintf(stderr," function"); break;
-			case symbol_t::TYPEDEF: fprintf(stderr," typedef"); break;
-			case symbol_t::STRUCT: fprintf(stderr," struct"); break;
-			case symbol_t::UNION: fprintf(stderr," union"); break;
-			case symbol_t::CONST: fprintf(stderr," const"); break;
-			case symbol_t::ENUM: fprintf(stderr," enum"); break;
-			case symbol_t::STR: fprintf(stderr," str"); break;
-			default: break;
-		};
-		if (sym.name != identifier_none) fprintf(stderr," '%s'",identifier(sym.name).to_str().c_str());
-		else fprintf(stderr," <anon>");
-		if (sym.flags & symbol_t::FL_DEFINED) fprintf(stderr," DEFINED");
-		if (sym.flags & symbol_t::FL_DECLARED) fprintf(stderr," DECLARED");
-		if (sym.flags & symbol_t::FL_PARAMETER) fprintf(stderr," PARAM");
-		if (sym.flags & symbol_t::FL_STACK) fprintf(stderr," STACK");
-		if (sym.flags & symbol_t::FL_ELLIPSIS) fprintf(stderr," ELLIPSIS");
-		if (sym.flags & symbol_t::FL_FUNCTION_POINTER) fprintf(stderr," FUNCTION-POINTER");
-
-		if (sym.scope == scope_none) fprintf(stderr," scope:none");
-		else if (sym.scope == scope_global) fprintf(stderr," scope:global");
-		else fprintf(stderr," scope:%lu",(unsigned long)sym.scope);
-
-		if (sym.parent_of_scope != scope_none) fprintf(stderr," parent-of-scope:%lu",(unsigned long)sym.parent_of_scope);
-
-		if (sym.part_of_segment != segment_none) {
-			const segment_t &so = segref(sym.part_of_segment);
-			fprintf(stderr," segment=#%u:'%s'",
-				(unsigned int)(&so - &segments[0]),
-				(so.name != identifier_none) ? identifier(so.name).to_str().c_str() : "(none)");
-		}
-
-		{
-			const data_size_t sz = calc_sizeof(sym.spec,sym.ddip);
-			if (sz != data_size_none) fprintf(stderr," size=0x%llx(%llx)",(unsigned long long)sz,(unsigned long long)sz);
-		}
-
-		{
-			const addrmask_t am = calc_alignofmask(sym.spec,sym.ddip);
-			if (am != addrmask_none) fprintf(stderr," symalign=0x%llx(%llx)",(unsigned long long)(~am) + 1ull,(unsigned long long)(~am) + 1ull);
-		}
-
-		fprintf(stderr,"\n");
-
-		debug_dump_declaration_specifiers(prefix+"  ",sym.spec);
-		debug_dump_ddip(prefix+"  ",sym.ddip);
-
-		for (auto &f : sym.fields)
-			debug_dump_structfield(prefix+"  ",f);
-
-		if (sym.parent_of_scope != scope_none) {
-			scope_t &sco = scope(sym.parent_of_scope);
-			for (auto &decl : sco.localdecl) {
-				fprintf(stderr,"%s  decl (as parent of scope):\n",prefix.c_str());
-				debug_dump_declaration_specifiers(prefix+"    ",decl.spec);
-				debug_dump_declarator(prefix+"    ",decl.declor);
-			}
-		}
-
-		if (sym.expr != ast_node_none) {
-			fprintf(stderr,"%s  expr:\n",prefix.c_str());
-			debug_dump_ast(prefix+"    ",sym.expr);
-		}
-	}
-
-	void cc_state_t::debug_dump_symbol_table(const std::string prefix,const std::string &name) {
-		fprintf(stderr,"%s%s%ssymbol table:\n",prefix.c_str(),name.c_str(),name.empty()?"":" ");
-		for (auto &symbol : symbols) debug_dump_symbol(prefix+"  ",symbol);
 	}
 
 	int cc_state_t::primary_expression(ast_node_id_t &aroot) {
@@ -13674,10 +13677,10 @@ int main(int argc,char **argv) {
 			if (!ccst.arrange_symbols())
 				fprintf(stderr,"Failed to arrange symbols\n");
 
-			ccst.debug_dump_general("");
-			ccst.debug_dump_segment_table("");
-			ccst.debug_dump_scope_table("");
-			ccst.debug_dump_symbol_table("");
+			debug_dump_general("");
+			debug_dump_segment_table("");
+			debug_dump_scope_table("");
+			debug_dump_symbol_table("");
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
