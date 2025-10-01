@@ -148,6 +148,12 @@ struct lgtok_state_t {
 	static constexpr unsigned int FL_ARROWSTR = (1u << 2u); /* <string> in #include <string> */
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename T> constexpr bool only_one_bit_set(const T &t) {
+	return (t & (t - T(1u))) == T(0u);
+}
+
 ////////////////////////////////////////////////////////////////////
 
 template <class T> void typ_delete(T *p) {
@@ -5551,12 +5557,6 @@ int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sf
 
 	return 1;
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-	template <typename T> constexpr bool only_one_bit_set(const T &t) {
-		return (t & (t - T(1u))) == T(0u);
-	}
 
 //////////////////////////////////////////////////////////////////////////////
 
