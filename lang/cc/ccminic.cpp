@@ -13438,6 +13438,13 @@ common_error:
 		return 1;
 	}
 
+void cleanup() {
+	segments.clear();
+	symbols.clear();
+	scopes.clear();
+	scope_stack.clear();
+}
+
 enum test_mode_t {
 	TEST_NONE=0,
 	TEST_SFO,      /* source file object */
@@ -13717,6 +13724,7 @@ int main(int argc,char **argv) {
 		assert(sfo.get() != NULL);
 	}
 
+	cleanup();
 	source_file_refcount_check();
 	identifier.refcount_check();
 	csliteral.refcount_check();
