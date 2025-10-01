@@ -2515,127 +2515,129 @@ void token_t::common_move(token_t &x) {
 
 ////////////////////////////////////////////////////////////////////
 
-	bool is_newline(const unsigned char b) {
-		return b == '\r' || b == '\n';
-	}
+bool is_newline(const unsigned char b) {
+	return b == '\r' || b == '\n';
+}
 
-	bool is_whitespace(const unsigned char b) {
-		return b == ' ' || b == '\t';
-	}
+bool is_whitespace(const unsigned char b) {
+	return b == ' ' || b == '\t';
+}
 
-	bool eat_whitespace(rbuf &buf,source_file_object &sfo) {
-		bool r = false;
+bool eat_whitespace(rbuf &buf,source_file_object &sfo) {
+	bool r = false;
 
-		do {
-			if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-			if (is_whitespace(buf.peekb())) { r = true; buf.discardb(); }
-			else break;
-		} while (1);
+	do {
+		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
+		if (is_whitespace(buf.peekb())) { r = true; buf.discardb(); }
+		else break;
+	} while (1);
 
-		return r;
-	}
+	return r;
+}
 
-	void eat_newline(rbuf &buf,source_file_object &sfo) {
-		if (buf.data_avail() < 4) rbuf_sfd_refill(buf,sfo);
-		if (buf.peekb() == '\r') buf.discardb();
-		if (buf.peekb() == '\n') buf.discardb();
-	}
+void eat_newline(rbuf &buf,source_file_object &sfo) {
+	if (buf.data_avail() < 4) rbuf_sfd_refill(buf,sfo);
+	if (buf.peekb() == '\r') buf.discardb();
+	if (buf.peekb() == '\n') buf.discardb();
+}
 
-	int cc_parsedigit(unsigned char c,const unsigned char base=10) {
-		if (c >= '0' && c <= '9')
-			return c - '0';
-		else if (c >= 'a' && c < ('a'+base-10))
-			return c + 10 - 'a';
-		else if (c >= 'A' && c < ('A'+base-10))
-			return c + 10 - 'A';
+int cc_parsedigit(unsigned char c,const unsigned char base=10) {
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	else if (c >= 'a' && c < ('a'+base-10))
+		return c + 10 - 'a';
+	else if (c >= 'A' && c < ('A'+base-10))
+		return c + 10 - 'A';
 
-		return -1;
-	}
+	return -1;
+}
 
-	bool is_identifier_first_char(unsigned char c) {
-		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-	}
+bool is_identifier_first_char(unsigned char c) {
+	return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 
-	bool is_identifier_char(unsigned char c) {
-		return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
-	}
+bool is_identifier_char(unsigned char c) {
+	return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
 
-	bool is_asm_non_ident_text_char(unsigned char c) {
-		return !(c == '{' || c == '}' || c == '\n' || c == '\'' || c == '\"' || is_whitespace(c) || isdigit(c) || is_identifier_first_char(c));
-	}
+bool is_asm_non_ident_text_char(unsigned char c) {
+	return !(c == '{' || c == '}' || c == '\n' || c == '\'' || c == '\"' || is_whitespace(c) || isdigit(c) || is_identifier_first_char(c));
+}
 
-	bool is_asm_ident_text_char(unsigned char c) {
-		return c == '.' || isdigit(c) || is_identifier_char(c);
-	}
+bool is_asm_ident_text_char(unsigned char c) {
+	return c == '.' || isdigit(c) || is_identifier_char(c);
+}
 
-	int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
-		int32_t v;
+int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false) {
+	int32_t v;
 
+	v = unicode ? getc(buf,sfo) : buf.getb();
+	if (v == 0) return int32_t(-1);
+
+	if (v == uint32_t('\\')) {
 		v = unicode ? getc(buf,sfo) : buf.getb();
-		if (v == 0) return int32_t(-1);
 
-		if (v == uint32_t('\\')) {
-			v = unicode ? getc(buf,sfo) : buf.getb();
+		switch (v) {
+			case '\'':
+			case '\"':
+			case '\?':
+			case '\\':
+				return v;
+			case '\r':
+				if (buf.peekb() == '\n') buf.discardb(); /* \r\n */
+				return unicode_nothing;
+			case '\n':
+				return unicode_nothing;
+			case 'a':
+				return int32_t(7);
+			case 'b':
+				return int32_t(8);
+			case 'f':
+				return int32_t(12);
+			case 'n':
+				return int32_t(10);
+			case 'r':
+				return int32_t(13);
+			case 't':
+				return int32_t(9);
+			case 'v':
+				return int32_t(11);
+			case '0': case '1': case '2': case '3':
+			case '4': case '5': case '6': case '7': {
+				v = cc_parsedigit((unsigned char)v,8);
+				assert(v >= int32_t(0));
 
-			switch (v) {
-				case '\'':
-				case '\"':
-				case '\?':
-				case '\\':
-					return v;
-				case '\r':
-					if (buf.peekb() == '\n') buf.discardb(); /* \r\n */
-					return unicode_nothing;
-				case '\n':
-					return unicode_nothing;
-				case 'a':
-					return int32_t(7);
-				case 'b':
-					return int32_t(8);
-				case 'f':
-					return int32_t(12);
-				case 'n':
-					return int32_t(10);
-				case 'r':
-					return int32_t(13);
-				case 't':
-					return int32_t(9);
-				case 'v':
-					return int32_t(11);
-				case '0': case '1': case '2': case '3':
-				case '4': case '5': case '6': case '7': {
-					v = cc_parsedigit((unsigned char)v,8);
-					assert(v >= int32_t(0));
-
-					for (unsigned int c=0;c < 2;c++) {
-						const int n = cc_parsedigit(buf.peekb(),8);
-						if (n >= 0) {
-							v = int32_t(((unsigned int)v << 3u) | (unsigned int)n);
-							buf.discardb();
-						}
-						else {
-							break;
-						}
-					}
-					break; }
-				case 'x': {
-					int n,count=0;
-
-					v = 0;
-					while ((n=cc_parsedigit(buf.peekb(),16)) >= 0) {
-						v = int32_t(((unsigned int)v << 4u) | (unsigned int)n);
+				for (unsigned int c=0;c < 2;c++) {
+					const int n = cc_parsedigit(buf.peekb(),8);
+					if (n >= 0) {
+						v = int32_t(((unsigned int)v << 3u) | (unsigned int)n);
 						buf.discardb();
-						count++;
 					}
-					if (count < 2) return unicode_eof;
-					break; }
-				default:
-					return unicode_bad_escape;
-			}
-		}
+					else {
+						break;
+					}
+				}
+				break; }
+			case 'x': {
+				int n,count=0;
 
-		return v;
+				v = 0;
+				while ((n=cc_parsedigit(buf.peekb(),16)) >= 0) {
+					v = int32_t(((unsigned int)v << 4u) | (unsigned int)n);
+					buf.discardb();
+					count++;
+				}
+				if (count < 2) return unicode_eof;
+				break; }
+			default:
+				return unicode_bad_escape;
+		}
 	}
+
+	return v;
+}
+
+////////////////////////////////////////////////////////////////////
 
 	template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
 
