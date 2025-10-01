@@ -305,10 +305,10 @@ const char *token_type_t_str(const token_type_t t);
 #define CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(sfclass) \
 	/* no copy */ \
 	sfclass(const sfclass &) = delete; \
-	virtual sfclass &operator=(const sfclass &) = delete; \
+	sfclass &operator=(const sfclass &) = delete; \
 	/* move allowed */ \
 	sfclass(sfclass &&x) { common_move(x); } \
-	virtual sfclass &operator=(sfclass &&x) { common_move(x); return *this; }
+	sfclass &operator=(sfclass &&x) { common_move(x); return *this; }
 
 //////////////////////////////////////////////////////////////
 
@@ -358,7 +358,7 @@ struct source_file_object {
 	virtual				~source_file_object();
 
 	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_file_object);
-	void				common_move(source_file_object &);
+	virtual void			common_move(source_file_object &);
 };
 
 //////////////////////////////////////////////////////////////
@@ -373,7 +373,7 @@ struct source_fd : public source_file_object {
 	virtual				~source_fd();
 
 	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_fd);
-	void				common_move(source_fd &x);
+	virtual void			common_move(source_fd &x);
 
 	std::string			name;
 	int				fd = -1;
@@ -390,6 +390,7 @@ struct source_null_file : public source_file_object {
 	virtual				~source_null_file() { }
 
 	CCMiniC_SOURCE_OBJ_NO_COPY_ONLY_MOVE(source_null_file);
+	virtual void			common_move(source_null_file &) { }
 };
 
 ////////////////////////////////////////////////////////////////////
