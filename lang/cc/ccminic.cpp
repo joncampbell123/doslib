@@ -9238,29 +9238,31 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::vector<token_t>	cc_tq;
+size_t			cc_tq_tail = 0;
+int			cc_err = 0;
+
+bool			cc_ignore_whitespace = true;
+
+//////////////////////////////////////////////////////////////////////////////
+
 	struct cc_state_t {
 		lgtok_state_t		lst;
 		pptok_state_t		pst;
 		rbuf*			buf = NULL;
 		source_file_object*	sfo = NULL;
-		int			err = 0;
-
-		std::vector<token_t>	cc_tq;
-		size_t			cc_tq_tail = 0;
-
-		bool			cc_ignore_whitespace = true;
 
 		void cc_tq_ft(void) {
 			token_t t(token_type_t::eof);
 			int r;
 
 			do {
-				if (err == 0) {
+				if (cc_err == 0) {
 					if ((r=lctok(pst,lst,*buf,*sfo,t)) < 1)
-						err = r;
+						cc_err = r;
 				}
 
-				if (cc_ignore_whitespace && err == 0) {
+				if (cc_ignore_whitespace && cc_err == 0) {
 					if (t.type == token_type_t::newline)
 						continue;
 				}
@@ -9301,8 +9303,8 @@ void debug_dump_symbol_table(const std::string prefix,const std::string &name) {
 
 		int chkerr(void) {
 			const token_t &t = cc_tq_peek();
-			if (t.type == token_type_t::none || t.type == token_type_t::eof || err < 0)
-				return err; /* 0 or negative */
+			if (t.type == token_type_t::none || t.type == token_type_t::eof || cc_err < 0)
+				return cc_err; /* 0 or negative */
 
 			return 1;
 		}
@@ -13369,7 +13371,7 @@ common_error:
 		int r;
 
 		if (cc_tq_peek().type == token_type_t::none || cc_tq_peek().type == token_type_t::eof)
-			return err; /* 0 or negative */
+			return cc_err; /* 0 or negative */
 
 		if (cc_tq_peek().type == token_type_t::r___asm) {
 			ast_node_id_t aroot = ast_node_none;
@@ -13398,12 +13400,12 @@ int cc_step(cc_state_t &cc,rbuf &_buf,source_file_object &_sfo) {
 	cc.buf = &_buf;
 	cc.sfo = &_sfo;
 
-	if (cc.err == 0) {
+	if (cc_err == 0) {
 		if ((r=cc.translation_unit()) < 1)
 			return r;
 	}
 
-	if (cc.err < 0)
+	if (cc_err < 0)
 		return r;
 
 	return 1;
