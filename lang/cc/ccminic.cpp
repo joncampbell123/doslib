@@ -85,6 +85,7 @@ static constexpr addrmask_t addrmask_make(const addrmask_t sz/*must be power of 
 }
 
 struct declaration_t;
+struct parameter_t;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -1027,6 +1028,137 @@ class ast_node_pool : public ast_node_pool_t {
 	public:
 		ast_node_id_t alloc(token_type_t t=token_type_t::none);
 		ast_node_id_t alloc(token_t &t);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct declaration_specifiers_t {
+	storage_class_t				storage_class = 0;
+	type_specifier_t			type_specifier = 0;
+	type_qualifier_t			type_qualifier = 0;
+	symbol_id_t				type_identifier_symbol = symbol_none;
+	data_size_t				size = data_size_none;
+	addrmask_t				align = addrmask_none;
+	unsigned int				dcs_flags = 0;
+	std::vector<symbol_id_t>		enum_list;
+	unsigned int				count = 0;
+
+	bool empty(void) const;
+
+	declaration_specifiers_t();
+	declaration_specifiers_t(const declaration_specifiers_t &x);
+	declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
+	declaration_specifiers_t(declaration_specifiers_t &&x);
+	declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
+	~declaration_specifiers_t();
+
+	void common_move(declaration_specifiers_t &o);
+	void common_copy(const declaration_specifiers_t &o);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct pointer_t {
+	type_qualifier_t			tq = 0;
+
+	bool operator==(const pointer_t &o) const;
+	bool operator!=(const pointer_t &o) const;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct ddip_t {
+	std::vector<pointer_t>		ptr;
+	std::vector<ast_node_id_t>	arraydef;
+	std::vector<parameter_t>	parameters;
+	unsigned int			dd_flags = 0;
+
+	ddip_t();
+	ddip_t(const ddip_t &x);
+	ddip_t &operator=(const ddip_t &x);
+	ddip_t(ddip_t &&x);
+	ddip_t &operator=(ddip_t &&x);
+
+	~ddip_t();
+
+	void common_copy(const ddip_t &o);
+	void common_move(ddip_t &o);
+	bool empty(void) const;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+class ddip_list_t : public std::vector<ddip_t> {
+	public:
+		using BT = std::vector<ddip_t>;
+	public:
+		ddip_list_t();
+		~ddip_list_t();
+	public:
+		void addcombine(ddip_t &&x);
+		void addcombine(const ddip_t &x);
+		ddip_t *funcparampair(void);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct declarator_t {
+	static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
+	static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
+	static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
+
+	ddip_list_t ddip;
+	identifier_id_t name = identifier_none;
+	symbol_id_t symbol = symbol_none;
+	unsigned int flags = 0;
+
+	ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
+
+	declarator_t();
+	declarator_t(const declarator_t &x);
+	declarator_t &operator=(const declarator_t &x);
+	declarator_t(declarator_t &&x);
+	declarator_t &operator=(declarator_t &&x);
+
+	void common_copy(const declarator_t &o);
+
+	void common_move(declarator_t &o);
+
+	~declarator_t();
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct declaration_t {
+	declaration_specifiers_t	spec;
+	std::vector<declarator_t>	declor;
+
+	declarator_t &new_declarator(void);
+
+	declaration_t();
+	declaration_t(declaration_t &&x);
+	declaration_t &operator=(declaration_t &&x);
+
+	void common_move(declaration_t &o);
+
+	~declaration_t();
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct parameter_t {
+	declaration_specifiers_t		spec;
+	declarator_t				decl;
+
+	parameter_t();
+	parameter_t(const parameter_t &x);
+	parameter_t &operator=(const parameter_t &x);
+	parameter_t(parameter_t &&x);
+	parameter_t &operator=(parameter_t &&x);
+	~parameter_t();
+
+	void common_copy(const parameter_t &o);
+	void common_move(parameter_t &o);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -5932,32 +6064,6 @@ ast_node_t &ast_node_t::release(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct declaration_specifiers_t {
-	storage_class_t				storage_class = 0;
-	type_specifier_t			type_specifier = 0;
-	type_qualifier_t			type_qualifier = 0;
-	symbol_id_t				type_identifier_symbol = symbol_none;
-	data_size_t				size = data_size_none;
-	addrmask_t				align = addrmask_none;
-	unsigned int				dcs_flags = 0;
-	std::vector<symbol_id_t>		enum_list;
-	unsigned int				count = 0;
-
-	bool empty(void) const;
-
-	declaration_specifiers_t();
-	declaration_specifiers_t(const declaration_specifiers_t &x);
-	declaration_specifiers_t &operator=(const declaration_specifiers_t &x);
-	declaration_specifiers_t(declaration_specifiers_t &&x);
-	declaration_specifiers_t &operator=(declaration_specifiers_t &&x);
-	~declaration_specifiers_t();
-
-	void common_move(declaration_specifiers_t &o);
-	void common_copy(const declaration_specifiers_t &o);
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
 bool declaration_specifiers_t::empty(void) const {
 	return 	storage_class == 0 && type_specifier == 0 && type_qualifier == 0 &&
 		type_identifier_symbol == symbol_none && enum_list.empty() && count == 0 &&
@@ -5999,15 +6105,6 @@ void declaration_specifiers_t::common_copy(const declaration_specifiers_t &o) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct pointer_t {
-	type_qualifier_t			tq = 0;
-
-	bool operator==(const pointer_t &o) const;
-	bool operator!=(const pointer_t &o) const;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
 bool pointer_t::operator==(const pointer_t &o) const {
 	return tq == o.tq;
 }
@@ -6015,29 +6112,6 @@ bool pointer_t::operator==(const pointer_t &o) const {
 bool pointer_t::operator!=(const pointer_t &o) const {
 	return !(*this == o);
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-	struct parameter_t;
-
-	struct ddip_t {
-		std::vector<pointer_t>		ptr;
-		std::vector<ast_node_id_t>	arraydef;
-		std::vector<parameter_t>	parameters;
-		unsigned int			dd_flags = 0;
-
-		ddip_t();
-		ddip_t(const ddip_t &x);
-		ddip_t &operator=(const ddip_t &x);
-		ddip_t(ddip_t &&x);
-		ddip_t &operator=(ddip_t &&x);
-
-		~ddip_t();
-
-		void common_copy(const ddip_t &o);
-		void common_move(ddip_t &o);
-		bool empty(void) const;
-	};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -6071,49 +6145,8 @@ bool ddip_t::empty(void) const {
 
 //////////////////////////////////////////////////////////////////////////////
 
-	class ddip_list_t : public std::vector<ddip_t> {
-	public:
-		using BT = std::vector<ddip_t>;
-	public:
-		ddip_list_t();
-		~ddip_list_t();
-	public:
-		void addcombine(ddip_t &&x);
-		void addcombine(const ddip_t &x);
-		ddip_t *funcparampair(void);
-	};
-
-//////////////////////////////////////////////////////////////////////////////
-
 ddip_list_t::ddip_list_t() : BT() { }
 ddip_list_t::~ddip_list_t() { }
-
-//////////////////////////////////////////////////////////////////////////////
-
-	struct declarator_t {
-		static constexpr unsigned int FL_FUNCTION = 1u << 0u; /* it saw () */
-		static constexpr unsigned int FL_FUNCTION_POINTER = 1u << 1u; /* it saw () but it's a function pointer, not a function, hence actually a variable */
-		static constexpr unsigned int FL_ELLIPSIS = 1u << 2u; /* we saw ellipsis ... in the parameter list */
-
-		ddip_list_t ddip;
-		identifier_id_t name = identifier_none;
-		symbol_id_t symbol = symbol_none;
-		unsigned int flags = 0;
-
-		ast_node_id_t expr = ast_node_none; /* function body if FL_FUNCTION, else initval */
-
-		declarator_t();
-		declarator_t(const declarator_t &x);
-		declarator_t &operator=(const declarator_t &x);
-		declarator_t(declarator_t &&x);
-		declarator_t &operator=(declarator_t &&x);
-
-		void common_copy(const declarator_t &o);
-
-		void common_move(declarator_t &o);
-
-		~declarator_t();
-	};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -6146,121 +6179,104 @@ declarator_t::~declarator_t() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-	ddip_t *ddip_list_t::funcparampair(void) {
-		if (!empty()) {
-			size_t si = size() - 1u;
-			do {
-				ddip_t &p = (*this)[si];
-				if (p.dd_flags & declarator_t::FL_FUNCTION)
-					return &p;
-			} while ((si--) != 0u);
-		}
-
-		return NULL;
+ddip_t *ddip_list_t::funcparampair(void) {
+	if (!empty()) {
+		size_t si = size() - 1u;
+		do {
+			ddip_t &p = (*this)[si];
+			if (p.dd_flags & declarator_t::FL_FUNCTION)
+				return &p;
+		} while ((si--) != 0u);
 	}
+
+	return NULL;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
-	bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
-		if (!to.parameters.empty() || !from.parameters.empty())
-			return false;
-		if (!to.arraydef.empty())
-			return false;
-		if (to.dd_flags != 0 || from.dd_flags != 0)
-			return false;
-
-		if (!to.ptr.empty() || !from.ptr.empty())
-			return true;
-
+bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
+	if (!to.parameters.empty() || !from.parameters.empty())
 		return false;
-	}
-
-	bool arraymergeable(const ddip_t &to,const ddip_t &from) {
-		if (!to.parameters.empty() || !from.parameters.empty())
-			return false;
-		if (!to.ptr.empty() || !from.ptr.empty())
-			return false;
-		if (to.dd_flags != 0 || from.dd_flags != 0)
-			return false;
-
-		if (!to.arraydef.empty() || !from.arraydef.empty())
-			return true;
-
+	if (!to.arraydef.empty())
 		return false;
-	}
+	if (to.dd_flags != 0 || from.dd_flags != 0)
+		return false;
+
+	if (!to.ptr.empty() || !from.ptr.empty())
+		return true;
+
+	return false;
+}
+
+bool arraymergeable(const ddip_t &to,const ddip_t &from) {
+	if (!to.parameters.empty() || !from.parameters.empty())
+		return false;
+	if (!to.ptr.empty() || !from.ptr.empty())
+		return false;
+	if (to.dd_flags != 0 || from.dd_flags != 0)
+		return false;
+
+	if (!to.arraydef.empty() || !from.arraydef.empty())
+		return true;
+
+	return false;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
-	void ddip_list_t::addcombine(ddip_t &&x) {
-		if (x.empty())
+void ddip_list_t::addcombine(ddip_t &&x) {
+	if (x.empty())
+		return;
+
+	if (!empty()) {
+		ddip_t &top = back();
+		if (ptrmergeable(top,x)) {
+			for (auto &p : x.ptr)
+				top.ptr.push_back(std::move(p));
+			for (auto &a : x.arraydef) {
+				top.arraydef.push_back(a);
+				a = ast_node_none;
+			}
 			return;
-
-		if (!empty()) {
-			ddip_t &top = back();
-			if (ptrmergeable(top,x)) {
-				for (auto &p : x.ptr)
-					top.ptr.push_back(std::move(p));
-				for (auto &a : x.arraydef) {
-					top.arraydef.push_back(a);
-					a = ast_node_none;
-				}
-				return;
-			}
-			if (arraymergeable(top,x)) {
-				for (auto &a : x.arraydef) {
-					top.arraydef.push_back(a);
-					a = ast_node_none;
-				}
-				return;
-			}
 		}
-
-		push_back(std::move(x));
+		if (arraymergeable(top,x)) {
+			for (auto &a : x.arraydef) {
+				top.arraydef.push_back(a);
+				a = ast_node_none;
+			}
+			return;
+		}
 	}
 
-	void ddip_list_t::addcombine(const ddip_t &x) {
-		if (x.empty())
+	push_back(std::move(x));
+}
+
+void ddip_list_t::addcombine(const ddip_t &x) {
+	if (x.empty())
+		return;
+
+	if (!empty()) {
+		ddip_t &top = back();
+		if (ptrmergeable(top,x)) {
+			for (const auto &p : x.ptr)
+				top.ptr.push_back(p);
+			for (const auto &a : x.arraydef) {
+				top.arraydef.push_back(a);
+				ast_node(a).addref();
+			}
 			return;
-
-		if (!empty()) {
-			ddip_t &top = back();
-			if (ptrmergeable(top,x)) {
-				for (const auto &p : x.ptr)
-					top.ptr.push_back(p);
-				for (const auto &a : x.arraydef) {
-					top.arraydef.push_back(a);
-					ast_node(a).addref();
-				}
-				return;
-			}
-			if (arraymergeable(top,x)) {
-				for (const auto &a : x.arraydef) {
-					top.arraydef.push_back(a);
-					if (a != ast_node_none) ast_node(a).addref();
-				}
-				return;
-			}
 		}
-
-		push_back(x);
+		if (arraymergeable(top,x)) {
+			for (const auto &a : x.arraydef) {
+				top.arraydef.push_back(a);
+				if (a != ast_node_none) ast_node(a).addref();
+			}
+			return;
+		}
 	}
 
-//////////////////////////////////////////////////////////////////////////////
-
-	struct declaration_t {
-		declaration_specifiers_t	spec;
-		std::vector<declarator_t>	declor;
-
-		declarator_t &new_declarator(void);
-
-		declaration_t();
-		declaration_t(declaration_t &&x);
-		declaration_t &operator=(declaration_t &&x);
-
-		void common_move(declaration_t &o);
-
-		~declaration_t();
-	};
+	push_back(x);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -6281,23 +6297,6 @@ void declaration_t::common_move(declaration_t &o) {
 
 declaration_t::~declaration_t() {
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-	struct parameter_t {
-		declaration_specifiers_t		spec;
-		declarator_t				decl;
-
-		parameter_t();
-		parameter_t(const parameter_t &x);
-		parameter_t &operator=(const parameter_t &x);
-		parameter_t(parameter_t &&x);
-		parameter_t &operator=(parameter_t &&x);
-		~parameter_t();
-
-		void common_copy(const parameter_t &o);
-		void common_move(parameter_t &o);
-	};
 
 //////////////////////////////////////////////////////////////////////////////
 
