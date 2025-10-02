@@ -12,22 +12,6 @@
 
 #include "cc.hpp"
 
-pptok_macro_t::pptok_macro_t() { }
-pptok_macro_t::pptok_macro_t(pptok_macro_t &&x) { common_move(x); }
-pptok_macro_t &pptok_macro_t::operator=(pptok_macro_t &&x) { common_move(x); return *this; }
-pptok_macro_t::~pptok_macro_t() {
-	for (auto &pid : parameters) identifier.release(pid);
-	parameters.clear();
-}
-
-void pptok_macro_t::common_move(pptok_macro_t &o) {
-	flags = o.flags; o.flags = 0;
-	tokens = std::move(o.tokens);
-	parameters = std::move(o.parameters);
-}
-
-////////////////////////////////////////////////////////////////////
-
 uint8_t pptok_state_t::macro_hash_id(const identifier_id_t &i) const {
 	return macro_hash_id(identifier(i));
 }
