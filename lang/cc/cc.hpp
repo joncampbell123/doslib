@@ -1291,3 +1291,10 @@ bool looks_like_arrowstr(rbuf &buf,source_file_object &sfo);
 
 int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const csliteral_t::type_t cslt=csliteral_t::type_t::CHAR);
 
+//////////////////////////////////////////////////////////////////////////////
+
+int lgtok_asm_text(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t);
+int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+
