@@ -12,16 +12,6 @@
 
 #include "cc.hpp"
 
-bool pointer_t::operator==(const pointer_t &o) const {
-	return tq == o.tq;
-}
-
-bool pointer_t::operator!=(const pointer_t &o) const {
-	return !(*this == o);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 ddip_t::ddip_t() { }
 ddip_t::ddip_t(const ddip_t &x) { common_copy(x); }
 ddip_t &ddip_t::operator=(const ddip_t &x) { common_copy(x); return *this; }
