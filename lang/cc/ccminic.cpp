@@ -12,17 +12,6 @@
 
 #include "cc.hpp"
 
-//////////////////////////////////////////////////////////////////////////////
-
-std::string path_combine(const std::string &base,const std::string &rel) {
-	if (!base.empty() && !rel.empty())
-		return base + "/" + rel;
-	if (!rel.empty())
-		return rel;
-
-	return std::string();
-}
-
 ////////////////////////////////////////////////////////////////////
 
 void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c) {
