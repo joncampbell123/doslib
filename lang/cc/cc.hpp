@@ -1100,6 +1100,10 @@ extern std::vector<source_file_t> source_files;
 
 //////////////////////////////////////////////////////////////////////////////
 
+int rbuf_sfd_refill(rbuf &buf,source_file_object &sfo);
+
+//////////////////////////////////////////////////////////////////////////////
+
 size_t alloc_source_file(const std::string &path);
 void clear_source_file(const size_t i);
 void release_source_file(const size_t i);
