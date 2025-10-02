@@ -1423,6 +1423,8 @@ addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 
+bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
+
 bool ast_constexpr_to_bool(token_t &t);
 bool ast_constexpr_to_bool(integer_value_t &iv);
 bool ast_constexpr_to_bool(floating_value_t &iv);
