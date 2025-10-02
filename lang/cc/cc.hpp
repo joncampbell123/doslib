@@ -1421,6 +1421,7 @@ extern segment_id_t					fardata_segment;
 addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
+bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 
 //////////////////////////////////////////////////////////////////////////////
 
