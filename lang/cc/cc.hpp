@@ -1308,3 +1308,7 @@ bool pptok_define_allowed_token(const token_t &t);
 int pptok_lgtok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 void pptok_lgtok_ungetch(pptok_state_t &pst,token_t &t);
 
+//////////////////////////////////////////////////////////////////////////////
+
+int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+
