@@ -1021,3 +1021,7 @@ void scopefunc1() {
 	int typedef_scope1_t; /* GCC supports this case (using the same name in a subscope) and so should we */
 }
 
+double float1 = 1.0;
+double float2 = 0.0;
+double float3 = -1.0;
+double float4 = -0.0;
