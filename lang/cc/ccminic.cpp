@@ -14,16 +14,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-segment_id_t					code_segment = segment_none;
-segment_id_t					const_segment = segment_none;
-segment_id_t					conststr_segment = segment_none;
-segment_id_t					data_segment = segment_none;
-segment_id_t					stack_segment = segment_none;
-segment_id_t					bss_segment = segment_none;
-segment_id_t					fardata_segment = segment_none;
-
-//////////////////////////////////////////////////////////////////////////////
-
 std::string ddip_list_to_str(const ddip_list_t &dl) {
 	std::string r;
 	size_t i=0;
