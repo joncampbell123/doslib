@@ -37,13 +37,16 @@ std::string floating_value_t::to_str(void) const {
 	if (flags & FL_SPECIAL)  s += " special";
 	if (flags & FL_NEGATIVE) s += " negative";
 	if (flags & FL_OVERFLOW) s += " overflow";
+	if (flags & FL_ZERO)     s += " zero";
 
 	return s;
 }
 
-void floating_value_t::init(void) { flags=0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
+void floating_value_t::init(void) { flags=FL_ZERO; mantissa=0; exponent=0; type=type_t::DOUBLE; }
 
 void floating_value_t::setsn(const uint64_t m,const int32_t e) {
+	if (m) flags &= ~FL_ZERO;
+	else flags |= FL_ZERO;
 	mantissa = m;
 	exponent = e+63;
 	normalize();

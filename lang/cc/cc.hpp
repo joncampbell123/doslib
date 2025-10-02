@@ -474,6 +474,7 @@ struct floating_value_t {
 	static constexpr unsigned int		FL_SPECIAL    = (1u << 0u); /* NaN, inf, etc */
 	static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
 	static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
+	static constexpr unsigned int           FL_ZERO       = (1u << 3u);
 
 	static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
 

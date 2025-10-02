@@ -1049,4 +1049,5 @@ double float8o = 0x0.fffffffffffffffffffffffp0;
 double float8p = 0x0.fffffffffffffffffffffffp1;
 double float8q = 0x0.fffffffffffffffffffffffp-1;
 double float8r = 0x10000000000000002p0;
+double float8s = 0x0p0;
 

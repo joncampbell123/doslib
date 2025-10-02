@@ -288,6 +288,14 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 						else t.v.floating.exponent += (int)pex;
 					}
 				}
+
+				if (t.v.floating.mantissa == 0ull) {
+					t.v.floating.flags |= floating_value_t::FL_ZERO;
+					t.v.floating.exponent = 0;
+				}
+				else {
+					t.v.floating.flags &= ~floating_value_t::FL_ZERO;
+				}
 			}
 			else {
 				scan = buf.data;
