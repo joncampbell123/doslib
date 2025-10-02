@@ -1367,3 +1367,16 @@ segment_id_t new_segment(void);
 segment_id_t find_segment(identifier_id_t name);
 void default_segment_setup(segment_t &so);
 
+//////////////////////////////////////////////////////////////////////////////
+
+extern std::vector<scope_t>				scopes;
+extern std::vector<scope_id_t>				scope_stack;
+
+//////////////////////////////////////////////////////////////////////////////
+
+scope_t &scope(scope_id_t id);
+scope_id_t new_scope(void);
+scope_id_t push_new_scope(void);
+void pop_scope(void);
+scope_id_t current_scope(void);
+
