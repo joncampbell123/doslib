@@ -208,7 +208,6 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 
 				unsigned char ldigit = 0;
 				unsigned char shf = 64;
-				int exponent = 0;
 				int v;
 
 				/* the above code already skipped the 0x1 */
@@ -222,15 +221,15 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 				/* skip leading zeros */
 				while (*scan == '0') scan++;
 				if (*scan != '0') {
-					exponent--; /* whole part is nonzero, adjust so the first digit has exponent=3 */
+					t.v.floating.exponent--; /* whole part is nonzero, adjust so the first digit has exponent=3 */
 					while ((v=cc_parsedigit(*scan,16)) >= 0) {
 						scan++;
 						if (shf >= 4) { /* assume shf a multiple of 4 */
-							shf -= 4; exponent += 4; t.v.floating.mantissa |= (uint64_t)v << (uint64_t)shf;
+							shf -= 4; t.v.floating.exponent += 4; t.v.floating.mantissa |= (uint64_t)v << (uint64_t)shf;
 						}
 						else {
 							ldigit = (unsigned char)v;
-							while ((v=cc_parsedigit(*scan,16)) >= 0) { exponent += 4; scan++; }
+							while ((v=cc_parsedigit(*scan,16)) >= 0) { t.v.floating.exponent += 4; scan++; }
 							break;
 						}
 					}
@@ -239,7 +238,7 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 					if (t.v.floating.mantissa != 0ull) {
 						while (!(t.v.floating.mantissa & floating_value_t::mant_msb)) {
 							t.v.floating.mantissa <<= 1ull;
-							exponent--;
+							t.v.floating.exponent--;
 							shf++;
 						}
 					}
@@ -285,12 +284,10 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 
 					if (isdigit(*scan)) {
 						unsigned int pex = strtoul((char*)scan,(char**)(&scan),10);
-						if (neg) exponent -= (int)pex;
-						else exponent += (int)pex;
+						if (neg) t.v.floating.exponent -= (int)pex;
+						else t.v.floating.exponent += (int)pex;
 					}
 				}
-
-				t.v.floating.exponent = exponent;
 			}
 			else {
 				scan = buf.data;

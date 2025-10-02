@@ -41,7 +41,7 @@ std::string floating_value_t::to_str(void) const {
 	return s;
 }
 
-void floating_value_t::init(void) { flags = 0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
+void floating_value_t::init(void) { flags=0; mantissa=0; exponent=0; type=type_t::DOUBLE; }
 
 void floating_value_t::setsn(const uint64_t m,const int32_t e) {
 	mantissa = m;
