@@ -1420,3 +1420,30 @@ addrmask_t calc_alignofmask(declaration_specifiers_t &spec,ddip_list_t &ddip,siz
 addrmask_t calc_alignof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t ptr_deref=0);
 
+//////////////////////////////////////////////////////////////////////////////
+
+void debug_dump_ast(const std::string prefix,ast_node_id_t r);
+void debug_dump_general(const std::string prefix,const std::string &name=std::string());
+void debug_dump_declaration_specifiers(const std::string prefix,declaration_specifiers_t &ds);
+void debug_dump_data_type_set(const std::string prefix,const data_type_set_t &dts,const std::string &name=std::string());
+void debug_dump_data_type_set_ptr(const std::string prefix,const data_type_set_ptr_t &dtsp,const std::string &name=std::string());
+void debug_dump_var_type(const std::string prefix,const data_var_type_t &dt,const std::string &name=std::string());
+void debug_dump_ptr_type(const std::string prefix,const data_ptr_type_t &dt,const std::string &name=std::string());
+void debug_dump_declarator(const std::string prefix,declarator_t &declr,const std::string &name=std::string());
+void debug_dump_declaration(const std::string prefix,declaration_t &decl,const std::string &name=std::string());
+void debug_dump_declaration_specifier_flags(const std::string prefix,const unsigned int flags,const std::string &name=std::string());
+void debug_dump_pointer(const std::string prefix,std::vector<pointer_t> &ptr,const std::string &name=std::string());
+void debug_dump_direct_declarator(const std::string prefix,declarator_t &ddecl,const std::string &name=std::string());
+void debug_dump_arraydef(const std::string prefix,std::vector<ast_node_id_t> &arraydef,const std::string &name=std::string());
+void debug_dump_parameter(const std::string prefix,parameter_t &p,const std::string &name=std::string());
+void debug_dump_structfield(const std::string prefix,structfield_t &f,const std::string &name=std::string());
+void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &name=std::string());
+void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name=std::string());
+void debug_dump_symbol(const std::string prefix,symbol_t &sym,const std::string &name=std::string());
+void debug_dump_symbol_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_scope(const std::string prefix,scope_t &sco,const std::string &name=std::string());
+void debug_dump_scope_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_segment(const std::string prefix,segment_t &s,const std::string &name=std::string());
+void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
+void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
+
