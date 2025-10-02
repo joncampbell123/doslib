@@ -1447,3 +1447,6 @@ void debug_dump_segment(const std::string prefix,segment_t &s,const std::string 
 void debug_dump_segment_table(const std::string prefix,const std::string &name=std::string());
 void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool arrange_symbols(void);
