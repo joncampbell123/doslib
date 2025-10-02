@@ -97,10 +97,6 @@ void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 
 ////////////////////////////////////////////////////////////////////
 
-const unsigned char csliteral_t::unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
-
-////////////////////////////////////////////////////////////////////
-
 csliteral_t &csliteral_t::clear(void) {
 	free();
 	return *this;

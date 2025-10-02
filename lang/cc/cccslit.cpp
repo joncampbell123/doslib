@@ -14,3 +14,7 @@
 
 csliteral_pool_t csliteral;
 
+////////////////////////////////////////////////////////////////////
+
+const unsigned char csliteral_t::unit_size[type_t::__MAX__] = { 1, 1, 2, 4 };
+
