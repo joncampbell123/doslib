@@ -1126,3 +1126,8 @@ unicode_char_t p_utf8_decode(const unsigned char* &p,const unsigned char* const 
 void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c);
 unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f);
 
+//////////////////////////////////////////////////////////////////////////////
+
+unicode_char_t getcnu(rbuf &buf,source_file_object &sfo); /* non-unicode */
+unicode_char_t getc(rbuf &buf,source_file_object &sfo);
+
