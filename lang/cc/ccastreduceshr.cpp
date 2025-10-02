@@ -17,7 +17,7 @@ static bool ast_constexpr_rightshift_integer(token_t &tr,const token_t &top1,con
 	const struct integer_value_t &op2 = top2.v.integer;
 	struct integer_value_t &r = tr.v.integer;
 
-	r = op1;
+	tr = top1;
 	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
 
 	if (op2.v.s >= 0ll && op2.v.s <= 63ll) {
