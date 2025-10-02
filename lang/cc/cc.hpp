@@ -1269,3 +1269,6 @@ bool is_asm_non_ident_text_char(unsigned char c);
 bool is_asm_ident_text_char(unsigned char c);
 bool is_hchar(unsigned char c);
 
+//////////////////////////////////////////////////////////////////////////////
+
+int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false);
