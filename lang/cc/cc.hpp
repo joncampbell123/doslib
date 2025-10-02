@@ -1441,6 +1441,9 @@ bool ast_constexpr_greaterthan_equals(token_t &r,const token_t &op1,const token_
 bool ast_constexpr_lessthan(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_greaterthan(token_t &r,const token_t &op1,const token_t &op2);
 
+bool ast_constexpr_equals(token_t &r,const token_t &op1,const token_t &op2);
+bool ast_constexpr_not_equals(token_t &r,const token_t &op1,const token_t &op2);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void debug_dump_ast(const std::string prefix,ast_node_id_t r);

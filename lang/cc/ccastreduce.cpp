@@ -12,36 +12,6 @@
 
 #include "cc.hpp"
 
-bool ast_constexpr_equals(token_t &r,const token_t &op1,const token_t &op2) {
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				r.v.integer.v.u = (op1.v.integer.v.u == op2.v.integer.v.u) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_not_equals(token_t &r,const token_t &op1,const token_t &op2) {
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				r.v.integer.v.u = (op1.v.integer.v.u != op2.v.integer.v.u) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
 bool ast_constexpr_binary_not(token_t &r,token_t &op) {
 	/* TODO: type promotion/conversion */
 	switch (op.type) {
