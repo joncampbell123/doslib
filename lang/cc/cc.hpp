@@ -1362,6 +1362,8 @@ extern std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 extern std::vector<segment_t>				segments;
 
+//////////////////////////////////////////////////////////////////////////////
+
 segment_t &segref(segment_id_t id);
 segment_id_t new_segment(void);
 segment_id_t find_segment(identifier_id_t name);
@@ -1379,4 +1381,35 @@ scope_id_t new_scope(void);
 scope_id_t push_new_scope(void);
 void pop_scope(void);
 scope_id_t current_scope(void);
+
+//////////////////////////////////////////////////////////////////////////////
+
+extern std::vector<symbol_t>				symbols;
+
+//////////////////////////////////////////////////////////////////////////////
+
+symbol_id_t match_str_symbol(const csliteral_t &csl);
+symbol_id_t new_symbol(const identifier_id_t name);
+symbol_t &symbol(symbol_id_t id);
+bool sym_match_type(const symbol_t::type_t at,const symbol_t::type_t bt);
+symbol_id_t lookup_symbol(scope_t &sco,const identifier_id_t name,const symbol_t::type_t st);
+symbol_id_t lookup_symbol(const identifier_id_t name,const symbol_t::type_t st);
+symbol_t::type_t classify_symbol(const declaration_specifiers_t &spec,const declarator_t &declor);
+int prep_symbol_lookup(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
+bool do_local_symbol_lookup(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
+int check_symbol_param_match(symbol_lookup_t &sl,const ddip_list_t &p1,const ddip_list_t &p2);
+int check_symbol_param_match(symbol_lookup_t &sl,const ddip_list_t &p);
+int check_symbol_lookup_match(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
+int add_symbol(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
+segment_id_t decide_sym_segment(symbol_t &sym);
+
+//////////////////////////////////////////////////////////////////////////////
+
+extern segment_id_t					code_segment;
+extern segment_id_t					const_segment;
+extern segment_id_t					conststr_segment;
+extern segment_id_t					data_segment;
+extern segment_id_t					stack_segment;
+extern segment_id_t					bss_segment;
+extern segment_id_t					fardata_segment;
 
