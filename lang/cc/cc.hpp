@@ -1331,3 +1331,13 @@ extern cb_include_search_t cb_include_search;
 
 int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
+//////////////////////////////////////////////////////////////////////////////
+
+struct symbol_lookup_t {
+	symbol_t::type_t st = symbol_t::NONE;
+	scope_id_t cursco = scope_none;
+	symbol_id_t sid = symbol_none;
+	unsigned int flags = 0;
+	position_t pos;
+};
+

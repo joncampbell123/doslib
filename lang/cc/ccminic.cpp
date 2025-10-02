@@ -29,16 +29,6 @@ std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct symbol_lookup_t {
-	symbol_t::type_t st = symbol_t::NONE;
-	scope_id_t cursco = scope_none;
-	symbol_id_t sid = symbol_none;
-	unsigned int flags = 0;
-	position_t pos;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
 std::vector<segment_t>	segments;
 std::vector<symbol_t>	symbols;
 
