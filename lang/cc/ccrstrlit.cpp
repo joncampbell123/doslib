@@ -12,7 +12,7 @@
 
 #include "cc.hpp"
 
-template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
+template <const csliteral_t::type_t cslt,typename ptrat> static int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
 
 template <> int lgtok_strlit_wrch<csliteral_t::type_t::CHAR,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {
 	if (v < 0x00 || v > 0xFF)
@@ -50,7 +50,7 @@ template <> int lgtok_strlit_wrch<csliteral_t::type_t::UNICODE32,uint32_t>(uint3
 	return 1;
 }
 
-template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,const unsigned char separator,ptrat* &p,ptrat* const &f) {
+template <const csliteral_t::type_t cslt,typename ptrat> static int lgtok_strlit_common_inner(rbuf &buf,source_file_object &sfo,const unsigned char separator,ptrat* &p,ptrat* const &f) {
 	const bool unicode = !(cslt == csliteral_t::type_t::CHAR);
 	int32_t v;
 	int rr;
@@ -73,7 +73,7 @@ template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common
 	return 1;
 }
 
-template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
+template <const csliteral_t::type_t cslt,typename ptrat> static int lgtok_strlit_common(rbuf &buf,source_file_object &sfo,token_t &t,const unsigned char separator) {
 	assert(t.type == token_type_t::charliteral || t.type == token_type_t::strliteral || t.type == token_type_t::anglestrliteral);
 	ptrat *p,*f;
 	int rr;
