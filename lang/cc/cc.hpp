@@ -1131,3 +1131,115 @@ unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f);
 unicode_char_t getcnu(rbuf &buf,source_file_object &sfo); /* non-unicode */
 unicode_char_t getc(rbuf &buf,source_file_object &sfo);
 
+//////////////////////////////////////////////////////////////////////////////
+
+enum storage_class_idx_t {
+	SCI_TYPEDEF,		// 0
+	SCI_EXTERN,
+	SCI_STATIC,
+	SCI_AUTO,
+	SCI_REGISTER,
+	SCI_CONSTEXPR,		// 5
+	SCI_INLINE,
+	SCI_CONSTEVAL,
+	SCI_CONSTINIT,
+
+	SCI__MAX
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+#define X(c) static constexpr storage_class_t SC_##c = 1u << SCI_##c
+X(TYPEDEF);			// 0
+X(EXTERN);
+X(STATIC);
+X(AUTO);
+X(REGISTER);
+X(CONSTEXPR);			// 5
+X(INLINE);
+X(CONSTEVAL);
+X(CONSTINIT);
+#undef X
+
+//////////////////////////////////////////////////////////////////////////////
+
+/* this is a bitmask because you can specify more than one, these are indexes */
+enum type_specifier_idx_t {
+	TSI_VOID=0,		// 0
+	TSI_CHAR,
+	TSI_SHORT,
+	TSI_INT,
+	TSI_LONG,
+	TSI_FLOAT,		// 5
+	TSI_DOUBLE,
+	TSI_SIGNED,
+	TSI_UNSIGNED,
+	TSI_LONGLONG,
+	TSI_ENUM,		// 10
+	TSI_STRUCT,
+	TSI_UNION,
+	TSI_MATCH_TYPEDEF,
+	TSI_MATCH_BUILTIN,
+	TSI_SZ8,		// 15
+	TSI_SZ16,
+	TSI_SZ32,
+	TSI_SZ64,
+
+	TSI__MAX
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+#define X(c) static constexpr type_specifier_t TS_##c = 1u << TSI_##c
+X(VOID);			// 0
+X(CHAR);
+X(SHORT);
+X(INT);
+X(LONG);
+X(FLOAT);			// 5
+X(DOUBLE);
+X(SIGNED);
+X(UNSIGNED);
+X(LONGLONG);
+X(ENUM);			// 10
+X(STRUCT);
+X(UNION);
+X(MATCH_TYPEDEF);
+X(MATCH_BUILTIN);
+X(SZ8);				// 15
+X(SZ16);
+X(SZ32);
+X(SZ64);
+#undef X
+
+//////////////////////////////////////////////////////////////////////////////
+
+/* this is a bitmask because you can specify more than one, these are indexes */
+enum type_qualifier_idx_t {
+	TQI_CONST=0,		// 0
+	TQI_VOLATILE,
+	TQI_NEAR,
+	TQI_FAR,
+	TQI_HUGE,
+	TQI_RESTRICT,		// 5
+
+	TQI__MAX
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+#define X(c) static constexpr type_qualifier_t TQ_##c = 1u << TQI_##c
+X(CONST);
+X(VOLATILE);
+X(NEAR);			// 5
+X(FAR);
+X(HUGE);
+X(RESTRICT);
+#undef X
+
+//////////////////////////////////////////////////////////////////////////////
+
+extern const char *storage_class_idx_t_str[SCI__MAX];
+extern const char *type_specifier_idx_t_str[TSI__MAX];
+extern const char *type_qualifier_idx_t_str[TSI__MAX];
+
