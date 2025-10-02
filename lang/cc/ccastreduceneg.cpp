@@ -27,7 +27,7 @@ static bool ast_constexpr_negate_floating(token_t &tr,const token_t &top) {
 	struct floating_value_t &r = tr.v.floating;
 
 	tr = top;
-	r.flags ^= floating_value_t::FL_NEGATIVE;
+	r.flags = op.flags ^ floating_value_t::FL_NEGATIVE;
 	return true;
 }
 
