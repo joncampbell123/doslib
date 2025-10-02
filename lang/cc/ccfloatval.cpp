@@ -16,15 +16,12 @@ std::string floating_value_t::to_str(void) const {
 	std::string s;
 	char tmp[256];
 
-	if (!(flags & FL_NAN)) {
+	if (!(flags & FL_SPECIAL)) {
 		sprintf(tmp,"v=0x%llx e=%ld ",(unsigned long long)mantissa,(long)exponent);
 		s += tmp;
 
 		sprintf(tmp,"%.20f",ldexp(double(mantissa),(int)exponent-63));
 		s += tmp;
-	}
-	else {
-		s += "NaN";
 	}
 
 	s += " t=\"";
@@ -37,6 +34,7 @@ std::string floating_value_t::to_str(void) const {
 	}
 	s += "\"";
 
+	if (flags & FL_SPECIAL)  s += " special";
 	if (flags & FL_NEGATIVE) s += " negative";
 	if (flags & FL_OVERFLOW) s += " overflow";
 

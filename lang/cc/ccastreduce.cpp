@@ -32,6 +32,7 @@ bool is_ast_strconstexpr(token_t &t) {
 bool is_ast_constexpr(token_t &t) {
 	switch (t.type) {
 		case token_type_t::integer:
+		case token_type_t::floating:
 			return true;
 		default:
 			break;
@@ -44,10 +45,16 @@ bool ast_constexpr_to_bool(integer_value_t &iv) {
 	return iv.v.u != 0ull;
 }
 
+bool ast_constexpr_to_bool(floating_value_t &iv) {
+	return iv.mantissa != 0ull;
+}
+
 bool ast_constexpr_to_bool(token_t &t) {
 	switch (t.type) {
 		case token_type_t::integer:
 			return ast_constexpr_to_bool(t.v.integer);
+		case token_type_t::floating:
+			return ast_constexpr_to_bool(t.v.floating);
 		default:
 			break;
 	};

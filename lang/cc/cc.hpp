@@ -467,11 +467,11 @@ struct floating_value_t {
 	};
 
 	uint64_t				mantissa;
-	int32_t					exponent;
+	int32_t					exponent; /* if special, this is a code for how special i.e. NaN, inf, etc. */
 	unsigned char				flags;
 	type_t					type;
 
-	static constexpr unsigned int		FL_NAN        = (1u << 0u);
+	static constexpr unsigned int		FL_SPECIAL    = (1u << 0u); /* NaN, inf, etc */
 	static constexpr unsigned int           FL_OVERFLOW   = (1u << 1u);
 	static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
 
