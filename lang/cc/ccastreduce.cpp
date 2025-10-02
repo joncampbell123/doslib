@@ -35,6 +35,38 @@ bool ast_constexpr_logical_not(token_t &r,const token_t &op) {
 	return false;
 }
 
+bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) || ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
+bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
+	/* TODO: type promotion/conversion */
+	if (op1.type == op2.type) {
+		switch (op1.type) {
+			case token_type_t::integer:
+				r = op1;
+				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) && ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
+				return true;
+			default:
+				break;
+		};
+	}
+
+	return false;
+}
+
 bool ast_constexpr_negate(token_t &r,token_t &op) {
 	/* TODO: type promotion/conversion */
 	switch (op.type) {
@@ -73,54 +105,6 @@ bool ast_constexpr_subtract(token_t &r,token_t &op1,token_t &op2) {
 			case token_type_t::integer:
 				r = op1;
 				r.v.integer.v.u -= op2.v.integer.v.u;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) || ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				r.v.integer.v.u = (ast_constexpr_to_bool(op1.v.integer) && ast_constexpr_to_bool(op2.v.integer)) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_binary_and(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				r.v.integer.v.v &= op2.v.integer.v.v;
 				return true;
 			default:
 				break;

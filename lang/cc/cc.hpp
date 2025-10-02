@@ -1446,7 +1446,8 @@ bool ast_constexpr_not_equals(token_t &r,const token_t &op1,const token_t &op2);
 
 bool ast_constexpr_binary_not(token_t &r,const token_t &op);
 bool ast_constexpr_binary_or(token_t &r,const token_t &op1,const token_t &op2);
-bool ast_constexpr_binary_xor(token_t &r,token_t &op1,token_t &op2);
+bool ast_constexpr_binary_and(token_t &r,const token_t &op1,const token_t &op2);
+bool ast_constexpr_binary_xor(token_t &r,const token_t &op1,const token_t &op2);
 
 //////////////////////////////////////////////////////////////////////////////
 
