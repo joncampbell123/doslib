@@ -1434,6 +1434,7 @@ bool is_ast_strconstexpr(token_t &t);
 bool is_ast_constexpr(token_t &t);
 
 bool ast_constexpr_leftshift(token_t &r,const token_t &op1,const token_t &op2);
+bool ast_constexpr_rightshift(token_t &r,const token_t &op1,const token_t &op2);
 
 //////////////////////////////////////////////////////////////////////////////
 
