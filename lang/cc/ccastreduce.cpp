@@ -12,26 +12,29 @@
 
 #include "cc.hpp"
 
+bool ast_constexpr_leftshift_integer(token_t &r,token_t &op1,token_t &op2) {
+	r = op1;
+	r.v.integer.flags |= op2.v.integer.flags & integer_value_t::FL_SIGNED;
+
+	if (op2.v.integer.v.v >= 0ll && op2.v.integer.v.v <= 63ll) {
+		if (op2.v.integer.v.u != 0ull) {
+			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - op2.v.integer.v.u);
+			if (op1.v.integer.v.u & chkmsk) r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+			r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
+		}
+	}
+	else {
+		r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+	}
+
+	return true;
+}
+
 bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
-				/* negative or over-large shift? NOPE.
-				 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
-				 * the shift instructions only use the number of LSB bits relevent to the data
-				 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
-				 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
-				 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
-				if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
-					return false;
-
-				r = op1;
-				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-					r.v.integer.v.u = op1.v.integer.v.v << op2.v.integer.v.v;
-				else
-					r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
-				return true;
+				return ast_constexpr_leftshift_integer(r,op1,op2);
 			default:
 				break;
 		};
@@ -40,26 +43,28 @@ bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
 	return false;
 }
 
+bool ast_constexpr_rightshift_integer(token_t &r,token_t &op1,token_t &op2) {
+	r = op1;
+	r.v.integer.flags |= op2.v.integer.flags & integer_value_t::FL_SIGNED;
+
+	if (op2.v.integer.v.v >= 0ll && op2.v.integer.v.v <= 63ll) {
+		if (r.v.integer.flags & integer_value_t::FL_SIGNED)
+			r.v.integer.v.s = op1.v.integer.v.s >> op2.v.integer.v.s;
+		else
+			r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
+	}
+	else {
+		r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+	}
+
+	return true;
+}
+
 bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
-				/* negative or over-large shift? NOPE.
-				 * That is undefined behavior. On Intel CPUs other than the 8086 for example,
-				 * the shift instructions only use the number of LSB bits relevent to the data
-				 * type being shifted. For example shifting an 8-bit value only uses the low 3 bits (0-7),
-				 * 16-bit the low 4 bits (0-15), 32-bit the low 5 bits (0-31), and so on.
-				 * TODO: If too large for the target interger data type, not the 64-bit integers we use here. */
-				if (op2.v.integer.v.v < 0ll || op2.v.integer.v.v >= 63ll)
-					return false;
-
-				r = op1;
-				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-					r.v.integer.v.u = op1.v.integer.v.v >> op2.v.integer.v.v;
-				else
-					r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
-				return true;
+				return ast_constexpr_rightshift_integer(r,op1,op2);
 			default:
 				break;
 		};
