@@ -1458,6 +1458,10 @@ bool ast_constexpr_negate(token_t &r,const token_t &op);
 bool ast_constexpr_add(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_subtract(token_t &r,const token_t &op1,const token_t &op2);
 
+bool ast_constexpr_multiply(token_t &r,const token_t &op1,const token_t &op2);
+bool ast_constexpr_divide(token_t &r,const token_t &op1,const token_t &op2);
+bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void debug_dump_ast(const std::string prefix,ast_node_id_t r);
