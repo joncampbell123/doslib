@@ -12,26 +12,6 @@
 
 #include "cc.hpp"
 
-declarator_t &declaration_t::new_declarator(void) {
-	const size_t i = declor.size();
-	declor.resize(i+1);
-	return declor[i];
-}
-
-declaration_t::declaration_t() { }
-declaration_t::declaration_t(declaration_t &&x) { common_move(x); }
-declaration_t &declaration_t::operator=(declaration_t &&x) { common_move(x); return *this; }
-
-void declaration_t::common_move(declaration_t &o) {
-	spec = std::move(o.spec);
-	declor = std::move(o.declor);
-}
-
-declaration_t::~declaration_t() {
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 parameter_t::parameter_t() { }
 parameter_t::parameter_t(const parameter_t &x) { common_copy(x); }
 parameter_t &parameter_t::operator=(const parameter_t &x) { common_copy(x); return *this; }
