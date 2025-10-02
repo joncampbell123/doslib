@@ -752,7 +752,6 @@ struct ast_node_t {
 using csliteral_pool_t = obj_pool<csliteral_t,csliteral_id_t,csliteral_none>;
 using ast_node_pool_t = obj_pool<ast_node_t,ast_node_id_t,ast_node_none>;
 
-
 //////////////////////////////////////////////////////////////////////////////
 
 class ast_node_pool : public ast_node_pool_t {
@@ -765,6 +764,10 @@ class ast_node_pool : public ast_node_pool_t {
 		ast_node_id_t alloc(token_type_t t=token_type_t::none);
 		ast_node_id_t alloc(token_t &t);
 };
+
+////////////////////////////////////////////////////////////////////
+
+extern ast_node_pool ast_node;
 
 //////////////////////////////////////////////////////////////////////////////
 
