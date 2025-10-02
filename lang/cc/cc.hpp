@@ -1243,3 +1243,9 @@ extern const char *storage_class_idx_t_str[SCI__MAX];
 extern const char *type_specifier_idx_t_str[TSI__MAX];
 extern const char *type_qualifier_idx_t_str[TSI__MAX];
 
+//////////////////////////////////////////////////////////////////////////////
+
+extern const char *target_cpu_str_t[CPU__MAX];
+extern const char *target_cpu_sub_str_t[CPU_SUB__MAX];
+extern const char *target_cpu_rev_str_t[CPU_REV__MAX];
+

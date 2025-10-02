@@ -1,7 +1,7 @@
 
 all: ccminic
 
-ccminic: ccminic.o cctoken.o ccsfo.o ccsfo_fd.o ccsft.o ccddipmergeable.o ccrbufcslit.o cccslit.o ccsourcefiles.o ccrbufsfrefill.o ccrbuf.o ccpathslashxlate.o ccpathcomb.o ccutf8e.o ccutf16e.o ccutf8d.o ccutf16d.o ccgetc.o ccstorcls.o cctypespec.o cctypequal.o
+ccminic: ccminic.o cctoken.o ccsfo.o ccsfo_fd.o ccsft.o ccddipmergeable.o ccrbufcslit.o cccslit.o ccsourcefiles.o ccrbufsfrefill.o ccrbuf.o ccpathslashxlate.o ccpathcomb.o ccutf8e.o ccutf16e.o ccutf8d.o ccutf16d.o ccgetc.o ccstorcls.o cctypespec.o cctypequal.o cctargetcpu.o
 	g++ -std=c++11 -o $@ $+
 
 %.o: %.cpp
