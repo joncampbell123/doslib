@@ -12,17 +12,27 @@
 
 #include "cc.hpp"
 
-bool ast_constexpr_multiply(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
+static bool ast_constexpr_multiply_integer(token_t &tr,const token_t &top1,const token_t &top2) {
+	const struct integer_value_t &op1 = top1.v.integer;
+	const struct integer_value_t &op2 = top2.v.integer;
+	struct integer_value_t &r = tr.v.integer;
+
+	tr = top1;
+	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
+
+	if (op1.flags & integer_value_t::FL_SIGNED)
+		r.v.v *= op2.v.v;
+	else
+		r.v.u *= op2.v.u;
+
+	return true;
+}
+
+bool ast_constexpr_multiply(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
-				r = op1;
-				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-					r.v.integer.v.v *= op2.v.integer.v.v;
-				else
-					r.v.integer.v.u *= op2.v.integer.v.u;
-				return true;
+				return ast_constexpr_multiply_integer(r,op1,op2);
 			default:
 				break;
 		};
