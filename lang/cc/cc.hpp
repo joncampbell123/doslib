@@ -1456,3 +1456,78 @@ bool cc_init(void);
 
 void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string());
 
+//////////////////////////////////////////////////////////////////////////////
+
+struct cc_state_t {
+	lgtok_state_t		lst;
+	pptok_state_t		pst;
+	rbuf*			buf = NULL;
+	source_file_object*	sfo = NULL;
+
+	std::vector<token_t>	tq;
+	size_t			tq_tail = 0;
+	int			err = 0;
+
+	bool			ignore_whitespace = true;
+
+	void tq_ft(void);
+	void tq_refill(const size_t i=1);
+	const token_t &tq_peek(const size_t i=0);
+	void tq_discard(const size_t i=1);
+	token_t &tq_get(void);
+	int cc_chkerr(void);
+	int do_pragma(void);
+	int check_for_pragma(void);
+	int do_pragma_comma_or_closeparens(void);
+	int parse_declspec_align(addrmask_t &align);
+	int typeid_or_expr_parse(ast_node_id_t &aroot);
+	int ms_declspec_parse(declspec_t &dsc,const position_t &pos);
+	int gnu_attribute_parse(declspec_t &dsc,const position_t &pos);
+	int cpp11_attribute_parse(declspec_t &dsc,const position_t &pos);
+	int declspec_alignas(addrmask_t &ds_align,const position_t &pos);
+	int cpp11_attribute_namespace_parse(bool &nsv_using,std::vector<identifier_id_t> &nsv);
+	cpp11attr_namespace_t cpp11_attribute_identify_namespace(std::vector<identifier_id_t> &nsv);
+	int direct_declarator_inner_parse(ddip_list_t &dp,declarator_t &dd,position_t &pos,unsigned int flags=0);
+	int direct_declarator_parse(declaration_specifiers_t &ds,declarator_t &dd,unsigned int flags=0);
+	int declaration_inner_parse(declaration_specifiers_t &spec,declarator_t &declor);
+	int declarator_parse(declaration_specifiers_t &ds,declarator_t &declor);
+	int declaration_specifiers_parse(declaration_specifiers_t &ds,const unsigned int declspec = 0);
+	int enumerator_list_parse(declaration_specifiers_t &ds,std::vector<symbol_id_t> &enum_list);
+	int struct_declarator_parse(const symbol_id_t sid,declaration_specifiers_t &ds,declarator_t &declor);
+	int asm_statement(ast_node_id_t &aroot);
+	int struct_bitfield_validate(token_t &t);
+	int struct_field_layout(symbol_id_t sid);
+	int msasm_statement(ast_node_id_t &aroot);
+	bool declaration_specifiers_check(const unsigned int token_offset=0);
+	int compound_statement(ast_node_id_t &aroot,ast_node_id_t &nroot);
+	int struct_declaration_parse(const symbol_id_t sid,const token_type_t &tt);
+	int asm_statement_gcc_colon_section(std::vector<token_t> &tokens,int &parens);
+	int multiplicative_expression(ast_node_id_t &aroot);
+	int exclusive_or_expression(ast_node_id_t &aroot);
+	int inclusive_or_expression(ast_node_id_t &aroot);
+	int conditional_expression(ast_node_id_t &aroot);
+	int logical_and_expression(ast_node_id_t &aroot);
+	int logical_or_expression(ast_node_id_t &aroot);
+	int assignment_expression(ast_node_id_t &aroot);
+	int relational_expression(ast_node_id_t &aroot);
+	int pointer_parse(std::vector<pointer_t> &ptr);
+	int expression_statement(ast_node_id_t &aroot);
+	int declaration_parse(declaration_t &declion);
+	int additive_expression(ast_node_id_t &aroot);
+	int equality_expression(ast_node_id_t &aroot);
+	int postfix_expression(ast_node_id_t &aroot);
+	int primary_expression(ast_node_id_t &aroot);
+	int shift_expression(ast_node_id_t &aroot);
+	int unary_expression(ast_node_id_t &aroot);
+	int cast_expression(ast_node_id_t &aroot);
+	int compound_statement_declarators(void);
+	int and_expression(ast_node_id_t &aroot);
+	int xor_expression(ast_node_id_t &aroot);
+	int or_expression(ast_node_id_t &aroot);
+	int initializer(ast_node_id_t &aroot);
+	int expression(ast_node_id_t &aroot);
+	int statement(ast_node_id_t &aroot);
+	int external_declaration(void);
+	int translation_unit(void);
+};
+
