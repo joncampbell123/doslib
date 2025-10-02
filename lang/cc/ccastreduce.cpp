@@ -12,25 +12,29 @@
 
 #include "cc.hpp"
 
-bool ast_constexpr_leftshift_integer(token_t &r,token_t &op1,token_t &op2) {
-	r = op1;
-	r.v.integer.flags |= op2.v.integer.flags & integer_value_t::FL_SIGNED;
+bool ast_constexpr_leftshift_integer(token_t &tr,const token_t &top1,const token_t &top2) {
+	const struct integer_value_t &op1 = top1.v.integer;
+	const struct integer_value_t &op2 = top2.v.integer;
+	struct integer_value_t &r = tr.v.integer;
 
-	if (op2.v.integer.v.v >= 0ll && op2.v.integer.v.v <= 63ll) {
-		if (op2.v.integer.v.u != 0ull) {
-			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - op2.v.integer.v.u);
-			if (op1.v.integer.v.u & chkmsk) r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
-			r.v.integer.v.u = op1.v.integer.v.u << op2.v.integer.v.u;
+	tr = top1;
+	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
+
+	if (op2.v.v >= 0ll && op2.v.v <= 63ll) {
+		if (op2.v.u != 0ull) {
+			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - op2.v.u);
+			if (op1.v.u & chkmsk) r.flags |= integer_value_t::FL_OVERFLOW;
+			r.v.u = op1.v.u << op2.v.u;
 		}
 	}
 	else {
-		r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+		r.flags |= integer_value_t::FL_OVERFLOW;
 	}
 
 	return true;
 }
 
-bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
+bool ast_constexpr_leftshift(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
@@ -43,24 +47,28 @@ bool ast_constexpr_leftshift(token_t &r,token_t &op1,token_t &op2) {
 	return false;
 }
 
-bool ast_constexpr_rightshift_integer(token_t &r,token_t &op1,token_t &op2) {
-	r = op1;
-	r.v.integer.flags |= op2.v.integer.flags & integer_value_t::FL_SIGNED;
+bool ast_constexpr_rightshift_integer(token_t &tr,const token_t &top1,const token_t &top2) {
+	const struct integer_value_t &op1 = top1.v.integer;
+	const struct integer_value_t &op2 = top2.v.integer;
+	struct integer_value_t &r = tr.v.integer;
 
-	if (op2.v.integer.v.v >= 0ll && op2.v.integer.v.v <= 63ll) {
-		if (r.v.integer.flags & integer_value_t::FL_SIGNED)
-			r.v.integer.v.s = op1.v.integer.v.s >> op2.v.integer.v.s;
+	r = op1;
+	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
+
+	if (op2.v.v >= 0ll && op2.v.v <= 63ll) {
+		if (r.flags & integer_value_t::FL_SIGNED)
+			r.v.s = op1.v.s >> op2.v.s;
 		else
-			r.v.integer.v.u = op1.v.integer.v.u >> op2.v.integer.v.u;
+			r.v.u = op1.v.u >> op2.v.u;
 	}
 	else {
-		r.v.integer.flags |= integer_value_t::FL_OVERFLOW;
+		r.flags |= integer_value_t::FL_OVERFLOW;
 	}
 
 	return true;
 }
 
-bool ast_constexpr_rightshift(token_t &r,token_t &op1,token_t &op2) {
+bool ast_constexpr_rightshift(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
