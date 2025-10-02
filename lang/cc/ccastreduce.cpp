@@ -41,27 +41,6 @@ bool is_ast_constexpr(token_t &t) {
 	return false;
 }
 
-bool ast_constexpr_to_bool(integer_value_t &iv) {
-	return iv.to_bool();
-}
-
-bool ast_constexpr_to_bool(floating_value_t &iv) {
-	return iv.to_bool();
-}
-
-bool ast_constexpr_to_bool(token_t &t) {
-	switch (t.type) {
-		case token_type_t::integer:
-			return ast_constexpr_to_bool(t.v.integer);
-		case token_type_t::floating:
-			return ast_constexpr_to_bool(t.v.floating);
-		default:
-			break;
-	};
-
-	return false;
-}
-
 bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref) {
 	switch (op.type) {
 		case token_type_t::op_symbol:
