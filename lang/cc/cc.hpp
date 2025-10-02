@@ -1119,8 +1119,10 @@ std::string path_combine(const std::string &base,const std::string &rel);
 
 void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c);
 std::string utf8_to_str(const unicode_char_t c);
+unicode_char_t p_utf8_decode(const unsigned char* &p,const unsigned char* const f);
 
 //////////////////////////////////////////////////////////////////////////////
 
 void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c);
+unicode_char_t p_utf16_decode(const uint16_t* &p,const uint16_t* const f);
 
