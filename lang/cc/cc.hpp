@@ -1453,6 +1453,8 @@ bool ast_constexpr_logical_not(token_t &r,const token_t &op);
 bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2);
 bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2);
 
+bool ast_constexpr_negate(token_t &r,const token_t &op);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void debug_dump_ast(const std::string prefix,ast_node_id_t r);
