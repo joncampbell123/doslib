@@ -1249,3 +1249,8 @@ extern const char *target_cpu_str_t[CPU__MAX];
 extern const char *target_cpu_sub_str_t[CPU_SUB__MAX];
 extern const char *target_cpu_rev_str_t[CPU_REV__MAX];
 
+//////////////////////////////////////////////////////////////////////////////
+
+using identifier_pool_t = obj_pool<identifier_t,identifier_id_t,identifier_none>;
+extern identifier_pool_t identifier;
+

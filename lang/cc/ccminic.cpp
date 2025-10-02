@@ -12,11 +12,6 @@
 
 #include "cc.hpp"
 
-using identifier_pool_t = obj_pool<identifier_t,identifier_id_t,identifier_none>;
-identifier_pool_t identifier;
-
-/////////////////////////////////////////////////////////////////////
-
 void CCerr(const position_t &pos,const char *fmt,...) {
 	va_list va;
 
