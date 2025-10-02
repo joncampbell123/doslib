@@ -12,15 +12,15 @@
 
 #include "cc.hpp"
 
-bool ast_constexpr_to_bool(integer_value_t &iv) {
+bool ast_constexpr_to_bool(const integer_value_t &iv) {
 	return iv.to_bool();
 }
 
-bool ast_constexpr_to_bool(floating_value_t &iv) {
+bool ast_constexpr_to_bool(const floating_value_t &iv) {
 	return iv.to_bool();
 }
 
-bool ast_constexpr_to_bool(token_t &t) {
+bool ast_constexpr_to_bool(const token_t &t) {
 	switch (t.type) {
 		case token_type_t::integer:
 			return ast_constexpr_to_bool(t.v.integer);

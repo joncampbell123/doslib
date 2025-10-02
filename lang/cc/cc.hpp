@@ -1426,9 +1426,9 @@ bool ast_constexpr_sizeof(token_t &r,token_t &op,size_t ptr_deref=0);
 
 bool ast_constexpr_alignof(token_t &r,token_t &op,size_t ptr_deref=0);
 
-bool ast_constexpr_to_bool(token_t &t);
-bool ast_constexpr_to_bool(integer_value_t &iv);
-bool ast_constexpr_to_bool(floating_value_t &iv);
+bool ast_constexpr_to_bool(const token_t &t);
+bool ast_constexpr_to_bool(const integer_value_t &iv);
+bool ast_constexpr_to_bool(const floating_value_t &iv);
 
 bool is_ast_strconstexpr(token_t &t);
 bool is_ast_constexpr(token_t &t);
