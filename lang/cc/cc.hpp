@@ -1091,4 +1091,11 @@ source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state
 
 bool ptrmergeable(const ddip_t &to,const ddip_t &from);
 bool arraymergeable(const ddip_t &to,const ddip_t &from);
-	
+int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid);
+
+//////////////////////////////////////////////////////////////////////////////
+
+extern csliteral_pool_t csliteral;
+
+//////////////////////////////////////////////////////////////////////////////
+//
