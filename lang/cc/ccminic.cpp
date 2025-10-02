@@ -12,24 +12,6 @@
 
 #include "cc.hpp"
 
-bool eat_whitespace(rbuf &buf,source_file_object &sfo) {
-	bool r = false;
-
-	do {
-		if (buf.data_avail() < 1) rbuf_sfd_refill(buf,sfo);
-		if (is_whitespace(buf.peekb())) { r = true; buf.discardb(); }
-		else break;
-	} while (1);
-
-	return r;
-}
-
-void eat_newline(rbuf &buf,source_file_object &sfo) {
-	if (buf.data_avail() < 4) rbuf_sfd_refill(buf,sfo);
-	if (buf.peekb() == '\r') buf.discardb();
-	if (buf.peekb() == '\n') buf.discardb();
-}
-
 int eat_c_comment(unsigned int level,rbuf &buf,source_file_object &sfo) {
 	/* caller already ate the / and the * if level == 1 */
 	assert(level == 0 || level == 1);

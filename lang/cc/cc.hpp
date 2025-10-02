@@ -1272,3 +1272,9 @@ bool is_hchar(unsigned char c);
 //////////////////////////////////////////////////////////////////////////////
 
 int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=false);
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool eat_whitespace(rbuf &buf,source_file_object &sfo);
+void eat_newline(rbuf &buf,source_file_object &sfo);
+
