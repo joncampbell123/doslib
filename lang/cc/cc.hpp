@@ -101,6 +101,14 @@ static constexpr unsigned int			DCS_FL_DLLIMPORT = 1u << 1u;
 static constexpr unsigned int			DCS_FL_DLLEXPORT = 1u << 2u;
 static constexpr unsigned int			DCS_FL_NAKED = 1u << 3u;
 
+//////////////////////////////////////////////////////////////////////////////
+
+static constexpr unsigned int			DECLSPEC_OPTIONAL = 1u << 0u;
+static constexpr unsigned int			DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
+
+static constexpr unsigned int			DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
+static constexpr unsigned int			DIRDECL_NO_IDENTIFIER = 1u << 1u;
+
 /////////////////////////////////////////////////////////////////////
 
 enum cpp11attr_namespace_t {

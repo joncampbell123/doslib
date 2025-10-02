@@ -29,14 +29,6 @@ std::vector<pack_state_t>			packing_stack; /* #pragma pack */
 
 //////////////////////////////////////////////////////////////////////////////
 
-static constexpr unsigned int DECLSPEC_OPTIONAL = 1u << 0u;
-static constexpr unsigned int DECLSPEC_ALLOW_DEF = 1u << 1u; /* allow definitions i.e. struct { ... } union { .... } enum { .... } */
-
-static constexpr unsigned int DIRDECL_ALLOW_ABSTRACT = 1u << 0u;
-static constexpr unsigned int DIRDECL_NO_IDENTIFIER = 1u << 1u;
-
-//////////////////////////////////////////////////////////////////////////////
-
 struct symbol_lookup_t {
 	symbol_t::type_t st = symbol_t::NONE;
 	scope_id_t cursco = scope_none;
