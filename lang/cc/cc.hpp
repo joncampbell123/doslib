@@ -1087,3 +1087,8 @@ typedef source_file_object* (*cb_include_search_t)(pptok_state_t &pst,lgtok_stat
 bool cb_include_accept_path_default(const std::string &/*p*/);
 source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl);
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool ptrmergeable(const ddip_t &to,const ddip_t &from);
+bool arraymergeable(const ddip_t &to,const ddip_t &from);
+	

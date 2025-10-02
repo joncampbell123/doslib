@@ -36,36 +36,6 @@ int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid) {
 	return 1;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-bool ptrmergeable(const ddip_t &to,const ddip_t &from) {
-	if (!to.parameters.empty() || !from.parameters.empty())
-		return false;
-	if (!to.arraydef.empty())
-		return false;
-	if (to.dd_flags != 0 || from.dd_flags != 0)
-		return false;
-
-	if (!to.ptr.empty() || !from.ptr.empty())
-		return true;
-
-	return false;
-}
-
-bool arraymergeable(const ddip_t &to,const ddip_t &from) {
-	if (!to.parameters.empty() || !from.parameters.empty())
-		return false;
-	if (!to.ptr.empty() || !from.ptr.empty())
-		return false;
-	if (to.dd_flags != 0 || from.dd_flags != 0)
-		return false;
-
-	if (!to.arraydef.empty() || !from.arraydef.empty())
-		return true;
-
-	return false;
-}
-
 ////////////////////////////////////////////////////////////////////
 
 std::vector<source_file_t> source_files;
