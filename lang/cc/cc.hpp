@@ -1402,6 +1402,7 @@ int check_symbol_param_match(symbol_lookup_t &sl,const ddip_list_t &p);
 int check_symbol_lookup_match(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
 int add_symbol(symbol_lookup_t &sl,const declaration_specifiers_t &spec,const declarator_t &declor);
 segment_id_t decide_sym_segment(symbol_t &sym);
+std::string ddip_list_to_str(const ddip_list_t &dl);
 
 //////////////////////////////////////////////////////////////////////////////
 
