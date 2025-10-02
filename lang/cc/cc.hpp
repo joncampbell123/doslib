@@ -1096,6 +1096,13 @@ int rbuf_copy_csliteral(rbuf &dbuf,csliteral_id_t &csid);
 //////////////////////////////////////////////////////////////////////////////
 
 extern csliteral_pool_t csliteral;
+extern std::vector<source_file_t> source_files;
 
 //////////////////////////////////////////////////////////////////////////////
-//
+
+size_t alloc_source_file(const std::string &path);
+void clear_source_file(const size_t i);
+void release_source_file(const size_t i);
+void addref_source_file(const size_t i);
+void source_file_refcount_check(void);
+
