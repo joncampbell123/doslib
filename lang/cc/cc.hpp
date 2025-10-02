@@ -1365,4 +1365,5 @@ extern std::vector<segment_t>				segments;
 segment_t &segref(segment_id_t id);
 segment_id_t new_segment(void);
 segment_id_t find_segment(identifier_id_t name);
+void default_segment_setup(segment_t &so);
 
