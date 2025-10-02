@@ -194,20 +194,122 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 			/* It's a floating point constant */
 			t.type = token_type_t::floating;
 			t.v.floating.init();
-			scan = buf.data;
 
-			/* use strtold directly on the buffer--this is why the rbuf code allocates in such a way that
-			 * there is a NUL at the end of the buffer. someday we'll have our own code to do this. */
-			assert(buf.end <= buf.fence); *buf.end = 0;
+			/* maybe after the additional digits there is the 'p' suffix */
+			if (*scan == '.') {
+				scan++;
+				while (scan < buf.end && (*scan == '\'' || cc_parsedigit(*scan,base) >= 0)) scan++;
+			}
 
-			/* assume strtold will never move scan to a point before the initial scan */
-			const long double x = strtold((char*)scan,(char**)(&scan));
-			assert(scan <= buf.end);
+			if (tolower((char)(*scan)) == 'p') {
+				scan = buf.data;
 
-			/* convert to mantissa, exponent, assume positive number because our parsing method should never strtold() a negative number */
-			int exp = 0; const long double m = frexpl(x,&exp); assert(m == 0.0 || (m >= 0.5 && m < 1.0)); /* <- as documented */
-			const uint64_t mc = (uint64_t)ldexpl(m,64); /* i.e 0.5 => 0x8000'0000'0000'0000 */
-			t.v.floating.setsn(mc,exp-64);
+				if (base != 16) CCERR_RET(ESRCH,buf.pos,"float 'p' constants must be hexadecimal");
+
+				unsigned char ldigit = 0;
+				unsigned char shf = 64;
+				int exponent = 0;
+				int v;
+
+				/* the above code already skipped the 0x1 */
+
+				/* read hex digits, fill the mantissa from the top bits down 4 bits at a time.
+				 * shf must be a multiple of 4 at this point of the code.
+				 * while filling the whole part, track the exponent.
+				 * do not track the exponent for the fractional part. */
+
+				/* whole part */
+				/* skip leading zeros */
+				while (*scan == '0') scan++;
+				if (*scan != '0') {
+					exponent--; /* whole part is nonzero, adjust so the first digit has exponent=3 */
+					while ((v=cc_parsedigit(*scan,16)) >= 0) {
+						scan++;
+						if (shf >= 4) { /* assume shf a multiple of 4 */
+							shf -= 4; exponent += 4; t.v.floating.mantissa |= (uint64_t)v << (uint64_t)shf;
+						}
+						else {
+							ldigit = (unsigned char)v;
+							while ((v=cc_parsedigit(*scan,16)) >= 0) { exponent += 4; scan++; }
+							break;
+						}
+					}
+
+					/* normalize mantissa */
+					if (t.v.floating.mantissa != 0ull) {
+						while (!(t.v.floating.mantissa & floating_value_t::mant_msb)) {
+							t.v.floating.mantissa <<= 1ull;
+							exponent--;
+							shf++;
+						}
+					}
+				}
+				/* fractional part */
+				if (*scan == '.') {
+					scan++;
+					while ((v=cc_parsedigit(*scan,16)) >= 0) {
+						scan++;
+						if (shf >= 4) { /* assume shf a multiple of 4 */
+							shf -= 4; t.v.floating.mantissa |= (uint64_t)v << (uint64_t)shf;
+						}
+						else {
+							ldigit = (unsigned char)v;
+							while ((v=cc_parsedigit(*scan,16)) >= 0) scan++;
+							break;
+						}
+					}
+
+					/* normalize mantissa */
+					if (t.v.floating.mantissa != 0ull) {
+						while (!(t.v.floating.mantissa & floating_value_t::mant_msb)) {
+							t.v.floating.mantissa <<= 1ull;
+							shf++;
+						}
+					}
+				}
+				/* was there a leftover digit that didn't fit, and normalization made some room for it? */
+				if (shf && ldigit) {
+					/* assume shf < 4 then (leftover bits to fill), ldigit is not set otherwise */
+					t.v.floating.mantissa |= (uint64_t)ldigit >> (uint64_t)(4u - shf);
+					shf = 0;
+				}
+				/* parse the 'p' power of 2 exponent */
+				if (*scan == 'p') {
+					bool neg = false;
+
+					scan++;
+					if (*scan == '-') {
+						neg = true;
+						scan++;
+					}
+
+					if (isdigit(*scan)) {
+						unsigned int pex = strtoul((char*)scan,(char**)(&scan),10);
+						if (neg) exponent -= (int)pex;
+						else exponent += (int)pex;
+					}
+				}
+
+				t.v.floating.exponent = exponent;
+			}
+			else {
+				scan = buf.data;
+
+				if (base != 10) CCERR_RET(ESRCH,buf.pos,"float cannot be hexadecimal");
+
+				/* use strtold directly on the buffer--this is why the rbuf code allocates in such a way that
+				 * there is a NUL at the end of the buffer. someday we'll have our own code to do this. */
+				assert(buf.end <= buf.fence); *buf.end = 0;
+
+				/* assume strtold will never move scan to a point before the initial scan */
+				const long double x = strtold((char*)scan,(char**)(&scan));
+				assert(scan <= buf.end);
+
+				/* convert to mantissa, exponent, assume positive number because our parsing method should never strtold() a negative number */
+				int exp = 0; const long double m = frexpl(x,&exp); assert(m == 0.0 || (m >= 0.5 && m < 1.0)); /* <- as documented */
+				const uint64_t mc = (uint64_t)ldexpl(m,64); /* i.e 0.5 => 0x8000'0000'0000'0000 */
+				t.v.floating.setsn(mc,exp-64);
+			}
 
 			/* look for suffixes */
 			if (scan < buf.end) {
