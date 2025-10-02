@@ -42,3 +42,5 @@ std::string integer_value_t::to_str(void) const {
 
 void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
 
+bool integer_value_t::to_bool(void) const { return v.u != 0ull; }
+

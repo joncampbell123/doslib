@@ -61,3 +61,10 @@ void floating_value_t::normalize(void) {
 	}
 }
 
+bool floating_value_t::to_bool(void) const {
+	if (flags & FL_SPECIAL)
+		return false;
+	else
+		return mantissa != 0ull;
+}
+

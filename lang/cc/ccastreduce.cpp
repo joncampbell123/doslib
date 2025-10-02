@@ -42,11 +42,11 @@ bool is_ast_constexpr(token_t &t) {
 }
 
 bool ast_constexpr_to_bool(integer_value_t &iv) {
-	return iv.v.u != 0ull;
+	return iv.to_bool();
 }
 
 bool ast_constexpr_to_bool(floating_value_t &iv) {
-	return iv.mantissa != 0ull;
+	return iv.to_bool();
 }
 
 bool ast_constexpr_to_bool(token_t &t) {

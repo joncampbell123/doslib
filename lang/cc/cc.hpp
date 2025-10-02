@@ -478,6 +478,7 @@ struct floating_value_t {
 	static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
 
 	std::string to_str(void) const;
+	bool to_bool(void) const;
 	void init(void);
 	void setsn(const uint64_t m,const int32_t e);
 	void normalize(void);
@@ -509,6 +510,7 @@ struct integer_value_t {
 	static constexpr unsigned int		FL_OVERFLOW   = (1u << 1u);
 
 	std::string to_str(void) const;
+	bool to_bool(void) const;
 	void init(void);
 };
 
