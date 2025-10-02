@@ -12,96 +12,7 @@
 
 #include "cc.hpp"
 
-static bool ast_constexpr_lessthan_equals_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
-	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v <= op2.v.v) ? 1 : 0;
-	else
-		r.v.u = (op1.v.u <= op2.v.u) ? 1 : 0;
-
-	return true;
-}
-
-bool ast_constexpr_lessthan_equals(token_t &r,const token_t &op1,const token_t &op2) {
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = token_t(token_type_t::integer);
-				r.v.integer.flags = 0;
-				r.v.integer.type = integer_value_t::type_t::BOOL;
-				return ast_constexpr_lessthan_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-static bool ast_constexpr_greaterthan_equals_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
-	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v >= op2.v.v) ? 1 : 0;
-	else
-		r.v.u = (op1.v.u >= op2.v.u) ? 1 : 0;
-
-	return true;
-}
-
-bool ast_constexpr_greaterthan_equals(token_t &r,const token_t &op1,const token_t &op2) {
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = token_t(token_type_t::integer);
-				r.v.integer.flags = 0;
-				r.v.integer.type = integer_value_t::type_t::BOOL;
-				return ast_constexpr_greaterthan_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_lessthan(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-					r.v.integer.v.u = (op1.v.integer.v.v < op2.v.integer.v.v) ? 1 : 0;
-				else
-					r.v.integer.v.u = (op1.v.integer.v.u < op2.v.integer.v.u) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_greaterthan(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
-	if (op1.type == op2.type) {
-		switch (op1.type) {
-			case token_type_t::integer:
-				r = op1;
-				if (op1.v.integer.flags & integer_value_t::FL_SIGNED)
-					r.v.integer.v.u = (op1.v.integer.v.v > op2.v.integer.v.v) ? 1 : 0;
-				else
-					r.v.integer.v.u = (op1.v.integer.v.u > op2.v.integer.v.u) ? 1 : 0;
-				return true;
-			default:
-				break;
-		};
-	}
-
-	return false;
-}
-
-bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
+bool ast_constexpr_equals(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
@@ -116,8 +27,7 @@ bool ast_constexpr_equals(token_t &r,token_t &op1,token_t &op2) {
 	return false;
 }
 
-bool ast_constexpr_not_equals(token_t &r,token_t &op1,token_t &op2) {
-	/* TODO: type promotion/conversion */
+bool ast_constexpr_not_equals(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
