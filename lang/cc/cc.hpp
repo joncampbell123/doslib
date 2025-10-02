@@ -1450,3 +1450,5 @@ void debug_dump_enumerator(const std::string prefix,enumerator_t &en);
 //////////////////////////////////////////////////////////////////////////////
 
 bool arrange_symbols(void);
+bool cc_init(void);
+
