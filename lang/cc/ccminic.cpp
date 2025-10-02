@@ -14,12 +14,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-void path_slash_translate(std::string &path) {
-	for (auto &c : path) {
-		if (c == '\\') c = '/';
-	}
-}
-
 std::string path_combine(const std::string &base,const std::string &rel) {
 	if (!base.empty() && !rel.empty())
 		return base + "/" + rel;

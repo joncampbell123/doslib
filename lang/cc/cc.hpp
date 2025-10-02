@@ -1110,3 +1110,7 @@ void release_source_file(const size_t i);
 void addref_source_file(const size_t i);
 void source_file_refcount_check(void);
 
+//////////////////////////////////////////////////////////////////////////////
+
+void path_slash_translate(std::string &path);
+
