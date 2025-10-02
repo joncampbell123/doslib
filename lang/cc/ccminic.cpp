@@ -12,26 +12,6 @@
 
 #include "cc.hpp"
 
-bool looks_like_arrowstr(rbuf &buf,source_file_object &sfo) {
-	rbuf_sfd_refill(buf,sfo);
-
-	unsigned char *p = buf.data,*f = buf.end;
-
-	if (p >= f) return false;
-	if (*p != '<') return false;
-	p++;
-
-	while (p < f && is_hchar(*p)) p++;
-
-	if (p >= f) return false;
-	if (*p != '>') return false;
-	p++;
-
-	return true;
-}
-
-////////////////////////////////////////////////////////////////////
-
 template <const csliteral_t::type_t cslt,typename ptrat> int lgtok_strlit_wrch(ptrat* &p,ptrat* const f,const unicode_char_t v) = delete;
 
 template <> int lgtok_strlit_wrch<csliteral_t::type_t::CHAR,unsigned char>(unsigned char* &p,unsigned char* const f,const unicode_char_t v) {

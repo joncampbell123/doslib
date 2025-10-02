@@ -1283,3 +1283,7 @@ void eat_newline(rbuf &buf,source_file_object &sfo);
 int eat_c_comment(unsigned int level,rbuf &buf,source_file_object &sfo);
 int eat_cpp_comment(rbuf &buf,source_file_object &sfo);
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool looks_like_arrowstr(rbuf &buf,source_file_object &sfo);
+
