@@ -1449,6 +1449,10 @@ bool ast_constexpr_binary_or(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_binary_and(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_binary_xor(token_t &r,const token_t &op1,const token_t &op2);
 
+bool ast_constexpr_logical_not(token_t &r,const token_t &op);
+bool ast_constexpr_logical_or(token_t &r,token_t &op1,token_t &op2);
+bool ast_constexpr_logical_and(token_t &r,token_t &op1,token_t &op2);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void debug_dump_ast(const std::string prefix,ast_node_id_t r);
