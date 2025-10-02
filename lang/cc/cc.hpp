@@ -1433,6 +1433,8 @@ bool ast_constexpr_to_bool(floating_value_t &iv);
 bool is_ast_strconstexpr(token_t &t);
 bool is_ast_constexpr(token_t &t);
 
+bool ast_constexpr_leftshift(token_t &r,const token_t &op1,const token_t &op2);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void debug_dump_ast(const std::string prefix,ast_node_id_t r);
