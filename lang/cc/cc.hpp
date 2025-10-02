@@ -1298,3 +1298,8 @@ int lgtok_identifier(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_
 int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t);
 int lgtok(lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool pptok_define_asm_allowed_token(const token_t &t);
+bool pptok_define_allowed_token(const token_t &t);
+
