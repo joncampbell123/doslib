@@ -1254,3 +1254,7 @@ extern const char *target_cpu_rev_str_t[CPU_REV__MAX];
 using identifier_pool_t = obj_pool<identifier_t,identifier_id_t,identifier_none>;
 extern identifier_pool_t identifier;
 
+//////////////////////////////////////////////////////////////////////////////
+
+void CCerr(const position_t &pos,const char *fmt,...);
+
