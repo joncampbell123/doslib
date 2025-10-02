@@ -12,7 +12,13 @@
 
 #include "cc.hpp"
 
-int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+/////////////////////////////////////////////////////////////////////
+
+static int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+
+/////////////////////////////////////////////////////////////////////
+
+static int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	/* #undef has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -57,7 +63,7 @@ int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_obje
 	return 1;
 }
 
-int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie,const bool subexpr=false) {
+static int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::deque<token_t>::iterator ie,const bool subexpr=false) {
 	std::stack< std::pair<unsigned char,token_t> > os;
 	std::stack<integer_value_t> vs;
 	bool expect_op2 = false;
@@ -289,9 +295,7 @@ int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,std::de
 	return 1;
 }
 
-int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
-
-int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	std::string msg;
 	int r;
 
@@ -351,7 +355,7 @@ int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_objec
 	return 1;
 }
 
-int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_err) {
+static int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_err) {
 	const int line = t.pos.row;
 	std::string msg;
 	int r;
@@ -387,7 +391,7 @@ int pptok_errwarn(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_ob
 	return 1;
 }
 
-int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_if) {
+static int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_if) {
 	/* #if has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -536,7 +540,7 @@ int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object 
 	return 1;
 }
 
-int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_ifdef,const bool match_cond) {
+static int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t,const bool is_ifdef,const bool match_cond) {
 	/* #ifdef has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -603,7 +607,7 @@ int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_obje
 	return 1;
 }
 
-int pptok_else(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_else(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	/* #else has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -645,7 +649,7 @@ int pptok_else(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_objec
 	return 1;
 }
 
-int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	/* #endif has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -678,7 +682,7 @@ int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_obje
 	return 1;
 }
 
-int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	/* #define has already been parsed.
 	 * the last token we didn't use is left in &t for the caller to parse as most recently obtained,
 	 * unless set to token_type_t::none in which case it will fetch another one */
@@ -845,7 +849,7 @@ int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_obj
 	return 1;
 }
 
-int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	/* caller just parsed the identifier token */
 	int r;
 
@@ -1204,49 +1208,7 @@ go_again:
 	return 1;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-std::vector<std::string> cb_include_search_paths;
-cb_include_search_t cb_include_search = cb_include_search_default;
-cb_include_accept_path_t cb_include_accept_path = cb_include_accept_path_default;
-
-bool cb_include_accept_path_default(const std::string &/*p*/) {
-	return true;
-}
-
-source_file_object* cb_include_search_default(pptok_state_t &/*pst*/,lgtok_state_t &/*lst*/,const token_t &t,unsigned int fl) {
-	source_file_object *sfo = NULL;
-
-	if (fl & CBIS_USER_HEADER) {
-		std::string path = csliteral(t.v.csliteral).makestring(); path_slash_translate(path);
-		if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
-			const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
-			if (fd >= 0) {
-				sfo = new source_fd(fd/*takes ownership*/,path);
-				assert(sfo->iface == source_file_object::IF_FD);
-				return sfo;
-			}
-		}
-	}
-
-	for (auto ipi=cb_include_search_paths.begin();ipi!=cb_include_search_paths.end();ipi++) {
-		std::string path = path_combine(*ipi,csliteral(t.v.csliteral).makestring()); path_slash_translate(path);
-		if (!path.empty() && cb_include_accept_path(path) && access(path.c_str(),R_OK) >= 0) {
-			const int fd = open(path.c_str(),O_RDONLY|O_BINARY);
-			if (fd >= 0) {
-				sfo = new source_fd(fd/*takes ownership*/,path);
-				assert(sfo->iface == source_file_object::IF_FD);
-				return sfo;
-			}
-		}
-	}
-
-	return NULL;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+static int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
 	int r;
 
 try_again:
@@ -1269,7 +1231,7 @@ try_again:
 }
 
 /* returns <= 1 as normal, > 1 if it handled the pragma by itself */
-int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
+static int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
 	(void)pragma;
 	(void)pst;
 	(void)lst;
