@@ -74,6 +74,7 @@ static int daa = 1 << 2 >> 3 << 4 >> 5;
 static int dab = 1 + 2;
 static int dac = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
 static int dad = 1 - 2;
+static int dadover = 1u - 2u;
 static int dae = 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8 - 9 - 10;
 static int daf = 1 + 2 - 3 + 4 - 5 + 6 - 7 + 8 - 9 + 10;
 static int dag = 1 * 2;

@@ -18,9 +18,16 @@ static bool ast_constexpr_add_integer(token_t &tr,const token_t &top1,const toke
 	struct integer_value_t &r = tr.v.integer;
 
 	tr = top1;
-	r.v.u = op1.v.u + op2.v.u;
-	if (r.v.u < op1.v.u) r.flags |= integer_value_t::FL_OVERFLOW;
-	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
+	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED) {
+		r.flags |= integer_value_t::FL_SIGNED;
+		r.v.s = op1.v.s + op2.v.s;
+		if (r.v.s < op1.v.s) r.flags |= integer_value_t::FL_OVERFLOW;
+	}
+	else {
+		r.v.u = op1.v.u + op2.v.u;
+		if (r.v.u < op1.v.u) r.flags |= integer_value_t::FL_OVERFLOW;
+	}
+
 	return true;
 }
 
