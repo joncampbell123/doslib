@@ -501,7 +501,6 @@ struct integer_value_t {
 
 	union {
 		uint64_t			u;
-		int64_t				v;//DEPRECATE
 		int64_t				s;
 	} v;
 	unsigned char				flags;
