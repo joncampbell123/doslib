@@ -1316,3 +1316,7 @@ int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sf
 
 extern cb_include_search_t cb_include_search;
 
+//////////////////////////////////////////////////////////////////////////////
+
+int lctok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
+
