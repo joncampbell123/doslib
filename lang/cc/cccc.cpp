@@ -1628,7 +1628,7 @@ int cc_state_t::declarator_parse(declaration_specifiers_t &ds,declarator_t &decl
 
 int cc_state_t::struct_bitfield_validate(token_t &t) {
 	if (t.type == token_type_t::integer) {
-		if (t.v.integer.v.v < 0ll || t.v.integer.v.v >= 255ll)
+		if (t.v.integer.v.s < 0ll || t.v.integer.v.s >= 255ll)
 			CCERR_RET(EINVAL,tq_peek().pos,"Bitfield value out of range");
 	}
 	else {
@@ -3004,7 +3004,7 @@ int cc_state_t::do_pragma(void) {
 			}
 
 			if (tq_peek().type == token_type_t::integer) {
-				if (tq_peek().v.integer.v.v < 1)
+				if (tq_peek().v.integer.v.s < 1)
 					CCERR_RET(EINVAL,tq_peek().pos,"Invalid packing value");
 
 				const unsigned long long n = tq_peek().v.integer.v.u;

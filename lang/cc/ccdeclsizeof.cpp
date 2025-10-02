@@ -81,7 +81,7 @@ data_size_t calc_sizeof(declaration_specifiers_t &spec,ddip_list_t &ddip,size_t 
 						const auto &an = ast_node(a);
 						if (an.t.type != token_type_t::integer)
 							return data_size_none;
-						if (an.t.v.integer.v.v < 1ll)
+						if (an.t.v.integer.v.s < 1ll)
 							return data_size_none;
 						if (an.t.v.integer.v.u >= (0x8000000000000000ull / count))
 							return data_size_none;

@@ -174,7 +174,7 @@ static int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,
 								/* nothing */
 								break;
 							case token_type_t::minus:
-								a.v.v = -a.v.v;
+								a.v.s = -a.v.s;
 								break;
 							case token_type_t::tilde:
 								a.v.u = ~a.v.u;
@@ -228,39 +228,39 @@ static int pptok_eval_expr(integer_value_t &r,std::deque<token_t>::iterator &ib,
 							a.v.u = (a.v.u != b.v.u) ? 1 : 0;
 							break;
 						case token_type_t::lessthan:
-							a.v.u = (a.v.v < b.v.v) ? 1 : 0;
+							a.v.u = (a.v.s < b.v.s) ? 1 : 0;
 							break;
 						case token_type_t::greaterthan:
-							a.v.u = (a.v.v > b.v.v) ? 1 : 0;
+							a.v.u = (a.v.s > b.v.s) ? 1 : 0;
 							break;
 						case token_type_t::lessthanequals:
-							a.v.u = (a.v.v <= b.v.v) ? 1 : 0;
+							a.v.u = (a.v.s <= b.v.s) ? 1 : 0;
 							break;
 						case token_type_t::greaterthanequals:
-							a.v.u = (a.v.v >= b.v.v) ? 1 : 0;
+							a.v.u = (a.v.s >= b.v.s) ? 1 : 0;
 							break;
 						case token_type_t::lessthanlessthan:
-							a.v.u = a.v.v << b.v.v;
+							a.v.u = a.v.s << b.v.s;
 							break;
 						case token_type_t::greaterthangreaterthan:
-							a.v.u = a.v.v >> b.v.v;
+							a.v.u = a.v.s >> b.v.s;
 							break;
 						case token_type_t::plus:
-							a.v.u = a.v.v + b.v.v;
+							a.v.u = a.v.s + b.v.s;
 							break;
 						case token_type_t::minus:
-							a.v.u = a.v.v - b.v.v;
+							a.v.u = a.v.s - b.v.s;
 							break;
 						case token_type_t::star:
-							a.v.u = a.v.v * b.v.v;
+							a.v.u = a.v.s * b.v.s;
 							break;
 						case token_type_t::forwardslash:
-							if (b.v.v == 0) return errno_return(EINVAL);
-							a.v.u = a.v.v / b.v.v;
+							if (b.v.s == 0) return errno_return(EINVAL);
+							a.v.u = a.v.s / b.v.s;
 							break;
 						case token_type_t::percent:
-							if (b.v.v == 0) return errno_return(EINVAL);
-							a.v.u = a.v.v % b.v.v;
+							if (b.v.s == 0) return errno_return(EINVAL);
+							a.v.u = a.v.s % b.v.s;
 							break;
 						default:
 							return errno_return(EINVAL);
@@ -320,7 +320,7 @@ static int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fil
 
 	if (t.type != token_type_t::integer)
 		return errno_return(EINVAL);
-	if (t.v.integer.v.v < 0ll || t.v.integer.v.v > 0xFFFFll)
+	if (t.v.integer.v.s < 0ll || t.v.integer.v.s > 0xFFFFll)
 		return errno_return(EINVAL);
 
 	const unsigned int row = (unsigned int)t.v.integer.v.u;

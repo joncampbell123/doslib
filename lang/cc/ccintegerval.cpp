@@ -17,7 +17,7 @@ std::string integer_value_t::to_str(void) const {
 	char tmp[192];
 
 	s += "v=";
-	if (flags & FL_SIGNED) sprintf(tmp,"%lld/0x%llx",(signed long long)v.v,(unsigned long long)v.u);
+	if (flags & FL_SIGNED) sprintf(tmp,"%lld/0x%llx",(signed long long)v.s,(unsigned long long)v.u);
 	else sprintf(tmp,"%llu/0x%llx",(unsigned long long)v.u,(unsigned long long)v.u);
 	s += tmp;
 
@@ -40,7 +40,7 @@ std::string integer_value_t::to_str(void) const {
 	return s;
 }
 
-void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.v=0; }
+void integer_value_t::init(void) { flags = FL_SIGNED; type=type_t::INT; v.s=0; }
 
 bool integer_value_t::to_bool(void) const { return v.u != 0ull; }
 

@@ -147,7 +147,7 @@ std::string ddip_list_to_str(const ddip_list_t &dl) {
 				if (a != ast_node_none) {
 					ast_node_t &an = ast_node(a);
 					if (an.t.type == token_type_t::integer)
-						r += std::to_string(an.t.v.integer.v.v);
+						r += std::to_string(an.t.v.integer.v.s);
 					else
 						r += "<expr>";
 				}
