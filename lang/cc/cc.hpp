@@ -1287,3 +1287,7 @@ int eat_cpp_comment(rbuf &buf,source_file_object &sfo);
 
 bool looks_like_arrowstr(rbuf &buf,source_file_object &sfo);
 
+//////////////////////////////////////////////////////////////////////////////
+
+int lgtok_charstrlit(rbuf &buf,source_file_object &sfo,token_t &t,const csliteral_t::type_t cslt=csliteral_t::type_t::CHAR);
+
