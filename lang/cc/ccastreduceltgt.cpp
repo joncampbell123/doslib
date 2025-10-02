@@ -14,7 +14,7 @@
 
 static bool ast_constexpr_lessthan_equals_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v <= op2.v.v) ? 1 : 0;
+		r.v.u = (op1.v.s <= op2.v.s) ? 1 : 0;
 	else
 		r.v.u = (op1.v.u <= op2.v.u) ? 1 : 0;
 
@@ -39,7 +39,7 @@ bool ast_constexpr_lessthan_equals(token_t &r,const token_t &op1,const token_t &
 
 static bool ast_constexpr_greaterthan_equals_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v >= op2.v.v) ? 1 : 0;
+		r.v.u = (op1.v.s >= op2.v.s) ? 1 : 0;
 	else
 		r.v.u = (op1.v.u >= op2.v.u) ? 1 : 0;
 
@@ -64,7 +64,7 @@ bool ast_constexpr_greaterthan_equals(token_t &r,const token_t &op1,const token_
 
 static bool ast_constexpr_lessthan_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v < op2.v.v) ? 1 : 0;
+		r.v.u = (op1.v.s < op2.v.s) ? 1 : 0;
 	else
 		r.v.u = (op1.v.u < op2.v.u) ? 1 : 0;
 
@@ -89,7 +89,7 @@ bool ast_constexpr_lessthan(token_t &r,const token_t &op1,const token_t &op2) {
 
 static bool ast_constexpr_greaterthan_integer(struct integer_value_t &r,const struct integer_value_t &op1,const struct integer_value_t &op2) {
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED)
-		r.v.u = (op1.v.v > op2.v.v) ? 1 : 0;
+		r.v.u = (op1.v.s > op2.v.s) ? 1 : 0;
 	else
 		r.v.u = (op1.v.u > op2.v.u) ? 1 : 0;
 

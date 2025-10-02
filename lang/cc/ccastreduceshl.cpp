@@ -20,7 +20,7 @@ static bool ast_constexpr_leftshift_integer(token_t &tr,const token_t &top1,cons
 	tr = top1;
 	r.flags |= op2.flags & integer_value_t::FL_SIGNED;
 
-	if (op2.v.v >= 0ll && op2.v.v <= 63ll) {
+	if (op2.v.s >= 0ll && op2.v.s <= 63ll) {
 		if (op2.v.u != 0ull) {
 			const uint64_t chkmsk = (uint64_t)(UINT64_MAX) << (uint64_t)(64ull - op2.v.u);
 			if (op1.v.u & chkmsk) r.flags |= integer_value_t::FL_OVERFLOW;

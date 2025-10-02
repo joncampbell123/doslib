@@ -21,15 +21,15 @@ static bool ast_constexpr_multiply_integer(token_t &tr,const token_t &top1,const
 
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED) {
 		r.flags |= integer_value_t::FL_SIGNED;
-		r.v.v *= op2.v.v;
+		r.v.s *= op2.v.s;
 
-		if (op2.v.v > 1ll) {
-			const int64_t mv = INT64_MAX / op2.v.v;
-			if (op1.v.v > mv) r.flags |= integer_value_t::FL_OVERFLOW;
+		if (op2.v.s > 1ll) {
+			const int64_t mv = INT64_MAX / op2.v.s;
+			if (op1.v.s > mv) r.flags |= integer_value_t::FL_OVERFLOW;
 		}
-		else if (op2.v.v < -1ll) {
-			const int64_t mv = INT64_MIN / -op2.v.v; /* NTS: negative / negative = positive, we want lowest negative number possible */
-			if (op1.v.v < mv) r.flags |= integer_value_t::FL_OVERFLOW;
+		else if (op2.v.s < -1ll) {
+			const int64_t mv = INT64_MIN / -op2.v.s; /* NTS: negative / negative = positive, we want lowest negative number possible */
+			if (op1.v.s < mv) r.flags |= integer_value_t::FL_OVERFLOW;
 		}
 	}
 	else {
@@ -70,7 +70,7 @@ static bool ast_constexpr_divide_integer(token_t &tr,const token_t &top1,const t
 
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED) {
 		r.flags |= integer_value_t::FL_SIGNED;
-		r.v.v = op1.v.v / op2.v.v;
+		r.v.s = op1.v.s / op2.v.s;
 	}
 	else {
 		r.v.u = op1.v.u / op2.v.u;
@@ -105,7 +105,7 @@ static bool ast_constexpr_modulus_integer(token_t &tr,const token_t &top1,const 
 
 	if ((op1.flags | op2.flags) & integer_value_t::FL_SIGNED) {
 		r.flags |= integer_value_t::FL_SIGNED;
-		r.v.v = op1.v.v % op2.v.v;
+		r.v.s = op1.v.s % op2.v.s;
 	}
 	else {
 		r.v.u = op1.v.u % op2.v.u;
