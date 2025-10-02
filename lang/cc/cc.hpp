@@ -1341,3 +1341,20 @@ struct symbol_lookup_t {
 	position_t pos;
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
+/* target settings */
+extern target_cpu_t					target_cpu;
+extern target_cpu_sub_t					target_cpusub;
+extern target_cpu_rev_t					target_cpurev;
+
+/* data types */
+extern data_type_set_t					data_types;
+extern data_type_set_ptr_t				data_types_ptr_code;
+extern data_type_set_ptr_t				data_types_ptr_data;
+extern data_type_set_ptr_t				data_types_ptr_stack;
+
+extern addrmask_t					default_packing;
+extern addrmask_t					current_packing;
+extern std::vector<pack_state_t>			packing_stack; /* #pragma pack */
+

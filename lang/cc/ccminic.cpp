@@ -12,36 +12,21 @@
 
 #include "cc.hpp"
 
-/* target settings */
-target_cpu_t					target_cpu = CPU_NONE;
-target_cpu_sub_t				target_cpusub = CPU_SUB_NONE;
-target_cpu_rev_t				target_cpurev = CPU_REV_NONE;
-
-/* data types */
-data_type_set_t					data_types = data_types_default;
-data_type_set_ptr_t				data_types_ptr_code = data_ptr_types_default;
-data_type_set_ptr_t				data_types_ptr_data = data_ptr_types_default;
-data_type_set_ptr_t				data_types_ptr_stack = data_ptr_types_default;
-
-addrmask_t					default_packing = addrmask_none;
-addrmask_t					current_packing = addrmask_none;
-std::vector<pack_state_t>			packing_stack; /* #pragma pack */
-
 //////////////////////////////////////////////////////////////////////////////
 
-std::vector<segment_t>	segments;
-std::vector<symbol_t>	symbols;
+std::vector<segment_t>				segments;
+std::vector<symbol_t>				symbols;
 
-std::vector<scope_t>	scopes;
-std::vector<scope_id_t>	scope_stack;
+std::vector<scope_t>				scopes;
+std::vector<scope_id_t>				scope_stack;
 
-segment_id_t		code_segment = segment_none;
-segment_id_t		const_segment = segment_none;
-segment_id_t		conststr_segment = segment_none;
-segment_id_t		data_segment = segment_none;
-segment_id_t		stack_segment = segment_none;
-segment_id_t		bss_segment = segment_none;
-segment_id_t		fardata_segment = segment_none;
+segment_id_t					code_segment = segment_none;
+segment_id_t					const_segment = segment_none;
+segment_id_t					conststr_segment = segment_none;
+segment_id_t					data_segment = segment_none;
+segment_id_t					stack_segment = segment_none;
+segment_id_t					bss_segment = segment_none;
+segment_id_t					fardata_segment = segment_none;
 
 //////////////////////////////////////////////////////////////////////////////
 
