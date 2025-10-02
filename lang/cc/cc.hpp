@@ -1278,3 +1278,8 @@ int32_t lgtok_cslitget(rbuf &buf,source_file_object &sfo,const bool unicode=fals
 bool eat_whitespace(rbuf &buf,source_file_object &sfo);
 void eat_newline(rbuf &buf,source_file_object &sfo);
 
+//////////////////////////////////////////////////////////////////////////////
+
+int eat_c_comment(unsigned int level,rbuf &buf,source_file_object &sfo);
+int eat_cpp_comment(rbuf &buf,source_file_object &sfo);
+
