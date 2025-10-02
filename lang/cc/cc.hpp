@@ -1531,3 +1531,5 @@ struct cc_state_t {
 	int translation_unit(void);
 };
 
+int cc_step(cc_state_t &cc,rbuf &_buf,source_file_object &_sfo);
+
