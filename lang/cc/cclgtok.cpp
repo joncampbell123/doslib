@@ -210,7 +210,7 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 				unsigned char shf = 64;
 				int v;
 
-				/* the above code already skipped the 0x1 */
+				/* the above code already skipped the "0x" */
 
 				/* read hex digits, fill the mantissa from the top bits down 4 bits at a time.
 				 * shf must be a multiple of 4 at this point of the code.
