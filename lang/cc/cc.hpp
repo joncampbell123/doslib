@@ -1258,3 +1258,14 @@ extern identifier_pool_t identifier;
 
 void CCerr(const position_t &pos,const char *fmt,...);
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool is_newline(const unsigned char b);
+bool is_whitespace(const unsigned char b);
+int cc_parsedigit(unsigned char c,const unsigned char base=10);
+bool is_identifier_first_char(unsigned char c);
+bool is_identifier_char(unsigned char c);
+bool is_asm_non_ident_text_char(unsigned char c);
+bool is_asm_ident_text_char(unsigned char c);
+bool is_hchar(unsigned char c);
+
