@@ -1025,3 +1025,9 @@ double float1 = 1.0;
 double float2 = 0.0;
 double float3 = -1.0;
 double float4 = -0.0;
+double float5 = +1.0;
+double float6 = +0.0;
+double float7 = 1e0;
+double float7a = 1e1;
+double float7b = 1e-1;
+
