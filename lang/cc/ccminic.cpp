@@ -12,25 +12,6 @@
 
 #include "cc.hpp"
 
-parameter_t::parameter_t() { }
-parameter_t::parameter_t(const parameter_t &x) { common_copy(x); }
-parameter_t &parameter_t::operator=(const parameter_t &x) { common_copy(x); return *this; }
-parameter_t::parameter_t(parameter_t &&x) { common_move(x); }
-parameter_t &parameter_t::operator=(parameter_t &&x) { common_move(x); return *this; }
-parameter_t::~parameter_t() { }
-
-void parameter_t::common_copy(const parameter_t &o) {
-	spec = o.spec;
-	decl = o.decl;
-}
-
-void parameter_t::common_move(parameter_t &o) {
-	spec = std::move(o.spec);
-	decl = std::move(o.decl);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 /* target settings */
 target_cpu_t					target_cpu = CPU_NONE;
 target_cpu_sub_t				target_cpusub = CPU_SUB_NONE;
