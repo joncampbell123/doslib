@@ -1115,3 +1115,12 @@ void source_file_refcount_check(void);
 void path_slash_translate(std::string &path);
 std::string path_combine(const std::string &base,const std::string &rel);
 
+//////////////////////////////////////////////////////////////////////////////
+
+void utf8_to_str(unsigned char* &w,unsigned char *f,unicode_char_t c);
+std::string utf8_to_str(const unicode_char_t c);
+
+//////////////////////////////////////////////////////////////////////////////
+
+void utf16_to_str(uint16_t* &w,uint16_t *f,unicode_char_t c);
+
