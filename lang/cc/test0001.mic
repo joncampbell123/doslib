@@ -1072,4 +1072,12 @@ double float11c = 2.0 * 1.0;
 double float11d = 2.0 * 2.0;
 double float11e = 2.0 * -2.0;
 double float11f = -2.0 * -2.0;
+double float12a = 1.0 / 1.0;
+double float12b = 0.0 / 1.0;
+double float12c = 1.0 / 2.0;
+double float12d = 1.0 / -2.0;
+double float12e = 1.0 / 3.0;
+double float12f = 16.0 / 4.0;
+double float12g = 7.77777 / 2.22222;
+double float12h = 1000.0 / 0.001;
 

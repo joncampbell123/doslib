@@ -34,11 +34,86 @@ static bool ast_constexpr_divide_integer(token_t &tr,const token_t &top1,const t
 	return true;
 }
 
+static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const token_t &top2) {
+	const struct floating_value_t &op1 = top1.v.floating;
+	const struct floating_value_t &op2 = top2.v.floating;
+	struct floating_value_t &r = tr.v.floating;
+
+	tr = top1;
+
+	/* divide by zero? NOPE! */
+	if (op2.flags & floating_value_t::FL_ZERO)
+		return false;
+
+	/* division sign rules:
+	 * ++ = +
+	 * -- = +
+	 * -+ = -
+	 * +- = -
+	 */
+	r.flags ^= op2.flags & floating_value_t::FL_NEGATIVE;
+
+	/* sanity check */
+	if (op2.flags & floating_value_t::FL_ZERO)
+		return false;
+	if (!(op2.mantissa & floating_value_t::mant_msb))
+		return false;
+
+	r.mantissa = 0;
+	if (op1.flags & floating_value_t::FL_ZERO) {
+		/* zero divided by anything is still zero */
+		r.exponent = 0;
+	}
+	else {
+		/* sanity check */
+		if (!(op1.mantissa & floating_value_t::mant_msb))
+			return false;
+
+		r.exponent = op1.exponent - op2.exponent;
+
+		uint64_t bset = (uint64_t)1u << (uint64_t)63u;
+		uint64_t tmp = op1.mantissa;
+		uint64_t cmv = op2.mantissa;
+
+		/* both tmp and cnv have bit 63 set at this point */
+		while (1) {
+			if (tmp >= cmv) {
+				r.mantissa |= bset;
+				bset >>= 1u;
+				tmp -= cmv;
+				/* two values subtracted with bit 63 set and tmp >= cnv, now bit 63 should be clear, scale cnv as well for correct math */
+				if ((cmv >>= 1ull) == 0ull)
+					return 1;
+				break;
+			}
+
+			r.exponent--;
+			if ((cmv >>= 1ull) == 0ull)
+				return 1;
+		}
+
+		while (tmp != 0ull) {
+			if (tmp >= cmv) {
+				r.mantissa |= bset;
+				tmp -= cmv;
+			}
+
+			tmp <<= 1ull;
+			if ((bset >>= 1u) == 0ull)
+				break;
+		}
+	}
+
+	return true;
+}
+
 bool ast_constexpr_divide(token_t &r,const token_t &op1,const token_t &op2) {
 	if (op1.type == op2.type) {
 		switch (op1.type) {
 			case token_type_t::integer:
 				return ast_constexpr_divide_integer(r,op1,op2);
+			case token_type_t::floating:
+				return ast_constexpr_divide_floating(r,op1,op2);
 			default:
 				break;
 		};
