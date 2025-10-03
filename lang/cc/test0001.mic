@@ -1080,4 +1080,12 @@ double float12e = 1.0 / 3.0;
 double float12f = 16.0 / 4.0;
 double float12g = 7.77777 / 2.22222;
 double float12h = 1000.0 / 0.001;
+double float13a = 1e10 + 1.0;
+double float13b = 1e10 + 1e6;
+double float13c = 1e20 + 1e15;
+double float13d = 1e90 + 1e84;
+double float14a = 1e10 - 1.0;
+double float14b = 1e10 - 1e6;
+double float14c = 1e20 - 1e15;
+double float14d = 1e90 - 1e84;
 
