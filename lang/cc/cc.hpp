@@ -1500,6 +1500,10 @@ void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix=std::string(
 
 //////////////////////////////////////////////////////////////////////////////
 
+bool ast_constexpr_addsub_floating(token_t &tr,const token_t &top1,const token_t &top2,unsigned int aflags);
+
+//////////////////////////////////////////////////////////////////////////////
+
 struct cc_state_t {
 	lgtok_state_t		lst;
 	pptok_state_t		pst;
