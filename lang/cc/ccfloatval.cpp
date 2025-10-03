@@ -54,7 +54,7 @@ void floating_value_t::setsn(const uint64_t m,const int32_t e) {
 }
 
 unsigned int floating_value_t::normalize(void) {
-	unsigned int count = normalize_no_exponent_adjust();
+	const unsigned int count = normalize_no_exponent_adjust();
 	return (exponent -= count);
 }
 
@@ -62,6 +62,10 @@ unsigned int floating_value_t::normalize_no_exponent_adjust(void) {
 	unsigned int count = 0;
 
 	if (mantissa != uint64_t(0)) {
+		while (!(mantissa & mant_msb8)) {
+			mantissa <<= uint64_t(8ull);
+			count += 8u;
+		}
 		while (!(mantissa & mant_msb)) {
 			mantissa <<= uint64_t(1ull);
 			count++;

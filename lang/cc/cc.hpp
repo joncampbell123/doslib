@@ -476,7 +476,8 @@ struct floating_value_t {
 	static constexpr unsigned int           FL_NEGATIVE   = (1u << 2u);
 	static constexpr unsigned int           FL_ZERO       = (1u << 3u);
 
-	static constexpr uint64_t		mant_msb = uint64_t(1ull) << uint64_t(63ull);
+	static constexpr uint64_t		mant_msb = uint64_t(1u) << uint64_t(64u - 1u);
+	static constexpr uint64_t		mant_msb8 = uint64_t(0xFFu) << uint64_t(64u - 8u);
 
 	std::string to_str(void) const;
 	bool to_bool(void) const;
