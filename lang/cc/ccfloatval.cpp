@@ -55,7 +55,7 @@ void floating_value_t::setsn(const uint64_t m,const int32_t e) {
 
 unsigned int floating_value_t::normalize(void) {
 	const unsigned int count = normalize_no_exponent_adjust();
-	return (exponent -= count);
+	return (exponent -= (int)count);
 }
 
 unsigned int floating_value_t::normalize_no_exponent_adjust(void) {
