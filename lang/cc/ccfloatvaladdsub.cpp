@@ -48,8 +48,17 @@ bool ast_constexpr_addsub_floating(token_t &tr,const token_t &top1,const token_t
 	tr = top1;
 
 	/* skip if adding zero */
-	if ((op1.flags | op2.flags) & floating_value_t::FL_ZERO)
+	if ((op1.flags | op2.flags) & floating_value_t::FL_ZERO) {
+		/* if op1 is zero and subtraction (aflags & NEGATIVE), and op2 is not zero, then return op2 negated (i.e. 0.0 - 1.0) */
+		if (aflags & floating_value_t::FL_NEGATIVE) {
+			if ((op1.flags & floating_value_t::FL_ZERO) && (op2.flags & floating_value_t::FL_ZERO) == 0) {
+				r = op2;
+				r.flags ^= floating_value_t::FL_NEGATIVE;
+			}
+		}
+
 		return true;
+	}
 
 	/* TODO: Inf, NaN */
 

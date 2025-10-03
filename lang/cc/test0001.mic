@@ -1061,4 +1061,9 @@ double float9h = -1.0 + 1.0;
 double float9i = -0.5 + 1.0;
 double float9j = -0.5 + 0.0;
 double float9k = -0.5 + -0.0;
+double float10a = 1.0 - 1.0;
+double float10b = 1.0 - 0.0;
+double float10c = 0.0 - 1.0;
+double float10d = 1.0 - 0.5;
+double float10e = 0.5 - 1.0;
 

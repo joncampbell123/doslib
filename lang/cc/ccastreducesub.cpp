@@ -36,6 +36,8 @@ bool ast_constexpr_subtract(token_t &r,const token_t &op1,const token_t &op2) {
 		switch (op1.type) {
 			case token_type_t::integer:
 				return ast_constexpr_subtract_integer(r,op1,op2);
+			case token_type_t::floating:
+				return ast_constexpr_addsub_floating(r,op1,op2,floating_value_t::FL_NEGATIVE);
 			default:
 				break;
 		};
