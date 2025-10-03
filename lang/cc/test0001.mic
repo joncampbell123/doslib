@@ -1066,4 +1066,7 @@ double float10b = 1.0 - 0.0;
 double float10c = 0.0 - 1.0;
 double float10d = 1.0 - 0.5;
 double float10e = 0.5 - 1.0;
-
+double float11a = 1.0 * 1.0;
+double float11b = 1.0 * 2.0;
+double float11c = 2.0 * 1.0;
+double float11d = 2.0 * 2.0;
