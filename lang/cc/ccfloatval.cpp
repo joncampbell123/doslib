@@ -20,6 +20,8 @@ std::string floating_value_t::to_str(void) const {
 		sprintf(tmp,"v=0x%llx e=%ld ",(unsigned long long)mantissa,(long)exponent);
 		s += tmp;
 
+		if (flags & FL_NEGATIVE) s += '-';
+
 		sprintf(tmp,"%.20f",ldexp(double(mantissa),(int)exponent-63));
 		s += tmp;
 	}
@@ -35,7 +37,6 @@ std::string floating_value_t::to_str(void) const {
 	s += "\"";
 
 	if (flags & FL_SPECIAL)  s += " special";
-	if (flags & FL_NEGATIVE) s += " negative";
 	if (flags & FL_OVERFLOW) s += " overflow";
 	if (flags & FL_ZERO)     s += " zero";
 
