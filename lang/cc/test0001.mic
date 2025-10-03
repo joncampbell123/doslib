@@ -1070,3 +1070,6 @@ double float11a = 1.0 * 1.0;
 double float11b = 1.0 * 2.0;
 double float11c = 2.0 * 1.0;
 double float11d = 2.0 * 2.0;
+double float11e = 2.0 * -2.0;
+double float11f = -2.0 * -2.0;
+

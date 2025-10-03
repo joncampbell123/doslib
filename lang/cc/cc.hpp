@@ -1504,6 +1504,10 @@ bool ast_constexpr_addsub_floating(token_t &tr,const token_t &top1,const token_t
 
 //////////////////////////////////////////////////////////////////////////////
 
+void multiply64x64to128(uint64_t &f_rh,uint64_t &f_rl,const uint64_t a,const uint64_t b);
+
+//////////////////////////////////////////////////////////////////////////////
+
 struct cc_state_t {
 	lgtok_state_t		lst;
 	pptok_state_t		pst;
