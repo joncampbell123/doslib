@@ -93,22 +93,12 @@ static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const 
 
 		/* both tmp and cnv have bit 63 set at this point */
 		while (tmp < cmv) {
-			fprintf(stderr,"div %d: bset=%llx tmp=%llx cmv=%llx\n",
-				__LINE__,(unsigned long long)bset,
-				(unsigned long long)tmp,
-				(unsigned long long)cmv);
-
 			r.exponent--;
 			if ((cmv >>= 1ull) == 0ull)
 				return 1;
 		}
 
 		while (tmp != 0ull) {
-			fprintf(stderr,"div %d: bset=%llx tmp=%llx cmv=%llx\n",
-				__LINE__,(unsigned long long)bset,
-				(unsigned long long)tmp,
-				(unsigned long long)cmv);
-
 			if (tmp >= cmv) {
 				r.mantissa |= bset;
 				tmp -= cmv;

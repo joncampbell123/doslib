@@ -235,13 +235,7 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 					}
 
 					/* normalize mantissa */
-					if (t.v.floating.mantissa != 0ull) {
-						while (!(t.v.floating.mantissa & floating_value_t::mant_msb)) {
-							t.v.floating.mantissa <<= 1ull;
-							t.v.floating.exponent--;
-							shf++;
-						}
-					}
+					shf += t.v.floating.normalize();
 				}
 				/* fractional part */
 				if (*scan == '.') {
@@ -259,12 +253,7 @@ int lgtok_number(rbuf &buf,source_file_object &sfo,token_t &t) {
 					}
 
 					/* normalize mantissa */
-					if (t.v.floating.mantissa != 0ull) {
-						while (!(t.v.floating.mantissa & floating_value_t::mant_msb)) {
-							t.v.floating.mantissa <<= 1ull;
-							shf++;
-						}
-					}
+					shf += t.v.floating.normalize_no_exponent_adjust();
 				}
 				/* was there a leftover digit that didn't fit, and normalization made some room for it? */
 				if (shf && ldigit) {

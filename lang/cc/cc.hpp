@@ -482,7 +482,8 @@ struct floating_value_t {
 	bool to_bool(void) const;
 	void init(void);
 	void setsn(const uint64_t m,const int32_t e);
-	void normalize(void);
+	unsigned int normalize(void);
+	unsigned int normalize_no_exponent_adjust(void);
 };
 
 ////////////////////////////////////////////////////////////////////
