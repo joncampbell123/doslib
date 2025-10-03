@@ -1050,4 +1050,15 @@ double float8p = 0x0.fffffffffffffffffffffffp1;
 double float8q = 0x0.fffffffffffffffffffffffp-1;
 double float8r = 0x10000000000000002p0;
 double float8s = 0x0p0;
+double float9a = 1.0 + 1.0;
+double float9b = 1.0 + 0.5;
+double float9c = 0.5 + 1.0;
+double float9d = 0.5 + 0.5;
+double float9e = 1.5 + 1.5;
+double float9f = 1.5 + 0.0;
+double float9g = 0.0 + 0.0;
+double float9h = -1.0 + 1.0;
+double float9i = -0.5 + 1.0;
+double float9j = -0.5 + 0.0;
+double float9k = -0.5 + -0.0;
 
