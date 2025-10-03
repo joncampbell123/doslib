@@ -92,16 +92,11 @@ static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const 
 		uint64_t cmv = op2.mantissa;
 
 		/* both tmp and cnv have bit 63 set at this point */
-		while (1) {
-			if (tmp >= cmv) {
-				r.mantissa |= bset;
-				bset >>= 1u;
-				tmp -= cmv;
-				/* two values subtracted with bit 63 set and tmp >= cnv, now bit 63 should be clear, scale cnv as well for correct math */
-				if ((cmv >>= 1ull) == 0ull)
-					return 1;
-				break;
-			}
+		while (tmp < cmv) {
+			fprintf(stderr,"div %d: bset=%llx tmp=%llx cmv=%llx\n",
+				__LINE__,(unsigned long long)bset,
+				(unsigned long long)tmp,
+				(unsigned long long)cmv);
 
 			r.exponent--;
 			if ((cmv >>= 1ull) == 0ull)
@@ -109,6 +104,11 @@ static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const 
 		}
 
 		while (tmp != 0ull) {
+			fprintf(stderr,"div %d: bset=%llx tmp=%llx cmv=%llx\n",
+				__LINE__,(unsigned long long)bset,
+				(unsigned long long)tmp,
+				(unsigned long long)cmv);
+
 			if (tmp >= cmv) {
 				r.mantissa |= bset;
 				tmp -= cmv;
@@ -117,6 +117,12 @@ static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const 
 			tmp <<= 1ull;
 			if ((bset >>= 1u) == 0ull)
 				break;
+		}
+
+		/* rounding */
+		if (tmp >= cmv) {
+			if ((uint64_t)(++r.mantissa) == 0ull)
+				r.exponent++;
 		}
 	}
 
