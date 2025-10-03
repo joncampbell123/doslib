@@ -90,10 +90,16 @@ static bool ast_constexpr_multiply_floating(token_t &tr,const token_t &top1,cons
 		}
 
 		if (r.mantissa != 0ull) {
+			while (!(r.mantissa & floating_value_t::mant_msb8)) {
+				r.mantissa = (r.mantissa << uint64_t(8u)) | (rl >> uint64_t(64u - 8u));
+				rl <<= uint64_t(8u);
+				r.exponent -= 8u;
+			}
+
 			while (!(r.mantissa & floating_value_t::mant_msb)) {
-				r.mantissa = (r.mantissa << 1ull) | (rl >> 63ull);
+				r.mantissa = (r.mantissa << uint64_t(1u)) | (rl >> uint64_t(64u - 1u));
+				rl <<= uint64_t(1u);
 				r.exponent--;
-				rl <<= 1ull;
 			}
 		}
 		/* rounding */
