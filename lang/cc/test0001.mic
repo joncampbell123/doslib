@@ -1092,4 +1092,9 @@ double float15a = 1e10 * 1.0;
 double float15b = 1e10 * 1e6;
 double float15c = 1e20 * 1e15;
 double float15d = 1e40 * 1e40;
+double float16a = 1e10 / 1.0;
+double float16b = 1e10 / 1e6;
+double float16c = 1e20 / 1e15;
+double float16d = 1e40 / 1e40;
+double float16e = 1e100 / 1e2;
 
