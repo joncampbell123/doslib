@@ -1088,4 +1088,8 @@ double float14a = 1e10 - 1.0;
 double float14b = 1e10 - 1e6;
 double float14c = 1e20 - 1e15;
 double float14d = 1e90 - 1e84;
+double float15a = 1e10 * 1.0;
+double float15b = 1e10 * 1e6;
+double float15c = 1e20 * 1e15;
+double float15d = 1e40 * 1e40;
 

@@ -12,6 +12,8 @@
 
 #include "cc.hpp"
 
+#define CHECK_WORK
+
 static bool ast_constexpr_multiply_integer(token_t &tr,const token_t &top1,const token_t &top2) {
 	const struct integer_value_t &op1 = top1.v.integer;
 	const struct integer_value_t &op2 = top2.v.integer;
@@ -43,6 +45,20 @@ static bool ast_constexpr_multiply_integer(token_t &tr,const token_t &top1,const
 
 	return true;
 }
+
+#ifdef CHECK_WORK
+static void check_mul_result(const struct floating_value_t &r,const struct floating_value_t &op1,const struct floating_value_t &op2) {
+	const long double r_v    = ldexpl(  r.mantissa,  r.exponent - 63) * (  r.flags & floating_value_t::FL_NEGATIVE ? -1.0l : 1.0l);
+	const long double r_op1  = ldexpl(op1.mantissa,op1.exponent - 63) * (op1.flags & floating_value_t::FL_NEGATIVE ? -1.0l : 1.0l);
+	const long double r_op2  = ldexpl(op2.mantissa,op2.exponent - 63) * (op2.flags & floating_value_t::FL_NEGATIVE ? -1.0l : 1.0l);
+	const long double should = r_op1 * r_op2;
+	const long double tol    = ldexpl(  1.0,         r.exponent - 63);
+	const long double err    = r_v - should;
+
+	if (err != 0.0l)
+		fprintf(stderr,"mul chk err=%.30f / %.30f\n",(double)err,(double)tol);
+}
+#endif
 
 static bool ast_constexpr_multiply_floating(token_t &tr,const token_t &top1,const token_t &top2) {
 	const struct floating_value_t &op1 = top1.v.floating;
@@ -92,6 +108,10 @@ static bool ast_constexpr_multiply_floating(token_t &tr,const token_t &top1,cons
 		r.exponent = 0;
 		r.mantissa = 0;
 	}
+
+#ifdef CHECK_WORK
+	check_mul_result(r,op1,op2);
+#endif
 
 	return true;
 }
