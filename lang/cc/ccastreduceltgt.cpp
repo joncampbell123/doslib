@@ -29,6 +29,12 @@ bool ast_constexpr_lessthan_equals(token_t &r,const token_t &op1,const token_t &
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_lessthan_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_LE);
+				return true;
 			default:
 				break;
 		};
@@ -54,6 +60,12 @@ bool ast_constexpr_greaterthan_equals(token_t &r,const token_t &op1,const token_
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_greaterthan_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_GE);
+				return true;
 			default:
 				break;
 		};
@@ -79,6 +91,12 @@ bool ast_constexpr_lessthan(token_t &r,const token_t &op1,const token_t &op2) {
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_lessthan_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_LT);
+				return true;
 			default:
 				break;
 		};
@@ -104,6 +122,12 @@ bool ast_constexpr_greaterthan(token_t &r,const token_t &op1,const token_t &op2)
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_greaterthan_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_GT);
+				return true;
 			default:
 				break;
 		};

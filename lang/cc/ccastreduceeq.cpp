@@ -25,6 +25,12 @@ bool ast_constexpr_equals(token_t &r,const token_t &op1,const token_t &op2) {
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_EQ);
+				return true;
 			default:
 				break;
 		};
@@ -46,6 +52,12 @@ bool ast_constexpr_not_equals(token_t &r,const token_t &op1,const token_t &op2) 
 				r.v.integer.flags = 0;
 				r.v.integer.type = integer_value_t::type_t::BOOL;
 				return ast_constexpr_not_equals_integer(r.v.integer,op1.v.integer,op2.v.integer);
+			case token_type_t::floating:
+				r = token_t(token_type_t::integer);
+				r.v.integer.flags = 0;
+				r.v.integer.type = integer_value_t::type_t::BOOL;
+				r.v.integer.v.u = ast_fconst_cmp(op1.v.floating,op2.v.floating,CMPOP_NE);
+				return true;
 			default:
 				break;
 		};

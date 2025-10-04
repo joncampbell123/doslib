@@ -199,6 +199,19 @@ extern const data_type_set_ptr_t data_ptr_types_intel64_flat;
 
 //////////////////////////////////////////////////////////////////////////////
 
+enum cmpop_t {
+	CMPOP_LT=0,				// 0
+	CMPOP_GT,
+	CMPOP_LE,
+	CMPOP_GE,
+	CMPOP_EQ,
+	CMPOP_NE,				// 5
+
+	CMPOP__MAX
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 template <typename T> constexpr bool only_one_bit_set(const T &t) {
 	return (t & (t - T(1u))) == T(0u);
 }
@@ -1463,6 +1476,8 @@ bool ast_constexpr_subtract(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_multiply(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_divide(token_t &r,const token_t &op1,const token_t &op2);
 bool ast_constexpr_modulus(token_t &r,token_t &op1,token_t &op2);
+
+bool ast_fconst_cmp(const struct floating_value_t &a,const struct floating_value_t &b,const enum cmpop_t op);
 
 //////////////////////////////////////////////////////////////////////////////
 
