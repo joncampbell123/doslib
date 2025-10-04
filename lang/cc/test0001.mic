@@ -1097,4 +1097,11 @@ double float16b = 1e10 / 1e6;
 double float16c = 1e20 / 1e15;
 double float16d = 1e40 / 1e40;
 double float16e = 1e100 / 1e2;
-
+int float17a = !0.0;
+int float17b = !1.0;
+int float17c = 0.0 && 0.0;
+int float17d = 0.0 && 1.0;
+int float17e = 1.0 && 1.0;
+int float17f = 0.0 || 0.0;
+int float17g = 0.0 || 1.0;
+int float17h = 1.0 || 1.0;
