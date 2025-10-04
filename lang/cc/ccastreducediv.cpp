@@ -85,6 +85,49 @@ static bool ast_constexpr_divide_floating(token_t &tr,const token_t &top1,const 
 		if (!(op1.mantissa & floating_value_t::mant_msb))
 			return false;
 
+		/*      79 remainder 2      integer division
+		 *   _________________
+		 * 7 ( 555|
+		 * 7   5  | 7 goes into 5 zero times, floor(5/7) = 0
+		 * 7  -0  | subtract 7 * 0 = 0
+		 * 7   55 | bring down next digit, 7 goes into 55, 7 times, floor(55/7) = 7
+		 * 7  -49 | subtract 7 * 7 = 49
+		 * 7    65| bring down next digit, 7 goes into 65, 9 times, floor(65/7) = 9
+		 * 7   -63| subtract 7 * 9 = 63
+		 * 7     2| this is the remainder
+		 */
+		/*      79.285714...        decimal division
+		 *   _________________
+		 * 7 ( 555.000000
+		 * 7   5  .            7 goes into 5 zero times, floor(5/7) = 0
+		 * 7  -0  .            subtract 7 * 0 = 0
+		 * 7   55 .            bring down next digit, 7 goes into 55, 7 times, floor(55/7) = 7
+		 * 7  -49 .            subtract 7 * 7 = 49
+		 * 7    65.            bring down next digit, 7 goes into 65, 9 times, floor(65/7) = 9
+		 * 7   -63.            subtract 7 * 9 = 63
+		 * 7     20            bring down next digit (which is zero), we cross the decimal point, 7 goes into 20, 2 times, floor(20/7) = 2
+		 * 7    -14            subtract 7 * 2 = 14
+		 * 7      60           bring down next digit (which is zero), 7 goes into 60, 8 times, floor(60/7) = 8
+		 * 7     -56           subtract 7 * 8 = 56
+		 * 7      .40          bring down next digit (which is zero), 7 goes into 40, 5 times, floor(40/7) = 5
+		 * 7      .35          subtract 7 * 5 = 35
+		 * 7      . 50         bring down next digit (which is zero), 7 goes into 50, 7 times, floor(50/7) = 7
+		 * 7      .-49         subtract 7 * 7 = 49
+		 * 7      .  10        bring down next digit (which is zero), 7 goes into 10, 1 times, floor(10/7) = 1
+		 * 7      . - 7        subtract 7 * 1 = 7
+		 * 7      .   30       bring down next digit (which is zero), 7 goes into 30, 4 times, floor(30/7) = 4
+		 * 7      .  -28       subtract 7 * 4 = 28
+		 * 7      .    20      *sigh* well this is going to repeat endlessly, but you get the point
+		 *
+		 * Warning: If you check this on your calculator, or on a web site, you're going to be shown a decimal that doesn't
+		 *          repeat because at some point the calculator will stop and round to nearest. It may show "79.2857143"
+		 *          or "79.2857142857142857" for example. Even this code will do that because there's only so many mantissa
+		 *          bits in floating point. Other repeating decimal digit examples like 1 / 3 = 0.3333333333333333... will
+		 *          have the same limitations. There are cases where, like 1/3, you have to do the math using fractions instead
+		 *          of decimals to get a more accurate answer.
+		 *
+		 * What this code does is basically the same thing, but using binary digits instead of decimal. */
+
 		r.exponent = op1.exponent - op2.exponent;
 
 		uint64_t bset = (uint64_t)1u << (uint64_t)63u;
