@@ -1123,4 +1123,6 @@ int float17w = 1.0 == 1.0;
 int float17x = 0.0 != 0.0;
 int float17y = 0.0 != 1.0;
 int float17z = 1.0 != 1.0;
+int float18a = -0.0 == +0.0;
+int float18b = -1.0 == +1.0;
 
