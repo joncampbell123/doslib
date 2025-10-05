@@ -1424,6 +1424,10 @@ std::string ddip_list_to_str(const ddip_list_t &dl);
 
 //////////////////////////////////////////////////////////////////////////////
 
+bool ast_convert_promote_types(token_t &r,const token_t &op1,const token_t &op2,bool (*func)(token_t &,const token_t &,const token_t &));
+
+//////////////////////////////////////////////////////////////////////////////
+
 extern segment_id_t					code_segment;
 extern segment_id_t					const_segment;
 extern segment_id_t					conststr_segment;
