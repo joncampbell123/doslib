@@ -325,6 +325,9 @@ static int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fil
 
 	(void)pst;
 
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #line directive");
+
 	/* line number */
 	if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
 		return r;
@@ -409,7 +412,8 @@ static int pptok_if(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_
 	std::deque<token_t> expr;
 	int r;
 
-	(void)pst;
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #if directive");
 
 	do {
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -559,7 +563,8 @@ static int pptok_ifdef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fi
 	pptok_macro_t macro;
 	int r;
 
-	(void)pst;
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #ifdef directive");
 
 	if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 		return r;
@@ -625,7 +630,8 @@ static int pptok_else(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fil
 	pptok_macro_t macro;
 	int r;
 
-	(void)pst;
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #else directive");
 
 	do {
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -667,7 +673,8 @@ static int pptok_endif(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fi
 	pptok_macro_t macro;
 	int r;
 
-	(void)pst;
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #endif directive");
 
 	do {
 		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
@@ -702,7 +709,8 @@ static int pptok_define(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_f
 	pptok_macro_t macro;
 	int r;
 
-	(void)pst;
+	if (!pst.macro_expansion.empty())
+		CCERR_RET(EINVAL,t.pos,"BUG: macro expansion still active at #define directive");
 
 	if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 		return r;
