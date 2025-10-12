@@ -1363,6 +1363,23 @@ try_again_w_token:
 				goto try_again;
 			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
+
+			/* Apparently you can use macros with #include. FreeType does: #include FREETYPE_H */
+			while (t.type == token_type_t::identifier) {
+				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
+				if (macro) {
+					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
+						return r;
+
+					pst.macro_expansion_counter++;
+					if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+						return r;
+				}
+				else {
+					break;
+				}
+			}
+
 			if (t.type == token_type_t::strliteral) {
 				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
 				if (sfo == NULL) {
