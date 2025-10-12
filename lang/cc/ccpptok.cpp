@@ -16,6 +16,30 @@
 
 static int pptok_macro_expansion(const pptok_state_t::pptok_macro_ent_t* macro,pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t);
 
+int pptok_lgtok_macro_expansion(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+	int r;
+
+	if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+		return r;
+
+	while (t.type == token_type_t::identifier) {
+		const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
+		if (macro) {
+			if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
+				return r;
+
+			pst.macro_expansion_counter++;
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+				return r;
+		}
+		else {
+			break;
+		}
+	}
+
+	return r;
+}
+
 /////////////////////////////////////////////////////////////////////
 
 static int pptok_undef(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
@@ -1354,24 +1378,10 @@ try_again_w_token:
 		case token_type_t::r_ppinclude: {
 			if (!pst.condb_true())
 				goto try_again;
-			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-				return r;
 
 			/* Apparently you can use macros with #include. FreeType does: #include FREETYPE_H */
-			while (t.type == token_type_t::identifier) {
-				const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
-				if (macro) {
-					if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1)
-						return r;
-
-					pst.macro_expansion_counter++;
-					if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-						return r;
-				}
-				else {
-					break;
-				}
-			}
+			if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
+				return r;
 
 			if (t.type == token_type_t::strliteral) {
 				source_file_object *sfo = cb_include_search(pst,lst,t,CBIS_USER_HEADER);
@@ -1431,8 +1441,7 @@ try_again_w_token:
 			}
 
 			/* Allow macro string substitution */
-			/* TODO: Can you use _Pragma with "strings" " pasted" " together"? */
-			if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::strliteral) {
 				fprintf(stderr,"_Pragma missing string literal\n");
@@ -1484,7 +1493,7 @@ try_again_w_token:
 				return errno_return(EINVAL);
 			}
 
-			if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::closeparenthesis) {
 				fprintf(stderr,"_Pragma missing close parens\n");
@@ -1528,7 +1537,7 @@ try_again_w_token:
 
 			do {
 				/* allow substitution as we work */
-				if ((r=pptok(pst,lst,buf,sfo,t)) < 1)
+				if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				if (t.type == token_type_t::newline) {
