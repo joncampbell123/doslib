@@ -1,4 +1,5 @@
 
-/* FIXME: Cannot #define in a header?? */
+#define ASDF123B 1234
+
 unsigned int qwerty = 1234;
 
