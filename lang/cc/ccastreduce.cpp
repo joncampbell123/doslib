@@ -12,6 +12,8 @@
 
 #include "cc.hpp"
 
+extern bool debug_astreduce;
+
 void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) {
 #define OP_ONE_PARAM_TEVAL ast_node_id_t op1 = erootnode.child
 
@@ -21,12 +23,10 @@ void ast_node_reduce(ast_node_id_t &eroot,const std::string &prefix) {
 	if (eroot == ast_node_none)
 		return;
 
-#if 1//DEBUG
-	if (prefix.empty()) {
+	if (prefix.empty() && debug_astreduce) {
 		fprintf(stderr,"%senum expr (reducing node#%lu):\n",prefix.c_str(),(unsigned long)eroot);
 		debug_dump_ast(prefix+"  ",eroot);
 	}
-#endif
 
 again:
 	for (ast_node_id_t n=eroot;n!=ast_node_none;n=ast_node(n).next)
@@ -425,12 +425,10 @@ again:
 		}
 	}
 
-#if 1//DEBUG
-	if (prefix.empty()) {
+	if (prefix.empty() && debug_astreduce) {
 		fprintf(stderr,"%senum expr (reduce-complete):\n",prefix.c_str());
 		debug_dump_ast(prefix+"  ",eroot);
 	}
-#endif
 #undef OP_TWO_PARAM_TEVAL
 #undef OP_ONE_PARAM_TEVAL
 }

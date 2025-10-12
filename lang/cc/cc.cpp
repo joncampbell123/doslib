@@ -32,10 +32,14 @@ enum test_mode_t {
 
 static std::vector<std::string>		main_input_files;
 static enum test_mode_t			test_mode = TEST_NONE;
+static bool				debug_dump = false;
+bool					debug_astreduce = false;
 
 static void help(void) {
 	fprintf(stderr,"cimcc [options] [input file [...]]\n");
 	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok|pptok|lctok>         Test mode\n");
+	fprintf(stderr,"  --dd                                                          debug dump\n");
+	fprintf(stderr,"  --ddastreduce                                                 debug ast reduce\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -51,6 +55,12 @@ static int parse_argv(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return -1;
+			}
+			else if (!strcmp(a,"dd")) {
+				debug_dump = true;
+			}
+			else if (!strcmp(a,"ddastreduce")) {
+				debug_astreduce = true;
 			}
 			else if (!strcmp(a,"test")) {
 				a = argv[i++];
@@ -284,10 +294,12 @@ int main(int argc,char **argv) {
 			if (!arrange_symbols())
 				fprintf(stderr,"Failed to arrange symbols\n");
 
-			debug_dump_general("");
-			debug_dump_segment_table("");
-			debug_dump_scope_table("");
-			debug_dump_symbol_table("");
+			if (debug_dump) {
+				debug_dump_general("");
+				debug_dump_segment_table("");
+				debug_dump_scope_table("");
+				debug_dump_symbol_table("");
+			}
 
 			if (r < 0) {
 				fprintf(stderr,"Read error from %s, error %d\n",sfo->getname(),(int)r);
