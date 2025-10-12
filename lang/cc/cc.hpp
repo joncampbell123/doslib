@@ -267,8 +267,8 @@ template <class obj_t,typename id_t,const id_t none> class obj_pool {
 			for (size_t i=0;i < pool.size();i++) {
 				if (pool[i].ref != 0) {
 					fprintf(stderr,"Leftover refcount=%u for object '%s'\n",
-							pool[i].ref,
-							pool[i].to_str().c_str());
+						pool[i].ref,
+						pool[i].to_str().c_str());
 				}
 			}
 		}
@@ -1542,6 +1542,7 @@ struct cc_state_t {
 	bool			ignore_whitespace = true;
 
 	void tq_ft(void);
+	void tq_ft_chking(void);
 	void tq_refill(const size_t i=1);
 	const token_t &tq_peek(const size_t i=0);
 	void tq_discard(const size_t i=1);

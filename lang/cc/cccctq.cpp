@@ -33,9 +33,64 @@ void cc_state_t::tq_ft(void) {
 	tq.push_back(std::move(t));
 }
 
+void cc_state_t::tq_ft_chking(void) {
+	size_t pi = tq.size(),ei;
+	tq_ft();
+
+	/* tq_ft() will always append even if eof tokens */
+	assert(pi < tq.size());
+
+	/* look for consecutive string segments and combine together.
+	 * they must be the same type of string---no combining UTF-8 and UTF-16 together! */
+	if (tq[pi].type == token_type_t::strliteral) {
+		do {
+			ei = tq.size();
+			tq_ft();
+			assert(ei < tq.size());
+		} while (tq[ei].type == token_type_t::strliteral && tq[ei].type == tq[pi].type);
+
+		if ((ei-pi) >= 2u) { /* multiples */
+			token_t sav = std::move(tq.back()); /* save the last non-string token */
+			tq.pop_back(); assert(tq.size() == ei);
+
+			size_t cmblen = 0;
+			for (size_t i=pi;i < ei;i++)
+				cmblen += csliteral(tq[i].v.csliteral).length;
+
+			/* create a new csliteral and allocate the combined size */
+			const csliteral_id_t ncs = csliteral.alloc();
+			if (ncs == csliteral_none) { err = -1; return; /*FIXME*/ }
+			csliteral_t &nc = csliteral(ncs);
+			if (!nc.alloc(cmblen)) { err = -1; return; /*FIXME*/ }
+			assert(nc.data != NULL);
+
+			/* copy all literals into the one big new literal */
+			size_t wrp = 0;
+			for (size_t i=pi;i < ei;i++) {
+				csliteral_t &n = csliteral(tq[i].v.csliteral);
+				if (n.length) {
+					assert(n.data != NULL);
+					assert((wrp+n.length) <= nc.length);
+					memcpy((unsigned char*)nc.data+wrp,n.data,n.length);
+					wrp += n.length;
+				}
+				csliteral.release(/*&*/tq[i].v.csliteral);/*also clears csliteral by reference*/
+			}
+			assert(wrp == nc.length);
+
+			/* truncate the queue to remove all strliterals we combined, and then append
+			 * the new csliteral along with the token we saved. */
+			tq.resize(pi+1u);
+			tq[pi] = token_t(token_type_t::strliteral,tq[pi].pos,tq[pi].source_file);
+			tq[pi].v.csliteral = ncs;
+			tq.push_back(std::move(sav));
+		}
+	}
+}
+
 void cc_state_t::tq_refill(const size_t i) {
 	while (tq.size() < (i+tq_tail))
-		tq_ft();
+		tq_ft_chking();
 }
 
 const token_t &cc_state_t::tq_peek(const size_t i) {

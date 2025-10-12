@@ -21,6 +21,9 @@ static int c6 = 4;
 static int cc = 4,ddd = 6,ee = 12.34,ff = cc;
 static const char *sss = "Hello world";
 static const char sss2[] = "Hello world";
+static const char *multiss1 = "Hello " "world";
+static const char *multiss2 = "Hello " "world" ", hello";
+static const char *multiss3 = "Hello " "world" ", hello" " with" " many" " seg" "ments";
 static int c8 = 6;;;
 static int d0a = -4;
 static int d1a = 4 ? 2 : 1;
@@ -1149,4 +1152,9 @@ double float19v = 0x3FFFFFFFFFFFFFll + 0.0;
 double float19w = 0x3FFFFFFFFFFFFFull + 0.0;
 double float19x = 0xFFFFFFFFFFFFFll + 0.0;
 double float19y = 0xFFFFFFFFFFFFFull + 0.0;
+
+#define STRMAC1 "Hello"
+#define STRMAC2 "world"
+
+const char *strmac1 = STRMAC1 ", how is this " STRMAC2 "?";
 
