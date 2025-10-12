@@ -1256,6 +1256,10 @@ int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &top_buf,source_file_object
 	goto try_again;
 
 try_again:
+	/* NTS: Include stack handling is handled here and only here to keep things simple.
+	 *      References are substituted if within another file.
+	 *      Also, this compiler will never allow preprocessor directives to span multiple
+	 *      header files and this helps enforce that. */
 	pptok_state_t::include_t *cur_include = pst.include_stk.empty() ? NULL : &pst.include_stk.top();
 	source_file_object &sfo = cur_include ? *(cur_include->sfo) : top_sfo;
 	rbuf &buf = cur_include ? cur_include->rb : top_buf;
