@@ -192,11 +192,11 @@ void debug_dump_ddip(const std::string prefix,ddip_t &ddip,const std::string &na
 	else if (ddip.dd_flags & declarator_t::FL_FUNCTION)
 		fprintf(stderr,"%s  is function\n",prefix.c_str());
 
-	if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
-		fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
-
 	for (auto &ppp : ddip.parameters)
 		debug_dump_parameter(prefix+"  ",ppp);
+
+	if (ddip.dd_flags & declarator_t::FL_ELLIPSIS)
+		fprintf(stderr,"%s  parameter ... (ellipsis)\n",prefix.c_str());
 }
 
 void debug_dump_ddip(const std::string prefix,ddip_list_t &ddip,const std::string &name) {
