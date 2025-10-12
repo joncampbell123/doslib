@@ -1208,28 +1208,6 @@ go_again:
 	return 1;
 }
 
-static int pptok_nexttok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
-	int r;
-
-try_again:
-	if (!pst.include_stk.empty()) {
-		pptok_state_t::include_t &i = pst.include_stk.top();
-		if ((r=pptok_lgtok(pst,lst,i.rb,*i.sfo,t)) < 0)
-			return r;
-
-		if (r == 0) {
-			pst.include_pop();
-			goto try_again;
-		}
-	}
-	else {
-		if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-			return r;
-	}
-
-	return 1;
-}
-
 /* returns <= 1 as normal, > 1 if it handled the pragma by itself */
 static int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<token_t> &pragma) {
 	(void)pragma;
@@ -1249,7 +1227,7 @@ static int pptok_pragma(pptok_state_t &pst,lgtok_state_t &lst,const std::vector<
 	return 1;
 }
 
-int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sfo,token_t &t) {
+int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &top_buf,source_file_object &top_sfo,token_t &t) {
 	int r;
 
 #define TRY_AGAIN \
@@ -1259,8 +1237,23 @@ int pptok(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_file_object &sf
 	goto try_again;
 
 try_again:
-	if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+	pptok_state_t::include_t *cur_include = pst.include_stk.empty() ? NULL : &pst.include_stk.top();
+	source_file_object &sfo = cur_include ? *(cur_include->sfo) : top_sfo;
+	rbuf &buf = cur_include ? cur_include->rb : top_buf;
+
+	r = pptok_lgtok(pst,lst,buf,sfo,t);
+	if (r < 0) {
 		return r;
+	}
+	else if (r == 0) {
+		if (!pst.include_stk.empty()) {
+			pst.include_pop();
+			goto try_again;
+		}
+		else {
+			return r;
+		}
+	}
 
 try_again_w_token:
 	switch (t.type) {
@@ -1430,7 +1423,7 @@ try_again_w_token:
 			token_t pp = std::move(t);
 			int parens = 0;
 
-			if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 			if (t.type != token_type_t::openparenthesis) {
 				fprintf(stderr,"_Pragma missing open parens\n");
@@ -1523,7 +1516,7 @@ try_again_w_token:
 			token_t pp = std::move(t);
 			int parens = 1;
 
-			if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 				return r;
 
 			/* if it is not __pragma(...) then pass the tokens directly down */
@@ -1594,7 +1587,7 @@ try_again_w_token:
 			 *         ... \
 			 *         ... */
 			do {
-				if ((r=pptok_nexttok(pst,lst,buf,sfo,t)) < 1)
+				if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
 					return r;
 
 				if (t.type == token_type_t::newline) {

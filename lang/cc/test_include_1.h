@@ -1,4 +1,5 @@
 
-/* FIXME: Cannot #define in a header?? */
+#define ASDF123 123
+
 unsigned int asdf = 1234;
 
