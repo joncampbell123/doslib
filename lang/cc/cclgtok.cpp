@@ -579,8 +579,8 @@ try_again:
 						return r;
 
 					if (	t.type == token_type_t::r_ppinclude ||
-							t.type == token_type_t::r_ppinclude_next ||
-							t.type == token_type_t::r_ppembed) {
+						t.type == token_type_t::r_ppinclude_next ||
+						t.type == token_type_t::r_ppembed) {
 						lst.flags |= lgtok_state_t::FL_ARROWSTR;
 					}
 

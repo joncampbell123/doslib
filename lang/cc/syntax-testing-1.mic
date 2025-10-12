@@ -92,15 +92,11 @@ hello A 4 B 4 C 4 D 4 E 4 F 4 G 4 X
 #undef X
 hello 4 X 4 A
 #include
-#include <something.h>
-#include "something.h"
-#include <add/x/y/something.h>
-#include "add/x/y/something.h"
+#include "test_include_1.h"
+#include <test_include_2.h>
 #include_next
-#include_next <else.h>
-#include_next "else.h"
-#include_next <and/else.h>
-#include_next "and/else.h"
+#include_next "test_include_3.h"
+#include_next <test_include_4.h>
 #error
 #error cannot define anything for fun
 #error "cannot #define anything for fun"
@@ -690,13 +686,10 @@ you should see this
 #define AG2 4
 #define AG2  4
 
-#define FREETYPE_H "ft2/ft.h"
+#define FREETYPE_H "test_include_ft.h"
 #include FREETYPE_H
 
-#define FREETYPE2_H <ft2/ft2.h>
-#include FREETYPE2_H
-
-#define BIN1 "ft1.ttf"
+#define BIN1 "test_include_1.bin"
 #embed BIN1
 
 __FUNCTION__

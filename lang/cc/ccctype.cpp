@@ -48,6 +48,6 @@ bool is_asm_ident_text_char(unsigned char c) {
 }
 
 bool is_hchar(unsigned char c) {
-	return isalpha((char)c) || isdigit((char)c) || c == '.' || c == ',' || c == '/' || c == '\\';
+	return c != '>' && !is_newline(c);
 }
 
