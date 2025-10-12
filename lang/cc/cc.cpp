@@ -30,19 +30,20 @@ enum test_mode_t {
 	TEST_LCTOK     /* lctok low level C token processing below compiler */
 };
 
-static std::vector<std::string>		main_input_files;
+static std::string			input_file;
 static enum test_mode_t			test_mode = TEST_NONE;
 static bool				debug_dump = false;
 bool					debug_astreduce = false;
 
 static void help(void) {
-	fprintf(stderr,"cimcc [options] [input file [...]]\n");
+	fprintf(stderr,"cimcc [options] [input file]\n");
 	fprintf(stderr,"  --test <none|sfo|rbf|rbfgc|rbfgcnu|lgtok|pptok|lctok>         Test mode\n");
 	fprintf(stderr,"  --dd                                                          debug dump\n");
 	fprintf(stderr,"  --ddastreduce                                                 debug ast reduce\n");
 }
 
 static int parse_argv(int argc,char **argv) {
+	unsigned int nonsw = 0;
 	int i = 1; /* argv[0] is command */
 	char *a;
 
@@ -91,8 +92,14 @@ static int parse_argv(int argc,char **argv) {
 			}
 		}
 		else {
-			if (main_input_files.size() > 1024) return -1;
-			main_input_files.push_back(a);
+			switch (nonsw) {
+				case 0:
+					input_file = a;
+					break;
+				default:
+					fprintf(stderr,"Extra parameter %s\n",a);
+					return -1;
+			}
 		}
 	}
 
@@ -103,15 +110,15 @@ int main(int argc,char **argv) {
 	if (parse_argv(argc,argv) < 0)
 		return 1;
 
-	if (main_input_files.empty()) {
-		fprintf(stderr,"No input files\n");
+	if (input_file.empty()) {
+		fprintf(stderr,"No input file\n");
 		return 1;
 	}
 
-	for (auto mifi=main_input_files.begin();mifi!=main_input_files.end();mifi++) {
+	{
 		std::unique_ptr<source_file_object> sfo;
 
-		if (*mifi == "-") {
+		if (input_file == "-") {
 			struct stat st;
 
 			if (fstat(0/*STDIN*/,&st)) {
@@ -126,12 +133,12 @@ int main(int argc,char **argv) {
 			assert(sfo->iface == source_file_object::IF_FD);
 		}
 		else {
-			int fd = open((*mifi).c_str(),O_RDONLY|O_BINARY);
+			int fd = open(input_file.c_str(),O_RDONLY|O_BINARY);
 			if (fd < 0) {
-				fprintf(stderr,"Cannot open '%s', '%s'\n",(*mifi).c_str(),strerror(errno));
+				fprintf(stderr,"Cannot open '%s', '%s'\n",input_file.c_str(),strerror(errno));
 				return 1;
 			}
-			sfo.reset(new source_fd(fd/*takes ownership*/,*mifi));
+			sfo.reset(new source_fd(fd/*takes ownership*/,input_file));
 			assert(sfo->iface == source_file_object::IF_FD);
 		}
 
