@@ -326,21 +326,8 @@ static int pptok_line(pptok_state_t &pst,lgtok_state_t &lst,rbuf &buf,source_fil
 	(void)pst;
 
 	/* line number */
-	if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
+	if ((r=pptok_lgtok_macro_expansion(pst,lst,buf,sfo,t)) < 1)
 		return r;
-
-	/* canonical GCC behavior: The number parameter can be a macro */
-	if (t.type == token_type_t::identifier) {
-		const pptok_state_t::pptok_macro_ent_t* macro = pst.lookup_macro(t.v.identifier);
-		if (macro) {
-			if ((r=pptok_macro_expansion(macro,pst,lst,buf,sfo,t)) < 1) /* which affects pptok_lgtok() */
-				return r;
-
-			pst.macro_expansion_counter++;
-			if ((r=pptok_lgtok(pst,lst,buf,sfo,t)) < 1)
-				return r;
-		}
-	}
 
 	if (t.type != token_type_t::integer)
 		return errno_return(EINVAL);
