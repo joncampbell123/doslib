@@ -15,7 +15,7 @@ win31=1 # Windows 3.1
 winnt=1 # Windows NT
 win32=1 # Windows 9x/NT/XP/Vista/etc.
 win32s=1 # Windows 3.1 + Win32s
-#win386=1 # Windows 3.1 + Watcom win386        <- FIXME: Ok great, it produces some proprietary EXE with an 'MQ' signature, how the fuck do I run it?
+win386=1 # Windows 3.1 + Watcom win386        <- FIXME: Ok great, it produces some proprietary EXE with an 'MQ' signature, how the fuck do I run it?
 
 if [ "$1" == "clean" ]; then
     do_clean
