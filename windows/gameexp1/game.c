@@ -231,10 +231,10 @@ HWND near			hwndMain = (HWND)NULL;
 HMENU near			SysMenu = (HMENU)NULL;
 
 // Window config (WndCFG_...) bitfield
-BYTE near			WndConfigFlags = WndCFG_ShowMenu;
+//BYTE near			WndConfigFlags = WndCFG_ShowMenu;
 //BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_MultiInstance;
 //BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_TopMost;
-//BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_Fullscreen;
+BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_Fullscreen;
 //BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_Fullscreen | WndCFG_TopMost;
 //BYTE near			WndConfigFlags = WndCFG_ShowMenu | WndCFG_Fullscreen | WndCFG_FullscreenWorkArea;
 //BYTE near			WndConfigFlags = 0;
