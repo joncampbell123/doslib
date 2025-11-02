@@ -8,14 +8,13 @@ RCFLAGS_THIS = -i.. -i"../.."
 HELLO_EXE =  $(SUBDIR)$(HPS)hello.exe
 HELLO_RES =  $(SUBDIR)$(HPS)hello.res
 
+# NTS: Win386 targets cannot compile 32-bit DLLs
 !ifndef WIN386
 HELLDLL1_EXE =  $(SUBDIR)$(HPS)HELLDLL1.EXE
 HELLDLL1_RES =  $(SUBDIR)$(HPS)HELLDLL1.RES
 HELLDLD1_DLL =  $(SUBDIR)$(HPS)HELLDLD1.DLL
 HELLDLD1_DLL_NOEXT =  $(SUBDIR)$(HPS)HELLDLD1
-! ifeq TARGET_MSDOS 16
 HELLDLD1_LIB =  $(SUBDIR)$(HPS)HELLDLD1.LIB
-! endif
 !endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
