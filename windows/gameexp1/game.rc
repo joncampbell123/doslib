@@ -1,0 +1,13 @@
+
+#include "resource.h"
+
+IDI_APPICON ICON DISCARDABLE MOVEABLE "game.ico"
+
+IDM_MAINMENU MENU DISCARDABLE MOVEABLE
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Quit", IDC_QUIT
+    END
+END
+
