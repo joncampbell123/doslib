@@ -695,9 +695,12 @@ int run_menu(void) {
                     break;
                 }
                 else if (c == UPARROW) {
-                    i = menu_sel;
-                    if ((--menu_sel) < 0)
-                        menu_sel = menu_items - 1;
+                    i = menu_sel; 
+                    // This loops until a non __INFO__ menu item is found                   
+                    do {
+                        if ((--menu_sel) < 0)
+                            menu_sel = menu_items - 1;                    
+                    } while (!strcmp(menu[menu_sel].menu_item_name, "__INFO__"));
 
                     if (i != menu_sel) {
                         draw_menu_item(i);
@@ -719,8 +722,11 @@ int run_menu(void) {
                 }
                 else if (c == DNARROW) {
                     i = menu_sel;
-                    if ((++menu_sel) >= menu_items)
-                        menu_sel = 0;
+                    // This loops until a non __INFO__ menu item is found
+                    do {
+                            if ((++menu_sel) >= menu_items)
+                                menu_sel = 0;
+                        } while (!strcmp(menu[menu_sel].menu_item_name, "__INFO__"));
 
                     if (i != menu_sel) {
                         draw_menu_item(i);
