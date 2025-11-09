@@ -734,11 +734,17 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 		}
 
 		{
-			HWND hwnd = GetDesktopWindow();
-			HDC hdc = GetDC(hwnd);
+			TEXTMETRIC tm;
+			HDC hdc = GetDC(_this_console.hwndMain);
+			HFONT of = (HFONT)SelectObject(hdc,_this_console.monoSpaceFont);
 			_this_console.monoSpaceFontHeight = 12;
-			if (!GetCharWidth(hdc,'A','A',&_this_console.monoSpaceFontWidth)) _this_console.monoSpaceFontWidth = 9;
-			ReleaseDC(hwnd,hdc);
+			_this_console.monoSpaceFontWidth = 9;
+			if (GetTextMetrics(hdc,&tm)) {
+				_this_console.monoSpaceFontHeight = tm.tmHeight;
+				_this_console.monoSpaceFontWidth = tm.tmMaxCharWidth;
+			}
+			SelectObject(hdc,of);
+			ReleaseDC(_this_console.hwndMain,hdc);
 		}
 	}
 
