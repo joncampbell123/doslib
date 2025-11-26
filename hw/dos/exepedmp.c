@@ -1084,6 +1084,8 @@ struct drt_level {
 	uint32_t	ID;
 };
 
+#define exe_pe_header_RT_STRING                     0x00000006
+
 const char *exe_pe_resource_type_to_str(const uint32_t id) {
 	switch (id) {
 		case 0x00000001: return "RT_CURSOR";
@@ -1091,7 +1093,7 @@ const char *exe_pe_resource_type_to_str(const uint32_t id) {
 		case 0x00000003: return "RT_ICON";
 		case 0x00000004: return "RT_MENU";
 		case 0x00000005: return "RT_DIALOG";
-		case 0x00000006: return "RT_STRING";
+		case exe_pe_header_RT_STRING:            return "RT_STRING";
 		case 0x00000007: return "RT_FONTDIR";
 		case 0x00000008: return "RT_FONT";
 		case 0x00000009: return "RT_ACCELERATOR";
@@ -1111,6 +1113,49 @@ const char *exe_pe_resource_type_to_str(const uint32_t id) {
 	};
 
 	return "?";
+}
+
+void print_wchar(const uint16_t *ws,unsigned int l) {
+	while ((l--) > 0) {
+		/* TODO: UTF-8 encoding on Linux if not ASCII */
+		if (*ws >= 0x20 && *ws < 0x80u)
+			putchar((int)(*ws));
+		else
+			printf("\\x%02X",*ws);
+
+		ws++;
+	}
+}
+
+void dump_resource_table_data_RT_STRING(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,uint32_t ID) {
+	uint16_t *tmp = NULL;
+	unsigned int si;
+	uint16_t ln;
+
+	(void)ddent;
+
+	for (si=0;si < 16;si++) {
+		ln = 0u;
+		pe_header_parser_varead(pe_parser,read_rva,(unsigned char*)(&ln),sizeof(ln));
+		read_rva += 2u;
+
+		printf("  #0x%lx@RVA0x%lx: ",((unsigned long)ID - 1ul) * 16ul + (unsigned long)si,(unsigned long)read_rva - 2ul);
+
+		if (ln != 0u && ln < 16384u) {
+			tmp = malloc(sizeof(uint16_t) * ln);
+			if (tmp) {
+				printf("\"");
+				memset(tmp,0,sizeof(uint16_t) * ln);
+				pe_header_parser_varead(pe_parser,read_rva,(unsigned char*)tmp,sizeof(uint16_t) * ln);
+				print_wchar(tmp,ln);
+				free(tmp);
+				printf("\"");
+			}
+		}
+
+		read_rva += (uint32_t)ln * 2ul;
+		printf("\n");
+	}
 }
 
 void dump_resource_table_data(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level,unsigned int levelmax,struct drt_level *dl) {
@@ -1158,6 +1203,20 @@ void dump_resource_table_data(struct pe_header_parser *pe_parser,struct exe_pe_o
 
 	printf(" ==");
 	printf("\n");
+
+	/* first level: resource type */
+	if (level > 1) {
+		EXE_PE_VA rbase = (EXE_PE_VA)(rde.DataRVA) + pe_parser->imagebase;
+
+		if (dl[0].Name) {
+			// TODO
+		}
+		else {
+			if (dl[0].ID == exe_pe_header_RT_STRING) {
+				 dump_resource_table_data_RT_STRING(pe_parser,ddent,rbase,dl[1].ID);
+			}
+		}
+	}
 }
 
 void dump_resource_table_level(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,unsigned int level,unsigned int levelmax,struct drt_level *dl) {
