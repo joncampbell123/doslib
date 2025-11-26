@@ -1127,7 +1127,8 @@ void print_wchar(const uint16_t *ws,unsigned int l) {
 	}
 }
 
-void dump_resource_table_data_RT_STRING(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,uint32_t ID) {
+void dump_resource_table_data_RT_STRING(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent,EXE_PE_VA read_rva,uint32_t ID,uint32_t sz) {
+	EXE_PE_VA end_va = read_rva + (EXE_PE_VA)sz;
 	uint16_t *tmp = NULL;
 	unsigned int si;
 	uint16_t ln;
@@ -1136,12 +1137,13 @@ void dump_resource_table_data_RT_STRING(struct pe_header_parser *pe_parser,struc
 
 	for (si=0;si < 16;si++) {
 		ln = 0u;
+		if ((read_rva + (EXE_PE_VA)sizeof(ln)) > end_va) break;
 		pe_header_parser_varead(pe_parser,read_rva,(unsigned char*)(&ln),sizeof(ln));
 		read_rva += 2u;
 
 		printf("  #0x%lx@RVA0x%lx: ",((unsigned long)ID - 1ul) * 16ul + (unsigned long)si,(unsigned long)read_rva - 2ul);
 
-		if (ln != 0u && ln < 16384u) {
+		if (ln != 0u && ln < 16384u && (read_rva + (EXE_PE_VA)(ln * 2ul)) <= end_va) {
 			tmp = malloc(sizeof(uint16_t) * ln);
 			if (tmp) {
 				printf("\"");
@@ -1213,7 +1215,7 @@ void dump_resource_table_data(struct pe_header_parser *pe_parser,struct exe_pe_o
 		}
 		else {
 			if (dl[0].ID == exe_pe_header_RT_STRING) {
-				 dump_resource_table_data_RT_STRING(pe_parser,ddent,rbase,dl[1].ID);
+				 dump_resource_table_data_RT_STRING(pe_parser,ddent,rbase,dl[1].ID,rde.Size);
 			}
 		}
 	}
