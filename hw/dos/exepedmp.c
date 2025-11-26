@@ -11,8 +11,6 @@
 #include <ctype.h>
 
 #include <hw/dos/exehdr.h>
-#include <hw/dos/exenehdr.h>
-#include <hw/dos/exenepar.h>
 
 #ifndef O_BINARY
 #define O_BINARY (0)
@@ -940,7 +938,7 @@ void dump_import_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_d
 void dump_export_table(struct pe_header_parser *pe_parser,struct exe_pe_opthdr_data_directory_entry *ddent) {
 	struct pe_header_export_directory_table edt;
 	EXE_PE_VA edt_min_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase;
-	EXE_PE_VA edt_max_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase + (EXE_PE_VA)ddent->Size;
+	//EXE_PE_VA edt_max_va = (EXE_PE_VA)ddent->RVA + pe_parser->imagebase + (EXE_PE_VA)ddent->Size;
 	EXE_PE_VA edt_read_va = edt_min_va;
 	EXE_PE_VA exportaddr;
 	EXE_PE_VA nameaddr;
