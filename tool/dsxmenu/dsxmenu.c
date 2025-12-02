@@ -30,9 +30,15 @@ static unsigned int                 first_menu_item_y = 0;
 static char*                        menu_default_name = NULL;   // strdup(), free at end
 static int                          menu_default_timeout = 5;
 
+enum {
+    MIT_ITEM=0,
+    MIT_INFO
+};
+
 struct menuitem {
     char*                           menu_text;                  // strdup()'d
     char*                           menu_item_name;             // strdup()'d
+    uint8_t                         type;
 };
 
 /* [menu] */
@@ -302,6 +308,14 @@ int load_menu(void) {
                         if (item == NULL) {
                             fprintf(stderr,"Too many menu items\n");
                             break;
+                        }
+
+                        item->type = MIT_ITEM;
+
+                        /* if choice is __INFO__ then change to MIT_INFO */
+                        if (!strcmp(choice,"__INFO__")) {
+                            item->type = MIT_INFO;
+                            choice = "";
                         }
 
                         item->menu_text = strdup(display);
@@ -696,11 +710,10 @@ int run_menu(void) {
                 }
                 else if (c == UPARROW) {
                     i = menu_sel; 
-                    // This loops until a non __INFO__ menu item is found                   
                     do {
                         if ((--menu_sel) < 0)
                             menu_sel = menu_items - 1;                    
-                    } while (!strcmp(menu[menu_sel].menu_item_name, "__INFO__"));
+                    } while (menu[menu_sel].type == MIT_INFO);
 
                     if (i != menu_sel) {
                         draw_menu_item(i);
@@ -722,11 +735,10 @@ int run_menu(void) {
                 }
                 else if (c == DNARROW) {
                     i = menu_sel;
-                    // This loops until a non __INFO__ menu item is found
                     do {
-                            if ((++menu_sel) >= menu_items)
-                                menu_sel = 0;
-                        } while (!strcmp(menu[menu_sel].menu_item_name, "__INFO__"));
+                        if ((++menu_sel) >= menu_items)
+                            menu_sel = 0;
+                    } while (menu[menu_sel].type == MIT_INFO);
 
                     if (i != menu_sel) {
                         draw_menu_item(i);
