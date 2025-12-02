@@ -511,9 +511,15 @@ void draw_menu_item(unsigned int idx) {
         unsigned short attrw;
 
 #if defined(TARGET_PC98)
-        attrw = (idx == menu_sel) ? 0xE5 : 0xE1; /* white, not invisible. use reverse attribute if selected */
+        if (item->type == MIT_INFO)
+            attrw = 0x81; /* green, you should not be able to select these */
+        else
+            attrw = (idx == menu_sel) ? 0xE5 : 0xE1; /* white, not invisible. use reverse attribute if selected */
 #else
-        attrw = (idx == menu_sel) ? 0x7000 : 0x0700;
+        if (item->type == MIT_INFO)
+            attrw = 0x0200; /* green, you should not be able to select these */
+        else
+            attrw = (idx == menu_sel) ? 0x7000 : 0x0700; /* white, use reverse if selected */
 #endif
 
         draw_string(vramoff,item->menu_text,attrw);
