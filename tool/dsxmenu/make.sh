@@ -4,7 +4,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 dos=1 # MS-DOS
-#dospc98=1 # MS-DOS PC-98
+dospc98=1 # MS-DOS PC-98
 
 if [ "$1" == "clean" ]; then
     do_clean
