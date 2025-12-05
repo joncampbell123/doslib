@@ -156,7 +156,7 @@ int main(int argc,char **argv) {
         if (lseek(out_fd,(off_t)offset,SEEK_SET) != (off_t)offset)
             return 1;
 
-        printf("IPS@0x%lx\n",(unsigned long)ipsoff);
+//      printf("IPS@0x%lx\n",(unsigned long)ipsoff);
 
         if (len != 0u) {
             while (len >= (unsigned long)sizeof(tmp)) {
