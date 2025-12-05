@@ -37,11 +37,6 @@ static int parse(int argc,char **argv) {
     int i,nosw=0;
     char *a;
 
-    if (argc <= 1) {
-        help();
-        return 1;
-    }
-
     for (i=1;i < argc;) {
         a = argv[i++];
 
