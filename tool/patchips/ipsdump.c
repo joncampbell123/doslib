@@ -144,7 +144,7 @@ int main(int argc,char **argv) {
                 printf("  0x%08lx:",(unsigned long)offset);
                 for (i=0;i < rd;i++) printf(" %02X",tmp[i]);
                 printf("\n");
-                if (rd < 16) return 1;
+                if (rd != 16) return 1;
                 len -= (unsigned int)rd;
                 offset += (unsigned long)rd;
             }
@@ -152,17 +152,19 @@ int main(int argc,char **argv) {
             if (len >= 16)
                 return 1;
 
-            while (len > 0u) {
+            if (len > 0u) {
                 rd = read(fd,tmp,(int)len);
                 if (rd <= 0) return 1;
 
                 printf("  0x%08lx:",(unsigned long)offset);
                 for (i=0;i < rd;i++) printf(" %02X",tmp[i]);
                 printf("\n");
-                if (rd < (int)len) return 1;
+                if (rd != (int)len) return 1;
                 len -= (unsigned int)rd;
-                offset += (unsigned long)rd;
             }
+
+            if (len != 0u)
+                return 1;
         }
         else {
             if (read(fd,tmp,3) != 3) break;
