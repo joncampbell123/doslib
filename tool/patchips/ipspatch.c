@@ -102,12 +102,10 @@ static unsigned char tmp[4096];
 int main(int argc,char **argv) {
     unsigned char rle_byte;
     uint32_t offset;
-    uint32_t ipsoff;
+    //uint32_t ipsoff;
     uint16_t len;
     int out_fd;
     int fd,rd;
-
-    (void)ipsoff;
 
     if (parse(argc,argv))
         return 1;
@@ -126,7 +124,7 @@ int main(int argc,char **argv) {
         return 1;
 
     while (1) {
-        ipsoff = (uint32_t)lseek(fd,0,SEEK_CUR);
+        //ipsoff = (uint32_t)lseek(fd,0,SEEK_CUR);
         rd = read(fd,tmp,5);
         if (rd == 3) {
             if (memcmp(tmp,"EOF",3))

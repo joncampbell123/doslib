@@ -6,6 +6,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = TOOL_IPSDUMP
 
 !ifndef NO_EXE
+IPSMAKE_EXE = $(SUBDIR)$(HPS)ipsmake.$(EXEEXT)
 IPSDUMP_EXE = $(SUBDIR)$(HPS)ipsdump.$(EXEEXT)
 IPSPATCH_EXE = $(SUBDIR)$(HPS)ipspatch.$(EXEEXT)
 !endif
@@ -18,7 +19,29 @@ IPSPATCH_EXE = $(SUBDIR)$(HPS)ipspatch.$(EXEEXT)
 
 all: exe
 
-exe: $(IPSDUMP_EXE) $(IPSPATCH_EXE) .symbolic
+exe: $(IPSDUMP_EXE) $(IPSMAKE_EXE) $(IPSPATCH_EXE) .symbolic
+
+!ifdef IPSMAKE_EXE
+$(IPSMAKE_EXE): $(SUBDIR)$(HPS)ipsmake.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)ipsmake.obj
+	%write tmp.cmd option map=$(IPSMAKE_EXE).map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+! endif
+	%write tmp.cmd name $(IPSMAKE_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(IPSMAKE_EXE)
+	@wbind $(IPSMAKE_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(IPSMAKE_EXE)
+! endif
+!endif
 
 !ifdef IPSDUMP_EXE
 $(IPSDUMP_EXE): $(SUBDIR)$(HPS)ipsdump.obj
