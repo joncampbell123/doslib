@@ -1,7 +1,8 @@
 
 IPSDUMP = linux-host/ipsdump
+IPSPATCH = linux-host/ipspatch
 
-BIN_OUT = $(IPSDUMP)
+BIN_OUT = $(IPSDUMP) $(IPSPATCH)
 
 # GNU makefile, Linux host
 all: bin
@@ -13,6 +14,9 @@ linux-host:
 
 $(IPSDUMP): linux-host/ipsdump.o
 	gcc -o $@ linux-host/ipsdump.o
+
+$(IPSPATCH): linux-host/ipspatch.o
+	gcc -o $@ linux-host/ipspatch.o
 
 linux-host/%.o : %.c
 	gcc -I../.. -I../../ext/zlib -I../../ext/libiconv/linux-host/include -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^
