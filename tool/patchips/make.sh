@@ -4,10 +4,8 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 dos=1 # MS-DOS
-doshuge=1 # MS-DOS huge model
-dospc98=1 # MS-DOS PC-98
+dostiny=1 # MS-DOS tiny model
 winnt=1 # Windows NT
-win32=1 # Windows 9x/NT/XP/Vista/etc.
 
 if [ "$1" == "clean" ]; then
     do_clean
