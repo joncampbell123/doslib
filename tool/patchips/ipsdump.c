@@ -110,17 +110,17 @@ int main(int argc,char **argv) {
         else if (rd != 5) {
             break;
         }
- 
-         /* offset          24-bit big endian
-          * size            16-bit big endian
-          * data            unsigned char[size]
-          *
-          * or
-          *
-          * offset          24-bit big endian
-          * 0               16-bit big endian
-          * RLE length      16-bit big endian
-          * RLE byte        unsigned char */
+
+        /* offset          24-bit big endian
+         * size            16-bit big endian
+         * data            unsigned char[size]
+         *
+         * or
+         *
+         * offset          24-bit big endian
+         * 0               16-bit big endian
+         * RLE length      16-bit big endian
+         * RLE byte        unsigned char */
         offset =
             ((uint32_t)tmp[0] << (uint32_t)16) +
             ((uint32_t)tmp[1] << (uint32_t) 8) +
