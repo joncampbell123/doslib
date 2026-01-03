@@ -863,7 +863,7 @@ int vbe_mode_decision_validate(struct vbe_mode_decision *md,struct vbe_mode_info
 	}
 	if ((mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE_WINDOWING) || mi->win_a_segment == 0 || mi->win_a_segment == 0xFFFF) {
 		if (md->lfb < 0) md->lfb = 1;
-		else if (md->lfb == 1) return 0;
+		else if (md->lfb == 0) return 0;
 	}
 
 #if TARGET_MSDOS == 16
