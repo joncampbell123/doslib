@@ -290,6 +290,17 @@ static void vbe_mode_test_pattern_svga_planar(struct vbe_mode_decision *md,struc
 	}
 }
 
+static const unsigned char dither1bpp[8][4] = {
+	{0x00,0x00,0x00,0x00},
+	{0xAA,0x00,0x00,0x00},
+	{0xAA,0x00,0xAA,0x00},
+	{0xAA,0x55,0xAA,0x00},
+	{0xAA,0x55,0xAA,0x55},
+	{0xFF,0x55,0xAA,0x55},
+	{0xFF,0x55,0xFF,0x55},
+	{0xFF,0xFF,0xFF,0xFF}
+};
+
 static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
 	unsigned int x,y,bypp;
 	unsigned long ofs;
@@ -349,114 +360,264 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			}
 		}
 
-        if (info) {
-            unsigned int fo;
-            unsigned long w=0,r=0;
-            char *s = info_txt;
-            char c;
+		if (info) {
+			unsigned int fo;
+			unsigned long w=0,r=0;
+			char *s = info_txt;
+			char c;
 
-            while (c = *s++) {
-                if (c != '\n') {
-                    fo = ((unsigned char)c) * 8;
-                    ofs = w;
-                    w += 8/2;
+			while (c = *s++) {
+				if (c != '\n') {
+					fo = ((unsigned char)c) * 8;
+					ofs = w;
+					w += 8/2;
 
-                    for (y=0;y < 8;y++) {
-                        unsigned char b = font8x8[fo++];
+					for (y=0;y < 8;y++) {
+						unsigned char b = font8x8[fo++];
 
-                        for (x=0;x < 8;x += 2) {
-                            unsigned char fb;
+						for (x=0;x < 8;x += 2) {
+							unsigned char fb;
 
-                            fb  = (b & 0x80) ? 0xF0 : 0x00;
-                            fb += (b & 0x40) ? 0x0F : 0x00;
+							fb  = (b & 0x80) ? 0xF0 : 0x00;
+							fb += (b & 0x40) ? 0x0F : 0x00;
 
-                            vesa_writeb(ofs+(x>>1u),fb);
-                            b <<= 2;
-                        }
+							vesa_writeb(ofs+(x>>1u),fb);
+							b <<= 2;
+						}
 
-                        ofs += mi->bytes_per_scan_line;
-                    }
-                }
-                else {
-                    w = (r += (mi->bytes_per_scan_line * 8));
-                }
-            }
-        }
+						ofs += mi->bytes_per_scan_line;
+					}
+				}
+				else {
+					w = (r += (mi->bytes_per_scan_line * 8));
+				}
+			}
+		}
 
-        while (getch() != 13);
+		while (getch() != 13);
 
-        for (x=0;x < 16;x++) {
-            pal[x*4+0] = x*4;
-            pal[x*4+1] = 0;
-            pal[x*4+2] = 0;
-        }
+		for (x=0;x < 16;x++) {
+			pal[x*4+0] = x*4;
+			pal[x*4+1] = 0;
+			pal[x*4+2] = 0;
+		}
 
-        if (md->dac8) {
-            for (x=0;x < 16*4;x++)
-                pal[x] <<= 2;
-        }
+		if (md->dac8) {
+			for (x=0;x < 16*4;x++)
+				pal[x] <<= 2;
+		}
 
-        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
-            vesa_set_palette_data(0,16,pal);
-        }
-        else {
-            outp(0x3C8,0);
-            for (y=0;y < 16;y++) {
-                outp(0x3C9,pal[y*4+0]);
-                outp(0x3C9,pal[y*4+1]);
-                outp(0x3C9,pal[y*4+2]);
-            }
-        }
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,16,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 16;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
 
-        while (getch() != 13);
+		while (getch() != 13);
 
-        for (x=0;x < 16;x++) {
-            pal[x*4+0] = 0;
-            pal[x*4+1] = x*4;
-            pal[x*4+2] = 0;
-        }
+		for (x=0;x < 16;x++) {
+			pal[x*4+0] = 0;
+			pal[x*4+1] = x*4;
+			pal[x*4+2] = 0;
+		}
 
-        if (md->dac8) {
-            for (x=0;x < 16*4;x++)
-                pal[x] <<= 2;
-        }
+		if (md->dac8) {
+			for (x=0;x < 16*4;x++)
+				pal[x] <<= 2;
+		}
 
-        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
-            vesa_set_palette_data(0,16,pal);
-        }
-        else {
-            outp(0x3C8,0);
-            for (y=0;y < 16;y++) {
-                outp(0x3C9,pal[y*4+0]);
-                outp(0x3C9,pal[y*4+1]);
-                outp(0x3C9,pal[y*4+2]);
-            }
-        }
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,16,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 16;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
 
-        while (getch() != 13);
+		while (getch() != 13);
 
-        for (x=0;x < 16;x++) {
-            pal[x*4+0] = 0;
-            pal[x*4+1] = 0;
-            pal[x*4+2] = x*4;
-        }
+		for (x=0;x < 16;x++) {
+			pal[x*4+0] = 0;
+			pal[x*4+1] = 0;
+			pal[x*4+2] = x*4;
+		}
 
-        if (md->dac8) {
-            for (x=0;x < 16*4;x++)
-                pal[x] <<= 2;
-        }
+		if (md->dac8) {
+			for (x=0;x < 16*4;x++)
+				pal[x] <<= 2;
+		}
 
-        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
-            vesa_set_palette_data(0,16,pal);
-        }
-        else {
-            outp(0x3C8,0);
-            for (y=0;y < 16;y++) {
-                outp(0x3C9,pal[y*4+0]);
-                outp(0x3C9,pal[y*4+1]);
-                outp(0x3C9,pal[y*4+2]);
-            }
-        }
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,16,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 16;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
+
+		free(pal);
+		pal = NULL;
+	}
+	else if (mi->bits_per_pixel == 1 && mi->number_of_planes == 1) {
+		/* nonstandard 1bpp mode in DOSBox-X machine=svga_dosbox */
+		unsigned char *pal = malloc(2*4);
+
+		memset(pal,0,2*4);
+		for (x=0;x < 2;x++) {
+			pal[x*4+0] = x*63;
+			pal[x*4+1] = x*63;
+			pal[x*4+2] = x*63;
+		}
+
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,2,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 2;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
+
+		/* high nibble, low nibble */
+		for (y=0;y < 32 && y < mi->y_resolution;y++) {
+			ofs = ((unsigned long)y * (unsigned long)mi->bytes_per_scan_line);
+			for (x=0;x < mi->x_resolution;x += 8,ofs++) {
+				vesa_writeb(ofs,(y&1)?0x55:0xAA);
+			}
+		}
+		for (y=32;y < mi->y_resolution;y++) {
+			ofs = ((unsigned long)y * (unsigned long)mi->bytes_per_scan_line);
+			for (x=0;x < mi->x_resolution;x += 8,ofs++) {
+				unsigned char c = ((x>>3) ^ (y>>3)) & 7;
+				vesa_writeb(ofs,dither1bpp[c][y&3]);
+			}
+		}
+
+		if (info && 0) {
+			unsigned int fo;
+			unsigned long w=0,r=0;
+			char *s = info_txt;
+			char c;
+
+			while (c = *s++) {
+				if (c != '\n') {
+					fo = ((unsigned char)c) * 8;
+					ofs = w;
+					w += 8/2;
+
+					for (y=0;y < 8;y++) {
+						unsigned char b = font8x8[fo++];
+
+						for (x=0;x < 8;x += 2) {
+							unsigned char fb;
+
+							fb  = (b & 0x80) ? 0xF0 : 0x00;
+							fb += (b & 0x40) ? 0x0F : 0x00;
+
+							vesa_writeb(ofs+(x>>1u),fb);
+							b <<= 2;
+						}
+
+						ofs += mi->bytes_per_scan_line;
+					}
+				}
+				else {
+					w = (r += (mi->bytes_per_scan_line * 8));
+				}
+			}
+		}
+
+		while (getch() != 13);
+
+		for (x=0;x < 2;x++) {
+			pal[x*4+0] = x*63;
+			pal[x*4+1] = 0;
+			pal[x*4+2] = 0;
+		}
+
+		if (md->dac8) {
+			for (x=0;x < 2*4;x++)
+				pal[x] <<= 2;
+		}
+
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,2,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 2;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
+
+		while (getch() != 13);
+
+		for (x=0;x < 2;x++) {
+			pal[x*4+0] = 0;
+			pal[x*4+1] = x*63;
+			pal[x*4+2] = 0;
+		}
+
+		if (md->dac8) {
+			for (x=0;x < 2*4;x++)
+				pal[x] <<= 2;
+		}
+
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,2,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 2;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
+
+		while (getch() != 13);
+
+		for (x=0;x < 2;x++) {
+			pal[x*4+0] = 0;
+			pal[x*4+1] = 0;
+			pal[x*4+2] = x*4;
+		}
+
+		if (md->dac8) {
+			for (x=0;x < 2*4;x++)
+				pal[x] <<= 2;
+		}
+
+		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+			vesa_set_palette_data(0,2,pal);
+		}
+		else {
+			outp(0x3C8,0);
+			for (y=0;y < 2;y++) {
+				outp(0x3C9,pal[y*4+0]);
+				outp(0x3C9,pal[y*4+1]);
+				outp(0x3C9,pal[y*4+2]);
+			}
+		}
 
 		free(pal);
 		pal = NULL;
@@ -529,35 +690,35 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 		free(pal);
 		pal = NULL;
 
-        if (info) {
-            unsigned int fo;
-            unsigned long w=0,r=0;
-            char *s = info_txt;
-            char c;
+		if (info) {
+			unsigned int fo;
+			unsigned long w=0,r=0;
+			char *s = info_txt;
+			char c;
 
-            while (c = *s++) {
-                if (c != '\n') {
-                    fo = ((unsigned char)c) * 8;
-                    ofs = w;
-                    w += 8;
+			while (c = *s++) {
+				if (c != '\n') {
+					fo = ((unsigned char)c) * 8;
+					ofs = w;
+					w += 8;
 
-                    for (y=0;y < 8;y++) {
-                        unsigned char b = font8x8[fo++];
+					for (y=0;y < 8;y++) {
+						unsigned char b = font8x8[fo++];
 
-                        for (x=0;x < 8;x++) {
-                            vesa_writeb(ofs+x,(b & 0x80) ? 63 : 0);
-                            b <<= 1;
-                        }
+						for (x=0;x < 8;x++) {
+							vesa_writeb(ofs+x,(b & 0x80) ? 63 : 0);
+							b <<= 1;
+						}
 
-                        ofs += mi->bytes_per_scan_line;
-                    }
-                }
-                else {
-                    w = (r += (mi->bytes_per_scan_line * 8));
-                }
-            }
-        }
-    }
+						ofs += mi->bytes_per_scan_line;
+					}
+				}
+				else {
+					w = (r += (mi->bytes_per_scan_line * 8));
+				}
+			}
+		}
+	}
 	else if (bypp == 2) {
 		unsigned int r,g,b;
 		for (y=0;y < 16 && y < mi->y_resolution;y++) {
@@ -594,34 +755,34 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			}
 		}
 
-        if (info) {
-            unsigned int fo;
-            unsigned long w=0,r=0;
-            char *s = info_txt;
-            char c;
+		if (info) {
+			unsigned int fo;
+			unsigned long w=0,r=0;
+			char *s = info_txt;
+			char c;
 
-            while (c = *s++) {
-                if (c != '\n') {
-                    fo = ((unsigned char)c) * 8;
-                    ofs = w;
-                    w += 8*2;
+			while (c = *s++) {
+				if (c != '\n') {
+					fo = ((unsigned char)c) * 8;
+					ofs = w;
+					w += 8*2;
 
-                    for (y=0;y < 8;y++) {
-                        unsigned char b = font8x8[fo++];
+					for (y=0;y < 8;y++) {
+						unsigned char b = font8x8[fo++];
 
-                        for (x=0;x < 8;x++) {
-                            vesa_writew(ofs+(x*2),(b & 0x80) ? 0xFFFF : 0x0000);
-                            b <<= 1;
-                        }
+						for (x=0;x < 8;x++) {
+							vesa_writew(ofs+(x*2),(b & 0x80) ? 0xFFFF : 0x0000);
+							b <<= 1;
+						}
 
-                        ofs += mi->bytes_per_scan_line;
-                    }
-                }
-                else {
-                    w = (r += (mi->bytes_per_scan_line * 8));
-                }
-            }
-        }
+						ofs += mi->bytes_per_scan_line;
+					}
+				}
+				else {
+					w = (r += (mi->bytes_per_scan_line * 8));
+				}
+			}
+		}
 	}
 	else if (bypp == 3 || bypp == 4) {
 		unsigned int r,g,b;
@@ -653,40 +814,40 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 				g = y & ((1UL << (unsigned long)mi->green_mask_size) - 1UL);
 				b = (((x >> mi->red_mask_size) ^ (y >> mi->green_mask_size)) & 1UL) ? (r^g) : 0UL;
 				vesa_writed(ofs,
-					((unsigned long)r << (unsigned long)mi->red_field_position) |
-					((unsigned long)g << (unsigned long)mi->green_field_position) |
-					((unsigned long)b << (unsigned long)mi->blue_field_position));
+						((unsigned long)r << (unsigned long)mi->red_field_position) |
+						((unsigned long)g << (unsigned long)mi->green_field_position) |
+						((unsigned long)b << (unsigned long)mi->blue_field_position));
 			}
 		}
 
-        if (info) {
-            unsigned int fo;
-            unsigned long w=0,r=0;
-            char *s = info_txt;
-            char c;
+		if (info) {
+			unsigned int fo;
+			unsigned long w=0,r=0;
+			char *s = info_txt;
+			char c;
 
-            while (c = *s++) {
-                if (c != '\n') {
-                    fo = ((unsigned char)c) * 8;
-                    ofs = w;
-                    w += 8*bypp;
+			while (c = *s++) {
+				if (c != '\n') {
+					fo = ((unsigned char)c) * 8;
+					ofs = w;
+					w += 8*bypp;
 
-                    for (y=0;y < 8;y++) {
-                        unsigned char b = font8x8[fo++];
+					for (y=0;y < 8;y++) {
+						unsigned char b = font8x8[fo++];
 
-                        for (x=0;x < 8;x++) {
-                            vesa_writed(ofs+(x*bypp),(b & 0x80) ? 0xFFFFFFFF : 0x00000000);
-                            b <<= 1;
-                        }
+						for (x=0;x < 8;x++) {
+							vesa_writed(ofs+(x*bypp),(b & 0x80) ? 0xFFFFFFFF : 0x00000000);
+							b <<= 1;
+						}
 
-                        ofs += mi->bytes_per_scan_line;
-                    }
-                }
-                else {
-                    w = (r += (mi->bytes_per_scan_line * 8));
-                }
-            }
-        }
+						ofs += mi->bytes_per_scan_line;
+					}
+				}
+				else {
+					w = (r += (mi->bytes_per_scan_line * 8));
+				}
+			}
+		}
 	}
 
 	while (getch() != 13);
