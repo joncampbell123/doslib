@@ -589,7 +589,7 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 		for (x=0;x < 2;x++) {
 			pal[x*4+0] = 0;
 			pal[x*4+1] = 0;
-			pal[x*4+2] = x*4;
+			pal[x*4+2] = x*63;
 		}
 
 		if (md->dac8) {
