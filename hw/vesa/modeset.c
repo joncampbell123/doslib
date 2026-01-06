@@ -510,7 +510,7 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			}
 		}
 
-		if (info && 0) {
+		if (info) {
 			unsigned int fo;
 			unsigned long w=0,r=0;
 			char *s = info_txt;
@@ -520,21 +520,11 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 				if (c != '\n') {
 					fo = ((unsigned char)c) * 8;
 					ofs = w;
-					w += 8/2;
+					w += 1;
 
 					for (y=0;y < 8;y++) {
 						unsigned char b = font8x8[fo++];
-
-						for (x=0;x < 8;x += 2) {
-							unsigned char fb;
-
-							fb  = (b & 0x80) ? 0xF0 : 0x00;
-							fb += (b & 0x40) ? 0x0F : 0x00;
-
-							vesa_writeb(ofs+(x>>1u),fb);
-							b <<= 2;
-						}
-
+						vesa_writeb(ofs,b);
 						ofs += mi->bytes_per_scan_line;
 					}
 				}
