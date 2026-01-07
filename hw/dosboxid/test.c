@@ -144,6 +144,17 @@ int main(int argc,char **argv,char **envp) {
 		};
 		printf("\n");
 	}
+	{
+		uint32_t caps;
+
+		dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CAPS);
+		caps = dosbox_id_read_data();
+
+		printf("DOSBox Integrated Graphics caps: ");
+		if (caps & DOSBOX_ID_REG_VGA1G_CAPS_ENABLED) printf("enabled");
+		else printf("not-available");
+		printf("\n");
+	}
 
 	return 0;
 }
