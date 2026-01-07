@@ -150,10 +150,10 @@ int main(int argc,char **argv,char **envp) {
 		dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CAPS);
 		caps = dosbox_id_read_data();
 
-		dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_VRAMSIZE);
+		dosbox_id_write_regsel(DOSBOX_ID_REG_GET_VGA_MEMSIZE);
 		memsz = dosbox_id_read_data();
 
-		dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_VRAMLFBBASE);
+		dosbox_id_write_regsel(DOSBOX_ID_REG_GET_VGA_MEMBASE);
 		lfb = dosbox_id_read_data();
 
 		printf("DOSBox Integrated Graphics caps: ");
