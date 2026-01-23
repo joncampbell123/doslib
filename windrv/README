@@ -8,4 +8,5 @@ needed to compile Windows device drivers with open source tools.
 
 dosboxpi .............. DOSBox pointer integration
 ps2mouse .............. Basic PS/2 mouse driver
+dosboxgi .............. DOSBox Integrated Graphics driver
 
