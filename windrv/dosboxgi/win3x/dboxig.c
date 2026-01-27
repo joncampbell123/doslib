@@ -18,6 +18,9 @@ unsigned char dos_version();
     modify [ah bx] \
     value [al]
 
+unsigned int screen_width = 640;
+unsigned int screen_height = 480;
+
 DWORD vga_memsize = 0;
 DWORD vga_lfb = 0;
 
@@ -96,7 +99,6 @@ static void DEBUG_OUTulhex(unsigned long v) { /* set debug_tw = debug_tmp_LAST, 
 }
 
 void DEBUG_OUTF(const char *fmt,...) {
-    const char *scan;
     unsigned char c;
     va_list va;
 
@@ -165,8 +167,32 @@ void DEBUG_OUTF(const char *fmt,...) {
     va_end(va);
 }
 
+int GetSettingInt(const char *name,int defval) {
+    int v = -666;
+
+#if WINVER >= 0x300
+    if (v == -666) v = GetPrivateProfileInt("dosboxig.drv",name,-666,"system.ini");
+#endif
+    if (v == -666) v = GetProfileInt("dosboxig.drv",name,-666);
+    if (v == -666) v = defval;
+
+    return v;
+}
+
 int init_dosbox_ig(void) {
     uint32_t r;
+
+    {
+        int v;
+
+        v = GetSettingInt("width",-1);
+        if (v >= 64 && v <= 4096) screen_width = (unsigned int)v;
+
+        v = GetSettingInt("height",-1);
+        if (v >= 64 && v <= 4096) screen_height = (unsigned int)v;
+    }
+
+    DEBUG_OUTF("Screen configuration: %u x %u\n",screen_width,screen_height);
 
     dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CAPS);
     r = dosbox_id_read_data();
