@@ -21,8 +21,42 @@ unsigned char dos_version();
 unsigned int screen_width = 640;
 unsigned int screen_height = 480;
 
+/* bits per pixel */
+#define vBitsPerPixel (1)
+/* bytes per pixel */
+#define vBytesPerPixel (0)
+/* pixels per byte */
+#define vPixelsPerByte (8)
+/* grayscale/monochrome */
+#define vGrayscale (1)
+/* planar */
+#define vPlanar (0)
+/* maximum bytes per scanline allowed */
+#define vMaxPitch (0x8000u)
+/* max cursor size */
+#define vMaxCursorW 32
+#define vMaxCursorH 32
+
 DWORD vga_memsize = 0;
 DWORD vga_lfb = 0;
+WORD vga_pitch = 0; /* bytes per scanline */
+DWORD vga_visualoffset = 0; /* framebuffer offset to draw at */
+DWORD vga_visualsize = 0; /* framebuffer (visible portion) size */
+DWORD vga_cursorbufoffset = 0; /* framebuffer offset of cursor buffer */
+WORD vga_cursorbufsize = 0; /* size of cursor buffer */
+WORD vga_cursorbufpitch = 0; /* bytes per scanline cursor buffer (cursor AND + cursor XOR + saved behind cursor + one byte) */
+WORD vga_cursorbuflinew = 0; /* bytes that make up the cursor itself */
+
+/* cursor buffer:
+ *
+ *   linew   linew   linew2
+ * +-------+-------+---------+
+ * |  AND  |  XOR  |  SAVED  |
+ * |  IMG  |  IMG  |   IMG   |
+ * +-------+-------+---------+
+ *
+ * linew2 = linew + vBytesPerPixel, saved image is vMaxCursorW + 1 pixels wide if vBytesPerPixel >= 1
+ * linew2 = linew + 1u if not, saved image is vMaxCursorW + vPixelsPerByte pixels wide */
 
 void DEBUG_OUT(const char *str) {
     unsigned char c;
@@ -37,6 +71,14 @@ static char debug_tmp[128],*debug_tw;
 #define debug_tmp_LAST (debug_tmp + sizeof(debug_tmp) - 1)
 
 static const char *debug_hexes = "0123456789ABCDEF";
+
+static unsigned long uint_mul_16x16to32(const unsigned int a,const unsigned int b);
+#pragma aux uint_mul_16x16to32 = \
+    "xor dx,dx" \
+    "mul cx" \
+    parm [ax] [cx] \
+    modify [dx ax] \
+    value [dx ax];
 
 static unsigned int DEBUG_uldiv(unsigned long *v,const unsigned int d);
 /* long division.
@@ -190,9 +232,29 @@ int init_dosbox_ig(void) {
 
         v = GetSettingInt("height",-1);
         if (v >= 64 && v <= 4096) screen_height = (unsigned int)v;
+
+        if (vBytesPerPixel/* remember, this is a #define macro! */ > 0) {
+            vga_pitch = vBytesPerPixel * screen_width;
+            vga_cursorbuflinew = vBitsPerPixel * vMaxCursorW;
+        }
+        else {
+            vga_pitch = (((unsigned int)vBitsPerPixel * screen_width) + 7u) / 8u;
+            vga_cursorbuflinew = (((unsigned int)vBitsPerPixel * vMaxCursorW) + 7u) / 8u;
+        }
+
+        vga_visualsize = uint_mul_16x16to32(vga_pitch,screen_height);
+        vga_visualoffset = 256ul * 1024ul; // start at 256KB so VGA memory is preserved, grabbers not necessary
+        vga_cursorbufpitch = (vga_cursorbuflinew * 3u) + (vBytesPerPixel > 0u ? vBytesPerPixel : 1u); // AND, XOR, saved image behind cursor plus one pixel
+        vga_cursorbufsize = vga_cursorbufpitch * vMaxCursorH;
     }
 
-    DEBUG_OUTF("Screen configuration: %u x %u\n",screen_width,screen_height);
+    DEBUG_OUTF("Screen configuration: %u x %u, %u bytes/line, %lu bytes visible framebuffer at offset 0x%lx(%lu), cursorbufsize=0x%lx(%lu)\n",
+        screen_width,screen_height,vga_pitch,vga_visualsize,vga_visualoffset,vga_visualoffset,
+        (unsigned long)vga_cursorbufsize,(unsigned long)vga_cursorbufsize);
+    DEBUG_OUTF("cursor pitch=%u imgw=%u\n",
+        vga_cursorbufpitch,vga_cursorbuflinew);
+
+    if (!vga_pitch || !vga_visualsize) return 0;
 
     dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CAPS);
     r = dosbox_id_read_data();
@@ -207,7 +269,23 @@ int init_dosbox_ig(void) {
     dosbox_id_write_regsel(DOSBOX_ID_REG_GET_VGA_MEMSIZE);
     vga_memsize = dosbox_id_read_data();
 
-    DEBUG_OUTF("VGA lfb=0x%lx memsize=0x%lx(%lu)\n",(unsigned long)vga_lfb,(unsigned long)vga_memsize,(unsigned long)vga_memsize);
+    DEBUG_OUTF("VGA lfb=0x%lx memsize=0x%lx(%lu)\n",
+        (unsigned long)vga_lfb,(unsigned long)vga_memsize,(unsigned long)vga_memsize);
+
+    if (vga_cursorbufsize > vga_memsize) {
+        DEBUG_OUT("Insufficient video RAM (cursor)\n");
+        return 0;
+    }
+    vga_memsize -= vga_cursorbufsize;
+    vga_cursorbufoffset = vga_memsize;
+
+    DEBUG_OUTF("VGA cursorbufoffset=0x%lx\n",(unsigned long long)vga_cursorbufoffset);
+
+    if ((vga_visualoffset+vga_visualsize) > vga_memsize) {
+        DEBUG_OUT("Insufficient video RAM (framebuffer)\n");
+        return 0;
+    }
+
     if (!vga_memsize) return 0;
 
     return 1;
@@ -219,7 +297,6 @@ WORD MiniLibMain(void) {
     if (dos_version() < 3)
         return 0;
 
-    __asm int 3
     DEBUG_OUT("DOSBox IG display driver init\n");
 
     if (!init_dosbox_ig())
