@@ -13,6 +13,7 @@ DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
 NONDISCARDABLE_CFLAGS = -nt=_NDTEXT -nc=NDCODE
 
 DBOXIG_DRV = $(SUBDIR)$(HPS)dboxig.drv
+DBOXIG_RES = $(SUBDIR)$(HPS)dboxig.res
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -23,13 +24,28 @@ DBOXIG_DRV = $(SUBDIR)$(HPS)dboxig.drv
 .asm.obj:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
+$(SUBDIR)$(HPS)fonts.bin: fonts.asm
+	nasm -o $@ -f bin $[@
+
+$(SUBDIR)$(HPS)config.bin: config.asm
+	nasm -o $@ -f bin $[@
+
+$(SUBDIR)$(HPS)colortab.bin: colortab.asm
+	nasm -o $@ -f bin $[@
+
 all: lib exe
 
 exe: $(DBOXIG_DRV) .symbolic
 
 lib: .symbolic
 
-$(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllentry.obj
+dboxig.rc: $(SUBDIR)$(HPS)config.bin $(SUBDIR)$(HPS)colortab.bin $(SUBDIR)$(HPS)fonts.bin
+	true
+
+$(DBOXIG_RES): dboxig.rc
+	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -i$(SUBDIR) -fo=$(SUBDIR)$(HPS)dboxig.res $[@
+
+$(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllentry.obj $(DBOXIG_RES)
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxig.obj
@@ -87,7 +103,7 @@ $(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllen
 	%write tmp.cmd export MoveCursor.103=my_MoveCursor
 	%write tmp.cmd export CheckCursor.104=my_CheckCursor
 	%write tmp.cmd export UserRepaintDisable.500=my_UserRepaintDisable
-	%write tmp.cmd op resource=hack.res
+	%write tmp.cmd op resource=$(DBOXIG_RES)
 	%write tmp.cmd name $(DBOXIG_DRV)
 	@wlink @tmp.cmd
 ! ifdef WIN_NE_SETVER_BUILD
@@ -106,7 +122,7 @@ $(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllen
 ! endif
 
 clean: .SYMBOLIC
-	del $(SUBDIR)$(HPS)*.obj
+	del $(SUBDIR)$(HPS)*.obj *.bin
 	del tmp.cmd
 	@echo Cleaning done
 
