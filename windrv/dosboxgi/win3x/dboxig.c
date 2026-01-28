@@ -300,12 +300,144 @@ WORD MiniLibMain(void) {
     return 1;
 }
 
-WORD WINAPI Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
+void WINAPI my_BitBlt(void) {
     __asm int 3
+    __asm mov ax,1
+}
+
+void WINAPI my_ColorInfo(void) {
+    __asm int 3
+    __asm mov ax,2
+}
+
+void WINAPI my_Control(void) {
+    __asm int 3
+    __asm mov ax,3
+}
+
+void WINAPI my_Disable(LPSTR/*FIXME*/ lpDestDev) {
+    __asm int 3
+    __asm mov ax,4
+}
+
+WORD WINAPI my_Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
+    __asm int 3
+    __asm mov ax,5
     return 0;
 }
 
-void WINAPI Disable(LPSTR/*FIXME*/ lpDestDev) {
+void WINAPI my_EnumDFonts(void) {
     __asm int 3
+    __asm mov ax,6
+}
+
+void WINAPI my_EnumObj(void) {
+    __asm int 3
+    __asm mov ax,7
+}
+
+void WINAPI my_Output(void) {
+    __asm int 3
+    __asm mov ax,8
+}
+
+void WINAPI my_Pixel(void) {
+    __asm int 3
+    __asm mov ax,9
+}
+
+void WINAPI my_RealizeObject(void) {
+    __asm int 3
+    __asm mov ax,10
+}
+
+void WINAPI my_StrBlt(void) {
+    __asm int 3
+    __asm mov ax,11
+}
+
+void WINAPI my_ScanLR(void) {
+    __asm int 3
+    __asm mov ax,12
+}
+
+void WINAPI my_DeviceMode(void) {
+    __asm int 3
+    __asm mov ax,13
+}
+
+void WINAPI my_ExtTextOut(void) {
+    __asm int 3
+    __asm mov ax,14
+}
+
+void WINAPI my_GetCharWidth(void) {
+    __asm int 3
+    __asm mov ax,15
+}
+
+void WINAPI my_DeviceBitmap(void) {
+    __asm int 3
+    __asm mov ax,16
+}
+
+void WINAPI my_FastBorder(void) {
+    __asm int 3
+    __asm mov ax,17
+}
+
+void WINAPI my_SetAttribute(void) {
+    __asm int 3
+    __asm mov ax,18
+}
+
+void WINAPI my_DeviceBitmapBits(void) {
+    __asm int 3
+    __asm mov ax,19
+}
+
+void WINAPI my_CreateBitmap(void) {
+    __asm int 3
+    __asm mov ax,20
+}
+
+void WINAPI my_DIBScreenBlt(void) {
+    __asm int 3
+    __asm mov ax,21
+}
+
+void WINAPI my_do_polylines(void) {
+    __asm int 3
+    __asm mov ax,90
+}
+
+void WINAPI my_do_scanlines(void) {
+    __asm int 3
+    __asm mov ax,91
+}
+
+void WINAPI my_Inquire(void) {
+    __asm int 3
+    __asm mov ax,101
+}
+
+void WINAPI my_SetCursor(void) {
+    __asm int 3
+    __asm mov ax,102
+}
+
+void WINAPI my_MoveCursor(void) {
+    __asm int 3
+    __asm mov ax,103
+}
+
+void WINAPI my_CheckCursor(void) {
+    __asm int 3
+    __asm mov ax,104
+}
+
+void WINAPI my_UserRepaintDisable(void) {
+    __asm int 3
+    __asm mov ax,500
 }
 
