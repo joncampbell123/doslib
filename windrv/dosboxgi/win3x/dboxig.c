@@ -279,7 +279,7 @@ int init_dosbox_ig(void) {
     if ((vga_visualoffset+vga_visualsize) > vga_memsize) {
         DEBUG_OUT("Insufficient video RAM (framebuffer)\n");
         return 0;
-    }
+   }
 
     if (!vga_memsize) return 0;
 
@@ -298,5 +298,14 @@ WORD MiniLibMain(void) {
         return 0;
 
     return 1;
+}
+
+WORD WINAPI Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
+    __asm int 3
+    return 0;
+}
+
+void WINAPI Disable(LPSTR/*FIXME*/ lpDestDev) {
+    __asm int 3
 }
 

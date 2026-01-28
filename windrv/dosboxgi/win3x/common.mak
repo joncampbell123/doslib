@@ -53,14 +53,15 @@ $(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllen
 ! ifeq TARGET_WINDOWS 31
 	%write tmp.cmd option version=3.10  # FIXME: Is Watcom's linker IGNORING THIS?
 ! endif
-	%write tmp.cmd option modname=MOUSE
+	%write tmp.cmd option modname=DISPLAY
 ! ifeq TARGET_WINDOWS 30
 	%write tmp.cmd option description 'DOSBox-X Integrated Graphics driver for Windows 3.0'
 ! endif
 ! ifeq TARGET_WINDOWS 31
 	%write tmp.cmd option description 'DOSBox-X Integrated Graphics driver for Windows 3.1'
 ! endif
-	#%write tmp.cmd export Inquire.1
+	%write tmp.cmd export Disable.4
+	%write tmp.cmd export Enable.5
 	%write tmp.cmd name $(DBOXIG_DRV)
 	@wlink @tmp.cmd
 ! ifdef WIN_NE_SETVER_BUILD
