@@ -103,6 +103,7 @@ $(DBOXIG_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxig.obj $(SUBDIR)$(HPS)dllen
 	%write tmp.cmd export MoveCursor.103=my_MoveCursor
 	%write tmp.cmd export CheckCursor.104=my_CheckCursor
 	%write tmp.cmd export UserRepaintDisable.500=my_UserRepaintDisable
+	%write tmp.cmd import _ScreenSelectorRaw KERNEL.174
 	%write tmp.cmd op resource=$(DBOXIG_RES)
 	%write tmp.cmd name $(DBOXIG_DRV)
 	@wlink @tmp.cmd

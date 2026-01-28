@@ -8,8 +8,8 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dosboxid/iglib.h>
 
-#pragma pack(push,1)
-#pragma pack(pop)
+extern const unsigned int ScreenSelectorRaw; // hack to access "absolute" value, address of this symbol is FFFF:constant
+#define ScreenSelector FP_OFF(&ScreenSelectorRaw) // Open Watcom doesn't seem to have a way to directly use KERNEL imported absolute values, so, this hack instead
 
 unsigned char dos_version();
 #pragma aux dos_version = \
@@ -50,6 +50,7 @@ DWORD vga_visualoffset = 0; /* framebuffer offset to draw at */
 DWORD vga_visualsize = 0; /* framebuffer (visible portion) size */
 DWORD vga_cursorbufoffset = 0; /* framebuffer offset of cursor buffer */
 
+unsigned int vga_drv_state = 0;
 #define VGA_DRV_ENABLED (1u << 0u)
 
 /* cursor buffer:
@@ -299,7 +300,6 @@ typedef GDIINFO FAR *LPGDIINFO;
 
 struct int_phys_device {
     BITMAP                    bitmap;
-    unsigned int              vga_drv_state;
 };
 
 GDIINFO GDIInfo = {
@@ -417,8 +417,9 @@ int init_dosbox_ig(void) {
         return 0;
     }
 
-    if (!vga_memsize) return 0;
-
+    __asm int 3
+    DEBUG_OUTF("ScreenSelector 0x%x\n",ScreenSelector);
+    DEBUG_OUTF("Updating GDIINFO\n");
     GDIInfo.dpHorzRes = 640, /* in pixels */
     GDIInfo.dpVertRes = 480, /* in pixels */
     GDIInfo.dpMLoVpt.x = 640;
