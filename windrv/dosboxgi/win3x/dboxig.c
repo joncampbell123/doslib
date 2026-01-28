@@ -241,6 +241,8 @@ int init_dosbox_ig(void) {
         vga_visualoffset = 256ul * 1024ul; // start at 256KB so VGA memory is preserved, grabbers not necessary
     }
 
+    DEBUG_OUTF("Screen configuration: %u bits/pixel, %u bytes/pixel, %u pixels/byte, planar=%u grayscale/mono=%u, maxpitch=%u, maxcursor=%u x %u\n",
+        vBitsPerPixel,vBytesPerPixel,vPixelsPerByte,vPlanar,vGrayscale,vMaxPitch,vMaxCursorW,vMaxCursorH);
     DEBUG_OUTF("Screen configuration: %u x %u, %u bytes/line, %lu bytes visible framebuffer at offset 0x%lx(%lu), cursorbufsize=0x%lx(%lu)\n",
         screen_width,screen_height,vga_pitch,vga_visualsize,vga_visualoffset,vga_visualoffset,
         (unsigned long)vga_cursorbufsize,(unsigned long)vga_cursorbufsize);
