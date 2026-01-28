@@ -36,6 +36,12 @@ unsigned int screen_height = 480;
 /* max cursor size */
 #define vMaxCursorW 32
 #define vMaxCursorH 32
+/* bytes per one cursor image scanline */
+#define vga_cursorbuflinew ((vBytesPerPixel > 0) ? (vBytesPerPixel * vMaxCursorW) : ((((vMaxCursorW * vBitsPerPixel) + 7u) / 8u)))
+/* bytes per scanline cursor buffer (cursor AND + cursor XOR + saved behind cursor + one byte) */
+#define vga_cursorbufpitch (((vga_cursorbuflinew) * 3u) + ((vBytesPerPixel > 0) ? vBytesPerPixel : 1u))
+/* size of cursor buffer */
+#define vga_cursorbufsize ((vga_cursorbufpitch) * (vMaxCursorH))
 
 DWORD vga_memsize = 0;
 DWORD vga_lfb = 0;
@@ -43,9 +49,6 @@ WORD vga_pitch = 0; /* bytes per scanline */
 DWORD vga_visualoffset = 0; /* framebuffer offset to draw at */
 DWORD vga_visualsize = 0; /* framebuffer (visible portion) size */
 DWORD vga_cursorbufoffset = 0; /* framebuffer offset of cursor buffer */
-WORD vga_cursorbufsize = 0; /* size of cursor buffer */
-WORD vga_cursorbufpitch = 0; /* bytes per scanline cursor buffer (cursor AND + cursor XOR + saved behind cursor + one byte) */
-WORD vga_cursorbuflinew = 0; /* bytes that make up the cursor itself */
 
 /* cursor buffer:
  *
@@ -233,19 +236,9 @@ int init_dosbox_ig(void) {
         v = GetSettingInt("height",-1);
         if (v >= 64 && v <= 4096) screen_height = (unsigned int)v;
 
-        if (vBytesPerPixel/* remember, this is a #define macro! */ > 0) {
-            vga_pitch = vBytesPerPixel * screen_width;
-            vga_cursorbuflinew = vBitsPerPixel * vMaxCursorW;
-        }
-        else {
-            vga_pitch = (((unsigned int)vBitsPerPixel * screen_width) + 7u) / 8u;
-            vga_cursorbuflinew = (((unsigned int)vBitsPerPixel * vMaxCursorW) + 7u) / 8u;
-        }
-
+        vga_pitch = (vBytesPerPixel > 0u) ? (vBytesPerPixel * screen_width) : (((vBitsPerPixel * screen_width) + 7u) / 8u);
         vga_visualsize = uint_mul_16x16to32(vga_pitch,screen_height);
         vga_visualoffset = 256ul * 1024ul; // start at 256KB so VGA memory is preserved, grabbers not necessary
-        vga_cursorbufpitch = (vga_cursorbuflinew * 3u) + (vBytesPerPixel > 0u ? vBytesPerPixel : 1u); // AND, XOR, saved image behind cursor plus one pixel
-        vga_cursorbufsize = vga_cursorbufpitch * vMaxCursorH;
     }
 
     DEBUG_OUTF("Screen configuration: %u x %u, %u bytes/line, %lu bytes visible framebuffer at offset 0x%lx(%lu), cursorbufsize=0x%lx(%lu)\n",
