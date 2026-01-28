@@ -416,9 +416,19 @@ void WINAPI my_do_scanlines(void) {
     __asm mov ax,91
 }
 
-void WINAPI my_Inquire(void) {
+#pragma pack(push,1)
+typedef struct tagCURSORINFO {
+    short   dpXRate;
+    short   dpYRate;
+} CURSORINFO;
+typedef CURSORINFO FAR *LPCURSORINFO;
+#pragma pack(pop)
+
+WORD WINAPI my_Inquire(LPCURSORINFO lpCursorInfo) {
     __asm int 3
-    __asm mov ax,101
+    lpCursorInfo->dpXRate = 1;
+    lpCursorInfo->dpYRate = 2;
+    return sizeof(CURSORINFO);
 }
 
 void WINAPI my_SetCursor(void) {
