@@ -299,6 +299,11 @@ typedef GDIINFO FAR *LPGDIINFO;
 #define     MAX_STYLE_ERR   HYPOTENUSE*2
 
 struct int_phys_device {
+    /* also a BITMAP, also a PDEVICE. */
+    /* first word bmType if BITMAP, pdType if PDEVICE.
+     * bmType == 0 if a bitmap, PDEVICE if not.
+     * PDEVICE is a generic base struct from which we define all our driver-specific state,
+     * therefore, if nonzero, it's our int_phys_device struct. */
     BITMAP                    bitmap;
 };
 
@@ -389,7 +394,7 @@ int init_dosbox_ig(void) {
 
     dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CAPS);
     r = dosbox_id_read_data();
-    if (!(r & DOSBOX_ID_REG_VGA1G_CAPS_ENABLED)) {
+    if (!(r & DOSBOX_ID_REG_VGAIG_CAPS_ENABLED)) {
         DEBUG_OUT("Checking DOSBox IG device\n");
         return 0;
     }
@@ -417,7 +422,6 @@ int init_dosbox_ig(void) {
         return 0;
     }
 
-    __asm int 3
     DEBUG_OUTF("ScreenSelector 0x%x\n",ScreenSelector);
     DEBUG_OUTF("Updating GDIINFO\n");
     GDIInfo.dpHorzRes = 640, /* in pixels */
@@ -448,9 +452,87 @@ void WINAPI my_BitBlt(void) {
     __asm mov ax,1
 }
 
-void WINAPI my_ColorInfo(void) {
+/* NTS: Nowhere does Microsoft document what a PCOLOR is, so this is a best guess */
+typedef DWORD PCOLOR;
+typedef PCOLOR FAR *LPPCOLOR;
+
+#define FP8(x) ((unsigned int)((x) * 255.0))
+
+static inline BYTE RGBtoGray8(BYTE r,BYTE g,BYTE b) {
+    return (BYTE)(((r * FP8(0.299)) + (g * FP8(0.587)) + (b * FP8(0.114))) >> 8u);
+}
+
+static const unsigned char Quant8ToBitsBias[8] = {
+    85,  // 1bpp: 33% black 66% white just like sample driver
+    32,  // 2bpp (pc * 64)
+    16,  // 3bpp (pc * 32)
+    8,   // 4bpp (pc * 16)
+    4,   // 5bpp (pc * 8)
+    2,   // 6bpp (pc * 4)
+    1,   // 7bpp (pc * 2)
+    0    // 8bpp
+};
+
+static inline BYTE Quant8ToBits(BYTE v,BYTE bits) {
+    const unsigned int r = ((unsigned int)v + (unsigned int)Quant8ToBitsBias[bits - 1u]) >> (8u - bits);
+    if (r & (0x100 >> (8u - bits)))
+        return 0xFFu >> (8u - bits);
+    else
+        return r;
+}
+
+DWORD colorRGBtoScreen(DWORD rgb) {
+#if vGrayscale > 0
+    return Quant8ToBits(RGBtoGray8(rgb>>16ul,rgb>>8ul,rgb),vBitsPerPixel);
+#else
+    return 0;
+#endif
+}
+
+DWORD colorScreenToRGB(DWORD pc) {
+#if vGrayscale > 0
+# if vBitsPerPixel < 8
+    if (pc != 0) {
+        BYTE r = 0,cn = 8;
+        // move bits to top i.e. 0000xxxx -> xxxx0000 and then iteratively make the bit pattern repeat every vBitsPerPixel
+        // for example,
+        // 1bpp 0 -> 00000000
+        // 1bpp 1 -> 11111111
+        // 2bpp 10 -> 10101010
+        // 2bpp 01 -> 01010101
+        // 4bpp 0110 -> 01100110
+        //
+        // doing this is equivalent to pc = (pc * 255) / ((1 << vBitsPerPixel) - 1)
+        pc <<= 8u - vBitsPerPixel;
+        while (cn >= vBitsPerPixel) {
+            r |= pc;
+            cn -= vBitsPerPixel;
+            pc >>= vBitsPerPixel;
+        }
+        if (cn != 0u) {
+            r |= pc;
+        }
+        pc = r;
+    }
+# endif
+    return pc | (pc << 8ul) | (pc << 16ul);
+#else
+    return 0;
+#endif
+}
+
+COLORREF WINAPI my_ColorInfo(LPVOID lpDestDev,DWORD dwColorin,LPPCOLOR lpPColor) {
+    (void)lpDestDev;
+
     __asm int 3
-    __asm mov ax,2
+    if (lpPColor) {
+        const DWORD pc = colorRGBtoScreen(dwColorin);
+        *lpPColor = colorScreenToRGB(pc);
+        return pc;
+    }
+    else {
+        return colorScreenToRGB(dwColorin);
+    }
 }
 
 void WINAPI my_Control(void) {
@@ -458,12 +540,66 @@ void WINAPI my_Control(void) {
     __asm mov ax,3
 }
 
-void WINAPI my_Disable(LPSTR/*FIXME*/ lpDestDev) {
+void WINAPI my_Disable(LPVOID lpDestDev) {
+    (void)lpDestDev;
+
     __asm int 3
-    __asm mov ax,4
+    if (vga_drv_state & VGA_DRV_ENABLED) {
+        /* clear CTL, so changes are not effective yet */
+        dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CTL);
+        dosbox_id_write_data(0);
+
+        vga_drv_state &= ~VGA_DRV_ENABLED;
+    }
 }
 
-WORD WINAPI my_Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
+WORD displayEnable(struct int_phys_device *lpDevInfo) {
+    (void*)lpDevInfo;
+
+    /* clear CTL, so changes are not effective yet */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CTL);
+    dosbox_id_write_data(0);
+
+    /* set format and bytes per line */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_FMT_BYTESPERSCANLINE);
+    dosbox_id_write_data(DOSBOX_ID_REG_VGAIG_FMT_1BPP | vga_pitch);
+
+    /* screen dimensions */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_DISPLAYSIZE);
+    dosbox_id_write_data(((unsigned long)screen_height << 16ul) + screen_width);
+
+    /* h/v total add */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_HVTOTALADD);
+    dosbox_id_write_data((64ul << 16ul) + 64ul);
+
+    /* refresh rate */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_REFRESHRATE);
+    dosbox_id_write_data(70ul << 16ul); /* 16.16 fixed point 70Hz */
+
+    /* pixel scale */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_HVPELSCALE);
+    dosbox_id_write_data(0);
+
+    /* aspect ratio */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_ASPECTRATIO);
+    dosbox_id_write_data(0); /* square pixels */
+
+    /* DOSBox IG bypasses the attribute controller, program the palette */
+#if vBitsPerPixel <= 8
+    outp(0x3C8,0);
+    outp(0x3C9,0x00); outp(0x3C9,0x00); outp(0x3C9,0x00);
+    outp(0x3C9,0xFF); outp(0x3C9,0xFF); outp(0x3C9,0xFF);
+#endif
+
+    /* switch on IG */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CTL);
+    dosbox_id_write_data(DOSBOX_ID_REG_VGAIG_CTL_OVERRIDE|DOSBOX_ID_REG_VGAIG_CTL_VGAREG_LOCKOUT|DOSBOX_ID_REG_VGAIG_CTL_OVERRIDE_REFRESH|DOSBOX_ID_REG_VGAIG_CTL_ACPAL_BYPASS|DOSBOX_ID_REG_VGAIG_CTL_VBEMODESET_DISABLE|DOSBOX_ID_REG_VGAIG_CTL_A0000_FORCE);
+
+    vga_drv_state |= VGA_DRV_ENABLED;
+    return 1;
+}
+
+WORD WINAPI my_Enable(LPVOID lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
     (void)lpDestDevType;
     (void)lpOutputFile;
     (void)lpData;
@@ -472,8 +608,11 @@ WORD WINAPI my_Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR
         _copymem((LPGDIINFO*)lpDevInfo,&GDIInfo,sizeof(GDIINFO));
         return sizeof(GDIINFO);
     }
+    else if (wStyle & InfoContext) {
+        return 0; // nope
+    }
 
-    return 0;
+    return displayEnable((struct int_phys_device*)lpDevInfo);
 }
 
 void WINAPI my_EnumDFonts(void) {
@@ -496,9 +635,25 @@ void WINAPI my_Pixel(void) {
     __asm mov ax,9
 }
 
-void WINAPI my_RealizeObject(void) {
+typedef struct tagTEXTXFORM {
+    short  txfHeight;
+    short  txfWidth;
+    short  txfEscapement;
+    short  txfOrientation;
+    short  txfWeight;
+    char   txfItalic;
+    char   txfUnderline;
+    char   txfStrikeOut;
+    char   txfOutPrecision;
+    char   txfClipPrecision;
+    short  txfAccelerator;
+    short  txfOverhang;
+} TEXTXFORM;
+typedef TEXTXFORM FAR *LPTEXTXFORM;
+
+DWORD WINAPI my_RealizeObject(LPVOID lpDestDev, WORD wStyle, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm) {
     __asm int 3
-    __asm mov ax,10
+    return 0;
 }
 
 void WINAPI my_StrBlt(void) {
