@@ -50,6 +50,8 @@ DWORD vga_visualoffset = 0; /* framebuffer offset to draw at */
 DWORD vga_visualsize = 0; /* framebuffer (visible portion) size */
 DWORD vga_cursorbufoffset = 0; /* framebuffer offset of cursor buffer */
 
+#define VGA_DRV_ENABLED (1u << 0u)
+
 /* cursor buffer:
  *
  *   linew   linew   linew2
@@ -74,6 +76,24 @@ static char debug_tmp[128],*debug_tw;
 #define debug_tmp_LAST (debug_tmp + sizeof(debug_tmp) - 1)
 
 static const char *debug_hexes = "0123456789ABCDEF";
+
+void _copymem(void *d,const void *s,unsigned int len) {
+    __asm {
+        push    ds
+        push    si
+        push    di
+        push    cx
+        mov     cx,len
+        lds     si,s
+        les     di,d
+        cld
+        rep	movsb
+        pop     cx
+        pop     di
+        pop     si
+        pop     ds
+    }
+}
 
 static unsigned long uint_mul_16x16to32(const unsigned int a,const unsigned int b);
 #pragma aux uint_mul_16x16to32 = \
@@ -212,6 +232,122 @@ void DEBUG_OUTF(const char *fmt,...) {
     va_end(va);
 }
 
+typedef struct tagGDIINFO {
+    short  int                dpVersion;
+    short  int                dpTechnology;
+    short  int                dpHorzSize;
+    short  int                dpVertSize;
+    short  int                dpHorzRes;
+    short  int                dpVertRes;
+    short  int                dpBitsPixel;
+    short  int                dpPlanes;
+    short  int                dpNumBrushes;
+    short  int                dpNumPens;
+    short  int                futureuse;
+    short  int                dpNumFonts;
+    short  int                dpNumColors;
+
+    unsigned  short  int      dpDEVICEsize;
+    unsigned  short  int      dpCurves;
+    unsigned  short  int      dpLines;
+    unsigned  short  int      dpPolygonals;
+    unsigned  short  int      dpText;
+    unsigned  short  int      dpClip;
+    unsigned  short  int      dpRaster;
+    short  int                dpAspectX;
+    short  int                dpAspectY;
+    short  int                dpAspectXY;
+    short  int                dpStyleLen;
+    POINT                     dpMLoWin;
+    POINT                     dpMLoVpt;
+    POINT                     dpMHiWin;
+    POINT                     dpMHiVpt;
+    POINT                     dpELoWin;
+
+    POINT                     dpELoVpt;
+    POINT                     dpEHiWin;
+    POINT                     dpEHiVpt;
+    POINT                     dpTwpWin;
+    POINT                     dpTwpVpt;
+    short  int                dpLogPixelsX;
+    short  int                dpLogPixelsY;
+    short  int                dpDCManage;
+    short  int                dpCaps1;
+    long   int                dpSpotSizeX;
+    long   int                dpSpotSizeY;
+    short  int                dpPalColors;
+    short  int                dpPalReserved;
+    short  int                dpPalResolution;
+} GDIINFO;
+typedef GDIINFO FAR *LPGDIINFO;
+
+#define     InquireInfo     0x01        /* Inquire Device GDI Info         */
+#define     EnableDevice    0x00        /* Enable Device                   */
+#define     InfoContext     0x8000      /* Inquire/Enable for info context */
+
+#define     TC_NONE         0x0000
+#define     DC_IgnoreDFNP   0x0004
+
+#define     CP_RECTANGLE    0x0001
+
+#define     X_MAJOR_DIST    36
+#define     Y_MAJOR_DIST    36
+#define     HYPOTENUSE      51
+#define     X_MINOR_DIST    HYPOTENUSE-X_MAJOR_DIST
+#define     Y_MINOR_DIST    HYPOTENUSE-Y_MAJOR_DIST
+#define     MAX_STYLE_ERR   HYPOTENUSE*2
+
+struct int_phys_device {
+    BITMAP                    bitmap;
+    unsigned int              vga_drv_state;
+};
+
+GDIINFO GDIInfo = {
+    .dpVersion = 0x30A, /* Windows 3.10 */
+    .dpTechnology = DT_RASDISPLAY,
+    .dpHorzSize = 208, /* in mm */
+    .dpVertSize = 156, /* in mm */
+    .dpHorzRes = 640, /* in pixels */
+    .dpVertRes = 480, /* in pixels */
+    .dpBitsPixel = vBitsPerPixel,
+    .dpPlanes = (vPlanar > 0) ? 4 : 1,
+    .dpNumBrushes = 65 + 6 + 6,
+    .dpNumPens = 10, /* 2 colors * 5 styles */
+    .futureuse = 0,
+    .dpNumFonts = 0,
+    .dpNumColors = (vBitsPerPixel <= 256) ? (1u << vBitsPerPixel) : 0,
+    .dpDEVICEsize = sizeof(struct int_phys_device),
+    .dpCurves = CC_NONE,
+    .dpLines = LC_POLYLINE+LC_STYLED,
+    .dpPolygonals = PC_SCANLINE,
+    .dpText = TC_CP_STROKE+TC_RA_ABLE,
+    .dpClip = CP_RECTANGLE,
+    .dpRaster = RC_BITBLT+RC_BITMAP64+RC_GDI20_OUTPUT+RC_DI_BITMAP+RC_DIBTODEV,
+    .dpAspectX = X_MAJOR_DIST,
+    .dpAspectY = Y_MAJOR_DIST,
+    .dpAspectXY = HYPOTENUSE,
+    .dpStyleLen = MAX_STYLE_ERR,
+    .dpMLoWin = {2080, 1560},
+    .dpMLoVpt = {640, -480},
+    .dpMHiWin = {20800, 15600},
+    .dpMHiVpt = {640, -480},
+    .dpELoWin = {325, 325},
+    .dpELoVpt = {254, -254},
+    .dpEHiWin = {1625, 1625},
+    .dpEHiVpt = {127, -127},
+    .dpTwpWin = {2340, 2340},
+    .dpTwpVpt = {127, -127},
+    .dpLogPixelsX = 96,
+    .dpLogPixelsY = 96,
+    .dpDCManage = DC_IgnoreDFNP,
+    .dpCaps1 = 0,
+    .dpSpotSizeX = 0,
+    .dpSpotSizeY = 0,
+    .dpPalColors = 0,
+    .dpPalReserved = 0,
+    .dpPalResolution = 0
+};
+
 int GetSettingInt(const char *name,int defval) {
     int v = -666;
 
@@ -279,10 +415,16 @@ int init_dosbox_ig(void) {
     if ((vga_visualoffset+vga_visualsize) > vga_memsize) {
         DEBUG_OUT("Insufficient video RAM (framebuffer)\n");
         return 0;
-   }
+    }
 
     if (!vga_memsize) return 0;
 
+    GDIInfo.dpHorzRes = 640, /* in pixels */
+    GDIInfo.dpVertRes = 480, /* in pixels */
+    GDIInfo.dpMLoVpt.x = 640;
+    GDIInfo.dpMLoVpt.y = -480;
+    GDIInfo.dpMHiVpt.x = 640;
+    GDIInfo.dpMHiVpt.y = -480;
     return 1;
 }
 
@@ -321,8 +463,15 @@ void WINAPI my_Disable(LPSTR/*FIXME*/ lpDestDev) {
 }
 
 WORD WINAPI my_Enable(LPVOID *lpDevInfo, WORD wStyle, LPSTR lpDestDevType, LPSTR lpOutputFile, LPVOID lpData) {
-    __asm int 3
-    __asm mov ax,5
+    (void)lpDestDevType;
+    (void)lpOutputFile;
+    (void)lpData;
+
+    if (wStyle & InquireInfo) {
+        _copymem((LPGDIINFO*)lpDevInfo,&GDIInfo,sizeof(GDIINFO));
+        return sizeof(GDIINFO);
+    }
+
     return 0;
 }
 
@@ -425,7 +574,6 @@ typedef CURSORINFO FAR *LPCURSORINFO;
 #pragma pack(pop)
 
 WORD WINAPI my_Inquire(LPCURSORINFO lpCursorInfo) {
-    __asm int 3
     lpCursorInfo->dpXRate = 1;
     lpCursorInfo->dpYRate = 2;
     return sizeof(CURSORINFO);
