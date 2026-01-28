@@ -37,11 +37,11 @@ unsigned int screen_height = 480;
 #define vMaxCursorW 32
 #define vMaxCursorH 32
 /* bytes per one cursor image scanline */
-#define vga_cursorbuflinew ((vBytesPerPixel > 0) ? (vBytesPerPixel * vMaxCursorW) : ((((vMaxCursorW * vBitsPerPixel) + 7u) / 8u)))
+#define vCursorImageLineBytes ((vBytesPerPixel > 0) ? (vBytesPerPixel * vMaxCursorW) : ((((vMaxCursorW * vBitsPerPixel) + 7u) / 8u)))
 /* bytes per scanline cursor buffer (cursor AND + cursor XOR + saved behind cursor + one byte) */
-#define vga_cursorbufpitch (((vga_cursorbuflinew) * 3u) + ((vBytesPerPixel > 0) ? vBytesPerPixel : 1u))
+#define vCursorBufferPitch (((vCursorImageLineBytes) * 3u) + ((vBytesPerPixel > 0) ? vBytesPerPixel : 1u))
 /* size of cursor buffer */
-#define vga_cursorbufsize ((vga_cursorbufpitch) * (vMaxCursorH))
+#define vCursorBufferSize ((vCursorBufferPitch) * (vMaxCursorH))
 
 DWORD vga_memsize = 0;
 DWORD vga_lfb = 0;
@@ -245,9 +245,9 @@ int init_dosbox_ig(void) {
         vBitsPerPixel,vBytesPerPixel,vPixelsPerByte,vPlanar,vGrayscale,vMaxPitch,vMaxCursorW,vMaxCursorH);
     DEBUG_OUTF("Screen configuration: %u x %u, %u bytes/line, %lu bytes visible framebuffer at offset 0x%lx(%lu), cursorbufsize=0x%lx(%lu)\n",
         screen_width,screen_height,vga_pitch,vga_visualsize,vga_visualoffset,vga_visualoffset,
-        (unsigned long)vga_cursorbufsize,(unsigned long)vga_cursorbufsize);
+        (unsigned long)vCursorBufferSize,(unsigned long)vCursorBufferSize);
     DEBUG_OUTF("cursor pitch=%u imgw=%u\n",
-        vga_cursorbufpitch,vga_cursorbuflinew);
+        vCursorBufferPitch,vCursorImageLineBytes);
 
     if (!vga_pitch || !vga_visualsize) return 0;
 
@@ -267,11 +267,11 @@ int init_dosbox_ig(void) {
     DEBUG_OUTF("VGA lfb=0x%lx memsize=0x%lx(%lu)\n",
         (unsigned long)vga_lfb,(unsigned long)vga_memsize,(unsigned long)vga_memsize);
 
-    if (vga_cursorbufsize > vga_memsize) {
+    if (vCursorBufferSize > vga_memsize) {
         DEBUG_OUT("Insufficient video RAM (cursor)\n");
         return 0;
     }
-    vga_memsize -= vga_cursorbufsize;
+    vga_memsize -= vCursorBufferSize;
     vga_cursorbufoffset = vga_memsize;
 
     DEBUG_OUTF("VGA cursorbufoffset=0x%lx\n",(unsigned long long)vga_cursorbufoffset);
