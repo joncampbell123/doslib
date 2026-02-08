@@ -8,6 +8,18 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dosboxid/iglib.h>
 
+#define GDIOBJ_PEN        1    /* ;Internal */
+#define GDIOBJ_BRUSH      2    /* ;Internal */
+#define GDIOBJ_FONT       3    /* ;Internal */
+#define GDIOBJ_PALETTE    4    /* ;Internal */
+#define GDIOBJ_BITMAP     5    /* ;Internal */
+#define GDIOBJ_RGN        6    /* ;Internal */
+#define GDIOBJ_DC         7    /* ;Internal */
+#define GDIOBJ_IC         8    /* ;Internal */
+#define GDIOBJ_DISABLEDDC 9    /* ;Internal */
+#define GDIOBJ_METADC    10    /* ;Internal */
+#define GDIOBJ_METAFILE  11    /* ;Internal */
+
 extern const unsigned int ScreenSelectorRaw; // hack to access "absolute" value, address of this symbol is FFFF:constant
 #define ScreenSelector FP_OFF(&ScreenSelectorRaw) // Open Watcom doesn't seem to have a way to directly use KERNEL imported absolute values, so, this hack instead
 
@@ -77,6 +89,20 @@ static char debug_tmp[128],*debug_tw;
 #define debug_tmp_LAST (debug_tmp + sizeof(debug_tmp) - 1)
 
 static const char *debug_hexes = "0123456789ABCDEF";
+
+void _setmem(void *d,const unsigned char c,unsigned int len) {
+    __asm {
+        push    di
+        push    cx
+	mov	al,c
+        mov     cx,len
+        les     di,d
+        cld
+        rep	stosb
+        pop     cx
+        pop     di
+    }
+}
 
 void _copymem(void *d,const void *s,unsigned int len) {
     __asm {
@@ -524,7 +550,6 @@ DWORD colorScreenToRGB(DWORD pc) {
 COLORREF WINAPI my_ColorInfo(LPVOID lpDestDev,DWORD dwColorin,LPPCOLOR lpPColor) {
     (void)lpDestDev;
 
-    __asm int 3
     if (lpPColor) {
         const DWORD pc = colorRGBtoScreen(dwColorin);
         *lpPColor = colorScreenToRGB(pc);
@@ -543,7 +568,7 @@ void WINAPI my_Control(void) {
 void WINAPI my_Disable(LPVOID lpDestDev) {
     (void)lpDestDev;
 
-    __asm int 3
+    //__asm int 3
     if (vga_drv_state & VGA_DRV_ENABLED) {
         /* clear CTL, so changes are not effective yet */
         dosbox_id_write_regsel(DOSBOX_ID_REG_VGAIG_CTL);
@@ -651,8 +676,97 @@ typedef struct tagTEXTXFORM {
 } TEXTXFORM;
 typedef TEXTXFORM FAR *LPTEXTXFORM;
 
+typedef uint32_t phys_color;
+
+struct oem_pen_def {
+    phys_color          color;
+    uint16_t            style;
+};
+typedef struct oem_pen_def *Poem_pen_def;
+typedef struct oem_pen_def FAR *LPoem_pen_def;
+
+struct oem_brush_def {
+    uint8_t             mono[8]; /* 8x8 */
+    uint16_t            style;
+    uint8_t             accel;
+    phys_color          fg,bg;
+    uint8_t             spare;
+    uint8_t             trans[8]; /* 8x8 */
+};
+typedef struct oem_brush_def *Poem_brush_def;
+typedef struct oem_brush_def FAR *LPoem_brush_def;
+
+typedef struct tagLPEN {
+    long  lopnStyle;
+    POINT lopnWidth;
+    long  lopnColor;
+} LPEN;
+typedef LPEN *PLPEN;
+typedef LPEN FAR *LPLPEN;
+
+typedef struct tagLBRUSH {
+    short  lbStyle;
+    long   lbColor;
+    short  lbHatch;
+    long   lbBkColor;
+} LBRUSH;
+typedef LBRUSH *PLBRUSH;
+typedef LBRUSH FAR *LPLBRUSH;
+
+typedef DWORD (WINAPI *robj_call_t)(LPVOID lpDestDev, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm);
+
+static DWORD WINAPI my_realize_pen(LPVOID lpDestDev, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm) {
+    LPoem_pen_def o_pn = (LPoem_pen_def)lpOutObj;
+    LPLPEN i_pn = (LPLPEN)lpInObj;
+
+    _setmem(o_pn,0,sizeof(*o_pn));
+    o_pn->style = i_pn->lopnStyle;
+    o_pn->color = i_pn->lopnColor;
+
+    return 1;
+}
+
+static DWORD WINAPI my_realize_brush(LPVOID lpDestDev, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm) {
+    LPoem_brush_def o_br = (LPoem_brush_def)lpOutObj;
+    LPLBRUSH i_br = (LPLBRUSH)lpInObj;
+
+    _setmem(o_br,0,sizeof(*o_br));
+    o_br->style = i_br->lbStyle;
+    o_br->fg = i_br->lbColor;
+    o_br->bg = i_br->lbBkColor;
+    o_br->accel = 0;
+    o_br->spare = 0;
+
+    return 1;
+}
+
+static DWORD WINAPI my_realize_font(LPVOID lpDestDev, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm) {
+    return 0; /* return 0 so GDI does it for us */
+}
+
+static const unsigned char robj_sizes[GDIOBJ_FONT] = {
+    sizeof(struct oem_pen_def),
+    sizeof(struct oem_brush_def),
+    0
+};
+
+static const robj_call_t robj_call[GDIOBJ_FONT] = {
+    my_realize_pen,
+    my_realize_brush,
+    my_realize_font
+};
+
 DWORD WINAPI my_RealizeObject(LPVOID lpDestDev, WORD wStyle, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm) {
-    __asm int 3
+    if (wStyle == 0/*deleting*/)
+        return 1; /* nothing to do */
+    if (wStyle > GDIOBJ_FONT)
+        return 0;
+
+    if (lpOutObj == NULL)
+        return robj_sizes[wStyle-1u];
+    else
+        return robj_call[wStyle-1u](lpDestDev,lpInObj,lpOutObj,lpTextXForm);
+
     return 0;
 }
 
