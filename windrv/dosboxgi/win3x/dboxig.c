@@ -850,8 +850,6 @@ void WINAPI my_DeviceMode(void) {
 }
 
 DWORD WINAPI my_ExtTextOut(LPPDEVICE lpDestDev,WORD wDestXOrg,WORD wDestYOrg,LPRECT lpClipRect,LPSTR lpString,int wCount,LPFONTINFO lpFontInfo,LPDRAWMODE lpDrawMode,LPTEXTXFORM lpTextXForm,LPSHORT lpCharWidths,LPRECT lpOpaqueRect,WORD wOptions) {
-    __asm int 3
-    __asm mov ax,14
     return 0;
 }
 
@@ -875,9 +873,7 @@ void WINAPI my_SetAttribute(void) {
     __asm mov ax,18
 }
 
-void WINAPI my_DeviceBitmapBits(void) {
-    __asm int 3
-    __asm mov ax,19
+void WINAPI my_DeviceBitmapBits(LPPDEVICE lpBitmap,WORD fGet,WORD iStart,WORD cScans,LPSTR lpDIBits,LPBITMAPINFO lpBitmapInfo,LPDRAWMODE lpDrawMode,LPINT lpTranslate) {
 }
 
 void WINAPI my_CreateBitmap(void) {
