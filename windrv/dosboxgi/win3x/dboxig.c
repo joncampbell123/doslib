@@ -914,9 +914,8 @@ void WINAPI my_SetCursor(void) {
     __asm mov ax,102
 }
 
-void WINAPI my_MoveCursor(void) {
-    __asm int 3
-    __asm mov ax,103
+void WINAPI my_MoveCursor(WORD wAbsX,WORD wAbsY) { /* caution: May be called from an interrupt */
+    DEBUG_OUTF("MoveCursor %u,%u",wAbsX,wAbsY);
 }
 
 void WINAPI my_CheckCursor(void) {
