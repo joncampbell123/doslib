@@ -450,12 +450,12 @@ int init_dosbox_ig(void) {
 
     DEBUG_OUTF("ScreenSelector 0x%x\n",ScreenSelector);
     DEBUG_OUTF("Updating GDIINFO\n");
-    GDIInfo.dpHorzRes = 640, /* in pixels */
-    GDIInfo.dpVertRes = 480, /* in pixels */
-    GDIInfo.dpMLoVpt.x = 640;
-    GDIInfo.dpMLoVpt.y = -480;
-    GDIInfo.dpMHiVpt.x = 640;
-    GDIInfo.dpMHiVpt.y = -480;
+    GDIInfo.dpHorzRes = screen_width; /* in pixels */
+    GDIInfo.dpVertRes = screen_height; /* in pixels */
+    GDIInfo.dpMLoVpt.x = screen_width;
+    GDIInfo.dpMLoVpt.y = -screen_height;
+    GDIInfo.dpMHiVpt.x = screen_width;
+    GDIInfo.dpMHiVpt.y = -screen_height;
     return 1;
 }
 
