@@ -658,11 +658,14 @@ void WINAPI my_Pixel(void) {
 typedef signed short SHORT;
 typedef SHORT FAR *LPSHORT;
 
+#pragma pack(push,1)
 typedef struct tagPDEVICE {
     short pdType;
 } PDEVICE;
 typedef PDEVICE FAR *LPPDEVICE;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct tagDRAWMODE {
   short    Rop2;       /*binary-raster operations*/
   short    bkMode;     /*background mode*/
@@ -679,7 +682,9 @@ typedef struct tagDRAWMODE {
   COLORREF LTextColor; /*logical text (foreground) color*/
 } DRAWMODE;
 typedef DRAWMODE FAR *LPDRAWMODE;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct tagFONTINFO {
     short dfType;
     short dfPoints;
@@ -718,7 +723,9 @@ typedef struct tagFONTINFO {
     long  dfReserved1[4];
 } FONTINFO;
 typedef FONTINFO FAR *LPFONTINFO;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct tagTEXTXFORM {
     short  txfHeight;
     short  txfWidth;
@@ -734,16 +741,20 @@ typedef struct tagTEXTXFORM {
     short  txfOverhang;
 } TEXTXFORM;
 typedef TEXTXFORM FAR *LPTEXTXFORM;
+#pragma pack(pop)
 
 typedef uint32_t phys_color;
 
+#pragma pack(push,1)
 struct oem_pen_def {
     phys_color          color;
     uint16_t            style;
 };
 typedef struct oem_pen_def *Poem_pen_def;
 typedef struct oem_pen_def FAR *LPoem_pen_def;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 struct oem_brush_def {
     uint8_t             mono[8]; /* 8x8 */
     uint16_t            style;
@@ -754,7 +765,9 @@ struct oem_brush_def {
 };
 typedef struct oem_brush_def *Poem_brush_def;
 typedef struct oem_brush_def FAR *LPoem_brush_def;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct tagLPEN {
     long  lopnStyle;
     POINT lopnWidth;
@@ -762,7 +775,9 @@ typedef struct tagLPEN {
 } LPEN;
 typedef LPEN *PLPEN;
 typedef LPEN FAR *LPLPEN;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct tagLBRUSH {
     short  lbStyle;
     long   lbColor;
@@ -771,6 +786,7 @@ typedef struct tagLBRUSH {
 } LBRUSH;
 typedef LBRUSH *PLBRUSH;
 typedef LBRUSH FAR *LPLBRUSH;
+#pragma pack(pop)
 
 typedef DWORD (WINAPI *robj_call_t)(LPVOID lpDestDev, LPVOID lpInObj, LPVOID lpOutObj, LPTEXTXFORM lpTextXForm);
 
@@ -903,28 +919,34 @@ typedef struct tagCURSORINFO {
 typedef CURSORINFO FAR *LPCURSORINFO;
 #pragma pack(pop)
 
+#pragma pack(push,1)
+typedef struct tagCURSORSHAPE {
+    short csHotX;
+    short csHotY;
+    short csWidth;
+    short csHeight;
+    short csWidthBytes;
+    short csColor;
+    char  csBits[1];
+} CURSORSHAPE;
+typedef CURSORSHAPE FAR *LPCURSORSHAPE;
+#pragma pack(pop)
+
 WORD WINAPI my_Inquire(LPCURSORINFO lpCursorInfo) {
     lpCursorInfo->dpXRate = 1;
     lpCursorInfo->dpYRate = 2;
     return sizeof(CURSORINFO);
 }
 
-void WINAPI my_SetCursor(void) {
-    __asm int 3
-    __asm mov ax,102
+void WINAPI my_SetCursor(LPCURSORSHAPE lpCursorShape) {
 }
 
 void WINAPI my_MoveCursor(WORD wAbsX,WORD wAbsY) { /* caution: May be called from an interrupt */
-    DEBUG_OUTF("MoveCursor %u,%u",wAbsX,wAbsY);
 }
 
-void WINAPI my_CheckCursor(void) {
-    __asm int 3
-    __asm mov ax,104
+void WINAPI my_CheckCursor(void) { /* caution: May be called from an interrupt */
 }
 
-void WINAPI my_UserRepaintDisable(void) {
-    __asm int 3
-    __asm mov ax,500
+void WINAPI my_UserRepaintDisable(BOOL bRepaintDisable) { /* not documented in the DDK */
 }
 
