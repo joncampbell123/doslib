@@ -473,11 +473,6 @@ WORD MiniLibMain(void) {
     return 1;
 }
 
-void WINAPI my_BitBlt(void) {
-    __asm int 3
-    __asm mov ax,1
-}
-
 /* NTS: Nowhere does Microsoft document what a PCOLOR is, so this is a best guess */
 typedef DWORD PCOLOR;
 typedef PCOLOR FAR *LPPCOLOR;
@@ -847,6 +842,10 @@ void WINAPI my_ScanLR(void) {
 void WINAPI my_DeviceMode(void) {
     __asm int 3
     __asm mov ax,13
+}
+
+BOOL WINAPI my_BitBlt(LPPDEVICE lpDestDev,WORD wDestX,WORD wDestY,LPPDEVICE lpSrcDev,WORD wSrcX,WORD wSrcY,WORD wXext,WORD wYext,long Rop3,/*LPBRUSH*/LPSTR lpPBrush,LPDRAWMODE lpDrawMode) {
+    return TRUE;
 }
 
 DWORD WINAPI my_ExtTextOut(LPPDEVICE lpDestDev,WORD wDestXOrg,WORD wDestYOrg,LPRECT lpClipRect,LPSTR lpString,int wCount,LPFONTINFO lpFontInfo,LPDRAWMODE lpDrawMode,LPTEXTXFORM lpTextXForm,LPSHORT lpCharWidths,LPRECT lpOpaqueRect,WORD wOptions) {
