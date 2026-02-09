@@ -660,6 +660,70 @@ void WINAPI my_Pixel(void) {
     __asm mov ax,9
 }
 
+typedef signed short SHORT;
+typedef SHORT FAR *LPSHORT;
+
+typedef struct tagPDEVICE {
+    short pdType;
+} PDEVICE;
+typedef PDEVICE FAR *LPPDEVICE;
+
+typedef struct tagDRAWMODE {
+  short    Rop2;       /*binary-raster operations*/
+  short    bkMode;     /*background mode*/
+  PCOLOR   bkColor;    /*physical background color*/
+  PCOLOR   TextColor;  /*physical text (foreground) color*/
+  short    TBreakExtra;/*number of extra pixels to add to line*/
+  short    BreakExtra; /*pixels per break: TBreakExtra/BreakCount*/
+  short    BreakErr;   /*running error term*/
+  short    BreakRem;   /*remaining pixels: TBreakExtra%BreakCount*/
+  short    BreakCount; /*number of breaks in the line*/
+  short    CharExtra;  /*extra pixels for each character*/
+  COLORREF LbkColor;   /*logical background color*/
+
+  COLORREF LTextColor; /*logical text (foreground) color*/
+} DRAWMODE;
+typedef DRAWMODE FAR *LPDRAWMODE;
+
+typedef struct tagFONTINFO {
+    short dfType;
+    short dfPoints;
+    short dfVertRes;
+    short dfHorizRes;
+    short dfAscent;
+    short dfInternalLeading;
+    short dfExternalLeading;
+    char  dfItalic;
+    char  dfUnderline;
+    char  dfStrikeOut;
+    short dfWeight;
+    char  dfCharSet;
+    short dfPixWidth;
+    short dfPixHeight;
+    char  dfPitchAndFamily;
+    short dfAvgWidth;
+    short dfMaxWidth;
+    char  dfFirstChar;
+    char  dfLastChar;
+    char  dfDefaultChar;
+    char  dfBreakChar;
+
+    short dfWidthBytes;
+    long  dfDevice;
+    long  dfFace;
+    long  dfBitsPointer;
+    long  dfBitsOffset;
+    char  dfReserved;
+    /* The following fields present only for Windows 3.x fonts */
+    long  dfFlags;
+    short dfAspace;
+    short dfBspace;
+    short dfCspace;
+    long  dfColorPointer;
+    long  dfReserved1[4];
+} FONTINFO;
+typedef FONTINFO FAR *LPFONTINFO;
+
 typedef struct tagTEXTXFORM {
     short  txfHeight;
     short  txfWidth;
@@ -785,9 +849,10 @@ void WINAPI my_DeviceMode(void) {
     __asm mov ax,13
 }
 
-void WINAPI my_ExtTextOut(void) {
+DWORD WINAPI my_ExtTextOut(LPPDEVICE lpDestDev,WORD wDestXOrg,WORD wDestYOrg,LPRECT lpClipRect,LPSTR lpString,int wCount,LPFONTINFO lpFontInfo,LPDRAWMODE lpDrawMode,LPTEXTXFORM lpTextXForm,LPSHORT lpCharWidths,LPRECT lpOpaqueRect,WORD wOptions) {
     __asm int 3
     __asm mov ax,14
+    return 0;
 }
 
 void WINAPI my_GetCharWidth(void) {
