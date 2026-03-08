@@ -452,6 +452,9 @@ static int chmd_read_headers(struct mspack_system *sys, struct mspack_file *fh,
       READ_ENCINT(offset);
       READ_ENCINT(length);
 
+	  /* ignore blank or one-char (e.g. "/") filenames we'd return as blank */
+      if (name_len < 2 || !name[0] || !name[1]) continue;
+
       /* empty files and directory names are stored as a file entry at
        * offset 0 with length 0. We want to keep empty files, but not
        * directory names, which end with a "/" */
