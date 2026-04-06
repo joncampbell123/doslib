@@ -330,6 +330,7 @@
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 #include <hw/sndsb/sb16asp.h>
+#include <hw/adlib/adlib.h>
 #include <hw/vga/vgagui.h>
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
@@ -3645,6 +3646,7 @@ static void help() {
 	printf(" /nopnp               Don't scan for ISA Plug & Play devices\n");
 	printf(" /noprobe             Don't probe ISA I/O ports for non PnP devices\n");
 	printf(" /noenv               Don't use BLASTER environment variable\n");
+	printf(" /noopl               Don't probe or use the OPL2/3 FM chip\n");
 	printf(" /wav=<file>          Open with specified WAV file\n");
 	printf(" /play                Automatically start playing WAV file\n");
 	printf(" /sc=<N>              Automatically pick Nth sound card (first card=1)\n");
@@ -4597,6 +4599,7 @@ int main(int argc,char **argv) {
 	int disable_pnp = 0;
 #endif
 	int disable_env = 0;
+	int disable_opl = 0;
 	int force_ddac = 0;
 	VGA_ALPHA_PTR vga;
 	int autoplay = 0;
@@ -4754,6 +4757,9 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"noenv")) {
 				disable_env = 1;
+			}
+			else if (!strcmp(a,"noopl")) {
+				disable_opl = 1;
 			}
 			else if (!strcmp(a,"ddac")) {
 				force_ddac = 1;
@@ -5070,6 +5076,28 @@ int main(int argc,char **argv) {
 		sndsb_update_capabilities(cx);
 		sndsb_determine_ideal_dsp_play_method(cx);
 	}
+
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+	if (!disable_opl) {
+		int chk = 1;
+
+		for (i=0;i < SNDSB_MAX_CARDS;i++) {
+			struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+			if (cx->oplio == 0x388) chk = 0;
+		}
+
+		if (chk) {
+			if (probe_adlib(0)) {
+				printf("OPL2/3 detected at 0x388\n");
+
+				for (i=0;i < SNDSB_MAX_CARDS;i++) {
+					struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+					if (cx->oplio == 0) cx->oplio = 0x388;
+				}
+			}
+		}
+	}
+#endif
 
 	if (sc_idx < 0) {
 		int count=0;
