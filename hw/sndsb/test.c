@@ -2306,7 +2306,18 @@ static void change_param_menu() {
 			vga_write_until(30);
 			vga_write("\n");
 
-			vga_moveto(0,13);
+			sprintf(tmp,"%s",sb_card->adlib_6bit?"6-bit HQ":"4-bit fast");
+			vga_write_color(selector == 8 ? 0x70 : 0x1F);
+			vga_write(  "Adlib mode:    ");
+			if (sndsb_dsp_out_method_supported(sb_card,wav_sample_rate,wav_stereo,wav_16bit))
+				vga_write_color(selector == 8 ? 0x70 : 0x1F);
+			else
+				vga_write_color(selector ==8 ? 0x74 : 0x1C);
+			vga_write(tmp);
+			vga_write_until(30);
+			vga_write("\n");
+
+			vga_moveto(0,14);
 #if defined(TARGET_PC98)
 			vga_write_color(0x10);
 #else
@@ -2355,7 +2366,7 @@ static void change_param_menu() {
 							if (i == 0) break;
 							temp_str[i] = 0;
 							wav_sample_rate = strtol(temp_str,NULL,0);
-                            if (wav_sample_rate == 0UL) wav_sample_rate = 1UL;
+							if (wav_sample_rate == 0UL) wav_sample_rate = 1UL;
 							uiredraw=1;
 							break;
 						}
@@ -2375,11 +2386,11 @@ static void change_param_menu() {
 			}
 			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				if (selector > 0) selector--;
-				else selector=7;
+				else selector=8;
 				uiredraw=1;
 			}
 			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
-				if (selector < 7) selector++;
+				if (selector < 8) selector++;
 				else selector=0;
 				uiredraw=1;
 			}
@@ -2430,6 +2441,10 @@ static void change_param_menu() {
 					case 7:
 						sb_card->backwards ^= 1;
 						break;
+					case 8:
+						sb_card->adlib_6bit ^= 1;
+						break;
+
 				};
 				update_cfg();
 				uiredraw=1;
@@ -2477,6 +2492,9 @@ static void change_param_menu() {
 						break;
 					case 7:
 						sb_card->backwards ^= 1;
+						break;
+					case 8:
+						sb_card->adlib_6bit ^= 1;
 						break;
 				};
 				update_cfg();
