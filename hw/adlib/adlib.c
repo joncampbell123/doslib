@@ -180,33 +180,6 @@ void adlib_write(unsigned short i,unsigned char d) {
  *       this would allow DOS programs to use this ADLIB library from within
  *       an interrupt routine */
 
-int probe_adlib(unsigned char sec) {
-	unsigned char a,b,retry=3;
-	unsigned short bas = sec ? 0x100 : 0;
-
-	/* this code uses the 8254 for timing */
-	if (!probe_8254())
-		return 1;
-
-	do {
-		adlib_write(0x04+bas,0x60);			/* reset both timers */
-		adlib_write(0x04+bas,0x80);			/* enable interrupts */
-		a = adlib_status(sec);
-		adlib_write(0x02+bas,0xFF);			/* timer 1 */
-		adlib_write(0x04+bas,0x21);			/* start timer 1 */
-		t8254_wait(t8254_us2ticks(100));
-		b = adlib_status(sec);
-		adlib_write(0x04+bas,0x60);			/* reset both timers */
-		adlib_write(0x04+bas,0x00);			/* disable interrupts */
-
-		if ((a&0xE0) == 0x00 && (b&0xE0) == 0xC0)
-			return 1;
-
-	} while (--retry != 0);
-
-	return 0;
-}
-
 int init_adlib() {
 	adlib_flags = 0;
 	if (!probe_adlib(0))
