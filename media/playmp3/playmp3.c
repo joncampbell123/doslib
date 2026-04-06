@@ -893,6 +893,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 /* Sound Blaster */
 #include <hw/sndsb/sndsb.h>
 #include <hw/sndsb/sndsbpnp.h>
+#include <hw/adlib/adlib.h>
 
 /* Gravis Ultrasound */
 #include <hw/ultrasnd/ultrasnd.h>
@@ -2338,6 +2339,13 @@ void begin_play() {
 			irq_0_adv = 182UL;		/* 18.2Hz */
 			irq_0_max = nr * 10UL;		/* sample rate */
 		}
+		else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
+			unsigned long nr = (unsigned long)sb_card->buffer_rate;
+			write_8254_system_timer(t8254_us2ticks(1000000UL / nr));
+			irq_0_count = 0;
+			irq_0_adv = 182UL;		/* 18.2Hz */
+			irq_0_max = nr * 10UL;		/* sample rate */
+		}
 
 		draw_irq_indicator();
 		mp3_playing = 1;
@@ -2477,7 +2485,7 @@ void stop_play() {
 
 	if (sb_card != NULL) { /* Sound Blaster */
 		_cli();
-		if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
+		if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
 			irq_0_count = 0;
 			irq_0_adv = 1;
 			irq_0_max = 1;
@@ -2581,6 +2589,24 @@ static void change_param_menu() {
 				vga_write(sndsb_dspoutmethod_str[sb_card->dsp_play_method]);
 				vga_write_until(30);
 				vga_write("\n");
+
+				vga_moveto(0,14);
+#if defined(TARGET_PC98)
+				vga_write_color(0x10);
+#else
+				vga_write_color(0x1F);
+#endif
+				vga_write_until(80);
+				vga_write("\n");
+				vga_write_until(80);
+				vga_write("\n");
+				vga_write_until(80);
+				vga_write("\n");
+				vga_moveto(0,14);
+#if defined(TARGET_PC98)
+				vga_write_color(0x0E);
+#endif
+				if (sb_card->reason_not_supported) vga_write(sb_card->reason_not_supported);
 			}
 			else if (gus_card != NULL) {
 				vga_write_color(selector == 3 ? 0x70 : 0x1F);
@@ -2712,7 +2738,7 @@ static void change_param_menu() {
 	}
 
 	if (sb_card != NULL) {
-		if (!irq_0_had_warned && sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
+		if (!irq_0_had_warned && (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB)) {
 			/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
 			   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
 			   On real hardware, even with the recovery method the machine remains hung :( */
@@ -3568,6 +3594,7 @@ int main(int argc,char **argv) {
 	int disable_blaster_env = 0;
 	uint32_t buffer_limit = 0;
 	int disable_probe = 0;
+	int disable_opl = 0;
 	int disable_pnp = 0;
 	int force_ddac = 0;
 	VGA_ALPHA_PTR vga;
@@ -3680,6 +3707,9 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"nowinvxd")) {
 				sndsb_probe_options.disable_windows_vxd_checks = 1;
+			}
+			else if (!strcmp(a,"noopl")) {
+				disable_opl = 1;
 			}
 			else {
 				help();
@@ -3918,6 +3948,28 @@ int main(int argc,char **argv) {
 
 	drv_mode = autopick;
 	if (autopick == USE_SB) {
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+		if (!disable_opl) {
+			int chk = 1;
+
+			for (i=0;i < SNDSB_MAX_CARDS;i++) {
+				struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+				if (cx->oplio == 0x388) chk = 0;
+			}
+
+			if (chk) {
+				if (probe_adlib(0)) { /* NTS: This code only cares about the Adlib FM digitized speech trick and does not need OPL3 */
+					printf("OPL2/3 detected at 0x388\n");
+
+					for (i=0;i < SNDSB_MAX_CARDS;i++) {
+						struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+						if (cx->oplio == 0) cx->oplio = 0x388;
+					}
+				}
+			}
+		}
+#endif
+
 		if (sc_idx < 0) {
 			int count=0;
 			for (i=0;i < SNDSB_MAX_CARDS;i++) {
