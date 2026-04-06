@@ -2,6 +2,7 @@
 #include <hw/sndsb/sndsb.h>
 
 const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
+	"adlib",
 	"direct",
 	"1.xx",
 	"2.00",

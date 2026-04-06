@@ -25,6 +25,21 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx * const cx,const unsigned lo
 		MSG("DSP alias I/O ports only exist on original Sound Blaster\nDSP 1.xx and 2.xx");
 		return 0;
 	}
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+	if (cx->oplio == 0 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
+		MSG("Adlib mode cannot work, OPL2/3 not detected");
+		return 0;
+	}
+	if (wav_stereo && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
+		MSG("Adlib mode does not support stereo");
+		return 0;
+	}
+#else
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
+		MSG("Adlib not supported");
+		return 0;
+	}
+#endif
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
 		if (cx->is_gallant_sc6600) {

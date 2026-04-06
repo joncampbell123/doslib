@@ -65,6 +65,10 @@
 #include <hw/dos/tgusmega.h>
 #include <hw/dos/tgussbos.h>
 
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+#include <hw/adlib/adlib.h>
+#endif
+
 /* Windows 9x VxD enumeration */
 #include <windows/w9xvmm/vxd_enum.h>
 
@@ -513,8 +517,8 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 	if (cx->dsp_playing)
 		return 0;
-    if (rate == 0)
-        return 0;
+	if (rate == 0)
+		return 0;
 
 	cx->dsp_prepared = 1;
 	cx->chose_use_dma = 0;
@@ -523,6 +527,13 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	cx->direct_dac_sent_command = 0;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT && cx->windows_emulation)
 		return 0;
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB && (cx->oplio == 0 || cx->windows_emulation))
+		return 0;
+#else
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB)
+		return 0;
+#endif
 
 	/* set up the params. if we already did (windows spring hack) then don't do it again, but proceed directly
 	 * to programming the hardware */
@@ -773,6 +784,51 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		else
 			cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
 	}
+	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+		cx->timer_tick_func = sndsb_timer_tick_adlib;
+		if (cx->dsp_record || cx->oplio == 0)
+			return 0;
+
+		/* Pinball dreams setup sequence:
+		 *
+		 * opl_write(0x20,0x21) operator0 AM=0 VIB=0 EG-TYP(voice sustain)=1 KSR=0 MULTI=1
+		 * opl_write(0x60,0xF0) operator0 AR=0xF DR=0x0
+		 * opl_write(0x80,0xF0) operator0 SL=0xF RR=0x0
+		 * opl_write(0xC0,0x01) modulator additive synthesis
+		 * opl_write(0xE0,0x00) wave select normal
+		 * opl_write(0x43,0x3F) modulator0 total volume=0x3F
+		 * opl_write(0xB0,0x01) voice0 KEY=0 octave=0 F(9..8)=1
+		 * opl_write(0xA0,0x8F) F(7..0)=0x8F
+		 * opl_write(0xB0,0x2E) voice0 KEY=1 octave=3 F(9..8)=2
+		 * opl_write(0xB0,0x20) voice0 KEY=1 octave=0 F(9..8)=0
+		 * opl_write(0xA0,0x00) F(7..0)=0x00
+
+		 * opl_set_index(0x40)
+		 * opl_write_data(.. 6-bit samples ..) */
+		/* to avoid making adlib.lib a hard dependency, do the I/O ourselves.
+		 * the calling program is responsible for setting cx->oplio properly
+		 * and calling probe_adlib()
+		 *
+		 * adlib_wait() is an inline function from adlib.h*/
+# define WAIT t8254_wait(t8254_us2ticks(100))
+		outp(cx->oplio+0,0x20); WAIT; outp(cx->oplio+1,0x21);
+		outp(cx->oplio+0,0x60); WAIT; outp(cx->oplio+1,0xF0);
+		outp(cx->oplio+0,0x80); WAIT; outp(cx->oplio+1,0xF0);
+		outp(cx->oplio+0,0xC0); WAIT; outp(cx->oplio+1,0x01);
+		outp(cx->oplio+0,0xE0); WAIT; outp(cx->oplio+1,0x00);
+		outp(cx->oplio+0,0x43); WAIT; outp(cx->oplio+1,0x3F);
+		outp(cx->oplio+0,0xB0); WAIT; outp(cx->oplio+1,0x01);
+		outp(cx->oplio+0,0xA0); WAIT; outp(cx->oplio+1,0x8f);
+		outp(cx->oplio+0,0xB0); WAIT; outp(cx->oplio+1,0x2E);
+		outp(cx->oplio+0,0xB0); WAIT; outp(cx->oplio+1,0x20);
+		outp(cx->oplio+0,0xA0); WAIT; outp(cx->oplio+1,0x00);
+		outp(cx->oplio+0,0x40);
+# undef WAIT
+#else
+		return 0;
+#endif
+	}
 	else if (cx->goldplay_mode) {
 #if TARGET_MSDOS == 32
 		if (cx->goldplay_dma == NULL)
@@ -795,6 +851,8 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) /* do nothing */
+		return 1;
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) /* do nothing */
 		return 1;
 
 	/* defer beginning playback until the program first asks for the DMA position */
@@ -973,6 +1031,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 
 	if (!cx->dsp_playing) return;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) return;
 	ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 
 	/* if we're doing it the non-autoinit method, then we

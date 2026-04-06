@@ -155,7 +155,7 @@ uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx * const cx) {
 
 	/* "direct" and "goldplay" methods require the program to update the play point in some fashion,
 	 * usually by programming IRQ 0 to tick at the sample rate */
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->goldplay_mode) {
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB || cx->goldplay_mode) {
 		r = cx->direct_dsp_io;
 		if (r >= cx->buffer_size) r = cx->buffer_size - 1;
 	}

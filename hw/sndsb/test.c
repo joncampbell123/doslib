@@ -1907,7 +1907,7 @@ static void begin_play() {
 		irq_0_adv = 182UL;		/* 18.2Hz */
 		irq_0_max = nr * 10UL;		/* sample rate */
 	}
-	else if (sb_card->goldplay_mode) {
+	else if (sb_card->goldplay_mode || sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
 		write_8254_system_timer(wav_sample_rate_by_timer_ticks);
 		irq_0_count = 0;
 		irq_0_adv = 182UL;		/* 18.2Hz */
@@ -1926,7 +1926,7 @@ static void stop_play() {
 	}
 
 	_cli();
-	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->goldplay_mode) {
+	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB || sb_card->goldplay_mode) {
 		irq_0_count = 0;
 		irq_0_adv = 1;
 		irq_0_max = 1;
@@ -2488,7 +2488,7 @@ static void change_param_menu() {
 	}
 
 #if TARGET_MSDOS == 32
-	if (!irq_0_had_warned && sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
+	if (!irq_0_had_warned && (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB)) {
 		/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
 		   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
 		   On real hardware, even with the recovery method the machine remains hung :( */
@@ -4648,31 +4648,31 @@ int main(int argc,char **argv) {
 				dma_probe_14 = 0;
 			}
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            else if (!strcmp(a,"srf4xx")) {
-                force_srate_4xx = 1;
-            }
-            else if (!strcmp(a,"dma128")) {
-                dma128 = 1;
-            }
-            else if (!strcmp(a,"-dma128")) {
-                dma128 = -1;
-            }
-            else if (!strncmp(a,"dmam:",5)) {
-                a += 5;
+			else if (!strcmp(a,"srf4xx")) {
+				force_srate_4xx = 1;
+			}
+			else if (!strcmp(a,"dma128")) {
+				dma128 = 1;
+			}
+			else if (!strcmp(a,"-dma128")) {
+				dma128 = -1;
+			}
+			else if (!strncmp(a,"dmam:",5)) {
+				a += 5;
 
-                if (*a == 'u' || *a == 'a' || *a == 'p')
-                    dmam = *a;
-                else
-                    return 1;
-            }
+				if (*a == 'u' || *a == 'a' || *a == 'p')
+					dmam = *a;
+				else
+					return 1;
+			}
 #endif
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            else if (!strcmp(a,"noasp")) {
-                ignore_asp = 1;
-            }
-            else if (!strcmp(a,"srftc")) {
-                force_srate_tc = 1;
-            }
+			else if (!strcmp(a,"noasp")) {
+				ignore_asp = 1;
+			}
+			else if (!strcmp(a,"srftc")) {
+				force_srate_tc = 1;
+			}
 			else if (!strcmp(a,"stopres")) {
 				always_reset_dsp_to_stop = 1;
 			}
@@ -4699,25 +4699,25 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"debug")) {
 				sb_debug = 1;
 			}
-            else if (!strcmp(a,"96k")) {
-                buffer_limit = 96UL * 1024UL;
-            }
+			else if (!strcmp(a,"96k")) {
+				buffer_limit = 96UL * 1024UL;
+			}
 #endif
-            else if (!strcmp(a,"64k")) {
-                buffer_limit = 64UL * 1024UL;
-            }
-            else if (!strcmp(a,"63k")) {
-                buffer_limit = 63UL * 1024UL;
-            }
-            else if (!strcmp(a,"48k")) {
-                buffer_limit = 48UL * 1024UL;
-            }
-            else if (!strcmp(a,"32k")) {
-                buffer_limit = 32UL * 1024UL;
-            }
-            else if (!strcmp(a,"16k")) {
-                buffer_limit = 16UL * 1024UL;
-            }
+			else if (!strcmp(a,"64k")) {
+				buffer_limit = 64UL * 1024UL;
+			}
+			else if (!strcmp(a,"63k")) {
+				buffer_limit = 63UL * 1024UL;
+			}
+			else if (!strcmp(a,"48k")) {
+				buffer_limit = 48UL * 1024UL;
+			}
+			else if (!strcmp(a,"32k")) {
+				buffer_limit = 32UL * 1024UL;
+			}
+			else if (!strcmp(a,"16k")) {
+				buffer_limit = 16UL * 1024UL;
+			}
 			else if (!strcmp(a,"8k")) {
 				buffer_limit = 8UL * 1024UL;
 			}
@@ -4802,17 +4802,17 @@ int main(int argc,char **argv) {
 		d8237_flags |= D8237_DMA_PRIMARY | D8237_DMA_SECONDARY;
 
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-    if (dma128 == 1)
-        d8237_enable_16bit_128kb_dma();
-    else if (dma128 == -1)
-        d8237_disable_16bit_128kb_dma();
+	if (dma128 == 1)
+		d8237_enable_16bit_128kb_dma();
+	else if (dma128 == -1)
+		d8237_disable_16bit_128kb_dma();
 
-    if (dmam == 'u')
-        d8237_16bit_set_unknown_mask();
-    else if (dmam == 'a')
-        d8237_16bit_set_addr_mask();
-    else if (dmam == 'p')
-        d8237_16bit_set_page_mask();
+	if (dmam == 'u')
+		d8237_16bit_set_unknown_mask();
+	else if (dmam == 'a')
+		d8237_16bit_set_addr_mask();
+	else if (dmam == 'p')
+		d8237_16bit_set_page_mask();
 
 	printf("DMA available: 0-3=%s 4-7=%s mask8=0x%lx mask16=0x%lx 128k=%u\n",
 		d8237_flags&D8237_DMA_PRIMARY?"yes":"no",
@@ -5068,8 +5068,8 @@ int main(int argc,char **argv) {
 		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 		if (assume_dsp_hispeed_doesnt_block) cx->hispeed_blocking = 0;
 		if (always_reset_dsp_to_stop) cx->always_reset_dsp_to_stop = 1;
-        if (force_srate_4xx) cx->srate_force_dsp_4xx = 1;
-        if (force_srate_tc) cx->srate_force_dsp_tc = 1;
+		if (force_srate_4xx) cx->srate_force_dsp_4xx = 1;
+		if (force_srate_tc) cx->srate_force_dsp_tc = 1;
 #endif
 
 		// having IRQ and DMA changes the ideal playback method and capabilities
@@ -5087,7 +5087,7 @@ int main(int argc,char **argv) {
 		}
 
 		if (chk) {
-			if (probe_adlib(0)) {
+			if (probe_adlib(0)) { /* NTS: This code only cares about the Adlib FM digitized speech trick and does not need OPL3 */
 				printf("OPL2/3 detected at 0x388\n");
 
 				for (i=0;i < SNDSB_MAX_CARDS;i++) {
@@ -5132,16 +5132,16 @@ int main(int argc,char **argv) {
 			printf("      '%s'\n",cx->dsp_copyright);
 
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            if (!ignore_asp) {
-                if (sndsb_check_for_sb16_asp(cx)) {
-                    printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
+			if (!ignore_asp) {
+				if (sndsb_check_for_sb16_asp(cx)) {
+					printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
 
-                    if (sndsb_sb16_asp_ram_test(cx) > 0)
-                        printf("RAM OK\n");
-                    else
-                        printf("RAM TEST FAILED\n");
-                }
-            }
+					if (sndsb_sb16_asp_ram_test(cx) > 0)
+						printf("RAM OK\n");
+					else
+						printf("RAM TEST FAILED\n");
+				}
+			}
 #endif
 
 			count++;
@@ -5171,7 +5171,7 @@ int main(int argc,char **argv) {
 	}
 
 	printf("Allocating sound buffer..."); fflush(stdout);
-    realloc_dma_buffer();
+	realloc_dma_buffer();
 
 	i = int10_getmode();
 	if (i != 3) int10_setmode(3);
@@ -5239,17 +5239,17 @@ int main(int argc,char **argv) {
 #endif
 
 #if defined(TARGET_PC98) && TARGET_MSDOS == 16
-    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
-     * between left arrow and backspace, etc.
-     *
-     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
-     * seems to be perfectly reasonable patterns. */
-    pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
-    cur_pc98_keycodes = prev_pc98_keycodes;
+	/* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+	 * between left arrow and backspace, etc.
+	 *
+	 * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+	 * seems to be perfectly reasonable patterns. */
+	pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
+	cur_pc98_keycodes = prev_pc98_keycodes;
 
-    /* the VGA GUI expects a specific mapping to work */
-    vga_tty_pc98_mapping(&cur_pc98_keycodes);
-    pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
+	/* the VGA GUI expects a specific mapping to work */
+	vga_tty_pc98_mapping(&cur_pc98_keycodes);
+	pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
 #endif
 
 	if (wav_file[0] != 0) open_wav();
@@ -5338,9 +5338,9 @@ int main(int argc,char **argv) {
 					"16-bit real mode (small model) version"
 #endif
 #if defined(TARGET_PC98)
-                    "\nFor NEC PC-9801/PC-9821 and compatibles"
+					"\nFor NEC PC-9801/PC-9821 and compatibles"
 #else
-                    "\nFor IBM PC/XT/AT and compatibles"
+					"\nFor IBM PC/XT/AT and compatibles"
 #endif
 					,0,0);
 				while (1) {
@@ -5473,37 +5473,37 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-            else if (mitem == &main_menu_device_srate_force) {
+			else if (mitem == &main_menu_device_srate_force) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 
-                if (sb_card->srate_force_dsp_4xx) {
-                    sb_card->srate_force_dsp_4xx = 0;
-                    sb_card->srate_force_dsp_tc = 1;
-                }
-                else if (sb_card->srate_force_dsp_tc) {
-                    sb_card->srate_force_dsp_4xx = 0;
-                    sb_card->srate_force_dsp_tc = 0;
-                }
-                else {
-                    sb_card->srate_force_dsp_4xx = 1;
-                    sb_card->srate_force_dsp_tc = 0;
-                }
+				if (sb_card->srate_force_dsp_4xx) {
+					sb_card->srate_force_dsp_4xx = 0;
+					sb_card->srate_force_dsp_tc = 1;
+				}
+				else if (sb_card->srate_force_dsp_tc) {
+					sb_card->srate_force_dsp_4xx = 0;
+					sb_card->srate_force_dsp_tc = 0;
+				}
+				else {
+					sb_card->srate_force_dsp_4xx = 1;
+					sb_card->srate_force_dsp_tc = 0;
+				}
 				update_cfg();
 
 				if (wp) begin_play();
 				bkgndredraw = 1;
 				redraw = 1;
-            }
-            else if (mitem == &main_menu_device_realloc_dma) {
-                unsigned char wp = wav_playing;
-                if (wp) stop_play();
-                realloc_dma_buffer();
-                if (wp) begin_play();
-                bkgndredraw = 1;
-                redraw = 1;
-            }
-            else if (mitem == &main_menu_device_busy_cycle) {
+			}
+			else if (mitem == &main_menu_device_realloc_dma) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				realloc_dma_buffer();
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
+			}
+			else if (mitem == &main_menu_device_busy_cycle) {
 				// NTS: The user may be testing the busy cycle while the card is playing audio. Do NOT stop playback!
 				//      The test carried out in this function does not send DSP commands, it only polls the DSP.
 				measure_dsp_busy_cycle();
@@ -5889,10 +5889,10 @@ int main(int argc,char **argv) {
 			if (bkgndredraw) {
 #if defined(TARGET_PC98)
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
-                    vga[0x0000] = 0x20;
-                    vga[0x1000] = 0x25;
-                    vga++;
-                }
+					vga[0x0000] = 0x20;
+					vga[0x1000] = 0x25;
+					vga++;
+				}
 #else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 #endif
@@ -5905,10 +5905,10 @@ int main(int argc,char **argv) {
 			vga_write_color(0x1F);
 #if defined(TARGET_PC98)
 			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) {
-                vga[0     ] = 0x20;
-                vga[0x1000] = 0x01;
-                vga++;
-            }
+				vga[0     ] = 0x20;
+				vga[0x1000] = 0x01;
+				vga++;
+			}
 #else
 			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) *vga++ = 0x1F20;
 #endif
@@ -6010,12 +6010,12 @@ int main(int argc,char **argv) {
 	}
 
 #if defined(TARGET_PC98) && TARGET_MSDOS == 16
-    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
-     * between left arrow and backspace, etc.
-     *
-     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
-     * seems to be perfectly reasonable patterns. */
-    pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
+	/* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+	 * between left arrow and backspace, etc.
+	 *
+	 * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+	 * seems to be perfectly reasonable patterns. */
+	pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
 #endif
 
 	_sti();
@@ -6025,7 +6025,7 @@ int main(int argc,char **argv) {
 	printf("Closing WAV...\n");
 	close_wav();
 	printf("Freeing buffer...\n");
-    free_dma_buffer();
+	free_dma_buffer();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);

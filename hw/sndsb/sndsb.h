@@ -186,7 +186,8 @@ enum {
 
 /* which method to use when playing audio through the DSP */
 enum {
-        SNDSB_DSPOUTMETHOD_DIRECT=0,            /* DSP command 0x10 single-byte playback */
+        SNDSB_DSPOUTMETHOD_ADLIB=0,             /* No DSP at all, use the Adlib FM trick */
+        SNDSB_DSPOUTMETHOD_DIRECT,              /* DSP command 0x10 single-byte playback */
         SNDSB_DSPOUTMETHOD_1xx,                 /* DSP command 0x14 8-bit mono (DSP 1.xx method) */
         SNDSB_DSPOUTMETHOD_200,                 /* DSP command 0x1C 8-bit auto-init (DSP 2.00) */
         SNDSB_DSPOUTMETHOD_201,                 /* DSP command 0x90 8-bit auto-init high speed (DSP 2.01+ using mixer bit to set stereo) */
@@ -551,6 +552,9 @@ const char *sndsb_ess_chipset_str(unsigned int c);
 
 void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx);
 void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx);
+#if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
+void sndsb_timer_tick_adlib(struct sndsb_ctx *cx);
+#endif
 int sndsb_read_sc400_config(struct sndsb_ctx *cx);
 void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx);
 int sndsb_read_dsp_copyright(struct sndsb_ctx *cx,char *buf,unsigned int buflen);
