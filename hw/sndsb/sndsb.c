@@ -298,7 +298,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->wari_hack_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->ess_extended_mode = 0;
-	cx->adlib_6bit = 0;
+	cx->adlib_6bit = 1; /* this library supports the 4-bit classic method, but the 6-bit lookup table sounds better, so it is default */
 	cx->hispeed_matters = 1; /* assume it does */
 	cx->hispeed_blocking = 1; /* assume it does */
 	cx->timer_tick_signal = 0;

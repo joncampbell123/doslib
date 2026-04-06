@@ -1,6 +1,6 @@
 
 Creative Sound Blaster or 100% Compatible sound output library.
-(C) 2008-2011 Jonathan Campbell.
+(C) 2008-2026 Jonathan Campbell.
 Compiles with Open Watcom.
 
 What it supports:
@@ -904,4 +904,25 @@ plays the audio really slow).
 The divider for their lowpass filter appears to have the same behavior.
 Setting the divider to 0x00 turns the audio into a very low bandwidth
 signal (as you'd expect) while 0xFF silences output entirely.
+
+Adlib FM playback
+-----------------
+
+Back in the very early 1990s, when some users may have had the Adlib
+FM board but not the Sound Blaster, there was a common hack to play
+digitized speech through the FM chip. This code implements that hack
+as a playback mode. It is listed in this library and test program
+as a DSP mode.
+
+Instead of letting the FM operator and modulator oscillate as usual,
+the code fixes the oscillator at full volume, then plays digital
+samples through the total volume register. Theoretically this would
+allow 6 bits of precision, except that the volume register represents
+decibels, not linear values, so it is common to send 4-bit values
+to play audio at the part of the scale that, while sounding slightly
+distorted, is pretty good.
+
+This library implements that mode, but also provides a higher
+quality mode using a lookup table that allows the use of all 6 bits
+and eliminates the slight distortion.
 

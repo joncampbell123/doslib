@@ -5339,7 +5339,7 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.5 for DOS\n\n(C) 2008-2025 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.6 for DOS\n\n(C) 2008-2026 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
@@ -5391,8 +5391,8 @@ int main(int argc,char **argv) {
 					"1.xx      Original Sound Blaster or compatible DSP operation.\n"
 					"\n"
 					"Direct    DSP command 0x10 (Direct DAC output) and system timer.\n"
-					"          If DMA is not available, this is your only option. Emulators,\n"
-					"          clones, some motherboard & SB16 combos have problems with it.\n"
+					"\n"
+					"Adlib     Play audio through the FM chip on the board, not the DSP.\n"
 					"\n"
 					"Detailed explanations are available in README.TXT"
 					,0,0);
