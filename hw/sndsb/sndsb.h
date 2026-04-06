@@ -558,7 +558,6 @@ void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx);
 #if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
 void sndsb_timer_tick_adlib(struct sndsb_ctx *cx);
 void sndsb_timer_tick_adlib6(struct sndsb_ctx *cx);
-extern const unsigned char sndsb_adlib6_lookup[256];
 #endif
 int sndsb_read_sc400_config(struct sndsb_ctx *cx);
 void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx);
