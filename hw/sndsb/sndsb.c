@@ -298,6 +298,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->wari_hack_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->ess_extended_mode = 0;
+	cx->adlib_6bit = 1;
 	cx->hispeed_matters = 1; /* assume it does */
 	cx->hispeed_blocking = 1; /* assume it does */
 	cx->timer_tick_signal = 0;
@@ -786,7 +787,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_ADLIB) {
 #if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
-		cx->timer_tick_func = sndsb_timer_tick_adlib;
+		cx->timer_tick_func = cx->adlib_6bit ? sndsb_timer_tick_adlib6 : sndsb_timer_tick_adlib;
 		if (cx->dsp_record || cx->oplio == 0)
 			return 0;
 

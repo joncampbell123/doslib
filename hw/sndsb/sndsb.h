@@ -377,6 +377,9 @@ struct sndsb_ctx {
 	uint8_t				direct_dac_sent_command:1;	/* direct DSP playback: we just sent the command, next is data */
 	uint8_t				ess_extended_mode:1;	/* if set, ESS chip is in extended mode */
 	uint8_t				timer_tick_signal:1;
+	uint8_t				adlib_6bit:1;		/* if set, Adlib mode uses a lookup table to use the full 6 bits rather than
+								   the cheap 4-bit Adlib hack of old, to get better volume, despite that the
+								   volume register is non-linear (decibels) */
 };
 #pragma pack(pop)
 
@@ -554,6 +557,8 @@ void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx);
 void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx);
 #if TARGET_MSDOS == 32 || (TARGET_MSDOS == 16 && !defined(__COMPACT__) && !defined(__SMALL__))
 void sndsb_timer_tick_adlib(struct sndsb_ctx *cx);
+void sndsb_timer_tick_adlib6(struct sndsb_ctx *cx);
+extern const unsigned char sndsb_adlib6_lookup[256];
 #endif
 int sndsb_read_sc400_config(struct sndsb_ctx *cx);
 void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx);
