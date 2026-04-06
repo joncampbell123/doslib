@@ -93,17 +93,17 @@ int main(int argc,char **argv) {
 #endif
 
 #if defined(TARGET_PC98) && TARGET_MSDOS == 16
-    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
-     * between left arrow and backspace, etc.
-     *
-     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
-     * seems to be perfectly reasonable patterns. */
-    pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
-    cur_pc98_keycodes = prev_pc98_keycodes;
+	/* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+	 * between left arrow and backspace, etc.
+	 *
+	 * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+	 * seems to be perfectly reasonable patterns. */
+	pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
+	cur_pc98_keycodes = prev_pc98_keycodes;
 
-    /* the VGA GUI expects a specific mapping to work */
-    vga_tty_pc98_mapping(&cur_pc98_keycodes);
-    pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
+	/* the VGA GUI expects a specific mapping to work */
+	vga_tty_pc98_mapping(&cur_pc98_keycodes);
+	pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
 #endif
 
 	memset(adlib_fm,0,sizeof(adlib_fm));
@@ -287,7 +287,7 @@ int main(int argc,char **argv) {
 				vga_write("Choose an instrument to load into the channel:\n");
 				vga_write(" 1. Violin     2. Piano     3. Harpsichord     4. Horn      5. Deep bass drum\n");
 				vga_write(" 6. Small drum 7. Electric Piano  8. Overdrive guitar  9. Electric bass\n");
-                vga_write(" 0. Lead 1 square\n");
+				vga_write(" 0. Lead 1 square\n");
 				vga_write_sync();
 
 				c = getch();
@@ -481,12 +481,12 @@ int main(int argc,char **argv) {
 	}
 
 #if defined(TARGET_PC98) && TARGET_MSDOS == 16
-    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
-     * between left arrow and backspace, etc.
-     *
-     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
-     * seems to be perfectly reasonable patterns. */
-    pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
+	/* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+	 * between left arrow and backspace, etc.
+	 *
+	 * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+	 * seems to be perfectly reasonable patterns. */
+	pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
 #endif
 
 	shutdown_adlib();

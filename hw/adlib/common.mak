@@ -4,7 +4,7 @@ NOW_BUILDING = HW_ADLIB_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    adlib.c adlprobe.c
-OBJS =        $(SUBDIR)$(HPS)adlib.obj $(SUBDIR)$(HPS)adlprobe.obj
+OBJS =        $(SUBDIR)$(HPS)adlib.obj $(SUBDIR)$(HPS)adlprobe.obj $(SUBDIR)$(HPS)adlread.obj $(SUBDIR)$(HPS)adlwrite.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 MIDI_EXE =    $(SUBDIR)$(HPS)midi.$(EXEEXT)
 IMFPLAY_EXE = $(SUBDIR)$(HPS)imfplay.$(EXEEXT)
@@ -12,6 +12,7 @@ MIDI2IMF_EXE =$(SUBDIR)$(HPS)midi2imf.$(EXEEXT)
 
 $(HW_ADLIB_LIB): $(OBJS)
 	wlib -q -b -c $(HW_ADLIB_LIB) -+$(SUBDIR)$(HPS)adlib.obj -+$(SUBDIR)$(HPS)adlprobe.obj
+	wlib -q -b -c $(HW_ADLIB_LIB) -+$(SUBDIR)$(HPS)adlread.obj -+$(SUBDIR)$(HPS)adlwrite.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
