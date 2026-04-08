@@ -1,3 +1,4 @@
+; Odd/Even SC/GC rendering, DWORD CRTC displaying. All 4 colors should be seen. Works in QEMU and 86Box.
 title TestOE
 .8086
 .model tiny

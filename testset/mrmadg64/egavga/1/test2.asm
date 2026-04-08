@@ -1,3 +1,4 @@
+; Odd/Even SC/GC rendering, BYTE CRTC displaying. 128Kb mode test. All 8 colors should be seen. Works in QEMU and 86Box, except high page. It's blank for QEMU and contains garbage data in 86Box.
 title TestOE
 .8086
 .model tiny

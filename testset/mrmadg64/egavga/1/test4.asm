@@ -1,3 +1,4 @@
+; 1bpp Chain4 mode test. Both line patterns should be the same. Doesn't work in QEMU, but all of a sudden works in 86Box.
 title TestS4
 .8086
 .model tiny
