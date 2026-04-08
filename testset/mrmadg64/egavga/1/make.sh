@@ -24,12 +24,23 @@ if [ "$1" == "clean" ]; then
     exit 0
 fi
 
+chk_built() {
+    count=0
+    if [ -f dos86t/TEST1.COM ]; then count=$(($count+1)); fi
+    if [ -f dos86t/TEST2.COM ]; then count=$(($count+1)); fi
+    if [ -f dos86t/TEST3.COM ]; then count=$(($count+1)); fi
+    if [ -f dos86t/TEST4.COM ]; then count=$(($count+1)); fi
+    if [ $(($count >= 4)) == 1 ]; then return 0; fi
+    return 1
+}
+
 if [[ "$1" == "build" || "$1" == "" ]]; then
-    mkdir -p dos86t || exit 1
-    dosbox-x --conf build.conf || exit 1
-    [ -f dos86t/TEST1.COM ] || exit 1
-    [ -f dos86t/TEST2.COM ] || exit 1
-    [ -f dos86t/TEST3.COM ] || exit 1
-    [ -f dos86t/TEST4.COM ] || exit 1
+    if chk_built; then
+        true
+    else
+        mkdir -p dos86t || exit 1
+        dosbox-x --conf build.conf || exit 1
+        chk_built || exit 1
+    fi
 fi
 
