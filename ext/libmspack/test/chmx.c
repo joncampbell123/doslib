@@ -40,7 +40,10 @@ static int ensure_filepath(char *path) {
 }
 
 char *create_output_name(char *fname) {
-    char *out, *p;
+    char *out = NULL, *p;
+
+    if (!fname)
+        return NULL;
     if ((out = malloc(strlen(fname) + 1))) {
         /* remove leading slashes */
         while (*fname == '/' || *fname == '\\') fname++;
@@ -89,7 +92,12 @@ int main(int argc, char *argv[]) {
 	  qsort(f, numf, sizeof(struct mschmd_file *), &sortfunc);
 
 	  for (i = 0; i < numf; i++) {
-	    char *outname = create_output_name((unsigned char *)f[i]->filename,NULL,0,1,0);
+	    char *outname = create_output_name(f[i]->filename);
+	    if (!outname) {
+	      fprintf(stderr, "%s: out of memory for \"%s\"\n",
+		      *argv, f[i]->filename);
+	      continue;
+	    }
 	    printf("Extracting %s\n", outname);
 	    ensure_filepath(outname);
 	    if (chmd->extract(chmd, f[i], outname)) {
