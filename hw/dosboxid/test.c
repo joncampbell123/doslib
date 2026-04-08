@@ -157,7 +157,7 @@ int main(int argc,char **argv,char **envp) {
 		lfb = dosbox_id_read_data();
 
 		printf("DOSBox Integrated Graphics caps: ");
-		if (caps & DOSBOX_ID_REG_VGA1G_CAPS_ENABLED) printf("enabled");
+		if (caps & DOSBOX_ID_REG_VGAIG_CAPS_ENABLED) printf("enabled");
 		else printf("not-available");
 		printf("\n");
 
