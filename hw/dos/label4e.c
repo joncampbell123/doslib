@@ -36,16 +36,23 @@ static void printf_fcb(unsigned char *fcb/*44*/) {
 	printf("\n");
 }
 
-static char *srch = "*.*";
+static const char *srch = "*.*";
 static unsigned char dta[128];
 static unsigned char tmp[64];
 
 int main(int argc,char **argv) {
 	unsigned int stat = 0xFFFF;
-	char far *fp;
+	const char far *fp;
 
 	if (argc > 1) {
-		srch = argv[1];
+		const char *s = argv[1];
+
+		if (isalpha(s[0]) && s[1] == ':') {
+			memcpy(tmp,s,2); memcpy(tmp+2,"*.*",4);
+			srch = tmp; s += 2;
+		}
+
+		if (*s) srch = s;
 	}
 
 	memset(dta,0,sizeof(dta));
