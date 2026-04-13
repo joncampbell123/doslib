@@ -61,6 +61,7 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk dos86s/hexstdi6.exe ::hexstdi6.exe
     mcopy -i test.dsk dos86s/blah.exe ::blah.exe
     mcopy -i test.dsk dos86s/labelfcb.exe ::labelfcb.exe
+    mcopy -i test.dsk dos86s/label4e.exe ::label4e.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then

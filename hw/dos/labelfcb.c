@@ -1,6 +1,6 @@
 /* labelfcb.c
  *
- * Test program: Demonstrate reading the volume label using an FBC
+ * Test program: Demonstrate reading the volume label using an FCB
  * (C) 2026 Jonathan Campbell.
  * Hackipedia DOS library.
  *
@@ -98,7 +98,7 @@ int main(int argc,char **argv) {
 		pop ds
 	}
 
-	printf("FCB in DTA after to INT 21h (AL=%02x aka status):\n",stat);
+	printf("FCB in DTA after INT 21h (AL=%02x aka status):\n",stat);
 	printf_fcb(dta);
 
 	if (stat == 0) {
