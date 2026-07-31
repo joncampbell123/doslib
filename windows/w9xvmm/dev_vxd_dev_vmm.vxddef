@@ -437,7 +437,7 @@ in              ESI=vxd_vm_event_handle_t           Event                   ; Ev
 %defconstbitfield
 description     Flags for Call_Priority_VM_Event (PEF_*)
 description
-description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537
 
 bitdefsuffix    _Bit
 
@@ -2500,7 +2500,7 @@ in              EDX                             Port                    ; I/O po
 #--------------------------------------
 %defcall
 byname          List_Create
-description     Create a list structure and return a handle to the list.
+description     Create a list structure and return a handle to the list
 
 in              EAX                             Flags                   ; creation flags
 in              ECX                             NodeSize                ; size in bytes of node in the list
@@ -2512,7 +2512,7 @@ out             ESI                             List                    ; list h
 #--------------------------------------
 %defcall
 byname          List_Destroy
-description     Deallocate all nodes of a list and destroy the list handle.
+description     Deallocate all nodes of a list and destroy the list handle
 
 in              ESI                             List                    ; list handle to destroy
 %enddef
