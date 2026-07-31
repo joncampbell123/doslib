@@ -608,12 +608,12 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553
 
 bitdefsuffix    _Bit
 
-#                                                   default=1   default=(1<<width)-1
-#       constant                        bit number  bit width   value   comment
-def     Block_Svc_Ints                  0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
-def     Block_Svc_If_Ints_Locked        1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
-def     Block_Enable_Ints               2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set
-def     Block_Poll                      3                             ; Do not switch away from the blocked virtual machine unless another machine has higher priority.
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     Block_Svc_Ints              0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
+def     Block_Svc_If_Ints_Locked    1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
+def     Block_Enable_Ints           2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set
+def     Block_Poll                  3                             ; Do not switch away from the blocked virtual machine unless another machine has higher priority.
 %enddef
 
 #--------------------------------------
@@ -2049,12 +2049,12 @@ description     Flags for _MMGR_Toggle_HMA
 description
 description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 754
 
-#                                                           default=1   default=(1<<width)-1
-#       constant                                bit number  bit width   value   comment
-def     MMGRHMAPhysical                         0           
-def     MMGRHMAEnable                           1           
-def     MMGRHMADisable                          2           
-def     MMGRHMAQuery                            3           
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     MMGRHMAPhysical             0
+def     MMGRHMAEnable               1
+def     MMGRHMADisable              2
+def     MMGRHMAQuery                3
 %enddef
 
 #--------------------------------------
