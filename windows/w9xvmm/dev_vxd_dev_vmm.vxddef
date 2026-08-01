@@ -2498,6 +2498,21 @@ in              EDX                             Port                    ; I/O po
 %enddef
 
 #--------------------------------------
+%defconstbitfield
+description     Flags for List_Create (LF_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 821
+
+bitdefsuffix    _Bit
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     LF_Async                    0                             ; Create an asynchronous list that can be used during interrupt servicing
+def     LF_Use_Heap                 1                             ; Allocate nodes on the system heap (shall not be used with LF_Async)
+def     LF_Alloc_Error              2                             ; Make List_Allocate set carry flag if new node could not be allocated
+%enddef
+
+#--------------------------------------
 %defcall
 byname          List_Create
 description     Create a list structure and return a handle to the list
@@ -2515,5 +2530,1058 @@ byname          List_Destroy
 description     Deallocate all nodes of a list and destroy the list handle
 
 in              ESI                             List                    ; list handle to destroy
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Allocate
+description     Allocate a new node for the list and return its address
+
+in              ESI                             List                    ; list handle
+
+out             !CF                             Success                 ; CF set if error, Success set if success
+out             EAX                             Node                    ; address of the new node if Success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Deallocate
+description     Deallocate the specified node
+
+in              ESI                             List                    ; list handle
+in              EAX                             Node                    ; address of the node to deallocate
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Attach
+description     Attach a node to the list head
+
+in              ESI                             List                    ; list handle
+in              EAX                             Node                    ; address of the node to attach
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Attach_Tail
+description     Attach a node to the list tail
+
+in              ESI                             List                    ; list handle
+in              EAX                             Node                    ; address of the node to attach
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Insert
+description     Insert a node after the specified one in a list
+
+in              ESI                             List                    ; list handle
+in              EAX                             NewNode                 ; address of the node to insert
+in              ECX                             Node                    ; address of the pivot, or 0 to replace the head
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Remove
+description     Remove the node from the list
+
+in              ESI                             List                    ; list handle
+in              EAX                             Node                    ; address of the node to remove
+
+out             !CF                             Success                 ; CF set if error, Success set if success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Remove_First
+description     Remove the first node from a list
+
+in              ESI                             List                    ; list handle
+
+out             ZF                              .                       ; ZF set on error (if list is empty)
+out             EAX                             Node                    ; 0 if ZF, otherwise address of the removed node
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Get_First
+description     Obtain a pointer to the first node in a list
+
+in              ESI                             List                    ; list handle
+
+out             ZF                              .                       ; ZF set on error (if list is empty)
+out             EAX                             Node                    ; 0 if ZF, otherwise address of the first node
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Get_Next
+description     Obtain a node after the specified one in a list
+
+in              ESI                             List                    ; list handle
+in              EAX                             Node                    ; address of the pivot
+
+out             ZF                              .                       ; ZF set on error (if pivot node is the tail)
+out             EAX                             NextNode                ; 0 if ZF, otherwise address of the next node
+%enddef
+
+#--------------------------------------
+%defconstenum
+description     Instance data types for InstDataStruc (PG_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 851
+
+#       constant                    value
+def     INDOS_Field                 0x100                         ; Reserved for special types of MS-DOS internal data
+def     ALWAYS_Field                0x200                         ; The field must always be switched when a VM is
+%enddef
+
+#--------------------------------------
+%defcode
+/*
+
+    Data structure for _AddInstanceItem
+
+ */
+#pragma pack(push,1)
+/* struct InstDataStruc */
+typedef struct InstDataStruc {
+    uint32_t        InstLinkF;                      /* +0x0000 RESERVED - SET TO 0 */
+    uint32_t        InstLinkB;                      /* +0x0004 RESERVED - SET TO 0 */
+    uint32_t        InstLinAddr;                    /* +0x0008 Linear address of block start */
+    uint32_t        InstSize;                       /* +0x000C Block size, in bytes */
+    uint32_t        InstType;                       /* +0x0010 Block type */
+} InstDataStruc;
+/* end InstDataStruc (total 0x0014 bytes) */
+#pragma pack(pop)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _AddInstanceItem
+description     Identify a region of instance data in the V86 address space
+
+cdecl           InstStruc, flags
+
+in              __cdecl=InstDataStruc*          InstStruc               ; info about the block of memory to instance
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero if has been added, or 0 if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Allocate_Device_CB_Area
+description     Allocate an area in the control block of the current VM for exclusive use by the virtual device
+
+cdecl           nBytes, flags
+
+in              __cdecl                         nBytes                  ; the number of bytes to allocate
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; control block offset to the area, 0 if error
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for _Allocate_Global_V86_Data_Area (GVDA*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 865
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     GVDAWordAlign               0                             ; Align block on a word boundary
+def     GVDADWordAlign	            1                             ; Align block on a doubleword boundary
+def     GVDAParaAlign	              2                             ; Align block on a paragraph (16-byte) boundary
+def     GVDAPageAlign	              3                             ; Align block on a page (4 kilobyte) boundary
+def     GVDAInstance	              8                             ; Create an instance data block 
+def     GVDAZeroInit	              9                             ; Fill the block with zeros
+def     GVDAReclaim	                10                            ; Unmap any physical pages in the block
+def     GVDAInquire	                11                            ; Return the size in bytes of the largest block 
+def     GVDAHighSysCritOK	          12                            ; Inform that the virtual device can manage a block residing in high MS-DOS memory
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Allocate_Global_V86_Data_Area
+description     Allocate a block of memory from the global V86 data area
+
+cdecl           nBytes, flags
+
+in              __cdecl                         nBytes                  ; bytes to allocate, a multiple of 4096
+in              __cdecl                         flags                   ; operation flags
+
+out             EAX                             .                       ; result on success, 0 on failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Allocate_Temp_V86_Data_Area
+description     Allocates a block of memory from the temporary data area
+
+cdecl           nBytes, flags
+
+in              __cdecl                         nBytes                  ; the number of bytes to allocate
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; ring-0 linear address of the block, 0 if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Free_Temp_V86_Data_Area
+description     Free the previously allocated temporary block
+
+out             EAX                             .                       ; nonzero if freed, zero if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Profile_Decimal_Int
+description     Obtain the value of a decimal number entry in the SYSTEM.INI
+
+in              EAX                             Default                 ; default value
+in              ESI                             Profile                 ; section name, 0 assumes [386Enh]
+in              EDI                             Keyname                 ; entry name
+
+out             CF                              WasFound                ; CF set if entry not found or value is invalid
+out             ZF                              HasValue                ; ZF set if entry has no value
+out             EAX                             Value                   ; if CF=ZF=0 - entry value, otherwise Default
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Convert_Decimal_String
+description     Convert a string with a decimal number into a value
+
+in              EDX                             String                  ; the null-terminated string to convert
+
+out             EAX                             Value                   ; decimal value of string, or 0 on error
+out             EDX                             TermChar                ; address of the string end; unchanged if EAX=0
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Profile_Fixed_Point
+description     Obtain the value of a fixed-point number entry in the SYSTEM.INI
+
+in              EAX                             Default                 ; default value
+in              ECX                             Places                  ; number of decimal digits expected after point
+in              ESI                             Profile                 ; section name, 0 assumes [386Enh]
+in              EDI                             Keyname                 ; entry name
+
+out             CF                              WasFound                ; CF set if entry not found or value is invalid
+out             ZF                              HasValue                ; ZF set if entry has no value
+out             EAX                             Value                   ; if CF=ZF=0 - entry value, otherwise Default
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Convert_Fixed_Point_String
+description     Convert a string with a fixed-point number into a value
+
+in              ECX                             Places                  ; number of decimal digits expected after point
+in              EDX                             String                  ; the null-terminated string to convert
+
+out             EAX                             Value                   ; normalized number value of string, 0 on error
+out             EDX                             TermChar                ; address of the string end; unchanged if EAX=0
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Profile_Hex_Int
+description     Obtain the value of a hexadecimal number entry in the SYSTEM.INI
+
+in              EAX                             Default                 ; default value
+in              ESI                             Profile                 ; section name, 0 assumes [386Enh]
+in              EDI                             Keyname                 ; entry name
+
+out             CF                              WasFound                ; CF set if entry not found or value is invalid
+out             ZF                              HasValue                ; ZF set if entry has no value
+out             EAX                             Value                   ; if CF=ZF=0 - entry value, otherwise Default
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Convert_Hex_String
+description     Convert a string with a hexadecimal number into a value
+
+in              EDX                             String                  ; the null-terminated string to convert
+
+out             EAX                             Value                   ; value of string, or 0 on error
+out             EDX                             TermChar                ; address of the string end; unchanged if EAX=0
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Profile_Boolean
+description     Obtain the value of a boolean entry in the SYSTEM.INI
+
+in              EAX                             Default                 ; default value
+in              ESI                             Profile                 ; section name, 0 assumes [386Enh]
+in              EDI                             Keyname                 ; entry name
+
+out             CF                              WasFound                ; CF set if entry not found or value is invalid
+out             ZF                              HasValue                ; ZF set if entry has no value
+out             EAX                             Value                   ; if CF=ZF=0 - 0 or -1, otherwise Default
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Convert_Boolean_String
+description     Convert a string with a boolean value into either 0 or -1
+
+in              EDX                             String                  ; the null-terminated string to convert
+
+out             !CF                             Result                  ; CF set if string is not a valid boolean
+out             EAX                             Value                   ; if CF is clear, 0 (false) or -1 (true)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Profile_String
+description     Scan SYSTEM.INI for a specified entry and obtain its value
+
+in              EDX                             Default                 ; default value
+in              ESI                             Profile                 ; section name, 0 assumes [386Enh]
+in              EDI                             Keyname                 ; entry name
+
+out             !CF                             WasFound                ; CF set if entry not found
+out             EDX                             Value                   ; if CF=0 - entry value, otherwise Default
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Next_Profile_String
+description     Scan SYSTEM.INI for the entry following the specified one, and obtain its value
+
+in              EDX                             Previous                ; previous entry value
+in              EDI                             Keyname                 ; entry name
+
+out             !CF                             HasNext                 ; CF set if there is no next value
+out             EDX                             Value                   ; if CF is clear, next string with that keyname
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Environment_String
+description     Obtain the value of the specified environment variable
+
+in              ESI                             Variable                ; name of the environment variable, case ignored
+
+out             !CF                             Success                 ; clear if found, set on error
+out             EDX                             Value                   ; if CF=0, value of the environment variable
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Exec_Path
+description     Obtain the full path of the Windows VM manager (WIN386.EXE)
+
+out             EDX                             Path                    ; the full path of the VMM
+out             ECX                             Length                  ; number of chars, with the trailing backslash
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Config_Directory
+description     Obtain the full path to the Windows configuration files such as SYSTEM.INI 
+
+out             EDX                             Path                    ; points to the Windows directory, or WINDIR one
+%enddef
+
+#--------------------------------------
+%defcall
+byname          OpenFile
+description     Open the file having the specified name
+
+in              EDX                             Filename                ; the name of file to open
+in              EDI                             Buffer                  ; buffer to receive full path
+
+out             !CF                             Result                  ; CF set if file not found
+out             AX                              Handle                  ; if CF=0, MS-DOS file handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_PSP_Segment
+description     Retrieve the segment address of program segment prefix for the VMM (WIN386.EXE)
+
+out             EAX                             .                       ; segment address of PSP, high word is always 0
+%enddef
+
+#--------------------------------------
+%defcall
+byname          GetDOSVectors
+description     Obtain the INT 23h and 24h vectors as originally set by MS-DOS for the Windows VMM
+
+out             EAX                             Int23                   ; V86 address (segment:offset) for 23h handler
+out             EDX                             Int24                   ; V86 address (segment:offset) for 24h handler
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for Get_Machine_Info (GMIF_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 899
+
+bitdefsuffix    _Bit
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     GMIF_80486                  10                            ; 80486 processor
+def     GMIF_PCXT	                  11                            ; PCXT accelerator
+def     GMIF_MCA	                  12                            ; Micro Channel
+def     GMIF_EISA	                  13                            ; EISA
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Machine_Info
+description     Obtain information about the computer that Windows is operating
+
+out             AH                      Major                           ; MS-DOS major version number
+out             AL                      Minor                           ; MS-DOS minor version number
+out             BH                      OEM                             ; MS-DOS OEM serial number
+out             BL                      Model                           ; machine model byte
+out             EBX                     Type                            ; machine type flags (high 16-bits)
+out             ECX                     SysConf                         ; System Configuration Parameters (15h, AH=C0h)
+out             EDX                     Equip                           ; equipment flags
+%enddef
+
+#--------------------------------------
+%defcall
+byname          GetSet_HMA_Info
+description     Return and set info related to the high-memory area (HMA) region
+
+in              ECX                             Action                  ; zero to get, nonzero to set
+in              DX                              A20Enable               ; if ECX is nonzero, A20 enable count
+
+out             EAX                             NoGlobalHMA             ; nonzero if no global HMA user
+out             ECX                             XMSCallAddr             ; loader XMS call address
+out             EDX                             A20Enable               ; A20 enable count before Windows started
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_System_Exit_Code
+description     Set the exit code value that Windows returns to MS-DOS when terminates
+
+in              AL                              ExitCode                ; the exit code value
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for Fatal_Error_Handler (EF_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 433
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     EF_Hang_On_Exit	            0                             ; Hang the system on a fatal exit
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Fatal_Error_Handler
+description     Terminate Windows, inform virtual devices, show an error and return to real mode
+
+in              ESI                             MsgPtr                  ; message to display, 0 if no message needed
+in              EAX                             ErrFlags                ; exit flags, see EF_Hang_On_Exit
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Fatal_Memory_Error
+description     Terminate Windows with an error saying not enough memory to init virtual devices
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Update_System_Clock
+description     Update the current system time and the current VM's execution time
+
+in              ECX                             Time                    ; time elapsed, in milliseconds
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Test_Debug_Installed
+description     Test whether the debugging version of the Windows VMM is running
+
+out             !ZF                             .                       ; ZF set if debugging version is NOT installed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Out_Debug_String
+description     Write the specified string to the debugging device (the COM1 serial port).
+description     Requires PUSHFD & PUSHAD before the call and POPAD & POPFD immediately after.
+
+in              ESI                             String                  ; the message to write to the debugging device
+in              DS                              SegSel                  ; the correct segment selector for the string
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Out_Debug_Chr
+description     Write a character to the debugging device
+
+in              AL                              Char                    ; the character to write
+%enddef
+
+#--------------------------------------
+%defcall
+byname          In_Debug_Chr
+description     Read a character from the debugging device
+
+out             AL                              Char                    ; the character read
+out             ZF                              Control                 ; set if ESCAPE or CTRL+C was pressed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Debug_Convert_Hex_Binary
+description     Convert a 8-bit value to a 32-bit value representing a binary number
+
+in              AL                              Number                  ; the number to convert
+
+out             EAX                             .                       ; the converted binary number
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Debug_Convert_Hex_Decimal
+description     Convert a 8-bit value to a 32-bit value representing a decimal number
+
+in              AL                              Number                  ; the number to convert
+
+out             EAX                             .                       ; the converted binary number
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Debug_Test_Valid_Handle
+description     Determine whether the specified VM handle is valid
+
+in              EBX                             Handle                  ; VM handle to validate
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Validate_Client_Ptr
+description     Determine if the address points to the Client_Reg_Struc for the current VM
+async           yes
+
+in              EBP                             Address                 ; crs address
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Test_Reenter
+description     Check the re-entry count for the VMM and values of the DS, ES, and SS registers
+async           yes
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Queue_Debug_String
+description     Enqueue a string and corresponding values for display at a later time
+
+cdecl           Value1, Value2
+
+in              __cdecl                         Value1                  ; a value to queue with the string
+in              __cdecl                         Value2                  ; a value to queue with the string
+in              ESI                             String                  ; a null-terminated string to queue
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Log_Proc_Call
+description     Create a debugging message identifying calling service or virtual device
+async           yes
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Debug_Test_Cur_VM
+description     Determine whether the specified VM is also the current VM
+
+in              EBX                             Handle                  ; VM handle to check
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_PM_Int_Type
+description     Determine whether a protected-mode interrupt vector is an interrupt or trap gate
+
+in              EAX                             Interrupt               ; number of interrupt to check
+
+out             EDX                             .                       ; zero if trap gate, otherwise interrupt gate
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_PM_Int_Type
+description     Set the gate type for a protected-mode interrupt vector
+
+in              EAX                             Interrupt               ; number of interrupt
+in              EDX                             Type                    ; zero for trap gate, nonzero for interrupt gate
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Last_Updated_System_Time
+description     Obtain the time in milliseconds since Windows was started
+async           yes
+
+out             EAX                             Time                    ; system time, in milliseconds
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Last_Updated_VM_Exec_Time
+description     Obtain the time in milliseconds the current VM has run
+async           yes
+
+out             EAX                             Time                    ; time that VM has run, in milliseconds
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Test_DBCS_Lead_Byte
+description     Tests if the given value is in the legal range for a DBCS lead byte
+
+in              EAX                             Value                   ; the value to test
+out             !CS                             .                       ; CS set if value is not legal DBCS lead byte
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _AddFreePhysPage
+description     Add one or more physical pages to the free memory pool
+
+cdecl           PhysPgNum, nPages, flags
+
+in              __cdecl                         PhysPgNum               ; physical page number of the first page to add
+in              __cdecl                         nPages                  ; number of physical pages to add
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; 0 - none pages were added, 1 - some, 2 - all
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageResetHandlePAddr
+description     Substitute pages in a memory block with physical pages not previously available
+
+cdecl           hMem, PgOff, nPages, PhysPgNum, flags
+
+in              __cdecl                         hMem                    ; a handle identifying a memory block
+in              __cdecl                         PgOff                   ; offset to the first page to be substituted
+in              __cdecl                         nPages                  ; number of pages to substitute
+in              __cdecl                         PhysPgNum               ; first physical page number to substitute
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero on success, zero if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _SetLastV86Page
+description     Set the page number of the last page in V86 memory for the current VM
+
+cdecl           PgNum, flags
+
+in              __cdecl                         PgNum                   ; linear page number to set the last V86 page
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero if the new page is set, zero on error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetLastV86Page
+description     Retrieve the page number of the last page of V86 memory for the specified VM
+
+out             EAX                             .                       ; number of the last page in V86 memory
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _MapFreePhysReg
+description     Map one or more physical pages into a free physical region
+
+cdecl           LinPgNum, nPages, flags
+
+in              __cdecl                         LinPgNum                ; linear page number of the first page to map
+in              __cdecl                         nPages                  ; number of pages to map
+in              __cdecl                         flags                   ; flags, can be only 0 or PageFixed
+
+out             EAX                             .                       ; nonzero on success, zero if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _UnmapFreePhysReg
+description     Unmap a page in a free physical region
+
+cdecl           LinPgNum, nPages, flags
+
+in              __cdecl                         LinPgNum                ; linear page number of the first page to unmap
+in              __cdecl                         nPages                  ; number of pages to unmap
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero on success, zero if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _XchgFreePhysReg
+description     Replace the current physical address in a page table entry with a new one
+async           yes
+
+cdecl           LinPgNum, PhysAddr, flags
+
+in              __cdecl                         LinPgNum                ; linear number of the first page to exchange
+in              __cdecl                         PhysAddr                ; the physical address to insert into the entry 
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; previous value on success, 0 if page not present, 0xFFFFFFFF on error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _SetFreePhysRegCalBk
+description     Install a callback procedure managing the free list for a free physical region
+
+cdecl           Callback, flags
+
+in              __cdecl                         Callback                ; the callback procedure to install
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero on success, zero if error
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for Get_Next_Arena (GNA_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 976
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     GNA_HiDOSLinked             1                             ; Set if high MS-DOS arenas were linked in when Windows was started
+def     GNA_IsHighDOS               2                             ; Set if high MS-DOS arenas exist
+%enddef
+
+#--------------------------------------
+%defcode
+/*
+
+    Data structure for Get_Next_Arena
+
+ */
+#pragma pack(push,1)
+/* struct Common_Memory_struc */
+typedef struct Common_Memory_struc {
+    uint16_t        CM_seg;                         /* +0x0000 segment address of start */
+    uint16_t        CM_size;                        /* +0x0002 size in paragraphs */
+} Common_Memory_struc;
+/* end Common_Memory_struc (total 0x0004 bytes) */
+#pragma pack(pop)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Next_Arena
+description     Retrieve a pointer to an MS-DOS data structure
+
+out             EAX                             Data                    ; a data value
+out             ECX                             Flags                   ; the high MS-DOS flags, see GNA_* values
+out             EDX=Common_Memory_struc*        Memory                  ; array specifying high MS-DOS memory segments
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Name_Of_Ugly_TSR
+description     Get the name of an uncooperative TSR
+
+out             !ZF                             Result                  ; ZF set if no ugly TSRs here, otherwise clear
+out             EAX                             NameHead                ; first 4 chars of the TSR name, or 0 if ZF set
+out             EBX                             NameTail                ; last 4 chars of the TSR name, or 0 if ZF set
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Debug_Options
+description     Test if the given char was specified as a command-line debugging option for Windows
+
+in              AL                              Char                    ; the debugging option to check for
+
+out             ZF                              .                       ; if ZF set, the char was on the command line
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Physical_HMA_Alias
+description     Define an HMA alias for pages 100h through 10Fh
+
+in              ESI                             Entries                 ; 16 page table entries defining the HMA alias
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetGlblRng0V86IntBase
+description     Retrieve the linear address to manage ring-0 global V86 interrupt handlers
+
+out             EAX                             Address                 ; address for ring-0 V86 interrupt handlers
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Add_Global_V86_Data_Area
+description     Add a region to the list of those available for allocation as global V86 data areas
+
+cdecl           LinAddr, nBytes, flags
+
+in              __cdecl                         LinAddr                 ; the linear address of the region
+in              __cdecl                         nBytes                  ; the size in bytes of the region
+in              __cdecl                         flags                   ; flags, must be 0
+
+out             EAX                             .                       ; nonzero on success, zero if error
+%enddef
+
+#--------------------------------------
+%defconstenum
+description     Error code values for GetSetDetailedVMError (GSDVME_*).
+description     Error values having the high word set to 2 are intended to be used when a VM fails on start up.
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1007
+
+#       constant                    value
+def     GSDVME_PrivInst             0x00010001                    ; Attempt to execute a privileged instruction
+def     GSDVME_InvalInst            0x00010002                    ; Attempt to execute an invalid instruction
+def     GSDVME_InvalPgFlt           0x00010003                    ; Invalid page fault
+def     GSDVME_InvalGpFlt           0x00010004                    ; Invalid general protection fault
+def     GSDVME_InvalFlt             0x00010005                    ; Invalid fault
+def     GSDVME_UserNuke             0x00010006                    ; User requested running virtual machine be terminated
+def     GSDVME_DevNuke              0x00010007                    ; Device-specific problem
+def     GSDVME_DevNukeHdwr          0x00010008                    ; Device-specific problem caused by software running in VM
+def     GSDVME_NukeNoMsg            0x00010009                    ; Suppress standard messages; the SHELL_Message service is used for custom messages
+def     GSDVME_InsMemV86            0x00020001                    ; Insufficient V86 memory
+def     GSDVME_InsV86Space          0x00020002                    ; Available V86 address space is less than requested
+def     GSDVME_InsMemXMS            0x00020003                    ; Available XMS memory is less than requested
+def     GSDVME_InsMemEMS            0x00020004                    ; Available EMS memory is less than requested
+def     GSDVME_InsMemV86Hi          0x00020005                    ; Insufficient high MS-DOS memory
+def     GSDVME_InsMemVid            0x00020006                    ; Insufficient base video memory
+def     GSDVME_InsMemVM             0x00020007                    ; Insufficient base virtual machine memory for control block or instance buffer
+def     GSDVME_InsMemDev            0x00020008                    ; Could not allocate base virtual machine memory for device
+def     GSDVME_CrtNoMsg             0x00020009                    ; Supress standard messages; the SHELL_Message service is used for custom messages
+def     GSDVME_OkNukeMask           0x80000000                    ; Reserved for the exclusive use of the virtual MS-DOS manager
+%enddef
+
+#--------------------------------------
+%defcall
+byname          GetSetDetailedVMError
+description     Set detailed error code for a VM crash or start-up error
+
+in              EBX                             VM                      ; VM handle, or 0 if it's a Create_VM error
+in              ECX                             GetSet                  ; zero to get, nonzero to set
+in              EAX                             Error                   ; error code if ECX is nonzero
+in              EDX                             RefData                 ; reference data if ECX is nonzero
+
+out             !ZF                             Result                  ; set if no error information
+out             EAX                             Error                   ; if ZF=0, error code
+out             EDX                             RefData                 ; if ZF=0, reference data for the error code
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Is_Debug_Chr
+description     Check for a character from the debugging device
+
+out             !ZF                             Result                  ; set if no character is available
+out             AL                              Char                    ; If ZF=0, the character from the device
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Clear_Mono_Screen
+description     Clear the secondary screen by filling it with spaces and resetting attributes
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Out_Mono_Chr
+description     Write a character to the current position on the secondary display
+
+in              EAX                             Value                   ; char to write (in AL), or 0 to write char+attr
+in              BL                              Char                    ; if EAX=0, character to write
+in              BH                              Attr                    ; if EAX=0, attribute to write
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Out_Mono_String
+description     Write the specified string to the secondary display
+
+in              ESI                             String                  ; the message to write to the debugging device
+in              DS                              SegSel                  ; the correct segment selector for the string
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Mono_Cur_Pos
+description     Set the cursor position for the secondary display
+
+in              DL                              Column                  ; the column position
+in              DH                              Row                     ; the row position
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Mono_Cur_Pos
+description     Retrieve the current cursor position for the secondary display
+
+out             DL                              Column                  ; the column position
+out             DH                              Row                     ; the row position
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Mono_Chr
+description     Retrieve the character and attribute value at the current cursor position
+
+in              AL                              Char                    ; character value
+in              AH                              Attr                    ; character attribute
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Locate_Byte_In_ROM
+description     Scans the system ROM for a specified byte
+
+in              AL                              Byte                    ; byte to locate
+
+out             !CF                             Result                  ; CF set if byte not found
+out             EAX                             Location                ; if CF=0, linear address of byte
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_Invalid_Page_Fault
+description     Install a hook to handle any invalid page faults not handled by the system handler
+
+in              ESI                             HookProc                ; the hook procedure to install
+
+out             !CF                             .                       ; clear if installed, set otherwise
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Unhook_Invalid_Page_Fault
+description     Remove the specified hook procedure from the chain of invalid page fault handlers
+
+in              ESI                             HookProc                ; the hook procedure to remove
+
+out             !CF                             .                       ; clear if removed, set otherwise
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Delete_On_Exit_File
+description     Add the specified filename to the list of files to delete when Windows terminates
+
+in              ESI                             Filename                ; filename to add
+
+out             !CF                             .                       ; clear if success, otherwise set
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for Close_VM (CVF_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1107
+
+bitdefsuffix    _Bit
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     CVF_Continue_Exec	          0                             ; Return to VM after scheduling the closing event even if VM is being closed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Close_VM
+description     Attempt to close the VM, allowing virtual devices to clean up before VM terminates
+
+in              EAX                             TimeOut                 ; time until forced termination, in milliseconds
+in              EBX                             VM                      ; handle of VM to close
+in              ECX                             Flags                   ; action to take, see CVF_Continue_Exec
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Enable_Touch_1st_Meg
+description     Enable the first 1 megabyte of memory for the current VM
+async           yes
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Disable_Touch_1st_Meg
+description     Disable the first 1 megabyte of memory for the current VM
+async           yes
+%enddef
+
+#--------------------------------------
+%defcode
+/*
+
+    Data structure for Install_Exception_Handler and Remove_Exception_Handler
+
+ */
+#pragma pack(push,1)
+/* struct Exception_Handler_Struc */
+typedef struct Exception_Handler_Struc {
+    uint32_t        EH_Reserved;                    /* +0x0000 Reserved; must be zero */
+    uint32_t        EH_Start_EIP;                   /* +0x0004 Starting address of the handler's supported range */
+    uint32_t        EH_End_EIP;                     /* +0x0008 Ending address of the handler's supported range */
+    uint32_t        EH_Handler;                     /* +0x000C The exception handler */
+} Exception_Handler_Struc;
+/* end Exception_Handler_Struc (total 0x0010 bytes) */
+#pragma pack(pop)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Install_Exception_Handler
+description     Install a ring-0 exception handler
+
+in              ESI=Exception_Handler_Struc*    Descriptor              ; information about the handler to install
+
+out             !CF                             .                       ; clear if success, set on error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Remove_Exception_Handler
+description     Remove the specified exception handler
+
+in              ESI=Exception_Handler_Struc*    Descriptor              ; information about the handler to remove
+
+out             !CF                             .                       ; clear if success, set on error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Crit_Status_No_Block
+description     Retrieve the claim count and handle of the owner of the critical section
+async           yes
+
+out             ECX                             Claims                  ; number of times critical section claimed
+out             EBX                             VM                      ; VM handle: if ECX=0 - current, otherwise owner
+out             CF                              HighPriority            ; set if VM priority >= Critical_Section_Boost
 %enddef
 
