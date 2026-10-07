@@ -250,12 +250,21 @@ def test_omfdump_SEGDEF_fields(tools, tmp):
     check('big=0 frame=47104 offset=0 use16' in out, 'absolute SEGDEF printed wrong')
     check('big=0 frame=0 offset=0 use32' in out, '32-bit SEGDEF printed wrong')
 
+# A 16-bit SEGDEF with the B (big) bit set is 64KB long. Its length field is 0.
+def test_SEGDEF_big_bit(tools, tmp):
+    obj = THEADR('big') + LNAMES(['', 'BIGSEG', 'FAR_DATA'])
+    obj += omf_record(0x98, bytes([0x6A, 0, 0, 2, 3, 1]))  # para aligned, public, B=1, length 0
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'big.obj', obj)
+    check('Length=65536 ' in out, 'big SEGDEF length is not 65536')
+
 TESTS = [
     test_lib_module_ends_after_page_boundary,
     test_omfsegdg_F4_frame,
     test_omfsegdg_thread_in_later_FIXUPP,
     test_omfsegdg_segdef_in_DGROUP,
     test_omfdump_SEGDEF_fields,
+    test_SEGDEF_big_bit,
 ]
 
 def main():

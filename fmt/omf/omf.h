@@ -201,7 +201,7 @@ struct omf_segdef_attr_t {
 
 struct omf_segdef_t {
     struct omf_segdef_attr_t        attr;
-    uint32_t                        segment_length;
+    uint32_t                        segment_length;     // 0x10000 if 16-bit and the B (big) bit is set
     uint16_t                        segment_name_index;
     uint16_t                        class_name_index;
     uint16_t                        overlay_name_index;

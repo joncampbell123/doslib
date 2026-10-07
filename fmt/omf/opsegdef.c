@@ -29,6 +29,19 @@ int omf_context_parse_SEGDEF(struct omf_context_t * const ctx,struct omf_record_
     else
         segdef->segment_length = omf_record_get_word(rec);
 
+    // if the B (big) bit is set, the length field is zero and the segment is
+    // 64KB (16-bit SEGDEF) or 4GB (32-bit SEGDEF) long. 4GB does not fit in
+    // segment_length, and like Open Watcom's linker, we do not support it.
+    if (segdef->attr.f.f.big_segment) {
+        if (rec->rectype & 1/*32-bit version*/) {
+            ctx->last_error = "4GB SEGDEF not supported";
+            errno = ERANGE;
+            return -1;
+        }
+
+        segdef->segment_length = 0x10000UL;
+    }
+
     segdef->segment_name_index = omf_record_get_index(rec);
     segdef->class_name_index = omf_record_get_index(rec);
 
