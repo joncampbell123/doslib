@@ -631,7 +631,7 @@ unsigned int omf_align_code_to_bytes(const unsigned int x) {
         case OMF_SEGDEF_RELOC_BYTE:         return 1;
         case OMF_SEGDEF_RELOC_WORD:         return 2;
         case OMF_SEGDEF_RELOC_PARA:         return 16;
-        case OMF_SEGDEF_RELOC_PAGE:         return 4096;
+        case OMF_SEGDEF_RELOC_PAGE:         return 256;
         case OMF_SEGDEF_RELOC_DWORD:        return 4;
         default:                            break;
     };

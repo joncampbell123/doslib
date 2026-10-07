@@ -8,7 +8,7 @@ const char *omf_segdefs_alignment_to_str(const unsigned char a) {
         case OMF_SEGDEF_RELOC_BYTE:         return "BYTE";      // 1
         case OMF_SEGDEF_RELOC_WORD:         return "WORD";      // 2
         case OMF_SEGDEF_RELOC_PARA:         return "PARA";      // 16
-        case OMF_SEGDEF_RELOC_PAGE:         return "PAGE";      // 4096
+        case OMF_SEGDEF_RELOC_PAGE:         return "PAGE";      // 256
         case OMF_SEGDEF_RELOC_DWORD:        return "DWORD";     // 4
     };
 
