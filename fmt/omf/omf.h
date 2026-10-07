@@ -317,6 +317,7 @@ void omf_fixupps_clear_thread(struct omf_fixupp_thread_t * const th);
 void omf_fixupps_clear_threads(struct omf_fixupps_context_t * const ctx);
 void omf_fixupps_context_init(struct omf_fixupps_context_t * const ctx);
 int omf_fixupps_context_alloc_fixupps(struct omf_fixupps_context_t * const ctx);
+void omf_fixupps_context_clear_fixupps(struct omf_fixupps_context_t * const ctx);
 void omf_fixupps_context_free_entries(struct omf_fixupps_context_t * const ctx);
 void omf_fixupps_context_free(struct omf_fixupps_context_t * const ctx);
 struct omf_fixupps_context_t *omf_fixupps_context_create(void);

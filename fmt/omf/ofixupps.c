@@ -50,6 +50,12 @@ int omf_fixupps_context_alloc_fixupps(struct omf_fixupps_context_t * const ctx) 
     return 0;
 }
 
+// remove all FIXUPP entries, but keep the THREADs.
+// THREADs remain in effect across FIXUPP records until the end of the module.
+void omf_fixupps_context_clear_fixupps(struct omf_fixupps_context_t * const ctx) {
+    ctx->omf_FIXUPPS_count = 0;
+}
+
 void omf_fixupps_context_free_entries(struct omf_fixupps_context_t * const ctx) {
     if (ctx->omf_FIXUPPS) {
         free(ctx->omf_FIXUPPS);

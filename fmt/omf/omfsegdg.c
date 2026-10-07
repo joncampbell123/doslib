@@ -530,8 +530,9 @@ int main(int argc,char **argv) {
         switch (omf_state->record.rectype) {
             case OMF_RECTYPE_FIXUPP:/*0x9C*/
             case OMF_RECTYPE_FIXUPP32:/*0x9D*/
-                // parse FIXUPP
-                omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
+                // parse FIXUPP. clear the previous FIXUPP record's entries, but not the THREADs,
+                // which a FIXUPP record may use even if they were defined in an earlier FIXUPP record.
+                omf_fixupps_context_clear_fixupps(&omf_state->FIXUPPs);
                 if (omf_context_parse_FIXUPP(omf_state,&omf_state->record) < 0) {
                     fprintf(stderr,"Error parsing FIXUPP\n");
                     return 1;
