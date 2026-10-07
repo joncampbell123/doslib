@@ -102,7 +102,7 @@ int segdef_in_DGROUP(struct omf_context_t * const ctx,unsigned int segment_index
     const char *name;
 
     for (gi=1;gi <= omf_grpdefs_context_get_highest_index(&ctx->GRPDEFs);gi++) {
-        name = omf_lnames_context_get_name(&ctx->LNAMEs,gi);
+        name = omf_context_get_grpdef_name(ctx,gi);
         if (name == NULL) continue;
 
         if (!strcmp(name,"DGROUP")) {
