@@ -2274,7 +2274,6 @@ int main(int argc,char **argv) {
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
-                    case OMF_RECTYPE_GRPDEF32:/*0x9B*/
                         {
                             int p_count = omf_state->GRPDEFs.omf_GRPDEFS_count;
                             int first_new_grpdef;

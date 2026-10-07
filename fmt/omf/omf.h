@@ -95,7 +95,6 @@ enum {
 #define OMF_RECTYPE_SEGDEF32    (0x99)
 
 #define OMF_RECTYPE_GRPDEF      (0x9A)
-#define OMF_RECTYPE_GRPDEF32    (0x9B)
 
 #define OMF_RECTYPE_FIXUPP      (0x9C)
 #define OMF_RECTYPE_FIXUPP32    (0x9D)

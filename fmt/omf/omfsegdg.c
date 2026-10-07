@@ -523,8 +523,7 @@ int main(int argc,char **argv) {
                     dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
                 } break;
-            case OMF_RECTYPE_GRPDEF:/*0x9A*/
-            case OMF_RECTYPE_GRPDEF32:/*0x9B*/{
+            case OMF_RECTYPE_GRPDEF:/*0x9A*/{
                 int first_new_grpdef;
 
                 if ((first_new_grpdef=omf_context_parse_GRPDEF(omf_state,&omf_state->record)) < 0) {
