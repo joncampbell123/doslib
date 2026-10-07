@@ -127,9 +127,9 @@ static inline unsigned long omf_record_get_dword_fast(struct omf_record_t * cons
 
 unsigned long omf_record_get_dword(struct omf_record_t * const rec) {
     if (rec->data == NULL)
-        return 0xFFFFU;
+        return 0xFFFFFFFFUL;
     if ((rec->recpos+4U) > rec->reclen)
-        return 0xFFFFU;
+        return 0xFFFFFFFFUL;
 
     return omf_record_get_dword_fast(rec);
 }
