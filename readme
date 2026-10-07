@@ -24,6 +24,11 @@ Your contributions help fund video production about MS-DOS and the
 purchase of MS-DOS hardware and software to test and develop this
 code. Any support is welcome.
 
+*** AI "Vibe coding" ***********************
+
+All AI generated code and "vibe coding" is allowed only in the main-ai branch,
+never in the master branch.
+
 ********************************************
 
 This is a collection of source code intended for DOS and DOS-level
