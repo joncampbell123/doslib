@@ -124,20 +124,34 @@ int segdef_in_DGROUP(struct omf_context_t * const ctx,unsigned int segment_index
     return 0;
 }
 
-void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t *ledata) {
+// patch the code that the 16-bit segbase fixups in the current FIXUPP record apply to,
+// and remove those fixups. ledata is the LEDATA or COMDAT record that the FIXUPP record follows,
+// or NULL if it does not follow one (LIDATA, or no data record yet), in which case nothing is patched.
+// returns 1 if the LEDATA or COMDAT record was changed.
+int my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t *ledata) {
     unsigned char update_le_chk = 0;
     struct omf_ledata_info_t info;
     unsigned char is_code = 0;
     unsigned int i;
 
-    omf_record_lseek(ledata,0);
-    if (omf_context_parse_LEDATA(ctx,&info,ledata) < 0) {
-        fprintf(stderr,"Unable to parse LEDATA\n");
-        return;
+    memset(&info,0,sizeof(info));
+    if (ledata != NULL) {
+        int r;
+
+        omf_record_lseek(ledata,0);
+        if ((ledata->rectype & 0xFE) == OMF_RECTYPE_COMDAT)
+            r = omf_context_parse_COMDAT(ctx,&info,ledata);
+        else
+            r = omf_context_parse_LEDATA(ctx,&info,ledata);
+
+        if (r < 0) {
+            fprintf(stderr,"Unable to parse LEDATA or COMDAT\n");
+            return 0;
+        }
     }
 
     // is this LEDATA for a code segment?
-    {
+    if (ledata != NULL) {
         const struct omf_segdef_t *segdef = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,info.segment_index);
         if (segdef != NULL) {
             const char *segname = omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index);
@@ -168,6 +182,11 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
 
         if (fixupp->location != OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE)
             continue;
+
+        if (ledata == NULL) {
+            fprintf(stderr,"WARNING: cannot patch 16-bit segbase fixup because it does not follow LEDATA or COMDAT\n");
+            continue;
+        }
 
         if ((fixupp->data_record_offset+2U) > info.data_length)
             continue;
@@ -261,6 +280,8 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
     // if we changed bytes in LEDATA we have to fix checksum
     if (update_le_chk)
         omf_record_write_update_checksum(ledata);
+
+    return update_le_chk;
 }
 
 static void help(void) {
@@ -316,6 +337,7 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 
 int main(int argc,char **argv) {
     struct omf_record_t last_ledata;
+    unsigned long last_ledata_ofs = 0;
     unsigned char dumpstate = 0;
     unsigned char diddump = 0;
     unsigned char verbose = 0;
@@ -540,6 +562,10 @@ int main(int argc,char **argv) {
     // clear last LEDATA record
     memset(&last_ledata,0,sizeof(last_ledata));
 
+    // Every record is written out as it is read, in the same order. The last LEDATA or COMDAT
+    // record is also kept, along with where it was written, because the FIXUPP records that
+    // follow it may patch it. Patching does not change its size, so it is then written again
+    // in the same place.
     do {
         ret = omf_context_read_fd(omf_state,fd);
         if (ret == 0) {
@@ -551,7 +577,6 @@ int main(int argc,char **argv) {
             break;
         }
 
-        // process and copy only FIXUPP, LEDATA, and MODEND
         switch (omf_state->record.rectype) {
             case OMF_RECTYPE_FIXUPP:/*0x9C*/
             case OMF_RECTYPE_FIXUPP32:/*0x9D*/
@@ -563,12 +588,16 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                // patch segment refs, and then remove those FIXUPPs
-                if (last_ledata.data == NULL) {
-                    fprintf(stderr,"FIXUPP with no prior LEDATA\n");
-                    return 1;
+                // patch segment refs, and then remove those FIXUPPs.
+                // if the LEDATA or COMDAT changed, write it again where it was written before.
+                if (my_fixupp_patch_segrefs(omf_state,(last_ledata.data != NULL) ? &last_ledata : NULL)) {
+                    if (lseek(ofd,(off_t)last_ledata_ofs,SEEK_SET) != (off_t)last_ledata_ofs ||
+                        omf_context_record_write_fd(ofd,&last_ledata) < 0 ||
+                        lseek(ofd,0,SEEK_END) < (off_t)0) {
+                        fprintf(stderr,"Failed to rewrite OMF record\n");
+                        return 1;
+                    }
                 }
-                my_fixupp_patch_segrefs(omf_state,&last_ledata);
 
                 // write parsed FIXUPPs back to record
                 if (omf_context_generate_FIXUPP(&omf_state->record,omf_state,omf_state->record.rectype & 1) < 0) {
@@ -576,22 +605,6 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                /* flush out LEDATA (possibly modified) */
-                if (last_ledata.data != NULL) {
-                    if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
-                        fprintf(stderr,"Failed to write OMF record\n");
-                        return 1;
-                    }
-                    omf_record_free(&last_ledata);
-                }
-                /* flush out FIXUPP (possibly modified) */
-                if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
-                    fprintf(stderr,"Failed to write OMF record\n");
-                    return 1;
-                }
-                break;
-            case 0x8A://MODEND
-            case 0x8B://MODEND32
                 if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
                     fprintf(stderr,"Failed to write OMF record\n");
                     return 1;
@@ -599,42 +612,46 @@ int main(int argc,char **argv) {
                 break;
             case OMF_RECTYPE_LEDATA:/*0xA0*/
             case OMF_RECTYPE_LEDATA32:/*0xA1*/
-                /* parse the LEDATA header now, so that the FIXUPP that follows is parsed against this LEDATA.
+            case OMF_RECTYPE_LIDATA:/*0xA2*/
+            case OMF_RECTYPE_LIDATA32:/*0xA3*/
+            case OMF_RECTYPE_COMDAT:/*0xC2*/
+            case OMF_RECTYPE_COMDAT32:/*0xC3*/
+                /* parse the data record header now, so that the FIXUPPs that follow are parsed against it.
                  * FIXUPP parsing converts frame method F4 (segment of previous LEDATA) to SEGDEF using
-                 * the last LEDATA segment, which would otherwise be stale (or zero) at that point. */
+                 * the last data record's segment, which would otherwise be stale (or zero) at that point. */
                 {
                     struct omf_ledata_info_t info;
+                    int r;
 
-                    if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
-                        fprintf(stderr,"Error parsing LEDATA\n");
+                    if ((omf_state->record.rectype & 0xFE) == OMF_RECTYPE_COMDAT)
+                        r = omf_context_parse_COMDAT(omf_state,&info,&omf_state->record);
+                    else if ((omf_state->record.rectype & 0xFE) == OMF_RECTYPE_LIDATA)
+                        r = omf_context_parse_LIDATA(omf_state,&info,&omf_state->record);
+                    else
+                        r = omf_context_parse_LEDATA(omf_state,&info,&omf_state->record);
+
+                    if (r < 0) {
+                        fprintf(stderr,"Error parsing LEDATA, LIDATA or COMDAT\n");
                         return 1;
                     }
-                }
 
-                /* flush out last LEDATA record if any, store the new one */
-                if (last_ledata.data != NULL) {
-                    if (omf_state->flags.verbose)
-                        fprintf(stderr,"LEDATA flushing out prior for new one\n");
+                    omf_record_free(&last_ledata);
+                    last_ledata_ofs = (unsigned long)lseek(ofd,0,SEEK_CUR);
 
-                    if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
+                    if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
                         fprintf(stderr,"Failed to write OMF record\n");
                         return 1;
                     }
-                    omf_record_free(&last_ledata);
+
+                    // keep LEDATA, or COMDAT that is not iterated data, for the FIXUPPs that follow to patch
+                    if (!info.iterated) {
+                        last_ledata = omf_state->record;//FIXME: the omf context should offer a "take record" to change ownership instead of this
+                        omf_record_init(&omf_state->record);
+                        omf_state->record.data_alloc = last_ledata.data_alloc;
+                    }
                 }
-                last_ledata = omf_state->record;//FIXME: the omf context should offer a "take record" to change ownership instead of this
-                omf_record_init(&omf_state->record);
-                omf_state->record.data_alloc = last_ledata.data_alloc;
                 break;
             default:
-                /* flush out LEDATA (possibly modified) */
-                if (last_ledata.data != NULL) {
-                    if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
-                        fprintf(stderr,"Failed to write OMF record\n");
-                        return 1;
-                    }
-                    omf_record_free(&last_ledata);
-                }
                 if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
                     fprintf(stderr,"Failed to write OMF record\n");
                     return 1;
@@ -643,13 +660,7 @@ int main(int argc,char **argv) {
         }
     } while (1);
 
-    if (last_ledata.data != NULL) {
-        if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
-            fprintf(stderr,"Failed to write OMF record\n");
-            return 1;
-        }
-        omf_record_free(&last_ledata);
-    }
+    omf_record_free(&last_ledata);
 
     omf_context_clear(omf_state);
     omf_state = omf_context_destroy(omf_state);

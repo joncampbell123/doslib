@@ -349,6 +349,27 @@ int main(int argc,char **argv) {
                     dump_LIDATA(stdout,omf_state,&info,&omf_state->record);
 
                 } break;
+            case OMF_RECTYPE_COMDAT:/*0xC2*/
+            case OMF_RECTYPE_COMDAT32:/*0xC3*/{
+                struct omf_ledata_info_t info;
+
+                if (omf_context_parse_COMDAT(omf_state,&info,&omf_state->record) < 0) {
+                    fprintf(stderr,"Error parsing COMDAT\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose) {
+                    printf("COMDAT segment=\"%s\"(%u) data_offset=0x%lX(%lu) length=0x%lX(%lu)%s\n",
+                        info.segment_index != 0 ? omf_context_get_segdef_name_safe(omf_state,info.segment_index) : "",
+                        info.segment_index,
+                        (unsigned long)info.enum_data_offset,
+                        (unsigned long)info.enum_data_offset,
+                        (unsigned long)info.data_length,
+                        (unsigned long)info.data_length,
+                        info.iterated ? " iterated" : "");
+                }
+
+                } break;
             case OMF_RECTYPE_MODEND:/*0x8A*/
             case OMF_RECTYPE_MODEND32:/*0x8B*/{
                 unsigned char ModuleType;

@@ -96,18 +96,32 @@ def read_index(body, pos):
         pos += 1
     return v, pos
 
-# returns a list of LEDATAs: { 'segdef', 'offset', 'data', 'fixups': [...] }
-# FIXUPPs are attached to the LEDATA before them, THREADs are resolved,
-# and frame method F4 is resolved to F0 (SEGDEF) of that LEDATA.
-def read_ledatas(data):
-    ledatas = []
+# returns a list of data records (16-bit LEDATA, LIDATA, COMDAT):
+#   { 'type', 'segdef', 'offset', 'data', 'fixups': [...] }
+# FIXUPPs are attached to the data record before them, THREADs are resolved,
+# and frame method F4 is resolved to F0 (SEGDEF) of that record, if it has a SEGDEF.
+# FIXUPPs before the first data record are attached to a 'type': None entry.
+def read_data_records(data):
+    records = [{ 'type': None, 'segdef': 0, 'offset': 0, 'data': b'', 'fixups': [] }]
     frame_threads = {}
     target_threads = {}
     for rectype, body in read_records(data):
-        if rectype == 0xA0:
+        if rectype in (0xA0, 0xA2):
             segdef, pos = read_index(body, 0)
             offset = body[pos] | (body[pos+1] << 8)
-            ledatas.append({ 'segdef': segdef, 'offset': offset, 'data': body[pos+2:], 'fixups': [] })
+            records.append({ 'type': rectype, 'segdef': segdef, 'offset': offset, 'data': body[pos+2:], 'fixups': [] })
+        elif rectype == 0xC2:
+            attributes = body[1]
+            offset = body[3] | (body[4] << 8)
+            _, pos = read_index(body, 5)                # type index
+            segdef = 0
+            if (attributes & 0x0F) == 0:                # explicit allocation: public base
+                _, pos = read_index(body, pos)          # group index
+                segdef, pos = read_index(body, pos)
+                if segdef == 0:
+                    pos += 2                            # frame number
+            _, pos = read_index(body, pos)              # public name index
+            records.append({ 'type': rectype, 'segdef': segdef, 'offset': offset, 'data': body[pos:], 'fixups': [] })
         elif rectype == 0x9C:
             pos = 0
             while pos < len(body):
@@ -131,10 +145,10 @@ def read_ledatas(data):
                         fix['target_index'], pos = read_index(body, pos)
                     if not (fixdata & FIX_P):
                         pos += 2
-                    if fix['frame_method'] == 4:
+                    if fix['frame_method'] == 4 and records[-1]['segdef'] != 0:
                         fix['frame_method'] = 0
-                        fix['frame_index'] = ledatas[-1]['segdef']
-                    ledatas[-1]['fixups'].append(fix)
+                        fix['frame_index'] = records[-1]['segdef']
+                    records[-1]['fixups'].append(fix)
                 else:
                     # THREAD: D bit selects frame or target thread
                     method = (b >> 2) & 7
@@ -147,7 +161,7 @@ def read_ledatas(data):
                         method &= 3
                         index, pos = read_index(body, pos)
                         target_threads[b & 3] = (method, index)
-    return ledatas
+    return records
 
 #------------------------------------------------------------------------
 # Tests
@@ -171,7 +185,8 @@ def run_omfdump(tools, tmp, name, data):
     check(r.returncode == 0, 'omfdump failed: ' + r.stdout.strip())
     return r.stdout
 
-def run_omfsegdg(tools, tmp, name, obj):
+# run omfsegdg, return the data records it wrote
+def run_omfsegdg_records(tools, tmp, name, obj):
     src = os.path.join(tmp, name + '.obj')
     dst = os.path.join(tmp, name + '.out')
     with open(src, 'wb') as f:
@@ -179,7 +194,11 @@ def run_omfsegdg(tools, tmp, name, obj):
     r = run([os.path.join(tools, 'omfsegdg'), '-i', src, '-o', dst])
     check(r.returncode == 0, 'omfsegdg failed: ' + r.stdout.strip())
     with open(dst, 'rb') as f:
-        return read_ledatas(f.read())
+        return read_data_records(f.read())
+
+# run omfsegdg, return the LEDATA records it wrote
+def run_omfsegdg(tools, tmp, name, obj):
+    return [r for r in run_omfsegdg_records(tools, tmp, name, obj) if r['type'] == 0xA0]
 
 # A .LIB module that ends one byte past a page boundary.
 # omf_context_next_lib_module_fd() must skip to the next page, not stop on
@@ -288,6 +307,65 @@ def test_COMDEF_CEXTDEF_numbering(tools, tmp):
     check('"local_d" typeindex=0 LOCAL COMMUNAL NEAR length=2' in out, 'local_d printed wrong')
     run_omfsegdg(tools, tmp, 'comdef', obj)
 
+# Several FIXUPP records may follow one LEDATA. A later one must still be able to patch it.
+def test_omfsegdg_two_FIXUPPs_after_LEDATA(tools, tmp):
+    obj = module_header('twofix', 6)
+    obj += LEDATA(SEG_TEXT, 0, [0xB8, 0, 0, 0xBB, 0, 0])                           # mov ax,offset _DATA / mov bx,seg _DATA
+    obj += omf_record(0x9C, LOCAT(LOC_OFFSET16, 1) + bytes([(5 << 4) | FIX_P, SEG_DATA]))
+    obj += omf_record(0x9C, LOCAT(LOC_SEGBASE16, 4) + bytes([(1 << 4) | FIX_P, 1, SEG_DATA]))  # frame GRPDEF 1 (DGROUP)
+    obj += MODEND()
+    led = run_omfsegdg(tools, tmp, 'twofix', obj)[0]
+    check(bytes(led['data']) == bytes([0xB8, 0, 0, 0x8C, 0xCB, 0x90]), 'code was not patched: ' + bytes(led['data']).hex())
+    check([f['location'] for f in led['fixups']] == [LOC_OFFSET16], 'wrong fixups left: %s' % led['fixups'])
+
+# FIXUPPs may follow LIDATA. Iterated data can't be patched, so its fixups are kept as they are.
+def test_omfsegdg_FIXUPP_after_LIDATA(tools, tmp):
+    obj = module_header('lidata', 1)
+    obj += LEDATA(SEG_TEXT, 0, [0xC3])
+    obj += omf_record(0xA2, bytes([SEG_DATA, 0, 0, 1, 0, 0, 0, 2, 0, 0]))           # _DATA @0: 1 x (2 bytes: dw offset _TEXT)
+    obj += omf_record(0x9C, LOCAT(LOC_OFFSET16, 5) + bytes([(4 << 4) | FIX_P, SEG_TEXT]))
+    obj += MODEND()
+    lid = [r for r in run_omfsegdg_records(tools, tmp, 'lidata', obj) if r['type'] == 0xA2][0]
+    check(len(lid['fixups']) == 1, 'LIDATA has %u fixups, not 1' % len(lid['fixups']))
+    fix = lid['fixups'][0]
+    check((fix['frame_method'], fix['frame_index'], fix['target_method'], fix['target_index']) == (0, SEG_DATA, 0, SEG_TEXT),
+        'LIDATA fixup changed: %s' % fix)
+
+# FIXUPPs may follow COMDAT (C++ templates and inline functions). A COMDAT in _TEXT must be
+# patched like LEDATA. A COMDAT that leaves its segment to the linker has no known segment,
+# so an F4 frame after it must stay F4.
+def test_omfsegdg_FIXUPP_after_COMDAT(tools, tmp):
+    obj = module_header('comdat', 4) + LNAMES(['tmpl1', 'tmpl2'])                 # LNAMES 7, 8
+    # pick any, explicit allocation in _TEXT: mov cx,seg _DATA / ret
+    obj += omf_record(0xC2, bytes([0x00, 0x10, 0x00, 0, 0, 0, 0, SEG_TEXT, 7, 0xB9, 0, 0, 0xC3]))
+    obj += omf_record(0x9C, LOCAT(LOC_SEGBASE16, 1) + bytes([(1 << 4) | FIX_P, 1, SEG_DATA]))
+    # pick any, far code (the linker picks the segment): mov ax,offset _DATA / ret
+    obj += omf_record(0xC2, bytes([0x00, 0x11, 0x00, 0, 0, 0, 8, 0xB8, 0, 0, 0xC3]))
+    obj += omf_record(0x9C, LOCAT(LOC_OFFSET16, 1) + bytes([(4 << 4) | FIX_P, SEG_DATA]))
+    obj += MODEND()
+    c1, c2 = [r for r in run_omfsegdg_records(tools, tmp, 'comdat', obj) if r['type'] == 0xC2]
+    check(bytes(c1['data']) == bytes([0x8C, 0xC9, 0x90, 0xC3]), 'COMDAT code was not patched: ' + bytes(c1['data']).hex())
+    check(c1['fixups'] == [], 'COMDAT segment fixup was not removed')
+    check([f['frame_method'] for f in c2['fixups']] == [4], 'F4 frame after COMDAT changed: %s' % c2['fixups'])
+
+# A FIXUPP record of only THREADs may come before any data record.
+def test_omfsegdg_THREAD_before_data(tools, tmp):
+    obj = module_header('thrfirst', 3)
+    obj += omf_record(0x9C, bytes([0x00, SEG_DATA]))                               # target thread 0 = SEGDEF _DATA
+    obj += LEDATA(SEG_TEXT, 0, [0xB8, 0, 0])                                       # mov ax,offset _DATA
+    obj += omf_record(0x9C, LOCAT(LOC_OFFSET16, 1) + bytes([(5 << 4) | FIX_T | FIX_P]))
+    obj += MODEND()
+    fix = run_omfsegdg(tools, tmp, 'thrfirst', obj)[0]['fixups'][0]
+    check((fix['target_method'], fix['target_index']) == (0, SEG_DATA), 'fixup has target T%u index %u' % (fix['target_method'], fix['target_index']))
+
+# A LEDATA that no FIXUPP follows must still be written before MODEND.
+def test_omfsegdg_LEDATA_before_MODEND(tools, tmp):
+    obj = module_header('order', 1)
+    obj += LEDATA(SEG_TEXT, 0, [0xC3])                                             # ret
+    obj += MODEND()
+    leds = run_omfsegdg(tools, tmp, 'order', obj)
+    check(len(leds) == 1 and bytes(leds[0]['data']) == bytes([0xC3]), 'LEDATA is not before MODEND')
+
 TESTS = [
     test_lib_module_ends_after_page_boundary,
     test_lib_large_page_size,
@@ -297,6 +375,11 @@ TESTS = [
     test_omfdump_SEGDEF_fields,
     test_SEGDEF_big_bit,
     test_COMDEF_CEXTDEF_numbering,
+    test_omfsegdg_two_FIXUPPs_after_LEDATA,
+    test_omfsegdg_FIXUPP_after_LIDATA,
+    test_omfsegdg_FIXUPP_after_COMDAT,
+    test_omfsegdg_THREAD_before_data,
+    test_omfsegdg_LEDATA_before_MODEND,
 ]
 
 def main():

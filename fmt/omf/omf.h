@@ -117,6 +117,9 @@ enum {
 
 #define OMF_RECTYPE_CEXTDEF     (0xBC)
 
+#define OMF_RECTYPE_COMDAT      (0xC2)
+#define OMF_RECTYPE_COMDAT32    (0xC3)
+
 // COMDEF/LCOMDEF communal data types
 #define OMF_COMDEF_FAR          (0x61)
 #define OMF_COMDEF_NEAR         (0x62)
@@ -136,11 +139,13 @@ struct omf_record_t {
 // this is filled in by a utility function after reading the OMF record from the beginning.
 // the data pointer is valid UNTIL the OMF record is overwritten/rewritten, so take the
 // data right after parsing the header, before you read another OMF record.
+// used for LEDATA, LIDATA, and COMDAT records.
 struct omf_ledata_info_t {
-    unsigned int                        segment_index;
+    unsigned int                        segment_index;      // 0 if a COMDAT does not say which segment
     unsigned long                       enum_data_offset;
     unsigned long                       data_length;
     unsigned char*                      data;
+    unsigned char                       iterated;           // data is LIDATA iterated data blocks, not the bytes themselves
 };
 
 struct omf_fixupp_t {
@@ -448,7 +453,9 @@ static inline unsigned char omf_record_eof(const struct omf_record_t * const rec
 
 // LIDATA has same header, but data points to blocks
 static inline int omf_lidata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
-    return omf_ledata_parse_header(info,rec);
+    int r = omf_ledata_parse_header(info,rec);
+    info->iterated = 1;
+    return r;
 }
 
 void omf_pubdefs_context_init_pubdef(struct omf_pubdef_t * const ctx);
@@ -509,6 +516,7 @@ static inline unsigned int omf_segdefs_context_get_next_add_index(const struct o
 
 int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
 int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
+int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
 int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
 void omf_context_init(struct omf_context_t * const ctx);

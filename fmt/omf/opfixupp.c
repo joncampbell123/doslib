@@ -75,8 +75,10 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         }
 
         /* fixup: if the frame method is F4 (segment index of previous LEDATA record), then
-         *        simplify this code by patching in the LEDATA record's segment index */
-        if (ent->frame_method == 4) {
+         *        simplify this code by patching in the LEDATA record's segment index.
+         *        leave it as F4 if that segment is not known (a COMDAT that does not name its
+         *        segment, or no data record yet). */
+        if (ent->frame_method == 4 && ctx->last_LEDATA_seg != 0) {
             ent->frame_method = 0;/*SEGDEF*/
             ent->frame_index = ctx->last_LEDATA_seg;
         }
