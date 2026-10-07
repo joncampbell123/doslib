@@ -6,6 +6,9 @@ void omf_extdefs_context_init_extdef(struct omf_extdef_t * const ctx) {
     ctx->type = OMF_EXTDEF_TYPE_LOCAL;
     ctx->name_string = NULL;
     ctx->type_index = 0;
+    ctx->record_type = 0;
+    ctx->communal_data_type = 0;
+    ctx->communal_length = 0;
 }
 
 void omf_extdefs_context_init(struct omf_extdefs_context_t * const ctx) {

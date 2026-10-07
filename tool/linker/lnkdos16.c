@@ -2194,6 +2194,33 @@ int main(int argc,char **argv) {
 
                             // TODO: Store as symbol, noting it is external
                         } break;
+                    case OMF_RECTYPE_COMDEF:/*0xB0*/
+                    case OMF_RECTYPE_LCOMDEF:/*0xB8*/
+                        {
+                            int first_new_extdef;
+
+                            // communal variables are not supported, but they take EXTDEF indexes, so they must be counted.
+                            if ((first_new_extdef=omf_context_parse_COMDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing COMDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
+                        } break;
+                    case OMF_RECTYPE_CEXTDEF:/*0xBC*/
+                        {
+                            int first_new_extdef;
+
+                            // COMDAT references are not supported, but they take EXTDEF indexes, so they must be counted.
+                            if ((first_new_extdef=omf_context_parse_CEXTDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing CEXTDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
+                        } break;
                     case OMF_RECTYPE_PUBDEF:/*0x90*/
                     case OMF_RECTYPE_PUBDEF32:/*0x91*/
                     case OMF_RECTYPE_LPUBDEF:/*0xB6*/

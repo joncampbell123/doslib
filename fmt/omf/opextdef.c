@@ -28,6 +28,7 @@ int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_
             return -1;
 
         extdef->type = type;
+        extdef->record_type = rec->rectype;
         extdef->type_index = omf_record_get_index(rec);
     }
 

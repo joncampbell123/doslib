@@ -112,6 +112,15 @@ enum {
 #define OMF_RECTYPE_LPUBDEF     (0xB6)
 #define OMF_RECTYPE_LPUBDEF32   (0xB7)
 
+#define OMF_RECTYPE_COMDEF      (0xB0)
+#define OMF_RECTYPE_LCOMDEF     (0xB8)
+
+#define OMF_RECTYPE_CEXTDEF     (0xBC)
+
+// COMDEF/LCOMDEF communal data types
+#define OMF_COMDEF_FAR          (0x61)
+#define OMF_COMDEF_NEAR         (0x62)
+
 extern char                             omf_temp_str[255+1/*NUL*/];
 
 struct omf_record_t {
@@ -214,10 +223,14 @@ struct omf_segdefs_context_t {
     unsigned int                    omf_SEGDEFS_alloc;
 };
 
+// EXTDEF, LEXTDEF, COMDEF, LCOMDEF and CEXTDEF all add to the same list of external names
 struct omf_extdef_t {
     char*                           name_string;
     unsigned int                    type_index;
     unsigned char                   type;
+    unsigned char                   record_type;        // OMF record that defined it
+    unsigned char                   communal_data_type; // COMDEF/LCOMDEF: OMF_COMDEF_FAR, OMF_COMDEF_NEAR, or Borland segment index
+    unsigned long                   communal_length;    // COMDEF/LCOMDEF: size in bytes
 };
 
 struct omf_extdefs_context_t {
@@ -510,6 +523,8 @@ int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_
 int omf_context_parse_SEGDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_GRPDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
+int omf_context_parse_COMDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
+int omf_context_parse_CEXTDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec);

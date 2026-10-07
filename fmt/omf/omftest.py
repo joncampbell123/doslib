@@ -265,6 +265,29 @@ def test_SEGDEF_big_bit(tools, tmp):
     out = run_omfdump(tools, tmp, 'big.obj', obj)
     check('Length=65536 ' in out, 'big SEGDEF length is not 65536')
 
+# COMDEF, LCOMDEF and CEXTDEF entries take EXTDEF indexes, in order, along with EXTDEF and LEXTDEF.
+def test_COMDEF_CEXTDEF_numbering(tools, tmp):
+    obj = module_header('comdef', 6) + LNAMES(['comdat_e'])                       # LNAMES 7
+    obj += omf_record(0x8C, lenstr('ext_a') + bytes([0]))                          # EXTDEF 1
+    obj += omf_record(0xB0,
+        lenstr('near_b') + bytes([0, 0x62, 0x84, 0x70, 0x11, 0x01]) +              # EXTDEF 2: NEAR, 70000 bytes
+        lenstr('far_c') + bytes([0, 0x61, 0x81, 0x2C, 0x01, 0x04]))                # EXTDEF 3: FAR, 300 elements of 4 bytes
+    obj += omf_record(0xB8, lenstr('local_d') + bytes([0, 0x62, 0x02]))            # EXTDEF 4: local NEAR, 2 bytes
+    obj += omf_record(0xBC, bytes([7, 0]))                                         # EXTDEF 5: COMDAT comdat_e
+    obj += omf_record(0x8C, lenstr('ext_f') + bytes([0]))                          # EXTDEF 6
+    obj += LEDATA(SEG_TEXT, 0, [0xB8, 0, 0, 0xBB, 0, 0])                           # mov ax,ext_f / mov bx,comdat_e
+    obj += omf_record(0x9C,
+        LOCAT(LOC_OFFSET16, 1) + bytes([(5 << 4) | FIX_P | 2, 6]) +
+        LOCAT(LOC_OFFSET16, 4) + bytes([(5 << 4) | FIX_P | 2, 5]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'comdef.obj', obj)
+    check('target_index="ext_f"(6)' in out, 'fixup to EXTDEF 6 is not ext_f')
+    check('target_index="comdat_e"(5)' in out, 'fixup to EXTDEF 5 is not comdat_e')
+    check('"near_b" typeindex=0 GLOBAL COMMUNAL NEAR length=70000' in out, 'near_b printed wrong')
+    check('"far_c" typeindex=0 GLOBAL COMMUNAL FAR length=1200' in out, 'far_c printed wrong')
+    check('"local_d" typeindex=0 LOCAL COMMUNAL NEAR length=2' in out, 'local_d printed wrong')
+    run_omfsegdg(tools, tmp, 'comdef', obj)
+
 TESTS = [
     test_lib_module_ends_after_page_boundary,
     test_lib_large_page_size,
@@ -273,6 +296,7 @@ TESTS = [
     test_omfsegdg_segdef_in_DGROUP,
     test_omfdump_SEGDEF_fields,
     test_SEGDEF_big_bit,
+    test_COMDEF_CEXTDEF_numbering,
 ]
 
 def main():
