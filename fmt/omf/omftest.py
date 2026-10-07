@@ -163,6 +163,14 @@ def check(cond, msg):
 def run(args):
     return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
 
+def run_omfdump(tools, tmp, name, data):
+    path = os.path.join(tmp, name)
+    with open(path, 'wb') as f:
+        f.write(data)
+    r = run([os.path.join(tools, 'omfdump'), '-v', '-i', path])
+    check(r.returncode == 0, 'omfdump failed: ' + r.stdout.strip())
+    return r.stdout
+
 def run_omfsegdg(tools, tmp, name, obj):
     src = os.path.join(tmp, name + '.obj')
     dst = os.path.join(tmp, name + '.out')
@@ -232,11 +240,22 @@ def test_omfsegdg_segdef_in_DGROUP(tools, tmp):
     check(led['fixups'] == [], 'segment fixup was not removed')
     check(bytes(led['data']) == bytes([0x8C, 0xC9, 0x90, 0xC3]), 'code was not patched: ' + bytes(led['data']).hex())
 
+# omfdump must print each SEGDEF attribute next to its own label.
+def test_omfdump_SEGDEF_fields(tools, tmp):
+    obj = THEADR('segdef') + LNAMES(['', 'VIDEO', 'FAR_DATA', 'CODE32', 'CODE'])
+    obj += omf_record(0x98, bytes([0x00, 0x00, 0xB8, 0x00, 0x00, 0x10, 2, 3, 1]))  # absolute at B800:0000, length 0x1000
+    obj += omf_record(0x99, bytes([0x29, 0x10, 0, 0, 0, 4, 5, 1]))                  # 32-bit, byte aligned, public, length 16
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'segdef.obj', obj)
+    check('big=0 frame=47104 offset=0 use16' in out, 'absolute SEGDEF printed wrong')
+    check('big=0 frame=0 offset=0 use32' in out, '32-bit SEGDEF printed wrong')
+
 TESTS = [
     test_lib_module_ends_after_page_boundary,
     test_omfsegdg_F4_frame,
     test_omfsegdg_thread_in_later_FIXUPP,
     test_omfsegdg_segdef_in_DGROUP,
+    test_omfdump_SEGDEF_fields,
 ]
 
 def main():

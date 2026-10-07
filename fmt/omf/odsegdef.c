@@ -12,9 +12,9 @@ void dump_SEGDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
             omf_segdefs_combination_to_str(segdef->attr.f.f.combination),
             segdef->attr.f.f.combination,
             segdef->attr.f.f.big_segment,
-            segdef->attr.f.f.use32?32U:16U,
             segdef->attr.frame_number,
-            segdef->attr.offset);
+            segdef->attr.offset,
+            segdef->attr.f.f.use32?32U:16U);
         fprintf(fp,"    Length=%lu name=\"%s\"(%u) class=\"%s\"(%u) overlay=\"%s\"(%u)\n",
             (unsigned long)segdef->segment_length,
             omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->segment_name_index),
