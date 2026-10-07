@@ -21,7 +21,8 @@ int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd) {
         return 0;
 
     // where does the next block size start?
-    ofs = ctx->record.rec_file_offset + 3 + ctx->record.reclen;
+    // NTS: omf_context_read_fd() removed the checksum byte from reclen, add it back (+1) to get the end of the MODEND record
+    ofs = ctx->record.rec_file_offset + 3 + ctx->record.reclen + 1;
     ofs += ctx->library_block_size - 1UL;
     ofs -= ofs % ctx->library_block_size;
     if (lseek(fd,(off_t)ofs,SEEK_SET) != (off_t)ofs)
