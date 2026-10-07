@@ -3,8 +3,10 @@
 #include <fmt/omf/omfcstr.h>
 
 int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
+    unsigned char checksum;
     unsigned char sum = 0;
     unsigned char tmp[3];
+    unsigned int readlen;
     unsigned int i;
     int ret;
 
@@ -42,29 +44,60 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
     ctx->record.reclen = le16toh(*((uint16_t*)(tmp+1))); // length (including checksum)
     if (ctx->record.rectype == 0 || ctx->record.reclen == 0)
         return 0;
-    if (ctx->record.reclen > ctx->record.data_alloc) {
-        ctx->last_error = "Reading OMF record failed because record too large for buffer";
-        errno = ERANGE;
-        return -1;
+
+    readlen = ctx->record.reclen;
+    if (readlen > ctx->record.data_alloc) {
+        // LIBHEAD is padded out to the .LIB page size, which can be larger than the
+        // record buffer. Only the start of it means anything, so read what fits
+        // (leaving room for the checksum byte) and read through the rest below.
+        if (ctx->record.rectype != 0xF0/*LIBHEAD*/) {
+            ctx->last_error = "Reading OMF record failed because record too large for buffer";
+            errno = ERANGE;
+            return -1;
+        }
+
+        readlen = ctx->record.data_alloc - 1;
     }
-    if ((unsigned int)(ret=read(fd,ctx->record.data,ctx->record.reclen)) != (unsigned int)ctx->record.reclen) {
+    if ((unsigned int)(ret=read(fd,ctx->record.data,readlen)) != readlen) {
         ctx->last_error = "Reading OMF record contents failed";
         if (ret >= 0) errno = EIO;
         return -1;
     }
 
-    /* check checksum */
-    if (ctx->record.data[ctx->record.reclen-1] != 0/*optional*/) {
-        for (i=0;i < 3;i++)
-            sum += tmp[i];
-        for (i=0;i < ctx->record.reclen;i++)
-            sum += ctx->record.data[i];
+    for (i=0;i < 3;i++)
+        sum += tmp[i];
+    for (i=0;i < readlen;i++)
+        sum += ctx->record.data[i];
 
-        if (sum != 0) {
-            ctx->last_error = "Reading OMF record checksum failed";
-            errno = EIO;
-            return -1;
+    checksum = ctx->record.data[readlen-1];
+
+    // read through the rest of an oversized LIBHEAD
+    if (readlen < ctx->record.reclen) {
+        unsigned int skip = ctx->record.reclen - readlen;
+        unsigned char skipbuf[64];
+        unsigned int n;
+
+        while (skip > 0) {
+            n = (skip > sizeof(skipbuf)) ? sizeof(skipbuf) : skip;
+            if ((unsigned int)(ret=read(fd,skipbuf,n)) != n) {
+                ctx->last_error = "Reading OMF record contents failed";
+                if (ret >= 0) errno = EIO;
+                return -1;
+            }
+
+            for (i=0;i < n;i++)
+                sum += skipbuf[i];
+
+            checksum = skipbuf[n-1];
+            skip -= n;
         }
+    }
+
+    /* check checksum */
+    if (checksum != 0/*optional*/ && sum != 0) {
+        ctx->last_error = "Reading OMF record checksum failed";
+        errno = EIO;
+        return -1;
     }
 
     /* remember LIBHEAD block size */
@@ -72,6 +105,12 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
         if (ctx->library_block_size == 0) {
             // and the length of the record defines the block size that modules within are aligned by
             ctx->library_block_size = ctx->record.reclen + 3;
+
+            // if we only read the start of the LIBHEAD, then that's all the record holds (no checksum)
+            if (readlen < ctx->record.reclen) {
+                ctx->record.reclen = readlen;
+                return 1;
+            }
         }
         else {
             ctx->last_error = "LIBHEAD defined again";

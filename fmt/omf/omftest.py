@@ -185,10 +185,17 @@ def run_omfsegdg(tools, tmp, name, obj):
 # omf_context_next_lib_module_fd() must skip to the next page, not stop on
 # that last byte (the MODEND checksum).
 def test_lib_module_ends_after_page_boundary(tools, tmp):
-    page = 16
-    lib = bytearray(omf_record(0xF0, bytes(page - 4)))  # LIBHEAD, record length makes the page size
     # THEADR of a 7 char name (12 bytes) + MODEND (5 bytes) = 17 bytes = one page + 1
-    names = ['module1', 'mod2', 'mod3']
+    check_lib_modules(tools, tmp, 16, ['module1', 'mod2', 'mod3'])
+
+# The LIBHEAD record is as long as a .LIB page, which can be larger than
+# the OMF library's record buffer.
+def test_lib_large_page_size(tools, tmp):
+    check_lib_modules(tools, tmp, 8192, ['mod1', 'mod2'])
+
+# Make a .LIB of modules that contain only THEADR and MODEND, and check that omfdump reads them all.
+def check_lib_modules(tools, tmp, page, names):
+    lib = bytearray(omf_record(0xF0, bytes(page - 4)))  # LIBHEAD, record length makes the page size
     for name in names:
         lib += THEADR(name) + MODEND()
         lib += bytes(-len(lib) % page)
@@ -198,7 +205,7 @@ def test_lib_module_ends_after_page_boundary(tools, tmp):
         f.write(lib)
     r = run([os.path.join(tools, 'omfdump'), '-i', path])
     found = r.stdout.count('type=0x80')
-    check(found == len(names), 'omfdump read %u of %u modules' % (found, len(names)))
+    check(found == len(names), 'omfdump read %u of %u modules: %s' % (found, len(names), r.stdout.strip().split('\n')[-1]))
 
 # Frame method F4 means "the segment of the preceding LEDATA".
 # omfsegdg must resolve it against the LEDATA that each FIXUPP follows.
@@ -260,6 +267,7 @@ def test_SEGDEF_big_bit(tools, tmp):
 
 TESTS = [
     test_lib_module_ends_after_page_boundary,
+    test_lib_large_page_size,
     test_omfsegdg_F4_frame,
     test_omfsegdg_thread_in_later_FIXUPP,
     test_omfsegdg_segdef_in_DGROUP,
