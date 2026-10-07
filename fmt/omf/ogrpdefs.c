@@ -98,7 +98,7 @@ int omf_grpdefs_context_get_grpdef_segdef(const struct omf_grpdefs_context_t * c
         errno = ERANGE;
         return -1;
     }
-    if ((grp->index+i) > ctx->segdefs_count) {
+    if ((grp->index+i) >= ctx->segdefs_count) {
         errno = ERANGE;
         return -1;
     }
