@@ -573,6 +573,18 @@ int main(int argc,char **argv) {
                 break;
             case OMF_RECTYPE_LEDATA:/*0xA0*/
             case OMF_RECTYPE_LEDATA32:/*0xA1*/
+                /* parse the LEDATA header now, so that the FIXUPP that follows is parsed against this LEDATA.
+                 * FIXUPP parsing converts frame method F4 (segment of previous LEDATA) to SEGDEF using
+                 * the last LEDATA segment, which would otherwise be stale (or zero) at that point. */
+                {
+                    struct omf_ledata_info_t info;
+
+                    if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
+                        fprintf(stderr,"Error parsing LEDATA\n");
+                        return 1;
+                    }
+                }
+
                 /* flush out last LEDATA record if any, store the new one */
                 if (last_ledata.data != NULL) {
                     if (omf_state->flags.verbose)
