@@ -366,6 +366,25 @@ def test_omfsegdg_LEDATA_before_MODEND(tools, tmp):
     leds = run_omfsegdg(tools, tmp, 'order', obj)
     check(len(leds) == 1 and bytes(leds[0]['data']) == bytes([0xC3]), 'LEDATA is not before MODEND')
 
+# The MODEND start address is like a FIXUP: which fields are present, and what the
+# frame and target indexes refer to, depend on the End Data byte.
+def test_omfdump_MODEND_start_address(tools, tmp):
+    base = module_header('modend', 1) + omf_record(0x8C, lenstr('main_') + bytes([0])) + LEDATA(SEG_TEXT, 0, [0xC3])
+
+    # main module, start address: frame GRPDEF 1 (DGROUP), target SEGDEF 1 (_TEXT) + 0x10
+    out = run_omfdump(tools, tmp, 'modend1.obj', base + omf_record(0x8A, bytes([0xC1, (1 << 4) | 0, 1, SEG_TEXT, 0x10, 0x00])))
+    check(' Start: frame_method=GRPDEF(1) frame_index="DGROUP"(1) target_method=SEGDEF(0) target_index="_TEXT"(1) target_displacement=0x10' in out,
+        'GRPDEF frame start address printed wrong')
+
+    # no start address
+    out = run_omfdump(tools, tmp, 'modend2.obj', base + omf_record(0x8A, bytes([0x00])))
+    check('Start=0' in out and ' Start:' not in out, 'module without a start address printed wrong')
+
+    # frame from target, target EXTDEF 1 (main_), no displacement
+    out = run_omfdump(tools, tmp, 'modend3.obj', base + omf_record(0x8A, bytes([0xC1, (5 << 4) | FIX_P | 2, 1])))
+    check(' Start: frame_method=by-TARGET(5) target_method=EXTDEF(2) target_index="main_"(1) target_displacement=0x0' in out,
+        'EXTDEF start address printed wrong')
+
 TESTS = [
     test_lib_module_ends_after_page_boundary,
     test_lib_large_page_size,
@@ -380,6 +399,7 @@ TESTS = [
     test_omfsegdg_FIXUPP_after_COMDAT,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,
+    test_omfdump_MODEND_start_address,
 ]
 
 def main():

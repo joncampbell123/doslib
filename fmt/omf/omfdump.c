@@ -67,6 +67,16 @@ void dump_COMENT(FILE *fp,struct omf_context_t * const ctx) {
     fprintf(fp,"\n");
 }
 
+// print the SEGDEF, GRPDEF, or EXTDEF that a frame or target method and index refer to
+static void print_method_index(const struct omf_context_t * const ctx,const char *what,const unsigned char method,const unsigned int index) {
+    if (method == 0/*SEGDEF*/)
+        printf(" %s=\"%s\"(%u)",what,omf_context_get_segdef_name_safe(ctx,index),index);
+    else if (method == 1/*GRPDEF*/)
+        printf(" %s=\"%s\"(%u)",what,omf_context_get_grpdef_name_safe(ctx,index),index);
+    else if (method == 2/*EXTDEF*/)
+        printf(" %s=\"%s\"(%u)",what,omf_context_get_extdef_name_safe(ctx,index),index);
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -372,40 +382,32 @@ int main(int argc,char **argv) {
                 } break;
             case OMF_RECTYPE_MODEND:/*0x8A*/
             case OMF_RECTYPE_MODEND32:/*0x8B*/{
-                unsigned char ModuleType;
-                unsigned char EndData;
-                unsigned int FrameDatum;
-                unsigned int TargetDatum;
-                unsigned long TargetDisplacement;
-                const struct omf_segdef_t *frame_segdef;
-                const struct omf_segdef_t *target_segdef;
+                struct omf_modend_t modend;
 
-                ModuleType = omf_record_get_byte(&omf_state->record);
-                EndData = omf_record_get_byte(&omf_state->record);
-                FrameDatum = omf_record_get_index(&omf_state->record);
-                TargetDatum = omf_record_get_index(&omf_state->record);
-
-                if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
-                    TargetDisplacement = omf_record_get_dword(&omf_state->record);
-                else
-                    TargetDisplacement = omf_record_get_word(&omf_state->record);
-    
-                frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
-                target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
+                if (omf_context_parse_MODEND(omf_state,&modend,&omf_state->record) < 0) {
+                    fprintf(stderr,"Error parsing MODEND\n");
+                    return 1;
+                }
 
                 printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
-                    ModuleType,
-                    ModuleType&0x80?1:0,
-                    ModuleType&0x40?1:0,
-                    ModuleType&0x20?1:0,
-                    ModuleType&0x01?1:0);
-                printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
-                    EndData,
-                    FrameDatum,
-                    (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
-                    TargetDatum,
-                    (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
-                    TargetDisplacement);
+                    modend.module_type,
+                    modend.module_type&0x80?1:0,
+                    modend.module_type&0x40?1:0,
+                    modend.module_type&0x20?1:0,
+                    modend.module_type&0x01?1:0);
+
+                if (modend.has_start) {
+                    printf("    Start: frame_method=%s(%u)",
+                        omf_fixupp_frame_method_to_str(modend.frame_method),
+                        modend.frame_method);
+                    print_method_index(omf_state,"frame_index",modend.frame_method,modend.frame_index);
+                    printf(" target_method=%s(%u)",
+                        omf_fixupp_target_method_to_str(modend.target_method),
+                        modend.target_method);
+                    print_method_index(omf_state,"target_index",modend.target_method,modend.target_index);
+                    printf(" target_displacement=0x%lx\n",
+                        (unsigned long)modend.target_displacement);
+                }
 
                 } break;
         }

@@ -165,6 +165,17 @@ struct omf_fixupp_t {
     unsigned char                       omf_rec_file_header;
 };
 
+// MODEND: end of module, and the program start address if this is the main module
+struct omf_modend_t {
+    unsigned char                       module_type;        // [7] main module [6] start address present [0] start address is relocatable
+    unsigned char                       has_start;          // start address is present
+    unsigned char                       frame_method;       // OMF_FIXUPP_FRAME_METHOD_* (from a frame THREAD if the record uses one)
+    unsigned char                       target_method;      // OMF_FIXUPP_TARGET_METHOD_* (from a target THREAD if the record uses one)
+    unsigned int                        frame_index;        // SEGDEF, GRPDEF, or EXTDEF index, according to frame_method
+    unsigned int                        target_index;       // SEGDEF, GRPDEF, or EXTDEF index, according to target_method
+    unsigned long                       target_displacement;
+};
+
 struct omf_fixupp_thread_t {
     unsigned int                        method:3;           // current method
     unsigned int                        alloc:1;            // allocated
@@ -536,6 +547,8 @@ int omf_context_parse_CEXTDEF(struct omf_context_t * const ctx,struct omf_record
 int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec);
+int omf_context_parse_MODEND(struct omf_context_t * const ctx,struct omf_modend_t * const modend,struct omf_record_t * const rec);
+const char *omf_context_get_grpdef_first_segdef_name(const struct omf_context_t * const ctx,unsigned int i);
 
 void dump_LIDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_record_t * const rec);
 void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);

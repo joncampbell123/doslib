@@ -2322,80 +2322,66 @@ int main(int argc,char **argv) {
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
                         if (pass == PASS_GATHER) {
-                            unsigned char ModuleType;
-                            unsigned char EndData;
-                            unsigned int FrameDatum;
-                            unsigned int TargetDatum;
-                            unsigned long TargetDisplacement;
-                            const struct omf_segdef_t *frame_segdef;
-                            const struct omf_segdef_t *target_segdef;
+                            struct omf_modend_t modend;
 
-                            ModuleType = omf_record_get_byte(&omf_state->record);
-                            if (ModuleType&0x40/*START*/) {
-                                EndData = omf_record_get_byte(&omf_state->record);
-                                FrameDatum = omf_record_get_index(&omf_state->record);
-                                TargetDatum = omf_record_get_index(&omf_state->record);
+                            if (omf_context_parse_MODEND(omf_state,&modend,&omf_state->record) < 0) {
+                                fprintf(stderr,"Error parsing MODEND\n");
+                                return 1;
+                            }
 
-                                if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
-                                    TargetDisplacement = omf_record_get_dword(&omf_state->record);
-                                else
-                                    TargetDisplacement = omf_record_get_word(&omf_state->record);
-
-                                frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
-                                target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
+                            if (modend.has_start) {
+                                struct link_segdef *frameseg = NULL,*targseg = NULL;
 
                                 if (verbose) {
                                     printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
-                                            ModuleType,
-                                            ModuleType&0x80?1:0,
-                                            ModuleType&0x40?1:0,
-                                            ModuleType&0x20?1:0,
-                                            ModuleType&0x01?1:0);
-                                    printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
-                                            EndData,
-                                            FrameDatum,
-                                            (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
-                                            TargetDatum,
-                                            (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
-                                            TargetDisplacement);
+                                            modend.module_type,
+                                            modend.module_type&0x80?1:0,
+                                            modend.module_type&0x40?1:0,
+                                            modend.module_type&0x20?1:0,
+                                            modend.module_type&0x01?1:0);
+                                    printf("    Start: frame_method=%u frame_index=%u target_method=%u target_index=%u target_displacement=0x%lx\n",
+                                            modend.frame_method,
+                                            modend.frame_index,
+                                            modend.target_method,
+                                            modend.target_index,
+                                            (unsigned long)modend.target_displacement);
                                 }
 
-                                if (frame_segdef != NULL && target_segdef != NULL) {
-                                    const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
-                                    const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
+                                // the start address must be in a SEGDEF
+                                if (modend.target_method == OMF_FIXUPP_TARGET_METHOD_SEGDEF)
+                                    targseg = find_link_segment(omf_context_get_segdef_name_safe(omf_state,modend.target_index));
 
-                                    if (verbose)
-                                        fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
+                                // the frame can be a SEGDEF, a GRPDEF (any segment in the group, they have the same base), or the target
+                                if (modend.frame_method == OMF_FIXUPP_FRAME_METHOD_SEGDEF) {
+                                    frameseg = find_link_segment(omf_context_get_segdef_name_safe(omf_state,modend.frame_index));
+                                }
+                                else if (modend.frame_method == OMF_FIXUPP_FRAME_METHOD_GRPDEF) {
+                                    const char *name = omf_context_get_grpdef_first_segdef_name(omf_state,modend.frame_index);
+                                    if (name != NULL) frameseg = find_link_segment(name);
+                                }
+                                else if (modend.frame_method == OMF_FIXUPP_FRAME_METHOD_TARGET) {
+                                    frameseg = targseg;
+                                }
 
-                                    if (*framename != 0 && *targetname != 0) {
-                                        struct link_segdef *frameseg,*targseg;
+                                if (verbose && targseg != NULL && frameseg != NULL)
+                                    fprintf(stderr,"'%s' vs '%s'\n",frameseg->name,targseg->name);
 
-                                        targseg = find_link_segment(targetname);
-                                        frameseg = find_link_segment(framename);
-                                        if (targseg != NULL && frameseg != NULL) {
-                                            entry_seg_ofs = TargetDisplacement;
+                                if (targseg != NULL && frameseg != NULL) {
+                                    entry_seg_ofs = modend.target_displacement;
 
-                                            assert(frameseg->fragments_count != 0);
-                                            entry_seg_link_frame_fragment = frameseg->fragments_count - 1u;
+                                    assert(frameseg->fragments_count != 0);
+                                    entry_seg_link_frame_fragment = frameseg->fragments_count - 1u;
 
-                                            assert(targseg->fragments_count != 0);
-                                            entry_seg_link_target_fragment = targseg->fragments_count - 1u;
+                                    assert(targseg->fragments_count != 0);
+                                    entry_seg_link_target_fragment = targseg->fragments_count - 1u;
 
-                                            entry_seg_link_target_name = strdup(targetname);
-                                            entry_seg_link_target = targseg;
-                                            entry_seg_link_frame_name = strdup(framename);
-                                            entry_seg_link_frame = frameseg;
-                                        }
-                                        else {
-                                            fprintf(stderr,"Did not find segments\n");
-                                        }
-                                    }
-                                    else {
-                                        fprintf(stderr,"frame/target name not found\n");
-                                    }
+                                    entry_seg_link_target_name = strdup(targseg->name);
+                                    entry_seg_link_target = targseg;
+                                    entry_seg_link_frame_name = strdup(frameseg->name);
+                                    entry_seg_link_frame = frameseg;
                                 }
                                 else {
-                                    fprintf(stderr,"frame/target segdef not found\n");
+                                    fprintf(stderr,"Did not find frame/target segments of the start address\n");
                                 }
                             }
                         } break;
