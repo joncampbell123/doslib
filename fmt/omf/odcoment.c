@@ -28,6 +28,32 @@ static void dump_COMENT_rest(FILE *fp,const char * const label,struct omf_record
     omf_record_lseek(rec,rec->reclen);
 }
 
+// print a text comment. It is usually just the text, but NASM puts a length byte first, like the strings
+// in other records. Take it that way only if that first byte is not printable, so that text that happens
+// to start with a character that matches its length is still printed whole.
+static void dump_COMENT_text(FILE *fp,const char * const label,struct omf_record_t * const rec) {
+    const size_t len = omf_record_data_available(rec);
+    const unsigned char *p;
+    size_t i;
+
+    if (len >= 2) {
+        p = rec->data + rec->recpos;
+        if ((size_t)p[0] == (len - 1u) && (p[0] < 0x20 || p[0] >= 0x7F)) {
+            i = 1;
+            while (i < len && p[i] >= 0x20 && p[i] < 0x7F)
+                i++;
+
+            if (i == len) {
+                fprintf(fp,"    %-18s\"%.*s\"\n",label,(int)(len - 1u),(const char*)(p + 1));
+                omf_record_lseek(rec,rec->reclen);
+                return;
+            }
+        }
+    }
+
+    dump_COMENT_rest(fp,label,rec);
+}
+
 // Watcom and Microsoft processor and memory model, a string of characters:
 //   processor ('0' = 8086, '1' = 80186, '2' = 80286, '3' = 80386 ...), memory model, 'O' if optimized, floating point
 static void dump_COMENT_proc_model(FILE *fp,struct omf_record_t * const rec) {
@@ -348,7 +374,7 @@ void dump_COMENT(FILE *fp,const struct omf_context_t * const ctx,struct omf_reco
         case OMF_COMENT_LIBRARY_SPEC:
         case OMF_COMENT_EXESTR:
         case OMF_COMENT_COMMAND_LINE:
-            dump_COMENT_rest(fp,"Text:",rec);
+            dump_COMENT_text(fp,"Text:",rec);
             break;
         case OMF_COMENT_DEFAULT_LIBRARY: // the name, without a length byte
             dump_COMENT_rest(fp,"Library:",rec);

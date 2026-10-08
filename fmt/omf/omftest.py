@@ -452,6 +452,8 @@ def test_omfdump_COMENT(tools, tmp):
     obj = THEADR('coment') + LNAMES(['', '_TEXT', 'CODE']) + SEGDEF(0x28, 1, 2, 3)
     obj += omf_record(0x8C, lenstr('weak') + bytes([0]) + lenstr('strong') + bytes([0]))
     obj += COMENT(0x00, 0x00, b'WATCOM C/C++ V2.0')
+    obj += COMENT(0x00, 0x00, lenstr('The Netwide Assembler 2.16.01'))              # NASM puts a length byte first
+    obj += COMENT(0x00, 0x00, b'A' + b'x' * 65)                                     # text, and 'A' (65) is the length of the rest
     obj += COMENT(0x80, 0x9F, b'clib3r')
     obj += COMENT(0x80, 0x9B, b'3fOp')
     obj += COMENT(0x80, 0x9E, b'')
@@ -472,6 +474,8 @@ def test_omfdump_COMENT(tools, tmp):
     out = run_omfdump(tools, tmp, 'coment.obj', obj)
     for want in [
             line('Comment Class:', '0x00 Translator') + line('Text:', '"WATCOM C/C++ V2.0"'),
+            line('Comment Class:', '0x00 Translator') + line('Text:', '"The Netwide Assembler 2.16.01"'),
+            line('Comment Class:', '0x00 Translator') + line('Text:', '"A' + 'x' * 65 + '"'),
             line('Comment Type:', '0x80 NO-PURGE') + line('Comment Class:', '0x9F Default library') + line('Library:', '"clib3r"'),
             line('Processor:', '80386') + line('Memory model:', 'Flat') + line('Optimized:', 'yes') + line('Floating point:', 'inline 80x87'),
             line('Comment Class:', '0x9E DOSSEG') + 'OMF record',
