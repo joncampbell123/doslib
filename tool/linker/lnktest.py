@@ -66,11 +66,17 @@ def COMDAT(flags, attributes, name_index, data, offset=0, group=1, segdef=1, ali
     base = bytes([group, segdef]) if (attributes & 0x0F) == 0 else b''
     return omf_record(0xC2, bytes([flags, attributes, align]) + w(offset) + bytes([0]) + base + bytes([name_index]) + bytes(data))
 
-# FIXUPP with 16-bit offset fixups. Each fixup is (data record offset, self relative, Fix Data byte, datums...)
+LOC_OFFSET16 = 1
+LOC_OFFSET32 = 9
+
+# FIXUPP. Each fixup is (data record offset, self relative, Fix Data byte, datums, [location]).
+# The location is a 16-bit offset unless it says otherwise.
 def FIXUPP(fixups):
     body = b''
-    for ofs, self_rel, fixdat, datums in fixups:
-        body += bytes([0x80 | (0x00 if self_rel else 0x40) | (1 << 2) | (ofs >> 8), ofs & 0xFF, fixdat]) + bytes(datums)
+    for f in fixups:
+        ofs, self_rel, fixdat, datums = f[:4]
+        loc = f[4] if len(f) > 4 else LOC_OFFSET16
+        body += bytes([0x80 | (0x00 if self_rel else 0x40) | (loc << 2) | (ofs >> 8), ofs & 0xFF, fixdat]) + bytes(datums)
     return omf_record(0x9C, body)
 
 FIX_TARGET_EXTDEF = (5 << 4) | 0x04 | 2     # frame by target, target EXTDEF, no displacement
@@ -243,6 +249,19 @@ def test_segment_without_data(linker, tmp):
     image = link_ok(linker, tmp, [obj])
     check(image == bytes([0xC3, 0, 0, 0, 0, 0]), 'wrong image: ' + image.hex())
 
+# 32-bit offset fixups get all 32 bits. A self-relative one back to an earlier address is negative.
+def test_OFFSET32(linker, tmp):
+    obj = module_header('ofs32', 14, 2) + EXTDEF(['back'])
+    obj += LEDATA(1, 0, [0xC3,                                                      # back: ret
+                         0x66, 0xE8, 0, 0, 0, 0,                                    # call dword back
+                         0x66, 0xB8, 0, 0, 0, 0,                                    # mov eax,offset _DATA
+                         0xC3])
+    obj += FIXUPP([(3, True, FIX_TARGET_EXTDEF, [1], LOC_OFFSET32), (9, False, FIX_DGROUP_SEGDEF, [1, 2], LOC_OFFSET32)])
+    obj += LEDATA(2, 0, b'HI') + PUBDEF(1, 1, 'back', 0) + MODEND_start()
+    image = link_ok(linker, tmp, [obj])
+    check(image == bytes([0xC3, 0x66, 0xE8, 0xF9, 0xFF, 0xFF, 0xFF, 0x66, 0xB8, 0x0E, 0x01, 0x00, 0x00, 0xC3]) + b'HI',
+        'wrong image: ' + image.hex())
+
 TESTS = [
     test_LIDATA,
     test_LIDATA_FIXUPP,
@@ -255,6 +274,7 @@ TESTS = [
     test_not_OMF,
     test_empty_EXE,
     test_segment_without_data,
+    test_OFFSET32,
 ]
 
 def main():

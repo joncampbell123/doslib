@@ -1634,7 +1634,8 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                         final_ofs -= ptch+4+current_link_segment->segment_offset;
                     }
 
-                    omf_add_le32(ptr,(uint16_t)final_ofs);
+                    /* all 32 bits of it, so that a negative self-relative offset is right too */
+                    omf_add_le32(ptr,final_ofs);
                 }
                 break;
  
