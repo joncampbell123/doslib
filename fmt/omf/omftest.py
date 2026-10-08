@@ -443,6 +443,53 @@ def test_omfdump_LIDATA(tools, tmp):
     check('    [invalid data block at 0x0]\n' in out, 'LIDATA with a short block was not caught')
     check('    [data blocks expand to more than ' in out, 'LIDATA32 that expands too far was not caught')
 
+# omfdump must name COMENT classes and decode the bodies it knows.
+def test_omfdump_COMENT(tools, tmp):
+    def COMENT(ctype, cclass, body):
+        return omf_record(0x88, bytes([ctype, cclass]) + bytes(body))
+    def line(label, value):
+        return '    %-18s%s\n' % (label, value)
+    obj = THEADR('coment') + LNAMES(['', '_TEXT', 'CODE']) + SEGDEF(0x28, 1, 2, 3)
+    obj += omf_record(0x8C, lenstr('weak') + bytes([0]) + lenstr('strong') + bytes([0]))
+    obj += COMENT(0x00, 0x00, b'WATCOM C/C++ V2.0')
+    obj += COMENT(0x80, 0x9F, b'clib3r')
+    obj += COMENT(0x80, 0x9B, b'3fOp')
+    obj += COMENT(0x80, 0x9E, b'')
+    obj += COMENT(0x00, 0xA0, bytes([0x01, 0x00]) + lenstr('MyFunc') + lenstr('MYDLL') + lenstr(''))
+    obj += COMENT(0x00, 0xA0, bytes([0x01, 0x01]) + lenstr('F2') + lenstr('MYDLL') + bytes([5, 0]))
+    obj += COMENT(0x00, 0xA0, bytes([0x02, 0xC3]) + lenstr('Exp') + lenstr('') + bytes([7, 0]))
+    obj += COMENT(0x00, 0xA1, bytes([1]) + b'CV')
+    obj += COMENT(0x40, 0xA2, bytes([1]))
+    obj += COMENT(0x80, 0xA8, bytes([1, 2]))
+    obj += COMENT(0x80, 0xE9, bytes([0x5C, 0x64, 0x6F, 0x58]) + lenstr('foo.h'))      # 2024-03-15 12:34:56
+    obj += COMENT(0x80, 0xE9, b'')
+    obj += COMENT(0x80, 0xFE, b'D' + bytes([1, 3]) + b'C')
+    obj += COMENT(0x80, 0xFE, b'O' + bytes([1]))
+    obj += COMENT(0x80, 0xFD, b's' + bytes([1, 0x10, 0, 0x20, 0]))
+    obj += COMENT(0x00, 0xA3, lenstr('foo'))
+    obj += COMENT(0x00, 0x55, bytes([0x00, 0xFF]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'coment.obj', obj)
+    for want in [
+            line('Comment Class:', '0x00 Translator') + line('Text:', '"WATCOM C/C++ V2.0"'),
+            line('Comment Type:', '0x80 NO-PURGE') + line('Comment Class:', '0x9F Default library') + line('Library:', '"clib3r"'),
+            line('Processor:', '80386') + line('Memory model:', 'Flat') + line('Optimized:', 'yes') + line('Floating point:', 'inline 80x87'),
+            line('Comment Class:', '0x9E DOSSEG') + 'OMF record',
+            line('Subtype:', '0x01 IMPDEF') + line('Import:', 'internal="MyFunc" module="MYDLL" name=(internal)'),
+            line('Import:', 'internal="F2" module="MYDLL" ordinal=5'),
+            line('Subtype:', '0x02 EXPDEF') + line('Export:', 'name="Exp" ordinal=7 RESIDENT parameters=3'),
+            line('Version:', '1') + line('Style:', '"CV" CodeView'),
+            line('Comment Type:', '0x40 NO-LIST') + line('Comment Class:', '0xA2 Link pass separator') + line('Link pass:', '0x01 (end of pass 1)'),
+            line('Extern:', '"weak"(1) default="strong"(2)'),
+            line('File:', '"foo.h" 2024-03-15 12:34:56'),
+            '    End of dependency list\n',
+            line('Directive:', "'D' debug information version and source language") + line('Version:', '1.3') + line('Language:', '"C"'),
+            line('Directive:', "'O' optimize far calls") + line('Segment:', '"_TEXT"(1)'),
+            line('Directive:', "'s' scan table") + line('Segment:', '"_TEXT"(1)') + line('Range:', 'start=0x10 end=0x20'),
+            line('Comment Class:', '0xA3 LIBMOD') + line('Data:', '03 66 6F 6F'),
+            line('Comment Class:', '0x55 ?') + line('Data:', '00 FF')]:
+        check(want in out, 'COMENT output is missing: ' + repr(want))
+
 # LEXTDEF32 (0xB5) is parsed like LEXTDEF, and omfdump must name it.
 def test_omfdump_LEXTDEF32_name(tools, tmp):
     obj = THEADR('lext32') + LNAMES(['']) + omf_record(0xB5, lenstr('lext') + bytes([0])) + MODEND()
@@ -505,6 +552,7 @@ TESTS = [
     test_omfdump_COMDAT,
     test_omfdump_LIDATA,
     test_omfdump_LEXTDEF32_name,
+    test_omfdump_COMENT,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,
     test_omfdump_MODEND_start_address,

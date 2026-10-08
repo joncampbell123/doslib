@@ -125,6 +125,43 @@ enum {
 #define OMF_COMDEF_FAR          (0x61)
 #define OMF_COMDEF_NEAR         (0x62)
 
+// COMENT comment type bits
+#define OMF_COMENT_TYPE_NO_PURGE        (0x80)
+#define OMF_COMENT_TYPE_NO_LIST         (0x40)
+
+// COMENT comment classes
+#define OMF_COMENT_TRANSLATOR           (0x00)
+#define OMF_COMENT_COPYRIGHT            (0x01)
+#define OMF_COMENT_LIBRARY_SPEC         (0x81)  // obsolete, replaced by OMF_COMENT_DEFAULT_LIBRARY
+#define OMF_COMENT_WATCOM_PROC_MODEL    (0x9B)
+#define OMF_COMENT_DOS_VERSION          (0x9C)  // obsolete
+#define OMF_COMENT_MS_PROC_MODEL        (0x9D)
+#define OMF_COMENT_DOSSEG               (0x9E)
+#define OMF_COMENT_DEFAULT_LIBRARY      (0x9F)
+#define OMF_COMENT_OMF_EXTENSION        (0xA0)  // a subtype byte follows, OMF_COMENT_OMFEXT_*
+#define OMF_COMENT_NEW_OMF              (0xA1)  // debug information style
+#define OMF_COMENT_LINK_PASS            (0xA2)
+#define OMF_COMENT_LIBMOD               (0xA3)
+#define OMF_COMENT_EXESTR               (0xA4)
+#define OMF_COMENT_INCERR               (0xA6)
+#define OMF_COMENT_NOPAD                (0xA7)
+#define OMF_COMENT_WKEXT                (0xA8)
+#define OMF_COMENT_LZEXT                (0xA9)
+#define OMF_COMENT_EASY_OMF             (0xAA)  // Phar Lap
+#define OMF_COMENT_DEPENDENCY           (0xE9)  // Borland
+#define OMF_COMENT_DISASM_DIRECTIVE     (0xFD)  // Watcom
+#define OMF_COMENT_LINKER_DIRECTIVE     (0xFE)  // Watcom
+#define OMF_COMENT_COMMAND_LINE         (0xFF)  // Microsoft compiler options, or Watcom source file name
+
+// OMF_COMENT_OMF_EXTENSION subtypes
+#define OMF_COMENT_OMFEXT_IMPDEF        (0x01)
+#define OMF_COMENT_OMFEXT_EXPDEF        (0x02)
+#define OMF_COMENT_OMFEXT_INCDEF        (0x03)
+#define OMF_COMENT_OMFEXT_PROTLIB       (0x04)
+#define OMF_COMENT_OMFEXT_LNKDIR        (0x05)
+#define OMF_COMENT_OMFEXT_BIG_ENDIAN    (0x06)
+#define OMF_COMENT_OMFEXT_PRECOMP       (0x07)
+
 extern char                             omf_temp_str[255+1/*NUL*/];
 
 struct omf_record_t {
@@ -586,6 +623,8 @@ int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_
 int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_comdat_t * const comdat,struct omf_record_t * const rec);
 const char *omf_comdat_selection_to_str(const unsigned char s);
 const char *omf_comdat_allocation_to_str(const unsigned char a);
+const char *omf_coment_class_to_str(const unsigned char c);
+const char *omf_coment_omfext_to_str(const unsigned char s);
 int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
 void omf_context_init(struct omf_context_t * const ctx);
@@ -621,6 +660,7 @@ void dump_SEGDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
 void dump_GRPDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_THEADR(FILE *fp,const struct omf_context_t * const ctx);
+void dump_COMENT(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
 int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const rec);
 int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c);

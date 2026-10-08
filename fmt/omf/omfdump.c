@@ -31,42 +31,6 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
 }
 
-void dump_COMENT(FILE *fp,struct omf_context_t * const ctx) {
-    unsigned char comment_type;
-    unsigned char comment_class;
-
-    fprintf(fp,"COMENT:\n");
-
-    comment_type = omf_record_get_byte(&ctx->record);
-    comment_class = omf_record_get_byte(&ctx->record);
-    fprintf(fp,"    Comment Type:     0x%02x ",comment_type);
-    if (comment_type & 0x80) fprintf(fp,"NO-PURGE ");
-    if (comment_type & 0x40) fprintf(fp,"NO-LIST ");
-    fprintf(fp,"\n");
-
-    fprintf(fp,"    Comment Class:    0x%02x ",comment_class);
-    if (comment_class == 0xA0) { /* microsoft extension */
-        unsigned char subtype = omf_record_get_byte(&ctx->record);
-
-        switch (subtype) {
-            case 0x01:  fprintf(fp,"IMPDEF"); break;
-            case 0x02:  fprintf(fp,"EXPDEF"); break;
-            case 0x03:  fprintf(fp,"INCDEF"); break;
-            case 0x04:  fprintf(fp,"Protected Memory Library"); break;
-            case 0x05:  fprintf(fp,"LNKDIR"); break;
-            case 0x06:  fprintf(fp,"Big-endian"); break;
-            case 0x07:  fprintf(fp,"PRECOMP"); break;
-        };
-    }
-    else if (comment_class == 0xA1) {
-        fprintf(fp,"New OMF extension");
-    }
-    else if (comment_class == 0xE9) {
-        fprintf(fp,"Dependency file");
-    }
-    fprintf(fp,"\n");
-}
-
 // print the SEGDEF, GRPDEF, or EXTDEF that a frame or target method and index refer to
 static void print_method_index(const struct omf_context_t * const ctx,const char *what,const unsigned char method,const unsigned int index) {
     if (method == 0/*SEGDEF*/)
@@ -226,7 +190,7 @@ int main(int argc,char **argv) {
                 break;
             case OMF_RECTYPE_COMENT:/*0x88*/
                 if (omf_state->flags.verbose)
-                    dump_COMENT(stdout,omf_state);
+                    dump_COMENT(stdout,omf_state,&omf_state->record);
                 break;
             case OMF_RECTYPE_EXTDEF:/*0x8C*/
             case OMF_RECTYPE_LEXTDEF:/*0xB4*/
