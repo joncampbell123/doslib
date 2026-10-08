@@ -391,6 +391,28 @@ def test_omfsegdg_FIXUPP_after_COMDAT(tools, tmp):
     check(c1['fixups'] == [], 'COMDAT segment fixup was not removed')
     check([f['frame_method'] for f in c2['fixups']] == [4], 'F4 frame after COMDAT changed: %s' % c2['fixups'])
 
+# omfdump must print every COMDAT header field, and the data if it is not iterated.
+def test_omfdump_COMDAT(tools, tmp):
+    obj = module_header('comdatf', 4) + LNAMES(['tmpl1', 'tmpl2', 'tmpl3'])       # LNAMES 7, 8, 9
+    # local, exact match, explicit in DGROUP:_TEXT, word aligned: mov ax,1234h / ret
+    obj += omf_record(0xC2, bytes([0x04, 0x30, 0x02, 0, 0, 0, 1, SEG_TEXT, 7, 0xB8, 0x34, 0x12, 0xC3]))
+    # continuation, pick any, far code, align from SEGDEF, at offset 4: nop
+    obj += omf_record(0xC2, bytes([0x01, 0x11, 0x00, 4, 0, 0, 8, 0x90]))
+    # iterated, same size, explicit at absolute frame 0xB800: 2 x (1 byte: AAh)
+    obj += omf_record(0xC2, bytes([0x02, 0x20, 0x00, 0, 0, 0, 0, 0, 0x00, 0xB8, 9, 2, 0, 0, 0, 1, 0xAA]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'comdatf.obj', obj)
+    check('COMDAT "tmpl1"(7) flags=0x04 LOCAL\n' in out, 'tmpl1 name or flags printed wrong')
+    check('selection=EXACT-MATCH(3) allocation=EXPLICIT(0) align=WORD(2) typeindex=0' in out, 'tmpl1 attributes printed wrong')
+    check('group="DGROUP"(1) segment="_TEXT"(1)' in out, 'tmpl1 public base printed wrong')
+    check('B8 34 12 C3' in out, 'tmpl1 data not dumped')
+    check('COMDAT "tmpl2"(8) flags=0x01 CONTINUATION\n' in out, 'tmpl2 name or flags printed wrong')
+    check('selection=PICK-ANY(1) allocation=FAR-CODE(1) align=FROM-SEGDEF(0)' in out, 'tmpl2 attributes printed wrong')
+    check('data_offset=0x4(4) length=0x1(1)' in out, 'tmpl2 data offset printed wrong')
+    check('COMDAT "tmpl3"(9) flags=0x02 ITERATED\n' in out, 'tmpl3 name or flags printed wrong')
+    check('group=""(0) segment=ABSOLUTE frame=0xB800' in out, 'tmpl3 public base printed wrong')
+    check('data_offset=0x0(0) length=0x6(6)' in out, 'tmpl3 data length printed wrong')
+
 # A FIXUPP record of only THREADs may come before any data record.
 def test_omfsegdg_THREAD_before_data(tools, tmp):
     obj = module_header('thrfirst', 3)
@@ -443,6 +465,7 @@ TESTS = [
     test_omfsegdg_two_FIXUPPs_after_LEDATA,
     test_omfsegdg_FIXUPP_after_LIDATA,
     test_omfsegdg_FIXUPP_after_COMDAT,
+    test_omfdump_COMDAT,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,
     test_omfdump_MODEND_start_address,

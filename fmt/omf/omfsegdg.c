@@ -140,7 +140,7 @@ int my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t
 
         omf_record_lseek(ledata,0);
         if ((ledata->rectype & 0xFE) == OMF_RECTYPE_COMDAT)
-            r = omf_context_parse_COMDAT(ctx,&info,ledata);
+            r = omf_context_parse_COMDAT(ctx,&info,NULL,ledata);
         else
             r = omf_context_parse_LEDATA(ctx,&info,ledata);
 
@@ -624,7 +624,7 @@ int main(int argc,char **argv) {
                     int r;
 
                     if ((omf_state->record.rectype & 0xFE) == OMF_RECTYPE_COMDAT)
-                        r = omf_context_parse_COMDAT(omf_state,&info,&omf_state->record);
+                        r = omf_context_parse_COMDAT(omf_state,&info,NULL,&omf_state->record);
                     else if ((omf_state->record.rectype & 0xFE) == OMF_RECTYPE_LIDATA)
                         r = omf_context_parse_LIDATA(omf_state,&info,&omf_state->record);
                     else

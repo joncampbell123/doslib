@@ -8,18 +8,11 @@ static void print_b(FILE *fp,unsigned char c) {
         fprintf(fp,".");
 }
 
-void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info) {
+// hex dump of the data in an LEDATA or COMDAT record, by data offset
+void dump_LEDATA_bytes(FILE *fp,const struct omf_ledata_info_t * const info) {
     unsigned int col,colstart;
     unsigned long i,pos,ics;
     unsigned int ci;
-
-    fprintf(fp,"LEDATA segment=\"%s\"(%u) data_offset=0x%lX(%lu) length=0x%lX(%lu)\n",
-        omf_context_get_segdef_name_safe(ctx,info->segment_index),
-        info->segment_index,
-        (unsigned long)info->enum_data_offset,
-        (unsigned long)info->enum_data_offset,
-        (unsigned long)info->data_length,
-        (unsigned long)info->data_length);
 
     i = 0;
     col = 0;
@@ -82,5 +75,17 @@ void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct om
 
         fprintf(fp,"\n");
     }
+}
+
+void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info) {
+    fprintf(fp,"LEDATA segment=\"%s\"(%u) data_offset=0x%lX(%lu) length=0x%lX(%lu)\n",
+        omf_context_get_segdef_name_safe(ctx,info->segment_index),
+        info->segment_index,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->data_length,
+        (unsigned long)info->data_length);
+
+    dump_LEDATA_bytes(fp,info);
 }
 

@@ -26,46 +26,53 @@ int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_
 }
 
 // COMDAT (initialized communal data) holds data like LEDATA does, and FIXUPPs that follow refer to it.
-//   Flags (byte)                   [1:1] iterated (LIDATA style data)
-//   Attributes (byte)              [3:0] allocation type, 0 = explicit (the record names the segment)
-//   Align (byte)
+//   Flags (byte)                   OMF_COMDAT_FLAG_*
+//   Attributes (byte)              [7:4] selection criteria [3:0] allocation type, 0 = explicit (the record names the segment)
+//   Align (byte)                   0 = the SEGDEF says, else same as SEGDEF alignment
 //   Enumerated data offset (word or dword)
 //   Type index (index)
 //   Public base (only if explicit allocation): group index, segment index, frame number (word) if segment index == 0
 //   Public name (LNAMES index)
 //   Data
-int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
-    unsigned char flags,attributes;
+// comdat may be NULL if the caller does not need the COMDAT header fields.
+int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_comdat_t * const comdat,struct omf_record_t * const rec) {
+    struct omf_comdat_t tmp,*c = (comdat != NULL) ? comdat : &tmp;
+    unsigned char attributes;
 
+    memset(c,0,sizeof(*c));
     info->segment_index = 0;
     info->data = NULL;
     info->data_length = 0;
     info->iterated = 0;
 
     if (omf_record_data_available(rec) < 3) return -1;
-    flags = omf_record_get_byte(rec);
+    c->flags = omf_record_get_byte(rec);
     attributes = omf_record_get_byte(rec);
-    (void)omf_record_get_byte(rec); // align
+    c->selection = attributes >> 4;
+    c->allocation = attributes & 0x0F;
+    c->align = omf_record_get_byte(rec);
 
     if (omf_record_eof(rec)) return -1;
     info->enum_data_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
 
     if (omf_record_eof(rec)) return -1;
-    (void)omf_record_get_index(rec); // type index
+    c->type_index = omf_record_get_index(rec);
 
-    if ((attributes & 0x0F) == 0/*explicit allocation*/) {
+    if (c->allocation == OMF_COMDAT_ALLOC_EXPLICIT) {
         if (omf_record_eof(rec)) return -1;
-        (void)omf_record_get_index(rec); // group index
+        c->group_index = omf_record_get_index(rec);
         info->segment_index = omf_record_get_index(rec);
-        if (info->segment_index == 0)
-            (void)omf_record_get_word(rec); // frame number
+        if (info->segment_index == 0) {
+            if (omf_record_data_available(rec) < 2) return -1;
+            c->frame_number = omf_record_get_word(rec);
+        }
     }
 
     if (omf_record_eof(rec)) return -1;
-    (void)omf_record_get_index(rec); // public name
+    c->public_name_index = omf_record_get_index(rec);
 
     // what's left in the record is the data
-    info->iterated = (flags & 0x02) ? 1 : 0;
+    info->iterated = (c->flags & OMF_COMDAT_FLAG_ITERATED) ? 1 : 0;
     info->data = rec->data + rec->recpos;
     info->data_length = omf_record_data_available(rec);
 

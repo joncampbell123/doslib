@@ -149,6 +149,41 @@ struct omf_ledata_info_t {
     unsigned char                       iterated;           // data is LIDATA iterated data blocks, not the bytes themselves
 };
 
+// COMDAT flags
+#define OMF_COMDAT_FLAG_CONTINUATION    (0x01)  // continues the COMDAT of the same name from an earlier record
+#define OMF_COMDAT_FLAG_ITERATED        (0x02)  // data is LIDATA iterated data blocks
+#define OMF_COMDAT_FLAG_LOCAL           (0x04)  // not visible outside the module, like LPUBDEF
+#define OMF_COMDAT_FLAG_DATA_IN_CODE    (0x08)  // data in a code segment
+
+// COMDAT selection criteria (attributes [7:4]), what to do if more than one module defines it
+enum {
+    OMF_COMDAT_SELECT_NO_MATCH=0,                   // only one definition allowed
+    OMF_COMDAT_SELECT_PICK_ANY=1,                   // pick any one
+    OMF_COMDAT_SELECT_SAME_SIZE=2,                  // pick any one, they must all be the same size
+    OMF_COMDAT_SELECT_EXACT_MATCH=3                 // pick any one, they must all have the same contents
+};
+
+// COMDAT allocation type (attributes [3:0])
+enum {
+    OMF_COMDAT_ALLOC_EXPLICIT=0,                    // in the segment the record names
+    OMF_COMDAT_ALLOC_FAR_CODE=1,                    // CODE16, the linker picks the segment
+    OMF_COMDAT_ALLOC_FAR_DATA=2,                    // DATA16, the linker picks the segment
+    OMF_COMDAT_ALLOC_CODE32=3,                      // the linker picks the segment
+    OMF_COMDAT_ALLOC_DATA32=4                       // the linker picks the segment
+};
+
+// COMDAT header fields. The segment index, data offset, and data go in omf_ledata_info_t.
+struct omf_comdat_t {
+    unsigned char                       flags;              // OMF_COMDAT_FLAG_*
+    unsigned char                       selection;          // OMF_COMDAT_SELECT_*
+    unsigned char                       allocation;         // OMF_COMDAT_ALLOC_*
+    unsigned char                       align;              // 0 if the SEGDEF says, else OMF_SEGDEF_RELOC_*
+    unsigned int                        type_index;
+    unsigned int                        group_index;        // explicit allocation only
+    unsigned int                        frame_number;       // explicit allocation with segment index 0 only
+    unsigned int                        public_name_index;  // LNAMES index
+};
+
 struct omf_fixupp_t {
     unsigned int                        segment_relative:1; // M bit [1=segment relative 0=self relative]
     unsigned int                        location:4;         // location
@@ -534,7 +569,9 @@ static inline unsigned int omf_segdefs_context_get_next_add_index(const struct o
 
 int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
 int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
-int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
+int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_comdat_t * const comdat,struct omf_record_t * const rec);
+const char *omf_comdat_selection_to_str(const unsigned char s);
+const char *omf_comdat_allocation_to_str(const unsigned char a);
 int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
 void omf_context_init(struct omf_context_t * const ctx);
@@ -560,6 +597,8 @@ const char *omf_context_get_grpdef_first_segdef_name(const struct omf_context_t 
 void dump_LIDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_record_t * const rec);
 void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);
 void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info);
+void dump_LEDATA_bytes(FILE *fp,const struct omf_ledata_info_t * const info);
+void dump_COMDAT(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_comdat_t * const comdat);
 void dump_FIXUPP(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_PUBDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_EXTDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
