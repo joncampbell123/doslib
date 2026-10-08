@@ -15,8 +15,12 @@ void dump_SEGDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
             segdef->attr.frame_number,
             segdef->attr.offset,
             segdef->attr.f.f.use32?32U:16U);
-        fprintf(fp,"    Length=%lu name=\"%s\"(%u) class=\"%s\"(%u) overlay=\"%s\"(%u)\n",
-            (unsigned long)segdef->segment_length,
+        if (omf_segdef_is_4GB(segdef))
+            fprintf(fp,"    Length=4GB");
+        else
+            fprintf(fp,"    Length=%lu",(unsigned long)segdef->segment_length);
+
+        fprintf(fp," name=\"%s\"(%u) class=\"%s\"(%u) overlay=\"%s\"(%u)\n",
             omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->segment_name_index),
             segdef->segment_name_index,
             omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->class_name_index),

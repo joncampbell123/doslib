@@ -1610,6 +1610,11 @@ int segdef_add(vector< shared_ptr<struct link_segdef> > &link_segments,struct om
 
         if (*name == 0) continue;
 
+        if (omf_segdef_is_4GB(sg)) {
+            fprintf(stderr,"Segment '%s' is 4GB long, which is not supported\n",name);
+            return -1;
+        }
+
         shared_ptr<struct link_segdef> lsg = find_link_segment(link_segments,name);
 
         if (lsg != NULL) {

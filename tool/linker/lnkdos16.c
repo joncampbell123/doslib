@@ -1782,6 +1782,11 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
         if (*name == 0) continue;
 
+        if (omf_segdef_is_4GB(sg)) {
+            fprintf(stderr,"Segment '%s' is 4GB long, which is not supported\n",name);
+            return -1;
+        }
+
         if (pass == PASS_BUILD) {
             lsg = find_link_segment(name);
             if (lsg == NULL) {

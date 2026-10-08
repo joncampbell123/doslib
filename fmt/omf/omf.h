@@ -227,12 +227,17 @@ struct omf_segdef_attr_t {
 
 struct omf_segdef_t {
     struct omf_segdef_attr_t        attr;
-    uint32_t                        segment_length;     // 0x10000 if 16-bit and the B (big) bit is set
+    uint32_t                        segment_length;     // 0x10000 if 16-bit and the B (big) bit is set, 0 if 32-bit and the B bit is set (4GB)
     uint16_t                        segment_name_index;
     uint16_t                        class_name_index;
     uint16_t                        overlay_name_index;
 };
 #pragma pack(pop)
+
+// a 32-bit SEGDEF with the B (big) bit set is 4GB long, which does not fit in segment_length
+static inline unsigned char omf_segdef_is_4GB(const struct omf_segdef_t * const s) {
+    return s->attr.f.f.big_segment && s->segment_length == 0;
+}
 
 struct omf_segdefs_context_t {
     struct omf_segdef_t*            omf_SEGDEFS;

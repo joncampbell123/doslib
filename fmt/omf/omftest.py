@@ -304,6 +304,16 @@ def test_SEGDEF_big_bit(tools, tmp):
     out = run_omfdump(tools, tmp, 'big.obj', obj)
     check('Length=65536 ' in out, 'big SEGDEF length is not 65536')
 
+# A 32-bit SEGDEF with the B (big) bit set is 4GB long. omfdump must say so, and keep reading.
+def test_SEGDEF32_big_bit(tools, tmp):
+    obj = THEADR('big32') + LNAMES(['', 'FLAT', 'CODE', 'AFTER'])
+    obj += omf_record(0x99, bytes([0x6B, 0, 0, 0, 0, 2, 3, 1]))  # para aligned, public, B=1, use32, length 0
+    obj += SEGDEF(0x28, 4, 4, 3)
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'big32.obj', obj)
+    check('Length=4GB name="FLAT"(2)' in out, '4GB SEGDEF printed wrong')
+    check('name="AFTER"(4)' in out, 'SEGDEF after the 4GB SEGDEF was not read')
+
 # COMDEF, LCOMDEF and CEXTDEF entries take EXTDEF indexes, in order, along with EXTDEF and LEXTDEF.
 def test_COMDEF_CEXTDEF_numbering(tools, tmp):
     obj = module_header('comdef', 6) + LNAMES(['comdat_e'])                       # LNAMES 7
@@ -414,6 +424,7 @@ TESTS = [
     test_LLNAMES_numbering,
     test_omfdump_SEGDEF_fields,
     test_SEGDEF_big_bit,
+    test_SEGDEF32_big_bit,
     test_COMDEF_CEXTDEF_numbering,
     test_omfsegdg_two_FIXUPPs_after_LEDATA,
     test_omfsegdg_FIXUPP_after_LIDATA,
