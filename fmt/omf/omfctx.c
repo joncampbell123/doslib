@@ -16,6 +16,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
+    ctx->last_LEDATA_type = 0;
     ctx->last_error = NULL;
     ctx->flags.verbose = 0;
     ctx->library_block_size = 0;
@@ -38,6 +39,7 @@ void omf_context_free(struct omf_context_t * const ctx) {
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
+    ctx->last_LEDATA_type = 0;
 }
 
 struct omf_context_t *omf_context_create(void) {
@@ -69,6 +71,7 @@ void omf_context_clear_for_module(struct omf_context_t * const ctx) {
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
+    ctx->last_LEDATA_type = 0;
     cstr_free(&ctx->THEADR);
 }
 

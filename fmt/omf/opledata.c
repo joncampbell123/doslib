@@ -7,6 +7,7 @@ static void omf_context_update_last_LEDATA(struct omf_context_t * const ctx,stru
     ctx->last_LEDATA_rec = rec->rec_file_offset;
     ctx->last_LEDATA_seg = info->segment_index;
     ctx->last_LEDATA_hdr = rec->recpos;
+    ctx->last_LEDATA_type = rec->rectype;
 }
 
 int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {

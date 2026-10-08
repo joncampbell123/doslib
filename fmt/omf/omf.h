@@ -278,6 +278,7 @@ struct omf_fixupp_t {
     unsigned long                       omf_rec_file_offset;// file offset of LEDATA record
     unsigned long                       omf_rec_file_enoffs;
     unsigned char                       omf_rec_file_header;
+    unsigned char                       data_rectype;       // record type of the LEDATA, LIDATA, or COMDAT it applies to (0 if none)
 };
 
 // MODEND: end of module, and the program start address if this is the main module
@@ -432,6 +433,7 @@ struct omf_context_t {
     unsigned long                       last_LEDATA_rec;
     unsigned long                       last_LEDATA_eno;
     unsigned char                       last_LEDATA_hdr;
+    unsigned char                       last_LEDATA_type;   // record type of the last LEDATA, LIDATA, or COMDAT
     char*                               THEADR;
     struct {
         unsigned int                    verbose:1;
@@ -568,6 +570,8 @@ const char *omf_context_get_extdef_name_safe(const struct omf_context_t * const 
 int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
 int omf_lidata_get_block(struct omf_lidata_block_t * const blk,const struct omf_ledata_info_t * const info,const unsigned long ofs);
 int omf_lidata_expand(const struct omf_ledata_info_t * const info,unsigned char * const dst,const unsigned long dstmax,unsigned long * const len);
+int omf_ledata_info_get_length(const struct omf_ledata_info_t * const info,unsigned long * const len);
+int omf_ledata_info_copy_data(unsigned char * const dst,const unsigned long dstmax,const struct omf_ledata_info_t * const info);
 unsigned char omf_record_is_modend(const struct omf_record_t * const rec);
 void omf_record_init(struct omf_record_t * const rec);
 void omf_record_data_free(struct omf_record_t * const rec);

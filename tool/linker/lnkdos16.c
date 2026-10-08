@@ -353,6 +353,7 @@ struct seg_fragment {
     unsigned long                       offset;
     unsigned long                       fragment_length;
     struct omf_segdef_attr_t            attr;
+    unsigned char                       is_comdat;          /* holds a COMDAT, not the data of a SEGDEF */
 };
 
 struct link_segdef {
@@ -1183,11 +1184,298 @@ struct link_segdef *new_link_segment(const char *name) {
     return NULL;
 }
 
+/* The COMDATs that are linked in. The first definition of a name is the one used, like Open Watcom's linker.
+ * Each one is a fragment of the segment it names (only explicit allocation is supported). */
+struct link_comdat {
+    char*                               name;
+    char*                               segdef;             /* segment it is in */
+    unsigned int                        fragment;           /* fragment of that segment that holds it */
+    unsigned short                      in_file;
+    unsigned short                      in_module;
+    unsigned char                       selection;          /* OMF_COMDAT_SELECT_* */
+    unsigned char                       is_local;
+};
+
+static struct link_comdat*              link_comdats = NULL;
+static size_t                           link_comdats_count = 0;
+static size_t                           link_comdats_alloc = 0;
+
+/* The COMDAT records of the COMDATs that are linked in, by file offset, so that FIXUPPs can tell which
+ * fragment they apply to. A FIXUPP after a COMDAT record that is not here belongs to a COMDAT that is not linked in. */
+struct link_comdat_record {
+    unsigned short                      in_file;
+    unsigned long                       rec_file_offset;
+    unsigned int                        comdat;             /* index in link_comdats */
+};
+
+static struct link_comdat_record*       link_comdat_records = NULL;
+static size_t                           link_comdat_records_count = 0;
+static size_t                           link_comdat_records_alloc = 0;
+
+void link_comdats_free(void) {
+    size_t i;
+
+    for (i=0;i < link_comdats_count;i++) {
+        cstr_free(&(link_comdats[i].name));
+        cstr_free(&(link_comdats[i].segdef));
+    }
+
+    if (link_comdats != NULL) free(link_comdats);
+    link_comdats = NULL;
+    link_comdats_count = link_comdats_alloc = 0;
+
+    if (link_comdat_records != NULL) free(link_comdat_records);
+    link_comdat_records = NULL;
+    link_comdat_records_count = link_comdat_records_alloc = 0;
+}
+
+/* the COMDAT of this name that is linked in. local COMDATs are only visible to the module that defines them. */
+struct link_comdat *find_link_comdat(const char *name,const unsigned char is_local,const unsigned int in_file,const unsigned int in_module) {
+    size_t i;
+
+    for (i=0;i < link_comdats_count;i++) {
+        struct link_comdat *cd = &link_comdats[i];
+
+        if (cd->is_local != is_local) continue;
+        if (is_local && (cd->in_file != in_file || cd->in_module != in_module)) continue;
+        if (!strcmp(cd->name,name)) return cd;
+    }
+
+    return NULL;
+}
+
+/* the COMDAT of this name that is linked in from this module, if any */
+struct link_comdat *find_link_comdat_in_module(const char *name,const unsigned int in_file,const unsigned int in_module) {
+    size_t i;
+
+    for (i=0;i < link_comdats_count;i++) {
+        struct link_comdat *cd = &link_comdats[i];
+
+        if (cd->in_file == in_file && cd->in_module == in_module && !strcmp(cd->name,name))
+            return cd;
+    }
+
+    return NULL;
+}
+
+struct link_comdat *new_link_comdat(void) {
+    if (link_comdats_count >= link_comdats_alloc) {
+        size_t nalloc = (link_comdats_alloc != 0) ? (link_comdats_alloc * 2u) : 64u;
+        struct link_comdat *n = realloc(link_comdats, nalloc * sizeof(struct link_comdat));
+        if (n == NULL) return NULL;
+        link_comdats = n;
+        link_comdats_alloc = nalloc;
+    }
+
+    memset(&link_comdats[link_comdats_count],0,sizeof(struct link_comdat));
+    return &link_comdats[link_comdats_count++];
+}
+
+int add_link_comdat_record(const unsigned int in_file,const unsigned long rec_file_offset,const struct link_comdat *cd) {
+    struct link_comdat_record *r;
+
+    if (link_comdat_records_count >= link_comdat_records_alloc) {
+        size_t nalloc = (link_comdat_records_alloc != 0) ? (link_comdat_records_alloc * 2u) : 64u;
+        struct link_comdat_record *n = realloc(link_comdat_records, nalloc * sizeof(struct link_comdat_record));
+        if (n == NULL) return -1;
+        link_comdat_records = n;
+        link_comdat_records_alloc = nalloc;
+    }
+
+    r = &link_comdat_records[link_comdat_records_count++];
+    r->in_file = in_file;
+    r->rec_file_offset = rec_file_offset;
+    r->comdat = (unsigned int)(cd - link_comdats);
+    return 0;
+}
+
+/* the COMDAT that the COMDAT record at this file offset belongs to, or NULL if it is not linked in */
+const struct link_comdat *find_link_comdat_record(const unsigned int in_file,const unsigned long rec_file_offset) {
+    size_t i;
+
+    for (i=0;i < link_comdat_records_count;i++) {
+        const struct link_comdat_record *r = &link_comdat_records[i];
+
+        if (r->in_file == in_file && r->rec_file_offset == rec_file_offset)
+            return &link_comdats[r->comdat];
+    }
+
+    return NULL;
+}
+
+/* COMDAT: the first definition of a name is linked in, as a new fragment of the segment it names.
+ * In PASS_GATHER this picks the COMDATs and makes room for them. In PASS_BUILD it copies the data. */
+int comdat_add(struct omf_context_t *omf_state,const struct omf_ledata_info_t *info,const struct omf_comdat_t *comdat,unsigned int in_file,unsigned int in_module,unsigned int pass) {
+    const unsigned char is_local = (comdat->flags & OMF_COMDAT_FLAG_LOCAL) ? 1 : 0;
+    const struct omf_segdef_t *osg;
+    struct seg_fragment *frag;
+    struct link_segdef *lsg;
+    struct link_symbol *sym;
+    struct link_comdat *cd;
+    unsigned long len,end;
+    unsigned int fragi,saved_read;
+    unsigned long alignb,malign;
+    const char *segname;
+    const char *name;
+
+    name = omf_lnames_context_get_name(&omf_state->LNAMEs,comdat->public_name_index);
+    if (name == NULL || *name == 0) {
+        fprintf(stderr,"COMDAT with no name\n");
+        return -1;
+    }
+
+    /* like Open Watcom's linker, only COMDATs that say which segment they go in are supported */
+    if (comdat->allocation != OMF_COMDAT_ALLOC_EXPLICIT) {
+        fprintf(stderr,"COMDAT '%s': %s allocation is not supported, only explicit allocation\n",name,omf_comdat_allocation_to_str(comdat->allocation));
+        return -1;
+    }
+    if (info->segment_index == 0) {
+        fprintf(stderr,"COMDAT '%s': absolute COMDATs are not supported\n",name);
+        return -1;
+    }
+
+    segname = omf_context_get_segdef_name_safe(omf_state,info->segment_index);
+    if ((lsg=find_link_segment(segname)) == NULL) {
+        fprintf(stderr,"COMDAT '%s': segment '%s' not found\n",name,segname);
+        return -1;
+    }
+
+    if (omf_ledata_info_get_length(info,&len) < 0) {
+        fprintf(stderr,"COMDAT '%s': iterated data is not valid\n",name);
+        return -1;
+    }
+    end = info->enum_data_offset + len;
+
+    if (pass == PASS_BUILD) {
+        const struct link_comdat *pcd = find_link_comdat_record(in_file,omf_state->record.rec_file_offset);
+
+        if (pcd == NULL) return 0; /* not linked in */
+        if (lsg->noemit) return 0;
+
+        assert(pcd->fragment < lsg->fragments_count);
+        frag = &lsg->fragments[pcd->fragment];
+        if (end > frag->fragment_length) {
+            fprintf(stderr,"COMDAT '%s' out of bounds\n",name);
+            return -1;
+        }
+
+        assert(lsg->image_ptr != NULL);
+        omf_ledata_info_copy_data(lsg->image_ptr + frag->offset + info->enum_data_offset,len,info);
+        return 0;
+    }
+
+    if (pass != PASS_GATHER)
+        return 0;
+
+    if (comdat->flags & OMF_COMDAT_FLAG_CONTINUATION) {
+        /* more data for a COMDAT in an earlier record of this module */
+        if ((cd=find_link_comdat_in_module(name,in_file,in_module)) == NULL)
+            return 0; /* not linked in */
+
+        assert(cd->fragment < lsg->fragments_count);
+        frag = &lsg->fragments[cd->fragment];
+        if (end > frag->fragment_length) {
+            /* it can grow only if nothing comes after it in the segment yet */
+            if (cd->fragment != (lsg->fragments_count - 1u)) {
+                fprintf(stderr,"COMDAT '%s' continues after more data was added to segment '%s', which is not supported\n",name,segname);
+                return -1;
+            }
+
+            lsg->segment_len_count += end - frag->fragment_length;
+            lsg->segment_length = lsg->segment_len_count;
+            frag->fragment_length = end;
+        }
+
+        return add_link_comdat_record(in_file,omf_state->record.rec_file_offset,cd);
+    }
+
+    if ((cd=find_link_comdat(name,is_local,in_file,in_module)) != NULL) {
+        /* already defined. NO-MATCH means only one definition is allowed. Otherwise keep the first one. */
+        if (cd->selection == OMF_COMDAT_SELECT_NO_MATCH || comdat->selection == OMF_COMDAT_SELECT_NO_MATCH) {
+            fprintf(stderr,"COMDAT '%s' defined more than once\n",name);
+            return -1;
+        }
+
+        if (verbose)
+            fprintf(stderr,"COMDAT '%s' already defined, this one is not linked in\n",name);
+
+        return 0;
+    }
+
+    if (find_link_symbol(name,in_file,in_module) != NULL) {
+        /* a PUBDEF defines it, so this COMDAT is not needed */
+        if (verbose)
+            fprintf(stderr,"COMDAT '%s' already defined as a symbol, this one is not linked in\n",name);
+
+        return 0;
+    }
+
+    /* align it like the COMDAT says, or like the SEGDEF if it says nothing */
+    osg = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,info->segment_index);
+    assert(osg != NULL);
+    alignb = omf_align_code_to_bytes(comdat->align != 0 ? comdat->align : osg->attr.f.f.alignment);
+    if (alignb == 0) alignb = 1;
+
+    /* allocating a fragment moves fragments_read to it, but fragments_read must stay at this module's SEGDEF fragment */
+    saved_read = lsg->fragments_read;
+    if ((frag=alloc_link_segment_fragment(lsg)) == NULL) {
+        fprintf(stderr,"Unable to alloc segment fragment\n");
+        return -1;
+    }
+    lsg->fragments_read = saved_read;
+    fragi = lsg->fragments_count - 1u;
+
+    malign = lsg->segment_len_count % alignb;
+    if (malign != 0) lsg->segment_len_count += alignb - malign;
+
+    frag->in_file = in_file;
+    frag->in_module = in_module;
+    frag->segidx = info->segment_index;
+    frag->offset = lsg->segment_len_count;
+    frag->fragment_length = end;
+    frag->attr = osg->attr;
+    frag->is_comdat = 1;
+
+    lsg->segment_len_count += end;
+    lsg->segment_length = lsg->segment_len_count;
+
+    if ((cd=new_link_comdat()) == NULL) {
+        fprintf(stderr,"Unable to allocate COMDAT\n");
+        return -1;
+    }
+    cd->name = strdup(name);
+    cd->segdef = strdup(segname);
+    cd->fragment = fragi;
+    cd->in_file = in_file;
+    cd->in_module = in_module;
+    cd->selection = comdat->selection;
+    cd->is_local = is_local;
+
+    /* the COMDAT's name is a symbol at the start of it */
+    if ((sym=new_link_symbol(name)) == NULL) {
+        fprintf(stderr,"Unable to allocate symbol '%s'\n",name);
+        return -1;
+    }
+    sym->fragment = fragi;
+    sym->offset = 0;
+    sym->groupdef = strdup(omf_context_get_grpdef_name_safe(omf_state,comdat->group_index));
+    sym->segdef = strdup(segname);
+    sym->in_file = in_file;
+    sym->in_module = in_module;
+    sym->is_local = is_local;
+
+    if (verbose)
+        fprintf(stderr,"COMDAT '%s' in '%s' fragment %u offset 0x%lx length 0x%lx\n",name,segname,fragi,frag->offset,end);
+
+    return add_link_comdat_record(in_file,omf_state->record.rec_file_offset,cd);
+}
+
 int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
     struct seg_fragment *frag;
     struct link_segdef *lsg;
     unsigned long max_ofs;
     const char *segname;
+    unsigned long len;
 
     segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
     if (*segname == 0) {
@@ -1215,7 +1503,13 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     assert(lsg->fragments_read > 0 && lsg->fragments_read <= lsg->fragments_count);
     frag = &lsg->fragments[lsg->fragments_read-1];
 
-    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
+    /* LIDATA: the length of the data once the iterated data blocks are expanded */
+    if (omf_ledata_info_get_length(info,&len) < 0) {
+        fprintf(stderr,"LIDATA iterated data is not valid\n");
+        return 1;
+    }
+
+    max_ofs = (unsigned long)info->enum_data_offset + len + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
         fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
         return 1;
@@ -1223,15 +1517,15 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
 
     if (pass == PASS_BUILD) {
         assert(info->data != NULL);
-        assert(max_ofs >= (unsigned long)info->data_length);
-        max_ofs -= (unsigned long)info->data_length;
+        assert(max_ofs >= len);
+        max_ofs -= len;
         assert(lsg->image_ptr != NULL);
-        memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
+        omf_ledata_info_copy_data(lsg->image_ptr + max_ofs, len, info);
     }
 
     if (verbose)
         fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx in frag ofs=0x%lx\n",
-                segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset,frag->offset);
+                segname,lsg->load_base,max_ofs,len,info->enum_data_offset,frag->offset);
 
     return 0;
 }
@@ -1331,8 +1625,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
     struct link_segdef *frame_sdef;
     struct link_segdef *targ_sdef;
     const struct omf_segdef_t *cur_segdef;
+    const struct link_comdat *comdat;
     struct seg_fragment *frag;
     const char *cur_segdefname;
+    unsigned int frag_index;
     unsigned char *fence;
     unsigned char *ptr;
     unsigned long ptch;
@@ -1341,6 +1637,19 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
         if (ent == NULL) continue;
         if (!ent->alloc) continue;
+
+        /* like Open Watcom's linker, fixups in iterated data are not supported */
+        if ((ent->data_rectype & 0xFE) == OMF_RECTYPE_LIDATA) {
+            fprintf(stderr,"FIXUPP in LIDATA (iterated data) is not supported\n");
+            return -1;
+        }
+
+        /* a fixup in a COMDAT applies to the fragment that holds it. drop it if that COMDAT is not linked in. */
+        comdat = NULL;
+        if ((ent->data_rectype & 0xFE) == OMF_RECTYPE_COMDAT) {
+            if ((comdat=find_link_comdat_record(in_file,ent->omf_rec_file_offset)) == NULL)
+                continue;
+        }
 
         if (pass == PASS_BUILD) {
             if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index,in_file,in_module))
@@ -1413,10 +1722,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         }
 
         /* assuming each OBJ/module has only one of each named segment,
-         * get the fragment it belongs to */
+         * get the fragment it belongs to, or the fragment of the COMDAT */
         assert(current_link_segment->fragments_read > 0);
         assert(current_link_segment->fragments_read <= current_link_segment->fragments_count);
-        frag = &current_link_segment->fragments[current_link_segment->fragments_read-1];
+        frag_index = (comdat != NULL) ? comdat->fragment : (current_link_segment->fragments_read - 1u);
+        assert(frag_index < current_link_segment->fragments_count);
+        frag = &current_link_segment->fragments[frag_index];
 
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
@@ -1494,10 +1805,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragments_read > 0);
                             assert(current_link_segment->name != NULL);
                             reloc->segname = strdup(current_link_segment->name);
-                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->fragment = frag_index;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                             if (verbose)
@@ -1522,10 +1832,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragments_read > 0);
                         assert(current_link_segment->name != NULL);
                         reloc->segname = strdup(current_link_segment->name);
-                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->fragment = frag_index;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         if (verbose)
@@ -1561,10 +1870,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                                 return -1;
                             }
 
-                            assert(current_link_segment->fragments_read > 0);
                             assert(current_link_segment->name != NULL);
                             reloc->segname = strdup(current_link_segment->name);
-                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->fragment = frag_index;
                             reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                             if (verbose)
@@ -1590,10 +1898,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                             return -1;
                         }
 
-                        assert(current_link_segment->fragments_read > 0);
                         assert(current_link_segment->name != NULL);
                         reloc->segname = strdup(current_link_segment->name);
-                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->fragment = frag_index;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
 
                         if (verbose)
@@ -1763,7 +2070,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         assert(lsg->fragments != NULL);
         assert(lsg->fragments_count != 0);
 
-        sym->fragment = lsg->fragments_count - 1u;
+        sym->fragment = lsg->fragments_read - 1u; /* this module's fragment of the segment */
         sym->offset = pubdef->public_offset;
         sym->groupdef = strdup(groupname);
         sym->segdef = strdup(segname);
@@ -1801,6 +2108,10 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 continue;
             if (lsg->fragments_count == 0)
                 continue;
+
+            /* skip the fragments that hold COMDATs, they do not come from SEGDEFs */
+            while (lsg->fragments_read < lsg->fragments_count && lsg->fragments[lsg->fragments_read].is_comdat)
+                lsg->fragments_read++;
 
             assert(lsg->fragments_read < lsg->fragments_count);
 
@@ -2221,7 +2532,7 @@ int main(int argc,char **argv) {
                         {
                             int first_new_extdef;
 
-                            // COMDAT references are not supported, but they take EXTDEF indexes, so they must be counted.
+                            // references to COMDATs. They take EXTDEF indexes, and resolve by name like EXTDEFs.
                             if ((first_new_extdef=omf_context_parse_CEXTDEF(omf_state,&omf_state->record)) < 0) {
                                 fprintf(stderr,"Error parsing CEXTDEF\n");
                                 return 1;
@@ -2328,6 +2639,39 @@ int main(int argc,char **argv) {
                             if (pass == PASS_BUILD && ledata_add(omf_state, &info, pass))
                                 return 1;
                         } break;
+                    case OMF_RECTYPE_LIDATA:/*0xA2*/
+                    case OMF_RECTYPE_LIDATA32:/*0xA3*/
+                        {
+                            struct omf_ledata_info_t info;
+
+                            if (omf_context_parse_LIDATA(omf_state,&info,&omf_state->record) < 0) {
+                                fprintf(stderr,"Error parsing LIDATA\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose && pass == PASS_GATHER)
+                                dump_LIDATA(stdout,omf_state,&info,&omf_state->record);
+
+                            if (pass == PASS_BUILD && ledata_add(omf_state, &info, pass))
+                                return 1;
+                        } break;
+                    case OMF_RECTYPE_COMDAT:/*0xC2*/
+                    case OMF_RECTYPE_COMDAT32:/*0xC3*/
+                        {
+                            struct omf_ledata_info_t info;
+                            struct omf_comdat_t comdat;
+
+                            if (omf_context_parse_COMDAT(omf_state,&info,&comdat,&omf_state->record) < 0) {
+                                fprintf(stderr,"Error parsing COMDAT\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose && pass == PASS_GATHER)
+                                dump_COMDAT(stdout,omf_state,&info,&comdat);
+
+                            if (comdat_add(omf_state, &info, &comdat, inf, current_in_mod, pass))
+                                return 1;
+                        } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
                         if (pass == PASS_GATHER) {
@@ -2378,11 +2722,12 @@ int main(int argc,char **argv) {
                                 if (targseg != NULL && frameseg != NULL) {
                                     entry_seg_ofs = modend.target_displacement;
 
-                                    assert(frameseg->fragments_count != 0);
-                                    entry_seg_link_frame_fragment = frameseg->fragments_count - 1u;
+                                    /* this module's fragment of each segment */
+                                    assert(frameseg->fragments_read != 0);
+                                    entry_seg_link_frame_fragment = frameseg->fragments_read - 1u;
 
-                                    assert(targseg->fragments_count != 0);
-                                    entry_seg_link_target_fragment = targseg->fragments_count - 1u;
+                                    assert(targseg->fragments_read != 0);
+                                    entry_seg_link_target_fragment = targseg->fragments_read - 1u;
 
                                     entry_seg_link_target_name = strdup(targseg->name);
                                     entry_seg_link_target = targseg;
@@ -3617,6 +3962,7 @@ int main(int argc,char **argv) {
         map_fp = NULL;
     }
 
+    link_comdats_free();
     link_symbols_free();
     free_link_segments();
     free_exe_relocations();

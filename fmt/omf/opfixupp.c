@@ -86,6 +86,7 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         ent->omf_rec_file_enoffs = ctx->last_LEDATA_eno;
         ent->omf_rec_file_offset = ctx->last_LEDATA_rec;
         ent->omf_rec_file_header = ctx->last_LEDATA_hdr;
+        ent->data_rectype = ctx->last_LEDATA_type;
         ent->alloc = 1;
     }
     else {
