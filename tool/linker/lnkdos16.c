@@ -1530,6 +1530,20 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     return 0;
 }
 
+/* index of this module's fragment of the segment, from its SEGDEF (not one that holds a COMDAT), or -1 if none */
+int find_link_segment_fragment(const struct link_segdef *sg,const unsigned int in_file,const unsigned int in_module) {
+    unsigned int i;
+
+    for (i=0;i < sg->fragments_count;i++) {
+        const struct seg_fragment *f = &sg->fragments[i];
+
+        if (f->in_file == in_file && f->in_module == in_module && !f->is_comdat)
+            return (int)i;
+    }
+
+    return -1;
+}
+
 int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,struct link_segdef **sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,unsigned int in_file,unsigned int in_module) {
     *fseg = *fofs = ~0UL;
     *sdef = NULL;
@@ -1538,6 +1552,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     if (method == 0/*SEGDEF*/) {
         struct link_segdef *lsg;
         const char *segname;
+        int fi;
 
         segname = omf_context_get_segdef_name_safe(omf_state,index);
         if (*segname == 0) {
@@ -1551,8 +1566,15 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
+        /* the SEGDEF is this module's, so the target is relative to this module's part of the segment */
+        fi = find_link_segment_fragment(lsg,in_file,in_module);
+        if (fi < 0) {
+            fprintf(stderr,"FIXUPP SEGDEF '%s' has no fragment from this module\n",segname);
+            return -1;
+        }
+
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_offset;
+        *fofs = lsg->segment_offset + lsg->fragments[fi].offset;
         *sdef = lsg;
     }
     else if (method == 1/*GRPDEF*/) {

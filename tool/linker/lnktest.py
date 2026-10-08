@@ -216,6 +216,16 @@ def test_COMDAT_local(linker, tmp):
     image = link_ok(linker, tmp, [a, b])
     check(image == bytes([0xB8, 0x04, 0x01, 0xC3]) + b'A1' + bytes([0xB8, 0x0A, 0x01, 0xC3]) + b'B2', 'wrong image: ' + image.hex())
 
+# A fixup to a SEGDEF is relative to this module's part of the segment, not the start of it.
+# Here the second module refers to its own _DATA.
+def test_SEGDEF_target_second_module(linker, tmp):
+    a = module_header('a', 4, 4) + LEDATA(1, 0, [0xB8, 0, 0, 0xC3])                # mov ax,offset _DATA / ret
+    a += FIXUPP([(1, False, FIX_DGROUP_SEGDEF, [1, 2])]) + LEDATA(2, 0, b'AAAA') + MODEND_start()
+    b = module_header('b', 4, 4) + LEDATA(1, 0, [0xB8, 2, 0, 0xC3])                 # mov ax,offset _DATA+2 / ret
+    b += FIXUPP([(1, False, FIX_DGROUP_SEGDEF, [1, 2])]) + LEDATA(2, 0, b'BBBB') + MODEND()
+    image = link_ok(linker, tmp, [a, b])
+    check(image == bytes([0xB8, 0x08, 0x01, 0xC3, 0xB8, 0x0E, 0x01, 0xC3]) + b'AAAABBBB', 'wrong image: ' + image.hex())
+
 TESTS = [
     test_LIDATA,
     test_LIDATA_FIXUPP,
@@ -224,6 +234,7 @@ TESTS = [
     test_COMDAT_continuation_iterated,
     test_COMDAT_far_code,
     test_COMDAT_local,
+    test_SEGDEF_target_second_module,
 ]
 
 def main():
