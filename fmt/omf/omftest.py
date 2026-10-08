@@ -503,6 +503,31 @@ def test_omfdump_LIBHEAD(tools, tmp):
         check('LIBHEAD page_size=%u dictionary_offset=0x123400 dictionary_blocks=3 flags=0x01 CASE-SENSITIVE\n' % page in out,
             'LIBHEAD with %u byte pages printed wrong' % page)
 
+# omfdump -v must list the .LIB dictionary: each entry's name, and the page and file offset of its module.
+def test_omfdump_LIBDICT(tools, tmp):
+    page = 16
+    mods = bytearray()
+    pages = []
+    for name in ['m1', 'm2']:
+        pages.append((page + len(mods)) // page)
+        mods += THEADR(name) + MODEND()
+        mods += bytes(-len(mods) % page)
+    libend = omf_record(0xF1, bytes(page - 4))
+    dict_ofs = page + len(mods) + len(libend)
+    blk = bytearray(512)
+    blk[38:44] = lenstr('foo') + bytes([pages[0], 0])                               # bucket 5 -> word offset 19
+    blk[44:50] = lenstr('m2!') + bytes([pages[1], 0])                               # bucket 20 -> word offset 22
+    blk[5], blk[20], blk[30], blk[37] = 19, 22, 0xFF, 25                            # bucket 30 points past the end
+    fields = bytes([dict_ofs & 0xFF, dict_ofs >> 8, 0, 0, 1, 0, 0])
+    lib = omf_record(0xF0, fields + bytes(page - 4 - len(fields))) + bytes(mods) + libend + bytes(blk)
+    out = run_omfdump(tools, tmp, 'libdict.lib', lib)
+    for want in [
+            'LIBDICT offset=0x%X blocks=1\n' % dict_ofs,
+            '    [0.5] "foo" page=%u offset=0x%X\n' % (pages[0], pages[0] * page),
+            '    [0.20] "m2!" page=%u offset=0x%X\n' % (pages[1], pages[1] * page),
+            '    [0.30] [invalid entry]\n']:
+        check(want in out, 'output is missing: ' + repr(want))
+
 # omfdump must print LHEADR, LINNUM, LINSYM, BAKPAT, NBKPAT, ALIAS, VERNUM and VENDEXT records.
 def test_omfdump_other_records(tools, tmp):
     def w(v):
@@ -602,6 +627,7 @@ TESTS = [
     test_omfdump_LEXTDEF32_name,
     test_omfdump_COMENT,
     test_omfdump_LIBHEAD,
+    test_omfdump_LIBDICT,
     test_omfdump_other_records,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,

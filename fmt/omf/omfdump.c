@@ -412,6 +412,10 @@ int main(int argc,char **argv) {
         diddump = 1;
     }
 
+    // the .LIB dictionary follows the modules
+    if (omf_state->flags.verbose && omf_state->library_dict_blocks != 0)
+        dump_LIBDICT(stdout,omf_state,fd);
+
     omf_context_clear(omf_state);
     omf_state = omf_context_destroy(omf_state);
     close(fd);

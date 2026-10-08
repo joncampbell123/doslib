@@ -147,6 +147,10 @@ enum {
 // LIBHEAD flags
 #define OMF_LIBHEAD_FLAG_CASE_SENSITIVE (0x01)
 
+// .LIB dictionary blocks
+#define OMF_LIBDICT_BLOCK_SIZE          (512)
+#define OMF_LIBDICT_BUCKETS             (37)
+
 // COMDEF/LCOMDEF communal data types
 #define OMF_COMDEF_FAR          (0x61)
 #define OMF_COMDEF_NEAR         (0x62)
@@ -551,6 +555,8 @@ static inline unsigned int omf_lnames_context_get_next_add_index(const struct om
 
 int omf_context_read_fd(struct omf_context_t * const ctx,int fd);
 int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd);
+int omf_lib_dict_read_block(unsigned char * const blk,const struct omf_context_t * const ctx,const int fd,const unsigned int i);
+int omf_lib_dict_get_entry(const unsigned char * const blk,const unsigned int b,char * const name,unsigned int * const page);
 
 const char *omf_context_get_grpdef_name(const struct omf_context_t * const ctx,unsigned int i);
 const char *omf_context_get_grpdef_name_safe(const struct omf_context_t * const ctx,unsigned int i);
@@ -698,6 +704,7 @@ void dump_ALIAS(FILE *fp,struct omf_record_t * const rec);
 void dump_VERNUM(FILE *fp,struct omf_record_t * const rec);
 void dump_VENDEXT(FILE *fp,struct omf_record_t * const rec);
 void dump_LIBHEAD(FILE *fp,const struct omf_context_t * const ctx);
+int dump_LIBDICT(FILE *fp,const struct omf_context_t * const ctx,const int fd);
 
 int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const rec);
 int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c);
