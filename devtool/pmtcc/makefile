@@ -12,6 +12,10 @@ linux-host/%.o : %.c
 linux-host/%.o : %.cpp
 	g++ -DLINUX -Wall -Wextra -pedantic -std=gnu++11 -g3 -MMD -MP -c -o $@ $<
 
+# keep the objects. Built through this rule, make would delete them as intermediate files, and the .d files
+# would make it build them again the next time.
+.PRECIOUS: linux-host/%.o
+
 linux-host/% : linux-host/%.o
 	g++ -lm -o $@ $^
 

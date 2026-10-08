@@ -22,7 +22,7 @@ pcx2vrl: pcx2vrl.c
 	$(CC) $(CFLAGS) -MMD -MP -o $@ $<
 
 png2vrl: png2vrl.c
-	$(CC) -lpng $(CFLAGS) -MMD -MP -o $@ $<
+	$(CC) $(CFLAGS) -MMD -MP -o $@ $< -lpng
 
 comshtps.o: comshtps.c
 	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<

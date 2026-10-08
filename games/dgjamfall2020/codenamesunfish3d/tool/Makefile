@@ -4,13 +4,13 @@ all: $(TOOLS)
 
 # -MMD -MP writes a .d file of the headers it uses, so that changing a header rebuilds it
 pnggenpal: pnggenpal.c
-	gcc -g3 -lpng -MMD -MP -o $@ $<
+	gcc -g3 -MMD -MP -o $@ $< -lpng
 
 pngquantpal: pngquantpal.c
-	gcc -lpng -MMD -MP -o $@ $<
+	gcc -MMD -MP -o $@ $< -lpng
 
 pngmatchpal: pngmatchpal.c
-	gcc -lpng -MMD -MP -o $@ $<
+	gcc -MMD -MP -o $@ $< -lpng
 
 test: pngmatchpal
 	./pngmatchpal -i test1.png -o test1.out.png -p palette.png

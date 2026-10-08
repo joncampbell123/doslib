@@ -7,7 +7,7 @@ clean:
 
 # -MMD -MP writes a .d file of the headers it uses, so that changing a header rebuilds it
 fontproc: fontproc.c
-	gcc -lpng -lz -MMD -MP -o $@ $<
+	gcc -MMD -MP -o $@ $< -lpng -lz
 
 fonts: fontproc
 	./fontproc -i arialsmall_0.png  -o arialsmall_final.png  -f arialsmall.fnt

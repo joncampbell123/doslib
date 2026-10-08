@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include <exception>
+#include <stdexcept>
 #include <cassert>
 #include <string>
 #include <vector>

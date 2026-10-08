@@ -19,8 +19,9 @@ lib: linux-host
 linux-host:
 	mkdir -p linux-host
 
-$(MINX86DEP):
-	make -C ../../minx86dec decodeall
+# always ask minx86dec's makefile, which knows when it is out of date
+$(MINX86DEP): FORCE
+	$(MAKE) -C ../../minx86dec decodeall
 
 # always ask the library's makefile, which knows when the library is out of date
 $(HW_DOS_LIB): FORCE
