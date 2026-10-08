@@ -49,7 +49,9 @@ void dump_COMDAT(FILE *fp,const struct omf_context_t * const ctx,const struct om
         (unsigned long)info->data_length,
         (unsigned long)info->data_length);
 
-    if (!info->iterated)
+    if (info->iterated)
+        dump_LIDATA_blocks(fp,info);
+    else
         dump_LEDATA_bytes(fp,info);
 }
 

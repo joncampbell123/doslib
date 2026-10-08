@@ -44,6 +44,7 @@ int omf_context_parse_COMDAT(struct omf_context_t * const ctx,struct omf_ledata_
     info->data = NULL;
     info->data_length = 0;
     info->iterated = 0;
+    info->is32bit = (rec->rectype & 1) ? 1 : 0;
 
     if (omf_record_data_available(rec) < 3) return -1;
     c->flags = omf_record_get_byte(rec);

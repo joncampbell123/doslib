@@ -412,6 +412,43 @@ def test_omfdump_COMDAT(tools, tmp):
     check('COMDAT "tmpl3"(9) flags=0x02 ITERATED\n' in out, 'tmpl3 name or flags printed wrong')
     check('group=""(0) segment=ABSOLUTE frame=0xB800' in out, 'tmpl3 public base printed wrong')
     check('data_offset=0x0(0) length=0x6(6)' in out, 'tmpl3 data length printed wrong')
+    check('    repeat=2 bytes=1: AA\n    expanded length=0x2(2)\n' in out, 'tmpl3 iterated data printed wrong')
+
+# omfdump must print the iterated data blocks of LIDATA and LIDATA32, and the data they expand to.
+def test_omfdump_LIDATA(tools, tmp):
+    obj = module_header('lidatad', 1)
+    obj += omf_record(0xA2, bytes([SEG_DATA, 0, 0,
+        3, 0, 0, 0, 2, 0xAA, 0xBB,                                                  # 3 x AA BB
+        2, 0, 2, 0,                                                                 # 2 x (
+            1, 0, 0, 0, 1, 0x01,                                                    #   1 x 01
+            2, 0, 0, 0, 1, 0x02]))                                                  #   2 x 02 )
+    obj += omf_record(0xA3, bytes([SEG_DATA, 0x10, 0, 0, 0,
+        0x00, 0x00, 0x01, 0x00, 0, 0, 1, 0x55]))                                    # 65536 x 55
+    obj += omf_record(0xA2, bytes([SEG_DATA, 0, 0, 1, 0, 0, 0, 5, 0xAA]))           # 5 content bytes, only 1 there
+    obj += omf_record(0xA3, bytes([SEG_DATA, 0, 0, 0, 0,                            # (4G-1)^3 bytes
+        0xFF, 0xFF, 0xFF, 0xFF, 1, 0,
+            0xFF, 0xFF, 0xFF, 0xFF, 1, 0,
+                0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 1, 0x00]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'lidatad.obj', obj)
+    check('    repeat=3 bytes=2: AA BB\n'
+          '    repeat=2 blocks=2\n'
+          '        repeat=1 bytes=1: 01\n'
+          '        repeat=2 bytes=1: 02\n'
+          '    expanded length=0xC(12)\n' in out, 'LIDATA blocks printed wrong')
+    check('0x00000000: AA BB AA BB AA BB 01 02-02 01 02 02 ' in out, 'LIDATA expanded data printed wrong')
+    check('    repeat=65536 bytes=1: 55\n    expanded length=0x10000(65536)\n' in out, 'LIDATA32 blocks printed wrong')
+    check('0x00000010: 55 55 55 55 55 55 55 55-55 55 55 55 55 55 55 55 ' in out, 'LIDATA32 expanded data printed wrong')
+    check('(first 4096 bytes shown)' in out, 'LIDATA32 expanded data was not cut short')
+    check('    [invalid data block at 0x0]\n' in out, 'LIDATA with a short block was not caught')
+    check('    [data blocks expand to more than ' in out, 'LIDATA32 that expands too far was not caught')
+
+# LEXTDEF32 (0xB5) is parsed like LEXTDEF, and omfdump must name it.
+def test_omfdump_LEXTDEF32_name(tools, tmp):
+    obj = THEADR('lext32') + LNAMES(['']) + omf_record(0xB5, lenstr('lext') + bytes([0])) + MODEND()
+    out = run_omfdump(tools, tmp, 'lext32.obj', obj)
+    check('type=0xb5 (LEXTDEF32: Local External Names Definition Record (32-bit))' in out, 'LEXTDEF32 not named')
+    check('"lext" typeindex=0 LOCAL' in out, 'LEXTDEF32 symbol printed wrong')
 
 # A FIXUPP record of only THREADs may come before any data record.
 def test_omfsegdg_THREAD_before_data(tools, tmp):
@@ -466,6 +503,8 @@ TESTS = [
     test_omfsegdg_FIXUPP_after_LIDATA,
     test_omfsegdg_FIXUPP_after_COMDAT,
     test_omfdump_COMDAT,
+    test_omfdump_LIDATA,
+    test_omfdump_LEXTDEF32_name,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,
     test_omfdump_MODEND_start_address,

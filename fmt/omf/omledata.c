@@ -6,6 +6,7 @@ int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_rec
     info->data = NULL;
     info->data_length = 0;
     info->iterated = 0;
+    info->is32bit = (rec->rectype & 1) ? 1 : 0;
 
     if (omf_record_eof(rec)) return -1;
     info->segment_index = omf_record_get_index(rec);

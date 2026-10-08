@@ -25,6 +25,7 @@ const char *omf_rectype_to_str_long(unsigned char rt) {
         case 0xB2:  return "Backpatch Record";
         case 0xB3:  return "Backpatch Record (32-bit)";
         case 0xB4:  return "Local External Names Definition Record";
+        case 0xB5:  return "Local External Names Definition Record (32-bit)";
         case 0xB6:  return "Local Public Names Definition Record";
         case 0xB7:  return "Local Public Names Definition Record (32-bit)";
         case 0xB8:  return "Local Communal Names Definition Record";
@@ -73,6 +74,7 @@ const char *omf_rectype_to_str(unsigned char rt) {
         case 0xB2:  return "BAKPAT";
         case 0xB3:  return "BAKPAT32";
         case 0xB4:  return "LEXTDEF";
+        case 0xB5:  return "LEXTDEF32";
         case 0xB6:  return "LPUBDEF";
         case 0xB7:  return "LPUBDEF32";
         case 0xB8:  return "LCOMDEF";

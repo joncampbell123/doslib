@@ -147,7 +147,19 @@ struct omf_ledata_info_t {
     unsigned long                       data_length;
     unsigned char*                      data;
     unsigned char                       iterated;           // data is LIDATA iterated data blocks, not the bytes themselves
+    unsigned char                       is32bit;            // from a 32-bit record (iterated data block repeat counts are dwords)
 };
+
+// LIDATA iterated data block header, see omf_lidata_get_block()
+struct omf_lidata_block_t {
+    unsigned long                       repeat_count;
+    unsigned int                        block_count;        // number of nested blocks, or 0 if content bytes follow
+    unsigned int                        content_length;     // number of content bytes, if block_count == 0
+    unsigned long                       content_offset;     // offset in data of the content bytes or the first nested block
+};
+
+// how deeply the library follows nested LIDATA data blocks
+#define OMF_LIDATA_MAX_DEPTH            (16)
 
 // COMDAT flags
 #define OMF_COMDAT_FLAG_CONTINUATION    (0x01)  // continues the COMDAT of the same name from an earlier record
@@ -482,6 +494,8 @@ const char *omf_context_get_extdef_name(const struct omf_context_t * const ctx,u
 const char *omf_context_get_extdef_name_safe(const struct omf_context_t * const ctx,unsigned int i);
 
 int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
+int omf_lidata_get_block(struct omf_lidata_block_t * const blk,const struct omf_ledata_info_t * const info,const unsigned long ofs);
+int omf_lidata_expand(const struct omf_ledata_info_t * const info,unsigned char * const dst,const unsigned long dstmax,unsigned long * const len);
 unsigned char omf_record_is_modend(const struct omf_record_t * const rec);
 void omf_record_init(struct omf_record_t * const rec);
 void omf_record_data_free(struct omf_record_t * const rec);
@@ -598,6 +612,7 @@ void dump_LIDATA(FILE *fp,const struct omf_context_t * const ctx,const struct om
 void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);
 void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info);
 void dump_LEDATA_bytes(FILE *fp,const struct omf_ledata_info_t * const info);
+void dump_LIDATA_blocks(FILE *fp,const struct omf_ledata_info_t * const info);
 void dump_COMDAT(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_comdat_t * const comdat);
 void dump_FIXUPP(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_PUBDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
