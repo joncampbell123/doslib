@@ -106,18 +106,20 @@ def check(cond, msg):
     if not cond:
         raise TestFailed(msg)
 
-# link the objects into a .COM at 0x100, return (exit status, output, .COM contents)
-def link(linker, tmp, objs):
+# link the objects into a .COM at 0x100 (or an .EXE), return (exit status, output, executable contents)
+def link(linker, tmp, objs, fmt='com'):
     args = [linker]
     for i, obj in enumerate(objs):
         path = os.path.join(tmp, 'm%u.obj' % i)
         with open(path, 'wb') as f:
             f.write(obj)
         args += ['-i', path]
-    out = os.path.join(tmp, 'out.com')
+    out = os.path.join(tmp, 'out.' + fmt)
     if os.path.exists(out):
         os.unlink(out)
-    args += ['-o', out, '-of', 'com', '-com100']
+    args += ['-o', out, '-of', fmt]
+    if fmt == 'com':
+        args += ['-com100']
     r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     image = None
     if os.path.exists(out):
@@ -125,8 +127,8 @@ def link(linker, tmp, objs):
             image = f.read()
     return r.returncode, r.stdout, image
 
-def link_ok(linker, tmp, objs):
-    rc, out, image = link(linker, tmp, objs)
+def link_ok(linker, tmp, objs, fmt='com'):
+    rc, out, image = link(linker, tmp, objs, fmt)
     check(rc == 0 and image is not None, 'link failed: ' + out.strip())
     return image
 
@@ -226,6 +228,21 @@ def test_SEGDEF_target_second_module(linker, tmp):
     image = link_ok(linker, tmp, [a, b])
     check(image == bytes([0xB8, 0x08, 0x01, 0xC3, 0xB8, 0x0E, 0x01, 0xC3]) + b'AAAABBBB', 'wrong image: ' + image.hex())
 
+# A file that is not OMF (this is the start of a COFF object) must stop the link with an error.
+def test_not_OMF(linker, tmp):
+    link_fails(linker, tmp, [bytes.fromhex('4c010100ed96386a3c000000050000000000')], "Error reading")
+
+# With nothing to link, an .EXE is just the 32-byte header.
+def test_empty_EXE(linker, tmp):
+    image = link_ok(linker, tmp, [THEADR('empty') + MODEND()], 'exe')
+    check(len(image) == 32 and image[0:2] == b'MZ', 'wrong image: ' + image.hex())
+
+# A segment with no LEDATA for it is zeros.
+def test_segment_without_data(linker, tmp):
+    obj = module_header('nodata', 1, 4) + LEDATA(1, 0, [0xC3]) + MODEND_start()     # _DATA has no LEDATA
+    image = link_ok(linker, tmp, [obj])
+    check(image == bytes([0xC3, 0, 0, 0, 0, 0]), 'wrong image: ' + image.hex())
+
 TESTS = [
     test_LIDATA,
     test_LIDATA_FIXUPP,
@@ -235,6 +252,9 @@ TESTS = [
     test_COMDAT_far_code,
     test_COMDAT_local,
     test_SEGDEF_target_second_module,
+    test_not_OMF,
+    test_empty_EXE,
+    test_segment_without_data,
 ]
 
 def main():

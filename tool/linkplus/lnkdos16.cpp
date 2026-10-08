@@ -1500,6 +1500,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
         assert(frag->in_module == in_module);
 
         if (pass == PASS_BUILD) {
+            if (frag->image.size() < frag->fragment_length) frag->image.resize(frag->fragment_length);
             assert(frag->image.size() == frag->fragment_length);
             fence = &frag->image[frag->fragment_length];
 
@@ -2515,8 +2516,9 @@ int main(int argc,char **argv) {
 
                         ret = omf_context_next_lib_module_fd(omf_state,fd);
                         if (ret < 0) {
-                            printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
+                            fprintf(stderr,"Unable to advance to next .LIB module in '%s', %s\n",current_in_file->path.c_str(),strerror(errno));
                             if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                            return 1;
                         }
                         else if (ret > 0) {
                             /* start a new module */
@@ -2534,9 +2536,9 @@ int main(int argc,char **argv) {
                     break;
                 }
                 else if (ret < 0) {
-                    fprintf(stderr,"Error: %s\n",strerror(errno));
+                    fprintf(stderr,"Error reading '%s': %s\n",current_in_file->path.c_str(),strerror(errno));
                     if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
-                    break;
+                    return 1;
                 }
 
                 switch (omf_state->record.rectype) {
@@ -3856,8 +3858,10 @@ int main(int argc,char **argv) {
                         assert(cur_offset == file_ofs);
                     }
 
+                    /* the parts that no LEDATA or LIDATA filled in are zero */
+                    if (frag->image.size() < frag->fragment_length) frag->image.resize(frag->fragment_length);
                     assert(frag->image.size() == frag->fragment_length);
-                    if ((unsigned long)write(fd,&frag->image[0],frag->fragment_length) != frag->fragment_length) {
+                    if (frag->fragment_length != 0 && (unsigned long)write(fd,&frag->image[0],frag->fragment_length) != frag->fragment_length) {
                         fprintf(stderr,"Write error\n");
                         return 1;
                     }

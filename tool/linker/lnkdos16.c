@@ -2500,8 +2500,9 @@ int main(int argc,char **argv) {
 
                         ret = omf_context_next_lib_module_fd(omf_state,fd);
                         if (ret < 0) {
-                            printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
+                            fprintf(stderr,"Unable to advance to next .LIB module in '%s', %s\n",in_file[inf],strerror(errno));
                             if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                            return 1;
                         }
                         else if (ret > 0) {
                             current_in_mod++;
@@ -2514,9 +2515,9 @@ int main(int argc,char **argv) {
                     break;
                 }
                 else if (ret < 0) {
-                    fprintf(stderr,"Error: %s\n",strerror(errno));
+                    fprintf(stderr,"Error reading '%s': %s\n",in_file[inf],strerror(errno));
                     if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
-                    break;
+                    return 1;
                 }
 
                 switch (omf_state->record.rectype) {
@@ -3458,6 +3459,10 @@ int main(int argc,char **argv) {
                 struct link_segdef *sd = &link_segments[0];
                 header_size = sd->file_offset;
             }
+
+            /* with nothing to link, the EXE is just the 32-byte header */
+            if (header_size < 32ul)
+                header_size = 32ul;
             o_header_size = header_size;
 
             if (exe_relocation_table_count != 0) {
