@@ -29,10 +29,12 @@ $(TEST): linux-host/test.o $(ACPILIB)
 $(ACPIDUMP): linux-host/acpidump.o $(ACPILIB)
 	gcc -o $@ $^
 
+# -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them
 linux-host/%.o : %.c
-	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^
+	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -MMD -MP -c -o $@ $<
 
 clean:
-	rm -f linux-host/test linux-host/acpidump linux-host/*.o linux-host/*.a
+	rm -f linux-host/test linux-host/acpidump linux-host/*.o linux-host/*.d linux-host/*.a
 	rmdir linux-host
 
+-include $(wildcard linux-host/*.d)

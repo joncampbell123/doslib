@@ -2,14 +2,15 @@ TOOLS=pngmatchpal pngquantpal pnggenpal
 
 all: $(TOOLS)
 
+# -MMD -MP writes a .d file of the headers it uses, so that changing a header rebuilds it
 pnggenpal: pnggenpal.c
-	gcc -g3 -lpng -o $@ $<
+	gcc -g3 -lpng -MMD -MP -o $@ $<
 
 pngquantpal: pngquantpal.c
-	gcc -lpng -o $@ $<
+	gcc -lpng -MMD -MP -o $@ $<
 
 pngmatchpal: pngmatchpal.c
-	gcc -lpng -o $@ $<
+	gcc -lpng -MMD -MP -o $@ $<
 
 test: pngmatchpal
 	./pngmatchpal -i test1.png -o test1.out.png -p palette.png
@@ -34,4 +35,6 @@ test: pngmatchpal
 	./pngquantpal -i rgba.png -o rgba.png.quant.vga16.png -p rgba.png.palgen.vga16.png
 
 clean:
-	rm -f $(TOOLS) test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.palgen.vga16.png *.png.quant.png *.png.quant.vga.png *.png.quant.vga16.png
+	rm -f $(TOOLS) *.d test1.out.png test2.out.png *.palgen.png *.palgen.vga.png *.palgen.vga16.png *.png.quant.png *.png.quant.vga.png *.png.quant.vga16.png
+
+-include $(wildcard *.d)

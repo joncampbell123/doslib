@@ -17,33 +17,35 @@ prussiademo:
 	cd dos86l && ../pcxsscut -s ../prussia.sht -hc prussia.h -hp demoanim_prussia_ -i ../prussia.pcx -p prussia.pal -tc 0x84 -y # run from subdirectory where output will not be committed accidentally
 	cd dos86l && ../vrl2vrs -s ../prussia.sht -hc prussias.h -hp demoanim_prussia_ -o ../prussia.vrs # run from same subdirectory
 
+# -MMD -MP writes a .d file of the headers each program or object uses, so that changing a header rebuilds it
 pcx2vrl: pcx2vrl.c
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -o $@ $<
 
 png2vrl: png2vrl.c
-	$(CC) -lpng $(CFLAGS) -o $@ $^
+	$(CC) -lpng $(CFLAGS) -MMD -MP -o $@ $<
 
 comshtps.o: comshtps.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
 
 vrl2vrs.o: vrl2vrs.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
 
 vrl2vrs: vrl2vrs.o comshtps.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 vrsdump: vrsdump.c
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -o $@ $<
 
 vrldbg: vrldbg.c
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -o $@ $<
 
 pcxsscut.o: pcxsscut.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
 
 pcxsscut: pcxsscut.o comshtps.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -fv pcx2vrl png2vrl pcxsscut vrl2vrs vrsdump vrldbg *.o
+	rm -fv pcx2vrl png2vrl pcxsscut vrl2vrs vrsdump vrldbg *.o *.d
 
+-include $(wildcard *.d)

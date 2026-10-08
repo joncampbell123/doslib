@@ -13,18 +13,23 @@
 
 all: ifictsdl2
 
+# -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them
 .cpp.o:
-	g++ -std=gnu++03 -Wall -Wextra -pedantic -DUSE_SDL2=1 -I../../.. -c -o $@ $< `pkg-config --cflags sdl2`
+	g++ -std=gnu++03 -Wall -Wextra -pedantic -DUSE_SDL2=1 -I../../.. -MMD -MP -c -o $@ $< `pkg-config --cflags sdl2`
 
-../../../fmt/minipng/linux-host/minipng.a:
-	make -C ../../../fmt/minipng
+# always ask the library's makefile, which knows when the library is out of date
+../../../fmt/minipng/linux-host/minipng.a: FORCE
+	$(MAKE) -C ../../../fmt/minipng
+
+FORCE:
 
 ifictsdl2: ifict.o utils.o debug.o palette.o fatal.o t_sdl2.o t_win32.o t_doslib.o keyboard.o mouse.o bitmap.o ../../../fmt/minipng/linux-host/minipng.a
 	g++ -o $@ $^ -lz `pkg-config --libs sdl2`
 
 clean:
-	rm -fv *.o
+	rm -fv *.o *.d
 
 distclean: clean
 	rm -fv ifictsdl2 dos4gw.exe
 
+-include $(wildcard *.d)

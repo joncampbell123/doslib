@@ -5,11 +5,12 @@ all: yyparser c11
 	
 yyparser: c11.l.h c11.l.c c11.y.h c11.y.c
 
+# -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them
 %.o: %.c
-	gcc -std=c11 -Wall -pedantic -D_POSIX_SOURCE -g3 -O0 -c -o $@ $<
+	gcc -std=c11 -Wall -pedantic -D_POSIX_SOURCE -g3 -O0 -MMD -MP -c -o $@ $<
 
 %.o: %.cpp
-	g++ -std=c++11 -Wall -pedantic -D_POSIX_SOURCE -g3 -O0 -c -o $@ $<
+	g++ -std=c++11 -Wall -pedantic -D_POSIX_SOURCE -g3 -O0 -MMD -MP -c -o $@ $<
 
 C11OBJ = c11.o c11iconst_sz.o c11yyskip.o c11iconst.o c11iconst_readsuffix.o c11iconst_readc.o c11iconst_read.o c11char2digit.o c11readutf8.o c11iconst_readchar.o c11stringhash.o c11strlitprefix.o c11writeutf8.o c11writeutf16.o c11strlit_init.o c11iconst_init.o c11unary_op.o c11strobj.o c11stringtable.o c11fconst_init.o c11fconst.o c11astnode.o c11mul64x64t128.o c11fconstmantissamatchprep.o c11fconst_addsub.o c11fconst_mul.o c11fconst_div.o c11iconst_add.o c11iconst_sub.o c11iconst_mul.o c11iconst_div.o c11iconst_mod.o c11iconst_shl.o c11iconst_shr.o c11iconst_cmp.o c11fconst_cmp.o c11iconst_binop.o c11iconst_logop.o c11ident.o
 
@@ -19,7 +20,7 @@ c11: $(C11OBJ) c11.l.o c11.y.o
 	g++ -lm -o $@ $+ -lgmp
 
 clean:
-	rm -fv c11.?.h c11.?.c *.y.output *.o c11
+	rm -fv c11.?.h c11.?.c *.y.output *.o *.d c11
 
 c11.l.h: c11.l.c
 
@@ -31,3 +32,4 @@ c11.y.h: c11.y.c
 c11.y.c: c11.y
 	bison -d -v --defines=c11.y.h -o c11.y.c c11.y
 
+-include $(wildcard *.d)

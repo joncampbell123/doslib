@@ -30,10 +30,12 @@ $(BMPLIB): $(BMPLIB_DEPS)
 linux-host:
 	mkdir -p linux-host
 
+# -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them
 linux-host/%.o : %.c
-	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -O0 -c -o $@ $^
+	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -O0 -MMD -MP -c -o $@ $<
 
 clean:
-	rm -f linux-host/*.o linux-host/*.a linux-host/t_cpy1
+	rm -f linux-host/*.o linux-host/*.d linux-host/*.a linux-host/t_cpy1
 	(rmdir linux-host 2>/dev/null) || true
 
+-include $(wildcard linux-host/*.d)
