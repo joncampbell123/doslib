@@ -196,7 +196,8 @@ struct omf_fixupps_context_t {
 struct omf_pubdef_t {
     char*                           name_string;
     unsigned int                    group_index;
-    unsigned int                    segment_index;
+    unsigned int                    segment_index;      // 0 if the symbol is absolute (at base_frame:public_offset)
+    unsigned int                    base_frame;         // frame number, if segment_index == 0
     unsigned long                   public_offset;
     unsigned int                    type_index;
     unsigned char                   type;

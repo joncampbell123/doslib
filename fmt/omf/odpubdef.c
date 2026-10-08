@@ -16,9 +16,15 @@ void dump_PUBDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
                 omf_context_get_grpdef_name_safe(ctx,pubdef->group_index),
                 pubdef->group_index);
 
-            fprintf(fp," segment=\"%s\"(%u)",
-                omf_context_get_segdef_name_safe(ctx,pubdef->segment_index),
-                pubdef->segment_index);
+            if (pubdef->segment_index == 0) {
+                fprintf(fp," segment=ABSOLUTE frame=0x%04X",
+                    pubdef->base_frame);
+            }
+            else {
+                fprintf(fp," segment=\"%s\"(%u)",
+                    omf_context_get_segdef_name_safe(ctx,pubdef->segment_index),
+                    pubdef->segment_index);
+            }
 
             fprintf(fp," offset=0x%lX(%lu)",
                     (unsigned long)pubdef->public_offset,

@@ -337,6 +337,19 @@ def test_COMDEF_CEXTDEF_numbering(tools, tmp):
     check('"local_d" typeindex=0 LOCAL COMMUNAL NEAR length=2' in out, 'local_d printed wrong')
     run_omfsegdg(tools, tmp, 'comdef', obj)
 
+# A PUBDEF with base segment 0 defines absolute symbols. The base frame follows the segment index.
+def test_PUBDEF_absolute(tools, tmp):
+    obj = module_header('abs', 4)
+    obj += omf_record(0x90, bytes([0, 0, 0x00, 0xB8]) +                            # absolute, frame 0xB800
+        lenstr('vidmem') + bytes([0x10, 0x00, 0]) +
+        lenstr('vidmem2') + bytes([0x20, 0x00, 0]))
+    obj += omf_record(0x90, bytes([0, SEG_TEXT]) + lenstr('entry') + bytes([0x02, 0x00, 0]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'abs.obj', obj)
+    check('"vidmem" group=""(0) segment=ABSOLUTE frame=0xB800 offset=0x10(16)' in out, 'vidmem printed wrong')
+    check('"vidmem2" group=""(0) segment=ABSOLUTE frame=0xB800 offset=0x20(32)' in out, 'vidmem2 printed wrong')
+    check('"entry" group=""(0) segment="_TEXT"(1) offset=0x2(2)' in out, 'entry printed wrong')
+
 # Several FIXUPP records may follow one LEDATA. A later one must still be able to patch it.
 def test_omfsegdg_two_FIXUPPs_after_LEDATA(tools, tmp):
     obj = module_header('twofix', 6)
@@ -426,6 +439,7 @@ TESTS = [
     test_SEGDEF_big_bit,
     test_SEGDEF32_big_bit,
     test_COMDEF_CEXTDEF_numbering,
+    test_PUBDEF_absolute,
     test_omfsegdg_two_FIXUPPs_after_LEDATA,
     test_omfsegdg_FIXUPP_after_LIDATA,
     test_omfsegdg_FIXUPP_after_COMDAT,

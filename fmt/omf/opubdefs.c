@@ -5,6 +5,7 @@
 void omf_pubdefs_context_init_pubdef(struct omf_pubdef_t * const ctx) {
     ctx->group_index = 0;
     ctx->segment_index = 0;
+    ctx->base_frame = 0;
     ctx->public_offset = 0;
     ctx->type = OMF_PUBDEF_TYPE_LOCAL;
     ctx->name_string = NULL;

@@ -1716,6 +1716,10 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         if (pubdef == NULL) continue;
         name = pubdef->name_string;
         if (name == NULL) continue;
+        if (pubdef->segment_index == 0) {
+            fprintf(stderr,"Pubdef: '%s' is absolute (frame 0x%04X), which is not supported\n",name,pubdef->base_frame);
+            return -1;
+        }
         segname = omf_context_get_segdef_name_safe(omf_state,pubdef->segment_index);
         if (*segname == 0) continue;
         groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);

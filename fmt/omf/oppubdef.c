@@ -6,6 +6,7 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
     int first_entry = omf_pubdefs_context_get_next_add_index(&ctx->PUBDEFs);
     unsigned int base_segment_index;
     unsigned int base_group_index;
+    unsigned int base_frame = 0;
     unsigned int type;
     int len;
 
@@ -20,7 +21,11 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
     base_group_index = omf_record_get_index(rec);
     base_segment_index = omf_record_get_index(rec);
     if (base_segment_index == 0) {
-        (void)omf_record_get_word(rec); // base frame (ignored)
+        // absolute symbols: the base frame follows
+        if (omf_record_data_available(rec) < 2)
+            return -1;
+
+        base_frame = omf_record_get_word(rec);
     }
 
     while (!omf_record_eof(rec)) {
@@ -40,6 +45,7 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
 
         pubdef->group_index = base_group_index;
         pubdef->segment_index = base_segment_index;
+        pubdef->base_frame = base_frame;
         pubdef->public_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         pubdef->type_index = omf_record_get_index(rec);
         pubdef->type = type;
