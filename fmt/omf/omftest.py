@@ -35,6 +35,9 @@ def THEADR(name):
 def LNAMES(names):
     return omf_record(0x96, b''.join(lenstr(n) for n in names))
 
+def LLNAMES(names):
+    return omf_record(0xCA, b''.join(lenstr(n) for n in names))
+
 def SEGDEF(acbp, length, name_index, class_index):
     return omf_record(0x98, bytes([acbp, length & 0xFF, length >> 8, name_index, class_index, 1]))
 
@@ -266,6 +269,23 @@ def test_omfsegdg_segdef_in_DGROUP(tools, tmp):
     check(led['fixups'] == [], 'segment fixup was not removed')
     check(bytes(led['data']) == bytes([0x8C, 0xC9, 0x90, 0xC3]), 'code was not patched: ' + bytes(led['data']).hex())
 
+# LLNAMES names are numbered along with LNAMES names, so the LNAMES after it continue from it.
+# Same as test_omfsegdg_segdef_in_DGROUP, but DGROUP comes after an LLNAMES.
+def test_LLNAMES_numbering(tools, tmp):
+    obj = THEADR('llnames') + LNAMES(['', 'CODE'])                                 # LNAMES 1, 2
+    obj += LLNAMES(['_LOCAL'])                                                     # LNAMES 3
+    obj += LNAMES(['DGROUP', '_TEXT', '_DATA', 'DATA'])                            # LNAMES 4, 5, 6, 7
+    obj += SEGDEF(0x28, 4, 5, 2) + SEGDEF(0x48, 2, 6, 7) + GRPDEF(4, [SEG_TEXT, SEG_DATA])
+    obj += LEDATA(SEG_TEXT, 0, [0xB9, 0x00, 0x00, 0xC3])                           # mov cx,seg _DATA / ret
+    obj += omf_record(0x9C, LOCAT(LOC_SEGBASE16, 1) + bytes([(0 << 4) | FIX_P, SEG_DATA, SEG_DATA]))
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'llnames.obj', obj)
+    check('[3]: "_LOCAL"' in out, 'LLNAMES name is not LNAMES 3')
+    check('name="_TEXT"(5) class="CODE"(2)' in out, 'SEGDEF 1 is not _TEXT')
+    check('GRPDEF (1): "DGROUP"(4)' in out, 'GRPDEF 1 is not DGROUP')
+    led = run_omfsegdg(tools, tmp, 'llnames', obj)[0]
+    check(bytes(led['data']) == bytes([0x8C, 0xC9, 0x90, 0xC3]), 'code was not patched: ' + bytes(led['data']).hex())
+
 # omfdump must print each SEGDEF attribute next to its own label.
 def test_omfdump_SEGDEF_fields(tools, tmp):
     obj = THEADR('segdef') + LNAMES(['', 'VIDEO', 'FAR_DATA', 'CODE32', 'CODE'])
@@ -391,6 +411,7 @@ TESTS = [
     test_omfsegdg_F4_frame,
     test_omfsegdg_thread_in_later_FIXUPP,
     test_omfsegdg_segdef_in_DGROUP,
+    test_LLNAMES_numbering,
     test_omfdump_SEGDEF_fields,
     test_SEGDEF_big_bit,
     test_COMDEF_CEXTDEF_numbering,

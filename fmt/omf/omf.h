@@ -119,6 +119,8 @@ enum {
 #define OMF_RECTYPE_COMDAT      (0xC2)
 #define OMF_RECTYPE_COMDAT32    (0xC3)
 
+#define OMF_RECTYPE_LLNAMES     (0xCA)
+
 // COMDEF/LCOMDEF communal data types
 #define OMF_COMDEF_FAR          (0x61)
 #define OMF_COMDEF_NEAR         (0x62)

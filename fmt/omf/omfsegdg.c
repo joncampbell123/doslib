@@ -498,7 +498,8 @@ int main(int argc,char **argv) {
                     dump_PUBDEF(stdout,omf_state,(unsigned int)first_new_pubdef);
 
                 } break;
-            case OMF_RECTYPE_LNAMES:/*0x96*/{
+            case OMF_RECTYPE_LNAMES:/*0x96*/
+            case OMF_RECTYPE_LLNAMES:/*0xCA*/{
                 int first_new_lname;
 
                 if ((first_new_lname=omf_context_parse_LNAMES(omf_state,&omf_state->record)) < 0) {

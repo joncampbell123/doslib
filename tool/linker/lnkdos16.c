@@ -2244,6 +2244,7 @@ int main(int argc,char **argv) {
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
+                    case OMF_RECTYPE_LLNAMES:/*0xCA*/
                         {
                             int first_new_lname;
 

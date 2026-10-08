@@ -2409,6 +2409,7 @@ int main(int argc,char **argv) {
                         }
                         break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
+                    case OMF_RECTYPE_LLNAMES:/*0xCA*/
                         if (omf_context_parse_LNAMES(omf_state,&omf_state->record) < 0) {
                             fprintf(stderr,"Error parsing LNAMES\n");
                             return 1;

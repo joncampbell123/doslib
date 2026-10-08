@@ -2,6 +2,7 @@
 #include <fmt/omf/omf.h>
 #include <fmt/omf/omfcstr.h>
 
+// LLNAMES has the same format, and its names are numbered along with the LNAMES names
 int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
     int first_entry = omf_lnames_context_get_next_add_index(&ctx->LNAMEs);
     int len;
