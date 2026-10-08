@@ -490,6 +490,54 @@ def test_omfdump_COMENT(tools, tmp):
             line('Comment Class:', '0x55 ?') + line('Data:', '00 FF')]:
         check(want in out, 'COMENT output is missing: ' + repr(want))
 
+# The LIBHEAD record gives the dictionary offset, size, and flags. Check a page that fits in
+# the record buffer and one that does not.
+def test_omfdump_LIBHEAD(tools, tmp):
+    for page in [32, 8192]:
+        fields = bytes([0x00, 0x34, 0x12, 0x00, 3, 0, 0x01])                          # 0x123400, 3 blocks, case sensitive
+        lib = bytearray(omf_record(0xF0, fields + bytes(page - 4 - len(fields))))
+        lib += THEADR('m1') + MODEND()
+        lib += bytes(-len(lib) % page)
+        lib += omf_record(0xF1, bytes(page - 4))
+        out = run_omfdump(tools, tmp, 'libhead.lib', bytes(lib))
+        check('LIBHEAD page_size=%u dictionary_offset=0x123400 dictionary_blocks=3 flags=0x01 CASE-SENSITIVE\n' % page in out,
+            'LIBHEAD with %u byte pages printed wrong' % page)
+
+# omfdump must print LHEADR, LINNUM, LINSYM, BAKPAT, NBKPAT, ALIAS, VERNUM and VENDEXT records.
+def test_omfdump_other_records(tools, tmp):
+    def w(v):
+        return bytes([v & 0xFF, v >> 8])
+    def dw(v):
+        return bytes([v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, v >> 24])
+    obj = omf_record(0x82, lenstr('libmod'))                                        # LHEADR
+    obj += LNAMES(['', 'DGROUP', '_TEXT', 'CODE', '_DATA', 'DATA', 'tmpl1'])        # LNAMES 1-7
+    obj += SEGDEF(0x28, 0x20, 3, 4)
+    obj += omf_record(0xCC, lenstr('1.0.0'))                                        # VERNUM
+    obj += omf_record(0x94, bytes([0, SEG_TEXT]) +                                  # LINNUM
+        w(10) + w(0x0) + w(11) + w(0x3) + w(12) + w(0x8) + w(13) + w(0xC) + w(14) + w(0x10))
+    obj += omf_record(0x95, bytes([0, SEG_TEXT]) + w(20) + dw(0x12345678))         # LINNUM32
+    obj += omf_record(0x94, bytes([0, 0]) + w(0xB800) + w(1) + w(0))                # LINNUM, absolute frame
+    obj += omf_record(0xC4, bytes([0x01, 7]) + w(5) + w(0x2))                       # LINSYM
+    obj += omf_record(0xB2, bytes([SEG_TEXT, 1]) + w(0x10) + w(0x4) + w(0x20) + w(0x8))  # BAKPAT
+    obj += omf_record(0xC9, bytes([2, 7]) + dw(0x100) + dw(0x10))                   # NBKPAT32
+    obj += omf_record(0xC6, lenstr('_old') + lenstr('_new') + lenstr('a2') + lenstr('b2'))  # ALIAS
+    obj += omf_record(0xCE, w(0x1234) + bytes([1, 2, 3]))                           # VENDEXT
+    obj += MODEND()
+    out = run_omfdump(tools, tmp, 'other.obj', obj)
+    for want in [
+            'type=0x82 (LHEADR: Library Module Header Record)',
+            '* THEADR: "libmod"',
+            'VERNUM "1.0.0"\n',
+            'LINNUM group=""(0) segment="_TEXT"(1)\n    10:0x0  11:0x3  12:0x8  13:0xC\n    14:0x10\n',
+            'LINNUM group=""(0) segment="_TEXT"(1)\n    20:0x12345678\n',
+            'LINNUM group=""(0) frame=0xB800\n    1:0x0\n',
+            'LINSYM "tmpl1"(7) flags=0x01 CONTINUATION\n    5:0x2\n',
+            'BAKPAT segment="_TEXT"(1) location=WORD(1)\n    offset=0x10 value=0x4\n    offset=0x20 value=0x8\n',
+            'NBKPAT "tmpl1"(7) location=DWORD(2)\n    offset=0x100 value=0x10\n',
+            'ALIAS:\n    "_old" -> "_new"\n    "a2" -> "b2"\n',
+            'VENDEXT vendor=4660\n    0x00000000: 01 02 03 ']:
+        check(want in out, 'output is missing: ' + repr(want))
+
 # LEXTDEF32 (0xB5) is parsed like LEXTDEF, and omfdump must name it.
 def test_omfdump_LEXTDEF32_name(tools, tmp):
     obj = THEADR('lext32') + LNAMES(['']) + omf_record(0xB5, lenstr('lext') + bytes([0])) + MODEND()
@@ -553,6 +601,8 @@ TESTS = [
     test_omfdump_LIDATA,
     test_omfdump_LEXTDEF32_name,
     test_omfdump_COMENT,
+    test_omfdump_LIBHEAD,
+    test_omfdump_other_records,
     test_omfsegdg_THREAD_before_data,
     test_omfsegdg_LEDATA_before_MODEND,
     test_omfdump_MODEND_start_address,

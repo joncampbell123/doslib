@@ -19,6 +19,9 @@ void omf_context_init(struct omf_context_t * const ctx) {
     ctx->last_error = NULL;
     ctx->flags.verbose = 0;
     ctx->library_block_size = 0;
+    ctx->library_dict_offset = 0;
+    ctx->library_dict_blocks = 0;
+    ctx->library_flags = 0;
     ctx->THEADR = NULL;
 }
 
@@ -72,6 +75,9 @@ void omf_context_clear_for_module(struct omf_context_t * const ctx) {
 void omf_context_clear(struct omf_context_t * const ctx) {
     omf_context_clear_for_module(ctx);
     ctx->library_block_size = 0;
+    ctx->library_dict_offset = 0;
+    ctx->library_dict_blocks = 0;
+    ctx->library_flags = 0;
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {

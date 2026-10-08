@@ -79,6 +79,8 @@ enum {
 
 #define OMF_RECTYPE_THEADR      (0x80)
 
+#define OMF_RECTYPE_LHEADR      (0x82)
+
 #define OMF_RECTYPE_COMENT      (0x88)
 
 #define OMF_RECTYPE_MODEND      (0x8A)
@@ -88,6 +90,9 @@ enum {
 
 #define OMF_RECTYPE_PUBDEF      (0x90)
 #define OMF_RECTYPE_PUBDEF32    (0x91)
+
+#define OMF_RECTYPE_LINNUM      (0x94)
+#define OMF_RECTYPE_LINNUM32    (0x95)
 
 #define OMF_RECTYPE_LNAMES      (0x96)
 
@@ -105,6 +110,9 @@ enum {
 #define OMF_RECTYPE_LIDATA      (0xA2)
 #define OMF_RECTYPE_LIDATA32    (0xA3)
 
+#define OMF_RECTYPE_BAKPAT      (0xB2)
+#define OMF_RECTYPE_BAKPAT32    (0xB3)
+
 #define OMF_RECTYPE_LEXTDEF     (0xB4)
 #define OMF_RECTYPE_LEXTDEF32   (0xB5)
 
@@ -119,7 +127,25 @@ enum {
 #define OMF_RECTYPE_COMDAT      (0xC2)
 #define OMF_RECTYPE_COMDAT32    (0xC3)
 
+#define OMF_RECTYPE_LINSYM      (0xC4)
+#define OMF_RECTYPE_LINSYM32    (0xC5)
+
+#define OMF_RECTYPE_ALIAS       (0xC6)
+
+#define OMF_RECTYPE_NBKPAT      (0xC8)
+#define OMF_RECTYPE_NBKPAT32    (0xC9)
+
 #define OMF_RECTYPE_LLNAMES     (0xCA)
+
+#define OMF_RECTYPE_VERNUM      (0xCC)
+
+#define OMF_RECTYPE_VENDEXT     (0xCE)
+
+#define OMF_RECTYPE_LIBHEAD     (0xF0)
+#define OMF_RECTYPE_LIBEND      (0xF1)
+
+// LIBHEAD flags
+#define OMF_LIBHEAD_FLAG_CASE_SENSITIVE (0x01)
 
 // COMDEF/LCOMDEF communal data types
 #define OMF_COMDEF_FAR          (0x61)
@@ -395,6 +421,9 @@ struct omf_context_t {
     struct omf_fixupps_context_t        FIXUPPs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
+    unsigned long                       library_dict_offset;// LIBHEAD: file offset of the dictionary
+    unsigned short                      library_dict_blocks;// LIBHEAD: size of the dictionary in 512-byte blocks
+    unsigned char                       library_flags;      // LIBHEAD: OMF_LIBHEAD_FLAG_*
     unsigned short                      last_LEDATA_seg;
     unsigned long                       last_LEDATA_rec;
     unsigned long                       last_LEDATA_eno;
@@ -661,6 +690,14 @@ void dump_GRPDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
 void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_THEADR(FILE *fp,const struct omf_context_t * const ctx);
 void dump_COMENT(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
+void dump_LINNUM(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
+void dump_LINSYM(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
+void dump_BAKPAT(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
+void dump_NBKPAT(FILE *fp,const struct omf_context_t * const ctx,struct omf_record_t * const rec);
+void dump_ALIAS(FILE *fp,struct omf_record_t * const rec);
+void dump_VERNUM(FILE *fp,struct omf_record_t * const rec);
+void dump_VENDEXT(FILE *fp,struct omf_record_t * const rec);
+void dump_LIBHEAD(FILE *fp,const struct omf_context_t * const ctx);
 
 int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const rec);
 int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c);

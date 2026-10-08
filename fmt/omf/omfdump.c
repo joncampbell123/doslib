@@ -179,6 +179,7 @@ int main(int argc,char **argv) {
 
         switch (omf_state->record.rectype) {
             case OMF_RECTYPE_THEADR:/*0x80*/
+            case OMF_RECTYPE_LHEADR:/*0x82*/
                 if (omf_context_parse_THEADR(omf_state,&omf_state->record) < 0) {
                     fprintf(stderr,"Error parsing THEADR\n");
                     return 1;
@@ -337,6 +338,42 @@ int main(int argc,char **argv) {
                     dump_COMDAT(stdout,omf_state,&info,&comdat);
 
                 } break;
+            case OMF_RECTYPE_LINNUM:/*0x94*/
+            case OMF_RECTYPE_LINNUM32:/*0x95*/
+                if (omf_state->flags.verbose)
+                    dump_LINNUM(stdout,omf_state,&omf_state->record);
+                break;
+            case OMF_RECTYPE_LINSYM:/*0xC4*/
+            case OMF_RECTYPE_LINSYM32:/*0xC5*/
+                if (omf_state->flags.verbose)
+                    dump_LINSYM(stdout,omf_state,&omf_state->record);
+                break;
+            case OMF_RECTYPE_BAKPAT:/*0xB2*/
+            case OMF_RECTYPE_BAKPAT32:/*0xB3*/
+                if (omf_state->flags.verbose)
+                    dump_BAKPAT(stdout,omf_state,&omf_state->record);
+                break;
+            case OMF_RECTYPE_NBKPAT:/*0xC8*/
+            case OMF_RECTYPE_NBKPAT32:/*0xC9*/
+                if (omf_state->flags.verbose)
+                    dump_NBKPAT(stdout,omf_state,&omf_state->record);
+                break;
+            case OMF_RECTYPE_ALIAS:/*0xC6*/
+                if (omf_state->flags.verbose)
+                    dump_ALIAS(stdout,&omf_state->record);
+                break;
+            case OMF_RECTYPE_VERNUM:/*0xCC*/
+                if (omf_state->flags.verbose)
+                    dump_VERNUM(stdout,&omf_state->record);
+                break;
+            case OMF_RECTYPE_VENDEXT:/*0xCE*/
+                if (omf_state->flags.verbose)
+                    dump_VENDEXT(stdout,&omf_state->record);
+                break;
+            case OMF_RECTYPE_LIBHEAD:/*0xF0*/
+                if (omf_state->flags.verbose)
+                    dump_LIBHEAD(stdout,omf_state);
+                break;
             case OMF_RECTYPE_MODEND:/*0x8A*/
             case OMF_RECTYPE_MODEND32:/*0x8B*/{
                 struct omf_modend_t modend;

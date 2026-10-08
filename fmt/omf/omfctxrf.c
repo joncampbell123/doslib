@@ -106,6 +106,15 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
             // and the length of the record defines the block size that modules within are aligned by
             ctx->library_block_size = ctx->record.reclen + 3;
 
+            // dictionary offset (dword), dictionary size in 512-byte blocks (word), flags (byte), then padding
+            if (readlen >= 8) {
+                const unsigned char *p = ctx->record.data;
+
+                ctx->library_dict_offset = (unsigned long)p[0] | ((unsigned long)p[1] << 8ul) | ((unsigned long)p[2] << 16ul) | ((unsigned long)p[3] << 24ul);
+                ctx->library_dict_blocks = (unsigned short)(p[4] | (p[5] << 8u));
+                ctx->library_flags = p[6];
+            }
+
             // if we only read the start of the LIBHEAD, then that's all the record holds (no checksum)
             if (readlen < ctx->record.reclen) {
                 ctx->record.reclen = readlen;
