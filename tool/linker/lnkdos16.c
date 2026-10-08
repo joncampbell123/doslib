@@ -866,7 +866,7 @@ void dump_link_symbols(void) {
             fprintf(map_fp,"---------------------------------------\n");
         }
 
-        if (verbose || map_fp != NULL)
+        if ((verbose || map_fp != NULL) && link_symbols_count != 0)
             qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
                 pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
@@ -3427,7 +3427,8 @@ int main(int argc,char **argv) {
     dump_link_symbols();
     dump_link_segments();
 
-    qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
+    if (link_symbols_count != 0)
+        qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
 
     /* write output */
     assert(out_file != NULL);
