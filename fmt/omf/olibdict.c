@@ -52,7 +52,7 @@ int omf_lib_dict_get_entry(const unsigned char * const blk,const unsigned int b,
     name[len] = 0;
     ofs += len;
 
-    *page = (unsigned int)blk[ofs] | ((unsigned int)blk[ofs+1] << 8u);
+    *page = omf_le16(blk + ofs);
     return 1;
 }
 

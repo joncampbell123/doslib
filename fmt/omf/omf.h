@@ -19,6 +19,28 @@
 # include <hw/cpu/endian.h>
 #endif
 
+// little endian words and dwords at any alignment. OMF records are not aligned, and reading them
+// through a uint16_t or uint32_t pointer is undefined (and faults on CPUs that require alignment).
+static inline unsigned short omf_le16(const unsigned char * const p) {
+    return (unsigned short)((unsigned short)p[0] | ((unsigned short)p[1] << 8u));
+}
+
+static inline unsigned long omf_le32(const unsigned char * const p) {
+    return (unsigned long)p[0] | ((unsigned long)p[1] << 8ul) | ((unsigned long)p[2] << 16ul) | ((unsigned long)p[3] << 24ul);
+}
+
+static inline void omf_put_le16(unsigned char * const p,const unsigned short v) {
+    p[0] = (unsigned char)v;
+    p[1] = (unsigned char)(v >> 8u);
+}
+
+static inline void omf_put_le32(unsigned char * const p,const unsigned long v) {
+    p[0] = (unsigned char)v;
+    p[1] = (unsigned char)(v >> 8ul);
+    p[2] = (unsigned char)(v >> 16ul);
+    p[3] = (unsigned char)(v >> 24ul);
+}
+
 enum {
     OMF_EXTDEF_TYPE_GLOBAL=0,
     OMF_EXTDEF_TYPE_LOCAL

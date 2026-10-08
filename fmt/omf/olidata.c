@@ -19,15 +19,15 @@ int omf_lidata_get_block(struct omf_lidata_block_t * const blk,const struct omf_
 
     p = info->data + ofs;
     if (info->is32bit) {
-        blk->repeat_count = (unsigned long)p[0] | ((unsigned long)p[1] << 8ul) | ((unsigned long)p[2] << 16ul) | ((unsigned long)p[3] << 24ul);
+        blk->repeat_count = omf_le32(p);
         p += 4;
     }
     else {
-        blk->repeat_count = (unsigned long)p[0] | ((unsigned long)p[1] << 8ul);
+        blk->repeat_count = omf_le16(p);
         p += 2;
     }
 
-    blk->block_count = (unsigned int)p[0] | ((unsigned int)p[1] << 8u);
+    blk->block_count = omf_le16(p);
     blk->content_offset = ofs + need;
     blk->content_length = 0;
 

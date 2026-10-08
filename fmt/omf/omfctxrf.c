@@ -41,7 +41,7 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
         return -1;
     }
     ctx->record.rectype = tmp[0];
-    ctx->record.reclen = le16toh(*((uint16_t*)(tmp+1))); // length (including checksum)
+    ctx->record.reclen = omf_le16(tmp+1); // length (including checksum)
     if (ctx->record.rectype == 0 || ctx->record.reclen == 0)
         return 0;
 
@@ -108,11 +108,9 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
 
             // dictionary offset (dword), dictionary size in 512-byte blocks (word), flags (byte), then padding
             if (readlen >= 8) {
-                const unsigned char *p = ctx->record.data;
-
-                ctx->library_dict_offset = (unsigned long)p[0] | ((unsigned long)p[1] << 8ul) | ((unsigned long)p[2] << 16ul) | ((unsigned long)p[3] << 24ul);
-                ctx->library_dict_blocks = (unsigned short)(p[4] | (p[5] << 8u));
-                ctx->library_flags = p[6];
+                ctx->library_dict_offset = omf_le32(ctx->record.data);
+                ctx->library_dict_blocks = omf_le16(ctx->record.data + 4);
+                ctx->library_flags = ctx->record.data[6];
             }
 
             // if we only read the start of the LIBHEAD, then that's all the record holds (no checksum)
