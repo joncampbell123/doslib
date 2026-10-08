@@ -41,6 +41,15 @@ static inline void omf_put_le32(unsigned char * const p,const unsigned long v) {
     p[3] = (unsigned char)(v >> 24ul);
 }
 
+// add to a little endian word or dword at any alignment (to apply a fixup, for example)
+static inline void omf_add_le16(unsigned char * const p,const unsigned short v) {
+    omf_put_le16(p,(unsigned short)(omf_le16(p) + v));
+}
+
+static inline void omf_add_le32(unsigned char * const p,const unsigned long v) {
+    omf_put_le32(p,omf_le32(p) + v);
+}
+
 enum {
     OMF_EXTDEF_TYPE_GLOBAL=0,
     OMF_EXTDEF_TYPE_LOCAL

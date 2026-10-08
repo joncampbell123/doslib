@@ -1533,7 +1533,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                         final_ofs -= ptch+2+current_link_segment->segment_offset;
                     }
 
-                    *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                    omf_add_le16(ptr,(uint16_t)final_ofs);
                 }
                 break;
             case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE: /* 16-bit segment base */
@@ -1569,7 +1569,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                 }
 
                 if (pass == PASS_BUILD) {
-                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
+                    omf_add_le16(ptr,(uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj);
                 }
 
                 break;
@@ -1606,8 +1606,8 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                 }
 
                 if (pass == PASS_BUILD) {
-                    *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                    *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj;
+                    omf_add_le16(ptr,(uint16_t)final_ofs);
+                    omf_add_le16(ptr+2,(uint16_t)targ_sdef->segment_relative + (uint16_t)targ_sdef->segment_reloc_adj);
                 }
 
                 break;
@@ -1634,7 +1634,7 @@ int apply_FIXUPP(vector< shared_ptr<struct exe_relocation> > &exe_relocation_tab
                         final_ofs -= ptch+4+current_link_segment->segment_offset;
                     }
 
-                    *((uint32_t*)ptr) += (uint16_t)final_ofs;
+                    omf_add_le32(ptr,(uint16_t)final_ofs);
                 }
                 break;
  
@@ -3182,7 +3182,7 @@ int main(int argc,char **argv) {
                     frag->image.resize(frag->fragment_length);
 
                     frag->image[0] = 0xE9; /* JMP near */
-                    *((uint16_t*)(&frag->image[1])) = 0; /* patch later */
+                    omf_put_le16(&frag->image[1],0); /* patch later */
                 }
                 else {
                     /* 2 byte JMP */
@@ -3451,8 +3451,9 @@ int main(int argc,char **argv) {
 
                 tbl_ip = exeseg->segment_offset + table_frag->offset;
 
-                uint16_t *w = (uint16_t*)(&table_frag->image[0]);
-                uint16_t *wf = (uint16_t*)(&table_frag->image[table_frag->image.size() & (~1u)]);
+                /* a table of words */
+                unsigned char *w = &table_frag->image[0];
+                unsigned char *wf = w + (table_frag->image.size() & (~((size_t)1u)));
 
                 for (auto i=exe_relocation_table.begin();i!=exe_relocation_table.end();i++) {
                     shared_ptr<struct exe_relocation> rel = *i;
@@ -3465,14 +3466,15 @@ int main(int argc,char **argv) {
                         return 1;
                     }
 
-                    *w++ = (uint16_t)roff;
+                    omf_put_le16(w,(uint16_t)roff);
+                    w += 2;
                     assert(w <= wf);
                 }
             }
 
-            *((uint16_t*)(&apply_frag->image[comrel_entry_point_CX_COUNT])) = exe_relocation_table.size();
-            *((uint16_t*)(&apply_frag->image[comrel_entry_point_SI_OFFSET])) = (uint16_t)tbl_ip;
-            *((uint16_t*)(&apply_frag->image[comrel_entry_point_JMP_ENTRY])) = (uint16_t)((init_ip - end_jmp_ip) & 0xFFFFul);
+            omf_put_le16(&apply_frag->image[comrel_entry_point_CX_COUNT],exe_relocation_table.size());
+            omf_put_le16(&apply_frag->image[comrel_entry_point_SI_OFFSET],(uint16_t)tbl_ip);
+            omf_put_le16(&apply_frag->image[comrel_entry_point_JMP_ENTRY],(uint16_t)((init_ip - end_jmp_ip) & 0xFFFFul));
         }
     }
 
@@ -3511,7 +3513,7 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"ERROR: JMP patch impossible, out of range %ld\n",rel);
                     return 1;
                 }
-                *((uint16_t*)(&frag->image[1])) = (uint16_t)rel;
+                omf_put_le16(&frag->image[1],(uint16_t)rel);
             }
             else {
                 abort();
@@ -3546,22 +3548,22 @@ int main(int argc,char **argv) {
             assert(rtablels->fragment->image.size() >= rtablels->fragment->fragment_length);
 
             /* original strategy entry point offset */
-            uint16_t orig_strat = *((uint16_t*)(&headls->fragment->image[0x06]));
+            uint16_t orig_strat = omf_le16(&headls->fragment->image[0x06]);
             /* original interrupt entry point offset */
-            uint16_t orig_int = *((uint16_t*)(&headls->fragment->image[0x08]));
+            uint16_t orig_int = omf_le16(&headls->fragment->image[0x08]);
 
             /* patch them to the new code */
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_entry1])) = orig_strat;
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry1])) = orig_strat;
-            *((uint16_t*)(&headls->fragment->image[0x06])) = relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry1 - 1;
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_entry1],orig_strat);
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry1],orig_strat);
+            omf_put_le16(&headls->fragment->image[0x06],relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry1 - 1);
 
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_entry2])) = orig_int;
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry2])) = orig_int;
-            *((uint16_t*)(&headls->fragment->image[0x08])) = relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry2 - 1;
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_entry2],orig_int);
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_orig_entry2],orig_int);
+            omf_put_le16(&headls->fragment->image[0x08],relocls->segref->segment_offset + relocls->fragment->offset + relocls->offset + dosdrvrel_entry_point_entry2 - 1);
 
             /* relocation table pointer and count */
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_CX_COUNT])) = exe_relocation_table.size();
-            *((uint16_t*)(&relocls->fragment->image[dosdrvrel_entry_point_SI_OFFSET])) = rtablels->segref->segment_offset + rtablels->fragment->offset + rtablels->offset;
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_CX_COUNT],exe_relocation_table.size());
+            omf_put_le16(&relocls->fragment->image[dosdrvrel_entry_point_SI_OFFSET],rtablels->segref->segment_offset + rtablels->fragment->offset + rtablels->offset);
 
             /* relocation table */
             for (size_t i=0;i < exe_relocation_table.size();i++) {
@@ -3573,7 +3575,7 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"Relocation out of range\n");
                     return 1;
                 }
-                *((uint16_t*)(&rtablels->fragment->image[i*2])) = (uint16_t)offset;
+                omf_put_le16(&rtablels->fragment->image[i*2],(uint16_t)offset);
             }
         }
     }
@@ -3692,38 +3694,38 @@ int main(int argc,char **argv) {
             /* +2 = number of bytes in last block. if nonzero, only that much is used, else if zero, entire last block is used
              * +4 = number of blocks in EXE, including, if +2 nonzero, the partial last block */
             if (max_image & 511ul) { /* not a multiple of 512 */
-                *((uint16_t*)(ptr+2)) = max_image & 511ul;
-                *((uint16_t*)(ptr+4)) = (max_image >> 9ul) + 1ul;
+                omf_put_le16(ptr+2,max_image & 511ul);
+                omf_put_le16(ptr+4,(max_image >> 9ul) + 1ul);
             }
             else { /* multiple of 512 */
-                *((uint16_t*)(ptr+2)) = 0ul;
-                *((uint16_t*)(ptr+4)) = max_image >> 9ul;
+                omf_put_le16(ptr+2,0ul);
+                omf_put_le16(ptr+4,max_image >> 9ul);
             }
 
             /* relocation table */
-            *((uint16_t*)(ptr+6)) = (uint16_t)exe_relocation_table.size(); /* count */
-            *((uint16_t*)(ptr+24)) = (uint16_t)(fragreloc != NULL ? fragreloc->offset : 0); /* offset */
+            omf_put_le16(ptr+6,(uint16_t)exe_relocation_table.size()); /* count */
+            omf_put_le16(ptr+24,(uint16_t)(fragreloc != NULL ? fragreloc->offset : 0)); /* offset */
 
-            *((uint16_t*)(ptr+8)) = (exeseg->segment_length+0xFul) >> 4ul; /* size of header in paragraphs */
+            omf_put_le16(ptr+8,(exeseg->segment_length+0xFul) >> 4ul); /* size of header in paragraphs */
 
             /* number of paragraphs of additional memory needed */
             tmp = (uint32_t)((bss_segment_size+0xFul) >> 4ul);
             if (tmp > 0xFFFFul) tmp = 0xFFFFul;
-            *((uint16_t*)(ptr+10)) = (uint16_t)tmp;
+            omf_put_le16(ptr+10,(uint16_t)tmp);
 
             /* maximum of paragraphs of additional memory */
-            *((uint16_t*)(ptr+12)) = 0xFFFFul;
+            omf_put_le16(ptr+12,0xFFFFul);
 
             /* stack pointer */
-            *((uint16_t*)(ptr+14)) = init_ss;
-            *((uint16_t*)(ptr+16)) = init_sp;
+            omf_put_le16(ptr+14,init_ss);
+            omf_put_le16(ptr+16,init_sp);
 
             /* checksum */
-            *((uint16_t*)(ptr+18)) = 0;
+            omf_put_le16(ptr+18,0);
 
             /* entry point (CS:IP) */
-            *((uint16_t*)(ptr+20)) = init_ip;
-            *((uint16_t*)(ptr+22)) = init_cs;
+            omf_put_le16(ptr+20,init_ip);
+            omf_put_le16(ptr+22,init_cs);
         }
 
         if (!exe_relocation_table.empty()) {
@@ -3745,8 +3747,8 @@ int main(int argc,char **argv) {
                     roff -= 0x100ul;
                 }
 
-                *((uint16_t*)(ptr + 0)) = (uint16_t)roff;
-                *((uint16_t*)(ptr + 2)) = (uint16_t)rseg;
+                omf_put_le16(ptr + 0,(uint16_t)roff);
+                omf_put_le16(ptr + 2,(uint16_t)rseg);
                 ptr += 4;
             }
         }

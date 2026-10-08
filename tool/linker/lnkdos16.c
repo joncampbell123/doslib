@@ -1805,7 +1805,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         final_ofs -= ptch+2+current_link_segment->segment_offset;
                     }
 
-                    *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                    omf_add_le16(ptr,(uint16_t)final_ofs);
                 }
                 break;
             case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE: /* 16-bit segment base */
@@ -1837,7 +1837,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         }
 
                         if (pass == PASS_BUILD) {
-                            *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                            omf_add_le16(ptr,(uint16_t)targ_sdef->segment_relative);
                         }
                     }
                     else {
@@ -1864,12 +1864,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
 
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                        omf_add_le16(ptr,(uint16_t)targ_sdef->segment_relative);
                     }
                 }
                 else {
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                        omf_add_le16(ptr,(uint16_t)targ_sdef->segment_relative);
                     }
                 }
                 break;
@@ -1902,8 +1902,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         }
 
                         if (pass == PASS_BUILD) {
-                            *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                            *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                            omf_add_le16(ptr,(uint16_t)final_ofs);
+                            omf_add_le16(ptr+2,(uint16_t)targ_sdef->segment_relative);
                         }
                     }
                     else {
@@ -1930,14 +1930,14 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
 
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                        omf_add_le16(ptr,(uint16_t)final_ofs);
+                        omf_add_le16(ptr+2,(uint16_t)targ_sdef->segment_relative);
                     }
                 }
                 else {
                     if (pass == PASS_BUILD) {
-                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
-                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                        omf_add_le16(ptr,(uint16_t)final_ofs);
+                        omf_add_le16(ptr+2,(uint16_t)targ_sdef->segment_relative);
                     }
                 }
                 break;
@@ -1964,7 +1964,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         final_ofs -= ptch+4+current_link_segment->segment_offset;
                     }
 
-                    *((uint32_t*)ptr) += (uint16_t)final_ofs;
+                    omf_add_le32(ptr,(uint16_t)final_ofs);
                 }
                 break;
  
@@ -3222,19 +3222,20 @@ int main(int argc,char **argv) {
                     assert(sg->image_ptr != NULL);
 
                     {
-                        uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
-                        uint16_t *f = (uint16_t*)(sg->image_ptr + sg->segment_length);
+                        unsigned char *d = sg->image_ptr + ro;
+                        unsigned char *f = sg->image_ptr + sg->segment_length;
                         struct exe_relocation *rel = exe_relocation_table;
                         struct seg_fragment *frag;
                         struct link_segdef *lsg;
                         unsigned long roff;
 
                         if (tsg != NULL) {
-                            d = (uint16_t*)(tsg->image_ptr + ro);
-                            f = (uint16_t*)(tsg->image_ptr + sg->segment_length);
+                            d = tsg->image_ptr + ro;
+                            f = tsg->image_ptr + sg->segment_length;
                         }
 
-                        assert((d+exe_relocation_table_count) <= f);
+                        /* a table of words */
+                        assert((d+(exe_relocation_table_count*2u)) <= f);
                         for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
                             assert(rel->segname != NULL);
                             lsg = find_link_segment(rel->segname);
@@ -3256,7 +3257,7 @@ int main(int argc,char **argv) {
                                 return 1;
                             }
 
-                            d[inf] = (uint16_t)roff;
+                            omf_put_le16(d+(inf*2u),(uint16_t)roff);
                         }
                     }
 
@@ -3267,12 +3268,12 @@ int main(int argc,char **argv) {
                         assert((d+sizeof(dosdrvrel_entry_point)) <= f);
                         memcpy(d,dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
 
-                        *((uint16_t*)(d+dosdrvrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+                        omf_put_le16(d+dosdrvrel_entry_point_CX_COUNT,exe_relocation_table_count);
 
                         if (tsg != NULL)
-                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
+                            omf_put_le16(d+dosdrvrel_entry_point_SI_OFFSET,ro + tsg->segment_offset);
                         else
-                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+                            omf_put_le16(d+dosdrvrel_entry_point_SI_OFFSET,ro + sg->segment_offset);
 
                         {
                             sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",-1,-1);
@@ -3349,14 +3350,14 @@ int main(int argc,char **argv) {
                         assert((d+sizeof(comrel_entry_point)) <= f);
                         memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
 
-                        *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+                        omf_put_le16(d+comrel_entry_point_CX_COUNT,exe_relocation_table_count);
 
                         if (tsg != NULL)
-                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
+                            omf_put_le16(d+comrel_entry_point_SI_OFFSET,ro + tsg->segment_offset);
                         else
-                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+                            omf_put_le16(d+comrel_entry_point_SI_OFFSET,ro + sg->segment_offset);
 
-                        *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
+                        omf_put_le16(d+comrel_entry_point_JMP_ENTRY,old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2));
 
                         cstr_free(&entry_seg_link_target_name);
                         entry_seg_link_target_fragment = (int)(frag - sg->fragments);
@@ -3411,7 +3412,7 @@ int main(int argc,char **argv) {
             if (com_entry_insert == 3) {
                 assert(ofs <= (0xFFFFu - 3u));
                 sg->image_ptr[0] = 0xE9; /* JMP near */
-                *((uint16_t*)(sg->image_ptr+1)) = (uint16_t)ofs - 3;
+                omf_put_le16(sg->image_ptr+1,(uint16_t)ofs - 3);
             }
             else if (com_entry_insert == 2) {
                 assert(ofs <= (0x7Fu + 2u));
@@ -3612,23 +3613,23 @@ int main(int argc,char **argv) {
                 lastblock = disk_size % 512u;
                 if (lastblock != 0) blocks++;
 
-                *((uint16_t*)(tmp+2)) = lastblock;
-                *((uint16_t*)(tmp+4)) = blocks;
+                omf_put_le16(tmp+2,lastblock);
+                omf_put_le16(tmp+4,blocks);
                 // no relocations (yet)
-                *((uint16_t*)(tmp+8)) = header_size / 16u; /* in paragraphs */
-                *((uint16_t*)(tmp+10)) = ((resident_size + 15ul - disk_size) / 16ul); /* in paragraphs, additional memory needed */
-                *((uint16_t*)(tmp+12)) = (max_resident_size + 15ul) / 16ul; /* maximum additional memory */
-                *((uint16_t*)(tmp+14)) = init_ss; /* relative */
-                *((uint16_t*)(tmp+16)) = init_sp;
+                omf_put_le16(tmp+8,header_size / 16u); /* in paragraphs */
+                omf_put_le16(tmp+10,((resident_size + 15ul - disk_size) / 16ul)); /* in paragraphs, additional memory needed */
+                omf_put_le16(tmp+12,(max_resident_size + 15ul) / 16ul); /* maximum additional memory */
+                omf_put_le16(tmp+14,init_ss); /* relative */
+                omf_put_le16(tmp+16,init_sp);
                 // no checksum
-                *((uint16_t*)(tmp+20)) = init_ip;
-                *((uint16_t*)(tmp+22)) = init_cs; /* relative */
+                omf_put_le16(tmp+20,init_ip);
+                omf_put_le16(tmp+22,init_cs); /* relative */
                 // no relocation table (yet)
                 // no overlay
 
                 if (exe_relocation_table_count != 0) {
-                    *((uint16_t*)(tmp+24)) = (uint16_t)relocation_table_offset;
-                    *((uint16_t*)(tmp+6)) = (uint16_t)exe_relocation_table_count;
+                    omf_put_le16(tmp+24,(uint16_t)relocation_table_offset);
+                    omf_put_le16(tmp+6,(uint16_t)exe_relocation_table_count);
                 }
             }
 
@@ -3667,8 +3668,8 @@ int main(int argc,char **argv) {
                             roff -= 0x100ul;
                         }
 
-                        *((uint16_t*)(tmp + 0)) = (uint16_t)roff;
-                        *((uint16_t*)(tmp + 2)) = (uint16_t)rseg;
+                        omf_put_le16(tmp + 0,(uint16_t)roff);
+                        omf_put_le16(tmp + 2,(uint16_t)rseg);
                         write(fd,tmp,4);
                     }
                 }
@@ -3725,9 +3726,9 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"MS-DOS device driver information:\n");
                 fprintf(map_fp,"---------------------------------------\n");
 
-                fprintf(map_fp,"  Attributes:          0x%04x\n",*((uint16_t*)(hdr_p + 0x4)));
-                fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
-                fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
+                fprintf(map_fp,"  Attributes:          0x%04x\n",omf_le16(hdr_p + 0x4));
+                fprintf(map_fp,"  Strategy routine:    0x%04x\n",omf_le16(hdr_p + 0x6));
+                fprintf(map_fp,"  Interrupt routine:   0x%04x\n",omf_le16(hdr_p + 0x8));
 
                 memcpy(tmp,hdr_p + 0xA,8); tmp[8] = 0;
                 for (i=0;i < 8;i++) {
@@ -3772,23 +3773,23 @@ int main(int argc,char **argv) {
 
                 if (verbose) {
                     fprintf(stderr,"Original entry: 0x%x, 0x%x\n",
-                        *((uint16_t*)(hdr_p + 0x06)),
-                        *((uint16_t*)(hdr_p + 0x08)));
+                        omf_le16(hdr_p + 0x06),
+                        omf_le16(hdr_p + 0x08));
                 }
 
                 /* copy entry points (2) to the relocation parts of the ASM we inserted */
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry1)) = *((uint16_t*)(hdr_p + 0x06));
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry1)) = *((uint16_t*)(hdr_p + 0x06));
-                *((uint16_t*)(hdr_p + 0x06)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry1 - 1;
+                omf_put_le16(reloc_p + dosdrvrel_entry_point_orig_entry1,omf_le16(hdr_p + 0x06));
+                omf_put_le16(reloc_p + dosdrvrel_entry_point_entry1,omf_le16(hdr_p + 0x06));
+                omf_put_le16(hdr_p + 0x06,rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry1 - 1);
 
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry2)) = *((uint16_t*)(hdr_p + 0x08));
-                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry2)) = *((uint16_t*)(hdr_p + 0x08));
-                *((uint16_t*)(hdr_p + 0x08)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry2 - 1;
+                omf_put_le16(reloc_p + dosdrvrel_entry_point_orig_entry2,omf_le16(hdr_p + 0x08));
+                omf_put_le16(reloc_p + dosdrvrel_entry_point_entry2,omf_le16(hdr_p + 0x08));
+                omf_put_le16(hdr_p + 0x08,rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry2 - 1);
 
                 if (verbose) {
                     fprintf(stderr,"New entry: 0x%x, 0x%x\n",
-                        *((uint16_t*)(hdr_p + 0x06)),
-                        *((uint16_t*)(hdr_p + 0x08)));
+                        omf_le16(hdr_p + 0x06),
+                        omf_le16(hdr_p + 0x08));
                 }
 
                 if (map_fp != NULL) {
@@ -3796,8 +3797,8 @@ int main(int argc,char **argv) {
                     fprintf(map_fp,"MS-DOS device driver information, after relocation table added:\n");
                     fprintf(map_fp,"---------------------------------------\n");
 
-                    fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
-                    fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
+                    fprintf(map_fp,"  Strategy routine:    0x%04x\n",omf_le16(hdr_p + 0x6));
+                    fprintf(map_fp,"  Interrupt routine:   0x%04x\n",omf_le16(hdr_p + 0x8));
 
                     fprintf(map_fp,"\n");
                 }
