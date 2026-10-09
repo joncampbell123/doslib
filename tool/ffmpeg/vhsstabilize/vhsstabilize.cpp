@@ -5,6 +5,10 @@
  * down movement taken out, leaving the slower movement of the camera. The video is decoded
  * and encoded again, but the audio is copied as it is.
  *
+ * It also moves each line left or right, so that the left and right edges of the picture,
+ * where it starts against the blanking at each side of the frame, are straight up and down
+ * and where they are most of the time, which straightens what the timing errors of VHS bend.
+ *
  * The input file is read twice: once to measure the whole video, and once to write it.
  * That way the smoothing can look ahead as far as it needs to. */
 
@@ -34,6 +38,8 @@ extern "C" {
 
 #include "motion.h"
 #include "vshift.h"
+#include "hshift.h"
+#include "edges.h"
 
 // vertical strips of the picture that are measured separately
 static const unsigned int PROFILE_STRIPS = 8;
@@ -53,6 +59,8 @@ struct options_t {
     double                      radius = 15;        // frames
     double                      min_score = 0.6;
     int                         margin[4] = {-1,-1,-1,-1}; // top, bottom, left, right; -1 for the default
+    double                      hmax = 8;           // pixels a line is moved left or right at most, 0 not to
+    int                         edges[2] = {-1,-1}; // pixels in from the left and right to look for the edges of the picture; -1 for the default
     interp_t                    interp = INTERP_CUBIC;
     int                         fields = -1;        // -1 to decide from the file, 0 progressive, 1 interlaced
     bool                        measure_only = false;
@@ -75,6 +83,7 @@ struct video_info_t {
     enum AVChromaLocation       chroma_location = AVCHROMA_LOC_UNSPECIFIED;
     enum AVFieldOrder           field_order = AV_FIELD_UNKNOWN;
     bool                        fields = true;      // measure and move each field on its own
+    edge_params_t               edges;              // where and how to look for the left and right edges of the picture
 };
 
 // what was measured of one field (or of a whole frame, if progressive), and how to correct it,
@@ -88,12 +97,15 @@ struct field_meas_t {
 struct frame_meas_t {
     int64_t                     pts = AV_NOPTS_VALUE;
     field_meas_t                f[2];
+    double                      edge[2] = {NAN,NAN};        // x of the left and right edges of the picture on most lines, NaN if not found
+    double                      edge_ref[2] = {NAN,NAN};    // where they should be, NaN if not straightened by that edge
 };
 
 static void help(void) {
     fprintf(stderr,"vhsstabilize [options] <input.mov> <output.mov>\n");
     fprintf(stderr,"\n");
-    fprintf(stderr,"Takes the up and down jitter out of video captured from a VHS tape. The video is\n");
+    fprintf(stderr,"Takes the up and down jitter out of video captured from a VHS tape, and straightens\n");
+    fprintf(stderr,"the lines that are a little left or right of where they should be. The video is\n");
     fprintf(stderr,"encoded again, the audio is copied as it is. Lines are lines of the whole frame.\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"  -r <lines>     The most the picture can move from one frame to the next (default 24)\n");
@@ -106,12 +118,19 @@ static void help(void) {
     fprintf(stderr,"                 Lines and pixels at the edges to leave out of measuring, such as the head\n");
     fprintf(stderr,"                 switching noise at the bottom (default: 1/32 of the height at the top,\n");
     fprintf(stderr,"                 1/16 of the height at the bottom, 1/16 of the width at each side)\n");
+    fprintf(stderr,"  -H <pixels>    The most a line is moved left or right to straighten the left and right\n");
+    fprintf(stderr,"                 edges of the picture, where it starts against the black of the blanking\n");
+    fprintf(stderr,"                 at each side of the frame (default 8). 0 leaves lines where they are.\n");
+    fprintf(stderr,"  -edges <left>,<right>\n");
+    fprintf(stderr,"                 How far in from the left and right of the frame to look for the edges\n");
+    fprintf(stderr,"                 of the picture, in pixels (default: 1/16 of the width). 0 for a side does\n");
+    fprintf(stderr,"                 not look there, for a side that has no blanking in the frame.\n");
     fprintf(stderr,"  -I             Interlaced: measure and move each field on its own\n");
     fprintf(stderr,"                 (default, unless the file says the video is progressive)\n");
     fprintf(stderr,"  -P             Progressive: measure and move whole frames\n");
-    fprintf(stderr,"  -i <interp>    How to move the picture by a fraction of a line: cubic (default), linear,\n");
-    fprintf(stderr,"                 or nearest (whole lines only, so nothing is blurred; with -I, whole lines\n");
-    fprintf(stderr,"                 of the field, which are 2 lines of the frame)\n");
+    fprintf(stderr,"  -i <interp>    How to move the picture by a fraction of a line or a pixel: cubic (default),\n");
+    fprintf(stderr,"                 linear, or nearest (whole lines and pixels only, so nothing is blurred; with\n");
+    fprintf(stderr,"                 -I, whole lines of the field, which are 2 lines of the frame)\n");
     fprintf(stderr,"  -c <encoder>   Video encoder, such as prores_ks, v210, ffv1 or libx264\n");
     fprintf(stderr,"                 (default: the input's codec, with prores_ks for ProRes)\n");
     fprintf(stderr,"  -b <rate>      Video bit rate, such as 50M (default: the input's, if the codec is the same)\n");
@@ -232,6 +251,7 @@ static const enum AVPixelFormat *encoder_pix_fmts(const AVCodec *c) {
 // and what fills the lines the picture moves away from: black, or opaque for alpha
 struct frame_plane_t {
     plane_t                     pl;
+    unsigned int                hsub = 0;           // log2 of the horizontal subsampling
     unsigned int                vsub = 0;           // log2 of the vertical subsampling
     unsigned int                fill = 0;
 };
@@ -253,6 +273,7 @@ static std::vector<frame_plane_t> frame_planes(const AVFrame *f,bool full_range)
         p.pl.height = (unsigned int)(chroma ? AV_CEIL_RSHIFT(f->height,(int)d->log2_chroma_h) : f->height);
         p.pl.depth = (unsigned int)c.depth;
         p.pl.bytes = c.depth > 8 ? 2u : 1u;
+        p.hsub = chroma ? d->log2_chroma_w : 0u;
         p.vsub = chroma ? d->log2_chroma_h : 0u;
 
         if (alpha && i == d->nb_components - 1u)
@@ -642,6 +663,7 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
     AVFrame *work = NULL;
     tracker_t tracker;
     profile_t prof[2];
+    line_edges_t epos;                              // where an edge of the picture is on each line
     unsigned int nf = 1;                            // pictures measured per frame: fields or frames
     unsigned int left = 0,right = 0;
     std::vector<profile_t> window;                  // profiles of the frames since the tracker started again
@@ -735,6 +757,18 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
                 return false;
             }
 
+            // The edges of the picture, where it starts against the blanking. The blanking is black,
+            // or darker, and black is 0 in full range and RGB, and 16 of 255 otherwise.
+            const AVPixFmtDescriptor *wd = av_pix_fmt_desc_get(vi.work_fmt);
+            const bool full_range = vi.color_range == AVCOL_RANGE_JPEG || pixfmt_is_yuvj(vi.dec_fmt) || (wd->flags & AV_PIX_FMT_FLAG_RGB);
+            edge_params_t &ep = vi.edges;
+            for (unsigned int k=0;k < 2u;k++)
+                ep.search[k] = opt.hmax > 0 ? (opt.edges[k] >= 0 ? (unsigned int)opt.edges[k] : (unsigned int)vi.width / 16u) : 0u;
+            ep.max_shift = opt.hmax;
+            ep.blank_max = (full_range ? 0.0 : (16.0 / 255.0)) + 0.1;
+            ep.top = top;
+            ep.bottom = bottom;
+
             if (!opt.quiet) {
                 fprintf(stderr,"%s: %dx%d %s %s, %s\n",opt.input.c_str(),vi.width,vi.height,
                     avcodec_get_name(st->codecpar->codec_id),av_get_pix_fmt_name(vi.dec_fmt),field_order_name(vi.field_order));
@@ -771,6 +805,14 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
         m.pts = frame->best_effort_timestamp;
         for (unsigned int p=0;p < nf;p++)
             m.f[p].step = steps[p];
+
+        // where the left and right edges of the picture are on most lines
+        for (unsigned int k=0;k < 2u;k++) {
+            if (vi.edges.search[k] != 0u) {
+                find_edges(epos,pl,k,NAN,vi.edges);
+                m.edge[k] = frame_edge(epos,vi.edges);
+            }
+        }
         meas.push_back(m);
 
         if (nf == 2u) {
@@ -865,6 +907,29 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
         }
     }
 
+    // where the edges of the picture should be: where they are most of the time
+    unsigned long found[2] = {0,0};
+    double typical[2] = {NAN,NAN};
+    bool straighten = false;
+    for (unsigned int k=0;k < 2u;k++) {
+        std::vector<double> edge(n),ref;
+
+        if (vi.edges.search[k] == 0u)
+            continue;
+
+        for (size_t i=0;i < n;i++) {
+            edge[i] = meas[i].edge[k];
+            if (!isnan(edge[i]))
+                found[k]++;
+        }
+        if (edge_reference(ref,edge,opt.radius)) {
+            for (size_t i=0;i < n;i++)
+                meas[i].edge_ref[k] = ref[i];
+            typical[k] = median(ref);
+            straighten = true;
+        }
+    }
+
     if (!opt.quiet) {
         unsigned long count[4] = {0,0,0,0};
         double total = 0,most = 0;
@@ -880,6 +945,20 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
         fprintf(stderr,"%lu frames: %lu %s matched to a key frame, %lu to the frame before, %lu could not be matched\n",
             (unsigned long)meas.size(),count[tracker_t::KEY],vi.fields ? "fields" : "frames",count[tracker_t::PREV],count[tracker_t::LOST]);
         fprintf(stderr,"Moving the picture %.2f lines on average, %.2f lines at most\n",total / (double)(meas.size() * nf),most);
+
+        if (straighten) {
+            static const char *side_names[2] = { "left", "right" };
+
+            fprintf(stderr,"Straightening lines up to %g pixels left or right, from the edges of the picture:",opt.hmax);
+            for (unsigned int k=0;k < 2u;k++) {
+                if (!isnan(typical[k]))
+                    fprintf(stderr," %s at about x=%.1f (in %.0f%% of frames)",side_names[k],typical[k],(found[k] * 100.0) / (double)n);
+            }
+            fprintf(stderr,"\n");
+        }
+        else if (vi.edges.search[0] != 0u || vi.edges.search[1] != 0u) {
+            fprintf(stderr,"No edge of the picture against the blanking at the left or right, so lines are not straightened (-edges says where to look)\n");
+        }
     }
 
     return true;
@@ -896,13 +975,14 @@ static bool write_log(const options_t &opt,const video_info_t &vi,const std::vec
         return false;
     }
 
-    // positions and shifts are in lines of the frame, down from where the first frame was
+    // positions and shifts are in lines of the frame, down from where the first frame was,
+    // and the edges of the picture are x of the frame, empty where not found
     fprintf(fp,"frame,time");
     for (unsigned int p=0;p < nf;p++) {
         const char *n = field_names[nf - 1u][p];
         fprintf(fp,",%s_pos,%s_smooth,%s_shift,%s_score,%s_match",n,n,n,n,n);
     }
-    fprintf(fp,"\n");
+    fprintf(fp,",left_edge,left_ref,right_edge,right_ref\n");
 
     for (size_t i=0;i < meas.size();i++) {
         const frame_meas_t &m = meas[i];
@@ -913,6 +993,14 @@ static bool write_log(const options_t &opt,const video_info_t &vi,const std::vec
         for (unsigned int p=0;p < nf;p++) {
             const field_meas_t &f = m.f[p];
             fprintf(fp,",%.3f,%.3f,%.3f,%.4f,%s",f.step.pos,f.smooth,f.shift,f.step.score,how_names[f.step.how]);
+        }
+        for (unsigned int k=0;k < 2u;k++) {
+            const double v[2] = { m.edge[k], m.edge_ref[k] };
+            for (unsigned int j=0;j < 2u;j++) {
+                fputc(',',fp);
+                if (!isnan(v[j]))
+                    fprintf(fp,"%.3f",v[j]);
+            }
         }
         fprintf(fp,"\n");
     }
@@ -1190,6 +1278,11 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
     progress_t progress("Writing",(int64_t)meas.size(),opt.quiet);
     converter_t conv_in,conv_out;
     AVFrame *work_in = NULL;
+    AVFrame *straight = NULL;                       // the frame with its lines moved left or right
+    line_edges_t epos[2];
+    std::vector<hwarp_t> lwarp,pwarp;
+    double hsum = 0,hmost = 0;                      // how far lines were moved left or right
+    unsigned long hlines = 0;
     unsigned long n = 0;
     bool warned_pts = false,warned_count = false;
     bool ok;
@@ -1202,7 +1295,9 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
 
         // the correction measured for this frame
         double shift[2] = {0,0};
+        const double *edge_ref = NULL;
         if (n < meas.size()) {
+            edge_ref = meas[n].edge_ref;
             if (meas[n].pts != frame->best_effort_timestamp && !warned_pts) {
                 fprintf(stderr,"\nFrame %lu is not the frame measured, the corrections may be wrong\n",n);
                 warned_pts = true;
@@ -1224,6 +1319,44 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
                 return false;
             }
             src = work_in;
+        }
+
+        // Each line moved left or right, as far as the edges of the picture on it are from where
+        // they should be. That is where the line is in the input, so it is done before moving it up or down.
+        if (edge_ref != NULL && (!isnan(edge_ref[0]) || !isnan(edge_ref[1]))) {
+            const plane_t lp = measure_plane(src);
+            bool moves = false;
+
+            for (unsigned int k=0;k < 2u;k++) {
+                if (!isnan(edge_ref[k]))
+                    find_edges(epos[k],lp,k,edge_ref[k],vi.edges);
+                else
+                    epos[k] = line_edges_t();
+            }
+            line_warps(lwarp,epos,edge_ref,(unsigned int)vi.height,nf,vi.edges);
+
+            for (size_t y=0;y < lwarp.size();y++) {
+                const double l = fabs(lwarp[y].shift);
+                const double r = fabs(lwarp[y].shift + (lwarp[y].stretch * (double)(vi.width - 1)));
+                hsum += (l + r) / 2.0;
+                hmost = std::max(hmost,std::max(l,r));
+                if (l != 0.0 || r != 0.0)
+                    moves = true;
+            }
+            hlines += lwarp.size();
+
+            if (moves) {
+                if (straight == NULL && (straight=alloc_frame(vi.work_fmt,vi.width,vi.height)) == NULL)
+                    return false;
+
+                const std::vector<frame_plane_t> sp = frame_planes(src,full_range);
+                const std::vector<frame_plane_t> hp = frame_planes(straight,full_range);
+                for (size_t i=0;i < sp.size();i++) {
+                    plane_warps(pwarp,lwarp,sp[i].pl.height,nf,sp[i].hsub,sp[i].vsub);
+                    shift_columns(hp[i].pl,sp[i].pl,&pwarp[0],opt.interp);
+                }
+                src = straight;
+            }
         }
 
         // a new frame each time, since the encoder may hold on to the last one
@@ -1304,6 +1437,10 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
 
     progress.done(n);
     av_frame_free(&work_in);
+    av_frame_free(&straight);
+
+    if (!opt.quiet && hlines != 0u)
+        fprintf(stderr,"Moved lines left or right %.2f pixels on average, %.2f pixels at most\n",hsum / (double)hlines,hmost);
 
     // what the encoder has left
     if (ok) {
@@ -1364,7 +1501,7 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "r" || o == "w" || o == "M" || o == "t" || o == "margin" || o == "i" ||
-                                o == "c" || o == "b" || o == "x" || o == "log");
+                                o == "H" || o == "edges" || o == "c" || o == "b" || o == "x" || o == "log");
             const char *v = NULL;
             double d;
 
@@ -1412,6 +1549,23 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 for (int j=0;j < 4;j++) opt.margin[j] = m[j];
+            }
+            else if (o == "H") {
+                if (!parse_double(v,d) || d < 0 || d > 100) {
+                    fprintf(stderr,"-H %s: must be 0 to 100 pixels\n",v);
+                    return 1;
+                }
+                opt.hmax = d;
+            }
+            else if (o == "edges") {
+                int e[2];
+                char extra;
+                if (sscanf(v,"%d,%d%c",&e[0],&e[1],&extra) != 2 || e[0] < 0 || e[1] < 0) {
+                    fprintf(stderr,"-edges %s: give how far in to look at the left and right, such as 32,32\n",v);
+                    return 1;
+                }
+                opt.edges[0] = e[0];
+                opt.edges[1] = e[1];
             }
             else if (o == "i") {
                 const std::string s = v;

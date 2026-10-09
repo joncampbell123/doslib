@@ -48,20 +48,7 @@ template <typename T> static void shift_lines_t(const plane_t &dst,const plane_t
             continue;
         }
 
-        // weights in 14-bit fixed point that add up to exactly 1 << 14
-        if (interp == INTERP_LINEAR) {
-            w[0] = 0;
-            w[1] = (int)floor(((1.0 - f) * 16384.0) + 0.5);
-            w[2] = 16384 - w[1];
-            w[3] = 0;
-        }
-        else {
-            const double f2 = f * f,f3 = f2 * f;
-            w[0] = (int)floor((0.5 * (-f3 + (2.0 * f2) - f) * 16384.0) + 0.5);
-            w[2] = (int)floor((0.5 * ((-3.0 * f3) + (4.0 * f2) + f) * 16384.0) + 0.5);
-            w[3] = (int)floor((0.5 * (f3 - f2) * 16384.0) + 0.5);
-            w[1] = 16384 - w[0] - w[2] - w[3];
-        }
+        interp_weights(w,f,interp);
 
         // lines above and below the picture repeat its top and bottom lines
         for (int k=0;k < 4;k++)

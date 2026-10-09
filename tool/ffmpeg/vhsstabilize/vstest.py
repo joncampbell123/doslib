@@ -5,6 +5,8 @@
 # Each test makes a short interlaced video like a VHS capture, with up and down jitter
 # that it knows, then checks that vhsstabilize measures the jitter, that the output has
 # the jitter taken out, and that the audio in the output is the same as in the input.
+# The picture on each line is also a little left or right of where it should be, and the
+# tests check that the output has the edges of the picture straight up and down again.
 # It needs numpy, and ffmpeg and ffprobe to make and look at the test videos.
 #
 # Usage (after "make" has built linux-host/vhsstabilize):
@@ -27,13 +29,17 @@ WIDTH = 720
 HEIGHT = 486
 FRAMES = 240
 PAD = 64            # scene lines above and below the picture, for the jitter and tilt
+LEFT = 8            # pixels of blanking at the left and right of each line, outside the picture
+RIGHT = 6
+BLANK = 16          # how bright the blanking is
 
 #------------------------------------------------------------------------
 # Making a test video
 #------------------------------------------------------------------------
 
-def make_scene(rng, height):
-    # a still picture with things in it: boxes, bars, a gradient, in Y, U and V
+def make_scene(rng, height, blanking=True):
+    # a still picture with things in it: boxes, bars, a gradient, in Y, U and V,
+    # and the black of the blanking at the left and right
     y = np.tile(np.linspace(40, 200, height)[:, None], (1, WIDTH))
     u = np.full((height, WIDTH), 128.0)
     v = np.full((height, WIDTH), 128.0)
@@ -48,6 +54,10 @@ def make_scene(rng, height):
     for _ in range(40):
         top = rng.integers(0, height - 2)
         y[top:top + rng.integers(1, 3), :] = rng.integers(16, 236)
+    if blanking:
+        for a, level in ((y, BLANK), (u, 128), (v, 128)):
+            a[:, :LEFT] = level
+            a[:, WIDTH - RIGHT:] = level
     # as soft as a camera makes it, up and down and across
     return [blur(blur(a, 0.8).T, 1.2).T for a in (y, u, v)]
 
@@ -74,9 +84,34 @@ def field_offsets(rng, count, jitter, tilt, same_fields):
         off[1::2] = off[0::2]
     return off
 
-def render(rng, scene, offsets):
+def line_warps(rng, count, same_fields):
+    # how far right (in pixels) the picture is on each line of each field, like VHS played without
+    # a time base corrector: each field a little off from the others, a slow wave down the field,
+    # a bend at the top of it, and a little jitter from line to line. Or of each frame, if same_fields.
+    out = np.empty((count, HEIGHT // 2))
+    for f in range(0, count, 2 if same_fields else 1):
+        y = np.arange(HEIGHT if same_fields else HEIGHT // 2) / (2.0 if same_fields else 1.0)
+        h = (rng.uniform(-1.5, 1.5)
+             + rng.uniform(0.5, 2.0) * np.sin(2 * np.pi * y / rng.uniform(60, 200) + rng.uniform(0, 2 * np.pi))
+             + rng.uniform(-3, 3) * np.exp(-y / 8)
+             + rng.normal(0, 0.2, y.shape))
+        if same_fields:
+            out[f], out[f + 1] = h[0::2], h[1::2]
+        else:
+            out[f] = h
+    return out
+
+def shift_rows(a, h):
+    # each row of a moved right by h of that row, to a fraction of a pixel, the ends repeating
+    x = np.arange(a.shape[1]) - h[:, None]
+    i = np.floor(x).astype(int)
+    f = x - i
+    take = lambda k: np.take_along_axis(a, np.clip(k, 0, a.shape[1] - 1), 1)
+    return take(i) * (1 - f) + take(i + 1) * f
+
+def render(rng, scene, offsets, warps):
     # interlaced frames of 8-bit YUV 4:2:2, top field first: field n of the video is
-    # frame n // 2, lines n % 2, n % 2 + 2, ...
+    # frame n // 2, lines n % 2, n % 2 + 2, ..., with the picture on each line moved right by warps
     sy, su, sv = scene
     frames = []
     for k in range(len(offsets) // 2):
@@ -85,14 +120,11 @@ def render(rng, scene, offsets):
         fv = np.empty((HEIGHT, WIDTH // 2))
         for p in range(2):
             rows = np.arange(p, HEIGHT, 2) + PAD + offsets[2 * k + p]
-            fy[p::2] = sy[rows]
-            fu[p::2] = su[rows, 0::2]
-            fv[p::2] = sv[rows, 0::2]
-        # VHS: horizontal jitter of each line, noise, black at the top, head switching noise at the bottom
-        for r in range(HEIGHT):
-            s = int(rng.integers(-2, 3))
-            if s:
-                fy[r] = np.roll(fy[r], s)
+            h = warps[2 * k + p]
+            fy[p::2] = shift_rows(sy[rows], h)
+            fu[p::2] = shift_rows(su[rows, 0::2], h / 2)
+            fv[p::2] = shift_rows(sv[rows, 0::2], h / 2)
+        # VHS: noise, black at the top, head switching noise at the bottom
         fy += rng.normal(0, 2.5, fy.shape)
         fy[:6] = 16
         fy[-8:] = rng.integers(16, 236, (8, WIDTH))
@@ -145,6 +177,38 @@ def audio_hashes(path):
     # the hash of each packet, leaving out the timestamps, which can be in another time base
     return [l.split(',')[-1].strip() for l in r.stdout.splitlines() if l and not l.startswith('#')]
 
+def edge_from_outside(a):
+    # where each row of a, samples from the edge of the frame inward, rises from the blanking to the
+    # picture, halfway up: the samples of blanking before it, with those on the rise counted as part
+    # of one, less a half. NaN where the picture is too dark next to the blanking to tell.
+    n = a.shape[-1]
+    up = a > BLANK + 20
+    first = np.argmax(up, -1)
+    hi = np.take_along_axis(a, np.minimum(first[..., None] + np.arange(2, 5), n - 1), -1).mean(-1)
+    start = np.maximum(first - 3, 0)
+    x = np.arange(n)
+    part = np.clip((hi[..., None] - a) / np.maximum(hi - BLANK, 1.0)[..., None], 0, 1)
+    pos = start + np.where((x >= start[..., None]) & (x < (first + 2)[..., None]), part, 0).sum(-1) - 0.5
+    return np.where(up.any(-1) & (hi - BLANK >= 40) & (first + 5 < n), pos, np.nan)
+
+def picture_edges(path):
+    # x of the left and right edges of the picture on each line of each frame (frames, lines)
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-f', 'rawvideo', '-pix_fmt', 'yuv422p', '-'],
+                       capture_output=True, check=True)
+    y = np.frombuffer(r.stdout, np.uint8).reshape(-1, WIDTH * HEIGHT * 2)[:, :WIDTH * HEIGHT]
+    y = y.reshape(-1, HEIGHT, WIDTH).astype(float)
+    return edge_from_outside(y[..., :24]), (WIDTH - 1) - edge_from_outside(y[..., ::-1][..., :24])
+
+def bent(edges):
+    # how far the edges are from where they are on most lines of the video, 90% of the lines within this,
+    # leaving out the lines at the top and bottom that the picture can move away from
+    d = []
+    for e in edges:
+        e = e[:, 24:HEIGHT - 24]
+        e = e - np.nanmedian(e)
+        d.append(np.abs(e[~np.isnan(e)]))
+    return float(np.percentile(np.concatenate(d), 90))
+
 def probe(path):
     r = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type,codec_name,pix_fmt,field_order,nb_frames,width,height',
                         '-of', 'csv=p=0', path], capture_output=True, text=True, check=True)
@@ -162,12 +226,13 @@ def check(name, cond, detail=''):
     if not cond:
         failures += 1
 
-def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, tilt=12, same_fields=False,
-         max_err=0.25, max_out_jitter=0.25, max_remeasure=0.35):
+def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, tilt=12, same_fields=False, blanking=True,
+         max_err=0.25, max_out_jitter=0.25, max_remeasure=0.35, max_bent=0.5):
     rng = np.random.default_rng(seed)
-    scene = make_scene(rng, HEIGHT + 2 * PAD)
+    scene = make_scene(rng, HEIGHT + 2 * PAD, blanking)
     offsets = field_offsets(rng, FRAMES * 2, jitter, tilt, same_fields)
-    frames = render(rng, scene, offsets)
+    warps = line_warps(rng, FRAMES * 2, same_fields)
+    frames = render(rng, scene, offsets, warps)
 
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, 'in.mov')
@@ -197,6 +262,27 @@ def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, tilt=12, same_f
         p95, worst = within(column(read_log(log_out), names, 'pos') - placed)
         check(name + ': output moved as the log says', p95 <= max_remeasure, '95%% within %.3f lines, worst %.3f' % (p95, worst))
 
+        # the edges of the picture straight up and down, unless not asked to straighten them,
+        # or there is no blanking at the sides to go by
+        straighten = '-H' not in tool_args or tool_args[list(tool_args).index('-H') + 1] != '0'
+        refs = [r[s + '_ref'] for r in rows for s in ('left', 'right')]
+        if not blanking:
+            check(name + ': no edges of the picture found', all(v == '' for v in refs),
+                  '%d of %d found' % (sum(v != '' for v in refs), len(refs)))
+        elif not straighten:
+            check(name + ': edges of the picture not looked for', all(v == '' for v in refs))
+        else:
+            check(name + ': edges of the picture found', all(v != '' for v in refs),
+                  '%d of %d' % (sum(v != '' for v in refs), len(refs)))
+        if blanking:
+            before, after = bent(picture_edges(src)), bent(picture_edges(dst))
+            if straighten:
+                check(name + ': lines straightened', before >= 2.0 and after <= max_bent,
+                      '90%% of edges within %.3f pixels, from %.3f' % (after, before))
+            else:
+                check(name + ': lines left where they are', abs(after - before) <= 0.1 * before,
+                      '90%% of edges within %.3f pixels, from %.3f' % (after, before))
+
         pin, pout = probe(src), probe(dst)
         check(name + ': same video format', pin[0].split(',')[1:] == pout[0].split(',')[1:],
               '%s -> %s' % (pin[0], pout[0]))
@@ -221,8 +307,10 @@ def test_errors():
 test('v210', 'v210')
 test('prores', 'prores_ks', extra=('-profile:v', '3'))
 test('2vuy', 'rawvideo', extra=('-pix_fmt', 'uyvy422'))
-test('nearest', 'v210', tool_args=('-i', 'nearest'), seed=2, max_out_jitter=0.8, max_remeasure=0.25)
-test('progressive', 'v210', tool_args=('-P',), seed=3, same_fields=True)
+test('nearest', 'v210', tool_args=('-i', 'nearest'), seed=2, max_out_jitter=0.8, max_remeasure=0.25, max_bent=0.7)
+test('progressive', 'v210', tool_args=('-P',), seed=3, same_fields=True, max_bent=0.55)
+test('not straightened', 'v210', tool_args=('-H', '0'), seed=4)
+test('no blanking', 'v210', seed=5, blanking=False)
 test_errors()
 
 print('%d failure%s' % (failures, '' if failures == 1 else 's'))

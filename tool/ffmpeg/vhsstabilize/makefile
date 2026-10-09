@@ -15,7 +15,7 @@ bin: linux-host $(BIN_OUT)
 linux-host:
 	mkdir -p linux-host
 
-$(VHSSTABILIZE): linux-host/vhsstabilize.o linux-host/motion.o linux-host/vshift.o
+$(VHSSTABILIZE): linux-host/vhsstabilize.o linux-host/motion.o linux-host/vshift.o linux-host/hshift.o linux-host/edges.o
 	g++ -o $@ $^ $(FFMPEG_LIBS) -lm
 
 # -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them
