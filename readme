@@ -29,6 +29,10 @@ code. Any support is welcome.
 All AI generated code and "vibe coding" is allowed only in the main-ai branch,
 never in the master branch.
 
+Due to AI generated code, there may exist may improvements to existing code
+and entirely new code in the main-ai branch that does not exist in the master
+branch. Please check either one.
+
 ********************************************
 
 This is a collection of source code intended for DOS and DOS-level
