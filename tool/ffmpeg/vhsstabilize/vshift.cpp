@@ -22,7 +22,16 @@ template <typename T> static void shift_lines_t(const plane_t &dst,const plane_t
 
     for (unsigned int j=0;j < n;j++) {
         T *d = (T*)dst.line(first + (j * step));
-        const double s = (double)j - shift;        // where in src this line comes from
+        double s = (double)j - shift;        // where in src this line comes from
+        bool mir = false;
+
+        // mirror edges so the image stabilization is less obvious
+        // TODO: Make this a command line option
+        s += 0.5;
+        while (s < 0) { s += n; mir = !mir; }
+        while (s > (double)n) { s -= n; mir = !mir; }
+        if (mir) s = (double)n - s;
+        s -= 0.5;
 
         // lines that nothing moved into
         if (s < -0.5 || s > ((double)n - 0.5)) {
