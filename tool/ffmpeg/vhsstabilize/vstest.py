@@ -68,21 +68,32 @@ def blur(a, sigma):
     p = np.pad(a, ((4, 4), (0, 0)), mode='edge')
     return sum(k[i] * p[i:i + a.shape[0]] for i in range(9))
 
-def field_offsets(rng, count, jitter, tilt, same_fields):
-    # how far up (in lines of the frame) the picture is taken from the scene, for each field,
-    # or for each frame if same_fields. Like VHS, most fields are where they should be, but
-    # some jump up or down, now and then several in a row, and so does the first frame's
-    # second field, so that the fields of the first frame are not lined up with each other.
+def camera_offsets(rng, count, tilt, shake, same_fields):
+    # how far up (in lines of the frame) the camera moves the picture, for each field in the order
+    # they are shown, or for each frame if same_fields: a slow tilt up and down, and the shaking
+    # of a camera held in the hand, a line or two a few times a second, to a fraction of a line
     t = np.arange(count) / 59.94
-    slow = np.round(tilt * np.sin(2 * np.pi * t / 6.0))
+    cam = tilt * np.sin(2 * np.pi * t / 6.0)
+    for f, a in ((1.3, 1.0), (2.9, 0.6), (5.1, 0.3)):
+        cam = cam + shake * a * np.sin(2 * np.pi * f * t + rng.uniform(0, 2 * np.pi))
+    if same_fields:
+        cam[1::2] = cam[0::2]
+    return cam
+
+def jitter_offsets(rng, count, jitter, same_fields, big=0):
+    # and how far up VHS jitter moves it on top of that, in whole lines. Like VHS, most fields
+    # are where they should be, but some jump up or down, now and then several in a row, and so
+    # does the first frame's second field, so that the fields of the first frame are not lined
+    # up with each other. And big times, a field or three jump much further than the range.
     fast = np.where(rng.random(count) < 0.4, rng.integers(-jitter, jitter + 1, count), 0)
     for start in rng.integers(0, count - 6, max(1, count // 100)):
         fast[start:start + 4] += rng.choice([-1, 1]) * (jitter + 3)
+    for start in rng.integers(10, count - 6, big):
+        fast[start:start + rng.integers(1, 4)] = rng.choice([-1, 1]) * rng.integers(30, 41)
     fast[1] = 3
-    off = (slow + fast).astype(int)
     if same_fields:
-        off[1::2] = off[0::2]
-    return off
+        fast[1::2] = fast[0::2]
+    return fast.astype(float)
 
 def line_warps(rng, count, same_fields):
     # how far right (in pixels) the picture is on each line of each field, like VHS played without
@@ -109,21 +120,30 @@ def shift_rows(a, h):
     take = lambda k: np.take_along_axis(a, np.clip(k, 0, a.shape[1] - 1), 1)
     return take(i) * (1 - f) + take(i + 1) * f
 
-def render(rng, scene, offsets, warps):
-    # interlaced frames of 8-bit YUV 4:2:2, top field first: field n of the video is
-    # frame n // 2, lines n % 2, n % 2 + 2, ..., with the picture on each line moved right by warps
+def take_rows(a, rows):
+    # the rows of a at rows, to a fraction of a row, all the same fraction
+    r0 = np.floor(rows).astype(int)
+    f = rows[0] - r0[0]
+    return a[r0] * (1 - f) + a[r0 + 1] * f
+
+def render(rng, scene, offsets, warps, bff=False):
+    # interlaced frames of 8-bit YUV 4:2:2: field n of the video, in the order they are shown, is
+    # frame n // 2, lines p, p + 2, ... where p is n % 2 top field first, or the other way round
+    # bottom field first, taken offsets[n] lines up the scene, with the picture on each line moved
+    # right by warps
     sy, su, sv = scene
     frames = []
     for k in range(len(offsets) // 2):
         fy = np.empty((HEIGHT, WIDTH))
         fu = np.empty((HEIGHT, WIDTH // 2))
         fv = np.empty((HEIGHT, WIDTH // 2))
-        for p in range(2):
-            rows = np.arange(p, HEIGHT, 2) + PAD + offsets[2 * k + p]
-            h = warps[2 * k + p]
-            fy[p::2] = shift_rows(sy[rows], h)
-            fu[p::2] = shift_rows(su[rows, 0::2], h / 2)
-            fv[p::2] = shift_rows(sv[rows, 0::2], h / 2)
+        for n in (2 * k, 2 * k + 1):
+            p = (n % 2) ^ int(bff)
+            rows = np.arange(p, HEIGHT, 2) + PAD + offsets[n]
+            h = warps[n]
+            fy[p::2] = shift_rows(take_rows(sy, rows), h)
+            fu[p::2] = shift_rows(take_rows(su[:, 0::2], rows), h / 2)
+            fv[p::2] = shift_rows(take_rows(sv[:, 0::2], rows), h / 2)
         # VHS: noise, black at the top, head switching noise at the bottom
         fy += rng.normal(0, 2.5, fy.shape)
         fy[:6] = 16
@@ -131,7 +151,7 @@ def render(rng, scene, offsets, warps):
         frames.append(b''.join(np.clip(np.round(a), 0, 255).astype(np.uint8).tobytes() for a in (fy, fu, fv)))
     return frames
 
-def make_video(path, frames, vcodec, extra=()):
+def make_video(path, frames, vcodec, extra=(), field_order='tt'):
     # with two audio streams, so that copying them is tested
     cmd = ['ffmpeg', '-v', 'error', '-y',
            '-f', 'rawvideo', '-pix_fmt', 'yuv422p', '-s', '%dx%d' % (WIDTH, HEIGHT), '-r', '30000/1001', '-i', '-',
@@ -139,7 +159,7 @@ def make_video(path, frames, vcodec, extra=()):
            '-f', 'lavfi', '-i', 'sine=frequency=1000:sample_rate=48000',
            '-map', '0:v', '-map', '1:a', '-map', '2:a', '-shortest',
            '-c:v', vcodec] + list(extra) + [
-           '-field_order', 'tt', '-c:a:0', 'pcm_s16le', '-c:a:1', 'pcm_s24le', path]
+           '-field_order', field_order, '-c:a:0', 'pcm_s16le', '-c:a:1', 'pcm_s24le', path]
     subprocess.run(cmd, input=b''.join(frames), check=True)
 
 #------------------------------------------------------------------------
@@ -165,6 +185,16 @@ def jitter_of(pos):
     # of where it is, field after field, which is small for smooth movement of the camera
     p = pos.reshape(-1)
     return float(np.sqrt(np.mean(np.square(p[1:-1] - (p[:-2] + p[2:]) / 2))))
+
+def fast(pos):
+    # the movement faster than about a quarter of a second, field after field
+    p = pos.reshape(-1)
+    k = np.exp(-np.arange(-45, 46) ** 2 / (2 * 15.0 ** 2))
+    k /= k.sum()
+    return p - np.convolve(np.pad(p, 45, mode='edge'), k, 'valid')
+
+def rms(a):
+    return float(np.sqrt(np.mean(np.square(a))))
 
 def within(err):
     # how close each parity is, once the difference all the way through is taken out
@@ -226,13 +256,15 @@ def check(name, cond, detail=''):
     if not cond:
         failures += 1
 
-def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, tilt=12, same_fields=False, blanking=True,
-         max_err=0.25, max_out_jitter=0.25, max_remeasure=0.35, max_bent=0.5):
+def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, big=0, tilt=12, shake=1.5, same_fields=False, blanking=True,
+         bff=False, field_order=None, max_err=0.25, max_out_jitter=0.35, min_kept=0.55, max_remeasure=0.6, max_bent=0.5):
     rng = np.random.default_rng(seed)
     scene = make_scene(rng, HEIGHT + 2 * PAD, blanking)
-    offsets = field_offsets(rng, FRAMES * 2, jitter, tilt, same_fields)
+    cam = camera_offsets(rng, FRAMES * 2, tilt, shake, same_fields)
+    offsets = cam + jitter_offsets(rng, FRAMES * 2, jitter, same_fields, big)
     warps = line_warps(rng, FRAMES * 2, same_fields)
-    frames = render(rng, scene, offsets, warps)
+    frames = render(rng, scene, offsets, warps, bff)
+    steady = '-w' in tool_args
 
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, 'in.mov')
@@ -240,22 +272,37 @@ def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, tilt=12, same_f
         log_in = os.path.join(tmp, 'in.csv')
         log_out = os.path.join(tmp, 'out.csv')
 
-        make_video(src, frames, vcodec, extra)
+        make_video(src, frames, vcodec, extra, field_order or ('bb' if bff else 'tt'))
         run_tool(list(tool_args) + ['-log', log_in, src, dst])
         rows = read_log(log_in)
         names = ['top', 'bottom'] if 'top_pos' in rows[0] else ['frame']
 
         check(name + ': every frame measured', len(rows) == FRAMES, '%d frames' % len(rows))
 
-        # the picture moved down by -offset
-        truth = -offsets.reshape(-1, 2)[:, :len(names)].astype(float)
+        # The picture moved down by -offset, in each field (top, bottom) of each frame, and by
+        # -cam without the jitter. shown() puts the fields in the order they are shown.
+        parity = lambda off: np.stack([-off[2 * np.arange(FRAMES) + (p ^ int(bff))] for p in range(len(names))], 1)
+        shown = lambda a: a[:, ::-1] if bff and len(names) == 2 else a
+        truth, camera = parity(offsets), parity(cam)
         p95, worst = within(column(rows, names, 'pos') - truth)
         check(name + ': measured the jitter', p95 <= max_err, '95%% within %.3f lines, worst %.3f' % (p95, worst))
 
         # where the picture really is in the output, if it was moved as far as the log says
         placed = truth + column(rows, names, 'shift')
-        before, after = jitter_of(truth), jitter_of(placed)
-        check(name + ': jitter taken out', after <= max_out_jitter, 'from %.3f to %.3f lines' % (before, after))
+        if steady:
+            # the camera steadied too: the picture moves only slowly
+            before, after = jitter_of(shown(truth)), jitter_of(shown(placed))
+            check(name + ': jitter taken out', after <= max_out_jitter, 'from %.3f to %.3f lines' % (before, after))
+            moved, left = rms(fast(shown(camera))), rms(fast(shown(placed)))
+            check(name + ': camera steadied', left <= 0.3 * moved,
+                  'the camera moving %.3f lines faster than 1/4 second, %.3f left' % (moved, left))
+        else:
+            # the jumps taken out, and the movement of the camera left as it is
+            before, after = jitter_of(shown(truth - camera)), jitter_of(shown(placed - camera))
+            check(name + ': jumps taken out', after <= max_out_jitter, 'from %.3f to %.3f lines' % (before, after))
+            moved, off = rms(fast(shown(camera))), rms(fast(shown(placed - camera)))
+            check(name + ': camera movement kept', 1 - off / moved >= min_kept,
+                  'the camera moving %.3f lines faster than 1/4 second, the output %.3f from it' % (moved, off))
 
         # and measuring the output, it is there
         run_tool(list(tool_args) + ['-n', '-log', log_out, dst])
@@ -307,10 +354,16 @@ def test_errors():
 test('v210', 'v210')
 test('prores', 'prores_ks', extra=('-profile:v', '3'))
 test('2vuy', 'rawvideo', extra=('-pix_fmt', 'uyvy422'))
-test('nearest', 'v210', tool_args=('-i', 'nearest'), seed=2, max_out_jitter=0.8, max_remeasure=0.25, max_bent=0.7)
+test('nearest', 'v210', tool_args=('-i', 'nearest'), seed=2, max_out_jitter=0.8, min_kept=0.4, max_remeasure=0.25, max_bent=0.7)
 test('progressive', 'v210', tool_args=('-P',), seed=3, same_fields=True, max_bent=0.55)
 test('not straightened', 'v210', tool_args=('-H', '0'), seed=4)
 test('no blanking', 'v210', seed=5, blanking=False)
+test('steadied', 'v210', tool_args=('-w', '15'), seed=6)
+test('fast tilt', 'v210', seed=7, tilt=40, max_out_jitter=0.5)
+test('jumps further than the range', 'v210', seed=12, big=12)
+test('bottom field first', 'v210', seed=8, bff=True)
+test('field order not given, top first', 'v210', tool_args=('-I',), seed=9, field_order='progressive')
+test('field order not given, bottom first', 'v210', tool_args=('-I',), seed=10, bff=True, field_order='progressive')
 test_errors()
 
 print('%d failure%s' % (failures, '' if failures == 1 else 's'))

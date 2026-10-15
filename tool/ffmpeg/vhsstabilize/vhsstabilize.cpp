@@ -1,9 +1,10 @@
 /* vhsstabilize: take the up and down jitter out of video captured from a VHS tape.
  *
  * Reads a video file (a .mov) with FFmpeg, measures how far the picture moves up and down
- * from one frame to the next, then writes the video to another file with the fast up and
- * down movement taken out, leaving the slower movement of the camera. The video is decoded
- * and encoded again, but the audio is copied as it is.
+ * from one field to the next, then writes the video to another file with the jumps taken out
+ * that the picture makes when the capture does not hold on to where the fields of the tape
+ * start, leaving the movement of the camera as it is. It can steady the camera too, if asked.
+ * The video is decoded and encoded again, but the audio is copied as it is.
  *
  * It also moves each line left or right, so that the left and right edges of the picture,
  * where it starts against the blanking at each side of the frame, are straight up and down
@@ -47,6 +48,9 @@ static const unsigned int PROFILE_STRIPS = 8;
 // frames to work out how the fields line up with each other, when the tracker starts again
 static const size_t ANCHOR_FRAMES = 30;
 
+// frames to smooth where the edges of the picture are, and how far apart the fields are, over, unless -w says
+static const double EDGE_RADIUS = 15;
+
 struct options_t {
     std::string                 input;
     std::string                 output;
@@ -55,8 +59,9 @@ struct options_t {
     std::string                 codec_opts;         // key=value:key=value
     int64_t                     bit_rate = 0;
     unsigned int                range = 24;         // lines of the frame
-    double                      max_shift = -1;     // lines of the frame, -1 for range
-    double                      radius = 15;        // frames
+    double                      max_shift = -1;     // lines of the frame, -1 for twice range
+    double                      radius = -1;        // frames to smooth the path of the camera over, 0 to hold it still, -1 not to
+    double                      min_jump = 1.0;     // lines of the frame
     double                      min_score = 0.6;
     int                         margin[4] = {-1,-1,-1,-1}; // top, bottom, left, right; -1 for the default
     double                      hmax = 8;           // pixels a line is moved left or right at most, 0 not to
@@ -104,15 +109,22 @@ struct frame_meas_t {
 static void help(void) {
     fprintf(stderr,"vhsstabilize [options] <input.mov> <output.mov>\n");
     fprintf(stderr,"\n");
-    fprintf(stderr,"Takes the up and down jitter out of video captured from a VHS tape, and straightens\n");
+    fprintf(stderr,"Takes the up and down jitter of VHS out of video captured from a tape, and straightens\n");
     fprintf(stderr,"the lines that are a little left or right of where they should be. The video is\n");
     fprintf(stderr,"encoded again, the audio is copied as it is. Lines are lines of the whole frame.\n");
     fprintf(stderr,"\n");
+    fprintf(stderr,"The jitter is the picture jumping up or down from one field to the next, all at once,\n");
+    fprintf(stderr,"which a camera does not do. Only the jumps are taken out: the camera's own movement,\n");
+    fprintf(stderr,"shaking, panning and tilting, is left as it is, unless -w asks to steady it too.\n");
+    fprintf(stderr,"\n");
     fprintf(stderr,"  -r <lines>     The most the picture can move from one frame to the next (default 24)\n");
-    fprintf(stderr,"  -w <frames>    Smoothing radius. Movement slower than this is kept, as movement of the\n");
-    fprintf(stderr,"                 camera, and faster movement is taken out (default 15). 0 holds the picture\n");
-    fprintf(stderr,"                 where it is most of the time, for the whole video.\n");
-    fprintf(stderr,"  -M <lines>     The most the picture is moved to correct it (default: -r)\n");
+    fprintf(stderr,"  -jump <lines>  How far a field has to be from the path of the camera to have jumped, and\n");
+    fprintf(stderr,"                 be put all the way back on it. One less far is put part of the way back,\n");
+    fprintf(stderr,"                 less the nearer it is (default 1).\n");
+    fprintf(stderr,"  -w <frames>    Steady the camera too, as image stabilization does: movement of the camera\n");
+    fprintf(stderr,"                 slower than this is kept, and faster movement is taken out, such as 15.\n");
+    fprintf(stderr,"                 0 holds the picture still for the whole video. (default: not done)\n");
+    fprintf(stderr,"  -M <lines>     The most the picture is moved to correct it (default: twice -r)\n");
     fprintf(stderr,"  -t <score>     The least match score, 0 to 1, to trust a measurement (default 0.6)\n");
     fprintf(stderr,"  -margin <top>,<bottom>,<left>,<right>\n");
     fprintf(stderr,"                 Lines and pixels at the edges to leave out of measuring, such as the head\n");
@@ -694,6 +706,9 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
                     for (unsigned int p=0;p < 2u;p++)
                         meas[window_start + i].f[p].step = steps[p];
                 }
+                // and the frame it starts again from is in the run of matches from it
+                for (unsigned int p=0;p < 2u;p++)
+                    m0.f[p].step.branch = tracker.branch();
             }
         }
 
@@ -824,6 +839,12 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
                 window_start = meas.size() - 1u;
                 anchoring = true;
             }
+            else if (anchoring && (steps[0].how == tracker_t::EARLIER || steps[1].how == tracker_t::EARLIER)) {
+                // the tracker found its way back to the frames before the one it could not match,
+                // which says how the fields line up, and it did not start again after all
+                anchoring = false;
+                window.clear();
+            }
             if (anchoring) {
                 window.push_back(prof[0]);
                 window.push_back(prof[1]);
@@ -847,59 +868,90 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
     if (anchoring)
         anchor();
 
-    // where the picture should be: the path it takes, smoothed
+    // Where the picture should be. First, where the picture is, field after field in the order they
+    // are shown (or frame after frame), with how far apart the fields are taken out.
     const size_t n = meas.size();
-    std::vector<double> smooth[2];
+    const double aux_radius = opt.radius >= 0 ? opt.radius : EDGE_RADIUS;
+    std::vector<double> apart(n,0.0),path(n * nf),cam;
+    std::vector<bool> known(n * nf);
+    std::vector<unsigned int> branch(n * nf);
+    unsigned int shown_first = 0;                   // the field shown first
+    jump_params_t jp;
+    size_t jumps = 0;
 
     if (nf == 2u) {
         // How far apart the fields are: they are lined up with each other most of the time,
         // or as far apart as the picture moves from one field to the next, so the median of
         // that over a while, smoothed. Jitter that moves one field and not the other hardly
         // changes the median. This does not need to know which field comes first.
-        std::vector<double> apart(n),both(n * 2u);
-        const unsigned int mr = std::max(2u,(unsigned int)ceil(opt.radius));
+        const unsigned int mr = std::max(2u,(unsigned int)ceil(aux_radius));
 
         for (size_t i=0;i < n;i++)
             apart[i] = meas[i].f[1].step.pos - meas[i].f[0].step.pos;
         apart = median_path(apart,mr);
-        if (opt.radius > 0)
-            apart = smooth_path(apart,opt.radius,false);
+        if (aux_radius > 0)
+            apart = smooth_path(apart,aux_radius,false);
+    }
 
-        // and where the picture is between them, from both fields, smoothed together
+    auto field_path = [&](unsigned int first) {
         for (size_t i=0;i < n;i++) {
-            both[i * 2u] = meas[i].f[0].step.pos + (apart[i] / 2.0);
-            both[(i * 2u) + 1u] = meas[i].f[1].step.pos - (apart[i] / 2.0);
+            for (unsigned int k=0;k < nf;k++) {
+                const unsigned int p = k ^ first;
+                const field_meas_t &f = meas[i].f[p];
+                const double half = nf == 2u ? (apart[i] / 2.0) : 0.0;
+
+                path[(i * nf) + k] = f.step.pos + (p == 0u ? half : -half);
+                known[(i * nf) + k] = f.step.how != tracker_t::LOST;
+                branch[(i * nf) + k] = f.step.branch;
+            }
         }
-        if (opt.radius > 0)
-            both = smooth_path(both,opt.radius * 2.0);
-        else
-            both.assign(both.size(),median(both));
+    };
 
-        smooth[0].resize(n);
-        smooth[1].resize(n);
-        for (size_t i=0;i < n;i++) {
-            const double mid = (both[i * 2u] + both[(i * 2u) + 1u]) / 2.0;
-            smooth[0][i] = mid - (apart[i] / 2.0);
-            smooth[1][i] = mid + (apart[i] / 2.0);
+    // Then the path of the camera, which is that with the jumps of VHS taken out
+    jp.min_jump = opt.min_jump;
+    {
+        const AVRational fr = av_guess_frame_rate(in.fmt,(AVStream*)st,NULL);
+        if (fr.num > 0 && fr.den > 0)
+            jp.set_rate(av_q2d(fr) * nf);
+    }
+
+    if (nf == 2u) {
+        if (vi.field_order == AV_FIELD_BB || vi.field_order == AV_FIELD_BT) {
+            shown_first = 1;
+        }
+        else if (!field_order_interlaced(vi.field_order)) {
+            // The file does not say which field is shown first. The wrong way round, the
+            // picture goes back and forth between the fields as the camera moves, which looks
+            // like jumps, so it is the way round with fewer jumps.
+            size_t j[2];
+            for (unsigned int first=0;first < 2u;first++) {
+                field_path(first);
+                camera_path(path,known,branch,jp,&j[first]);
+            }
+            shown_first = j[1] < j[0] ? 1u : 0u;
+            if (!opt.quiet)
+                fprintf(stderr,"The %s field looks to be shown first\n",shown_first ? "bottom" : "top");
         }
     }
-    else {
-        std::vector<double> path(n);
+    field_path(shown_first);
+    cam = camera_path(path,known,branch,jp,&jumps);
 
-        for (size_t i=0;i < n;i++)
-            path[i] = meas[i].f[0].step.pos;
-        if (opt.radius > 0)
-            smooth[0] = smooth_path(path,opt.radius);
-        else
-            smooth[0].assign(n,median(path));
-    }
+    // and if asked to, the camera steadied too: its path smoothed, or held still. The jitter is
+    // out of it, so it is smoothed as it is, which a fast pan or tilt is too.
+    if (opt.radius > 0)
+        cam = smooth_path(cam,opt.radius * nf,false);
+    else if (opt.radius == 0)
+        cam.assign(cam.size(),median(cam));
 
     // and the correction, from where the picture is to there
-    const double max_shift = opt.max_shift >= 0 ? opt.max_shift : (double)opt.range;
+    const double max_shift = opt.max_shift >= 0 ? opt.max_shift : (double)opt.range * 2.0;
     for (size_t i=0;i < n;i++) {
-        for (unsigned int p=0;p < nf;p++) {
+        for (unsigned int k=0;k < nf;k++) {
+            const unsigned int p = k ^ shown_first;
+            const double half = nf == 2u ? (apart[i] / 2.0) : 0.0;
             field_meas_t &f = meas[i].f[p];
-            f.smooth = smooth[p][i];
+
+            f.smooth = cam[(i * nf) + k] - (p == 0u ? half : -half);
             f.shift = std::max(-max_shift,std::min(max_shift,f.smooth - f.step.pos));
             // as far as it will really move: whole lines, of the field if fields
             if (opt.interp == INTERP_NEAREST)
@@ -922,7 +974,7 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
             if (!isnan(edge[i]))
                 found[k]++;
         }
-        if (edge_reference(ref,edge,opt.radius)) {
+        if (edge_reference(ref,edge,aux_radius)) {
             for (size_t i=0;i < n;i++)
                 meas[i].edge_ref[k] = ref[i];
             typical[k] = median(ref);
@@ -931,7 +983,7 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
     }
 
     if (!opt.quiet) {
-        unsigned long count[4] = {0,0,0,0};
+        unsigned long count[5] = {0,0,0,0,0};
         double total = 0,most = 0;
 
         for (size_t i=0;i < meas.size();i++) {
@@ -942,8 +994,10 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
             }
         }
 
-        fprintf(stderr,"%lu frames: %lu %s matched to a key frame, %lu to the frame before, %lu could not be matched\n",
-            (unsigned long)meas.size(),count[tracker_t::KEY],vi.fields ? "fields" : "frames",count[tracker_t::PREV],count[tracker_t::LOST]);
+        fprintf(stderr,"%lu frames: %lu %s matched to a key frame, %lu to the frame before, %lu to a frame further back, %lu could not be matched\n",
+            (unsigned long)meas.size(),count[tracker_t::KEY],vi.fields ? "fields" : "frames",count[tracker_t::PREV],count[tracker_t::EARLIER],count[tracker_t::LOST]);
+        fprintf(stderr,"Put back %lu %s that had jumped away from the path of the camera%s\n",(unsigned long)jumps,vi.fields ? "fields" : "frames",
+            opt.radius > 0 ? ", and steadied the camera" : (opt.radius == 0 ? ", and held the picture still" : ""));
         fprintf(stderr,"Moving the picture %.2f lines on average, %.2f lines at most\n",total / (double)(meas.size() * nf),most);
 
         if (straighten) {
@@ -965,7 +1019,7 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
 }
 
 static bool write_log(const options_t &opt,const video_info_t &vi,const std::vector<frame_meas_t> &meas) {
-    static const char *how_names[] = { "first", "key", "prev", "lost" };
+    static const char *how_names[] = { "first", "key", "prev", "lost", "earlier" };
     static const char *field_names[2][2] = { { "frame", "" }, { "top", "bottom" } };
     const unsigned int nf = vi.fields ? 2u : 1u;
     FILE *fp = fopen(opt.log_path.c_str(),"w");
@@ -1501,7 +1555,8 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "r" || o == "w" || o == "M" || o == "t" || o == "margin" || o == "i" ||
-                                o == "H" || o == "edges" || o == "c" || o == "b" || o == "x" || o == "log");
+                                o == "H" || o == "edges" || o == "c" || o == "b" || o == "x" || o == "log" ||
+                                o == "jump");
             const char *v = NULL;
             double d;
 
@@ -1526,6 +1581,13 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 opt.radius = d;
+            }
+            else if (o == "jump") {
+                if (!parse_double(v,d) || d <= 0 || d > 1000) {
+                    fprintf(stderr,"-jump %s: must be more than 0 lines\n",v);
+                    return 1;
+                }
+                opt.min_jump = d;
             }
             else if (o == "M") {
                 if (!parse_double(v,d) || d < 0) {

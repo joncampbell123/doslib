@@ -1,6 +1,9 @@
 #ifndef VHSSTABILIZE_MOTION_H
 #define VHSSTABILIZE_MOTION_H
 
+#include <math.h>
+
+#include <algorithm>
 #include <vector>
 
 #include "plane.h"
@@ -70,17 +73,22 @@ public:
         FIRST=0,                                    // the first frame, position 0
         KEY,                                        // matched to the key frame
         PREV,                                       // matched to the frame before
-        LOST                                        // could not be matched, kept the position of the frame before
+        LOST,                                       // could not be matched, kept the position of the frame before
+        EARLIER                                     // matched to a frame before the frame before and the key frame
     };
 
     struct step_t {
         double                  pos = 0;            // lines of the frame the picture is down from the first frame
         double                  score = 0;
         how_t                   how = FIRST;
+        unsigned int            branch = 0;         // which run of matches pos is from: the run starts again, and where
+                                                    // the picture is from one run to another is not known, as at a cut
     };
 
     match_params_t              params;
     double                      key_score = 0.9;    // a new key frame when the key frame matches less than this
+    double                      key_agree = 1.0;    // lines: the frame before is used instead of the key frame
+                                                    // when they put the picture further apart than this
     unsigned int                height = 0;         // lines in the frame
     unsigned int                fields = 1;         // 2 to follow each field
 
@@ -89,15 +97,25 @@ public:
     void add(const profile_t cur[],step_t st[]);
     // start again from this frame, with the picture where pos says it is in each field
     void restart_at(const profile_t cur[],const double pos[]);
+    // the run of matches the tracker is in, from the frame it started again at
+    unsigned int branch(void) const {
+        return key.branch;
+    }
 private:
     struct ref_t {
         profile_t               frame;              // the whole frame, lined up with field 0
         double                  pos[2] = {0,0};
+        bool                    found = true;       // false if a field of it could not be matched
+        unsigned int            branch = 0;
     };
+
+    static const size_t         EARLIER_FRAMES = 8;
 
     void make_ref(ref_t &r,const profile_t cur[],const double pos[]) const;
 
     ref_t                       key,prev;
+    unsigned int                branches = 0;
+    std::vector<ref_t>          earlier;            // the frames before prev, the last of them last
     bool                        key_is_prev = true;
     bool                        started = false;
 };
@@ -108,5 +126,30 @@ std::vector<double> smooth_path(const std::vector<double> &path,double radius,bo
 
 // the median of each point of a path and the points up to radius on each side of it
 std::vector<double> median_path(const std::vector<double> &path,unsigned int radius);
+
+// how to tell the jitter of VHS from the movement of the camera
+struct jump_params_t {
+    double                      min_jump = 1.0;     // lines of the frame: a field this far or further from the path
+                                                    // of the camera has jumped, and is all put back on it
+    double                      stiffness = 2.0;    // how much the path of the camera is kept from bending, for 60 fields a second
+    unsigned int                radius = 15;        // fields each side for where to start looking for the path, which
+                                                    // leaves out jumps that come back sooner than this, for 60 fields a second
+    unsigned int                rounds = 12;
+
+    // for this many fields (or frames) a second, so that the path bends as much in a second
+    void set_rate(double rate) {
+        const double r = rate / 59.94;
+        stiffness = 2.0 * r * r * r * r;
+        radius = (unsigned int)std::max(2.0,floor((15.0 * r) + 0.5));
+    }
+};
+
+// The path of the camera, from the path of the picture, field after field in the order they are
+// shown (or frame after frame): the path with the jumps of VHS taken out, and nothing else.
+// known[i] is false where the picture could not be found, and branch[i] is the run of matches
+// path[i] is from (the branch of the step), each of which has a path of its own.
+// jumps, if not NULL, is set to how many fields had jumped.
+std::vector<double> camera_path(const std::vector<double> &path,const std::vector<bool> &known,const std::vector<unsigned int> &branch,
+    const jump_params_t &jp,size_t *jumps);
 
 #endif //VHSSTABILIZE_MOTION_H

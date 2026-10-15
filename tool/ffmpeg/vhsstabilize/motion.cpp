@@ -279,7 +279,9 @@ static bool fields_odd(double d) {
 }
 
 void tracker_t::restart_at(const profile_t cur[],const double pos[]) {
+    earlier.clear();
     make_ref(key,cur,pos);
+    key.branch = ++branches;
     prev = key;
     key_is_prev = true;
     started = true;
@@ -293,6 +295,7 @@ void tracker_t::make_ref(ref_t &r,const profile_t cur[],const double pos[]) cons
 
     r.pos[0] = pos[0];
     r.pos[1] = fields == 2u ? pos[1] : pos[0];
+    r.found = true;
 }
 
 void tracker_t::add(const profile_t cur[],step_t st[]) {
@@ -305,21 +308,85 @@ void tracker_t::add(const profile_t cur[],step_t st[]) {
             st[p].pos = 0;
             st[p].score = 1;
             st[p].how = FIRST;
+            st[p].branch = key.branch;
         }
         return;
     }
 
     bool new_key = false;
+    unsigned int fresh = 0;
+
+    // a run of matches that starts here, from a frame that could not be matched to anything before it
+    auto fresh_branch = [&](void) -> unsigned int {
+        if (fresh == 0u)
+            fresh = ++branches;
+        return fresh;
+    };
+
+    // the match to the last of the frames before the frame before (and the key frame) that matches,
+    // from before a jump, which the camera has moved the picture the least from since, or NULL
+    auto match_earlier = [&](const profile_t &c,match_t &best) -> const ref_t* {
+        for (size_t i=earlier.size();i-- > 0u;) {
+            const match_t m = match_profiles(earlier[i].frame,c,params);
+            if (m.ok) {
+                best = m;
+                return &earlier[i];
+            }
+        }
+        return NULL;
+    };
 
     for (unsigned int p=0;p < fields;p++) {
-        const match_t mp = match_profiles(prev.frame,cur[p],params);
-        const match_t mk = key_is_prev ? mp : match_profiles(key.frame,cur[p],params);
+        match_t mp,mk,me;
+        const ref_t *from = NULL;
 
-        // the key frame, unless the frame before matches noticeably better
+        // VHS jitter can move the picture further than the range and back again, which loses the
+        // frame it moved to. Where that frame is is not known, so the frame after it is matched to
+        // the frames before it first, which it is back with.
+        if (!prev.found && (from=match_earlier(cur[p],me)) != NULL) {
+            st[p].pos = from->pos[0] + me.shift;
+            st[p].score = me.score;
+            st[p].how = EARLIER;
+            st[p].branch = from->branch;
+            new_key = true;
+            continue;
+        }
+
+        mp = match_profiles(prev.frame,cur[p],params);
+        mk = key_is_prev ? mp : match_profiles(key.frame,cur[p],params);
+
+        if (!mk.ok && !mp.ok) {
+            // the frame before and the key frame may be the jump, and this back from it
+            if ((from=match_earlier(cur[p],me)) != NULL) {
+                st[p].pos = from->pos[0] + me.shift;
+                st[p].score = me.score;
+                st[p].how = EARLIER;
+                st[p].branch = from->branch;
+                new_key = true;
+                continue;
+            }
+
+            // or this is a jump further than the range, so look twice as far
+            if (prev.found) {
+                match_params_t wide = params;
+                wide.range *= 2u;
+                mp = match_profiles(prev.frame,cur[p],wide);
+                mk = key_is_prev ? mp : match_profiles(key.frame,cur[p],wide);
+            }
+        }
+
+        // The key frame, unless the frame before matches noticeably better, or puts the picture
+        // somewhere else: the picture has changed since the key frame, as the camera moved, and
+        // the frame before is more like it. Where it moved from one field to the next has to be
+        // right, more than where it is after a long time, to tell the jumps from the camera.
+        if (mk.ok && mp.ok && !key_is_prev && fabs((key.pos[0] + mk.shift) - (prev.pos[0] + mp.shift)) > key_agree)
+            mk.ok = false;
+
         if (mk.ok && (key_is_prev || !mp.ok || mk.score >= (mp.score - 0.02))) {
             st[p].pos = key.pos[0] + mk.shift;
             st[p].score = mk.score;
             st[p].how = key_is_prev ? PREV : KEY;
+            st[p].branch = key.found ? key.branch : fresh_branch();
             if (mk.score < key_score)
                 new_key = true;
         }
@@ -327,12 +394,14 @@ void tracker_t::add(const profile_t cur[],step_t st[]) {
             st[p].pos = prev.pos[0] + mp.shift;
             st[p].score = mp.score;
             st[p].how = PREV;
+            st[p].branch = prev.found ? prev.branch : fresh_branch();
             new_key = true;
         }
         else {
             st[p].pos = prev.pos[p];
             st[p].score = std::max(mp.score,mk.score);
             st[p].how = LOST;
+            st[p].branch = prev.branch;
             new_key = true;
         }
     }
@@ -355,7 +424,25 @@ void tracker_t::add(const profile_t cur[],step_t st[]) {
     if (fields == 2u && fields_odd(key.pos[1] - key.pos[0]) && !fields_odd(pos[1] - pos[0]))
         new_key = true;
 
+    // the frames before this one, but not those that could not be matched, which are not where they are said to be
+    if (prev.found) {
+        if (earlier.size() >= EARLIER_FRAMES)
+            earlier.erase(earlier.begin());
+        earlier.push_back(prev);
+    }
+
+    unsigned int branch = prev.branch;
+    for (unsigned int p=fields;p-- > 0u;) {
+        if (st[p].how != LOST)
+            branch = st[p].branch;
+    }
+
     make_ref(prev,cur,pos);
+    prev.branch = branch;
+    for (unsigned int p=0;p < fields;p++) {
+        if (st[p].how == LOST)
+            prev.found = false;
+    }
     if (new_key)
         key = prev;
     key_is_prev = new_key;
@@ -415,6 +502,166 @@ std::vector<double> median_path(const std::vector<double> &path,unsigned int rad
         std::nth_element(win.begin(),win.begin() + (ptrdiff_t)(win.size() / 2u),win.end());
         out[i] = win[win.size() / 2u];
     }
+
+    return out;
+}
+
+// solve (diag(w) + stiffness * D'D) x = b for x, where D takes the second difference, by
+// factoring the matrix, which has two bands each side of the diagonal, into L D L'
+static void solve_bent(std::vector<double> &x,const std::vector<double> &w,double stiffness,const std::vector<double> &b) {
+    const size_t n = w.size();
+    std::vector<double> d(n),l1(n,0.0),l2(n,0.0);    // l1[i] = L[i][i-1], l2[i] = L[i][i-2]
+
+    // the bands of D'D: the diagonal, and the first and second bands beside it
+    auto band0 = [n](size_t i) -> double {
+        if (n == 1u) return 0;
+        if (i == 0u || i == n - 1u) return 1;
+        if (n == 2u) return 1;
+        if (i == 1u || i == n - 2u) return n == 3u ? 4 : 5;
+        return 6;
+    };
+    auto band1 = [n](size_t i) -> double {          // between i and i+1
+        if (n < 3u) return 0;
+        if (i == 0u || i == n - 2u) return -2;
+        return -4;
+    };
+
+    for (size_t i=0;i < n;i++) {
+        if (i >= 2u)
+            l2[i] = stiffness / d[i - 2u];
+        if (i >= 1u) {
+            double t = stiffness * band1(i - 1u);
+            if (i >= 2u) t -= l2[i] * d[i - 2u] * l1[i - 1u];
+            l1[i] = t / d[i - 1u];
+        }
+        double v = w[i] + (stiffness * band0(i));
+        if (i >= 1u) v -= l1[i] * l1[i] * d[i - 1u];
+        if (i >= 2u) v -= l2[i] * l2[i] * d[i - 2u];
+        d[i] = v;
+    }
+
+    x.resize(n);
+    for (size_t i=0;i < n;i++) {
+        double v = b[i];
+        if (i >= 1u) v -= l1[i] * x[i - 1u];
+        if (i >= 2u) v -= l2[i] * x[i - 2u];
+        x[i] = v;
+    }
+    for (size_t i=0;i < n;i++)
+        x[i] /= d[i];
+    for (size_t i=n;i-- > 0u;) {
+        if (i + 1u < n) x[i] -= l1[i + 1u] * x[i + 1u];
+        if (i + 2u < n) x[i] -= l2[i + 2u] * x[i + 2u];
+    }
+}
+
+// VHS jitter moves the picture away from where the camera has it, all at once from one field to the
+// next, and most of the time back again, and the camera moves it smoothly. So the path of the camera
+// is the smooth path through the fields that are where it has them, which leaves out those that are
+// not: a smoothing spline that can bend enough to follow the camera shaking, fit again and again,
+// each time leaving out the fields that are far from it (Tukey's biweight). The fields that did not
+// jump are left as they are, and those that did are put back on the path.
+//
+// A jump that does not come back, as when the capture locks on to the picture a few lines away, is
+// in time where most of the fields are, and the path goes there, over a few tenths of a second.
+static void camera_segment(std::vector<double> &out,const double *path,const std::vector<bool>::const_iterator known,size_t n,
+    const jump_params_t &jp,size_t &jumps) {
+    std::vector<double> w(n),b(n),win;
+    const size_t r = jp.radius;
+    const double k = jp.min_jump;
+
+    out.assign(path,path + n);
+    if (n < 3u)
+        return;
+
+    // to start from, the median of the fields near each one, which leaves out short jumps
+    for (size_t i=0;i < n;i++) {
+        const size_t a0 = i > r ? (i - r) : 0u;
+        const size_t a1 = std::min(n,i + r + 1u);
+
+        win.clear();
+        for (size_t j=a0;j < a1;j++) {
+            if (known[(ptrdiff_t)j]) win.push_back(path[j]);
+        }
+        if (!win.empty()) {
+            std::nth_element(win.begin(),win.begin() + (ptrdiff_t)(win.size() / 2u),win.end());
+            out[i] = win[win.size() / 2u];
+        }
+        else {
+            out[i] = path[i];
+        }
+    }
+
+    // The median is a long way from where the camera has the picture as it shakes, so the first
+    // rounds leave out only the fields much further from the path than a jump, and the path finds
+    // its way to the fields near it, before only those that jumped are left out.
+    static const double wide[] = { 3.0, 2.0, 1.5 };
+    const unsigned int wide_rounds = 4;
+    const unsigned int total = (unsigned int)(sizeof(wide) / sizeof(wide[0])) * wide_rounds + jp.rounds;
+
+    for (unsigned int round=0;round < total;round++) {
+        const double kr = k * (round / wide_rounds < sizeof(wide) / sizeof(wide[0]) ? wide[round / wide_rounds] : 1.0);
+
+        for (size_t i=0;i < n;i++) {
+            const double e = (path[i] - out[i]) / kr;
+            w[i] = (known[(ptrdiff_t)i] && fabs(e) < 1.0) ? ((1.0 - (e * e)) * (1.0 - (e * e))) : 0.0;
+            w[i] += 1e-6;                           // so that the path is there where all fields near it are left out
+            b[i] = w[i] * path[i];
+        }
+        solve_bent(out,w,jp.stiffness,b);
+    }
+
+    // Before the first field that was found and after the last, the path goes on as it was going,
+    // which can be far from anything. Where the picture is there is not known, so it is left there.
+    size_t first = 0,last = n;
+    while (first < n && !known[(ptrdiff_t)first])
+        first++;
+    while (last > first && !known[(ptrdiff_t)(last - 1u)])
+        last--;
+    for (size_t i=0;i < n;i++) {
+        if (i < first || i >= last)
+            out[i] = path[i];
+        else if (known[(ptrdiff_t)i] && fabs(path[i] - out[i]) >= k)
+            jumps++;
+    }
+}
+
+std::vector<double> camera_path(const std::vector<double> &path,const std::vector<bool> &known,const std::vector<unsigned int> &branch,
+    const jump_params_t &jp,size_t *jumps) {
+    const size_t n = path.size();
+    std::vector<double> out(n),p,seg;
+    std::vector<bool> k;
+    std::vector< std::vector<size_t> > runs;
+    size_t count = 0;
+
+    // each run of matches on its own, since from one to another, as at a cut, the picture can be
+    // anywhere. Fields of one run between those of another, which the tracker found its way back
+    // to, are left out of that, and are not where they are said to be from it.
+    for (size_t i=0;i < n;i++) {
+        if (branch[i] >= runs.size())
+            runs.resize((size_t)branch[i] + 1u);
+        runs[branch[i]].push_back(i);
+    }
+
+    for (size_t r=0;r < runs.size();r++) {
+        const std::vector<size_t> &at = runs[r];
+
+        if (at.empty())
+            continue;
+
+        p.resize(at.size());
+        k.resize(at.size());
+        for (size_t j=0;j < at.size();j++) {
+            p[j] = path[at[j]];
+            k[j] = known[at[j]];
+        }
+        camera_segment(seg,&p[0],k.begin(),at.size(),jp,count);
+        for (size_t j=0;j < at.size();j++)
+            out[at[j]] = seg[j];
+    }
+
+    if (jumps != NULL)
+        *jumps = count;
 
     return out;
 }
