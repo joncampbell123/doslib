@@ -9,6 +9,7 @@
  * It also moves each line left or right, so that the left and right edges of the picture,
  * where it starts against the blanking at each side of the frame, are straight up and down
  * and where they are most of the time, which straightens what the timing errors of VHS bend.
+ * The picture itself says how far each line is from the next, and which edges are wrong.
  *
  * The input file is read twice: once to measure the whole video, and once to write it.
  * That way the smoothing can look ahead as far as it needs to. */
@@ -132,7 +133,8 @@ static void help(void) {
     fprintf(stderr,"                 1/16 of the height at the bottom, 1/16 of the width at each side)\n");
     fprintf(stderr,"  -H <pixels>    The most a line is moved left or right to straighten the left and right\n");
     fprintf(stderr,"                 edges of the picture, where it starts against the black of the blanking\n");
-    fprintf(stderr,"                 at each side of the frame (default 8). 0 leaves lines where they are.\n");
+    fprintf(stderr,"                 at each side of the frame, and the picture from one line to the next\n");
+    fprintf(stderr,"                 (default 8). 0 leaves lines where they are.\n");
     fprintf(stderr,"  -edges <left>,<right>\n");
     fprintf(stderr,"                 How far in from the left and right of the frame to look for the edges\n");
     fprintf(stderr,"                 of the picture, in pixels (default: 1/16 of the width). 0 for a side does\n");
@@ -1387,7 +1389,7 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
                 else
                     epos[k] = line_edges_t();
             }
-            line_warps(lwarp,epos,edge_ref,(unsigned int)vi.height,nf,vi.edges);
+            line_warps(lwarp,epos,edge_ref,(unsigned int)vi.height,nf,vi.edges,&lp);
 
             for (size_t y=0;y < lwarp.size();y++) {
                 const double l = fabs(lwarp[y].shift);

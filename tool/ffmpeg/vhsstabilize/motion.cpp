@@ -596,11 +596,11 @@ static void camera_segment(std::vector<double> &out,const double *path,const std
     // rounds leave out only the fields much further from the path than a jump, and the path finds
     // its way to the fields near it, before only those that jumped are left out.
     static const double wide[] = { 3.0, 2.0, 1.5 };
-    const unsigned int wide_rounds = 4;
+    const unsigned int wide_rounds = jp.wide ? 4u : 0u;
     const unsigned int total = (unsigned int)(sizeof(wide) / sizeof(wide[0])) * wide_rounds + jp.rounds;
 
     for (unsigned int round=0;round < total;round++) {
-        const double kr = k * (round / wide_rounds < sizeof(wide) / sizeof(wide[0]) ? wide[round / wide_rounds] : 1.0);
+        const double kr = k * ((wide_rounds != 0u && round / wide_rounds < sizeof(wide) / sizeof(wide[0])) ? wide[round / wide_rounds] : 1.0);
 
         for (size_t i=0;i < n;i++) {
             const double e = (path[i] - out[i]) / kr;

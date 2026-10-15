@@ -135,6 +135,8 @@ struct jump_params_t {
     unsigned int                radius = 15;        // fields each side for where to start looking for the path, which
                                                     // leaves out jumps that come back sooner than this, for 60 fields a second
     unsigned int                rounds = 12;
+    bool                        wide = true;        // first leave out only what is much further off, for a path that
+                                                    // the median of the fields near it is a long way from, as a camera shaking
 
     // for this many fields (or frames) a second, so that the path bends as much in a second
     void set_rate(double rate) {

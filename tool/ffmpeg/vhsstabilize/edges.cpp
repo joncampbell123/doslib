@@ -7,7 +7,12 @@
  * starts a little early or late, which bends what should be straight up and down. The picture
  * on a line moves as far as its edges do, so how far they are from where they are most of the
  * time is how far to move the line back. The two edges together also say how much longer or
- * shorter the line is than it should be. */
+ * shorter the line is than it should be.
+ *
+ * The picture moves with them, so how far the picture on each line is from the picture on the
+ * line before says the same, and better from one line to the next, as an edge is soft and has
+ * noise on it. It also tells an edge that is in the wrong place, where something dark in the
+ * picture is next to the blanking, from one that is right. */
 
 #include <stdlib.h>
 #include <math.h>
@@ -283,9 +288,11 @@ static double near_mean(const std::vector<double> &d,const std::vector<char> &us
 // Where the edges of a line are further apart or closer together than on most lines of the field, by
 // more than 'apart', something in the picture next to one of them has moved it. Over each run of such
 // lines, that is the edge that jumps where the run starts and ends, from the lines on either side where
-// the edges agree, while the other goes on from them smoothly. Or the weaker edge, if there are no lines
-// where they agree to go by.
-static void settle_disagreements(std::vector<double> d[2],const std::vector<double> wt[2],double apart) {
+// the edges agree, while the other goes on from them smoothly. If there are no lines where they agree
+// to go by, it is the edge that would move the lines further, so as to do the least harm: something
+// dark next to the blanking makes the edge look further in, and that is often brighter beside it, and
+// sharper, than the edge of the picture.
+static void settle_disagreements(std::vector<double> d[2],double apart) {
     const int n = (int)d[0].size();
     std::vector<char> agree((size_t)n,0),differ((size_t)n,0);
     std::vector<double> sv;
@@ -322,7 +329,7 @@ static void settle_disagreements(std::vector<double> d[2],const std::vector<doub
         }
         j = b + 1;
 
-        double jumps[2] = {0,0},weight[2] = {0,0};
+        double jumps[2] = {0,0},moves[2] = {0,0};
         bool sides = false;
         for (unsigned int k=0;k < 2u;k++) {
             const double before = near_mean(d[k],agree,a - 1,-1,0,n - 1);
@@ -338,11 +345,11 @@ static void settle_disagreements(std::vector<double> d[2],const std::vector<doub
             }
             for (int i=a;i <= b;i++) {
                 if (differ[(size_t)i])
-                    weight[k] += wt[k][(size_t)i];
+                    moves[k] += fabs(d[k][(size_t)i]);
             }
         }
 
-        const unsigned int wrong = sides ? (jumps[0] > jumps[1] ? 0u : 1u) : (weight[0] < weight[1] ? 0u : 1u);
+        const unsigned int wrong = sides ? (jumps[0] > jumps[1] ? 0u : 1u) : (moves[0] > moves[1] ? 0u : 1u);
         for (int i=a;i <= b;i++)
             d[wrong][(size_t)i] = NAN;
     }
@@ -359,7 +366,213 @@ static size_t count_known(const std::vector<double> &v) {
     return c;
 }
 
-void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const double ref[2],unsigned int height,unsigned int fields,const edge_params_t &ep) {
+// how much one line of a plane changes from each sample to the next, 0.0 to 1.0, from x0 to x1,
+// a little smoothed first, [1 2 1], which keeps the noise from counting for as much
+template <typename T> static void line_changes(float *o,const plane_t &pl,unsigned int y,int x0,int x1) {
+    const T *r = (const T*)pl.line(y);
+    const float scale = 0.25f / (float)pl.maxval();
+
+    for (int x=x0;x < x1;x++)
+        o[x - x0] = (((float)r[x + 2] + (float)r[x + 1]) - ((float)r[x] + (float)r[x - 1])) * scale;
+}
+
+// the bottom of a parabola through three points, from the middle one, -0.5 to 0.5
+static inline double parabola_min(double l,double c,double r) {
+    const double dd = l - (2.0 * c) + r;
+    return dd > 0.0 ? std::max(-0.5,std::min(0.5,(0.5 * (l - r)) / dd)) : 0.0;
+}
+
+// How far the picture on line b is to the right of the picture on line a, to a fraction of a
+// sample, from where the picture changes from one sample to the next along them (ga and gb, n
+// of each), which is the up and down edges of things in it. NaN if it cannot tell, as where the
+// picture is all one colour, or looks the same moved one way or another.
+static double picture_step(const float *ga,const float *gb,int n,int range) {
+    const int m = n - (2 * range);
+    const int nr = (2 * range) + 1;
+    std::vector<float> sad((size_t)nr);
+    float energy = 0;
+
+    if (m < 32)
+        return NAN;
+
+    for (int i=0;i < m;i++)
+        energy += fabsf(ga[range + i]);
+    if (energy <= 0.0f)
+        return NAN;
+
+    int best = 0;
+    for (int s=-range;s <= range;s++) {
+        float t = 0;
+        for (int i=0;i < m;i++)
+            t += fabsf(gb[range + s + i] - ga[range + i]);
+        sad[(size_t)(s + range)] = t;
+        if (t < sad[(size_t)(best + range)])
+            best = s;
+    }
+
+    // a clear best: much better than most of the others, for how much there is in the picture
+    std::vector<float> sorted(sad);
+    std::nth_element(sorted.begin(),sorted.begin() + (ptrdiff_t)(nr / 2),sorted.end());
+    if (best == -range || best == range || (sorted[(size_t)(nr / 2)] - sad[(size_t)(best + range)]) < (0.3f * energy))
+        return NAN;
+
+    return (double)best + parabola_min(sad[(size_t)(best + range - 1)],sad[(size_t)(best + range)],sad[(size_t)(best + range + 1)]);
+}
+
+// An edge is found in the wrong place now and then, where something dark in the picture is next to
+// the blanking and the edge of that is taken for the edge of the picture, on a few lines or a few
+// dozen. On those lines it moves where the picture does not. So the picture is followed down the
+// field too: how far it moves from each line to the next, added up. Where an edge is right, it moves
+// as the picture does, and how far it is from where the picture says the line is changes only slowly
+// down the field. Where it is wrong, that jumps away and back. The edges that are off the path it
+// takes, which is found as the path of the camera is from the jumps of VHS, are not used.
+//
+// Then d is made where each line is from both: where the picture says, from one line to the next,
+// and the edges that are left for how far that is off, which changes slowly down the field. d is
+// left NaN above and below the lines with an edge that is left.
+static void check_with_picture(std::vector<double> d[2],const plane_t &pl,unsigned int p,unsigned int fields,const edge_params_t &ep) {
+    const unsigned int n = (unsigned int)d[0].size();
+    const int x0 = (int)ep.search[0] + 2;
+    const int x1 = (int)pl.width - 1 - (int)ep.search[1] - 2;
+    const int range = 4;
+    const double off = 1.5;                         // samples: an edge further than this from the path is wrong
+
+    if (n < 8u || (x1 - x0) < 64)
+        return;
+
+    // where the picture says each line is, from the line before
+    std::vector<float> line[2];
+    std::vector<double> at(n,0.0),steps(n,NAN);
+    const unsigned int lean = 6;                    // lines each side over which leaning things move the picture as much
+    line[0].resize((size_t)(x1 - x0));
+    line[1].resize((size_t)(x1 - x0));
+
+    for (unsigned int j=0;j < n;j++) {
+        float *now = &line[j & 1u][0];
+        const unsigned int y = p + (j * fields);
+
+        if (pl.bytes == 2)
+            line_changes<uint16_t>(now,pl,y,x0,x1);
+        else
+            line_changes<uint8_t>(now,pl,y,x0,x1);
+        if (j == 0u)
+            continue;
+
+        steps[j] = picture_step(&line[(j & 1u) ^ 1u][0],now,x1 - x0,range);
+    }
+
+    // Things in the picture that lean move it from line to line as much on many lines one after the
+    // other, and the timing of the lines moves it this way and that from one line to the next, so
+    // what the picture says is only how far each line moves more or less than the lines near it.
+    // Where it cannot say, it is as the edges say, which does not tell one from the other.
+    for (unsigned int j=1;j < n;j++) {
+        double step;
+
+        if (!isnan(steps[j])) {
+            double sum = 0;
+            unsigned int cnt = 0;
+            for (unsigned int i=(j > lean ? j - lean : 1u);i <= std::min(n - 1u,j + lean);i++) {
+                if (!isnan(steps[i])) {
+                    sum += steps[i];
+                    cnt++;
+                }
+            }
+            step = steps[j] - (sum / (double)cnt);
+        }
+        else {
+            double sum = 0;
+            unsigned int cnt = 0;
+            for (unsigned int k=0;k < 2u;k++) {
+                if (!isnan(d[k][j]) && !isnan(d[k][j - 1u])) {
+                    sum += d[k][j] - d[k][j - 1u];
+                    cnt++;
+                }
+            }
+            step = cnt != 0u ? (sum / (double)cnt) : 0.0;
+        }
+        at[j] = at[j - 1u] + step;
+    }
+
+    // Both edges of a line move together, but for the line being a little longer or shorter, which
+    // changes slowly, so they go on one path, the left and the right of each line one after the
+    // other, less half of how much longer the lines are most of the time. Then a few lines on which
+    // one edge is wrong are told from the many lines around them on which either edge is right.
+    jump_params_t jp;
+    std::vector<double> sv;
+    for (unsigned int j=0;j < n;j++) {
+        if (!isnan(d[0][j]) && !isnan(d[1][j]))
+            sv.push_back(d[1][j] - d[0][j]);
+    }
+    const double longer = sv.empty() ? 0.0 : median_of(sv);
+
+    std::vector<double> apart((size_t)n * 2u,0.0);
+    std::vector<bool> known((size_t)n * 2u,false);
+    std::vector<unsigned int> run((size_t)n * 2u,0u);
+    size_t cnt = 0;
+
+    for (unsigned int j=0;j < n;j++) {
+        for (unsigned int k=0;k < 2u;k++) {
+            if (!isnan(d[k][j])) {
+                apart[(j * 2u) + k] = d[k][j] - (k == 0u ? -0.5 : 0.5) * longer - at[j];
+                known[(j * 2u) + k] = true;
+                cnt++;
+            }
+        }
+    }
+    if (cnt < 8u)
+        return;
+
+    // as stiff, for two to a line, as the path of the camera is for one to a field, from the median of
+    // the lines near each, which is near the path: edges do not shake as a camera does
+    jp.min_jump = off;
+    jp.stiffness = 2.0 * 16.0;
+    jp.radius = 30;
+    jp.wide = false;
+
+    const std::vector<double> path = camera_path(apart,known,run,jp,NULL);
+    bool side[2] = {false,false};
+    unsigned int first = n,last = 0;
+    for (unsigned int j=0;j < n;j++) {
+        for (unsigned int k=0;k < 2u;k++) {
+            if (!known[(j * 2u) + k])
+                continue;
+            side[k] = true;
+            if (fabs(apart[(j * 2u) + k] - path[(j * 2u) + k]) >= off) {
+                known[(j * 2u) + k] = false;
+            }
+            else {
+                first = std::min(first,j);
+                last = std::max(last,j);
+            }
+        }
+    }
+    if (first > last)
+        return;
+
+    // The edges that are left are where the lines are, but each is a little off, as an edge is not
+    // sharp and has noise on it, and the picture says how far each line is from the next better.
+    // So where the lines are is where the picture says, and the edges say only how far that is off,
+    // which changes slowly: the path through them, made stiffer, which smooths it over a few lines.
+    jump_params_t sp;
+    sp.min_jump = 1e9;
+    sp.stiffness = 200.0 * 16.0;
+    sp.radius = 30;
+    sp.rounds = 1;
+    sp.wide = false;
+    const std::vector<double> slow = camera_path(apart,known,run,sp,NULL);
+
+    for (unsigned int j=0;j < n;j++) {
+        for (unsigned int k=0;k < 2u;k++) {
+            if (j < first || j > last)
+                d[k][j] = NAN;
+            else if (side[k])
+                d[k][j] = at[j] + ((slow[j * 2u] + slow[(j * 2u) + 1u]) / 2.0) + (k == 0u ? -0.5 : 0.5) * longer;
+        }
+    }
+}
+
+void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const double ref[2],unsigned int height,unsigned int fields,
+    const edge_params_t &ep,const plane_t *pl) {
     const double H = ep.max_shift;
     const double jump = std::max(1.0,H / 8.0);      // the most a line can be off from the lines around it
     const double apart = std::max(0.5,H / 16.0);    // the most the edges of a line can be off from each other
@@ -402,6 +615,9 @@ void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const dou
                 d[k].assign(n,NAN);
         }
 
+        if (pl != NULL)
+            check_with_picture(d,*pl,p,fields,ep);
+
         // How much longer the lines are, from the lines where the edges agree, counting each line as
         // much as its weaker edge. That is taken to be the same all down the field: it changes slowly,
         // and by too little to tell on each line from edges that are harder to place on some lines.
@@ -409,7 +625,7 @@ void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const dou
         if (both) {
             std::vector<double> sl(n,NAN),sw(n,0.0);
 
-            settle_disagreements(d,wt,apart);
+            settle_disagreements(d,apart);
             for (unsigned int j=0;j < n;j++) {
                 if (!isnan(d[0][j]) && !isnan(d[1][j])) {
                     sl[j] = d[1][j] - d[0][j];

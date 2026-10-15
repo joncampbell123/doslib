@@ -244,6 +244,26 @@ def probe(path):
                         '-of', 'csv=p=0', path], capture_output=True, text=True, check=True)
     return r.stdout.split()
 
+def picture_offsets(a, b, x0=60, x1=660, r=6):
+    # how far right the picture in the middle of each line of b is from the same line of a, to a
+    # fraction of a pixel, for the lines of the frames away from the top and bottom (frames, lines)
+    out = []
+    for fa, fb in zip(a, b):
+        A = fa[40:HEIGHT - 40, x0:x1]
+        B = fb[40:HEIGHT - 40, x0 - r:x1 + r]
+        cost = np.stack([np.abs(B[:, r + s:r + s + (x1 - x0)] - A).mean(1) for s in range(-r, r + 1)], 1)
+        k = np.clip(np.argmin(cost, 1), 1, 2 * r - 1)
+        at = np.arange(len(k))
+        l, c, h = cost[at, k - 1], cost[at, k], cost[at, k + 1]
+        dd = l - 2 * c + h
+        out.append(k - r + np.where(dd > 1e-6, np.clip(0.5 * (l - h) / np.maximum(dd, 1e-6), -0.5, 0.5), 0.0))
+    return np.array(out)
+
+def luma(path):
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'],
+                       capture_output=True, check=True)
+    return np.frombuffer(r.stdout, np.uint8).reshape(-1, HEIGHT, WIDTH).astype(float)
+
 #------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------
@@ -337,6 +357,39 @@ def test(name, vcodec, extra=(), tool_args=(), seed=1, jitter=3, big=0, tilt=12,
         ha, hb = audio_hashes(src), audio_hashes(dst)
         check(name + ': audio copied as it is', len(ha) > 0 and ha == hb, '%d packets' % len(ha))
 
+def test_dark_edges(name, seed=13, max_off=0.45, max_far=0.002):
+    # Something dark next to the blanking, with the picture bright beside it, on a run of lines at
+    # the left or right, which makes the edge of the picture look further in on those lines. The same
+    # scene with and without lines moved left and right as VHS does should come out the same.
+    rng = np.random.default_rng(seed)
+    scene = make_scene(rng, HEIGHT + 2 * PAD)
+    for _ in range(14):
+        top = rng.integers(0, HEIGHT + 2 * PAD - 40)
+        h = rng.integers(10, 40)
+        w = rng.integers(3, 9)
+        side = rng.integers(0, 2)
+        x = slice(LEFT, LEFT + w) if side == 0 else slice(WIDTH - RIGHT - w, WIDTH - RIGHT)
+        near = slice(LEFT + w, LEFT + w + 30) if side == 0 else slice(WIDTH - RIGHT - w - 30, WIDTH - RIGHT - w)
+        scene[0][top:top + h, x] = BLANK + 4
+        scene[0][top:top + h, near] = 220
+    cam = camera_offsets(rng, FRAMES, 6, 0.8, False)
+    warps = line_warps(rng, FRAMES, False)
+    with tempfile.TemporaryDirectory() as tmp:
+        out = {}
+        for kind, wp, noise in (('warped', warps, seed + 1), ('straight', np.zeros_like(warps), seed + 2)):
+            # (with noise of their own, which would line up where nothing is moved)
+            frames = render(np.random.default_rng(noise), scene, cam, wp)
+            src = os.path.join(tmp, kind + '.mov')
+            dst = os.path.join(tmp, kind + '-out.mov')
+            make_video(src, frames, 'v210')
+            run_tool([src, dst])
+            out[kind] = luma(dst)
+        # how far the picture on each line is from where it should be, and how many lines are a long way off
+        o = picture_offsets(out['straight'], out['warped'])
+        far = np.mean(np.abs(o) > 4)
+        check(name + ': lines moved back, not out of line', rms(o) <= max_off and far <= max_far,
+              'the picture on each line %.3f pixels from where it should be, %.2f%% of lines 4 or more' % (rms(o), far * 100))
+
 def test_errors():
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, 'in.mov')
@@ -364,6 +417,7 @@ test('jumps further than the range', 'v210', seed=12, big=12)
 test('bottom field first', 'v210', seed=8, bff=True)
 test('field order not given, top first', 'v210', tool_args=('-I',), seed=9, field_order='progressive')
 test('field order not given, bottom first', 'v210', tool_args=('-I',), seed=10, bff=True, field_order='progressive')
+test_dark_edges('dark next to the blanking')
 test_errors()
 
 print('%d failure%s' % (failures, '' if failures == 1 else 's'))

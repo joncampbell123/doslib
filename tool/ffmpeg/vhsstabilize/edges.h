@@ -41,6 +41,10 @@ bool edge_reference(std::vector<double> &ref,const std::vector<double> &found,do
 // line (from find_edges, or empty for a side not looked at) and where they should be (NaN for a side
 // not looked at). Each field is worked out on its own, as its lines are one sweep of a head across
 // the tape. A line where neither edge was found has moved as far as the lines above and below it.
-void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const double ref[2],unsigned int height,unsigned int fields,const edge_params_t &ep);
+// If pl, the plane the edges were found in, is given, the picture on it says how far each line is from
+// the next, and which edges were found in the wrong place, so as not to move a line out of line with
+// the lines next to it.
+void line_warps(std::vector<hwarp_t> &warp,const line_edges_t edges[2],const double ref[2],unsigned int height,unsigned int fields,
+    const edge_params_t &ep,const plane_t *pl=NULL);
 
 #endif //VHSSTABILIZE_EDGES_H
