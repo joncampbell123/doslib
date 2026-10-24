@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -34,6 +35,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/avconfig.h>
 #include <libavutil/opt.h>
+#include <libavutil/parseutils.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
@@ -72,6 +74,8 @@ struct options_t {
     bool                        measure_only = false;
     bool                        overwrite = false;
     bool                        quiet = false;
+    int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
+    int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
 };
 
 // what the first frame of the video is like
@@ -126,7 +130,7 @@ static void help(void) {
     fprintf(stderr,"                 slower than this is kept, and faster movement is taken out, such as 15.\n");
     fprintf(stderr,"                 0 holds the picture still for the whole video. (default: not done)\n");
     fprintf(stderr,"  -M <lines>     The most the picture is moved to correct it (default: twice -r)\n");
-    fprintf(stderr,"  -t <score>     The least match score, 0 to 1, to trust a measurement (default 0.6)\n");
+    fprintf(stderr,"  -score <n>     The least match score, 0 to 1, to trust a measurement (default 0.6)\n");
     fprintf(stderr,"  -margin <top>,<bottom>,<left>,<right>\n");
     fprintf(stderr,"                 Lines and pixels at the edges to leave out of measuring, such as the head\n");
     fprintf(stderr,"                 switching noise at the bottom (default: 1/32 of the height at the top,\n");
@@ -149,6 +153,9 @@ static void help(void) {
     fprintf(stderr,"                 (default: the input's codec, with prores_ks for ProRes)\n");
     fprintf(stderr,"  -b <rate>      Video bit rate, such as 50M (default: the input's, if the codec is the same)\n");
     fprintf(stderr,"  -x <k=v:k=v>   Video encoder options, such as -x profile=3 (ProRes HQ for prores_ks)\n");
+    fprintf(stderr,"  -ss <time>     Start this far into the input, as FFmpeg's -ss: seconds, such as 90.5,\n");
+    fprintf(stderr,"                 or [HH:]MM:SS[.m...], such as 1:30.5. The output starts at 0.\n");
+    fprintf(stderr,"  -t <time>      Do only this much of the input, as FFmpeg's -t\n");
     fprintf(stderr,"  -y             Write over the output file if it exists\n");
     fprintf(stderr,"  -n             Measure only, write no output file\n");
     fprintf(stderr,"  -log <file>    Write what was measured and corrected for each frame to a CSV file\n");
@@ -417,11 +424,41 @@ static AVFrame *alloc_frame(enum AVPixelFormat fmt,int width,int height) {
 /////////////////////////////////////////////////////////////////////////////
 // reading and decoding the input file
 
+// set by CTRL+C: stop reading the input, and finish the output file with what there is
+static volatile sig_atomic_t interrupted = 0;
+
+static void on_interrupt(int sig) {
+    (void)sig;
+    interrupted = 1;
+}
+
+// CTRL+C stops the reading, so that what is written so far is finished and playable.
+// It is only caught once: CTRL+C again quits at once.
+static void catch_interrupt(void) {
+    struct sigaction sa;
+
+    memset(&sa,0,sizeof(sa));
+    sa.sa_handler = on_interrupt;
+    sa.sa_flags = SA_RESETHAND;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT,&sa,NULL);
+}
+
+// a time as FFmpeg takes it for -ss and -t: seconds, such as 90 or 1.5, or [HH:]MM:SS[.m...],
+// in microseconds, or false if it is not one or is less than 0
+static bool parse_time(const char *s,int64_t &us) {
+    return av_parse_time(&us,s,1) >= 0 && us >= 0;
+}
+
 class input_t {
 public:
     AVFormatContext*            fmt = NULL;
     AVCodecContext*             dec = NULL;
     int                         vindex = -1;
+    int64_t                     start_us = 0;       // how far into the input to start, as FFmpeg's -ss
+    int64_t                     length_us = -1;     // how much of it, as FFmpeg's -t, -1 for the rest of it
+    const char*                 stop_message = NULL;    // said when CTRL+C stops the reading
+    bool                        stopped = false;    // CTRL+C stopped the reading before the end
 
     ~input_t() {
         close();
@@ -481,19 +518,48 @@ public:
             }
         }
 
+        // the start of the part to read, as FFmpeg's -ss: the keyframe at or before it, from which
+        // the frames before it are decoded and left out
+        t0 = fmt->start_time != AV_NOPTS_VALUE ? fmt->start_time : 0;
+        const AVRational fr = av_guess_frame_rate(fmt,fmt->streams[vindex],NULL);
+        half_frame_us = (fr.num > 0 && fr.den > 0) ? av_rescale_q(1,av_inv_q(fr),av_make_q(1,AV_TIME_BASE)) / 2 : 0;
+        if (start_us > 0) {
+            const int64_t ts = t0 + start_us;
+            if ((r=avformat_seek_file(fmt,-1,INT64_MIN,ts,ts,0)) < 0) {
+                fprintf(stderr,"%s: cannot go to %.3f seconds in: %s\n",path.c_str(),(double)start_us / AV_TIME_BASE,averr(r).c_str());
+                return false;
+            }
+        }
+
         return true;
     }
 
-    // read the whole file: decode each frame of the video and give it to on_frame, and give
-    // each packet of the other streams to on_packet. Either can stop it by returning false.
+    // what to take off the time of everything written, in microseconds, so that with -ss
+    // the output starts at 0, as FFmpeg's does
+    int64_t offset_us(void) const {
+        return start_us > 0 ? t0 + start_us : 0;
+    }
+
+    // how far a frame or packet at ts in time base tb is into the input, from its start, in microseconds
+    int64_t time_us(int64_t ts,AVRational tb) const {
+        return av_rescale_q(ts,tb,av_make_q(1,AV_TIME_BASE)) - t0;
+    }
+
+    // read the file, or the part of it from start_us for length_us: decode each frame of the video
+    // and give it to on_frame, and give each packet of the other streams to on_packet. Either can
+    // stop it by returning false, which is an error. CTRL+C stops it too, but not as an error.
     bool run(const std::function<bool(AVFrame*)> &on_frame,const std::function<bool(AVPacket*)> &on_packet) {
         AVPacket *pkt = av_packet_alloc();
         AVFrame *frame = av_frame_alloc();
+        const AVRational vtb = fmt->streams[vindex]->time_base;
+        const int64_t end_us = length_us >= 0 ? start_us + length_us : INT64_MAX;
         unsigned int errors = 0;
         bool ok = (pkt != NULL && frame != NULL);
+        bool ended = false;                         // past the end of the part to read
         int r;
 
-        // give on_frame each frame the decoder has ready
+        // give on_frame each frame the decoder has ready, of the part to read: the frame nearest
+        // the start, and the frames before the end
         auto drain = [&](void) -> bool {
             for (;;) {
                 r = avcodec_receive_frame(dec,frame);
@@ -504,6 +570,19 @@ public:
                     return true;
                 }
 
+                if (frame->best_effort_timestamp != AV_NOPTS_VALUE) {
+                    const int64_t t = time_us(frame->best_effort_timestamp,vtb) + half_frame_us;
+                    if (t < start_us) {
+                        av_frame_unref(frame);
+                        continue;
+                    }
+                    if (t >= end_us) {
+                        av_frame_unref(frame);
+                        ended = true;
+                        return false;
+                    }
+                }
+
                 const bool keep = on_frame(frame);
                 av_frame_unref(frame);
                 if (!keep)
@@ -512,6 +591,13 @@ public:
         };
 
         while (ok) {
+            if (interrupted) {
+                stopped = true;
+                if (stop_message != NULL)
+                    fprintf(stderr,"\n%s\n",stop_message);
+                break;
+            }
+
             if ((r=av_read_frame(fmt,pkt)) < 0) {
                 if (r != AVERROR_EOF)
                     fprintf(stderr,"\nError reading the input, stopping there: %s\n",averr(r).c_str());
@@ -533,22 +619,35 @@ public:
                     ok = drain();
             }
             else if (on_packet) {
-                ok = on_packet(pkt);
+                // of the part to read
+                const AVStream *s = fmt->streams[pkt->stream_index];
+                const int64_t t = pkt->pts != AV_NOPTS_VALUE ? time_us(pkt->pts,s->time_base) : start_us;
+                if (t >= start_us && t < end_us)
+                    ok = on_packet(pkt);
             }
 
             av_packet_unref(pkt);
         }
 
-        // and the frames the decoder still has
-        if (ok) {
+        // and the frames the decoder still has, unless stopped before the end, when some of them
+        // may be missing frames they need, and are left out, which would put the others out of step
+        if (ended || stopped) {
+            ok = ok || ended;
+        }
+        else if (ok) {
             avcodec_send_packet(dec,NULL);
             ok = drain();
+            if (ended)
+                ok = true;
         }
 
         av_packet_free(&pkt);
         av_frame_free(&frame);
         return ok;
     }
+private:
+    int64_t                     t0 = 0;             // the time the input starts at, in microseconds
+    int64_t                     half_frame_us = 0;
 };
 
 class progress_t {
@@ -583,18 +682,25 @@ private:
     double                      last = 0;
 };
 
-// how many frames the video stream has, or about how many, or 0 if not known
+// how many frames the video stream has, or about how many, or 0 if not known,
+// of the part of it that is read
 static int64_t frame_count(const input_t &in) {
     const AVStream *st = in.vstream();
+    const AVRational fr = av_guess_frame_rate(in.fmt,(AVStream*)st,NULL);
+    const bool rate = fr.num > 0 && fr.den > 0;
+    int64_t n = 0;
 
     if (st->nb_frames > 0)
-        return st->nb_frames;
+        n = st->nb_frames;
+    else if (in.fmt->duration > 0 && rate)
+        n = av_rescale_q(in.fmt->duration,av_make_q(1,AV_TIME_BASE),av_inv_q(fr));
 
-    const AVRational fr = av_guess_frame_rate(in.fmt,(AVStream*)st,NULL);
-    if (in.fmt->duration > 0 && fr.num > 0 && fr.den > 0)
-        return av_rescale_q(in.fmt->duration,av_make_q(1,AV_TIME_BASE),av_inv_q(fr));
+    if (rate && in.length_us >= 0)
+        return av_rescale_q(in.length_us,av_make_q(1,AV_TIME_BASE),av_inv_q(fr));
+    if (rate && in.start_us > 0 && n > 0)
+        return std::max((int64_t)0,n - av_rescale_q(in.start_us,av_make_q(1,AV_TIME_BASE),av_inv_q(fr)));
 
-    return 0;
+    return n;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -668,6 +774,8 @@ static bool field_offset(const std::vector<profile_t> &prof,const match_params_t
 static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas_t> &meas) {
     input_t in;
 
+    in.start_us = opt.start_us;
+    in.length_us = opt.length_us;
     if (!in.open(opt.input,true))
         return false;
 
@@ -863,6 +971,10 @@ static bool measure(const options_t &opt,video_info_t &vi,std::vector<frame_meas
 
     if (!ok)
         return false;
+    if (in.stopped) {
+        fprintf(stderr,"Stopped by CTRL+C while measuring, before writing anything\n");
+        return false;
+    }
     if (meas.empty()) {
         fprintf(stderr,"%s: no video frames\n",opt.input.c_str());
         return false;
@@ -1254,7 +1366,7 @@ static bool open_output(const options_t &opt,const video_info_t &vi,input_t &in,
 
     // the streams, in the same order as the input: the video, and the audio copied as it is.
     // A timecode track is made again from the video's timecode, which the video keeps.
-    const bool has_timecode = av_dict_get(ist->metadata,"timecode",NULL,0) != NULL;
+    const bool has_timecode = av_dict_get(ist->metadata,"timecode",NULL,0) != NULL && opt.start_us <= 0;
     unsigned int skipped = 0;
     out.map.assign(in.fmt->nb_streams,-1);
     for (unsigned int i=0;i < in.fmt->nb_streams;i++) {
@@ -1282,6 +1394,9 @@ static bool open_output(const options_t &opt,const video_info_t &vi,input_t &in,
             os->sample_aspect_ratio = vi.sar;
             // it was encoded again, by something else
             av_dict_set(&os->metadata,"encoder",NULL,0);
+            // which is not the timecode of the frame -ss starts at
+            if (opt.start_us > 0)
+                av_dict_set(&os->metadata,"timecode",NULL,0);
         }
         else {
             if ((r=avcodec_parameters_copy(os->codecpar,s->codecpar)) < 0)
@@ -1321,10 +1436,16 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
     output_t out;
     enum AVPixelFormat enc_fmt = AV_PIX_FMT_NONE;
 
+    in.start_us = opt.start_us;
+    in.length_us = opt.length_us;
+    in.stop_message = "CTRL+C: stopping here, and finishing the output with what there is (CTRL+C again quits at once)";
     if (!in.open(opt.input,false))
         return false;
     if (!open_output(opt,vi,in,out,enc_fmt))
         return false;
+
+    // taken off the time of everything written, for -ss
+    const int64_t offset_us = in.offset_us();
 
     const AVRational itb = in.vstream()->time_base;
     const bool interlaced = field_order_interlaced(vi.field_order);
@@ -1455,7 +1576,7 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
         // timestamps in the encoder's time base, always going forward
         int64_t pts = frame->best_effort_timestamp;
         if (pts != AV_NOPTS_VALUE)
-            pts = av_rescale_q(pts,itb,out.enc->time_base);
+            pts = av_rescale_q(pts - av_rescale_q(offset_us,av_make_q(1,AV_TIME_BASE),itb),itb,out.enc->time_base);
         else
             pts = (out.last_pts != AV_NOPTS_VALUE) ? (out.last_pts + std::max((int64_t)1,out.frame_duration)) : 0;
         if (out.last_pts != AV_NOPTS_VALUE && pts <= out.last_pts)
@@ -1479,7 +1600,13 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
         if (o < 0)
             return true;
 
-        av_packet_rescale_ts(pkt,in.fmt->streams[pkt->stream_index]->time_base,out.oc->streams[o]->time_base);
+        const AVRational tb = in.fmt->streams[pkt->stream_index]->time_base;
+        if (offset_us != 0) {
+            const int64_t off = av_rescale_q(offset_us,av_make_q(1,AV_TIME_BASE),tb);
+            if (pkt->pts != AV_NOPTS_VALUE) pkt->pts -= off;
+            if (pkt->dts != AV_NOPTS_VALUE) pkt->dts -= off;
+        }
+        av_packet_rescale_ts(pkt,tb,out.oc->streams[o]->time_base);
         pkt->stream_index = o;
         pkt->pos = -1;
 
@@ -1517,6 +1644,8 @@ static bool write_output(const options_t &opt,const video_info_t &vi,const std::
     }
     if (!ok)
         fprintf(stderr,"%s is not complete\n",opt.output.c_str());
+    else if (in.stopped)
+        fprintf(stderr,"Stopped by CTRL+C: %s has the %lu frames before it, and is complete\n",opt.output.c_str(),n);
 
     return ok;
 }
@@ -1556,9 +1685,9 @@ int main(int argc,char **argv) {
         if (a[0] == '-' && a[1] != 0) {
             const std::string o = a + 1;
             // options that take a value
-            const bool takes = (o == "r" || o == "w" || o == "M" || o == "t" || o == "margin" || o == "i" ||
+            const bool takes = (o == "r" || o == "w" || o == "M" || o == "score" || o == "margin" || o == "i" ||
                                 o == "H" || o == "edges" || o == "c" || o == "b" || o == "x" || o == "log" ||
-                                o == "jump");
+                                o == "jump" || o == "ss" || o == "t");
             const char *v = NULL;
             double d;
 
@@ -1598,12 +1727,24 @@ int main(int argc,char **argv) {
                 }
                 opt.max_shift = d;
             }
-            else if (o == "t") {
+            else if (o == "score") {
                 if (!parse_double(v,d) || d < -1 || d > 1) {
-                    fprintf(stderr,"-t %s: the score must be 0 to 1\n",v);
+                    fprintf(stderr,"-score %s: the score must be 0 to 1\n",v);
                     return 1;
                 }
                 opt.min_score = d;
+            }
+            else if (o == "ss") {
+                if (!parse_time(v,opt.start_us)) {
+                    fprintf(stderr,"-ss %s: give the time as seconds, such as 90.5, or [HH:]MM:SS[.m...], such as 1:30.5\n",v);
+                    return 1;
+                }
+            }
+            else if (o == "t") {
+                if (!parse_time(v,opt.length_us) || opt.length_us == 0) {
+                    fprintf(stderr,"-t %s: give the time as seconds, such as 90.5, or [HH:]MM:SS[.m...], such as 1:30.5\n",v);
+                    return 1;
+                }
             }
             else if (o == "margin") {
                 int m[4];
@@ -1708,6 +1849,8 @@ int main(int argc,char **argv) {
 
     video_info_t vi;
     std::vector<frame_meas_t> meas;
+
+    catch_interrupt();
 
     if (!measure(opt,vi,meas))
         return 1;

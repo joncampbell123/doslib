@@ -16,6 +16,8 @@
 # Exit status is 0 if all tests pass, 1 otherwise.
 import csv
 import os
+import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -390,6 +392,69 @@ def test_dark_edges(name, seed=13, max_off=0.45, max_far=0.002):
         check(name + ': lines moved back, not out of line', rms(o) <= max_off and far <= max_far,
               'the picture on each line %.3f pixels from where it should be, %.2f%% of lines 4 or more' % (rms(o), far * 100))
 
+def run_interrupted(args, src, dst, what, at=60):
+    # run the tool, and once it has written about at frames, CTRL+C (SIGINT) it, as at a terminal
+    p = subprocess.Popen([TOOL] + list(args) + [src, dst], stderr=subprocess.PIPE)
+    seen = b''
+    pattern = re.compile(what.encode() + rb': frame (\d+)')
+    sent = False
+    while True:
+        b = p.stderr.read1(4096) if hasattr(p.stderr, 'read1') else p.stderr.read(1)
+        if not b:
+            break
+        seen += b
+        if not sent:
+            m = [int(x) for x in pattern.findall(seen)]
+            if m and max(m) >= at:
+                p.send_signal(signal.SIGINT)
+                sent = True
+    p.wait()
+    return p.returncode, sent, seen.decode(errors='replace')
+
+def test_interrupt(name, args, what, ext='.mov', vcodec=None, audio=True):
+    # CTRL+C while it writes: it stops, finishes the file with what it has, and exits as it would at the end
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, 'in.mov')
+        dst = os.path.join(tmp, 'out' + ext)
+        cmd = ['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=720x480:rate=60000/1001,noise=alls=8:allf=t']
+        if audio:
+            cmd += ['-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-c:a', 'pcm_s16le']
+        cmd += ['-t', '30', '-c:v', 'ffv1', '-pix_fmt', 'yuv422p', src]
+        subprocess.run(cmd, check=True)
+        extra = ['-c', vcodec] if vcodec else []
+        rc, sent, err = run_interrupted(list(args) + extra, src, dst, what)
+        check(name + ': CTRL+C sent while writing', sent)
+        check(name + ': exits normally', rc == 0, 'exit status %d: %s' % (rc, err.strip().splitlines()[-1] if err.strip() else ''))
+        check(name + ': says it stopped', 'Stopped by CTRL+C' in err)
+        r = subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v', '-show_entries', 'stream=nb_read_frames',
+                            '-of', 'csv=p=0', dst], capture_output=True, text=True)
+        n = int(r.stdout.strip() or 0) if r.returncode == 0 else 0
+        check(name + ': output is complete and plays', r.returncode == 0 and 0 < n < 1798, '%d of 1798 frames, %s' % (n, r.stderr.strip()))
+        d = subprocess.run(['ffmpeg', '-v', 'error', '-i', dst, '-f', 'null', '-'], capture_output=True, text=True)
+        check(name + ': decodes without errors', d.returncode == 0 and d.stderr.strip() == '', d.stderr.strip()[:200])
+
+def test_range(name, ss, t):
+    # -ss and -t, as FFmpeg's: both passes do only that part, the output starts at 0, and the log
+    # gives where in the input each frame is
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, 'in.mov')
+        dst = os.path.join(tmp, 'out.mov')
+        log = os.path.join(tmp, 'out.csv')
+        subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=720x486:rate=30000/1001',
+                        '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-c:a', 'pcm_s16le',
+                        '-t', '5', '-c:v', 'v210', src], check=True)
+        run_tool(['-P', '-ss', ss, '-t', t, '-log', log, src, dst])
+        rows = read_log(log)
+        r = subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v', '-show_entries', 'stream=nb_read_frames',
+                            '-of', 'csv=p=0', dst], capture_output=True, text=True, check=True)
+        n = int(r.stdout.strip())
+        check(name + ': the frames of that part', abs(len(rows) - 60) <= 1 and n == len(rows), '%d measured, %d written' % (len(rows), n))
+        check(name + ': the log says where in the input', abs(float(rows[0]['time']) - 1.0) < 0.02, rows[0]['time'])
+        r = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=start_time', '-of', 'csv=p=0', dst],
+                           capture_output=True, text=True, check=True)
+        st = [float(x) for x in r.stdout.split()]
+        check(name + ': video and audio start at 0', all(abs(x) < 0.05 for x in st), str(st))
+
 def test_errors():
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, 'in.mov')
@@ -418,6 +483,10 @@ test('bottom field first', 'v210', seed=8, bff=True)
 test('field order not given, top first', 'v210', tool_args=('-I',), seed=9, field_order='progressive')
 test('field order not given, bottom first', 'v210', tool_args=('-I',), seed=10, bff=True, field_order='progressive')
 test_dark_edges('dark next to the blanking')
+test_range('-ss and -t in seconds', '1', '2.002')
+test_range('-ss and -t as HH:MM:SS', '00:00:01', '0:02.002')
+test_interrupt('CTRL+C', ['-P'], 'Writing')
+test_interrupt('CTRL+C, MP4', ['-P'], 'Writing', ext='.mp4', vcodec='libx264', audio=False)
 test_errors()
 
 print('%d failure%s' % (failures, '' if failures == 1 else 's'))
