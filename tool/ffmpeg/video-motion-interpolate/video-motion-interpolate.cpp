@@ -68,6 +68,7 @@ struct options_t {
     double                      upscale = 1;        // how many times as big the output is
     int                         near = 2;           // frames each side of a new frame whose motion is used: 1 or 2
     bool                        drops = true;       // find the frames the capture missed or repeated
+    int                         smooth = 0;         // frames to even out irregular motion over, 0 not to
     int64_t                     bit_rate = 0;
     int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
     int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
@@ -95,6 +96,11 @@ static void help(void) {
     fprintf(stderr,"                 to start the motion from (default 2)\n");
     fprintf(stderr,"  -nodrops       Take each frame as being when the file says, not looking for frames the\n");
     fprintf(stderr,"                 capture missed or repeated\n");
+    fprintf(stderr,"  -smooth <n>    Even out motion that goes in uneven steps, from frames that are not of evenly\n");
+    fprintf(stderr,"                 spaced moments, as a capture of 15 frames a second of film at 24 frames a second\n");
+    fprintf(stderr,"                 on TV is: each frame is put at the time of what is in it, from how far the\n");
+    fprintf(stderr,"                 picture moves to it against how fast it moves over n frames around it, and a frame\n");
+    fprintf(stderr,"                 that is the same moment as the one before is left out (default 0, not to)\n");
     fprintf(stderr,"  -block <n>     Pixels across and down of the blocks the motion is measured in (default 8)\n");
     fprintf(stderr,"  -range <n>     Pixels the picture can move, at most, from one frame to the next (default 64)\n");
     fprintf(stderr,"  -log <file>    Write a CSV file of each frame of the input: when it was captured, and\n");
@@ -711,6 +717,117 @@ static float median_of(std::vector<float> v) {
     return v[v.size() / 2u];
 }
 
+// -smooth: motion that goes in uneven steps. The steps around a frame are this many pixels long, as a rule
+// (the median), at least, to go by; and a step this fraction of them is no step, the same moment again.
+static const double SMOOTH_MOTION = 2.0;
+static const double SMOOTH_SAME = 0.2;
+// and a frame is left at its own time if its time worked out so is less than this fraction of a frame from
+// it, which is as near as how far the picture moves tells, and a frame of the output at the time of a frame
+// of the input is that frame as it is, not one made
+static const double SMOOTH_NEAR = 0.15;
+
+// Each frame put at the time of what is in it: its step from the frame before, how far the picture moved,
+// against how far it moves in a second over the span of frames around it (in the same shot, between cuts),
+// leaving out steps more than three times the median of them, as at a cut that was not found, which takes
+// the time between them in proportion. A frame that did not move from the one before, where the picture
+// moves, is the same moment, and is left out as a repeat. Then the times are kept near the times of the
+// frames, over four spans, and each within a frame of its own, what is in a frame being no further from when
+// it was captured, so that the video stays with the sound. Where the picture moves too little to go by, the
+// times are as they were. The number of frames whose time was worked out so.
+static size_t smooth_times(std::vector<frame_info_t> &info,int span) {
+    const size_t n = info.size();
+    if (span < 2 || n < 3)
+        return 0;
+
+    std::vector<double> step(n,0.0),dt(n,0.0),dc(n,0.0);
+    std::vector<char> ok(n,0);
+    for (size_t i=1;i < n;i++) {
+        dt[i] = info[i].time - info[i - 1u].time;
+        step[i] = sqrt(((double)info[i].gx * info[i].gx) + ((double)info[i].gy * info[i].gy));
+        ok[i] = !info[i].cut && !info[i].repeat && !info[i - 1u].repeat && dt[i] > 0;
+        dc[i] = dt[i];
+    }
+
+    const int half = std::max(1,span / 2);
+    size_t retimed = 0;
+    std::vector<char> same(n,0);
+    for (size_t i=1;i < n;i++) {
+        if (!ok[i])
+            continue;
+        // the span, not over a cut: its pairs
+        std::vector<size_t> pairs;
+        pairs.push_back(i);
+        for (size_t j=i;j > 1u && (int)(i - j) < half && !info[j].cut;) {
+            j--;
+            if (info[j].cut) break;
+            if (ok[j]) pairs.push_back(j);
+        }
+        for (size_t j=i + 1u;j < n && (int)(j - i) <= half && !info[j].cut;j++) {
+            if (ok[j]) pairs.push_back(j);
+        }
+        if ((int)pairs.size() < half + 1)
+            continue;
+        std::vector<double> steps;
+        for (size_t j : pairs)
+            steps.push_back(step[j]);
+        std::nth_element(steps.begin(),steps.begin() + (ptrdiff_t)(steps.size() / 2u),steps.end());
+        const double med = steps[steps.size() / 2u];
+        if (med < SMOOTH_MOTION || step[i] > 3.0 * med)
+            continue;
+        double ss = 0,tt = 0;
+        for (size_t j : pairs) {
+            if (step[j] <= 3.0 * med) {
+                ss += step[j];
+                tt += dt[j];
+            }
+        }
+        const double rate = ss / tt;                // pixels a second
+        dc[i] = std::min(3.0 * dt[i],step[i] / rate);
+        if (step[i] < SMOOTH_SAME * rate * dt[i])
+            same[i] = 1;
+        retimed++;
+    }
+    for (size_t i=1;i < n;i++) {
+        if (same[i])
+            info[i].repeat = true;
+    }
+
+    // the times from the steps, and how far each is from the time of its frame, averaged over four spans,
+    // taken off
+    std::vector<double> c(n),d(n),cs(n + 1u,0.0);
+    c[0] = info[0].time;
+    for (size_t i=1;i < n;i++)
+        c[i] = c[i - 1u] + dc[i];
+    for (size_t i=0;i < n;i++) {
+        d[i] = c[i] - info[i].time;
+        cs[i + 1u] = cs[i] + d[i];
+    }
+    const size_t w = (size_t)(span * 2);
+    std::vector<double> t(n);
+    for (size_t i=0;i < n;i++) {
+        const size_t lo = i >= w ? i - w : 0,hi = std::min(n,i + w + 1u);
+        t[i] = c[i] - ((cs[hi] - cs[lo]) / (double)(hi - lo));
+    }
+    // each within a frame (as frames go here, the median time between them) of its own time
+    std::vector<double> gaps(dt.begin() + 1,dt.end());
+    std::nth_element(gaps.begin(),gaps.begin() + (ptrdiff_t)(gaps.size() / 2u),gaps.end());
+    const double frame = gaps[gaps.size() / 2u];
+    for (size_t i=0;i < n;i++) {
+        t[i] = std::min(info[i].time + frame,std::max(info[i].time - frame,t[i]));
+        if (fabs(t[i] - info[i].time) < SMOOTH_NEAR * frame)
+            t[i] = info[i].time;
+    }
+    // and always going forward
+    for (size_t i=1;i < n;i++) {
+        const double least = t[i - 1u] + (0.05 * std::max(dt[i],1e-3));
+        if (t[i] < least)
+            t[i] = least;
+    }
+    for (size_t i=0;i < n;i++)
+        info[i].time = t[i];
+    return retimed;
+}
+
 static bool analyze(const options_t &opt,std::vector<frame_info_t> &info) {
     input_t in;
     struct SwsContext *sws = NULL;
@@ -729,9 +846,10 @@ static bool analyze(const options_t &opt,std::vector<frame_info_t> &info) {
     const double step = fr.num > 0 ? av_q2d(av_inv_q(fr)) : 1.0 / 15.0;
     progress_t progress("Looking at the motion",frame_count(in),opt.quiet);
 
-    // coarse blocks, whole pixels: only how far, and which way, the picture moves
+    // coarse blocks, whole pixels: only how far, and which way, the picture moves; and to a quarter of a pixel
+    // for -smooth, which goes by how far it moves
     fp.block = 16;
-    fp.subpel = false;
+    fp.subpel = opt.smooth > 0;
 
     info.clear();
     bool ok = in.run([&](AVFrame *f) -> bool {
@@ -864,7 +982,11 @@ static bool analyze(const options_t &opt,std::vector<frame_info_t> &info) {
     for (size_t i=1;i < n;i++)
         info[i].time = info[i - 1u].time + ((info[i].pts_time - info[i - 1u].pts_time) * (1.0 + info[i].missed) * k);
 
+    const size_t retimed = smooth_times(info,opt.smooth);
+
     if (!opt.quiet) {
+        if (opt.smooth > 0)
+            fprintf(stderr,"-smooth %d: %zu frames put at the time of what is in them\n",opt.smooth,retimed);
         size_t reps = 0,miss = 0,missed = 0,cuts = 0;
         for (const frame_info_t &fi : info) {
             reps += fi.repeat ? 1u : 0u;
@@ -1489,7 +1611,7 @@ int main(int argc,char **argv) {
         if (a[0] == '-' && a[1] != 0) {
             const std::string o = a + 1;
             // options that take a value
-            const bool takes = (o == "r" || o == "upscale" || o == "near" || o == "block" || o == "range" || o == "log" ||
+            const bool takes = (o == "r" || o == "upscale" || o == "near" || o == "block" || o == "range" || o == "log" || o == "smooth" ||
                                 o == "c" || o == "b" || o == "x" || o == "ss" || o == "t" || o == "threads");
             const char *v = NULL;
             double d;
@@ -1526,6 +1648,13 @@ int main(int argc,char **argv) {
             }
             else if (o == "nodrops") {
                 opt.drops = false;
+            }
+            else if (o == "smooth") {
+                if (!parse_double(v,d) || d < 0 || d > 1000 || d != floor(d) || d == 1) {
+                    fprintf(stderr,"-smooth %s: must be 2 or more frames, or 0 not to\n",v);
+                    return 1;
+                }
+                opt.smooth = (int)d;
             }
             else if (o == "block") {
                 if (!parse_double(v,d) || d < 4 || d > 64 || d != floor(d)) {

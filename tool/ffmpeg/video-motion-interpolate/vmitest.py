@@ -199,6 +199,43 @@ def main():
             check(psnr(got[k], scene[k]) > psnr(scene[k - step], scene[k]) + 3, 'the frame made for it is the scene there, not the frame before (%.2f dB, the frame before %.2f)'
                   % (psnr(got[k], scene[k]), psnr(scene[k - step], scene[k])))
 
+        print('-smooth, frames of uneven moments')
+        # Film at 24 frames a second, on TV at 30 (each film frame shown for two or three fields), captured at
+        # 15: frame c of the capture is of film frame 1.6 c, down to a whole frame, which is a step of one film
+        # frame or two from frame to frame, the file saying 15 a second, even. And one frame the same as the
+        # one before, as a capture card that was late makes.
+        film = [int(np.floor(1.6 * c)) for c in range(int(SECONDS * SLOW))]
+        film[21] = film[20]
+        idx = [min(len(scene) - 1, int(round(FAST * f / 24.0))) for f in film]
+        src = os.path.join(tmp, 'uneven.mkv')
+        write_video(src, [scene[i] for i in idx], str(SLOW))
+        log = os.path.join(tmp, 'uneven.csv')
+        out0 = os.path.join(tmp, 'uneven-0.mkv')
+        out8 = os.path.join(tmp, 'uneven-8.mkv')
+        outd = os.path.join(tmp, 'uneven-default.mkv')
+        if (run_tool(['-r', '60', '-nodrops', '-smooth', '0', src, out0]) == 0 and run_tool(['-r', '60', '-nodrops', '-smooth', '8', '-log', log, src, out8]) == 0 and
+            run_tool(['-r', '60', '-nodrops', src, outd]) == 0):
+            rows = [l.split(',') for l in open(log).read().split('\n')[1:] if l]
+            reps = [int(x[0]) for x in rows if x[8] == '1']
+            check(21 in reps, 'the frame that is the same moment as the one before is left out (%s)' % reps)
+            # how far each frame is put from the time of what is in it, from frame to frame (the times are kept
+            # by the frames' own, which film on TV is behind, by half a film frame as a rule, which does not show)
+            times = [float(x[2]) for x in rows]
+            mid = [j for j in range(4, len(idx) - 4) if j not in reps]
+            err0 = np.std([j / SLOW - idx[j] / FAST for j in mid])
+            err8 = np.std([times[j] - idx[j] / FAST for j in mid])
+            check(err8 < 0.5 * err0, 'each frame is put at the time of what is in it, to within %.1f ms, against %.1f ms at the even times' % (1000 * err8, 1000 * err0))
+            # the frames made, against the scene at their times, the scene a few frames either way
+            got0, got8 = read_video(out0), read_video(out8)
+            ks = range(4 * step, (len(idx) - 8) * step)
+            def best(got):
+                return max(np.mean([psnr(got[k], scene[k + d]) for k in ks if k < len(got) and 0 <= k + d < len(scene)]) for d in range(-3, 4))
+            s0, s8 = best(got0), best(got8)
+            check(s8 > s0 + 1, 'the frames are nearer the scene at their times: %.2f dB, against %.2f without it' % (s8, s0))
+            check(np.array_equal(read_video(outd), got0), 'off by default: the same as -smooth 0')
+        else:
+            check(False, 'it ran')
+
         print('Fading in from black')
         # a picture that does not move, black, then fading in over a second: the frames made are of the
         # picture where it is, between as bright as the frames either side, not moved anywhere
