@@ -985,6 +985,14 @@ static bool open_output(const options_t &opt,const video_info_t &vi,input_t &in,
     }
     if (opt.bit_rate > 0)
         enc->bit_rate = opt.bit_rate;
+    // H.264 near enough to the picture not to put back the blocks that were taken out
+    if (strcmp(codec->name,"libx264") == 0 && opt.bit_rate <= 0 && opt.codec_opts.find("crf") == std::string::npos)
+        av_opt_set(enc->priv_data,"crf","14",0);
+    // FFV1 in slices, which are encoded at once on the CPUs, a frame a CPU being too slow for 60 of them a second
+    if (strcmp(codec->name,"ffv1") == 0 && opt.codec_opts.empty()) {
+        av_opt_set_int(enc->priv_data,"slices",16,0);
+        enc->level = 3;
+    }
 
     AVDictionary *eopts = NULL;
     if (!opt.codec_opts.empty() && (r=av_dict_parse_string(&eopts,opt.codec_opts.c_str(),"=",":",0)) < 0) {
