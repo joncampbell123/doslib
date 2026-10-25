@@ -23,6 +23,7 @@ struct project_t {
     int64_t                     frames = 0;         // how long the sequence is
     std::vector<track_t>        video;              // bottom to top: the top one is what is seen
     std::vector<track_t>        audio;              // clips of the audio of the captures, stereo
+    bool                        nest = false;       // each capture in a sequence of its own, and the clips of those
 
     // where the editor finds the files: each path with the first prefix that is the start of it changed
     // to what goes with it, as /media/x to D: for an editor on Windows that has the disk as D:

@@ -66,6 +66,7 @@ struct options_t {
     int                         width = 0,height = 0;
     bool                        all_tracks = true;  // each capture lined up on a track of its own as well
     bool                        all_audio = false;  // and its audio
+    bool                        nest = false;       // each capture in a sequence of its own, the clips clips of those
     bool                        overwrite = false;
     bool                        quiet = false;
     unsigned int                jobs = 4;
@@ -99,6 +100,9 @@ static void help(void) {
     fprintf(stderr,"  -tracks <t>    best: only the best of the captures; all: and each capture lined up with it,\n");
     fprintf(stderr,"                 all of it, on the tracks under it (the default)\n");
     fprintf(stderr,"  -audio <t>     best: only the audio of the best (the default); all: and of each capture\n");
+    fprintf(stderr,"  -nest          Put each capture in a sequence of its own, as big as the sequence, all of it,\n");
+    fprintf(stderr,"                 and make the clips of the sequence clips of those sequences: the position\n");
+    fprintf(stderr,"                 or color of a capture changed in its sequence is changed in every clip of it\n");
     fprintf(stderr,"  -name <name>   The name of the sequence (default the name of the output)\n");
     fprintf(stderr,"  -size <WxH>    The size of the sequence, square pixels (default as the capture the timeline\n");
     fprintf(stderr,"                 starts from is shown)\n");
@@ -227,6 +231,7 @@ static bool run(options_t &opt) {
     p.rate_num = caps[ref].rate_num;
     p.rate_den = caps[ref].rate_den;
     p.path_map = opt.path_map;
+    p.nest = opt.nest;
     if (opt.width > 0) {
         p.width = opt.width;
         p.height = opt.height;
@@ -334,6 +339,9 @@ int main(int argc,char **argv) {
         }
         else if (o == "keep-blank") {
             opt.tp.keep_blank = true;
+        }
+        else if (o == "nest") {
+            opt.nest = true;
         }
         else if (o == "keep-repeats") {
             opt.pp.keep_repeats = true;

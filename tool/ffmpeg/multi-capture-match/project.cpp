@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#include <functional>
 #include <map>
 #include <random>
 #include <string>
@@ -155,10 +156,45 @@ public:
             }
         }
 
+        // With -nest, each capture in a sequence of its own, as big as the sequence, all of it from where
+        // it starts, so that a frame is as far into its sequence as into the capture, and the clips of the
+        // sequence are clips of those sequences: a change to the position or color of a capture made in its
+        // sequence is made to every clip of it.
+        std::vector<media_t> nested(caps.size());
+        std::vector<std::string> nested_items;
+        if (p.nest) {
+            for (size_t i=0;i < caps.size();i++) {
+                if (!used[i])
+                    continue;
+                const capture_t &c = caps[i];
+                const int64_t first = c.position(0),len = c.position(c.frames() - 1u) + 1 - first;
+                clip_t all;
+                all.cap = (unsigned int)i;
+                all.frame = 0;
+                all.length = len;
+                all.start = first;
+                std::vector<track_t> v(1),a;
+                v[0].clips.push_back(all);
+                if (media[i].audio) {
+                    a.resize(1);
+                    a[0].clips.push_back(all);
+                }
+                std::string name = base_name(c.path);
+                const size_t dot = name.rfind('.');
+                if (dot != std::string::npos && dot > 0)
+                    name.resize(dot);
+                const std::string uid = uuid();
+                nested_items.push_back(write_sequence_clip(uid,name,(first + len) * fticks,media[i].audio,nested[i]));
+                write_sequence(uid,name,v,a,first + len,media);
+            }
+        }
+
         // the sequence, and the clip of it in the project
-        const std::string seq_item = write_sequence_clip(seq_uid,p.frames * fticks);
+        media_t seq_src;
+        const std::string seq_item = write_sequence_clip(seq_uid,p.name,p.frames * fticks,true,seq_src);
+        write_sequence(seq_uid,p.name,p.video,p.audio,p.frames,p.nest ? nested : media);
+        items.insert(items.begin(),nested_items.begin(),nested_items.end());
         items.insert(items.begin(),seq_item);
-        write_sequence(seq_uid,media);
 
         out += "\t<RootProjectItem ObjectUID=\"" + root_uid + "\" ClassID=\"1c307a89-9318-47d7-a583-bf2553736543\" Version=\"1\">\n"
                "\t\t<ProjectItem Version=\"1\">\n"
@@ -181,9 +217,10 @@ public:
         return out;
     }
 private:
-    // what is written of a capture, for the clips of it to refer to
+    // what is written of a capture, or of a sequence, for the clips of it to refer to
     struct media_t {
         std::string             media_uid,master_uid,item_uid;
+        std::string             name;
         unsigned int            video_source = 0,audio_source = 0,markers = 0;
         bool                    audio = false;
     };
@@ -335,6 +372,7 @@ private:
         const unsigned int vstream = id(),astream = id(),logging = id(),chain = id(),vclip = id(),aclip = id(),groups = id();
 
         m.audio = c.audio_rate > 0 && c.audio_channels > 0;
+        m.name = base_name(c.path);
         m.media_uid = uuid();
         m.master_uid = uuid();
         m.item_uid = uuid();
@@ -440,12 +478,20 @@ private:
         out += "\t</VideoStream>\n";
     }
 
-    // the sequence as a clip in the project
-    std::string write_sequence_clip(const std::string &seq_uid,int64_t dur) {
+    // a sequence as a clip in the project, and what the clips of it refer to
+    std::string write_sequence_clip(const std::string &seq_uid,const std::string &seq_name,int64_t dur,bool audio,media_t &src) {
         const std::string item = uuid(),master = uuid();
         const unsigned int logging = id(),chain = id(),aclip = id(),vclip = id(),groups = id();
         const unsigned int asrc = id(),vsrc = id();
-        const std::string name = xml_escape(p.name);
+        const std::string name = xml_escape(seq_name);
+
+        src.master_uid = master;
+        src.item_uid = item;
+        src.name = seq_name;
+        src.video_source = vsrc;
+        src.audio_source = asrc;
+        src.markers = 0;
+        src.audio = audio;
 
         out += uobj("ClipProjectItem",item,"cb4e0ed7-aca1-4171-8525-e3658dec06dd",1);
         out += "\t\t<ProjectItem Version=\"1\">\n"
@@ -637,7 +683,7 @@ private:
         out += obj("SubClip",sub,"e0c58dc9-dbdd-4166-aef7-5db7e3f22e84",6);
         out += ref(2,"Clip",clip);
         out += uref(2,"MasterClip",m.master_uid);
-        out += val(2,"Name",xml_escape(base_name(cap.path)));
+        out += val(2,"Name",xml_escape(m.name));
         out += "\t\t<OrigChGrp>0</OrigChGrp>\n";
         out += "\t</SubClip>\n";
         write_clip(audio,clip,audio ? m.audio_source : m.video_source,m.markers,in,in + (c.length * cticks),false,1);
@@ -736,21 +782,23 @@ private:
                "\t</AudioComponentParam>\n";
     }
 
-    void write_sequence(const std::string &seq_uid,const std::vector<media_t> &media) {
+    // a sequence of these tracks of clips of the sources, frames long
+    void write_sequence(const std::string &seq_uid,const std::string &name,const std::vector<track_t> &video,const std::vector<track_t> &audio,
+        int64_t frames,const std::vector<media_t> &media) {
         const int64_t fticks = ticks_per(p.rate_num,p.rate_den);
         const int64_t aticks = ticks_per(48000,1);
         const unsigned int vgroup = id(),agroup = id(),dgroup = id(),vchain = id(),mix = id();
         std::vector<std::string> vtracks,atracks;
-        for (size_t i=0;i < p.video.size();i++)
+        for (size_t i=0;i < video.size();i++)
             vtracks.push_back(uuid());
-        for (size_t i=0;i < p.audio.size();i++)
+        for (size_t i=0;i < audio.size();i++)
             atracks.push_back(uuid());
 
         out += uobj("Sequence",seq_uid,"6a15d903-8739-11d5-af2d-9b7855ad8974",12);
         out += "\t\t<Node Version=\"1\">\n"
                "\t\t\t<Properties Version=\"1\">\n"
                "\t\t\t\t<MZ.WorkInPoint>0</MZ.WorkInPoint>\n";
-        out += val(4,"MZ.WorkOutPoint",num(p.frames * fticks));
+        out += val(4,"MZ.WorkOutPoint",num(frames * fticks));
         out += "\t\t\t\t<MZ.EditLine>0</MZ.EditLine>\n";
         if (p.rate_num == 60000 && p.rate_den == 1001)
             out += "\t\t\t\t<MZ.Sequence.VideoTimeDisplayFormat>107</MZ.Sequence.VideoTimeDisplayFormat>\n";
@@ -778,7 +826,7 @@ private:
             out += "\t\t\t</TrackGroup>\n";
         }
         out += "\t\t</TrackGroups>\n";
-        out += val(2,"Name",xml_escape(p.name));
+        out += val(2,"Name",xml_escape(name));
         out += "\t</Sequence>\n";
 
         out += obj("VideoTrackGroup",vgroup,"9e9abf7a-0918-49c2-91ae-991b5dde77bb",13);
@@ -819,10 +867,10 @@ private:
         out += "\t\t\t<NextTrackID>1</NextTrackID>\n\t\t</TrackGroup>\n\t</DataTrackGroup>\n";
 
         // the video tracks, and their clips
-        for (size_t t=0;t < p.video.size();t++) {
+        for (size_t t=0;t < video.size();t++) {
             std::vector<unsigned int> items;
             std::string head = uobj("VideoClipTrack",vtracks[t],"f68dcd81-8805-11d5-af2d-9bfa89d4ddd4",1);
-            for (const clip_t &c : p.video[t].clips)
+            for (const clip_t &c : video[t].clips)
                 items.push_back(write_track_item(false,c,media,fticks));
             out += head;
             out += "\t\t<ClipTrack Version=\"2\">\n";
@@ -832,9 +880,9 @@ private:
         }
 
         // the audio tracks, their clips, and the mix of them
-        for (size_t t=0;t < p.audio.size();t++) {
+        for (size_t t=0;t < audio.size();t++) {
             std::vector<unsigned int> items;
-            for (const clip_t &c : p.audio[t].clips) {
+            for (const clip_t &c : audio[t].clips) {
                 if (media[c.cap].audio)
                     items.push_back(write_track_item(true,c,media,fticks));
             }
@@ -1007,65 +1055,107 @@ bool write_fcpxml(const std::string &path,const project_t &p) {
         x += t + "</file>\n";
     };
 
-    auto clip_elem = [&](const clip_t &cl,bool audio) {
+    // the name of the sequence of a capture, with -nest: the name of the file, without its extension
+    auto capture_name = [&](unsigned int cap) -> std::string {
+        std::string name = base_name(caps[cap].path);
+        const size_t dot = name.rfind('.');
+        if (dot != std::string::npos && dot > 0)
+            name.resize(dot);
+        return name;
+    };
+
+    std::vector<bool> seq_done(caps.size(),false);
+    std::function<void(const std::string&,const std::string&,int64_t,const std::vector<track_t>&,const std::vector<track_t>&,int,bool)> sequence;
+
+    // a clip of a capture, or with -nest of its sequence, which is defined where it is first used
+    auto clip_elem = [&](const clip_t &cl,bool audio,int tabs,bool nest) {
         const capture_t &c = caps[cl.cap];
+        const std::string t((size_t)tabs,'\t');
         const int64_t in = c.position((size_t)cl.frame);
-        x += std::string("\t\t\t\t\t<clipitem id=\"clipitem-") + std::to_string(clipitem++) + "\"" + (audio ? " premiereChannelType=\"stereo\"" : "") + ">\n";
-        x += "\t\t\t\t\t\t<name>" + xml_escape(base_name(c.path)) + "</name>\n";
-        x += "\t\t\t\t\t\t<enabled>TRUE</enabled>\n";
-        x += "\t\t\t\t\t\t<duration>" + std::to_string(c.position(c.frames() - 1u) + 1) + "</duration>\n";
-        x += fcp_rate(c.rate_num,c.rate_den,6);
-        x += "\t\t\t\t\t\t<start>" + std::to_string(cl.start) + "</start>\n";
-        x += "\t\t\t\t\t\t<end>" + std::to_string(cl.start + cl.length) + "</end>\n";
-        x += "\t\t\t\t\t\t<in>" + std::to_string(in) + "</in>\n";
-        x += "\t\t\t\t\t\t<out>" + std::to_string(in + cl.length) + "</out>\n";
-        file_elem(cl.cap,6);
+        const int64_t len = c.position(c.frames() - 1u) + 1;
+        x += t + "<clipitem id=\"clipitem-" + std::to_string(clipitem++) + "\"" + (audio ? " premiereChannelType=\"stereo\"" : "") + ">\n";
+        x += t + "\t<name>" + xml_escape(nest ? capture_name(cl.cap) : base_name(c.path)) + "</name>\n";
+        x += t + "\t<enabled>TRUE</enabled>\n";
+        x += t + "\t<duration>" + std::to_string(len) + "</duration>\n";
+        x += fcp_rate(c.rate_num,c.rate_den,tabs + 1);
+        x += t + "\t<start>" + std::to_string(cl.start) + "</start>\n";
+        x += t + "\t<end>" + std::to_string(cl.start + cl.length) + "</end>\n";
+        x += t + "\t<in>" + std::to_string(in) + "</in>\n";
+        x += t + "\t<out>" + std::to_string(in + cl.length) + "</out>\n";
+        if (nest) {
+            const std::string sid = "sequence-" + std::to_string(cl.cap + 2u);
+            if (seq_done[cl.cap]) {
+                x += t + "\t<sequence id=\"" + sid + "\"/>\n";
+            }
+            else {
+                // all of the capture, from where it starts, so that a frame is as far into it as into the capture
+                seq_done[cl.cap] = true;
+                clip_t all;
+                all.cap = cl.cap;
+                all.frame = 0;
+                all.start = c.position(0);
+                all.length = len - all.start;
+                std::vector<track_t> v(1),a;
+                v[0].clips.push_back(all);
+                if (c.audio_rate > 0) {
+                    a.resize(1);
+                    a[0].clips.push_back(all);
+                }
+                sequence(sid,capture_name(cl.cap),len,v,a,tabs + 1,false);
+            }
+        }
+        else {
+            file_elem(cl.cap,tabs + 1);
+        }
         if (audio)
-            x += "\t\t\t\t\t\t<sourcetrack>\n"
-                 "\t\t\t\t\t\t\t<mediatype>audio</mediatype>\n"
-                 "\t\t\t\t\t\t\t<trackindex>1</trackindex>\n"
-                 "\t\t\t\t\t\t</sourcetrack>\n";
-        x += "\t\t\t\t\t</clipitem>\n";
+            x += t + "\t<sourcetrack>\n" + t + "\t\t<mediatype>audio</mediatype>\n" + t + "\t\t<trackindex>1</trackindex>\n" + t + "\t</sourcetrack>\n";
+        x += t + "</clipitem>\n";
+    };
+
+    sequence = [&](const std::string &sid,const std::string &name,int64_t frames,const std::vector<track_t> &video,const std::vector<track_t> &audio,
+        int tabs,bool nest) {
+        const std::string t((size_t)tabs,'\t');
+        x += t + "<sequence id=\"" + sid + "\">\n";
+        x += t + "\t<name>" + xml_escape(name) + "</name>\n";
+        x += t + "\t<duration>" + std::to_string(frames) + "</duration>\n";
+        x += fcp_rate(p.rate_num,p.rate_den,tabs + 1);
+        x += t + "\t<media>\n";
+        x += t + "\t\t<video>\n";
+        x += t + "\t\t\t<format>\n" + t + "\t\t\t\t<samplecharacteristics>\n";
+        x += fcp_rate(p.rate_num,p.rate_den,tabs + 5);
+        x += t + "\t\t\t\t\t<width>" + std::to_string(p.width) + "</width>\n";
+        x += t + "\t\t\t\t\t<height>" + std::to_string(p.height) + "</height>\n";
+        x += t + "\t\t\t\t\t<anamorphic>FALSE</anamorphic>\n";
+        x += t + "\t\t\t\t\t<pixelaspectratio>square</pixelaspectratio>\n";
+        x += t + "\t\t\t\t\t<fielddominance>none</fielddominance>\n";
+        x += t + "\t\t\t\t</samplecharacteristics>\n" + t + "\t\t\t</format>\n";
+        for (const track_t &tr : video) {
+            x += t + "\t\t\t<track>\n";
+            for (const clip_t &cl : tr.clips)
+                clip_elem(cl,false,tabs + 4,nest);
+            x += t + "\t\t\t\t<enabled>TRUE</enabled>\n";
+            x += t + "\t\t\t</track>\n";
+        }
+        x += t + "\t\t</video>\n";
+        x += t + "\t\t<audio>\n";
+        x += t + "\t\t\t<numOutputChannels>2</numOutputChannels>\n";
+        for (const track_t &tr : audio) {
+            x += t + "\t\t\t<track premiereTrackType=\"Stereo\">\n";
+            for (const clip_t &cl : tr.clips) {
+                if (caps[cl.cap].audio_rate > 0)
+                    clip_elem(cl,true,tabs + 4,nest);
+            }
+            x += t + "\t\t\t\t<enabled>TRUE</enabled>\n";
+            x += t + "\t\t\t\t<outputchannelindex>1</outputchannelindex>\n";
+            x += t + "\t\t\t</track>\n";
+        }
+        x += t + "\t\t</audio>\n";
+        x += t + "\t</media>\n";
+        x += t + "</sequence>\n";
     };
 
     x = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE xmeml>\n<xmeml version=\"4\">\n";
-    x += "\t<sequence id=\"sequence-1\">\n";
-    x += "\t\t<name>" + xml_escape(p.name) + "</name>\n";
-    x += "\t\t<duration>" + std::to_string(p.frames) + "</duration>\n";
-    x += fcp_rate(p.rate_num,p.rate_den,2);
-    x += "\t\t<media>\n";
-    x += "\t\t\t<video>\n";
-    x += "\t\t\t\t<format>\n\t\t\t\t\t<samplecharacteristics>\n";
-    x += fcp_rate(p.rate_num,p.rate_den,6);
-    x += "\t\t\t\t\t\t<width>" + std::to_string(p.width) + "</width>\n";
-    x += "\t\t\t\t\t\t<height>" + std::to_string(p.height) + "</height>\n";
-    x += "\t\t\t\t\t\t<anamorphic>FALSE</anamorphic>\n";
-    x += "\t\t\t\t\t\t<pixelaspectratio>square</pixelaspectratio>\n";
-    x += "\t\t\t\t\t\t<fielddominance>none</fielddominance>\n";
-    x += "\t\t\t\t\t</samplecharacteristics>\n\t\t\t\t</format>\n";
-    for (const track_t &t : p.video) {
-        x += "\t\t\t\t<track>\n";
-        for (const clip_t &cl : t.clips)
-            clip_elem(cl,false);
-        x += "\t\t\t\t\t<enabled>TRUE</enabled>\n";
-        x += "\t\t\t\t</track>\n";
-    }
-    x += "\t\t\t</video>\n";
-    x += "\t\t\t<audio>\n";
-    x += "\t\t\t\t<numOutputChannels>2</numOutputChannels>\n";
-    for (const track_t &t : p.audio) {
-        x += "\t\t\t\t<track premiereTrackType=\"Stereo\">\n";
-        for (const clip_t &cl : t.clips) {
-            if (caps[cl.cap].audio_rate > 0)
-                clip_elem(cl,true);
-        }
-        x += "\t\t\t\t\t<enabled>TRUE</enabled>\n";
-        x += "\t\t\t\t\t<outputchannelindex>1</outputchannelindex>\n";
-        x += "\t\t\t\t</track>\n";
-    }
-    x += "\t\t\t</audio>\n";
-    x += "\t\t</media>\n";
-    x += "\t</sequence>\n";
+    sequence("sequence-1",p.name,p.frames,p.video,p.audio,1,p.nest);
     x += "</xmeml>\n";
 
     FILE *fp = fopen(path.c_str(),"wb");

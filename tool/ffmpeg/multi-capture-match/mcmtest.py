@@ -181,7 +181,8 @@ def check_sequence(rows, caps, what):
         print('        (sequence frame, capture, frame, tape frame)', avoidable[:10])
     return seq
 
-def check_prproj(path, rows, caps):
+def check_prproj(path, rows, caps, name, nest=False):
+    # returns the start, end, in and out of each clip of the top track
     data = gzip.open(path).read()
     root = ET.fromstring(data)
     ids, uids = {}, {}
@@ -207,7 +208,8 @@ def check_prproj(path, rows, caps):
     udangling = [r for r in urefs if r not in uids]
     check(not udangling, 'prproj: every ObjectURef is an object (%d of them)' % len(urefs))
     # the top video track is the sequence: its clips, end to end
-    seq = [e for e in root if e.tag == 'Sequence'][0]
+    seqs = [e for e in root if e.tag == 'Sequence']
+    seq = [e for e in seqs if e.findtext('Name') == name][0]
     vgroup = ids[seq.find('TrackGroups').findall('TrackGroup')[0].find('Second').attrib['ObjectRef']]
     tracks = [uids[t.attrib['ObjectURef']] for t in vgroup.find('TrackGroup').find('Tracks')]
     top = tracks[-1]
@@ -216,6 +218,8 @@ def check_prproj(path, rows, caps):
     pos = 0
     cont = True
     frames = 0
+    got = []
+    sources = set()
     for it in items:
         ti = it.find('ClipTrackItem').find('TrackItem')
         start = int(ti.findtext('Start', '0'))
@@ -227,26 +231,57 @@ def check_prproj(path, rows, caps):
         cout = int(clip.find('Clip').findtext('OutPoint'))
         cont = cont and (cout - cin) == (end - start)
         frames += (end - start) // ticks
+        got.append((start, end, cin, cout))
+        sources.add(ids[clip.find('Clip').find('Source').attrib['ObjectRef']].tag)
     nseq = len([r for r in rows if r['capture'] != ''])
-    check(cont, 'prproj: the clips of the top track are end to end, as long as what they are of')
-    check(frames == nseq, 'prproj: the top track is as long as the sequence (%d frames)' % nseq)
-    check(len(tracks) == 1 + len(caps), 'prproj: a track for the best, and one for each capture')
+    what = 'prproj -nest' if nest else 'prproj'
+    check(cont, '%s: the clips of the top track are end to end, as long as what they are of' % what)
+    check(frames == nseq, '%s: the top track is as long as the sequence (%d frames)' % (what, nseq))
+    check(len(tracks) == 1 + len(caps), '%s: a track for the best, and one for each capture' % what)
+    if nest:
+        others = [e for e in seqs if e is not seq]
+        check(sources == {'VideoSequenceSource'}, 'prproj -nest: the clips are of sequences, not of the files (%s)' % ', '.join(sorted(sources)))
+        check(len(others) == len(caps), 'prproj -nest: a sequence for each capture (%d)' % len(others))
+        whole = True
+        for o in others:
+            vg = ids[o.find('TrackGroups').findall('TrackGroup')[0].find('Second').attrib['ObjectRef']]
+            trs = [uids[t.attrib['ObjectURef']] for t in vg.find('TrackGroup').find('Tracks')]
+            its = [ids[i.attrib['ObjectRef']] for t in trs for i in t.iter('TrackItem') if 'ObjectRef' in i.attrib]
+            if len(its) != 1:
+                whole = False
+                continue
+            c = ids[ids[its[0].find('ClipTrackItem').find('SubClip').attrib['ObjectRef']].find('Clip').attrib['ObjectRef']]
+            whole = whole and ids[c.find('Clip').find('Source').attrib['ObjectRef']].tag == 'VideoMediaSource'
+            whole = whole and int(c.find('Clip').findtext('InPoint')) == 0
+        check(whole, 'prproj -nest: each sequence of a capture is one clip of all of the file')
+    else:
+        check(sources == {'VideoMediaSource'}, 'prproj: the clips are of the files')
+    return got
 
-def check_xml(path, rows):
+def check_xml(path, rows, nest=False):
     root = ET.parse(path).getroot()
     tracks = root.find('sequence').find('media').find('video').findall('track')
     top = tracks[-1]
     pos = 0
     cont = True
+    got = []
     for ci in top.findall('clipitem'):
         s, e = int(ci.findtext('start')), int(ci.findtext('end'))
         i, o = int(ci.findtext('in')), int(ci.findtext('out'))
         cont = cont and s == pos and (e - s) == (o - i)
         pos = e
+        got.append((s, e, i, o))
     nseq = len([r for r in rows if r['capture'] != ''])
-    check(cont and pos == nseq, 'xml: the clips of the top track are end to end, %d frames' % pos)
+    what = 'xml -nest' if nest else 'xml'
+    check(cont and pos == nseq, '%s: the clips of the top track are end to end, %d frames' % (what, pos))
+    if nest:
+        nested = [q for q in root.iter('sequence') if q.find('media') is not None and q.get('id') != 'sequence-1']
+        refs = [ci.find('sequence') for ci in top.findall('clipitem')]
+        check(all(r is not None for r in refs) and not top.findall('clipitem/file'), 'xml -nest: the clips of the top track are of sequences, not of the files')
+        check(len(nested) == len(set(q.get('id') for q in nested)) and len(nested) >= 2, 'xml -nest: each sequence of a capture is defined once (%d)' % len(nested))
     files = [f for f in root.iter('file') if f.find('pathurl') is not None]
-    check(all(f.findtext('pathurl').startswith('file://localhost/') for f in files) and len(files) >= 2, 'xml: each file is defined, with its path')
+    check(all(f.findtext('pathurl').startswith('file://localhost/') for f in files) and len(files) >= 2, '%s: each file is defined, with its path' % what)
+    return got
 
 #------------------------------------------------------------------------
 
@@ -287,7 +322,19 @@ def main():
             rows = read_log(log)
             check_sequence(rows, caps, '-match %s' % by)
             if by == 'video':
-                check_prproj(out, rows, caps)
+                flat = check_prproj(out, rows, caps, 'out-video')
+                # -nest: the same clips, of a sequence of each capture
+                out = os.path.join(tmp, 'out-nest.prproj')
+                r = run_tool(['-cache', cache, '-nest', '-o', out] + paths)
+                check(r == 0, '-nest: it ran')
+                if r == 0:
+                    nested = check_prproj(out, rows, caps, 'out-nest', nest=True)
+                    check(nested == flat, 'prproj -nest: the clips start, end, go in and out where they do without it')
+                out = os.path.join(tmp, 'out-nest.xml')
+                r = run_tool(['-cache', cache, '-nest', '-o', out] + paths)
+                check(r == 0, '-nest, xml: it ran')
+                if r == 0:
+                    check_xml(out, rows, nest=True)
 
         print('Final Cut Pro XML, -ref 3, -path-map')
         log = os.path.join(tmp, 'log-xml.csv')
