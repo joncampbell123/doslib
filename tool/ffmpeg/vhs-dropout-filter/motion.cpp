@@ -283,6 +283,42 @@ void estimate_motion(mvfield_t &mv,const pyramid_t &cur,const pyramid_t &ref,con
     }
 }
 
+void block_costs(mvfield_t &mv,const pyramid_t &cur,const pyramid_t &ref,const me_params_t &mp) {
+    const int nb = mv.bw * mv.bh;
+    const image8_t &c0 = cur.level[0];
+    const int B = mv.block;
+
+    // The median difference, not the mean, so that what is in one picture and not the other, such as
+    // a dropout, does not make the block look out of line, as long as it is less than half of it
+    #pragma omp parallel
+    {
+    std::vector<int> d;
+    d.reserve((size_t)(B * B));
+    #pragma omp for schedule(static)
+    for (int b=0;b < nb;b++) {
+        const int x0 = (b % mv.bw) * B,x1 = std::min(c0.w,x0 + B);
+        const int y0 = (b / mv.bw) * B,y1 = std::min(c0.h,y0 + B);
+        const float dx = floorf((mv.vx[b] * 2.0f) + 0.5f) * 0.5f,dy = floorf((mv.vy[b] * 2.0f) + 0.5f) * 0.5f;
+        const int ix = (int)floorf(dx),iy = (int)floorf(dy);
+        const bool hx = (dx != (float)ix),hy = (dy != (float)iy);
+        const image8_t &r = hx ? (hy ? ref.half[2] : ref.half[0]) : (hy ? ref.half[1] : ref.level[0]);
+        d.clear();
+        for (int y=y0;y < y1;y++) {
+            const uint8_t *c = c0.row(y);
+            const uint8_t *rr = r.row(std::min(std::max(y + iy,0),r.h - 1));
+            for (int x=x0;x < x1;x++)
+                d.push_back(std::min(abs((int)c[x] - (int)rr[std::min(std::max(x + ix,0),r.w - 1)]),mp.trunc));
+        }
+        if (d.empty()) {
+            mv.cost[b] = (float)mp.trunc;
+            continue;
+        }
+        std::nth_element(d.begin(),d.begin() + (ptrdiff_t)(d.size() / 2u),d.end());
+        mv.cost[b] = (float)d[d.size() / 2u];
+    }
+    }
+}
+
 void refine_masked(mvfield_t &mv,const image_t &cur,const image_t &ref,const mask_t &cmask,const mask_t &rmask,const me_params_t &mp) {
     const int B = mv.block;
     const int nb = mv.bw * mv.bh;

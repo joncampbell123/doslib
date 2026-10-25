@@ -101,7 +101,8 @@ struct box_sums_t {
 };
 
 void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,const mask_t &mask,int lw,int lh,
-    const std::vector<fill_source_t> &src,const fill_params_t &fp,fill_stats_t &fs) {
+    const std::vector<fill_source_t> &src,const fill_params_t &fp,fill_stats_t &fs,
+    const std::vector<plane16_t> *fallback) {
     out = cur;
 
     for (size_t p=0;p < cur.size();p++) {
@@ -124,7 +125,7 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
             grow_mask(near,w,h,mx,my);
 
         std::vector<float> pred(n,0.0f),diff(n,0.0f),have(n,0.0f);
-        mask_t done(n,0);
+        mask_t done(n,0),from_donor(n,0);
 
         #pragma omp parallel for schedule(dynamic,4)
         for (int y=0;y < h;y++) {
@@ -137,12 +138,19 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
                 const float lx = ((float)x * sx) + ((sx - 1.0f) * 0.5f);
                 const float ly = ((float)y * sy) + ((sy - 1.0f) * 0.5f);
                 float sw = 0,sv = 0;
+                int top = -1;
+                float cv[16],cw[16];                // what each source of the top priority says, and how much it counts
+                int nc = 0;
 
                 for (size_t s=0;s < src.size();s++) {
+                    if (src[s].priority < top)
+                        continue;
                     const plane16_t &rp = (*src[s].pl)[p];
                     float dx,dy,c;
 
                     src[s].mv->at(lx,ly,dx,dy,&c);
+                    if (c > src[s].max_cost)
+                        continue;
                     const float rx = (float)x + (dx / sx),ry = (float)y + (dy / sy);
                     const int ix = (int)floorf(rx),iy = (int)floorf(ry);
 
@@ -159,19 +167,56 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
                     if (bad)
                         continue;
 
+                    // the first of a higher priority puts aside what came before
+                    if (src[s].priority > top) {
+                        top = src[s].priority;
+                        sw = sv = 0;
+                        nc = 0;
+                    }
                     const float wt = expf(-c / fp.cost_scale) / (float)src[s].distance;
-                    sv += wt * sample_bilinear(rp,rx,ry);
+                    const float v = sample_bilinear(rp,rx,ry);
+                    sv += wt * v;
                     sw += wt;
+                    if (nc < 16) {
+                        cv[nc] = v;
+                        cw[nc] = wt;
+                        nc++;
+                    }
+                }
+
+                // Where other copies of the tape do not agree, in a dropout, one that is much the same as
+                // the dropout is likely to have the same dropout, as another playback of a tape with a
+                // crease in it does, and is left out, where another is not like the dropout at all.
+                if (pm[i] && top > 0 && nc >= 2) {
+                    const float here = (float)cp.v[i];
+                    float most = 0;
+                    for (int k=0;k < nc;k++)
+                        most = std::max(most,fabsf(cv[k] - here));
+                    if (most > 12.0f * 256.0f) {
+                        sv = sw = 0;
+                        for (int k=0;k < nc;k++) {
+                            if (fabsf(cv[k] - here) >= 0.4f * most) {
+                                sv += cw[k] * cv[k];
+                                sw += cw[k];
+                            }
+                        }
+                    }
                 }
 
                 if (sw > 0.0f) {
                     pred[i] = sv / sw;
                     if (pm[i]) {
                         done[i] = 1;
+                        from_donor[i] = top > 0 ? 1 : 0;
                     }
                     else {
-                        diff[i] = (float)cp.v[i] - pred[i];
-                        have[i] = 1.0f;
+                        // not where they differ a lot, which is more likely a dropout that was not found,
+                        // or something that moved, than how much brighter one is than the other
+                        const float d = (float)cp.v[i] - pred[i];
+                        if (fabsf(d) <= 16.0f * 256.0f) {
+                            diff[i] = d;
+                            have[i] = 1.0f;
+                        }
                     }
                 }
             }
@@ -183,8 +228,8 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
         if (fp.match)
             bs.build(diff,have,w,h);
 
-        size_t count = 0;
-        #pragma omp parallel for schedule(static) reduction(+:count)
+        size_t count = 0,dcount = 0;
+        #pragma omp parallel for schedule(static) reduction(+:count,dcount)
         for (int y=0;y < h;y++) {
             uint16_t *o = op.line((unsigned int)y);
             for (int x=0;x < w;x++) {
@@ -201,12 +246,27 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
                 }
                 o[x] = (uint16_t)std::min(65535.0f,std::max(0.0f,v + 0.5f));
                 count++;
+                dcount += from_donor[i];
             }
         }
 
-        const size_t left = fill_columns(op,pm,done);
+        // what nothing filled in, from what was held, or the lines above and below
+        size_t left = 0,held = 0;
+        if (fallback != NULL) {
+            const plane16_t &fb = (*fallback)[p];
+            for (size_t i=0;i < n;i++) {
+                if (pm[i] && !done[i]) {
+                    op.v[i] = fb.v[i];
+                    held++;
+                }
+            }
+        }
+        else {
+            left = fill_columns(op,pm,done);
+        }
         if (p == 0) {
-            fs.temporal += count;
+            fs.temporal += count + held;
+            fs.donor += dcount;
             fs.spatial += left;
         }
     }

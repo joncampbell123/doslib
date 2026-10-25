@@ -21,6 +21,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -54,6 +55,7 @@ extern "C" {
 #include "motion.h"
 #include "detect.h"
 #include "fill.h"
+#include "match.h"
 
 enum filter_mode_t {
     MODE_HOLD=1,                                    // fill in with what was last there
@@ -76,6 +78,10 @@ struct options_t {
     int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
     int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
     int                         threads = 0;        // to work on the pictures with, 0 for half the CPUs
+    std::vector<std::string>    donors;             // other copies of the tape to fill in from
+    double                      match = 0.9;        // the least score for a frame of a donor to be the same frame
+    double                      donor_gap = 60;     // seconds: a donor that is the input itself is not used this close
+    std::string                 cache_dir;          // where the thumbnails of files are kept, "" not to keep them
     detect_params_t             dp;
     fill_params_t               fp;
     int                         fields = -1;        // -1 to decide from the file, 0 progressive, 1 interlaced
@@ -131,7 +137,27 @@ static void help(void) {
     fprintf(stderr,"                 a cut, the dropouts are filled from the lines above and below (default 24)\n");
     fprintf(stderr,"  -nomatch       -mode 3: do not make what is filled in as bright as the picture around it\n");
     fprintf(stderr,"  -feather <px>  -mode 2: the edges of the holes fade over this many pixels (default 0)\n");
-    fprintf(stderr,"  -show          Mark the dropouts in magenta instead, to see what is found\n");
+    fprintf(stderr,"  -show          Mark the dropouts in magenta instead, to see what is found, and those\n");
+    fprintf(stderr,"                 only a donor found in green\n");
+    fprintf(stderr,"\n");
+    fprintf(stderr,"Other copies of the tape:\n");
+    fprintf(stderr,"  -donor <file>  Another capture of the same tape, or a copy of it, or of some parts of it,\n");
+    fprintf(stderr,"                 such as a copy made from it before it was worn, or edited from it. Its frames\n");
+    fprintf(stderr,"                 are found from the picture, lined up with the input's, and used where they\n");
+    fprintf(stderr,"                 are not dropouts themselves: to find dropouts that stay in the same place for\n");
+    fprintf(stderr,"                 a while, as a crease in the tape makes, which the pictures around cannot show,\n");
+    fprintf(stderr,"                 and to fill in the dropouts (-mode 1 and 3) before the pictures around do\n");
+    fprintf(stderr,"                 (-mode 2 makes holes of what it finds).\n");
+    fprintf(stderr,"                 It can be the input itself, if it has the tape played more than once in it.\n");
+    fprintf(stderr,"                 More than one -donor can be given.\n");
+    fprintf(stderr,"  -match <n>     How alike, 0 to 1, a frame of a donor and of the input have to be to be the\n");
+    fprintf(stderr,"                 same frame (default 0.9)\n");
+    fprintf(stderr,"  -donor-gap <sec>  A donor that is the input itself is not used less than this far from\n");
+    fprintf(stderr,"                 the frame it fills in (default 60)\n");
+    fprintf(stderr,"  -cache <dir>   Where to keep the thumbnails of each frame of the input and the donors,\n");
+    fprintf(stderr,"                 which take a while to make, so that they are made only once\n");
+    fprintf(stderr,"                 (default ~/.cache/vhs-dropout-filter)\n");
+    fprintf(stderr,"  -nocache       Do not keep them\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"Output:\n");
     fprintf(stderr,"  -c <encoder>   Video encoder, such as prores_ks, ffv1 or libx264 (default: the input's\n");
@@ -472,6 +498,40 @@ public:
         return av_rescale_q(ts,tb,av_make_q(1,AV_TIME_BASE)) - t0;
     }
 
+    // go to the keyframe at or before this many seconds into the input, to read the frames from there
+    // with read_frame
+    bool seek_seconds(double t) {
+        const int64_t ts = t0 + (int64_t)(std::max(0.0,t) * AV_TIME_BASE);
+        if (avformat_seek_file(fmt,-1,INT64_MIN,ts,ts,0) < 0)
+            return false;
+        avcodec_flush_buffers(dec);
+        eof = false;
+        return true;
+    }
+
+    // the next frame of the video, read and decoded, or false at the end of it
+    bool read_frame(AVFrame *frame,AVPacket *pkt) {
+        for (;;) {
+            int r = avcodec_receive_frame(dec,frame);
+            if (r >= 0)
+                return true;
+            if (r == AVERROR_EOF)
+                return false;
+            if (r != AVERROR(EAGAIN))
+                continue;
+            if (eof)
+                return false;
+            if (av_read_frame(fmt,pkt) < 0) {
+                avcodec_send_packet(dec,NULL);
+                eof = true;
+                continue;
+            }
+            if (pkt->stream_index == vindex)
+                avcodec_send_packet(dec,pkt);
+            av_packet_unref(pkt);
+        }
+    }
+
     // read the file, or the part of it from start_us for length_us: decode each frame of the video
     // and give it to on_frame, and give each packet of the other streams to on_packet. Either can
     // stop it by returning false, which is an error. CTRL+C stops it too, but not as an error.
@@ -575,6 +635,7 @@ public:
 private:
     int64_t                     t0 = 0;             // the time the input starts at, in microseconds
     int64_t                     half_frame_us = 0;
+    bool                        eof = false;        // read_frame read all of the input
 };
 
 class progress_t {
@@ -629,6 +690,283 @@ static int64_t frame_count(const input_t &in) {
 
     return n;
 }
+/////////////////////////////////////////////////////////////////////////////
+// another copy of the tape: finding its frames, and reading them
+
+// the thumbnail of a frame of 8-bit gray: the middle of the picture, leaving out the blanking at the
+// sides and the head switching noise at the bottom, each sample the mean of its part of it
+static void make_thumb(uint8_t *t,const AVFrame *g) {
+    const int x0 = g->width / 18,x1 = g->width - (g->width / 18);
+    const int y0 = g->height / 12,y1 = g->height - (g->height / 12);
+
+    for (int ty=0;ty < THUMB_H;ty++) {
+        const int ya = y0 + (((y1 - y0) * ty) / THUMB_H),yb = std::max(ya + 1,y0 + (((y1 - y0) * (ty + 1)) / THUMB_H));
+        for (int tx=0;tx < THUMB_W;tx++) {
+            const int xa = x0 + (((x1 - x0) * tx) / THUMB_W),xb = std::max(xa + 1,x0 + (((x1 - x0) * (tx + 1)) / THUMB_W));
+            unsigned int sum = 0;
+            for (int y=ya;y < yb;y++) {
+                const uint8_t *r = g->data[0] + ((ptrdiff_t)y * g->linesize[0]);
+                for (int x=xa;x < xb;x++)
+                    sum += r[x];
+            }
+            t[(ty * THUMB_W) + tx] = (uint8_t)((sum + (unsigned int)(((yb - ya) * (xb - xa)) / 2)) / (unsigned int)((yb - ya) * (xb - xa)));
+        }
+    }
+}
+
+// a thumbnail of each frame of a video, or of the part of it from start_us for length_us,
+// or false if it cannot be read, or CTRL+C stopped it
+static bool index_video(thumbs_t &t,const std::string &path,int64_t start_us,int64_t length_us,bool quiet,const char *what) {
+    input_t in;
+    converter_t conv;
+    AVFrame *g = NULL;
+
+    in.start_us = start_us;
+    in.length_us = length_us;
+    if (!in.open(path,true))
+        return false;
+
+    const AVRational tb = in.vstream()->time_base;
+    const AVRational fr = av_guess_frame_rate(in.fmt,in.vstream(),NULL);
+    const double step = (fr.num > 0 && fr.den > 0) ? av_q2d(av_inv_q(fr)) : (1001.0 / 60000.0);
+    progress_t progress(what,frame_count(in),quiet);
+    bool ok;
+
+    t = thumbs_t();
+    ok = in.run([&](AVFrame *frame) -> bool {
+        if (g == NULL || g->width != frame->width || g->height != frame->height) {
+            av_frame_free(&g);
+            if ((g=alloc_frame(AV_PIX_FMT_GRAY8,frame->width,frame->height)) == NULL)
+                return false;
+        }
+        if (!conv.convert(g,frame)) {
+            fprintf(stderr,"\n%s: cannot convert %s pixels to gray\n",path.c_str(),av_get_pix_fmt_name((enum AVPixelFormat)frame->format));
+            return false;
+        }
+
+        const size_t n = t.time.size();
+        t.v.resize((n + 1u) * THUMB_SIZE);
+        make_thumb(&t.v[n * THUMB_SIZE],g);
+        if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
+            t.time.push_back((double)in.time_us(frame->best_effort_timestamp,tb) / AV_TIME_BASE);
+        else
+            t.time.push_back(n != 0u ? t.time[n - 1u] + step : 0.0);
+        progress.frame(n + 1u);
+        return true;
+    },nullptr);
+
+    progress.done(t.count());
+    av_frame_free(&g);
+    if (in.stopped) {
+        fprintf(stderr,"Stopped by CTRL+C while indexing %s, nothing written\n",path.c_str());
+        return false;
+    }
+    return ok;
+}
+
+// where the thumbnails of a file are kept, so that they are made only once: the cache directory, and a
+// name from where the file is, how big it is and when it was changed, or "" if they are not kept
+static std::string thumbs_cache_path(const std::string &dir,const std::string &path) {
+    struct stat st;
+    char *real;
+
+    if (dir.empty() || stat(path.c_str(),&st) != 0 || (real=realpath(path.c_str(),NULL)) == NULL)
+        return "";
+
+    char key[64];
+    std::string s = real;
+    free(real);
+    snprintf(key,sizeof(key),"|%lld|%lld|thumbs1",(long long)st.st_size,(long long)st.st_mtime);
+    s += key;
+
+    // FNV-1a
+    uint64_t h = 14695981039346656037ull;
+    for (unsigned char c : s) {
+        h ^= c;
+        h *= 1099511628211ull;
+    }
+    snprintf(key,sizeof(key),"%016llx.thumbs",(unsigned long long)h);
+    return dir + "/" + key;
+}
+
+static const char THUMBS_MAGIC[8] = { 'V','D','F','T','H','M','B','1' };
+
+static bool load_thumbs(thumbs_t &t,const std::string &cpath) {
+    FILE *fp = fopen(cpath.c_str(),"rb");
+    char magic[8];
+    uint64_t n = 0;
+    bool ok = false;
+
+    if (fp == NULL)
+        return false;
+    if (fread(magic,8,1,fp) == 1 && memcmp(magic,THUMBS_MAGIC,8) == 0 && fread(&n,8,1,fp) == 1 && n < (1ull << 32)) {
+        t.time.resize((size_t)n);
+        t.v.resize((size_t)n * THUMB_SIZE);
+        ok = (n == 0 || (fread(&t.time[0],sizeof(double),(size_t)n,fp) == (size_t)n &&
+                         fread(&t.v[0],THUMB_SIZE,(size_t)n,fp) == (size_t)n));
+    }
+    fclose(fp);
+    return ok;
+}
+
+// make each directory of the path that is not there
+static void make_dirs(const std::string &dir) {
+    for (size_t i=1;i <= dir.size();i++) {
+        if (i == dir.size() || dir[i] == '/')
+            mkdir(dir.substr(0,i).c_str(),0755);
+    }
+}
+
+static void save_thumbs(const thumbs_t &t,const std::string &cpath) {
+    const size_t slash = cpath.rfind('/');
+    if (slash != std::string::npos)
+        make_dirs(cpath.substr(0,slash));
+
+    const std::string tmp = cpath + ".tmp";
+    FILE *fp = fopen(tmp.c_str(),"wb");
+    if (fp == NULL)
+        return;
+
+    const uint64_t n = t.count();
+    bool ok = fwrite(THUMBS_MAGIC,8,1,fp) == 1 && fwrite(&n,8,1,fp) == 1;
+    if (ok && n != 0)
+        ok = fwrite(&t.time[0],sizeof(double),(size_t)n,fp) == (size_t)n && fwrite(&t.v[0],THUMB_SIZE,(size_t)n,fp) == (size_t)n;
+    if (fclose(fp) != 0)
+        ok = false;
+    if (ok)
+        rename(tmp.c_str(),cpath.c_str());
+    else
+        unlink(tmp.c_str());
+}
+
+// the thumbnails of the whole of a file, from the cache, or made and kept there
+static bool file_thumbs(thumbs_t &t,const std::string &path,const options_t &opt,const char *what) {
+    const std::string cpath = thumbs_cache_path(opt.cache_dir,path);
+
+    if (!cpath.empty() && load_thumbs(t,cpath))
+        return true;
+    if (!index_video(t,path,0,-1,opt.quiet,what))
+        return false;
+    if (!cpath.empty())
+        save_thumbs(t,cpath);
+    return true;
+}
+
+// the frames of the thumbnails of a whole file that are of the part from start_us for length_us,
+// as input_t takes them: the frame nearest the start, and the frames before the end
+static void slice_thumbs(thumbs_t &out,const thumbs_t &t,int64_t start_us,int64_t length_us) {
+    std::vector<double> d;
+    for (size_t i=1;i < t.count();i++)
+        d.push_back(t.time[i] - t.time[i - 1u]);
+    double half = 0;
+    if (!d.empty()) {
+        std::nth_element(d.begin(),d.begin() + (ptrdiff_t)(d.size() / 2u),d.end());
+        half = d[d.size() / 2u] / 2.0;
+    }
+
+    const double start = (double)start_us / AV_TIME_BASE;
+    const double end = length_us >= 0 ? start + ((double)length_us / AV_TIME_BASE) : 1e300;
+    out = thumbs_t();
+    for (size_t i=0;i < t.count();i++) {
+        if (t.time[i] + half < start || t.time[i] + half >= end)
+            continue;
+        out.time.push_back(t.time[i]);
+        out.v.insert(out.v.end(),t.thumb(i),t.thumb(i) + THUMB_SIZE);
+    }
+}
+
+// the frame of a set of thumbnails at a time, or -1
+static int64_t thumb_at(const thumbs_t &t,double time) {
+    if (t.count() == 0)
+        return -1;
+    const size_t i = (size_t)(std::lower_bound(t.time.begin(),t.time.end(),time) - t.time.begin());
+    size_t best = i < t.count() ? i : t.count() - 1u;
+    if (i > 0 && (i >= t.count() || fabs(t.time[i - 1u] - time) < fabs(t.time[best] - time)))
+        best = i - 1u;
+    const double step = t.count() > 1u ? (t.time.back() - t.time.front()) / (double)(t.count() - 1u) : 1.0;
+    return fabs(t.time[best] - time) <= step / 2.0 ? (int64_t)best : -1;
+}
+
+// another copy of the tape, and which of its frames each frame of the input is
+class donor_t {
+public:
+    std::string                 path;
+    unsigned int                number = 1;         // the first -donor is 1
+    bool                        self = false;       // the input file itself, another playback in it
+    thumbs_t                    thumbs;             // of the whole file
+    std::vector<frame_match_t>  match;              // for each frame of the part of the input being done
+
+    ~donor_t() {
+        for (auto &f : cache)
+            av_frame_free(&f.second);
+        av_frame_free(&frame);
+        av_packet_free(&pkt);
+    }
+
+    bool open(void) {
+        if ((pkt=av_packet_alloc()) == NULL || (frame=av_frame_alloc()) == NULL)
+            return false;
+        return in.open(path,true);
+    }
+
+    // frame idx of the donor, in format fmt and w by h pixels, or NULL if it cannot be had.
+    // Frames are read in order where they can be, and the copy is found again where it jumps,
+    // as at the cuts of an edited copy.
+    const AVFrame *get(int64_t idx,enum AVPixelFormat fmt,int w,int h) {
+        auto it = cache.find(idx);
+        if (it != cache.end())
+            return it->second;
+        if (idx < 0 || (size_t)idx >= thumbs.count())
+            return NULL;
+
+        if (last < 0 || idx <= last || idx > last + 90) {
+            if (!in.seek_seconds(thumbs.time[(size_t)idx] - 1.5))
+                return NULL;
+            last = -1;
+        }
+
+        while (in.read_frame(frame,pkt)) {
+            const int64_t k = frame->best_effort_timestamp != AV_NOPTS_VALUE ?
+                thumb_at(thumbs,(double)in.time_us(frame->best_effort_timestamp,in.vstream()->time_base) / AV_TIME_BASE) : -1;
+            if (k < 0) {
+                av_frame_unref(frame);
+                continue;
+            }
+            last = k;
+            if (k + 4 >= idx) {
+                AVFrame *c = alloc_frame(fmt,w,h);
+                if (c != NULL && conv.convert(c,frame)) {
+                    c->color_range = frame->color_range;
+                    c->colorspace = frame->colorspace;
+                    cache[k] = c;
+                }
+                else {
+                    av_frame_free(&c);
+                }
+            }
+            av_frame_unref(frame);
+
+            // the frames a few before the one asked for are kept, for its dropouts to be found
+            while (!cache.empty() && cache.begin()->first < k - 8) {
+                av_frame_free(&cache.begin()->second);
+                cache.erase(cache.begin());
+            }
+            if (k >= idx)
+                break;
+        }
+
+        it = cache.find(idx);
+        return it != cache.end() ? it->second : NULL;
+    }
+private:
+    input_t                     in;
+    converter_t                 conv;
+    AVPacket*                   pkt = NULL;
+    AVFrame*                    frame = NULL;
+    std::map<int64_t,AVFrame*>  cache;
+    int64_t                     last = -1;          // the frame last read
+};
+
 /////////////////////////////////////////////////////////////////////////////
 // second pass: moving the picture and writing the output file
 
@@ -759,6 +1097,31 @@ static std::vector<comp_t> color_comps(enum AVPixelFormat fmt) {
     return r;
 }
 
+// a blocks matching worse than this, in levels, is not lined up well enough with a donor to use it there
+static const float DONOR_MAX_COST = 12.0f;
+
+// a picture of a donor: a field, or a whole frame, and its own dropouts
+struct dpic_t {
+    std::vector<plane16_t>      pl;
+    image_t                     lum;
+    pyramid_t                   pyr;
+    mask_t                      mask;
+    bool                        masked = false;     // its dropouts were looked for
+};
+typedef std::shared_ptr<dpic_t> dpic_ptr;
+
+// a picture of a donor that is the same as a picture of the input, and how to line it up with it
+struct donor_use_t {
+    dpic_ptr                    pic;
+    mvfield_t                   mv;                 // from the picture of the input to it
+    // and it moved to where the picture of the input is, block by block and then line by line,
+    // its own dropouts with it, and how well each block matched, to fill in from where it is
+    std::vector<plane16_t>      wpl;
+    image_t                     wlum;
+    mask_t                      wmask;
+    mvfield_t                   still;              // no movement, the costs of mv
+};
+
 // one picture: a field, or a whole frame
 struct pic_t {
     int64_t                     seq = 0;            // in the order shown
@@ -771,6 +1134,7 @@ struct pic_t {
     mask_t                      mask;
     std::vector<float>          E;                  // how much each pixel differs from the pictures around it
     detect_stats_t              ds;
+    std::vector<donor_use_t>    donors;             // the pictures of the donors that are this picture
 };
 
 // a frame waiting for its pictures to be done
@@ -785,6 +1149,8 @@ struct out_frame_t {
     float                       threshold = 0;
     float                       noise = 0;
     unsigned int                too_much = 0;
+    size_t                      donor = 0;          // filled in from the donors
+    int64_t                     in_index = -1;      // the frame of the part of the input being done
 };
 
 // the luma, or for RGB, green, which is most of the brightness
@@ -858,27 +1224,33 @@ static void put_picture(AVFrame *f,const std::vector<plane16_t> &pl,const video_
     }
 }
 
-// the dropouts in magenta, for -show
+// the dropouts in magenta, for -show, and those that only a donor found in green
 static void mark_dropouts(std::vector<plane16_t> &pl,const mask_t &mask,const video_info_t &vi) {
     const plane16_t &l = pl[luma_index(vi)];
 
-    for (size_t i=0;i < pl.size();i++) {
-        mask_t pm;
-        plane_mask(pm,mask,(int)l.width,(int)l.height,pl[i]);
+    for (unsigned int kind=1;kind <= 2u;kind++) {
+        mask_t m(mask.size(),0);
+        for (size_t j=0;j < mask.size();j++)
+            m[j] = mask[j] == kind ? 1 : 0;
 
-        uint16_t v;
-        if (pl.size() < 3u)
-            v = 65535;                              // gray: white
-        else if (vi.rgb)
-            v = i == 1u ? 0 : 65535;                // R and B
-        else if (i == 0u)
-            continue;                               // Y as it is
-        else
-            v = 56000;                              // U and V well above the middle
+        for (size_t i=0;i < pl.size();i++) {
+            mask_t pm;
+            plane_mask(pm,m,(int)l.width,(int)l.height,pl[i]);
 
-        for (size_t j=0;j < pm.size();j++) {
-            if (pm[j])
-                pl[i].v[j] = v;
+            uint16_t v;
+            if (pl.size() < 3u)
+                v = kind == 1u ? 65535 : 32768;     // gray: white, or gray
+            else if (vi.rgb)
+                v = (i == 1u) == (kind == 1u) ? 0 : 65535;  // R and B, or G
+            else if (i == 0u)
+                continue;                           // Y as it is
+            else
+                v = kind == 1u ? 56000 : 9000;      // U and V well above the middle, or well below
+
+            for (size_t j=0;j < pm.size();j++) {
+                if (pm[j])
+                    pl[i].v[j] = v;
+            }
         }
     }
 }
@@ -918,8 +1290,11 @@ public:
     // done with a frame: all its pictures are filled in
     std::function<bool(out_frame_t&)> on_frame;
 
-    // add the next frame, of the work format, which this keeps
-    bool add(AVFrame *work,int64_t pts) {
+    // the donors, and which of their frames each frame of the input is
+    std::vector<donor_t*>       donors;
+
+    // add the next frame, of the work format, which this keeps, frame in_index of the part of the input being done
+    bool add(AVFrame *work,int64_t pts,int64_t in_index) {
         const unsigned int nf = vi.fields ? 2u : 1u;
         out_frame_t &of = frames[next_frame];
 
@@ -928,6 +1303,7 @@ public:
         of.work = work;
         of.mask.assign((size_t)vi.width * vi.height,0);
         of.pictures_left = nf;
+        of.in_index = in_index;
 
         for (unsigned int i=0;i < nf;i++) {
             std::unique_ptr<pic_t> p(new pic_t);
@@ -939,7 +1315,7 @@ public:
             p->seq = next_seq++;
             p->frame = next_frame;
             pics.push_back(std::move(p));
-            arrived(next_seq - 1);
+            arrived(next_seq - 1,in_index);
         }
 
         next_frame++;
@@ -954,6 +1330,9 @@ public:
     size_t                      total_pixels = 0;   // of dropouts, over the whole video
     size_t                      total_temporal = 0;
     size_t                      total_spatial = 0;
+    size_t                      total_donor = 0;    // of what was filled in, from the donors
+    size_t                      donor_found = 0;    // dropouts that only the donors found
+    unsigned long               with_donor = 0;     // pictures that a donor had
     unsigned long               flashes = 0;        // pictures with too much differing to be dropouts
     unsigned long               with_dropouts = 0;  // pictures with dropouts
     unsigned long               cuts = 0;           // -mode 1: pictures not filled in from what was held, at a cut
@@ -979,8 +1358,9 @@ private:
         return true;
     }
 
-    // a picture came: how it moved from each of the pictures before it it is compared with
-    void arrived(int64_t seq) {
+    // a picture came: how it moved from each of the pictures before it it is compared with,
+    // and the pictures of the donors that are it, lined up with it
+    void arrived(int64_t seq,int64_t in_index) {
         pic_t &c = *get(seq);
 
         for (int k=1;k <= near;k++) {
@@ -989,10 +1369,509 @@ private:
                 estimate_motion(c.mv[-k],c.pyr,b->pyr,mp);
         }
 
+        for (size_t k=0;k < donors.size() && in_index >= 0;k++) {
+            const donor_t &d = *donors[k];
+            if ((size_t)in_index >= d.match.size() || d.match[(size_t)in_index].frame < 0)
+                continue;
+
+            const int64_t q = (d.match[(size_t)in_index].frame * (vi.fields ? 2 : 1)) + field_order_of(c.field);
+            dpic_ptr dp = donor_pic(k,q);
+            if (dp == NULL)
+                continue;
+            donor_mask(k,q,*dp);
+
+            donor_use_t u;
+            u.pic = dp;
+            estimate_motion(u.mv,c.pyr,dp->pyr,mp);
+            fit_donor_motion(u.mv);
+            block_costs(u.mv,c.pyr,dp->pyr,mp);
+            c.donors.push_back(u);
+        }
+
         // the pyramid of the picture furthest before it is not matched to again
         pic_t *old = get(seq - near);
         if (old != NULL)
             old->pyr.clear();
+    }
+
+    // which of the pictures of a frame a field is, in the order shown
+    unsigned int field_order_of(unsigned int field) const {
+        return vi.fields ? (vi.tff ? field : 1u - field) : 0u;
+    }
+
+    // picture q of donor k, in the order shown, from frame q / 2 if each field is a picture
+    dpic_ptr donor_pic(size_t k,int64_t q) {
+        if (dcache.size() < donors.size())
+            dcache.resize(donors.size());
+        std::map<int64_t,dpic_ptr> &m = dcache[k];
+        auto it = m.find(q);
+        if (it != m.end())
+            return it->second;
+        if (q < 0)
+            return dpic_ptr();
+
+        const int64_t nf = vi.fields ? 2 : 1;
+        const unsigned int o = (unsigned int)(q % nf);
+        const unsigned int field = vi.fields ? (vi.tff ? o : 1u - o) : 0u;
+        const AVFrame *f = donors[k]->get(q / nf,vi.work_fmt,vi.width,vi.height);
+        if (f == NULL)
+            return dpic_ptr();
+
+        pic_t tmp;
+        dpic_ptr p = std::make_shared<dpic_t>();
+        get_picture(tmp,f,vi,field);
+        p->pl.swap(tmp.pl);
+        p->lum = tmp.lum;
+        build_pyramid(p->pyr,p->lum,4);
+
+        // the pictures near this one are kept, which the next pictures of the input are likely to want
+        while (m.size() >= 12u) {
+            auto far = m.begin();
+            for (auto j=m.begin();j != m.end();++j) {
+                if (llabs(j->first - q) > llabs(far->first - q))
+                    far = j;
+            }
+            m.erase(far);
+        }
+        m[q] = p;
+        return p;
+    }
+
+    // How a picture of another copy is put differently from the input is simple: up or down, left or right,
+    // and a little wider or narrower, taller or shorter, all over, as another VCR and capture card put it.
+    // The blocks that matched well say how, fitted to x and y, and each block is kept near that: where the
+    // input has a crease, which is the line above it again, and again, a block matches the picture of the
+    // donor further up just as well, and a few blocks that do so are no more than wrong.
+    static void fit_donor_motion(mvfield_t &mv) {
+        const int nb = mv.bw * mv.bh;
+        if (nb < 6)
+            return;
+
+        std::vector<float> cs = mv.cost;
+        std::nth_element(cs.begin(),cs.begin() + (ptrdiff_t)(cs.size() / 2u),cs.end());
+        const float cmax = std::max(1.0f,cs[cs.size() / 2u] * 1.5f);
+        std::vector<uint8_t> use(nb,0);
+        for (int b=0;b < nb;b++)
+            use[b] = mv.cost[b] <= cmax ? 1 : 0;
+
+        // least squares of a + b*x + c*y, twice, the second time without the blocks far off the first
+        double fx[3] = {0,0,0},fy[3] = {0,0,0};
+        for (int round=0;round < 2;round++) {
+            for (int axis=0;axis < 2;axis++) {
+                double m[3][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+                for (int b=0;b < nb;b++) {
+                    if (!use[b])
+                        continue;
+                    const double r[3] = { 1.0,(double)(b % mv.bw) / mv.bw,(double)(b / mv.bw) / mv.bh };
+                    const double v = axis == 0 ? mv.vx[b] : mv.vy[b];
+                    for (int i=0;i < 3;i++) {
+                        for (int j=0;j < 3;j++)
+                            m[i][j] += r[i] * r[j];
+                        m[i][3] += r[i] * v;
+                    }
+                }
+                // Gauss-Jordan, 3 by 3
+                bool ok = true;
+                for (int i=0;i < 3 && ok;i++) {
+                    int piv = i;
+                    for (int j=i + 1;j < 3;j++)
+                        if (fabs(m[j][i]) > fabs(m[piv][i])) piv = j;
+                    if (fabs(m[piv][i]) < 1e-9) { ok = false; break; }
+                    for (int j=0;j < 4;j++) std::swap(m[i][j],m[piv][j]);
+                    for (int j=0;j < 3;j++) {
+                        if (j == i) continue;
+                        const double f = m[j][i] / m[i][i];
+                        for (int k2=0;k2 < 4;k2++) m[j][k2] -= f * m[i][k2];
+                    }
+                }
+                double *f = axis == 0 ? fx : fy;
+                for (int i=0;i < 3;i++)
+                    f[i] = ok ? m[i][3] / m[i][i] : 0.0;
+                if (!ok) {
+                    // too few blocks to fit: the median
+                    std::vector<float> v;
+                    for (int b=0;b < nb;b++) v.push_back(axis == 0 ? mv.vx[b] : mv.vy[b]);
+                    std::nth_element(v.begin(),v.begin() + (ptrdiff_t)(v.size() / 2u),v.end());
+                    f[0] = v[v.size() / 2u];
+                    f[1] = f[2] = 0;
+                }
+            }
+            for (int b=0;b < nb;b++) {
+                const double x = (double)(b % mv.bw) / mv.bw,y = (double)(b / mv.bw) / mv.bh;
+                const double ex = mv.vx[b] - (fx[0] + (fx[1] * x) + (fx[2] * y));
+                const double ey = mv.vy[b] - (fy[0] + (fy[1] * x) + (fy[2] * y));
+                use[b] = (use[b] && fabs(ex) <= 1.5 && fabs(ey) <= 1.0) ? 1 : 0;
+            }
+        }
+
+        for (int b=0;b < nb;b++) {
+            const double x = (double)(b % mv.bw) / mv.bw,y = (double)(b / mv.bw) / mv.bh;
+            const float px = (float)(fx[0] + (fx[1] * x) + (fx[2] * y));
+            const float py = (float)(fy[0] + (fy[1] * x) + (fy[2] * y));
+            mv.vx[b] = std::min(px + 1.5f,std::max(px - 1.5f,mv.vx[b]));
+            mv.vy[b] = std::min(py + 0.75f,std::max(py - 0.75f,mv.vy[b]));
+        }
+    }
+
+    // the dropouts of a picture of a donor, from the pictures of it before and after it
+    void donor_mask(size_t k,int64_t q,dpic_t &p) {
+        if (p.masked)
+            return;
+
+        std::vector<image_t> preds;
+        std::vector<const image_t*> pp;
+        preds.reserve(2);
+        for (int64_t n=q - 1;n <= q + 1;n += 2) {
+            dpic_ptr o = donor_pic(k,n);
+            if (o == NULL)
+                continue;
+            mvfield_t mv;
+            estimate_motion(mv,p.pyr,o->pyr,mp);
+            preds.push_back(image_t());
+            predict(preds.back(),o->lum,mv);
+        }
+        for (size_t i=0;i < preds.size();i++)
+            pp.push_back(&preds[i]);
+
+        std::vector<float> E;
+        detect_stats_t ds;
+        detect_dropouts(p.mask,E,p.lum,pp,std::vector<const std::vector<float>*>(),dp,ds);
+        if (p.mask.empty())
+            p.mask.assign(p.lum.v.size(),0);
+        p.masked = true;
+    }
+
+    // Dropouts the donors find: where the input differs from a donor lined up with it and made as bright
+    // as it, where the donor is not a dropout itself and is lined up well. A dropout that stays in the same
+    // place for a while, as a crease in the tape makes, is the same in the pictures around it, but not
+    // in another copy. These are 2 in the mask, which are 1 where the pictures around found them.
+    // A picture of a donor moved to where the picture of the input is: block by block, and then each line
+    // left or right, as a VCR without a time base corrector puts each line a little left or right of where
+    // it should be, differently each time the tape is played, which the blocks cannot follow. How far,
+    // in pieces of each line, is where the donor is most like the input, in shape, not brightness.
+    void warp_donor(const pic_t &c,donor_use_t &u) {
+        const int w = c.lum.w,h = c.lum.h;
+        const size_t n = (size_t)w * h;
+        const int SEG = 48,R = 6;               // pixels in each piece, and half pixels either way
+        const int nseg = std::max(1,w / SEG);
+        std::vector<float> bxv(n),byv(n),shift(n,0.0f);
+
+        #pragma omp parallel for schedule(static)
+        for (int y=0;y < h;y++) {
+            for (int x=0;x < w;x++) {
+                float dx,dy;
+                u.mv.at((float)x,(float)y,dx,dy);
+                bxv[((size_t)y * w) + x] = (float)x + dx;
+                byv[((size_t)y * w) + x] = (float)y + dy;
+            }
+        }
+
+        #pragma omp parallel
+        {
+        std::vector<float> best(nseg),smp((size_t)SEG),med(nseg);
+        #pragma omp for schedule(dynamic,8)
+        for (int y=0;y < h;y++) {
+            std::fill(best.begin(),best.end(),0.0f);
+            const float *cr = c.lum.row(y);
+            for (int k=0;k < nseg;k++) {
+                const int x0 = k * SEG,x1 = (k + 1 == nseg) ? w : x0 + SEG;
+                double cm = 0,cv = 0;
+                for (int x=x0;x < x1;x++)
+                    cm += cr[x];
+                cm /= (double)(x1 - x0);
+                for (int x=x0;x < x1;x++)
+                    cv += fabs(cr[x] - cm);
+                if (cv / (double)(x1 - x0) < 2.0)
+                    continue;               // too flat to tell
+
+                double bc = 1e30;
+                float bs = 0;
+                smp.resize((size_t)(x1 - x0));
+                for (int si=-R;si <= R;si++) {
+                    const float sh = 0.5f * (float)si;
+                    double sm = 0,cost = 0;
+                    for (int x=x0;x < x1;x++) {
+                        const size_t i = ((size_t)y * w) + x;
+                        smp[(size_t)(x - x0)] = sample_bilinear(u.pic->lum,bxv[i] + sh,byv[i]);
+                        sm += smp[(size_t)(x - x0)];
+                    }
+                    sm /= (double)(x1 - x0);
+                    for (int x=x0;x < x1;x++)
+                        cost += fabs((cr[x] - cm) - (smp[(size_t)(x - x0)] - sm));
+                    // a little for each half pixel away, so that where it is no better it stays
+                    cost += 0.02 * fabs((double)si) * (double)(x1 - x0);
+                    if (cost < bc) {
+                        bc = cost;
+                        bs = sh;
+                    }
+                }
+                best[k] = bs;
+            }
+
+            // the median of each piece and the pieces either side of it, as a line is a little left or
+            // right all the way along it, then blended from the middle of one piece to the next
+            for (int k=0;k < nseg;k++) {
+                float v[3];
+                int m = 0;
+                for (int j=std::max(0,k - 1);j <= std::min(nseg - 1,k + 1);j++)
+                    v[m++] = best[j];
+                std::sort(v,v + m);
+                med[k] = v[m / 2];
+            }
+            for (int x=0;x < w;x++) {
+                float f = ((float)x - (float)(SEG / 2)) / (float)SEG;
+                if (f < 0.0f) f = 0.0f;
+                if (f > (float)(nseg - 1)) f = (float)(nseg - 1);
+                const int k0 = (int)f,k1 = std::min(k0 + 1,nseg - 1);
+                const float a = f - (float)k0;
+                shift[((size_t)y * w) + x] = (med[k0] * (1.0f - a)) + (med[k1] * a);
+            }
+        }
+        }
+
+        // the donor where each pixel of the input is: luma, its dropouts, and each plane
+        u.wlum.alloc(w,h);
+        u.wmask.assign(n,0);
+        #pragma omp parallel for schedule(static)
+        for (int y=0;y < h;y++) {
+            for (int x=0;x < w;x++) {
+                const size_t i = ((size_t)y * w) + x;
+                const float sx = bxv[i] + shift[i],sy = byv[i];
+                u.wlum.v[i] = sample_bilinear(u.pic->lum,sx,sy);
+                const int ix = std::min(std::max((int)floorf(sx + 0.5f),0),w - 1);
+                const int iy = std::min(std::max((int)floorf(sy + 0.5f),0),h - 1);
+                u.wmask[i] = u.pic->mask[((size_t)iy * w) + ix];
+            }
+        }
+        u.wpl.resize(u.pic->pl.size());
+        for (size_t p=0;p < u.pic->pl.size();p++) {
+            const plane16_t &sp = u.pic->pl[p];
+            plane16_t &dp2 = u.wpl[p];
+            const float fx = (float)(1u << sp.hsub),fy = (float)(1u << sp.vsub);
+            dp2.alloc(sp.width,sp.height);
+            dp2.hsub = sp.hsub;
+            dp2.vsub = sp.vsub;
+            #pragma omp parallel for schedule(static)
+            for (int y=0;y < (int)sp.height;y++) {
+                const int ly = std::min(h - 1,(int)((float)y * fy));
+                for (int x=0;x < (int)sp.width;x++) {
+                    const int lx = std::min(w - 1,(int)((float)x * fx));
+                    const size_t i = ((size_t)ly * w) + lx;
+                    const float sx = (float)x + ((bxv[i] + shift[i] - (float)lx) / fx);
+                    const float sy = (float)y + ((byv[i] - (float)ly) / fy);
+                    dp2.line((unsigned int)y)[x] = (uint16_t)std::min(65535.0f,std::max(0.0f,sample_bilinear(sp,sx,sy) + 0.5f));
+                }
+            }
+        }
+
+        u.still = u.mv;
+        std::fill(u.still.vx.begin(),u.still.vx.end(),0.0f);
+        std::fill(u.still.vy.begin(),u.still.vy.end(),0.0f);
+    }
+
+    void donor_detect(pic_t &c) {
+        const int w = c.lum.w,h = c.lum.h;
+        const size_t n = (size_t)w * h;
+        const int bx = 24,by = 12;
+        size_t added = 0;
+
+        for (donor_use_t &u : c.donors) {
+            warp_donor(c,u);
+            const image_t &pred = u.wlum;
+
+            // the pixels to go by: not dropouts of either, and lined up well
+            std::vector<float> diff(n,0.0f),good(n,0.0f);
+            #pragma omp parallel for schedule(static)
+            for (int y=0;y < h;y++) {
+                for (int x=0;x < w;x++) {
+                    const size_t i = ((size_t)y * w) + x;
+                    if (c.mask[i] || u.wmask[i])
+                        continue;
+                    diff[i] = c.lum.v[i] - pred.v[i];
+                    good[i] = 1.0f;
+                }
+            }
+
+            // The donor, as bright as the input around each pixel: a copy is brighter or darker, and with
+            // more or less contrast, so it is fitted to the input from the pixels around each pixel, a times
+            // the donor plus b. Or the input itself where there is nothing to go by, which finds nothing there.
+            const size_t sn = (size_t)(w + 1) * (h + 1);
+            std::vector<double> s1(sn,0.0),sc(sn,0.0),sp(sn,0.0),scp(sn,0.0),spp(sn,0.0);
+            for (int y=0;y < h;y++) {
+                double r1 = 0,rc = 0,rp = 0,rcp = 0,rpp = 0;
+                for (int x=0;x < w;x++) {
+                    const size_t i = ((size_t)y * w) + x;
+                    if (good[i] > 0.0f) {
+                        const double cv = c.lum.v[i],pv = pred.v[i];
+                        r1 += 1.0; rc += cv; rp += pv; rcp += cv * pv; rpp += pv * pv;
+                    }
+                    const size_t o = ((size_t)(y + 1) * (w + 1)) + x + 1,u0 = ((size_t)y * (w + 1)) + x + 1;
+                    s1[o] = s1[u0] + r1; sc[o] = sc[u0] + rc; sp[o] = sp[u0] + rp; scp[o] = scp[u0] + rcp; spp[o] = spp[u0] + rpp;
+                }
+            }
+            image_t dc,cl;
+            dc.alloc(w,h);
+            #pragma omp parallel for schedule(static)
+            for (int y=0;y < h;y++) {
+                const int y0 = std::max(0,y - by),y1 = std::min(h,y + by + 1);
+                for (int x=0;x < w;x++) {
+                    const size_t i = ((size_t)y * w) + x;
+                    const int x0 = std::max(0,x - bx),x1 = std::min(w,x + bx + 1);
+                    const size_t A = ((size_t)y0 * (w + 1)) + x0,B = ((size_t)y0 * (w + 1)) + x1;
+                    const size_t C = ((size_t)y1 * (w + 1)) + x0,D = ((size_t)y1 * (w + 1)) + x1;
+                    const double cnt = s1[D] - s1[B] - s1[C] + s1[A];
+                    if (u.wmask[i] || cnt < (double)((x1 - x0) * (y1 - y0)) / 4.0) {
+                        dc.v[i] = c.lum.v[i];
+                        continue;
+                    }
+                    const double mc = (sc[D] - sc[B] - sc[C] + sc[A]) / cnt;
+                    const double mpv = (sp[D] - sp[B] - sp[C] + sp[A]) / cnt;
+                    const double cov = ((scp[D] - scp[B] - scp[C] + scp[A]) / cnt) - (mc * mpv);
+                    const double var = ((spp[D] - spp[B] - spp[C] + spp[A]) / cnt) - (mpv * mpv);
+                    const double a = var > 4.0 ? std::min(2.0,std::max(0.5,cov / var)) : 1.0;
+                    dc.v[i] = (float)((a * (pred.v[i] - mpv)) + mc);
+                }
+            }
+
+            // And as sharp as each other: a copy is softer, more so for each generation, and an edge that is
+            // sharp in one and soft in the other differs along both sides of it. Whichever is sharper, across
+            // the lines and from line to line, is made softer until they are about the same. A dropout is long
+            // across the line, and a few lines down, mostly, which this keeps.
+            auto soften_x = [&](image_t &im) {
+                std::vector<float> r((size_t)w);
+                for (int y=0;y < h;y++) {
+                    float *d = im.row(y);
+                    for (int x=0;x < w;x++)
+                        r[(size_t)x] = (d[x > 0 ? x - 1 : 0] + (2.0f * d[x]) + d[x + 1 < w ? x + 1 : w - 1]) * 0.25f;
+                    memcpy(d,&r[0],sizeof(float) * (size_t)w);
+                }
+            };
+            auto soften_y = [&](image_t &im) {
+                image_t t = im;
+                for (int y=0;y < h;y++) {
+                    const float *a = t.row(y > 0 ? y - 1 : 0),*b = t.row(y),*e = t.row(y + 1 < h ? y + 1 : h - 1);
+                    float *d = im.row(y);
+                    for (int x=0;x < w;x++)
+                        d[x] = (a[x] + (2.0f * b[x]) + e[x]) * 0.25f;
+                }
+            };
+            // the median difference from one pixel to the next, across or down, of the pixels to go by
+            auto sharpness = [&](const image_t &im,bool down) -> float {
+                std::vector<float> v;
+                for (int y=1;y < h;y += 3) {
+                    for (int x=1;x < w;x += 3) {
+                        const size_t i = ((size_t)y * w) + x;
+                        if (good[i] > 0.0f)
+                            v.push_back(fabsf(im.v[i] - im.v[down ? i - (size_t)w : i - 1u]));
+                    }
+                }
+                if (v.size() < 100u)
+                    return 0.0f;
+                std::nth_element(v.begin(),v.begin() + (ptrdiff_t)(v.size() / 2u),v.end());
+                return v[v.size() / 2u];
+            };
+            cl = c.lum;
+            soften_x(cl);
+            soften_x(dc);
+            for (int down=0;down < 2;down++) {
+                for (int it=0;it < 4;it++) {
+                    const float a = sharpness(cl,down != 0),b = sharpness(dc,down != 0);
+                    if (a <= 0.0f || b <= 0.0f)
+                        break;
+                    image_t *im = a > 1.15f * b ? &cl : (b > 1.15f * a ? &dc : NULL);
+                    if (im == NULL)
+                        break;
+                    if (down)
+                        soften_y(*im);
+                    else
+                        soften_x(*im);
+                }
+            }
+
+            // how much more detail from line to line the donor has than the input, as a rule, which is noise
+            std::vector<float> vc,vd;
+            for (int y=1;y < h;y += 3) {
+                for (int x=0;x < w;x += 3) {
+                    const size_t i = ((size_t)y * w) + x;
+                    if (good[i] <= 0.0f)
+                        continue;
+                    vc.push_back(fabsf(cl.v[i] - cl.v[i - (size_t)w]));
+                    vd.push_back(fabsf(dc.v[i] - dc.v[i - (size_t)w]));
+                }
+            }
+            float detail = 1.0f;
+            if (vc.size() > 100u) {
+                std::nth_element(vc.begin(),vc.begin() + (ptrdiff_t)(vc.size() / 2u),vc.end());
+                std::nth_element(vd.begin(),vd.begin() + (ptrdiff_t)(vd.size() / 2u),vd.end());
+                const float mc = vc[vc.size() / 2u],md = vd[vd.size() / 2u];
+                if (md > 0.05f)
+                    detail = std::min(1.0f,std::max(0.25f,mc / md));
+            }
+
+            // Only those that look like dropouts, against the donor: flat from line to line where the donor
+            // is not, a line repeated, or noisy where it is not, or that differ from it a great deal over
+            // a band of lines, as where a crease in the tape has moved the lines left and right. The edges
+            // of things in the picture, a little out of line with the copy or softer in it, are thin lines
+            // that differ a lot too, and the same from line to line, as an edge up and down is.
+            mask_t m;
+            std::vector<float> E;
+            detect_stats_t ds;
+            detect_params_t ddp = dp;
+            ddp.strong_lines = false;
+            ddp.strong_bands = true;
+            // and how much it typically differs from the copy over much of the picture, as a crease can
+            // spoil a band of many lines
+            ddp.local_lines = std::max(ddp.local_lines,h / 2);
+            ddp.same_as_above = false;
+            ddp.repeated_low = true;
+            ddp.pred_detail = detail;
+            // and only long ones, a few lines down, as a crease makes: a copy has a lot that is not quite
+            // the same, which makes short bits on a line here and there
+            ddp.min_run = std::max(ddp.min_run,32);
+            ddp.min_lines = std::max(ddp.min_lines,vi.fields ? 2 : 2);
+            // not at the sides, where one capture has more or less of the blanking than another
+            ddp.margin[2] = std::max(ddp.margin[2],w / 32);
+            ddp.margin[3] = std::max(ddp.margin[3],w / 32);
+            // The donor where it is, and a little up and down: an edge across the picture, a fraction of a
+            // line higher or lower in one copy, or softer, differs a lot along it, but not with the donor
+            // moved that fraction, as a dropout or a band of lines out of place does
+            image_t dup,ddn;
+            dup.alloc(w,h);
+            ddn.alloc(w,h);
+            #pragma omp parallel for schedule(static)
+            for (int y=0;y < h;y++) {
+                for (int x=0;x < w;x++) {
+                    dup.v[((size_t)y * w) + x] = sample_bilinear(dc,(float)x,(float)y - 0.6f);
+                    ddn.v[((size_t)y * w) + x] = sample_bilinear(dc,(float)x,(float)y + 0.6f);
+                }
+            }
+            ddp.least_of = true;
+            std::vector<const image_t*> pp;
+            pp.push_back(&dc);
+            pp.push_back(&dup);
+            pp.push_back(&ddn);
+            detect_dropouts(m,E,cl,pp,std::vector<const std::vector<float>*>(),ddp,ds);
+
+            for (size_t i=0;i < n && !ds.too_much;i++) {
+                if (m[i] && !c.mask[i]) {
+                    c.mask[i] = 2;
+                    added++;
+                }
+            }
+        }
+
+        if (added != 0u) {
+            donor_found += added;
+            c.ds.pixels = 0;
+            c.ds.lines = 0;
+            for (int y=0;y < h;y++) {
+                size_t r = 0;
+                for (int x=0;x < w;x++)
+                    r += c.mask[((size_t)y * w) + x] ? 1u : 0u;
+                c.ds.pixels += r;
+                c.ds.lines += r != 0u ? 1u : 0u;
+            }
+        }
     }
 
     void detect(int64_t seq) {
@@ -1026,7 +1905,87 @@ private:
         }
 
         detect_dropouts(c.mask,c.E,c.lum,pp,pe,dp,c.ds);
+        if (!c.donors.empty()) {
+            with_donor++;
+            donor_detect(c);
+        }
 
+    }
+
+    // How well each block of a donor, where it was moved to, matches the picture, from the pixels of the
+    // picture that are not dropouts: the median difference. Blocks with too few of them have the median
+    // of the blocks around them, as the donor is lined up with the picture all over.
+    static void masked_costs(const pic_t &c,donor_use_t &u) {
+        mvfield_t &mv = u.still;
+        const int w = c.lum.w,h = c.lum.h,B = mv.block,nb = mv.bw * mv.bh;
+        std::vector<float> cost(nb,-1.0f);
+
+        #pragma omp parallel
+        {
+        std::vector<float> d;
+        #pragma omp for schedule(static)
+        for (int b=0;b < nb;b++) {
+            const int x0 = (b % mv.bw) * B,x1 = std::min(w,x0 + B);
+            const int y0 = (b / mv.bw) * B,y1 = std::min(h,y0 + B);
+            d.clear();
+            for (int y=y0;y < y1;y++) {
+                for (int x=x0;x < x1;x++) {
+                    const size_t i = ((size_t)y * w) + x;
+                    if (!c.mask[i] && !u.wmask[i])
+                        d.push_back(std::min(fabsf(c.lum.v[i] - u.wlum.v[i]),24.0f));
+                }
+            }
+            if (d.size() * 4u >= (size_t)((x1 - x0) * (y1 - y0))) {
+                std::nth_element(d.begin(),d.begin() + (ptrdiff_t)(d.size() / 2u),d.end());
+                cost[b] = d[d.size() / 2u];
+            }
+        }
+        }
+        for (int b=0;b < nb;b++) {
+            if (cost[b] >= 0.0f) {
+                mv.cost[b] = cost[b];
+                continue;
+            }
+            std::vector<float> v;
+            const int bxp = b % mv.bw,byp = b / mv.bw;
+            for (int r=1;r <= 4 && v.empty();r++) {
+                for (int ny=std::max(0,byp - r);ny <= std::min(mv.bh - 1,byp + r);ny++) {
+                    for (int nx=std::max(0,bxp - r);nx <= std::min(mv.bw - 1,bxp + r);nx++) {
+                        if (cost[((size_t)ny * mv.bw) + nx] >= 0.0f)
+                            v.push_back(cost[((size_t)ny * mv.bw) + nx]);
+                    }
+                }
+            }
+            if (v.empty()) {
+                mv.cost[b] = 0.0f;
+            }
+            else {
+                std::nth_element(v.begin(),v.begin() + (ptrdiff_t)(v.size() / 2u),v.end());
+                mv.cost[b] = v[v.size() / 2u];
+            }
+        }
+    }
+
+    // the donors of a picture, to fill it in from before the pictures around it, where they are lined up well.
+    // mvs must have room for them, as src points into it.
+    void donor_sources(pic_t &c,std::vector<mvfield_t> &mvs,std::vector<fill_source_t> &src) {
+        if (mvs.capacity() < mvs.size() + c.donors.size())
+            mvs.reserve(mvs.size() + c.donors.size());
+        for (donor_use_t &u : c.donors) {
+            if (u.wpl.empty())
+                warp_donor(c,u);
+            masked_costs(c,u);
+            mvs.push_back(u.still);
+
+            fill_source_t s;
+            s.pl = &u.wpl;
+            s.mask = &u.wmask;
+            s.mv = &mvs.back();
+            s.distance = 1;
+            s.priority = 1;
+            s.max_cost = DONOR_MAX_COST;
+            src.push_back(s);
+        }
     }
 
     bool fill(int64_t seq) {
@@ -1065,13 +2024,22 @@ private:
                 }
             }
 
-            fill_hold(out,c.pl,c.mask,lw,lh,from,fs);
+            if (c.donors.empty()) {
+                fill_hold(out,c.pl,c.mask,lw,lh,from,fs);
+            }
+            else {
+                // from the donors, and what they do not have from what was held
+                std::vector<mvfield_t> mvs;
+                std::vector<fill_source_t> src;
+                donor_sources(c,mvs,src);
+                fill_motion(out,c.pl,c.mask,lw,lh,src,opt.fp,fs,from);
+            }
         }
         else {
             std::vector<mvfield_t> mvs;
             std::vector<fill_source_t> src;
 
-            mvs.reserve((size_t)near * 2u);
+            mvs.reserve(((size_t)near * 2u) + c.donors.size());
             for (int k=-near;k <= near;k++) {
                 pic_t *n = k != 0 ? get(seq + k) : NULL;
                 if (n == NULL)
@@ -1087,6 +2055,7 @@ private:
                 s.distance = abs(k);
                 src.push_back(s);
             }
+            donor_sources(c,mvs,src);
 
             fill_motion(out,c.pl,c.mask,lw,lh,src,opt.fp,fs);
         }
@@ -1109,15 +2078,18 @@ private:
         of.pixels += c.ds.pixels;
         of.temporal += fs.temporal;
         of.spatial += fs.spatial;
+        of.donor += fs.donor;
         of.threshold = std::max(of.threshold,c.ds.threshold);
         of.noise = std::max(of.noise,c.ds.noise);
         of.too_much += c.ds.too_much ? 1u : 0u;
         total_pixels += c.ds.pixels;
         total_temporal += fs.temporal;
         total_spatial += fs.spatial;
+        total_donor += fs.donor;
 
-        // how it moved to the pictures around it is not needed again
+        // how it moved to the pictures around it is not needed again, nor its donors
         c.mv.clear();
+        c.donors.clear();
 
         if (--of.pictures_left == 0u) {
             bool ok = on_frame(of);
@@ -1137,6 +2109,7 @@ private:
     std::deque<std::unique_ptr<pic_t>> pics;
     std::map<int64_t,out_frame_t> frames;
     std::vector<plane16_t>      held[2];
+    std::vector<std::map<int64_t,dpic_ptr> > dcache;    // pictures of each donor
     int64_t                     next_seq = 0;
     int64_t                     next_frame = 0;
     int64_t                     next_detect = 0;
@@ -1405,8 +2378,86 @@ static void set_alpha(AVFrame *f,const std::vector<float> &a) {
     }
 }
 
-static bool write_log_header(FILE *fp) {
-    return fprintf(fp,"frame,time,dropout_pixels,dropout_percent,threshold,noise,flash,filled_from_other_pictures,filled_from_lines\n") > 0;
+// with, for each donor, the time of its frame that is the same as the frame, and how well they match
+static bool write_log_header(FILE *fp,const std::vector<std::unique_ptr<donor_t> > &donors) {
+    fprintf(fp,"frame,time,dropout_pixels,dropout_percent,threshold,noise,flash,filled_from_other_pictures,filled_from_lines,filled_from_donors");
+    for (const auto &d : donors)
+        fprintf(fp,",donor%u_time,donor%u_match",d->number,d->number);
+    return fprintf(fp,"\n") > 0;
+}
+
+// the thumbnails of the part of the input being done, and of each donor, and which frame of each donor
+// each frame of the input is
+static bool setup_donors(const options_t &opt,thumbs_t &in_thumbs,std::vector<std::unique_ptr<donor_t> > &donors) {
+    const bool whole = opt.start_us <= 0 && opt.length_us < 0;
+    thumbs_t in_full;
+    bool have_full = false;
+
+    // The input's, from those of the whole file if they are kept, or else of the part being done.
+    // With 10 seconds more each side, as a few seconds of video is too little to find surely in hours of it.
+    const int64_t more = 10 * (int64_t)AV_TIME_BASE;
+    const int64_t cstart = std::max((int64_t)0,opt.start_us - more);
+    const int64_t clength = opt.length_us >= 0 ? (opt.start_us - cstart) + opt.length_us + more : -1;
+    const std::string cpath = thumbs_cache_path(opt.cache_dir,opt.input);
+    if (whole || (!cpath.empty() && load_thumbs(in_full,cpath))) {
+        if (in_full.count() == 0 && !file_thumbs(in_full,opt.input,opt,"Indexing the input"))
+            return false;
+        have_full = true;
+        slice_thumbs(in_thumbs,in_full,cstart,clength);
+    }
+    else if (!index_video(in_thumbs,opt.input,cstart,clength,opt.quiet,"Indexing the input")) {
+        return false;
+    }
+
+    for (size_t i=0;i < opt.donors.size();i++) {
+        std::unique_ptr<donor_t> d(new donor_t);
+        char what[64];
+
+        d->path = opt.donors[i];
+        d->number = (unsigned int)(i + 1u);
+        d->self = same_file(d->path,opt.input);
+        snprintf(what,sizeof(what),"Indexing donor %u",d->number);
+        if (d->self && have_full)
+            d->thumbs = in_full;
+        else if (!file_thumbs(d->thumbs,d->path,opt,what))
+            return false;
+
+        match_params_t mp;
+        mp.min_score = opt.match;
+        mp.min_gap = d->self ? opt.donor_gap : 0;
+        match_frames(d->match,in_thumbs,d->thumbs,mp);
+
+        size_t got = 0,frames = 0;
+        double first = -1,last = -1;
+        const double rs = (double)opt.start_us / AV_TIME_BASE;
+        const double re = opt.length_us >= 0 ? rs + ((double)opt.length_us / AV_TIME_BASE) : 1e300;
+        for (size_t k=0;k < d->match.size();k++) {
+            if (in_thumbs.time[k] < rs - 0.01 || in_thumbs.time[k] >= re - 0.01)
+                continue;
+            frames++;
+            if (d->match[k].frame < 0)
+                continue;
+            got++;
+            const double t = d->thumbs.time[(size_t)d->match[k].frame];
+            if (first < 0 || t < first) first = t;
+            if (t > last) last = t;
+        }
+        if (!opt.quiet) {
+            fprintf(stderr,"Donor %u, %s%s: %zu of %zu frames are in it (%.1f%%)",d->number,d->path.c_str(),
+                d->self ? " (the input itself)" : "",got,frames,frames ? (100.0 * (double)got) / (double)frames : 0.0);
+            if (got != 0u)
+                fprintf(stderr,", from %.1f to %.1f seconds into it",first,last);
+            fprintf(stderr,"\n");
+        }
+
+        if (got != 0u) {
+            if (!d->open())
+                return false;
+            donors.push_back(std::move(d));
+        }
+    }
+
+    return true;
 }
 
 static bool run(const options_t &opt) {
@@ -1421,6 +2472,12 @@ static bool run(const options_t &opt) {
     bool opened = false;
     bool ok_write_early = true;
     unsigned long written = 0;
+
+    // the donors: their thumbnails, and which of their frames each frame of the input is
+    std::vector<std::unique_ptr<donor_t> > donors;
+    thumbs_t in_thumbs;
+    if (!opt.donors.empty() && !setup_donors(opt,in_thumbs,donors))
+        return false;
 
     in.start_us = opt.start_us;
     in.length_us = opt.length_us;
@@ -1437,7 +2494,7 @@ static bool run(const options_t &opt) {
             fprintf(stderr,"%s: %s\n",opt.log_path.c_str(),strerror(errno));
             return false;
         }
-        write_log_header(logfp);
+        write_log_header(logfp,donors);
     }
 
     vi.frame_rate = av_guess_frame_rate(in.fmt,in.vstream(),NULL);
@@ -1521,8 +2578,17 @@ static bool run(const options_t &opt) {
 
         if (logfp != NULL) {
             const double t = of.pts != AV_NOPTS_VALUE ? (double)in.time_us(of.pts,itb) / AV_TIME_BASE : NAN;
-            fprintf(logfp,"%lld,%.4f,%zu,%.4f,%.2f,%.2f,%u,%zu,%zu\n",(long long)of.index,t,of.pixels,
-                (100.0 * (double)of.pixels) / ((double)vi.width * (double)vi.height),of.threshold,of.noise,of.too_much,of.temporal,of.spatial);
+            fprintf(logfp,"%lld,%.4f,%zu,%.4f,%.2f,%.2f,%u,%zu,%zu,%zu",(long long)of.index,t,of.pixels,
+                (100.0 * (double)of.pixels) / ((double)vi.width * (double)vi.height),of.threshold,of.noise,of.too_much,
+                of.temporal - of.donor,of.spatial,of.donor);
+            for (const auto &d : donors) {
+                const frame_match_t *m = (of.in_index >= 0 && (size_t)of.in_index < d->match.size()) ? &d->match[(size_t)of.in_index] : NULL;
+                if (m != NULL && m->frame >= 0)
+                    fprintf(logfp,",%.4f,%.3f",d->thumbs.time[(size_t)m->frame],m->score);
+                else
+                    fprintf(logfp,",,");
+            }
+            fprintf(logfp,"\n");
         }
 
         int r = avcodec_send_frame(out.enc,ef);
@@ -1588,6 +2654,8 @@ static bool run(const options_t &opt) {
 
             pipe.reset(new pipeline_t(opt,vi));
             pipe->on_frame = encode;
+            for (auto &d : donors)
+                pipe->donors.push_back(d.get());
         }
 
         if (frame->width != vi.width || frame->height != vi.height) {
@@ -1612,7 +2680,12 @@ static bool run(const options_t &opt) {
         work->color_range = frame->color_range;
         work->colorspace = frame->colorspace;
 
-        return pipe->add(work,pts);
+        // which frame of the thumbnails of the input it is, for the donors
+        int64_t idx = -1;
+        if (!donors.empty() && pts != AV_NOPTS_VALUE)
+            idx = thumb_at(in_thumbs,(double)in.time_us(pts,itb) / AV_TIME_BASE);
+
+        return pipe->add(work,pts,idx);
     },[&](AVPacket *pkt) -> bool {
         // the other streams, as they are, for the part of the video being done
         if (!opened) {
@@ -1679,6 +2752,14 @@ static bool run(const options_t &opt) {
                 opt.mode == MODE_HOLD ? "what was held" : "the pictures around it");
         }
         fprintf(stderr,"\n");
+        if (!donors.empty()) {
+            fprintf(stderr,"A donor had %lu of the %s",pipe->with_donor,vi.fields ? "fields" : "frames");
+            if (pipe->total_pixels != 0u)
+                fprintf(stderr,", found %.1f%% of the dropouts that the pictures around did not",(100.0 * (double)pipe->donor_found) / (double)pipe->total_pixels);
+            if (opt.mode != MODE_ALPHA && !opt.show && (pipe->total_temporal + pipe->total_spatial) != 0u)
+                fprintf(stderr,", and filled in %.1f%% of them",(100.0 * (double)pipe->total_donor) / (double)(pipe->total_temporal + pipe->total_spatial));
+            fprintf(stderr,"\n");
+        }
         if (pipe->flashes != 0u)
             fprintf(stderr,"%lu %s differed too much from the pictures around to be dropouts (-area)\n",pipe->flashes,vi.fields ? "fields" : "frames");
         if (pipe->cuts != 0u)
@@ -1717,6 +2798,7 @@ int main(int argc,char **argv) {
     std::vector<std::string> files;
     options_t opt;
     int grow[2] = {-1,-1};
+    bool cache_given = false;
 
     for (int i=1;i < argc;i++) {
         const char *a = argv[i];
@@ -1727,7 +2809,7 @@ int main(int argc,char **argv) {
             const bool takes = (o == "mode" || o == "level" || o == "noise" || o == "local" || o == "strong" || o == "run" || o == "grow" ||
                                 o == "near" || o == "area" || o == "margin" || o == "cut" || o == "feather" ||
                                 o == "c" || o == "b" || o == "x" || o == "ss" || o == "t" || o == "log" ||
-                                o == "threads");
+                                o == "threads" || o == "donor" || o == "match" || o == "donor-gap" || o == "cache");
             const char *v = NULL;
             double d;
 
@@ -1825,6 +2907,31 @@ int main(int argc,char **argv) {
                 }
                 opt.feather = d;
             }
+            else if (o == "donor") {
+                opt.donors.push_back(v);
+            }
+            else if (o == "match") {
+                if (!parse_double(v,d) || d <= 0 || d >= 1) {
+                    fprintf(stderr,"-match %s: must be more than 0 and less than 1\n",v);
+                    return 1;
+                }
+                opt.match = d;
+            }
+            else if (o == "donor-gap") {
+                if (!parse_double(v,d) || d < 0) {
+                    fprintf(stderr,"-donor-gap %s: must be 0 or more seconds\n",v);
+                    return 1;
+                }
+                opt.donor_gap = d;
+            }
+            else if (o == "cache") {
+                opt.cache_dir = v;
+                cache_given = true;
+            }
+            else if (o == "nocache") {
+                opt.cache_dir.clear();
+                cache_given = true;
+            }
             else if (o == "nomatch") {
                 opt.fp.match = false;
             }
@@ -1896,6 +3003,19 @@ int main(int argc,char **argv) {
     }
     opt.input = files[0];
     opt.output = files[1];
+    for (const std::string &d : opt.donors) {
+        if (same_file(d,opt.output)) {
+            fprintf(stderr,"%s: the output would write over a donor\n",opt.output.c_str());
+            return 1;
+        }
+    }
+    if (!cache_given) {
+        const char *x = getenv("XDG_CACHE_HOME"),*home = getenv("HOME");
+        if (x != NULL && *x != 0)
+            opt.cache_dir = std::string(x) + "/vhs-dropout-filter";
+        else if (home != NULL && *home != 0)
+            opt.cache_dir = std::string(home) + "/.cache/vhs-dropout-filter";
+    }
     if (same_file(opt.input,opt.output)) {
         fprintf(stderr,"%s: the output would write over the input\n",opt.output.c_str());
         return 1;

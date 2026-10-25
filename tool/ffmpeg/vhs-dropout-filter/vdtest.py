@@ -88,6 +88,14 @@ def render(rng, scene, interlaced, dropouts=True):
             oy, ox = 3.0 * np.sin(n / pics * 3.0), 0.6 * n
             rows = np.arange(p, HEIGHT, nf).astype(float)
             fy[p::nf], fu[p::nf], fv[p::nf] = (take(a, oy, ox, rows) for a in (sy, su, sv))
+            # and things moving about on their own, as people do, which make each frame unlike the next
+            for j, (level, speed) in enumerate(((225, 5.0), (30, -4.0), (170, 3.0))):
+                cx = int(100 + j * 220 + speed * n) % (WIDTH - 80)
+                cy = int(90 + j * 120 + 25 * np.sin(n / 7.0 + j))
+                r = np.arange(p, HEIGHT, nf)
+                sel = r[(r >= cy) & (r < cy + 50)]
+                fy[sel, cx:cx + 60] = level
+                fu[sel, cx:cx + 60] = 100 + 30 * j
         fy += rng.normal(0, 1.5, fy.shape)
         clean.append([fy.copy(), fu.copy(), fv.copy()])
 
@@ -335,6 +343,120 @@ def test_interrupt(name, args, what, ext='.mov', vcodec=None, audio=True):
         d = subprocess.run(['ffmpeg', '-v', 'error', '-i', dst, '-f', 'null', '-'], capture_output=True, text=True)
         check(name + ': decodes without errors', d.returncode == 0 and d.stderr.strip() == '', d.stderr.strip()[:200])
 
+def add_creases(rng, frames, count=2, length=25):
+    # dropouts like those a crease in the tape makes: a band of lines, the line above repeated, in the same
+    # lines for a run of frames, the ends of it moving a little; which the frames around cannot show
+    mask = np.zeros((len(frames), HEIGHT, WIDTH), bool)
+    for _ in range(count):
+        h = int(rng.integers(4, 9))
+        y0 = int(rng.integers(60, HEIGHT - 60 - h))
+        x0 = int(rng.integers(40, WIDTH - 340))
+        x1 = x0 + int(rng.integers(200, 300))
+        k0 = int(rng.integers(0, len(frames) - length))
+        for k in range(k0, k0 + length):
+            a, b = x0 + int(rng.integers(-20, 21)), x1 + int(rng.integers(-20, 21))
+            for plane in frames[k]:
+                plane[y0:y0 + h, a:b] = plane[y0 - 1, a:b]
+            mask[k, y0:y0 + h, a:b] = True
+    return mask
+
+def as_copy(frames):
+    # a second generation copy: a little dimmer and softer, the picture 2 pixels to the right
+    right = lambda a: np.concatenate([np.repeat(a[:, :1], 2, 1), a[:, :-2]], 1)
+    out = []
+    for y, u, v in frames:
+        y2 = right(y * 0.93 + 6)
+        y2 = (y2 + np.concatenate([y2[:, :1], y2[:, :-1]], 1) + np.concatenate([y2[:, 1:], y2[:, -1:]], 1)) / 3
+        out.append([y2, right(u), right(v)])
+    return out
+
+def visible(dirty_y, clean_y, mask):
+    k = np.ones(9) / 9
+    off = np.apply_along_axis(lambda r: np.convolve(r, k, 'same'), 2, np.abs(dirty_y - clean_y))
+    return mask & (off >= 6)
+
+def test_donor(name, seed=40):
+    # a donor edited from the same tape, with dropouts of its own: it finds and fills in the creases,
+    # which the frames around cannot, for the frames it has, and is not used for those it has not
+    rng = np.random.default_rng(seed)
+    scene = make_scene(rng)
+    clean, dirty, truth, drops = render(rng, scene, False)
+    crease = add_creases(rng, dirty)
+    dclean, ddirty, dtruth, ddrops = render(rng, scene, False)
+    other = render(rng, make_scene(rng), False, dropouts=False)[1][:20]
+    copy = other + as_copy(ddirty[0:25] + ddirty[35:60])
+    clean_y = np.array([f[0] for f in clean])
+    dirty_y = np.array([f[0] for f in dirty])
+    vis = visible(dirty_y, clean_y, crease)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, 'in.mkv')
+        don = os.path.join(tmp, 'donor.mkv')
+        make_video(src, dirty, False)
+        make_video(don, copy, False)
+        cache = ['-cache', os.path.join(tmp, 'cache')]
+
+        found = {}
+        for tag, extra in (('without', []), ('with', ['-donor', don])):
+            holes = os.path.join(tmp, 'holes-%s.mov' % tag)
+            log = os.path.join(tmp, 'holes-%s.csv' % tag)
+            run_tool(cache + extra + ['-mode', '2', '-log', log, src, holes])
+            found[tag] = alpha(holes) < 128
+        rows = list(csv.DictReader(open(log)))
+        has = [r['donor1_time'] != '' for r in rows]
+        check(name + ': the frames the donor has are found', sum(has[0:25]) + sum(has[35:60]) >= 48 and sum(has[25:35]) <= 1,
+              '%d of 50 found, %d of the 10 it has not' % (sum(has[0:25]) + sum(has[35:60]), sum(has[25:35])))
+        times = [float(r['donor1_time']) for r in rows[:25] if r['donor1_time']]
+        check(name + ': and where they are in it', all(abs(t - (20 + k) * 1001 / 60000) < 0.002 for k, t in enumerate(times) if t),
+              'first at %.3f s' % (times[0] if times else -1))
+        inside = np.zeros(FRAMES, bool)
+        inside[0:25] = inside[35:60] = True
+        r0 = (found['without'] & vis)[inside].sum() / vis[inside].sum()
+        r1 = (found['with'] & vis)[inside].sum() / vis[inside].sum()
+        check(name + ': creases found with the donor', r1 >= 0.75 and r1 >= r0 + 0.3, '%.1f%%, from %.1f%% without it' % (r1 * 100, r0 * 100))
+        extra = (found['with'] & ~grown(truth | crease, 8, 3)).sum() / (~(truth | crease)).sum()
+        check(name + ': little else found with the donor', extra <= 0.004, '%.3f%% of the rest of the picture' % (extra * 100))
+
+        err = {}
+        for tag, extra in (('without', []), ('with', ['-donor', don])):
+            dst = os.path.join(tmp, 'out-%s.mkv' % tag)
+            run_tool(cache + extra + ['-mode', '3', src, dst])
+            out = plane(dst)
+            err[tag] = np.abs(out - clean_y)[crease & inside[:, None, None]].mean()
+        before = np.abs(dirty_y - clean_y)[crease & inside[:, None, None]].mean()
+        check(name + ': creases filled in from the donor', err['with'] <= 0.4 * err['without'],
+              '%.2f levels from what was there, %.2f without it, %.2f before' % (err['with'], err['without'], before))
+        check(name + ': thumbnails kept in the cache', len(os.listdir(os.path.join(tmp, 'cache'))) == 2,
+              str(os.listdir(os.path.join(tmp, 'cache'))))
+
+def test_self_donor(name, seed=50):
+    # the tape played twice in the same file, with other dropouts and creases each time: the input is its own donor
+    rng = np.random.default_rng(seed)
+    scene = make_scene(rng)
+    clean, play1, truth1, _ = render(rng, scene, False)
+    crease1 = add_creases(rng, play1)
+    _, play2, truth2, _ = render(rng, scene, False)
+    add_creases(rng, play2)
+    gap = render(rng, make_scene(rng), False, dropouts=False)[1][:20]
+    clean_y = np.array([f[0] for f in clean])
+    dirty_y = np.array([f[0] for f in play1])
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, 'in.mkv')
+        make_video(src, play1 + gap + play2, False)
+        err = {}
+        for tag, extra in (('without', []), ('with', ['-donor', src, '-donor-gap', '0.5'])):
+            dst = os.path.join(tmp, 'out-%s.mkv' % tag)
+            log = os.path.join(tmp, 'out-%s.csv' % tag)
+            run_tool(['-nocache', '-t', '1'] + extra + ['-mode', '3', '-log', log, src, dst])
+            out = plane(dst)
+            err[tag] = np.abs(out - clean_y)[crease1].mean()
+        rows = list(csv.DictReader(open(log)))
+        times = [float(r['donor1_time']) for r in rows if r['donor1_time']]
+        check(name + ': the second playback found', len(times) >= 58 and all(t > 1.0 for t in times), '%d frames' % len(times))
+        check(name + ': creases filled in from it', err['with'] <= 0.4 * err['without'],
+              '%.2f levels from what was there, %.2f without it' % (err['with'], err['without']))
+
 def test_errors():
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, 'in.mov')
@@ -360,6 +482,8 @@ test('-near 1', False, tool_args=('-near', '1'), seed=4)
 test_clean('no dropouts')
 test_range('-ss and -t in seconds', '0.25', '0.5')
 test_range('-ss and -t as MM:SS', '00:00.25', '0:0.5')
+test_donor('-donor')
+test_self_donor('-donor, the input itself')
 test_interrupt('CTRL+C, -mode 3', ['-mode', '3'], 'Filtering')
 test_interrupt('CTRL+C, -mode 2', ['-mode', '2'], 'Filtering')
 test_interrupt('CTRL+C, -mode 1, MP4', ['-mode', '1'], 'Filtering', ext='.mp4', vcodec='libx264', audio=False)

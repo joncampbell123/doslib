@@ -12,6 +12,10 @@ struct fill_source_t {
     const mask_t*               mask = NULL;        // its own dropouts, of its luma
     const mvfield_t*            mv = NULL;          // how the picture moved from the one being filled in to it
     int                         distance = 1;       // pictures away
+    int                         priority = 0;       // where a source of a higher priority can fill a pixel, those of
+                                                    // lower priority are not used: another copy of the tape before
+                                                    // the pictures around, which may have the same dropout
+    float                       max_cost = 1e30f;   // not used where its blocks match worse than this
 };
 
 struct fill_params_t {
@@ -22,18 +26,20 @@ struct fill_params_t {
 };
 
 struct fill_stats_t {
-    size_t                      temporal = 0;       // samples of luma filled in from other pictures
+    size_t                      temporal = 0;       // samples of luma filled in from other pictures, or what was held
+    size_t                      donor = 0;          // of those, from another copy
     size_t                      spatial = 0;        // samples of luma filled in from the lines above and below
 };
 
 // the dropouts of a plane of a picture, from the dropouts of its luma
 void plane_mask(mask_t &pm,const mask_t &mask,int lw,int lh,const plane16_t &pl);
 
-// -mode 3: fill in the dropouts of cur from the pictures around it, moved to where it is, and made
-// as bright as the picture around the dropouts, or where none of them have it, from the lines
-// above and below. lw and lh are the size of the luma.
+// -mode 3: fill in the dropouts of cur from the pictures around it, and other copies of it, moved to
+// where it is, and made as bright as the picture around the dropouts, or where none of them have it,
+// from fallback, or if that is NULL, from the lines above and below. lw and lh are the size of the luma.
 void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,const mask_t &mask,int lw,int lh,
-    const std::vector<fill_source_t> &src,const fill_params_t &fp,fill_stats_t &fs);
+    const std::vector<fill_source_t> &src,const fill_params_t &fp,fill_stats_t &fs,
+    const std::vector<plane16_t> *fallback=NULL);
 
 // -mode 1: fill in the dropouts of cur with the same pixels of held, the last of each that was not a dropout,
 // or if held is NULL, from the lines above and below

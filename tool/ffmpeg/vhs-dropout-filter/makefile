@@ -15,7 +15,7 @@ bin: linux-host $(BIN_OUT)
 linux-host:
 	mkdir -p linux-host
 
-$(VHSDROPOUT): linux-host/vhs-dropout-filter.o linux-host/motion.o linux-host/detect.o linux-host/fill.o
+$(VHSDROPOUT): linux-host/vhs-dropout-filter.o linux-host/motion.o linux-host/detect.o linux-host/fill.o linux-host/match.o
 	g++ -fopenmp -o $@ $^ $(FFMPEG_LIBS) -lm
 
 # -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them.

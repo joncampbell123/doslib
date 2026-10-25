@@ -21,11 +21,24 @@ struct detect_params_t {
     float                       strong = 3.0f;      // a dropout that differs this many times as much need not look like one
     int                         box = 9;            // pixels across that the differences are taken over
     int                         min_run = 16;       // pixels across: a dropout is at least this long on a line
+    int                         min_lines = 1;      // lines down: a dropout is on at least this many lines one after another
     int                         gap = 6;            // pixels across: dropouts on a line this close together are one dropout
     int                         grow_x = 3;         // pixels each side, and lines above and below, that are put in with
     int                         grow_y = 1;         // a dropout, which the dropout smears into
     int                         margin[4] = {0,0,0,0};  // lines at the top and bottom, and pixels at the left and right,
                                                     // that are never dropouts
+    bool                        same_as_above = true;   // a line the same as the lines above it, with detail across it,
+                                                    // that differs at least low as much, is a line repeated
+    bool                        repeated_low = false;   // a line repeated where the prediction is not need differ only
+                                                    // low as much, for a prediction that is another copy of it
+    float                       pred_detail = 1.0f; // how much of the detail of the predictions is the picture's, not noise:
+                                                    // the input's typical detail over theirs, for a noisier copy
+    bool                        strong_lines = true;    // a line differing by strong times as much is a dropout,
+                                                    // whatever it looks like
+    bool                        least_of = false;   // how much it differs from the prediction it differs least from,
+                                                    // even with three or more: for one prediction, a little up and down
+    bool                        strong_bands = false;   // and so is a band of lines differing that much, for a
+                                                    // prediction that is another copy, which has what is there
     float                       max_area = 0.6f;    // if more of the picture than this differs, it is not dropouts but
                                                     // something that is not in the pictures before and after, a flash
 };

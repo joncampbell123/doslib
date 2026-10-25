@@ -92,6 +92,10 @@ struct mvfield_t {
 // how the picture moved from cur to ref
 void estimate_motion(mvfield_t &mv,const pyramid_t &cur,const pyramid_t &ref,const me_params_t &mp);
 
+// how badly each block matches where its vector puts it, to the half pixel, after the vectors were changed:
+// the median difference of its pixels
+void block_costs(mvfield_t &mv,const pyramid_t &cur,const pyramid_t &ref,const me_params_t &mp);
+
 // the vectors again, of the blocks near the dropouts of cur, from the vector of each block and the blocks
 // next to it, matching only the pixels that are not dropouts in either picture, and for blocks that are
 // almost all dropouts, the vectors of the blocks around them
