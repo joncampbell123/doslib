@@ -12,12 +12,13 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 8086_EXE =    $(SUBDIR)$(HPS)8086.$(EXEEXT)
 286_EXE =     $(SUBDIR)$(HPS)286.$(EXEEXT)
 286P_EXE =    $(SUBDIR)$(HPS)286p.$(EXEEXT)
+386_EXE =     $(SUBDIR)$(HPS)386.$(EXEEXT)
 
 all: lib exe
 
 lib: .symbolic
 
-exe: $(8086_EXE) $(286_EXE) $(286P_EXE) .symbolic
+exe: $(8086_EXE) $(286_EXE) $(286P_EXE) $(386_EXE) .symbolic
 
 $(8086_EXE): $(SUBDIR)$(HPS)8086.obj
 	%write tmp.cmd
@@ -36,6 +37,12 @@ $(286P_EXE): $(SUBDIR)$(HPS)286p.obj
 	%write tmp.cmd
 	%append tmp.cmd option quiet option map=$(286P_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)286p.obj
 	%append tmp.cmd name $(286P_EXE)
+	@wlink @tmp.cmd
+
+$(386_EXE): $(SUBDIR)$(HPS)386.obj
+	%write tmp.cmd
+	%append tmp.cmd option quiet option map=$(386_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)386.obj
+	%append tmp.cmd name $(386_EXE)
 	@wlink @tmp.cmd
 
 clean: .SYMBOLIC
