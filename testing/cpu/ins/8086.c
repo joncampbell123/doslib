@@ -88,6 +88,9 @@ static unsigned short		dgroup,ss_val,thunk_seg,memw_off;
 /* exception/interrupt capture, written by the interrupt handlers */
 volatile unsigned short		x_cnt,x_vec,x_ip,x_cs,x_fl,x_live,x_resume;
 volatile unsigned short		ss_cnt,ss_ip[16];
+volatile unsigned short		x_faulted;	/* a fault handler resumed at the end of the thunk */
+static unsigned char		x_unexpected;	/* ... and the test did not expect it */
+static unsigned char		exc_expected = 0;	/* the test expects a fault, verify() should not flag it */
 
 /* CPU detection results */
 static unsigned char		c_flagsF;	/* FLAGS bits 12-15 stuck at 1 (8086/186/V20 class) */
@@ -436,11 +439,17 @@ static void setup(void) {
 	tp = thunk;
 }
 
-/* terminate the thunk with RETF, run it, expected state = input state */
+/* terminate the thunk with RETF, run it, expected state = input state.
+ * The RETF is also where a fault (#DE, BOUND, #UD, #GP) resumes, so that an
+ * instruction the CPU or emulator does not implement is reported instead of hanging */
 static void go(void) {
+	x_resume = here();
+	x_faulted = 0;
 	E(0xCB);
 	memcpy(re,ri,sizeof(re));
 	run();
+	x_resume = 0;
+	x_unexpected = (x_faulted && !exc_expected) ? 1 : 0;
 }
 
 static const char *rname[R_MAX] = { "AX","CX","DX","BX","SP","BP","SI","DI","ES","FL" };
@@ -465,6 +474,10 @@ static int verify(unsigned fmask) {
 	}
 	if (sp_before != sp_after) {
 		p += sprintf(p," SP%+d",(int)(sp_after - sp_before));
+		ok = 0;
+	}
+	if (x_unexpected) {
+		p += sprintf(p," INT %02X raised at %04X",x_vec,x_ip);
 		ok = 0;
 	}
 	if (!ok) sprintf(p,"  in AX=%04X CX=%04X DX=%04X BX=%04X FL=%04X",ri[R_AX],ri[R_CX],ri[R_DX],ri[R_BX],ri[R_FL]);
@@ -494,9 +507,11 @@ static void x_common(unsigned vec,union INTPACK __far *r) {
 	x_ip = r->w.ip;
 	x_cs = r->w.cs;
 	x_fl = r->w.flags;
-	if (x_resume) {
+	/* faults resume at the end of the thunk, software interrupts return normally */
+	if (x_resume && (vec == 0x00 || vec == 0x05 || vec == 0x06 || vec == 0x0D)) {
 		r->w.ip = x_resume;
 		r->w.cs = thunk_seg;
+		x_faulted = 1;
 	}
 }
 
@@ -515,6 +530,11 @@ static void __interrupt __far __loadds int01_h(union INTPACK r) {
 	if (ss_cnt < 16) ss_ip[ss_cnt] = r.w.ip;
 	ss_cnt++;
 	x_live |= f;
+}
+
+/* INT 6: invalid opcode (80186 and later) */
+static void __interrupt __far __loadds int06_h(union INTPACK r) {
+	x_common(6,&r);
 }
 
 static void __interrupt __far __loadds int03_h(union INTPACK r) {
@@ -543,6 +563,7 @@ static void (__interrupt __far *old_int00)();
 static void (__interrupt __far *old_int01)();
 static void (__interrupt __far *old_int03)();
 static void (__interrupt __far *old_int04)();
+static void (__interrupt __far *old_int06)();
 static void (__interrupt __far *old_int66)();
 
 static void hook_vectors(void) {
@@ -550,6 +571,7 @@ static void hook_vectors(void) {
 	old_int01 = _dos_getvect(0x01); _dos_setvect(0x01,int01_h);
 	old_int03 = _dos_getvect(0x03); _dos_setvect(0x03,int03_h);
 	old_int04 = _dos_getvect(0x04); _dos_setvect(0x04,int04_h);
+	old_int06 = _dos_getvect(0x06); _dos_setvect(0x06,int06_h);
 	old_int66 = _dos_getvect(0x66); _dos_setvect(0x66,int66_h);
 }
 
@@ -558,11 +580,12 @@ static void unhook_vectors(void) {
 	_dos_setvect(0x01,old_int01);
 	_dos_setvect(0x03,old_int03);
 	_dos_setvect(0x04,old_int04);
+	_dos_setvect(0x06,old_int06);
 	_dos_setvect(0x66,old_int66);
 }
 
 static void x_clear(void) {
-	x_cnt = x_vec = x_ip = x_cs = x_fl = x_live = x_resume = 0;
+	x_cnt = x_vec = x_ip = x_cs = x_fl = x_live = x_resume = x_faulted = 0;
 	ss_cnt = 0;
 }
 
@@ -1042,6 +1065,44 @@ static void t_seg_prefix(void) {
 	setup(); ri[R_ES] = alt; ri[R_BX] = T; EB(3, 0x26,0x8A,0x27); go(); set8(re,4,0x7B);
 	if (!verify(ARITH|CTRL)) failr("26 8A 27 mov ah,es:[bx]");
 
+	end();
+}
+
+/* ---- word access at offset FFFFh wraps to offset 0000h (8086/80186; 286+ raise #GP, see 286.c).
+ * Runs with DS = a 64KB+16 block of our own, so that offset 0000h, offset FFFFh and the byte
+ * just past the segment (linear base+10000h, where a non-wrapping emulator would go) are all ours */
+static void t_seg_wrap(void) {
+	unsigned seg;
+	unsigned char __far *p0,__far *pf,__far *pn;
+
+	begin("Seg wrap");
+	if (is286p) { skip("286+ raise #GP, tested by 286.EXE"); end(); return; }
+	if (_dos_allocmem(0x1001,&seg) != 0) { skip("cannot allocate 64KB"); end(); return; }
+	p0 = (unsigned char __far*)MK_FP(seg,0);
+	pf = (unsigned char __far*)MK_FP(seg,0xFFFF);
+	pn = (unsigned char __far*)MK_FP(seg+0x1000,0);
+	*p0 = 0x11; *pf = 0x22; *pn = 0x33;
+
+	/* push ds; mov ds,cx; mov ax,[bx]; pop ds */
+	setup(); ri[R_CX] = seg; ri[R_BX] = 0xFFFF; EB(6, 0x1E,0x8E,0xD9,0x8B,0x07,0x1F); go(); re[R_AX] = 0x1122;
+	if (!verify(ARITH|CTRL)) failr("mov ax,[FFFF] should wrap to offset 0 (past segment would be 3322h)");
+
+	/* mov ax,[bx+si] with bx+si = 1FFFFh */
+	setup(); ri[R_CX] = seg; ri[R_BX] = 0xFFF0; ri[R_SI] = 0x000F; EB(6, 0x1E,0x8E,0xD9,0x8B,0x00,0x1F); go(); re[R_AX] = 0x1122;
+	if (!verify(ARITH|CTRL)) failr("mov ax,[bx+si] = [FFFF] should wrap to offset 0");
+
+	/* mov [bx],ax */
+	setup(); ri[R_CX] = seg; ri[R_BX] = 0xFFFF; ri[R_AX] = 0xA5B6; EB(6, 0x1E,0x8E,0xD9,0x89,0x07,0x1F); go();
+	if (!verify(ARITH|CTRL) || !checkm(*pf == 0xB6 && *p0 == 0xA5 && *pn == 0x33))
+		failr("mov [FFFF],ax: [FFFF]=%02X [0]=%02X [past]=%02X, expected B6 A5 33",*pf,*p0,*pn);
+
+	/* movsw */
+	*p0 = 0x11; *pf = 0x22; *pn = 0x33;
+	setup(); ri[R_CX] = seg; ri[R_SI] = 0xFFFF; ri[R_ES] = FP_SEG(xbuf); ri[R_DI] = FP_OFF(xbuf); xbuf[0] = xbuf[1] = 0xEE;
+	EB(5, 0x1E,0x8E,0xD9,0xA5,0x1F); go(); re[R_SI] = 0x0001; re[R_DI] = FP_OFF(xbuf) + 2;
+	if (!verify(ARITH|CTRL) || !checkm(xbuf[0] == 0x22 && xbuf[1] == 0x11)) failr("movsw from [FFFF]: got %02X %02X, expected 22 11",xbuf[0],xbuf[1]);
+
+	_dos_freemem(seg);
 	end();
 }
 
@@ -1613,12 +1674,8 @@ skip_byte:
 static int de_style_8086 = 0,de_style_286 = 0;
 
 static int de_case(const char *what,unsigned start,unsigned len) {
-	unsigned resume = here();
-
 	x_clear();
-	x_resume = resume;
 	go();
-	x_resume = 0;
 
 	if (!checkm(x_cnt == 1 && x_vec == 0 && x_cs == thunk_seg)) {
 		failm("%s: INT 0 not raised (count=%u)",what,x_cnt);
@@ -1668,12 +1725,12 @@ static void t_div_fault(void) {
 
 /* ---- IDIV with quotient -128 / -32768: #DE on 8086, valid on 286+ */
 static void t_idiv_min(void) {
-	unsigned resume,faulted;
+	unsigned faulted;
 
 	begin("IDIV -80h");
 
 	setup(); ri[R_AX] = 0xFF80; ri[R_BX] = 1; EB(2, 0xF6,0xFB);
-	resume = here(); x_clear(); x_resume = resume; go(); x_resume = 0;
+	x_clear(); go();
 	faulted = x_cnt;
 	if (faulted) info("IDIV byte -128/1 raises #DE (8086 behavior)");
 	else info("IDIV byte -128/1 = AL=%02X AH=%02X (286+ behavior)",ro[R_AX] & 0xFF,ro[R_AX] >> 8);
@@ -1681,7 +1738,7 @@ static void t_idiv_min(void) {
 	if (is286p && !checkm(!faulted && ro[R_AX] == 0x0080)) failm("286+ should return quotient -128, got AX=%04X",ro[R_AX]);
 
 	setup(); ri[R_DX] = 0xFFFF; ri[R_AX] = 0x8000; ri[R_BX] = 1; EB(2, 0xF7,0xFB);
-	resume = here(); x_clear(); x_resume = resume; go(); x_resume = 0;
+	x_clear(); go();
 	faulted = x_cnt;
 	if (faulted) info("IDIV word -32768/1 raises #DE (8086 behavior)");
 	else info("IDIV word -32768/1 = AX=%04X DX=%04X (286+ behavior)",ro[R_AX],ro[R_DX]);
@@ -2566,6 +2623,7 @@ int main(int argc,char **argv) {
 	t_lea();
 	t_seg_default();
 	t_seg_prefix();
+	t_seg_wrap();
 	t_xchg();
 	t_xlat();
 	t_ldsles();

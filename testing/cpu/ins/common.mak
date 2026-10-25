@@ -10,12 +10,13 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 	@$(CC) @tmp.cmd
 
 8086_EXE =    $(SUBDIR)$(HPS)8086.$(EXEEXT)
+286_EXE =     $(SUBDIR)$(HPS)286.$(EXEEXT)
 
 all: lib exe
 
 lib: .symbolic
 
-exe: $(8086_EXE) .symbolic
+exe: $(8086_EXE) $(286_EXE) .symbolic
 
 $(8086_EXE): $(SUBDIR)$(HPS)8086.obj
 	%write tmp.cmd
@@ -23,6 +24,12 @@ $(8086_EXE): $(SUBDIR)$(HPS)8086.obj
 	%append tmp.cmd name $(8086_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+
+$(286_EXE): $(SUBDIR)$(HPS)286.obj
+	%write tmp.cmd
+	%append tmp.cmd option quiet option map=$(286_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)286.obj
+	%append tmp.cmd name $(286_EXE)
+	@wlink @tmp.cmd
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
