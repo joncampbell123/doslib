@@ -375,6 +375,9 @@ static void run(void) {
 		push	si
 		push	di
 		push	es
+		push	ds
+		mov	ax,seg ri			; Watcom does not keep DS = DGROUP in the large model
+		mov	ds,ax
 		mov	ax,word ptr ri+16
 		mov	es,ax
 		mov	cx,word ptr ri+2
@@ -402,6 +405,7 @@ static void run(void) {
 		mov	ax,es
 		mov	word ptr ro+16,ax
 		pop	word ptr ro+18
+		pop	ds
 		pop	es
 		pop	di
 		pop	si
@@ -1253,7 +1257,8 @@ int main(int argc,char **argv) {
 #endif
 
 	__asm {
-		mov	ax,ds
+		mov	ax,seg dgroup
+		mov	ds,ax
 		mov	dgroup,ax
 		mov	ax,ss
 		mov	ss_val,ax
