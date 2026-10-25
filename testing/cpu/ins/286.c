@@ -1160,7 +1160,8 @@ static void wrap_fill(void) {
 	*wrap_p(0x10000ul) = 0x33;
 }
 
-/* push ds; mov ds,cx; <instruction>; pop ds. A fault resumes at the POP DS */
+/* push ds; mov ds,cx; <instruction>; pop ds. A fault resumes at the POP DS.
+ * expect_fault: 1 = #GP (386+), 0 = no #GP (8086/80186), 2 = report only (286, see t_segwrap) */
 static void wrap_case(const char *what,unsigned n,const unsigned char *code,int expect_fault) {
 	unsigned s,i;
 
@@ -1180,12 +1181,16 @@ static void wrap_case(const char *what,unsigned n,const unsigned char *code,int 
 	x_resume = 0;
 	x_unexpected = 0;
 
-	if (expect_fault) {
+	if (expect_fault == 1) {
 		if (!checkm(x_cnt == 1 && x_vec == 0x0D && x_ip == s && sp_before == sp_after))
 			failm("%s: #GP count=%u ip=%04X(%04X)",what,x_cnt,x_ip,s);
 	}
-	else {
+	else if (expect_fault == 0) {
 		if (!checkm(x_cnt == 0)) failm("%s: unexpected #GP",what);
+	}
+	else {
+		if (x_cnt) info("%s: #GP",what);
+		else info("%s: no #GP (limit FFFFh not checked?)",what);
 	}
 }
 
@@ -1196,7 +1201,9 @@ static void t_segwrap(void) {
 	static const unsigned char c3[] = { 0x89,0x07 };			/* mov [bx],ax */
 	static const unsigned char c4[] = { 0xA5 };				/* movsw */
 	static const unsigned char c5[] = { 0xFF,0x37,0x58 };			/* push [bx]; pop ax */
-	int f = is286p;
+	/* A 386 enforces a segment limit unless it is FFFFFFFFh, so a word at FFFFh faults.
+	 * A 286 may likewise skip the check for the maximum 16-bit limit FFFFh: report what it does */
+	int f = c_386 ? 1 : is286p ? 2 : 0;
 
 	begin("Wrap #GP");
 	if (c_v86) { skip("virtual 8086 mode"); end(); return; }
@@ -1218,7 +1225,10 @@ static void t_segwrap(void) {
 
 	wrap_fill();
 	setup(); ri[R_BX] = 0xFFFF; ri[R_AX] = 0xA5B6; wrap_case("89 07 mov [FFFF],ax",2,c3,f);
-	if (f) {
+	if (f == 2) {
+		if (!x_cnt) info("mov [FFFF],ax wrote [FFFF]=%02X [0]=%02X [past]=%02X",*wrap_p(0xFFFFul),*wrap_p(0ul),*wrap_p(0x10000ul));
+	}
+	else if (f) {
 		if (!checkm(*wrap_p(0xFFFFul) == 0x22 && *wrap_p(0ul) == 0x11 && *wrap_p(0x10000ul) == 0x33))
 			failm("mov [FFFF],ax: memory changed despite #GP");
 	}

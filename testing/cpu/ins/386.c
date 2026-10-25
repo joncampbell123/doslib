@@ -25,6 +25,8 @@
  *                IOPL sensitive instructions, the I/O bitmap, and the
  *                instructions that are not allowed.
  *   Unreal mode: segment limits kept after returning to real mode.
+ *   4GB limit:   a segment limit of FFFFFFFFh is not checked (an access that
+ *                wraps past 4GB does not fault), any smaller limit is.
  *
  * The register runner, the real/protected mode switch and all protected mode
  * and V86 code are generated machine code. The 386 returns to real mode by
@@ -1855,7 +1857,10 @@ static void t_486(void) {
 #define S_DSTK16	0x78		/* stack, B=0, limit FFFFh, offset FFFCh = stk1+80h */
 #define S_S32B		0x80		/* stack, B=1, G=1, limit 4GB, offset FFFEh = stk1+80h */
 #define S_DNP		0x88		/* data, not present */
-#define GDT_N		18
+#define S_W32		0x90		/* data, B=1, G=1, limit 4GB, base = tbuf+2: offset FFFFFFFEh wraps to tbuf */
+#define S_W16		0x98		/* same with B=0 */
+#define S_WM		0xA0		/* data, B=1, G=1, limit FFFFEFFFh, base = tbuf+1002h: offset FFFFEFFEh = tbuf */
+#define GDT_N		21
 #define S_BEYOND	0x01F8
 
 #define IDT_N		0x50
@@ -2240,6 +2245,9 @@ static void pm_tables(void) {
 	set_seg(&gdt[S_DSTK16>>3],sl + 0x80ul - 0xFFFCul,0xFFFF,0x92,0x0);
 	set_seg(&gdt[S_S32B>>3],sl + 0x80ul - 0xFFFEul,0xFFFFF,0x92,0xC);
 	set_seg(&gdt[S_DNP>>3],tl,0xFFFF,0x12,0x0);
+	set_seg(&gdt[S_W32>>3],tl + 2ul,0xFFFFF,0x92,0xC);
+	set_seg(&gdt[S_W16>>3],tl + 2ul,0xFFFFF,0x92,0x8);
+	set_seg(&gdt[S_WM>>3],tl + 0x1002ul,0xFFFFE,0x92,0xC);
 
 	for (v=0;v < IDT_N;v++) set_gate(&idt[v],S_C32,stub_off[v],0x8E,0);
 	set_gate(&idt[V_INTG],S_C32,h40_off,0x8E,0);
@@ -2632,6 +2640,40 @@ static void g_limits(void) {
 			ex_eq("LAR 32-bit code",r->esi & 0x00F0FE00ul,0x00409A00ul);
 			ex_eq("LAR flat data",r->edi & 0x00F0FE00ul,0x00C09200ul);
 		}
+	}
+	end();
+}
+
+/* ---- a limit of FFFFFFFFh is not checked: an access that wraps past 4GB does not fault
+ *      (seen on real 386 hardware), while any smaller limit is enforced */
+static void g_limit4g(void) {
+	unsigned c[8],n = 0,a[8];
+	unsigned long w0;
+
+	begin("Limit 4GB");
+	pm_begin();
+	case_begin(); c[n] = ncase-1; p_sreg(SR_DS,S_W32); a[n++] = pc(); P(0xA1); PD(0xFFFFFFFEul); case_end();
+	case_begin(); c[n] = ncase-1; p_sreg(SR_DS,S_W16); a[n++] = pc(); P(0xA1); PD(0xFFFFFFFEul); case_end();
+	case_begin(); c[n] = ncase-1;					/* 16-bit code, 32-bit address */
+	P(0xEA); PD(pc() + 6u); PW(S_C16);
+	P(0xB8); PW(S_W32); PB(2, 0x8E,0xD8); a[n++] = pc(); PB(3, 0x67,0x66,0xA1); PD(0xFFFFFFFEul);
+	PB(2, 0x66,0xEA); PD(pc() + 6u); PW(S_C32);
+	case_end();
+	case_begin(); c[n] = ncase-1; p_sreg(SR_DS,S_WM); a[n++] = pc(); P(0xA1); PD(0xFFFFEFFEul); case_end();
+	case_begin(); c[n] = ncase-1; p_sreg(SR_DS,S_WM); a[n++] = pc(); P(0xA0); PD(0xFFFFEFFFul); case_end();
+	case_begin(); c[n] = ncase-1; p_sreg(SR_DS,S_D); a[n++] = pc(); PB(2, 0x66,0xA1); PD(0x0000FFFFul); case_end();
+
+	if (pm_go()) {
+		w0 = (unsigned long)tbuf[0] | ((unsigned long)tbuf[1] << 8) | ((unsigned long)tbuf[2] << 16) | ((unsigned long)tbuf[3] << 24);
+		pm_what = "limit FFFFFFFFh, B=1: dword at FFFFFFFEh (no #GP, wraps)";
+		if (ex_ok(c[0])) ex_eq("EAX",res[c[0]].eax,w0);
+		pm_what = "limit FFFFFFFFh, B=0: dword at FFFFFFFEh (no #GP, wraps)";
+		if (ex_ok(c[1])) ex_eq("EAX",res[c[1]].eax,w0);
+		pm_what = "limit FFFFFFFFh, 16-bit code with 67h: dword at FFFFFFFEh";
+		if (ex_ok(c[2])) ex_eq("EAX",res[c[2]].eax,w0);
+		pm_what = "limit FFFFEFFFh: dword at FFFFEFFEh";	ex_fault(c[3],13,0,a[3]);
+		pm_what = "limit FFFFEFFFh: byte at FFFFEFFFh";	if (ex_ok(c[4])) ex_eq("AL",res[c[4]].eax & 0xFF,tbuf[1]);
+		pm_what = "limit FFFFh: word at FFFFh (enforced on 386)"; ex_fault(c[5],13,0,a[5]);
 	}
 	end();
 }
@@ -3129,6 +3171,7 @@ int main(int argc,char **argv) {
 			g_pm32();
 			g_mixed();
 			g_limits();
+			g_limit4g();
 			g_gates();
 			g_ring3();
 			g_task();

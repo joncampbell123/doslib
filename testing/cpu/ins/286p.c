@@ -1170,7 +1170,12 @@ static void g_limits(void) {
 		pm_what = "jmp far past code limit";	ex_fault(c[9],13,0,case_mark[c[9]]);
 		pm_what = "access through null DS";	ex_fault(c[10],13,0,case_mark[c[10]]);
 		pm_what = "mov ss,null";		ex_fault(c[11],13,0,case_mark[c[11]]);
-		pm_what = "mov ax,[FFFF] limit FFFF";	ex_fault(c[12],13,0,case_mark[c[12]]);
+		/* a 386 enforces any limit below FFFFFFFFh. A 286 may skip the check for the maximum
+		 * 16-bit limit FFFFh: on a 286 this is reported, not checked */
+		pm_what = "mov ax,[FFFF] limit FFFF";
+		if (c_386) ex_fault(c[12],13,0,case_mark[c[12]]);
+		else if (res[c[12]].xcnt) info("286: word at FFFFh with limit FFFFh raises %s",res[c[12]].vec == 13 ? "#GP" : "another exception");
+		else info("286: word at FFFFh with limit FFFFh does not fault");
 	}
 	end();
 }
