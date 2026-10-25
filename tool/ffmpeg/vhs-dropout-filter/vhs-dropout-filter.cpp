@@ -82,6 +82,7 @@ struct options_t {
     double                      match = 0.9;        // the least score for a frame of a donor to be the same frame
     double                      donor_gap = 60;     // seconds: a donor that is the input itself is not used this close
     std::string                 cache_dir;          // where the thumbnails of files are kept, "" not to keep them
+    bool                        fast = false;       // donors: quicker, a little less well
     detect_params_t             dp;
     fill_params_t               fp;
     int                         fields = -1;        // -1 to decide from the file, 0 progressive, 1 interlaced
@@ -154,6 +155,12 @@ static void help(void) {
     fprintf(stderr,"                 same frame (default 0.9)\n");
     fprintf(stderr,"  -donor-gap <sec>  A donor that is the input itself is not used less than this far from\n");
     fprintf(stderr,"                 the frame it fills in (default 60)\n");
+    fprintf(stderr,"  -fast          Quicker with donors, for doing a whole tape: a donor is lined up with the\n");
+    fprintf(stderr,"                 input block by block, not line by line too, and its own dropouts are found\n");
+    fprintf(stderr,"                 from its picture before without following how the picture moves, which\n");
+    fprintf(stderr,"                 leaves a little more of it out where something moves. Only the first\n");
+    fprintf(stderr,"                 -donor that has each frame is used, and the dropouts the donors find are\n");
+    fprintf(stderr,"                 looked for every other frame, those between having what the one before had.\n");
     fprintf(stderr,"  -cache <dir>   Where to keep the thumbnails of each frame of the input and the donors,\n");
     fprintf(stderr,"                 which take a while to make, so that they are made only once\n");
     fprintf(stderr,"                 (default ~/.cache/vhs-dropout-filter)\n");
@@ -1119,6 +1126,7 @@ struct donor_use_t {
     std::vector<plane16_t>      wpl;
     image_t                     wlum;
     mask_t                      wmask;
+    std::vector<mask_t>         wpmasks;            // its dropouts in each plane
     mvfield_t                   still;              // no movement, the costs of mv
 };
 
@@ -1135,6 +1143,7 @@ struct pic_t {
     std::vector<float>          E;                  // how much each pixel differs from the pictures around it
     detect_stats_t              ds;
     std::vector<donor_use_t>    donors;             // the pictures of the donors that are this picture
+    std::vector<mask_t>         pmasks;             // its dropouts in each plane, once they are all found
 };
 
 // a frame waiting for its pictures to be done
@@ -1371,6 +1380,9 @@ private:
 
         for (size_t k=0;k < donors.size() && in_index >= 0;k++) {
             const donor_t &d = *donors[k];
+            // -fast: the first that has it
+            if (opt.fast && !c.donors.empty())
+                break;
             if ((size_t)in_index >= d.match.size() || d.match[(size_t)in_index].frame < 0)
                 continue;
 
@@ -1520,11 +1532,18 @@ private:
 
         std::vector<image_t> preds;
         std::vector<const image_t*> pp;
+        std::vector<dpic_ptr> keep;
         preds.reserve(2);
         for (int64_t n=q - 1;n <= q + 1;n += 2) {
             dpic_ptr o = donor_pic(k,n);
             if (o == NULL)
                 continue;
+            // -fast: the picture before as it is, or after if there is none before
+            if (opt.fast) {
+                keep.push_back(o);
+                pp.push_back(&o->lum);
+                break;
+            }
             mvfield_t mv;
             estimate_motion(mv,p.pyr,o->pyr,mp);
             preds.push_back(image_t());
@@ -1566,6 +1585,8 @@ private:
             }
         }
 
+        // -fast: block by block only
+        if (!opt.fast) {
         #pragma omp parallel
         {
         std::vector<float> best(nseg),smp((size_t)SEG),med(nseg);
@@ -1628,6 +1649,7 @@ private:
             }
         }
         }
+        }
 
         // the donor where each pixel of the input is: luma, its dropouts, and each plane
         u.wlum.alloc(w,h);
@@ -1669,6 +1691,35 @@ private:
         std::fill(u.still.vy.begin(),u.still.vy.end(),0.0f);
     }
 
+    // what the donors found in picture b, which is not in c, as if they had found it in c
+    void donor_carry(pic_t &c,const pic_t &b) {
+        size_t added = 0;
+        for (size_t i=0;i < c.mask.size();i++) {
+            if (b.mask[i] == 2 && !c.mask[i]) {
+                c.mask[i] = 2;
+                added++;
+            }
+        }
+        recount(c,added);
+    }
+
+    // the dropouts of a picture again, after the donors put more in
+    void recount(pic_t &c,size_t added) {
+        const int w = c.lum.w,h = c.lum.h;
+        if (added == 0u)
+            return;
+        donor_found += added;
+        c.ds.pixels = 0;
+        c.ds.lines = 0;
+        for (int y=0;y < h;y++) {
+            size_t r = 0;
+            for (int x=0;x < w;x++)
+                r += c.mask[((size_t)y * w) + x] ? 1u : 0u;
+            c.ds.pixels += r;
+            c.ds.lines += r != 0u ? 1u : 0u;
+        }
+    }
+
     void donor_detect(pic_t &c) {
         const int w = c.lum.w,h = c.lum.h;
         const size_t n = (size_t)w * h;
@@ -1696,7 +1747,9 @@ private:
             // more or less contrast, so it is fitted to the input from the pixels around each pixel, a times
             // the donor plus b. Or the input itself where there is nothing to go by, which finds nothing there.
             const size_t sn = (size_t)(w + 1) * (h + 1);
+            // the sums from the top left corner: along each line, then down each column
             std::vector<double> s1(sn,0.0),sc(sn,0.0),sp(sn,0.0),scp(sn,0.0),spp(sn,0.0);
+            #pragma omp parallel for schedule(static)
             for (int y=0;y < h;y++) {
                 double r1 = 0,rc = 0,rp = 0,rcp = 0,rpp = 0;
                 for (int x=0;x < w;x++) {
@@ -1705,8 +1758,15 @@ private:
                         const double cv = c.lum.v[i],pv = pred.v[i];
                         r1 += 1.0; rc += cv; rp += pv; rcp += cv * pv; rpp += pv * pv;
                     }
-                    const size_t o = ((size_t)(y + 1) * (w + 1)) + x + 1,u0 = ((size_t)y * (w + 1)) + x + 1;
-                    s1[o] = s1[u0] + r1; sc[o] = sc[u0] + rc; sp[o] = sp[u0] + rp; scp[o] = scp[u0] + rcp; spp[o] = spp[u0] + rpp;
+                    const size_t o = ((size_t)(y + 1) * (w + 1)) + x + 1;
+                    s1[o] = r1; sc[o] = rc; sp[o] = rp; scp[o] = rcp; spp[o] = rpp;
+                }
+            }
+            #pragma omp parallel for schedule(static)
+            for (int x=1;x <= w;x++) {
+                for (int y=1;y < h;y++) {
+                    const size_t o = ((size_t)(y + 1) * (w + 1)) + x,u0 = ((size_t)y * (w + 1)) + x;
+                    s1[o] += s1[u0]; sc[o] += sc[u0]; sp[o] += sp[u0]; scp[o] += scp[u0]; spp[o] += spp[u0];
                 }
             }
             image_t dc,cl;
@@ -1738,16 +1798,21 @@ private:
             // the lines and from line to line, is made softer until they are about the same. A dropout is long
             // across the line, and a few lines down, mostly, which this keeps.
             auto soften_x = [&](image_t &im) {
-                std::vector<float> r((size_t)w);
-                for (int y=0;y < h;y++) {
-                    float *d = im.row(y);
-                    for (int x=0;x < w;x++)
-                        r[(size_t)x] = (d[x > 0 ? x - 1 : 0] + (2.0f * d[x]) + d[x + 1 < w ? x + 1 : w - 1]) * 0.25f;
-                    memcpy(d,&r[0],sizeof(float) * (size_t)w);
+                #pragma omp parallel
+                {
+                    std::vector<float> r((size_t)w);
+                    #pragma omp for schedule(static)
+                    for (int y=0;y < h;y++) {
+                        float *d = im.row(y);
+                        for (int x=0;x < w;x++)
+                            r[(size_t)x] = (d[x > 0 ? x - 1 : 0] + (2.0f * d[x]) + d[x + 1 < w ? x + 1 : w - 1]) * 0.25f;
+                        memcpy(d,&r[0],sizeof(float) * (size_t)w);
+                    }
                 }
             };
             auto soften_y = [&](image_t &im) {
                 image_t t = im;
+                #pragma omp parallel for schedule(static)
                 for (int y=0;y < h;y++) {
                     const float *a = t.row(y > 0 ? y - 1 : 0),*b = t.row(y),*e = t.row(y + 1 < h ? y + 1 : h - 1);
                     float *d = im.row(y);
@@ -1860,18 +1925,7 @@ private:
             }
         }
 
-        if (added != 0u) {
-            donor_found += added;
-            c.ds.pixels = 0;
-            c.ds.lines = 0;
-            for (int y=0;y < h;y++) {
-                size_t r = 0;
-                for (int x=0;x < w;x++)
-                    r += c.mask[((size_t)y * w) + x] ? 1u : 0u;
-                c.ds.pixels += r;
-                c.ds.lines += r != 0u ? 1u : 0u;
-            }
-        }
+        recount(c,added);
     }
 
     void detect(int64_t seq) {
@@ -1907,7 +1961,14 @@ private:
         detect_dropouts(c.mask,c.E,c.lum,pp,pe,dp,c.ds);
         if (!c.donors.empty()) {
             with_donor++;
-            donor_detect(c);
+            // -fast: every other picture, and the pictures between have what was found in the picture
+            // before them of the same field, as a crease stays where it is from one picture to the next
+            const int64_t nf = vi.fields ? 2 : 1;
+            pic_t *b = opt.fast ? get(seq - nf) : NULL;
+            if (b != NULL && ((seq / nf) % 2) == 1 && b->mask.size() == c.mask.size() && !b->donors.empty())
+                donor_carry(c,*b);
+            else
+                donor_detect(c);
         }
 
     }
@@ -1966,6 +2027,18 @@ private:
         }
     }
 
+    // the dropouts of a picture in each of its planes, worked out once: a picture is filled in from the
+    // pictures around it, and each of them is used by a few pictures
+    const std::vector<mask_t> &plane_masks(const pic_t &p,const mask_t &mask,std::vector<mask_t> &pm) {
+        if (pm.size() != p.pl.size()) {
+            const unsigned int li = luma_index(vi);
+            pm.resize(p.pl.size());
+            for (size_t i=0;i < p.pl.size();i++)
+                plane_mask(pm[i],mask,(int)p.pl[li].width,(int)p.pl[li].height,p.pl[i]);
+        }
+        return pm;
+    }
+
     // the donors of a picture, to fill it in from before the pictures around it, where they are lined up well.
     // mvs must have room for them, as src points into it.
     void donor_sources(pic_t &c,std::vector<mvfield_t> &mvs,std::vector<fill_source_t> &src) {
@@ -1980,6 +2053,7 @@ private:
             fill_source_t s;
             s.pl = &u.wpl;
             s.mask = &u.wmask;
+            s.pmasks = &plane_masks(c,u.wmask,u.wpmasks);
             s.mv = &mvs.back();
             s.distance = 1;
             s.priority = 1;
@@ -2039,7 +2113,9 @@ private:
             std::vector<mvfield_t> mvs;
             std::vector<fill_source_t> src;
 
+            // the donors first: where one has a pixel, the pictures around are not looked at for it
             mvs.reserve(((size_t)near * 2u) + c.donors.size());
+            donor_sources(c,mvs,src);
             for (int k=-near;k <= near;k++) {
                 pic_t *n = k != 0 ? get(seq + k) : NULL;
                 if (n == NULL)
@@ -2053,9 +2129,9 @@ private:
                 s.mask = &n->mask;
                 s.mv = &mvs.back();
                 s.distance = abs(k);
+                s.pmasks = &plane_masks(*n,n->mask,n->pmasks);
                 src.push_back(s);
             }
-            donor_sources(c,mvs,src);
 
             fill_motion(out,c.pl,c.mask,lw,lh,src,opt.fp,fs);
         }
@@ -2928,6 +3004,9 @@ int main(int argc,char **argv) {
                 opt.cache_dir = v;
                 cache_given = true;
             }
+            else if (o == "fast") {
+                opt.fast = true;
+            }
             else if (o == "nocache") {
                 opt.cache_dir.clear();
                 cache_given = true;
@@ -2949,6 +3028,13 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"-t %s: give the time as seconds, such as 90.5, or [HH:]MM:SS[.m...], such as 1:30.5\n",v);
                     return 1;
                 }
+            }
+            else if (o == "threads") {
+                if (!parse_double(v,d) || d < 1 || d > 1024 || d != floor(d)) {
+                    fprintf(stderr,"-threads %s: must be 1 or more\n",v);
+                    return 1;
+                }
+                opt.threads = (int)d;
             }
             else if (o == "c") {
                 opt.codec = v;

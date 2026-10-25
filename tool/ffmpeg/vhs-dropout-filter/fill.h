@@ -16,6 +16,7 @@ struct fill_source_t {
                                                     // lower priority are not used: another copy of the tape before
                                                     // the pictures around, which may have the same dropout
     float                       max_cost = 1e30f;   // not used where its blocks match worse than this
+    const std::vector<mask_t>*  pmasks = NULL;      // its dropouts in each plane, if they are already worked out
 };
 
 struct fill_params_t {

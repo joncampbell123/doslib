@@ -375,7 +375,7 @@ def visible(dirty_y, clean_y, mask):
     off = np.apply_along_axis(lambda r: np.convolve(r, k, 'same'), 2, np.abs(dirty_y - clean_y))
     return mask & (off >= 6)
 
-def test_donor(name, seed=40):
+def test_donor(name, seed=40, args=(), min_found=0.75, max_extra=0.004, max_err=0.4):
     # a donor edited from the same tape, with dropouts of its own: it finds and fills in the creases,
     # which the frames around cannot, for the frames it has, and is not used for those it has not
     rng = np.random.default_rng(seed)
@@ -397,7 +397,7 @@ def test_donor(name, seed=40):
         cache = ['-cache', os.path.join(tmp, 'cache')]
 
         found = {}
-        for tag, extra in (('without', []), ('with', ['-donor', don])):
+        for tag, extra in (('without', []), ('with', list(args) + ['-donor', don])):
             holes = os.path.join(tmp, 'holes-%s.mov' % tag)
             log = os.path.join(tmp, 'holes-%s.csv' % tag)
             run_tool(cache + extra + ['-mode', '2', '-log', log, src, holes])
@@ -413,23 +413,23 @@ def test_donor(name, seed=40):
         inside[0:25] = inside[35:60] = True
         r0 = (found['without'] & vis)[inside].sum() / vis[inside].sum()
         r1 = (found['with'] & vis)[inside].sum() / vis[inside].sum()
-        check(name + ': creases found with the donor', r1 >= 0.75 and r1 >= r0 + 0.3, '%.1f%%, from %.1f%% without it' % (r1 * 100, r0 * 100))
+        check(name + ': creases found with the donor', r1 >= min_found and r1 >= r0 + 0.3, '%.1f%%, from %.1f%% without it' % (r1 * 100, r0 * 100))
         extra = (found['with'] & ~grown(truth | crease, 8, 3)).sum() / (~(truth | crease)).sum()
-        check(name + ': little else found with the donor', extra <= 0.004, '%.3f%% of the rest of the picture' % (extra * 100))
+        check(name + ': little else found with the donor', extra <= max_extra, '%.3f%% of the rest of the picture' % (extra * 100))
 
         err = {}
-        for tag, extra in (('without', []), ('with', ['-donor', don])):
+        for tag, extra in (('without', []), ('with', list(args) + ['-donor', don])):
             dst = os.path.join(tmp, 'out-%s.mkv' % tag)
             run_tool(cache + extra + ['-mode', '3', src, dst])
             out = plane(dst)
             err[tag] = np.abs(out - clean_y)[crease & inside[:, None, None]].mean()
         before = np.abs(dirty_y - clean_y)[crease & inside[:, None, None]].mean()
-        check(name + ': creases filled in from the donor', err['with'] <= 0.4 * err['without'],
+        check(name + ': creases filled in from the donor', err['with'] <= max_err * err['without'],
               '%.2f levels from what was there, %.2f without it, %.2f before' % (err['with'], err['without'], before))
         check(name + ': thumbnails kept in the cache', len(os.listdir(os.path.join(tmp, 'cache'))) == 2,
               str(os.listdir(os.path.join(tmp, 'cache'))))
 
-def test_self_donor(name, seed=50):
+def test_self_donor(name, seed=50, args=(), max_err=0.4):
     # the tape played twice in the same file, with other dropouts and creases each time: the input is its own donor
     rng = np.random.default_rng(seed)
     scene = make_scene(rng)
@@ -445,7 +445,7 @@ def test_self_donor(name, seed=50):
         src = os.path.join(tmp, 'in.mkv')
         make_video(src, play1 + gap + play2, False)
         err = {}
-        for tag, extra in (('without', []), ('with', ['-donor', src, '-donor-gap', '0.5'])):
+        for tag, extra in (('without', []), ('with', list(args) + ['-donor', src, '-donor-gap', '0.5'])):
             dst = os.path.join(tmp, 'out-%s.mkv' % tag)
             log = os.path.join(tmp, 'out-%s.csv' % tag)
             run_tool(['-nocache', '-t', '1'] + extra + ['-mode', '3', '-log', log, src, dst])
@@ -454,7 +454,7 @@ def test_self_donor(name, seed=50):
         rows = list(csv.DictReader(open(log)))
         times = [float(r['donor1_time']) for r in rows if r['donor1_time']]
         check(name + ': the second playback found', len(times) >= 58 and all(t > 1.0 for t in times), '%d frames' % len(times))
-        check(name + ': creases filled in from it', err['with'] <= 0.4 * err['without'],
+        check(name + ': creases filled in from it', err['with'] <= max_err * err['without'],
               '%.2f levels from what was there, %.2f without it' % (err['with'], err['without']))
 
 def test_errors():
@@ -484,6 +484,8 @@ test_range('-ss and -t in seconds', '0.25', '0.5')
 test_range('-ss and -t as MM:SS', '00:00.25', '0:0.5')
 test_donor('-donor')
 test_self_donor('-donor, the input itself')
+test_donor('-donor -fast', args=('-fast',), min_found=0.65, max_err=0.5)
+test_self_donor('-donor -fast, the input itself', args=('-fast',), max_err=0.5)
 test_interrupt('CTRL+C, -mode 3', ['-mode', '3'], 'Filtering')
 test_interrupt('CTRL+C, -mode 2', ['-mode', '2'], 'Filtering')
 test_interrupt('CTRL+C, -mode 1, MP4', ['-mode', '1'], 'Filtering', ext='.mp4', vcodec='libx264', audio=False)

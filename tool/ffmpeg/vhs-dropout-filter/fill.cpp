@@ -113,11 +113,19 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
         const float sx = (float)(1u << cp.hsub),sy = (float)(1u << cp.vsub);
         const int mx = std::max(1,fp.match_x >> cp.hsub),my = std::max(1,fp.match_y >> cp.vsub);
         mask_t pm,near;
-        std::vector<mask_t> spm(src.size());
+        std::vector<mask_t> own(src.size());
+        std::vector<const mask_t*> spm(src.size());
 
         plane_mask(pm,mask,lw,lh,cp);
-        for (size_t s=0;s < src.size();s++)
-            plane_mask(spm[s],*src[s].mask,lw,lh,(*src[s].pl)[p]);
+        for (size_t s=0;s < src.size();s++) {
+            if (src[s].pmasks != NULL && p < src[s].pmasks->size()) {
+                spm[s] = &(*src[s].pmasks)[p];
+            }
+            else {
+                plane_mask(own[s],*src[s].mask,lw,lh,(*src[s].pl)[p]);
+                spm[s] = &own[s];
+            }
+        }
 
         // the pixels to make a prediction of: the dropouts, and around them, to match the brightness to
         near = pm;
@@ -160,7 +168,7 @@ void fill_motion(std::vector<plane16_t> &out,const std::vector<plane16_t> &cur,c
                         const int cj = std::min(std::max(j,0),h - 1);
                         for (int k=ix;k <= ix + 1 && !bad;k++) {
                             const int ck = std::min(std::max(k,0),w - 1);
-                            if (spm[s][((size_t)cj * w) + ck])
+                            if ((*spm[s])[((size_t)cj * w) + ck])
                                 bad = true;
                         }
                     }
