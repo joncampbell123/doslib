@@ -106,8 +106,10 @@ def read_video(path, w=WIDTH, h=HEIGHT):
 def psnr(a, b):
     return 10 * np.log10(255 ** 2 / max(1e-9, ((a - b) ** 2).mean()))
 
-def run_tool(args):
-    r = subprocess.run([TOOL, '-y', '-q'] + args, capture_output=True, text=True)
+def run_tool(args, lossless=True):
+    # the frames are measured from the output, so it is lossless, FFV1, unless asked otherwise (the GPU version
+    # encodes H.264 on the GPU by default)
+    r = subprocess.run([TOOL, '-y', '-q'] + (['-c', 'ffv1'] if lossless else []) + args, capture_output=True, text=True)
     sys.stdout.write(''.join('    | ' + l + '\n' for l in r.stderr.splitlines()))
     return r.returncode
 
@@ -206,6 +208,26 @@ def main():
             check(probe(out, 'stream=width,height')[0] == '640,480', 'the output is 640x480 (%s)' % probe(out, 'stream=width,height')[0])
             got = read_video(out, 640, 480)
             check(abs(len(got) - 30) <= 1, '-r 30 -t 1: 30 frames (%d)' % len(got))
+
+        if '-hwaccel' in subprocess.run([TOOL, '-h'], capture_output=True, text=True).stderr:
+            print('Decoding and encoding on the GPU (-hwaccel)')
+            src = os.path.join(tmp, 'slow-h264.mkv')
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(tmp, 'slow.mkv'), '-c:v', 'libx264', '-crf', '10', '-pix_fmt', 'yuv420p', '-c:a', 'copy', src], check=True)
+            ref = os.path.join(tmp, 'hw-ref.mkv')
+            out = os.path.join(tmp, 'hw.mkv')
+            if run_tool(['-r', '60', '-hwaccel', 'none', src, ref]) == 0 and run_tool(['-r', '60', src, out], lossless=False) == 0:
+                def luma(p):
+                    r = subprocess.run(['ffmpeg', '-v', 'error', '-i', p, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], capture_output=True, check=True)
+                    v = np.frombuffer(r.stdout, np.uint8)
+                    return v[:(len(v) // (WIDTH * HEIGHT)) * (WIDTH * HEIGHT)].reshape(-1, HEIGHT, WIDTH).astype(np.float64)
+                a, b = luma(out), luma(ref)
+                n = min(len(a), len(b))
+                ps = [psnr(a[k], b[k]) for k in range(n)]
+                drift = max(abs((a[k] - b[k]).mean()) for k in range(n))
+                check(len(a) == len(b), 'as many frames as decoding and encoding on the CPU (%d, %d)' % (len(a), len(b)))
+                check(min(ps) > 35 and drift < 2, 'the same frames, as near as encoding allows: worst %.1f dB, brightness at most %.2f off' % (min(ps), drift))
+            else:
+                check(False, 'it ran')
 
         print('Options')
         check(run_tool(['-r', 'fast', src, out]) != 0, '-r fast: refused')
