@@ -120,6 +120,9 @@ struct flow_params_t {
                                                     // in pieces, not pixel by pixel
     float                       predict = 0.5f;     // cost of each pixel a block moves differently from the prediction
                                                     // of the frames before, if there is one
+    float                       still = 0.03f;      // cost of each pixel (of the full size) a block moves at all: where it
+                                                    // matches as well anywhere, as black does, or the noise of a picture
+                                                    // fading in from black, it stays where it is
     bool                        subpel = true;      // to a quarter of a pixel, not only whole pixels
 };
 

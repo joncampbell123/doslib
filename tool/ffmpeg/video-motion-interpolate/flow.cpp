@@ -27,8 +27,18 @@ void build_pyr(pyr_t &p,const fimage_t &full) {
 
 // How badly block (bx,by) of a matches b moved by (vx,vy): the mean difference of the pixels of the block
 // and a margin around it, so that blocks overlap, and a block of nothing but sky still has edges to go by;
-// each with the mean of its block taken off, so that a fade, or the light changing, does not throw it off.
-// If dc is not NULL, it is how much brighter the block is in b.
+// each with the mean of its block taken off, and made as contrasty as the other (to half or twice as
+// contrasty), so that a fade, or the light changing, which makes a picture brighter and more contrasty
+// together, does not throw it off. If dc is not NULL, it is how much brighter the block is in b.
+// how much more contrasty b is than a, from their means and mean squares: the ratio of their standard
+// deviations, kept to half to twice, and 1 where either is too flat to tell
+static float contrast_gain(float ma,float mb,float qa,float qb) {
+    const float sa = sqrtf(std::max(0.0f,qa - (ma * ma))),sb = sqrtf(std::max(0.0f,qb - (mb * mb)));
+    if (sa < 2.0f || sb < 2.0f)
+        return 1.0f;
+    return std::min(2.0f,std::max(0.5f,sb / sa));
+}
+
 static float block_cost(const fimage_t &a,const fimage_t &b,int bx,int by,int blk,float vx,float vy,float *dc=NULL) {
     const int m = std::max(1,blk / 4);
     const int x0 = std::max(0,(bx * blk) - m),x1 = std::min(a.w,((bx + 1) * blk) + m);
@@ -42,23 +52,28 @@ static float block_cost(const fimage_t &a,const fimage_t &b,int bx,int by,int bl
         return b.at((float)x + vx,(float)y + vy);
     };
 
-    float ma = 0,mb = 0;
+    float ma = 0,mb = 0,qa = 0,qb = 0;
     for (int y=y0;y < y1;y++) {
         const float *ra = a.row(y);
         for (int x=x0;x < x1;x++) {
-            ma += ra[x];
-            mb += sb(x,y);
+            const float va = ra[x],vb = sb(x,y);
+            ma += va;
+            mb += vb;
+            qa += va * va;
+            qb += vb * vb;
         }
     }
-    const float d = (mb - ma) / (float)n;
+    ma /= (float)n;
+    mb /= (float)n;
     if (dc != NULL)
-        *dc = d;
+        *dc = mb - ma;
+    const float g = contrast_gain(ma,mb,qa / (float)n,qb / (float)n);
 
     float sum = 0;
     for (int y=y0;y < y1;y++) {
         const float *ra = a.row(y);
         for (int x=x0;x < x1;x++)
-            sum += fabsf(ra[x] + d - sb(x,y));
+            sum += fabsf(((ra[x] - ma) * g) + mb - sb(x,y));
     }
     return sum / (float)n;
 }
@@ -151,6 +166,7 @@ void estimate_flow(field_t &out,const pyr_t &a,const pyr_t &b,const flow_params_
 
                 auto cost = [&](float vx,float vy) -> float {
                     float c = block_cost(ia,ib,bx,by,blk,vx,vy);
+                    c += fp.still * scale * (fabsf(vx) + fabsf(vy));
                     if (full == 0)
                         c += fp.smooth * (fabsf(vx - mx) + fabsf(vy - my));
                     if (pred != NULL && !pred->empty())

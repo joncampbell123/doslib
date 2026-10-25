@@ -62,11 +62,11 @@ void main() {
 // up in shared memory. Every invocation gets the same answer, and so goes on the same way.
 #define GLSL_BLOCK_COST R"GLSL(
 uniform int blk;
-shared vec2 red[64];
+shared vec4 red[64];
 float sample_b(vec2 p) {
     return texture(ib,(p + 0.5) / vec2(textureSize(ib,0))).r;
 }
-vec2 reduce(vec2 v) {
+vec4 reduce(vec4 v) {
     uint i = gl_LocalInvocationIndex;
     red[i] = v;
     barrier();
@@ -75,9 +75,16 @@ vec2 reduce(vec2 v) {
             red[i] += red[i + k];
         barrier();
     }
-    vec2 r = red[0];
+    vec4 r = red[0];
     barrier();
     return r;
+}
+// how much more contrasty b is than a (as contrast_gain in flow.cpp)
+float contrast_gain(float ma,float mb,float qa,float qb) {
+    float sa = sqrt(max(0.0,qa - (ma * ma))),sb = sqrt(max(0.0,qb - (mb * mb)));
+    if (sa < 2.0 || sb < 2.0)
+        return 1.0;
+    return clamp(sb / sa,0.5,2.0);
 }
 float block_cost(ivec2 bxy,vec2 v,out float dc) {
     ivec2 asz = textureSize(ia,0),bsz = textureSize(ib,0);
@@ -88,23 +95,24 @@ float block_cost(ivec2 bxy,vec2 v,out float dc) {
     bool whole = v == floor(v);
     ivec2 iv = ivec2(v);
     float n = float(max(1,np));
-    vec2 sum = vec2(0.0);
+    vec4 sum = vec4(0.0);
     for (int i=int(gl_LocalInvocationIndex);i < np;i += 64) {
         ivec2 p = lo + ivec2(i % ww,i / ww);
-        sum.x += texelFetch(ia,p,0).r;
-        sum.y += whole ? texelFetch(ib,clamp(p + iv,ivec2(0),bsz - 1),0).r : sample_b(vec2(p) + v);
+        float a = texelFetch(ia,p,0).r;
+        float b = whole ? texelFetch(ib,clamp(p + iv,ivec2(0),bsz - 1),0).r : sample_b(vec2(p) + v);
+        sum += vec4(a,b,a * a,b * b);
     }
-    sum = reduce(sum);
-    float d = (sum.y - sum.x) / n;
-    dc = d;
+    sum = reduce(sum) / n;
+    dc = sum.y - sum.x;
+    float g = contrast_gain(sum.x,sum.y,sum.z,sum.w);
     float s = 0.0;
     for (int i=int(gl_LocalInvocationIndex);i < np;i += 64) {
         ivec2 p = lo + ivec2(i % ww,i / ww);
         float a = texelFetch(ia,p,0).r;
         float b = whole ? texelFetch(ib,clamp(p + iv,ivec2(0),bsz - 1),0).r : sample_b(vec2(p) + v);
-        s += abs(a + d - b);
+        s += abs(((a - sum.x) * g) + sum.y - b);
     }
-    return reduce(vec2(s,0.0)).x / n;
+    return reduce(vec4(s,0.0,0.0,0.0)).x / n;
 }
 )GLSL"
 
@@ -124,7 +132,7 @@ uniform int has_pred;
 uniform int pred_block;
 uniform float pred_k;           // the prediction is the field pred times this
 uniform float scale;            // of this level: 2 to the level
-uniform float smooth_w,predict_w;
+uniform float smooth_w,predict_w,still_w;
 uniform int subpel;
 
 vec2 field_at(sampler2D f,int fb,vec2 p) {
@@ -148,6 +156,7 @@ float mx,my,px,py;
 float cost(vec2 v) {
     float dc;
     float c = block_cost(bxy,v,dc);
+    c += still_w * scale * (abs(v.x) + abs(v.y));
     if (full == 0)
         c += smooth_w * (abs(v.x - mx) + abs(v.y - my));
     if (has_pred != 0)
@@ -673,6 +682,7 @@ bool gpu_t::flow(gpu_field_t &out,const gpu_frame_t &a,const gpu_frame_t &b,cons
         glUniform1f(loc(p_match,"scale"),scale);
         glUniform1f(loc(p_match,"smooth_w"),fp.smooth);
         glUniform1f(loc(p_match,"predict_w"),fp.predict);
+        glUniform1f(loc(p_match,"still_w"),fp.still);
         glUniform1i(loc(p_match,"subpel"),(L == 0 && fp.subpel) ? 1 : 0);
         dispatch(bw,bh,true);
 

@@ -816,8 +816,8 @@ static const int REPEAT_RUN = 3;                    // repeats one after another
 // the light changing, changes it as much, but the blocks still match, brighter or darker.)
 static const float CUT_BAD = 0.5f;
 static const float CUT_CHANGE = 20.0f;
-static const float CUT_RESIDUAL = 10.0f;
-static const float CUT_RATIO = 1.5f;
+static const float CUT_RESIDUAL = 9.0f;
+static const float CUT_RATIO = 1.3f;
 static const float BAD_COST = 20.0f;                // levels, a block that matches this badly matches nothing
 static const float GOOD_COST = 14.0f;
 // Missed frames: the picture moves this many times as far as from the frames before and after, which move

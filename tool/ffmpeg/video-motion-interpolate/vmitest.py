@@ -199,6 +199,27 @@ def main():
             check(psnr(got[k], scene[k]) > psnr(scene[k - step], scene[k]) + 3, 'the frame made for it is the scene there, not the frame before (%.2f dB, the frame before %.2f)'
                   % (psnr(got[k], scene[k]), psnr(scene[k - step], scene[k])))
 
+        print('Fading in from black')
+        # a picture that does not move, black, then fading in over a second: the frames made are of the
+        # picture where it is, between as bright as the frames either side, not moved anywhere
+        still = scene[0]
+        fade = [still * min(1.0, max(0.0, (k - 8) / 15.0)) for k in range(SLOW * 2)]
+        src = os.path.join(tmp, 'fade.mkv')
+        write_video(src, fade, str(SLOW))
+        log = os.path.join(tmp, 'fade.csv')
+        out = os.path.join(tmp, 'fade-out.mkv')
+        r = run_tool(['-r', '60', '-log', log, src, out])
+        check(r == 0, 'it ran')
+        if r == 0:
+            rows = [l.split(',') for l in open(log).read().split('\n')[1:] if l]
+            moved = max(float(x[4]) for x in rows)
+            check(moved < 1.0, 'nothing moves, from frame to frame (at most %.2f pixels)' % moved)
+            got = read_video(out)
+            ks = [k for k in range(8 * step, 24 * step) if k % step != 0 and k < len(got)]
+            blend = [fade[k // step] * (1 - (k % step) / step) + fade[min(len(fade) - 1, k // step + 1)] * ((k % step) / step) for k in ks]
+            worst = min(psnr(got[k], b) for k, b in zip(ks, blend))
+            check(worst > 38, 'the frames made are the picture, brighter, where it is (worst %.2f dB from blending)' % worst)
+
         print('8-bit paletted video')
         # as 8-bit video for Windows is: an index into a palette of colors for each pixel
         src = os.path.join(tmp, 'pal8.avi')
