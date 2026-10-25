@@ -898,10 +898,11 @@ static bool analyze(const options_t &opt,std::vector<frame_info_t> &info) {
 /////////////////////////////////////////////////////////////////////////////
 // the second pass: the new frames
 
-// the work format, of planes the new frames are made in: planar RGB for RGB, else YUV 4:4:4, 8 bits
+// The work format, of planes the new frames are made in: planar RGB for RGB, else YUV 4:4:4, 8 bits. A
+// palette, as of 8-bit video for Windows, is RGB, though it has one component, the index into it.
 static enum AVPixelFormat planes_format(enum AVPixelFormat fmt) {
     const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(fmt);
-    if (d != NULL && (d->flags & AV_PIX_FMT_FLAG_RGB))
+    if (d != NULL && (d->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL)))
         return AV_PIX_FMT_GBRP;
     if (d != NULL && d->nb_components == 1)
         return AV_PIX_FMT_GRAY8;

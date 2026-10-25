@@ -199,6 +199,24 @@ def main():
             check(psnr(got[k], scene[k]) > psnr(scene[k - step], scene[k]) + 3, 'the frame made for it is the scene there, not the frame before (%.2f dB, the frame before %.2f)'
                   % (psnr(got[k], scene[k]), psnr(scene[k - step], scene[k])))
 
+        print('8-bit paletted video')
+        # as 8-bit video for Windows is: an index into a palette of colors for each pixel
+        src = os.path.join(tmp, 'pal8.avi')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(tmp, 'slow.mkv'), '-filter_complex',
+                        '[0:v]split[a][b];[a]palettegen=max_colors=256[p];[b][p]paletteuse=dither=none', '-c:v', 'rawvideo', '-pix_fmt', 'pal8',
+                        '-c:a', 'copy', src], check=True)
+        out = os.path.join(tmp, 'pal8.mkv')
+        r = run_tool(['-r', '60', '-t', '2', src, out])
+        check(r == 0, 'it ran')
+        if r == 0:
+            got = read_video(out)
+            want = read_video(src)
+            sat = np.abs(got - got.mean(axis=3, keepdims=True)).mean()
+            want_sat = np.abs(want - want.mean(axis=3, keepdims=True)).mean()
+            check(sat > 0.8 * want_sat, 'it is in color, as the palette is (%.1f levels from gray, the input %.1f)' % (sat, want_sat))
+            kept = np.mean([psnr(got[k * step], want[k]) for k in range(1, 7)])
+            check(kept > 35, 'the frames of the input are as they were (%.2f dB)' % kept)
+
         print('-upscale 2')
         src = os.path.join(tmp, 'slow.mkv')
         out = os.path.join(tmp, 'up.mkv')

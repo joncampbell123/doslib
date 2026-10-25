@@ -688,7 +688,7 @@ public:
 // The video encoder: -c, or else one for the kind of file the output is, as the input was most likely a
 // capture card's MPEG, too little to encode again as it was: lossless FFV1 in Matroska, AVI and NUT, ProRes
 // in QuickTime, H.264 in MP4. Otherwise the input's codec.
-static const AVCodec *choose_encoder(const options_t &opt,enum AVCodecID id,const AVOutputFormat *ofmt) {
+static const AVCodec *choose_encoder(const options_t &opt,enum AVCodecID id,const AVOutputFormat *ofmt,bool device=true) {
     const char *name = ofmt->name;
     const char *pick = NULL;
     const AVCodec *c;
@@ -697,7 +697,7 @@ static const AVCodec *choose_encoder(const options_t &opt,enum AVCodecID id,cons
         return avcodec_find_encoder_by_name(opt.codec.c_str());
 
     // H.264 on the device, for the files that can have it
-    if (hw.dev != NULL && (strstr(name,"matroska") != NULL || strcmp(name,"mov") == 0 || strstr(name,"mp4") != NULL)) {
+    if (device && hw.dev != NULL && (strstr(name,"matroska") != NULL || strcmp(name,"mov") == 0 || strstr(name,"mp4") != NULL)) {
         const char *suffix = hw.type == AV_HWDEVICE_TYPE_CUDA ? "nvenc" : hw.name();
         const std::string n = std::string("h264_") + suffix;
         if ((c=avcodec_find_encoder_by_name(n.c_str())) != NULL)
@@ -1055,10 +1055,11 @@ static bool analyze(const options_t &opt,gpu_t &gpu,std::vector<frame_info_t> &i
 /////////////////////////////////////////////////////////////////////////////
 // the second pass: the new frames
 
-// the work format, of planes the new frames are made in: planar RGB for RGB, else YUV 4:4:4, 8 bits
+// The work format, of planes the new frames are made in: planar RGB for RGB, else YUV 4:4:4, 8 bits. A
+// palette, as of 8-bit video for Windows, is RGB, though it has one component, the index into it.
 static enum AVPixelFormat planes_format(enum AVPixelFormat fmt) {
     const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(fmt);
-    if (d != NULL && (d->flags & AV_PIX_FMT_FLAG_RGB))
+    if (d != NULL && (d->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL)))
         return AV_PIX_FMT_GBRP;
     if (d != NULL && d->nb_components == 1)
         return AV_PIX_FMT_GRAY8;
@@ -1082,156 +1083,177 @@ static bool open_output(const options_t &opt,const video_info_t &vi,input_t &in,
     if ((out.pkt=av_packet_alloc()) == NULL)
         return false;
 
-    // the video encoder
-    const AVCodec *codec = choose_encoder(opt,ipar->codec_id,out.oc->oformat);
-    if (codec == NULL && !opt.codec.empty()) {
-        fprintf(stderr,"No video encoder named %s\n",opt.codec.c_str());
-        return false;
-    }
-    if (codec == NULL) {
-        if ((codec=avcodec_find_encoder_by_name("prores_ks")) == NULL) {
-            fprintf(stderr,"No encoder for %s video, and no prores_ks: use -c to choose one\n",avcodec_get_name(ipar->codec_id));
-            return false;
-        }
-        fprintf(stderr,"No encoder for %s video, using %s\n",avcodec_get_name(ipar->codec_id),codec->name);
-    }
-
-    // the same pixel format as the input, if the encoder can take it
-    const enum AVPixelFormat *fmts = encoder_pix_fmts(codec);
-    enc_fmt = vi.dec_fmt;
-    if (fmts != NULL) {
-        bool found = false;
-        for (const enum AVPixelFormat *p=fmts;*p != AV_PIX_FMT_NONE;p++) {
-            if (*p == vi.dec_fmt) found = true;
-        }
-        if (!found)
-            enc_fmt = avcodec_find_best_pix_fmt_of_list(fmts,vi.dec_fmt,pixfmt_has_alpha(vi.dec_fmt) ? 1 : 0,NULL);
-    }
-    if (enc_fmt == AV_PIX_FMT_NONE) {
-        fprintf(stderr,"The %s encoder takes no pixel format this can give it\n",codec->name);
-        return false;
-    }
-
-    // An encoder on the device takes frames of the device's, uploaded from frames in memory of the format the
-    // device takes them in, which is what the frames are made into.
-    enum AVPixelFormat enc_hw_fmt = AV_PIX_FMT_NONE;
-    if (fmts != NULL) {
-        for (const enum AVPixelFormat *p=fmts;*p != AV_PIX_FMT_NONE;p++) {
-            const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(*p);
-            if (d != NULL && (d->flags & AV_PIX_FMT_FLAG_HWACCEL))
-                enc_hw_fmt = *p;
-        }
-    }
-    if (enc_hw_fmt != AV_PIX_FMT_NONE) {
-        if (hw.dev == NULL) {
-            fprintf(stderr,"The %s encoder is on a GPU, and there is no hardware acceleration (-hwaccel)\n",codec->name);
-            return false;
-        }
-        AVBufferRef *fr = av_hwframe_ctx_alloc(hw.dev);
-        if (fr == NULL)
-            return false;
-        AVHWFramesContext *fc = (AVHWFramesContext*)fr->data;
-        enum AVPixelFormat sw = AV_PIX_FMT_NV12;
-        AVHWFramesConstraints *cons = av_hwdevice_get_hwframe_constraints(hw.dev,NULL);
-        if (cons != NULL && cons->valid_sw_formats != NULL) {
-            bool nv12 = false;
-            for (const enum AVPixelFormat *p=cons->valid_sw_formats;*p != AV_PIX_FMT_NONE;p++)
-                nv12 = nv12 || *p == AV_PIX_FMT_NV12;
-            if (!nv12)
-                sw = cons->valid_sw_formats[0];
-        }
-        av_hwframe_constraints_free(&cons);
-        fc->format = enc_hw_fmt;
-        fc->sw_format = sw;
-        fc->width = vi.width;
-        fc->height = vi.height;
-        fc->initial_pool_size = 16;
-        if ((r=av_hwframe_ctx_init(fr)) < 0) {
-            fprintf(stderr,"Cannot make frames of %s on the %s device for the %s encoder: %s\n",av_get_pix_fmt_name(sw),hw.name(),codec->name,averr(r).c_str());
-            av_buffer_unref(&fr);
-            return false;
-        }
-        out.hw_frames = fr;
-        enc_fmt = sw;
-    }
-
-    AVCodecContext *enc = out.enc = avcodec_alloc_context3(codec);
-    if (enc == NULL)
-        return false;
-
+    // The video encoder: the one asked for; or by default, on the device, if it can take the video, which it
+    // cannot if it is smaller than the device can encode (128x128 for VA-API), and if not, on the CPU, the one
+    // for the kind of file.
+    const AVCodec *codec = NULL;
+    AVCodecContext *enc = NULL;
     const AVRational fr = vi.frame_rate;
-    const bool interlaced = field_order_interlaced(vi.field_order);
-
-    enc->width = vi.width;
-    enc->height = vi.height;
-    enc->pix_fmt = out.hw_frames != NULL ? enc_hw_fmt : enc_fmt;
-    if (out.hw_frames != NULL)
-        enc->hw_frames_ctx = av_buffer_ref(out.hw_frames);
-    enc->sample_aspect_ratio = vi.sar;
-    if (fr.num > 0 && fr.den > 0) {
-        enc->framerate = fr;
-        enc->time_base = av_inv_q(fr);
-    }
-    else {
-        enc->time_base = ist->time_base;
-    }
-    enc->field_order = vi.field_order;
-    enc->color_range = (pixfmt_is_yuvj(vi.dec_fmt) && !pixfmt_is_yuvj(enc_fmt)) ? AVCOL_RANGE_JPEG : vi.color_range;
-    enc->color_primaries = vi.color_primaries;
-    enc->color_trc = vi.color_trc;
-    enc->colorspace = vi.colorspace;
-    enc->chroma_sample_location = vi.chroma_location;
-    enc->thread_count = 0;
-    if (interlaced && codec_codes_fields(codec->id))
-        enc->flags |= AV_CODEC_FLAG_INTERLACED_DCT | AV_CODEC_FLAG_INTERLACED_ME;
-    if (out.oc->oformat->flags & AVFMT_GLOBALHEADER)
-        enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-
-    if (codec->id == ipar->codec_id) {
-        if (opt.bit_rate <= 0 && ipar->bit_rate > 0)
-            enc->bit_rate = ipar->bit_rate;
-
-        // the same kind of ProRes or DNxHR
-        const int profile = ipar->profile >= 0 ? ipar->profile : in.dec->profile;
-        if (profile >= 0 && (codec->id == AV_CODEC_ID_PRORES || codec->id == AV_CODEC_ID_DNXHD))
-            av_opt_set_int(enc->priv_data,"profile",profile,0);
-    }
-    if (opt.bit_rate > 0)
-        enc->bit_rate = opt.bit_rate;
-    // H.264 near enough to the picture not to put back the blocks that were taken out
-    if (strcmp(codec->name,"libx264") == 0 && opt.bit_rate <= 0 && opt.codec_opts.find("crf") == std::string::npos)
-        av_opt_set(enc->priv_data,"crf","14",0);
-    // On the device, of a constant quality, about as near the picture as libx264's -crf 14; and with no
-    // B-frames: the H.264 encoder of AMD's Mesa driver (radeonsi) lets the brightness drift away from the
-    // picture through a fade, by 20 levels and more, with them, and not without them.
-    if (out.hw_frames != NULL && opt.codec_opts.empty()) {
-        if (opt.bit_rate <= 0) {
-            av_opt_set(enc->priv_data,"rc_mode","CQP",0);
-            av_opt_set_int(enc->priv_data,"qp",18,0);
-            enc->global_quality = 18;
+    for (int attempt=0;;attempt++) {
+        codec = choose_encoder(opt,ipar->codec_id,out.oc->oformat,attempt == 0);
+        if (codec == NULL && !opt.codec.empty()) {
+            fprintf(stderr,"No video encoder named %s\n",opt.codec.c_str());
+            return false;
         }
-        enc->max_b_frames = 0;
-    }
-    // FFV1 in slices, which are encoded at once on the CPUs, a frame a CPU being too slow for 60 of them a second
-    if (strcmp(codec->name,"ffv1") == 0 && opt.codec_opts.empty()) {
-        av_opt_set_int(enc->priv_data,"slices",16,0);
-        enc->level = 3;
-    }
+        if (codec == NULL) {
+            if ((codec=avcodec_find_encoder_by_name("prores_ks")) == NULL) {
+                fprintf(stderr,"No encoder for %s video, and no prores_ks: use -c to choose one\n",avcodec_get_name(ipar->codec_id));
+                return false;
+            }
+            fprintf(stderr,"No encoder for %s video, using %s\n",avcodec_get_name(ipar->codec_id),codec->name);
+        }
 
-    AVDictionary *eopts = NULL;
-    if (!opt.codec_opts.empty() && (r=av_dict_parse_string(&eopts,opt.codec_opts.c_str(),"=",":",0)) < 0) {
-        fprintf(stderr,"-x %s: %s\n",opt.codec_opts.c_str(),averr(r).c_str());
+        // the same pixel format as the input, if the encoder can take it
+        const enum AVPixelFormat *fmts = encoder_pix_fmts(codec);
+        enc_fmt = vi.dec_fmt;
+        if (fmts != NULL) {
+            bool found = false;
+            for (const enum AVPixelFormat *p=fmts;*p != AV_PIX_FMT_NONE;p++) {
+                if (*p == vi.dec_fmt) found = true;
+            }
+            if (!found)
+                enc_fmt = avcodec_find_best_pix_fmt_of_list(fmts,vi.dec_fmt,pixfmt_has_alpha(vi.dec_fmt) ? 1 : 0,NULL);
+        }
+        if (enc_fmt == AV_PIX_FMT_NONE) {
+            fprintf(stderr,"The %s encoder takes no pixel format this can give it\n",codec->name);
+            return false;
+        }
+
+        // An encoder on the device takes frames of the device's, uploaded from frames in memory of the format the
+        // device takes them in, which is what the frames are made into.
+        enum AVPixelFormat enc_hw_fmt = AV_PIX_FMT_NONE;
+        if (fmts != NULL) {
+            for (const enum AVPixelFormat *p=fmts;*p != AV_PIX_FMT_NONE;p++) {
+                const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(*p);
+                if (d != NULL && (d->flags & AV_PIX_FMT_FLAG_HWACCEL))
+                    enc_hw_fmt = *p;
+            }
+        }
+        if (enc_hw_fmt != AV_PIX_FMT_NONE) {
+            if (hw.dev == NULL) {
+                fprintf(stderr,"The %s encoder is on a GPU, and there is no hardware acceleration (-hwaccel)\n",codec->name);
+                return false;
+            }
+            AVBufferRef *fr = av_hwframe_ctx_alloc(hw.dev);
+            if (fr == NULL)
+                return false;
+            AVHWFramesContext *fc = (AVHWFramesContext*)fr->data;
+            enum AVPixelFormat sw = AV_PIX_FMT_NV12;
+            AVHWFramesConstraints *cons = av_hwdevice_get_hwframe_constraints(hw.dev,NULL);
+            if (cons != NULL && cons->valid_sw_formats != NULL) {
+                bool nv12 = false;
+                for (const enum AVPixelFormat *p=cons->valid_sw_formats;*p != AV_PIX_FMT_NONE;p++)
+                    nv12 = nv12 || *p == AV_PIX_FMT_NV12;
+                if (!nv12)
+                    sw = cons->valid_sw_formats[0];
+            }
+            av_hwframe_constraints_free(&cons);
+            fc->format = enc_hw_fmt;
+            fc->sw_format = sw;
+            fc->width = vi.width;
+            fc->height = vi.height;
+            fc->initial_pool_size = 16;
+            if ((r=av_hwframe_ctx_init(fr)) < 0) {
+                av_buffer_unref(&fr);
+                if (attempt == 0 && opt.codec.empty()) {
+                    if (!opt.quiet)
+                        fprintf(stderr,"The %s encoder cannot take this video: encoding it on the CPU\n",codec->name);
+                    avcodec_free_context(&out.enc);
+                    av_buffer_unref(&out.hw_frames);
+                    continue;
+                }
+                fprintf(stderr,"Cannot make frames of %s on the %s device for the %s encoder: %s\n",av_get_pix_fmt_name(sw),hw.name(),codec->name,averr(r).c_str());
+                return false;
+            }
+            out.hw_frames = fr;
+            enc_fmt = sw;
+        }
+
+        enc = out.enc = avcodec_alloc_context3(codec);
+        if (enc == NULL)
+            return false;
+
+        const bool interlaced = field_order_interlaced(vi.field_order);
+
+        enc->width = vi.width;
+        enc->height = vi.height;
+        enc->pix_fmt = out.hw_frames != NULL ? enc_hw_fmt : enc_fmt;
+        if (out.hw_frames != NULL)
+            enc->hw_frames_ctx = av_buffer_ref(out.hw_frames);
+        enc->sample_aspect_ratio = vi.sar;
+        if (fr.num > 0 && fr.den > 0) {
+            enc->framerate = fr;
+            enc->time_base = av_inv_q(fr);
+        }
+        else {
+            enc->time_base = ist->time_base;
+        }
+        enc->field_order = vi.field_order;
+        enc->color_range = (pixfmt_is_yuvj(vi.dec_fmt) && !pixfmt_is_yuvj(enc_fmt)) ? AVCOL_RANGE_JPEG : vi.color_range;
+        enc->color_primaries = vi.color_primaries;
+        enc->color_trc = vi.color_trc;
+        enc->colorspace = vi.colorspace;
+        enc->chroma_sample_location = vi.chroma_location;
+        enc->thread_count = 0;
+        if (interlaced && codec_codes_fields(codec->id))
+            enc->flags |= AV_CODEC_FLAG_INTERLACED_DCT | AV_CODEC_FLAG_INTERLACED_ME;
+        if (out.oc->oformat->flags & AVFMT_GLOBALHEADER)
+            enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+        if (codec->id == ipar->codec_id) {
+            if (opt.bit_rate <= 0 && ipar->bit_rate > 0)
+                enc->bit_rate = ipar->bit_rate;
+
+            // the same kind of ProRes or DNxHR
+            const int profile = ipar->profile >= 0 ? ipar->profile : in.dec->profile;
+            if (profile >= 0 && (codec->id == AV_CODEC_ID_PRORES || codec->id == AV_CODEC_ID_DNXHD))
+                av_opt_set_int(enc->priv_data,"profile",profile,0);
+        }
+        if (opt.bit_rate > 0)
+            enc->bit_rate = opt.bit_rate;
+        // H.264 near enough to the picture not to put back the blocks that were taken out
+        if (strcmp(codec->name,"libx264") == 0 && opt.bit_rate <= 0 && opt.codec_opts.find("crf") == std::string::npos)
+            av_opt_set(enc->priv_data,"crf","14",0);
+        // On the device, of a constant quality, about as near the picture as libx264's -crf 14; and with no
+        // B-frames: the H.264 encoder of AMD's Mesa driver (radeonsi) lets the brightness drift away from the
+        // picture through a fade, by 20 levels and more, with them, and not without them.
+        if (out.hw_frames != NULL && opt.codec_opts.empty()) {
+            if (opt.bit_rate <= 0) {
+                av_opt_set(enc->priv_data,"rc_mode","CQP",0);
+                av_opt_set_int(enc->priv_data,"qp",18,0);
+                enc->global_quality = 18;
+            }
+            enc->max_b_frames = 0;
+        }
+        // FFV1 in slices, which are encoded at once on the CPUs, a frame a CPU being too slow for 60 of them a second
+        if (strcmp(codec->name,"ffv1") == 0 && opt.codec_opts.empty()) {
+            av_opt_set_int(enc->priv_data,"slices",16,0);
+            enc->level = 3;
+        }
+
+        AVDictionary *eopts = NULL;
+        if (!opt.codec_opts.empty() && (r=av_dict_parse_string(&eopts,opt.codec_opts.c_str(),"=",":",0)) < 0) {
+            fprintf(stderr,"-x %s: %s\n",opt.codec_opts.c_str(),averr(r).c_str());
+            av_dict_free(&eopts);
+            return false;
+        }
+        r = avcodec_open2(enc,codec,&eopts);
+        for (const AVDictionaryEntry *e=NULL;(e=av_dict_get(eopts,"",e,AV_DICT_IGNORE_SUFFIX)) != NULL;)
+            fprintf(stderr,"The %s encoder has no option %s\n",codec->name,e->key);
         av_dict_free(&eopts);
-        return false;
-    }
-    r = avcodec_open2(enc,codec,&eopts);
-    for (const AVDictionaryEntry *e=NULL;(e=av_dict_get(eopts,"",e,AV_DICT_IGNORE_SUFFIX)) != NULL;)
-        fprintf(stderr,"The %s encoder has no option %s\n",codec->name,e->key);
-    av_dict_free(&eopts);
-    if (r < 0) {
-        fprintf(stderr,"Cannot open the %s encoder for %dx%d %s: %s (-c chooses another encoder)\n",
-            codec->name,vi.width,vi.height,av_get_pix_fmt_name(enc_fmt),averr(r).c_str());
-        return false;
+        if (r < 0) {
+            if (attempt == 0 && opt.codec.empty() && out.hw_frames != NULL) {
+                if (!opt.quiet)
+                    fprintf(stderr,"The %s encoder cannot take this video: encoding it on the CPU\n",codec->name);
+                avcodec_free_context(&out.enc);
+                av_buffer_unref(&out.hw_frames);
+                continue;
+            }
+            fprintf(stderr,"Cannot open the %s encoder for %dx%d %s: %s (-c chooses another encoder)\n",
+                codec->name,vi.width,vi.height,av_get_pix_fmt_name(enc_fmt),averr(r).c_str());
+            return false;
+        }
+        break;
     }
     if (fr.num > 0 && fr.den > 0)
         out.frame_duration = std::max((int64_t)1,av_rescale_q(1,av_inv_q(fr),enc->time_base));
