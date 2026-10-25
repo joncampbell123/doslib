@@ -20,14 +20,18 @@ static const int DECIMATE = 4;
 // for VCRs that do not play at quite the same speed
 static const int FRAME_SEARCH = 3;
 
-// each thumbnail made zero mean and unit variance, and how much the picture changes from the frame before
+// each thumbnail made zero mean and unit variance, in 1/32 units in a byte, which is plenty to tell one
+// frame from the next, and a quarter of the memory of hours of them as floats; and how much the picture
+// changes from the frame before
+static const int SIG_SCALE = 32;
+
 struct sig_t {
     size_t                      n = 0;
-    std::vector<float>          f;
+    std::vector<int8_t>         f;
     std::vector<float>          sd;
     std::vector<float>          act;
 
-    const float *at(size_t i) const {
+    const int8_t *at(size_t i) const {
         return &f[i * THUMB_SIZE];
     }
     bool blank(size_t i) const {
@@ -50,10 +54,10 @@ static void make_sig(sig_t &s,const thumbs_t &t) {
         }
         const double mean = sum / THUMB_SIZE;
         const double sd = sqrt(std::max(0.0,(sum2 / THUMB_SIZE) - (mean * mean)));
-        const float inv = (float)(1.0 / std::max(sd,1.0));
-        float *f = &s.f[i * THUMB_SIZE];
+        const float inv = (float)(SIG_SCALE / std::max(sd,1.0));
+        int8_t *f = &s.f[i * THUMB_SIZE];
         for (int k=0;k < THUMB_SIZE;k++)
-            f[k] = (float)(p[k] - mean) * inv;
+            f[k] = (int8_t)std::min(127.0f,std::max(-127.0f,floorf(((float)(p[k] - mean) * inv) + 0.5f)));
         s.sd[i] = (float)sd;
     }
 
@@ -63,11 +67,11 @@ static void make_sig(sig_t &s,const thumbs_t &t) {
     for (size_t i=1;i < s.n;i++) {
         if (s.blank(i) || s.blank(i - 1u))
             continue;
-        const float *a = s.at(i),*b = s.at(i - 1u);
-        float sum = 0;
+        const int8_t *a = s.at(i),*b = s.at(i - 1u);
+        int sum = 0;
         for (int k=0;k < THUMB_SIZE;k++)
-            sum += fabsf(a[k] - b[k]);
-        d[i] = sum / THUMB_SIZE;
+            sum += abs((int)a[k] - (int)b[k]);
+        d[i] = (float)sum / (float)(THUMB_SIZE * SIG_SCALE);
     }
     const int r = 30;
     double run = 0;
@@ -83,11 +87,11 @@ static void make_sig(sig_t &s,const thumbs_t &t) {
 
 // how alike frame i of a and frame j of b are, -1 to 1
 static float frame_score(const sig_t &a,size_t i,const sig_t &b,size_t j) {
-    const float *x = a.at(i),*y = b.at(j);
-    float sum = 0;
+    const int8_t *x = a.at(i),*y = b.at(j);
+    int sum = 0;
     for (int k=0;k < THUMB_SIZE;k++)
-        sum += x[k] * y[k];
-    return sum / THUMB_SIZE;
+        sum += (int)x[k] * (int)y[k];
+    return (float)sum / (float)(THUMB_SIZE * SIG_SCALE * SIG_SCALE);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -221,11 +225,7 @@ void match_frames(std::vector<frame_match_t> &out,const thumbs_t &in_t,const thu
     if (in.n == 0 || d.n == 0)
         return;
 
-    // windows short enough that a part of an edited copy between two cuts is the whole of some of them
-    const size_t W = std::max((size_t)DECIMATE * 4u,std::min((size_t)mp.window,in.n / 3u));
-    const size_t hop = std::max((size_t)1,W / 2u);
     const double verify = std::max(0.5,mp.min_score - 0.05);
-    finder_t finder(d,W);
 
     // whether input frame i may be donor frame j: not blank, and not itself in the same file
     auto allowed = [&](size_t i,int64_t j) -> bool {
@@ -234,14 +234,15 @@ void match_frames(std::vector<frame_match_t> &out,const thumbs_t &in_t,const thu
         return mp.min_gap <= 0 || fabs(in_t.time[i] - donor_t.time[(size_t)j]) >= mp.min_gap;
     };
 
-    // how well the window starting at s matches the donor that many frames further on, from every
-    // 5th frame of it, and the best of a few frames either way of that
+    // how well the window of W frames starting at s matches the donor that many frames further on,
+    // from every 5th frame of it, and the best of a few frames either way of that
+    size_t W = 0;
     auto window_score = [&](size_t s,int64_t lag,int search,int64_t &best_lag) -> double {
         double best = -1;
         for (int64_t l=lag - search;l <= lag + search;l++) {
             double sum = 0;
             size_t cnt = 0,tried = 0;
-            for (size_t i=s;i < std::min(s + W,in.n);i += 5) {
+            for (size_t i=s;i < std::min(s + W,in.n);i += (W >= 50u ? 5u : 2u)) {
                 tried++;
                 const int64_t j = (int64_t)i + l;
                 if (!allowed(i,j))
@@ -259,56 +260,100 @@ void match_frames(std::vector<frame_match_t> &out,const thumbs_t &in_t,const thu
         return best;
     };
 
-    // where each window of the input is in the donor, if it is: where the window before it was, if that
-    // still matches, which it does most of the time, or else where the pattern of change says it may be
-    std::vector<std::pair<size_t,int64_t> > found;     // window start, lag
-    bool have = false;
-    int64_t last = 0;
-    for (size_t s=0;s < in.n;s += hop) {
-        int64_t lag = 0;
-        double sc = -1;
+    // Where each window of the input is in the donor, if it is: where the window before it was, if that
+    // still matches, which it does most of the time, or else where the pattern of change says it may be.
+    // In long windows, which are found most surely, and in windows short enough that a part of an edited
+    // copy between two cuts is the whole of some of them. Each frame then takes the best of them.
+    struct found_t {
+        size_t                  start,len;
+        int64_t                 lag;
+    };
+    std::vector<found_t> found,missed;
+    const size_t W1 = std::min((size_t)mp.window,in.n);
+    const size_t W2 = std::max((size_t)DECIMATE * 4u,W1 / 3u);
+    for (unsigned int pass=0;pass < 2u;pass++) {
+        W = pass == 0u ? W1 : W2;
+        if (W < (size_t)DECIMATE * 2u || (pass == 1u && W2 >= W1))
+            continue;
 
-        if (have)
-            sc = window_score(s,last,FRAME_SEARCH,lag);
-        if (sc < verify) {
-            sc = -1;
-            for (int64_t f : finder.find(in,s,16)) {
-                int64_t l2 = 0;
-                // as far either way as the candidates are kept apart, so that none is left out between them
-                const double c = window_score(s,f - (int64_t)s,2 * DECIMATE,l2);
-                if (c > sc) {
-                    sc = c;
-                    lag = l2;
+        const size_t hop = std::max((size_t)1,W / 2u);
+        finder_t finder(d,W);
+        bool have = false;
+        int64_t last = 0;
+        for (size_t s=0;s < in.n;s += hop) {
+            const size_t e = std::min(s + W,in.n);
+            {
+                int64_t lag = 0;
+                double sc = -1;
+
+                if (have)
+                    sc = window_score(s,last,FRAME_SEARCH,lag);
+                if (sc < verify) {
+                    sc = -1;
+                    for (int64_t f : finder.find(in,s,32)) {
+                        int64_t l2 = 0;
+                        // as far either way as the candidates are kept apart, so that none is left out between them
+                        const double c = window_score(s,f - (int64_t)s,2 * DECIMATE,l2);
+                        if (c > sc) {
+                            sc = c;
+                            lag = l2;
+                        }
+                    }
+                }
+
+                have = sc >= verify;
+                if (have) {
+                    last = lag;
+                    found.push_back(found_t{s,e - s,lag});
+                }
+                else {
+                    missed.push_back(found_t{s,e - s,0});
+                }
+            }
+            if (s + W >= in.n)
+                break;
+        }
+    }
+    // A window that was not found, where those near it were: the pattern of change of a short window is
+    // like that of many places in hours of video. The tape goes on as it did, so where the windows near it
+    // are, a frame for each frame, is where it is likely to be too.
+    {
+        const std::vector<found_t> got = found;
+        for (const found_t &m : missed) {
+            W = m.len;
+            std::vector<int64_t> tried;
+            for (const found_t &f : got) {
+                if (f.start + f.len + (3u * m.len) < m.start || m.start + m.len + (3u * m.len) < f.start)
+                    continue;
+                if (std::find(tried.begin(),tried.end(),f.lag) != tried.end())
+                    continue;
+                tried.push_back(f.lag);
+                int64_t lag = 0;
+                if (window_score(m.start,f.lag,FRAME_SEARCH,lag) >= verify) {
+                    found.push_back(found_t{m.start,m.len,lag});
+                    break;
                 }
             }
         }
-
-        have = sc >= verify;
-        if (have) {
-            last = lag;
-            found.push_back(std::make_pair(s,lag));
-        }
-        if (s + W >= in.n)
-            break;
     }
+    std::sort(found.begin(),found.end(),[](const found_t &a,const found_t &b) { return a.start < b.start; });
 
     // then each frame, from where the windows it is in were found, a few frames either way
     std::vector<int64_t> lag(in.n,INT64_MIN);
     std::vector<float> score(in.n,-1.0f);
-    size_t wi = 0;
     for (size_t i=0;i < in.n;i++) {
-        while (wi < found.size() && found[wi].first + W <= i)
-            wi++;
         // a little for each frame away from where the window was found, for frames much like the
         // frames either side of them, as in a slow pan, which would go to any of them
         float best = -2.0f;
-        for (size_t k=wi;k < found.size() && found[k].first <= i;k++) {
-            for (int64_t l=found[k].second - FRAME_SEARCH;l <= found[k].second + FRAME_SEARCH;l++) {
+        for (size_t k=0;k < found.size() && found[k].start <= i;k++) {
+            if (found[k].start + found[k].len <= i)
+                continue;
+            for (int64_t l=found[k].lag - FRAME_SEARCH;l <= found[k].lag + FRAME_SEARCH;l++) {
                 const int64_t j = (int64_t)i + l;
                 if (!allowed(i,j))
                     continue;
                 const float c = frame_score(in,i,d,(size_t)j);
-                const float cp = c - (0.0005f * (float)llabs(l - found[k].second));
+                const float cp = c - (0.0005f * (float)llabs(l - found[k].lag));
                 if (cp > best) {
                     best = cp;
                     score[i] = c;
