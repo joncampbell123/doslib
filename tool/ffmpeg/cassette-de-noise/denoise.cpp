@@ -117,6 +117,17 @@ bool denoise_t::init(const noise_params_t &np,int sample_rate,int nchannels) {
         }
     }
 
+    // -attacks: octave bands from 300Hz
+    aedges.clear();
+    for (double f=300;f < rate * 0.5;f *= 2)
+        aedges.push_back(f);
+    aband.assign(bins,-1);
+    for (int j=0;j < bins;j++) {
+        const double f = j * binhz;
+        if (f >= 300 && !aedges.empty())
+            aband[j] = std::min((int)aedges.size() - 1,(int)floor(log2(f / 300)));
+    }
+
     weight.resize(bins);
     for (int j=0;j < bins;j++) {
         const double f = j * binhz;
@@ -188,7 +199,7 @@ void denoise_t::feed(const float *const *x,int n,pass_t pass,std::vector<float> 
                 memcpy(d,x[c] + at,sizeof(float) * todo);
             else
                 memset(d,0,sizeof(float) * todo);
-            if (pass == FILTER)
+            if (pass == FILTER && !p.change_only)
                 ch[c].dly.insert(ch[c].dly.end(),d,d + todo);
         }
 
@@ -373,12 +384,22 @@ void denoise_t::decide(decide_t &D,int di,int64_t f,pass_t pass) {
         }
     }
 
-    // the gain put on now, only from -from up
+    // the gain put on now, only from -from up; with -attacks, only this transform's part of the change
     const int64_t d = f - 4 - 2 * refine;
     if (d >= 0) {
         const float *Gd = D.G.data() + ((size_t)refine * R + (d % R)) * bins;
-        for (int j=0;j < bins;j++)
-            D.g[j] = 1 - weight[j] * (1 - Gd[j]);
+        if (amap != NULL) {
+            std::vector<float> aw;
+            attack_weights(di,d,aw);
+            for (int j=0;j < bins;j++) {
+                const float part = aband[j] >= 0 ? aw[aband[j]] : (ashort ? 0.0f : 1.0f);
+                D.g[j] = 1 - weight[j] * part * (1 - Gd[j]);
+            }
+        }
+        else {
+            for (int j=0;j < bins;j++)
+                D.g[j] = 1 - weight[j] * (1 - Gd[j]);
+        }
     }
 }
 
@@ -407,6 +428,15 @@ void denoise_t::frame(pass_t pass,std::vector<float> *out) {
             box(P,cum,nscale,Pf.data());
             for (int j=0;j < bins;j++)
                 c.block[j] += Pf[j];
+
+            // -attacks: the power of each octave band, for finding the attacks once the noise is known
+            if (p.attacks) {
+                std::vector<double> bp(aedges.size(),0);
+                for (int j=0;j < bins;j++)
+                    if (aband[j] >= 0) bp[aband[j]] += P[j];
+                for (double v : bp)
+                    c.bandpow.push_back((uint16_t)std::max(0.0,std::min(65535.0,(10 * log10(v + 1e-30) + 200) * 256)));
+            }
         }
         if (++block_count == block_frames) {
             for (auto &c : ch) {
@@ -468,6 +498,10 @@ void denoise_t::frame(pass_t pass,std::vector<float> *out) {
             const int64_t n = std::min((int64_t)hop,samples_in - samples_out);
             for (int ci=0;ci < channels;ci++) {
                 chan_t &C = ch[ci];
+                if (p.change_only) {
+                    out[ci].insert(out[ci].end(),C.acc.begin(),C.acc.begin() + n);
+                    continue;
+                }
                 for (int64_t i=0;i < n;i++)
                     out[ci].push_back(C.dly[C.dly_at + i] + C.acc[i]);
                 C.dly_at += hop;
@@ -697,4 +731,129 @@ double denoise_t::reduced_db(int ci) const {
 
     std::nth_element(v.begin(),v.begin() + v.size() / 2,v.end());
     return v[v.size() / 2];
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// -attacks
+
+int attack_map_t::band_of(double hz) const {
+    if (edges.empty() || hz < edges[0])
+        return -1;
+    return std::min((int)edges.size() - 1,(int)floor(log2(hz / edges[0])));
+}
+
+// the part of the change the shorter transform takes at time t: 1 from before an attack to after it, faded
+float attack_map_t::weight(int ch,int band,double t) const {
+    if (ch < 0 || ch >= (int)onsets.size() || band < 0 || band >= (int)onsets[ch].size())
+        return 0;
+
+    const std::vector<double> &on = onsets[ch][band];
+    float w = 0;
+    for (auto i = std::lower_bound(on.begin(),on.end(),t - after - ramp);i != on.end() && *i <= t + before + ramp;i++) {
+        double v = 1;
+        if (t < *i - before) v = 1 - ((*i - before) - t) / ramp;
+        else if (t > *i + after) v = 1 - (t - (*i + after)) / ramp;
+        w = std::max(w,(float)std::max(0.0,v));
+    }
+    return w;
+}
+
+size_t attack_map_t::count(void) const {
+    size_t n = 0;
+    for (const auto &c : onsets)
+        for (const auto &b : c) n += b.size();
+    return n;
+}
+
+void denoise_t::find_attacks(attack_map_t &m) const {
+    const int nb = (int)aedges.size();
+    const int kb = std::max(1,(int)lrint((m.lookback * rate) / hop));
+    const float rise = (float)pow(10.0,m.rise_db / 10);
+
+    m.rate = rate;
+    m.edges = aedges;
+    m.onsets.assign(channels,std::vector<std::vector<double>>(nb));
+
+    // over the noise by more than chance: as many values as the band has frequencies
+    std::vector<float> lam(nb);
+    std::vector<int> nbin(nb,0);
+    for (int j=0;j < bins;j++)
+        if (aband[j] >= 0) nbin[aband[j]]++;
+    for (int b=0;b < nb;b++)
+        lam[b] = (float)(gamma_quantile(std::max(1.0,nbin[b] / 1.5),p.threshold) * pow(10.0,p.margin / 10));
+
+    for (int ci=0;ci < channels;ci++) {
+        const chan_t &c = ch[ci];
+        const int64_t nf = (int64_t)(c.bandpow.size() / std::max(1,nb));
+
+        // the noise of each band, each block
+        std::vector<float> nband((size_t)nblocks * nb,0);
+        for (int blk=0;blk < nblocks;blk++)
+            for (int j=0;j < bins;j++)
+                if (aband[j] >= 0) nband[(size_t)blk * nb + aband[j]] += c.blocks[(size_t)blk * bins + j];
+
+        for (int b=0;b < nb;b++) {
+            std::vector<double> &on = m.onsets[ci][b];
+            std::vector<float> E(nf);
+            for (int64_t f=0;f < nf;f++)
+                E[f] = (float)pow(10.0,(c.bandpow[(size_t)f * nb + b] / 256.0 - 200) / 10);
+
+            for (int64_t f=1;f < nf;f++) {
+                float prev = 0;
+                for (int64_t k=std::max((int64_t)0,f - kb);k < f;k++) prev = std::max(prev,E[k]);
+                if (E[f] <= prev * rise)
+                    continue;
+
+                const double pos = std::max(0.0,std::min((f - (block_frames - 1) * 0.5) / block_frames,(double)(nblocks - 1)));
+                const int b0 = (int)floor(pos),b1 = std::min(b0 + 1,nblocks - 1);
+                const float En = nband[(size_t)b0 * nb + b] + (float)(pos - b0) * (nband[(size_t)b1 * nb + b] - nband[(size_t)b0 * nb + b]);
+                if (E[f] <= lam[b] * En)
+                    continue;
+
+                // the middle of frame f, which is the samples from (f-3)*hop
+                const double t = ((f - 3) * (double)hop + fft * 0.5) / rate;
+                if (on.empty() || t - on.back() > 0.005)
+                    on.push_back(t);
+            }
+        }
+    }
+}
+
+void denoise_t::use_attacks(const attack_map_t *m,bool shorter) {
+    amap = m;
+    ashort = shorter;
+    for (int j=0;j < bins;j++)
+        aband[j] = m != NULL ? m->band_of((double)j * rate / fft) : -1;
+}
+
+// this transform's part of the change of frame d, each octave band: the shorter one at the middle of its frame,
+// the longer one 1 less the shorter's over its frame, as its window weighs it; of the channels the gain is for
+void denoise_t::attack_weights(int di,int64_t d,std::vector<float> &w) const {
+    const int nb = (int)amap->edges.size();
+    const double s0 = (d - 3) * (double)hop;
+
+    w.assign(nb,0);
+    for (int ci=0;ci < channels;ci++) {
+        if (!p.link && ci != di)
+            continue;
+        for (int b=0;b < nb;b++) {
+            float a;
+            if (ashort) {
+                a = amap->weight(ci,b,(s0 + fft * 0.5) / rate);
+            }
+            else {
+                double sw = 0,sa = 0;
+                for (int i=0;i < 16;i++) {
+                    const double x = (i + 0.5) / 16,h = 0.5 - 0.5 * cos(2 * M_PI * x),h2 = h * h;
+                    sa += h2 * amap->weight(ci,b,(s0 + x * fft) / rate);
+                    sw += h2;
+                }
+                a = (float)(sa / sw);
+            }
+            w[b] = std::max(w[b],a);
+        }
+    }
+    if (!ashort) {
+        for (auto &v : w) v = 1 - v;
+    }
 }

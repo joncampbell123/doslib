@@ -41,6 +41,15 @@
  *   sound let through less the noise let through with it, over the 3 frequencies and 3 frames around it), up to
  *   as much as the tiles let through: up to twice, the second from the first.
  *
+ * With -attacks, the frames are not all as long: a long transform is only as sharp in time as its frames, and
+ * where a sound starts sharply (an attack: a drum, a consonant, a click), what is done to the frame is done to
+ * all of it, so the noise is let through for up to a frame before the attack, which dulls it. A second, short
+ * transform (about 5ms, 256 samples at 48000Hz) finds the attacks, as a rise of more than 6dB within 20ms of the power of an
+ * octave band from 300Hz up, over the noise by more than chance; around each, from 40ms before it to 25ms after,
+ * the shorter transform is used for that band, the longer one everywhere else, faded from one to the other
+ * over 10ms. Each takes its part of the change (their parts adding up to all of it), so noise alone is still
+ * turned down evenly.
+ *
  * Where nothing is turned down, the output is the input to the bit (only the change is transformed back). */
 
 #ifndef DENOISE_H
@@ -64,6 +73,25 @@ struct noise_params_t {
     int                         fft = 0;            // samples to a transform, a power of 2, or 0 for about 43ms
     bool                        link = false;       // the same gain to all the channels, decided from all of them
     int                         iterate = 0;        // times more through the input, to find the noise again; and the gain made finer up to twice
+    bool                        change_only = false;// put out only the change, not the input with it (-attacks, to add the two up)
+    bool                        attacks = false;    // this is the shorter transform for -attacks: keep the power of the octave bands
+};
+
+// with -attacks: where the sounds start sharply, of each channel and octave band, and how much the shorter
+// transform is used there, from 0 to 1
+struct attack_map_t {
+    double                      before = 0.040;     // seconds before an attack that the shorter transform is used
+    double                      after = 0.025;      // and after
+    double                      ramp = 0.010;       // faded in and out over this
+    double                      rise_db = 6;        // a rise of this much
+    double                      lookback = 0.020;   // within this
+    int                         rate = 0;
+    std::vector<double>         edges;              // Hz: of the octave bands, from 300Hz
+    std::vector<std::vector<std::vector<double>>> onsets;   // [channel][band]: the time of each attack, seconds, in order
+
+    float                       weight(int ch,int band,double t) const;
+    int                         band_of(double hz) const;
+    size_t                      count(void) const;
 };
 
 class denoise_t {
@@ -90,6 +118,11 @@ public:
     double                      noise_db(int ch) const;
     // how much the noise was turned down by, in dB, where there was only the noise (the middle of it over time)
     double                      reduced_db(int ch) const;
+
+    // -attacks: the shorter transform finds the attacks, from the power of its octave bands and the noise found;
+    // then each transform gets its part of the change from them
+    void                        find_attacks(attack_map_t &m) const;
+    void                        use_attacks(const attack_map_t *m,bool shorter);
 
     int                         fft = 0;
     int                         hop = 0;
@@ -131,6 +164,7 @@ private:
         std::vector<float>      blocks;             // analysis: mean of it, each block, then the noise level
         std::vector<float>      reduced;            // dB the noise was turned down by, each frame where it was all at the floor
         std::vector<float>      esum,ecnt;          // finding the noise again: power and count of the noise alone, each block
+        std::vector<uint16_t>   bandpow;            // -attacks: [frame][band]: power of the octave bands, in 1/256 dB over -200dB
     };
 
     enum pass_t { ANALYZE, REESTIMATE, FILTER };
@@ -164,6 +198,12 @@ private:
     int                         refine = 0;         // times the gain is made finer
     float                       clip = 0;           // noise alone over 3x3 frequencies and frames is under this, 99 times in 100
     float                       clip_mean = 1;      // and its mean, under that, over its mean
+    // -attacks
+    std::vector<double>         aedges;             // Hz: octave bands, from 300Hz
+    std::vector<int>            aband;              // of each frequency: its octave band, -1 below them
+    const attack_map_t*         amap = NULL;
+    bool                        ashort = false;     // this is the shorter transform
+    void                        attack_weights(int di,int64_t d,std::vector<float> &w) const;
 };
 
 #endif

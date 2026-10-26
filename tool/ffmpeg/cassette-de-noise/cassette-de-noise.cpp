@@ -44,6 +44,7 @@ struct options_t {
     int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
     int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
     noise_params_t              noise;
+    bool                        attacks = false;    // -attacks: a shorter transform around the attacks
     bool                        report = false;     // -report: the noise level found, each minute
     bool                        dither = false;
     bool                        overwrite = false;
@@ -97,6 +98,9 @@ static void help(void) {
     fprintf(stderr,"                   which helps most where the sound goes on with no quiet parts (such as music),\n");
     fprintf(stderr,"                   and the noise between the harmonics of a voice or an instrument is turned down\n");
     fprintf(stderr,"                   as well. Slower: 2 to 4 is about right (default 0, off)\n");
+    fprintf(stderr,"  -attacks         Use a short transform (about 5ms, 256 at 48000Hz) around the attacks, where a sound starts\n");
+    fprintf(stderr,"                   sharply (drums, consonants, clicks), and the longer one elsewhere: the noise is\n");
+    fprintf(stderr,"                   not let through before the attack, which keeps it sharp. About twice as slow\n");
     fprintf(stderr,"  -link            The same gain for all the channels, decided from all of them together:\n");
     fprintf(stderr,"                   better for a mono recording on both channels\n");
     fprintf(stderr,"  -fft <n>         Samples to a transform, a power of 2 (default about 43ms, 2048 at 48000Hz)\n");
@@ -568,8 +572,22 @@ static void progress(const options_t &opt,const char *what,const input_t &in,tim
 }
 
 
+// the longer transform, and with -attacks the shorter one too: each pass goes to both
+struct denoisers_t {
+    denoise_t                   dn;
+    denoise_t                   ds;
+    attack_map_t                attacks;
+    bool                        both = false;
+
+    void analyze(const float *const *x,int n) { dn.analyze(x,n); if (both) ds.analyze(x,n); }
+    void end_analysis(void) { dn.end_analysis(); if (both) ds.end_analysis(); }
+    void reestimate(const float *const *x,int n) { dn.reestimate(x,n); if (both) ds.reestimate(x,n); }
+    void end_reestimate(void) { dn.end_reestimate(); if (both) ds.end_reestimate(); }
+};
+
 static bool run(const options_t &opt) {
-    denoise_t dn;
+    denoisers_t dd;
+    denoise_t &dn = dd.dn;
     time_t last = 0;
     double seconds = 0;                             // of the input, as decoded the first time
     int nch = 0,rate = 0;
@@ -581,15 +599,28 @@ static bool run(const options_t &opt) {
 
         if (!in.open(opt))
             return false;
-        if (!dn.init(opt.noise,in.rate,in.channels)) {
+        noise_params_t np = opt.noise;
+        np.change_only = opt.attacks;
+        if (!dn.init(np,in.rate,in.channels)) {
             fprintf(stderr,"Cannot set up the filter\n");
             return false;
+        }
+        if (opt.attacks) {
+            // about 5ms, whatever the longer one is
+            np.fft = 64;
+            while (np.fft < (int)(in.rate * 0.0053)) np.fft *= 2;
+            np.attacks = true;
+            if (!dd.ds.init(np,in.rate,in.channels)) {
+                fprintf(stderr,"Cannot set up the filter\n");
+                return false;
+            }
+            dd.both = true;
         }
 
         while (in.read(n)) {
             std::vector<const float*> x(in.channels);
             for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
-            dn.analyze(x.data(),n);
+            dd.analyze(x.data(),n);
             progress(opt,"Finding the noise",in,last,false);
         }
         progress(opt,"Finding the noise",in,last,true);
@@ -597,7 +628,7 @@ static bool run(const options_t &opt) {
             fprintf(stderr,"Stopped by CTRL+C\n");
             return false;
         }
-        dn.end_analysis();
+        dd.end_analysis();
         seconds = (double)in.done / in.rate;
         nch = in.channels;
         rate = in.rate;
@@ -615,7 +646,7 @@ static bool run(const options_t &opt) {
         while (in.read(n)) {
             std::vector<const float*> x(in.channels);
             for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
-            dn.reestimate(x.data(),n);
+            dd.reestimate(x.data(),n);
             progress(opt,what,in,last,false);
         }
         progress(opt,what,in,last,true);
@@ -623,12 +654,22 @@ static bool run(const options_t &opt) {
             fprintf(stderr,"Stopped by CTRL+C\n");
             return false;
         }
-        dn.end_reestimate();
+        dd.end_reestimate();
+    }
+
+    // -attacks: where they are, and each transform's part of the change around them
+    if (dd.both) {
+        dd.ds.find_attacks(dd.attacks);
+        dd.dn.use_attacks(&dd.attacks,false);
+        dd.ds.use_attacks(&dd.attacks,true);
     }
 
     {
         if (!opt.quiet) {
             fprintf(stderr,"%d samples to a transform, %.1fHz apart, %.1fms a hop\n",dn.fft,(double)rate / dn.fft,(1000.0 * dn.hop) / rate);
+            if (dd.both)
+                fprintf(stderr,"and %d samples around the attacks, %.1fms a hop: %zu attacks found, of the bands from %gHz up\n",
+                    dd.ds.fft,(1000.0 * dd.ds.hop) / rate,dd.attacks.count(),dd.attacks.edges.empty() ? 0.0 : dd.attacks.edges[0]);
             for (int c=0;c < nch;c++)
             {
                 char where[64];
@@ -665,22 +706,54 @@ static bool run(const options_t &opt) {
     std::vector<std::vector<float>> y(in.channels);
     bool ok = true;
 
+    // -attacks: the input, and the changes of the two transforms, which come out after it, each by its own
+    // delay, added up as they come
+    std::vector<std::vector<float>> xq(in.channels),lq(in.channels),sq(in.channels);
+    auto mix = [&](void) -> bool {
+        const size_t n = std::min(lq[0].size(),sq[0].size());
+        for (int c=0;c < in.channels;c++) {
+            y[c].resize(n);
+            for (size_t i=0;i < n;i++)
+                y[c][i] = xq[c][i] + lq[c][i] + sq[c][i];
+            xq[c].erase(xq[c].begin(),xq[c].begin() + n);
+            lq[c].erase(lq[c].begin(),lq[c].begin() + n);
+            sq[c].erase(sq[c].begin(),sq[c].begin() + n);
+        }
+        return out.write(y.data(),(int)n);
+    };
+
     while (ok && in.read(n)) {
         std::vector<const float*> x(in.channels);
         for (int c=0;c < in.channels;c++) {
             x[c] = in.conv[c].data();
             y[c].clear();
         }
-        dn.filter(x.data(),n,y.data());
-        ok = out.write(y.data(),(int)y[0].size());
+        if (dd.both) {
+            for (int c=0;c < in.channels;c++)
+                xq[c].insert(xq[c].end(),x[c],x[c] + n);
+            dd.dn.filter(x.data(),n,lq.data());
+            dd.ds.filter(x.data(),n,sq.data());
+            ok = mix();
+        }
+        else {
+            dn.filter(x.data(),n,y.data());
+            ok = out.write(y.data(),(int)y[0].size());
+        }
         progress(opt,"Filtering",in,last,false);
     }
     progress(opt,"Filtering",in,last,true);
 
     if (ok) {
         for (auto &v : y) v.clear();
-        dn.end_filter(y.data());
-        ok = out.write(y.data(),(int)y[0].size());
+        if (dd.both) {
+            dd.dn.end_filter(lq.data());
+            dd.ds.end_filter(sq.data());
+            ok = mix();
+        }
+        else {
+            dn.end_filter(y.data());
+            ok = out.write(y.data(),(int)y[0].size());
+        }
     }
     if (!out.finish())
         ok = false;
@@ -818,6 +891,9 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 opt.noise.iterate = (int)d;
+            }
+            else if (o == "attacks") {
+                opt.attacks = true;
             }
             else if (o == "link") {
                 opt.noise.link = true;
