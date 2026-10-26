@@ -164,6 +164,7 @@ bool denoise_t::init(const noise_params_t &np,int sample_rate,int nchannels) {
     }
 
     gmin = (float)pow(10.0,-p.reduce / 20);
+    nadj = (float)pow(10.0,p.adjust / 10);
     refine = std::min(p.iterate,2);
 
     // finding the noise again: noise alone over 3 frequencies and 3 frames is about Gamma(3) over 3; under
@@ -254,7 +255,7 @@ void denoise_t::decide(decide_t &D,int di,int64_t f,pass_t pass) {
         if (nblocks > 0) {
             const float *n0 = ch[ci].blocks.data() + (size_t)b0 * bins,*n1 = ch[ci].blocks.data() + (size_t)b1 * bins;
             for (int j=0;j < bins;j++)
-                Nr[j] += n0[j] + bf * (n1[j] - n0[j]);
+                Nr[j] += nadj * (n0[j] + bf * (n1[j] - n0[j]));
         }
     }
     D.P.assign(Pr,Pr + bins);
@@ -416,6 +417,22 @@ void denoise_t::frame(pass_t pass,std::vector<float> *out) {
         memcpy(c.X.data() + (size_t)slot * bins,c.spec,sizeof(AVComplexFloat) * bins);
     }
 
+    // -noise: the power of each frequency of the frames of a part of the input that is noise alone, leaving out the
+    // first three, which are partly before it
+    if (pass == PROFILE) {
+        if (f >= 3) {
+            for (auto &c : ch) {
+                const AVComplexFloat *X = c.X.data() + (size_t)slot * bins;
+                if (c.psum.empty()) c.psum.assign(bins,0);
+                for (int j=0;j < bins;j++)
+                    c.psum[j] += (double)X[j].re * X[j].re + (double)X[j].im * X[j].im;
+                c.pcount++;
+            }
+        }
+        frames++;
+        return;
+    }
+
     if (pass == ANALYZE) {
         #pragma omp parallel for
         for (int ci=0;ci < channels;ci++) {
@@ -570,9 +587,44 @@ void denoise_t::end_analysis(void) {
         nblocks++;
     }
 
-    find_noise();
+    if (has_profile())
+        noise_from_profile();
+    else
+        find_noise();
     reset();
 }
+
+void denoise_t::profile(const float *const *x,int n) {
+    feed(x,n,PROFILE,NULL);
+}
+
+// the end of a part of the input given as noise alone: ready for the next, or the first pass
+void denoise_t::end_profile_part(void) {
+    for (auto &c : ch)
+        std::fill(c.in.begin(),c.in.end(),0.0f);
+    fill = 0;
+    frames = 0;
+}
+
+bool denoise_t::has_profile(void) const {
+    return !ch.empty() && ch[0].pcount > 0;
+}
+
+// the level of the noise of all the blocks: the mean power of the parts given, over 1/12 octave
+void denoise_t::noise_from_profile(void) {
+    std::vector<float> mean(bins),sm(bins);
+    std::vector<double> cum;
+
+    for (auto &c : ch) {
+        for (int j=0;j < bins;j++)
+            mean[j] = (float)(c.psum[j] / std::max((int64_t)1,c.pcount));
+        box(mean,cum,nscale,sm.data());
+        c.blocks.resize((size_t)nblocks * bins);
+        for (int b=0;b < nblocks;b++)
+            std::copy(sm.begin(),sm.end(),c.blocks.begin() + (size_t)b * bins);
+    }
+}
+
 
 void denoise_t::reestimate(const float *const *x,int n) {
     if (ch[0].esum.empty()) {
@@ -708,7 +760,7 @@ double denoise_t::noise_db_at(int ci,double t) const {
             s += ch[ci].blocks[(size_t)b * bins + j];
     }
 
-    return power_to_db(s,fft);
+    return power_to_db(s * nadj,fft);
 }
 
 double denoise_t::noise_db(int ci) const {
@@ -806,7 +858,7 @@ void denoise_t::find_attacks(attack_map_t &m) const {
 
                 const double pos = std::max(0.0,std::min((f - (block_frames - 1) * 0.5) / block_frames,(double)(nblocks - 1)));
                 const int b0 = (int)floor(pos),b1 = std::min(b0 + 1,nblocks - 1);
-                const float En = nband[(size_t)b0 * nb + b] + (float)(pos - b0) * (nband[(size_t)b1 * nb + b] - nband[(size_t)b0 * nb + b]);
+                const float En = nadj * (nband[(size_t)b0 * nb + b] + (float)(pos - b0) * (nband[(size_t)b1 * nb + b] - nband[(size_t)b0 * nb + b]));
                 if (E[f] <= lam[b] * En)
                     continue;
 

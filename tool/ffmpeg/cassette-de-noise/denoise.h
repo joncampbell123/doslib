@@ -41,6 +41,13 @@
  *   sound let through less the noise let through with it, over the 3 frequencies and 3 frames around it), up to
  *   as much as the tiles let through: up to twice, the second from the first.
  *
+ * With -noise, the level of the noise is not found, but taken from a part of the input that is noise alone (such
+ * as blank tape before or after the recording, from the same recorder and tape): the mean power of each frequency
+ * there (smoothed over 1/12 octave), the same all through. Where the sound goes on with no quiet parts, the quiet
+ * part of each minute is not the noise but the quiet sound (the room, a distant voice), which is then taken for
+ * noise and turned down with it; a part with only the noise takes only the noise out. -noiseadjust turns the level
+ * of the noise, found or taken, up or down by so many dB.
+ *
  * With -attacks, the frames are not all as long: a long transform is only as sharp in time as its frames, and
  * where a sound starts sharply (an attack: a drum, a consonant, a click), what is done to the frame is done to
  * all of it, so the noise is let through for up to a frame before the attack, which dulls it. A second, short
@@ -73,6 +80,7 @@ struct noise_params_t {
     int                         fft = 0;            // samples to a transform, a power of 2, or 0 for about 43ms
     bool                        link = false;       // the same gain to all the channels, decided from all of them
     int                         iterate = 0;        // times more through the input, to find the noise again; and the gain made finer up to twice
+    double                      adjust = 0;         // dB: the level of the noise turned up or down by this much
     bool                        change_only = false;// put out only the change, not the input with it (-attacks, to add the two up)
     bool                        attacks = false;    // this is the shorter transform for -attacks: keep the power of the octave bands
 };
@@ -103,6 +111,12 @@ public:
     // first pass: the whole input, to find the level of the noise
     void                        analyze(const float *const *x,int n);
     void                        end_analysis(void);
+
+    // with -noise, before the first pass: each part of the input that is noise alone, then the end of it; the
+    // level of the noise is then the mean of them, instead of being found
+    void                        profile(const float *const *x,int n);
+    void                        end_profile_part(void);
+    bool                        has_profile(void) const;
 
     // with -iterate, after the first pass and before the last, each time: the whole input again, to find the
     // level of the noise again from what is not let through
@@ -165,9 +179,11 @@ private:
         std::vector<float>      reduced;            // dB the noise was turned down by, each frame where it was all at the floor
         std::vector<float>      esum,ecnt;          // finding the noise again: power and count of the noise alone, each block
         std::vector<uint16_t>   bandpow;            // -attacks: [frame][band]: power of the octave bands, in 1/256 dB over -200dB
+        std::vector<double>     psum;               // -noise: the power of each frequency, summed over the parts given
+        int64_t                 pcount = 0;         // and the frames of it
     };
 
-    enum pass_t { ANALYZE, REESTIMATE, FILTER };
+    enum pass_t { PROFILE, ANALYZE, REESTIMATE, FILTER };
 
     void                        feed(const float *const *x,int n,pass_t pass,std::vector<float> *out);
     void                        frame(pass_t pass,std::vector<float> *out);
@@ -176,6 +192,7 @@ private:
     void                        reset(void);
     void                        find_noise(void);
     void                        find_noise_again(void);
+    void                        noise_from_profile(void);
     void                        box(const std::vector<float> &v,std::vector<double> &cum,const scale_t &s,float *out);
 
     noise_params_t              p;
@@ -195,6 +212,7 @@ private:
     int64_t                     samples_in = 0;
     int64_t                     samples_out = 0;
     float                       gmin = 1;
+    float                       nadj = 1;           // -noiseadjust: the level of the noise is used times this
     int                         refine = 0;         // times the gain is made finer
     float                       clip = 0;           // noise alone over 3x3 frequencies and frames is under this, 99 times in 100
     float                       clip_mean = 1;      // and its mean, under that, over its mean

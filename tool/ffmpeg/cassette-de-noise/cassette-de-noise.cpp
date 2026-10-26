@@ -3,7 +3,8 @@
  *
  * The input is read twice. The first time, the level of the noise at each frequency of each channel is found
  * over the whole recording; the second time, each channel is filtered and encoded (see denoise.h). With -iterate,
- * it is read that many more times between the two, to find the level of the noise again. The output
+ * it is read that many more times between the two, to find the level of the noise again. With -noise, the parts
+ * of the input given as noise alone are read first, and the level of the noise is taken from them. The output
  * has the same sample rate and channels as the input, and is as long, lined up with it sample for sample. */
 
 #include <sys/types.h>
@@ -43,6 +44,7 @@ struct options_t {
     int64_t                     bit_rate = 0;
     int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
     int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
+    std::vector<std::pair<int64_t,int64_t>> noise_parts;    // -noise: parts of the input that are noise alone, microseconds from the start of it
     noise_params_t              noise;
     bool                        attacks = false;    // -attacks: a shorter transform around the attacks
     bool                        report = false;     // -report: the noise level found, each minute
@@ -90,6 +92,11 @@ static void help(void) {
     fprintf(stderr,"                   for less of the noise coming and going, less for more of the quiet sounds\n");
     fprintf(stderr,"  -margin <dB>     And by this much more, for noise that is not quite steady\n");
     fprintf(stderr,"\n");
+    fprintf(stderr,"  -noise <from>-<to>  Take the level of the noise from this part of the input, which must be noise\n");
+    fprintf(stderr,"                   alone (blank tape before or after the recording), such as 51:00-54:00, instead of\n");
+    fprintf(stderr,"                   finding it: for recordings with no quiet parts, where quiet sounds (a distant\n");
+    fprintf(stderr,"                   voice, the room) would be taken as noise. Can be given more than once\n");
+    fprintf(stderr,"  -noiseadjust <dB>  Turn the level of the noise, found or taken, up or down by this much\n");
     fprintf(stderr,"  -window <s>      The level of the noise is found from this many seconds around each moment\n");
     fprintf(stderr,"                   (default %g)\n",d.window);
     fprintf(stderr,"  -percentile <n>  The quiet part of each window that is taken as the noise (default %g)\n",d.percentile);
@@ -183,6 +190,11 @@ public:
     }
 
     bool open(const options_t &opt) {
+        return open(opt,opt.start_us,opt.length_us);
+    }
+
+    // from start_us into the input, length_us of it (-1 for all of it)
+    bool open(const options_t &opt,int64_t start_us,int64_t length_us) {
         int r;
 
         if ((r = avformat_open_input(&fmt,opt.input.c_str(),NULL,NULL)) < 0) {
@@ -226,8 +238,8 @@ public:
         frm = av_frame_alloc();
         conv.resize(channels);
 
-        skip = av_rescale(opt.start_us,rate,1000000);
-        left = opt.length_us >= 0 ? av_rescale(opt.length_us,rate,1000000) : -1;
+        skip = av_rescale(start_us,rate,1000000);
+        left = length_us >= 0 ? av_rescale(length_us,rate,1000000) : -1;
         if (st->duration != AV_NOPTS_VALUE && st->duration > 0)
             total = av_rescale_q(st->duration,st->time_base,AVRational{1,rate});
         else if (fmt->duration > 0)
@@ -582,6 +594,8 @@ struct denoisers_t {
     void analyze(const float *const *x,int n) { dn.analyze(x,n); if (both) ds.analyze(x,n); }
     void end_analysis(void) { dn.end_analysis(); if (both) ds.end_analysis(); }
     void reestimate(const float *const *x,int n) { dn.reestimate(x,n); if (both) ds.reestimate(x,n); }
+    void profile(const float *const *x,int n) { dn.profile(x,n); if (both) ds.profile(x,n); }
+    void end_profile_part(void) { dn.end_profile_part(); if (both) ds.end_profile_part(); }
     void end_reestimate(void) { dn.end_reestimate(); if (both) ds.end_reestimate(); }
 };
 
@@ -617,6 +631,31 @@ static bool run(const options_t &opt) {
             dd.both = true;
         }
 
+        // -noise: the parts given as noise alone, first
+        for (size_t i=0;i < opt.noise_parts.size();i++) {
+            input_t pin;
+            int pn;
+
+            if (!pin.open(opt,opt.noise_parts[i].first,opt.noise_parts[i].second - opt.noise_parts[i].first))
+                return false;
+            while (pin.read(pn)) {
+                std::vector<const float*> x(pin.channels);
+                for (int c=0;c < pin.channels;c++) x[c] = pin.conv[c].data();
+                dd.profile(x.data(),pn);
+                progress(opt,"Taking the noise",pin,last,false);
+            }
+            progress(opt,"Taking the noise",pin,last,true);
+            if (pin.stopped) {
+                fprintf(stderr,"Stopped by CTRL+C\n");
+                return false;
+            }
+            dd.end_profile_part();
+        }
+        if (!opt.noise_parts.empty() && !dn.has_profile()) {
+            fprintf(stderr,"-noise: the parts given are not in the input, or too short (at least %.0fms)\n",(4000.0 * dn.hop) / in.rate);
+            return false;
+        }
+
         while (in.read(n)) {
             std::vector<const float*> x(in.channels);
             for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
@@ -634,8 +673,8 @@ static bool run(const options_t &opt) {
         rate = in.rate;
     }
 
-    // with -iterate: the level of the noise again, from what is not let through
-    for (int it=1;it <= opt.noise.iterate;it++) {
+    // with -iterate: the level of the noise again, from what is not let through; not with -noise, where it is given
+    for (int it=1;it <= (opt.noise_parts.empty() ? opt.noise.iterate : 0);it++) {
         input_t in;
         char what[64];
         int n;
@@ -657,6 +696,9 @@ static bool run(const options_t &opt) {
         dd.end_reestimate();
     }
 
+    if (!opt.noise_parts.empty() && opt.noise.iterate > 0 && !opt.quiet)
+        fprintf(stderr,"-iterate with -noise: the level of the noise is given, only the gain is made finer\n");
+
     // -attacks: where they are, and each transform's part of the change around them
     if (dd.both) {
         dd.ds.find_attacks(dd.attacks);
@@ -675,7 +717,8 @@ static bool run(const options_t &opt) {
                 char where[64];
                 if (opt.noise.from > 0) snprintf(where,sizeof(where),"from %gHz up",opt.noise.from);
                 else snprintf(where,sizeof(where),"all frequencies");
-                fprintf(stderr,"Channel %d: noise %.1fdB (the middle of it over time, %s)\n",c,dn.noise_db(c),where);
+                fprintf(stderr,"Channel %d: noise %.1fdB (%s, %s)\n",c,dn.noise_db(c),
+                    opt.noise_parts.empty() ? "the middle of it over time" : "taken from the parts given",where);
             }
         }
 
@@ -811,7 +854,7 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "mode" || o == "reduce" || o == "from" || o == "threshold" || o == "margin" || o == "window" ||
-                                o == "percentile" || o == "fft" || o == "iterate" || o == "c" || o == "b" || o == "ss" || o == "t");
+                                o == "percentile" || o == "fft" || o == "iterate" || o == "noise" || o == "noiseadjust" || o == "c" || o == "b" || o == "ss" || o == "t");
             const char *v = NULL;
             double d;
 
@@ -891,6 +934,23 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 opt.noise.iterate = (int)d;
+            }
+            else if (o == "noise") {
+                // from-to: the two times either side of the first '-' that is not at the start
+                const char *dash = strchr(v + 1,'-');
+                int64_t a,b;
+                if (dash == NULL || !parse_time(std::string(v,dash - v).c_str(),a) || !parse_time(dash + 1,b) || b <= a) {
+                    fprintf(stderr,"-noise %s: must be <from>-<to>, such as 51:00-54:00\n",v);
+                    return 1;
+                }
+                opt.noise_parts.push_back(std::make_pair(a,b));
+            }
+            else if (o == "noiseadjust") {
+                if (!parse_double(v,d) || d < -60 || d > 60) {
+                    fprintf(stderr,"-noiseadjust %s: must be -60 to 60\n",v);
+                    return 1;
+                }
+                opt.noise.adjust = d;
             }
             else if (o == "attacks") {
                 opt.attacks = true;
