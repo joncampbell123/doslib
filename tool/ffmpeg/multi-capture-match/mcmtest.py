@@ -138,7 +138,7 @@ def make_capture(tmp, name, tape, audio, segments, drops=(), damage=(), lead=0, 
     os.unlink(praw)
     # what each frame is a picture of, and whether it is usable: not a repeat, not damaged, not black
     good = [pic[k] >= 0 and pic[k] == truth[k] and k not in damaged for k in range(len(truth))]
-    return {'path': path, 'truth': pic, 'good': good}
+    return {'path': path, 'truth': pic, 'good': good, 'segments': list(segments)}
 
 #------------------------------------------------------------------------
 # Checking what it made
@@ -283,6 +283,40 @@ def check_xml(path, rows, nest=False):
     check(all(f.findtext('pathurl').startswith('file://localhost/') for f in files) and len(files) >= 2, '%s: each file is defined, with its path' % what)
     return got
 
+def check_tracks(path, rows, caps):
+    # under the top track, each capture lined up with it, video and audio: a clip for each part of the tape
+    # it recorded, cut nowhere else, as it has to be only where it stopped recording; and every frame of it
+    # there that is usable is the frame of the tape the sequence has there
+    root = ET.parse(path).getroot()
+    media = root.find('sequence').find('media')
+    byname = {os.path.basename(x['path']): x for x in caps}
+    fileof = {}
+    for f in root.iter('file'):
+        if f.find('pathurl') is not None:
+            fileof[f.get('id')] = byname.get(re.split(r'[/\\]', f.findtext('pathurl'))[-1])
+    seq = [caps[int(r['capture']) - 1]['truth'][int(r['capture_frame'])] for r in rows if r['capture'] != '']
+    for kind in ('video', 'audio'):
+        tracks = media.find(kind).findall('track')
+        under = tracks[:-1] if kind == 'video' else tracks[1:]
+        clips = {}
+        wrong = 0
+        for t in under:
+            for ci in t.findall('clipitem'):
+                cap = fileof.get(ci.find('file').get('id'))
+                if cap is None:
+                    continue
+                clips.setdefault(cap['path'], []).append(ci)
+                s, e, i = int(ci.findtext('start')), int(ci.findtext('end')), int(ci.findtext('in'))
+                for k in range(e - s):
+                    f = i + k
+                    if f < len(cap['truth']) and cap['good'][f] and cap['truth'][f] != seq[s + k]:
+                        wrong += 1
+        want = {x['path']: len(x['segments']) for x in caps}
+        got = {x: len(v) for x, v in clips.items()}
+        check(got == want, 'xml: each capture on %s tracks of its own, cut only where it stopped recording (%s)' %
+              (kind, ', '.join('%s %d clips' % (os.path.basename(x), got.get(x, 0)) for x in sorted(want))))
+        check(wrong == 0, 'xml: the %s of each capture is in step with the sequence (%d frames out of step)' % (kind, wrong))
+
 #------------------------------------------------------------------------
 
 def main():
@@ -345,6 +379,7 @@ def main():
             rows = read_log(log)
             check_sequence(rows, caps, '-ref 3')
             check_xml(out, rows)
+            check_tracks(out, rows, caps)
             check('file://localhost/D%3a/caps/a.mkv' in open(out).read(), 'xml: -path-map makes the paths Windows paths')
 
         print('-match audio, a capture whose pictures do not match')

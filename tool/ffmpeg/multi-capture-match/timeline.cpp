@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include <algorithm>
+#include <map>
 #include <vector>
 
 #include "timeline.h"
@@ -175,6 +176,8 @@ struct insert_t {
     int64_t                     after = -1;
     size_t                      first = 0,count = 0;
 };
+
+static void align_captures(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,double resync);
 
 bool build_timeline(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,unsigned int ref,const timeline_params_t &tp) {
     match_params_t mp;
@@ -577,6 +580,7 @@ bool build_timeline(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,u
         fprintf(stderr,"None of the captures match each other\n");
         return false;
     }
+    align_captures(tl,caps,tp.resync);
     return true;
 }
 
@@ -585,6 +589,162 @@ bool build_timeline(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,u
 // whether frame b of capture cap comes straight after frame a of it
 static bool follows(const capture_t &cap,int64_t a,int64_t b) {
     return b == a + 1 && cap.position((size_t)b) == cap.position((size_t)a) + 1;
+}
+
+// Each capture in runs of its frames one after the other, cut only where it goes out of step with the timeline
+// for long enough, against resync frames shown out of step or not shown: where it dropped frames, or the
+// timeline has frames it does not, and not where a frame or two was matched a frame early or late, as it is
+// in slow pans and zooms and in damage. What a capture has in each slot of the timeline is then only the
+// frame of its run there.
+static void align_captures(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,double resync) {
+    const size_t n = tl.size();
+    if (resync <= 0 || n == 0)
+        return;
+    const double in_out = resync / 2;               // of starting or stopping the capture
+
+    for (unsigned int cap=0;cap < caps.size();cap++) {
+        const int64_t frames = (int64_t)caps[cap].frames();
+
+        // the offsets, frame of the capture less slot, of its frames in each slot of the timeline
+        std::vector<std::vector<int64_t> > at(n);
+        bool any = false;
+        for (size_t s=0;s < n;s++) {
+            for (const cand_t &k : tl[s].c) {
+                if (k.cap == cap)
+                    at[s].push_back(k.frame - (int64_t)s);
+            }
+            std::sort(at[s].begin(),at[s].end());
+            at[s].erase(std::unique(at[s].begin(),at[s].end()),at[s].end());
+            any = any || !at[s].empty();
+        }
+        if (!any)
+            continue;
+
+        // The least cost of each offset at each slot, and of the capture not being there: a frame it has that
+        // is not shown, or one shown that it does not have there, costs 1, going to another offset resync,
+        // and starting or stopping half that. The offsets of each slot are those of the frames of the capture
+        // within near slots of it: one further away would cost more than going to it costs. from is how each
+        // was got to: the offset of the slot before it went on from, or FROM_BEST, from the best offset of
+        // the slot before, or FROM_NONE, from not being there.
+        const size_t near = (size_t)ceil(resync) * 2u + 2u;
+        const int32_t FROM_BEST = -1,FROM_NONE = -2;
+        std::vector<size_t> first(n + 1u);          // of the offsets of each slot in offs and from
+        std::vector<int64_t> offs;
+        std::vector<int32_t> from,none_from(n),best_at(n,-1);
+        std::map<int64_t,unsigned int> window;      // the offsets near the slot, and how many
+        std::vector<double> prev,cur;
+        double prev_none = 0;
+        size_t prev_first = 0;
+        for (size_t s=0;s < near && s < n;s++)
+            for (int64_t o : at[s]) window[o]++;
+        for (size_t s=0;s < n;s++) {
+            if (s + near < n)
+                for (int64_t o : at[s + near]) window[o]++;
+            if (s > near) {
+                for (int64_t o : at[s - near - 1u]) {
+                    auto w = window.find(o);
+                    if (--w->second == 0)
+                        window.erase(w);
+                }
+            }
+
+            int32_t bp = -1;
+            for (size_t i=0;i < prev.size();i++)
+                if (bp < 0 || prev[i] < prev[(size_t)bp]) bp = (int32_t)i;
+            best_at[s] = bp;
+
+            first[s] = offs.size();
+            cur.clear();
+            size_t j = 0;
+            for (const auto &w : window) {
+                const int64_t o = w.first;
+                double v = 1e300;
+                int32_t f = FROM_NONE;
+                while (j < prev.size() && offs[prev_first + j] < o)
+                    j++;
+                if (j < prev.size() && offs[prev_first + j] == o) {
+                    v = prev[j];
+                    f = (int32_t)j;
+                }
+                if (bp >= 0 && prev[(size_t)bp] + resync < v) {
+                    v = prev[(size_t)bp] + resync;
+                    f = FROM_BEST;
+                }
+                if (prev_none + in_out < v) {
+                    v = prev_none + in_out;
+                    f = FROM_NONE;
+                }
+                const int64_t fr = (int64_t)s + o;
+                double c = 1;
+                if (fr < 0 || fr >= frames)
+                    c = 1e30;
+                else if (std::binary_search(at[s].begin(),at[s].end(),o))
+                    c = 0;
+                offs.push_back(o);
+                from.push_back(f);
+                cur.push_back(v + c);
+            }
+
+            double v = prev_none;
+            none_from[s] = FROM_NONE;
+            if (bp >= 0 && prev[(size_t)bp] + in_out < v) {
+                v = prev[(size_t)bp] + in_out;
+                none_from[s] = FROM_BEST;
+            }
+            prev_none = v + (at[s].empty() ? 0.0 : 1.0);
+            prev.swap(cur);
+            prev_first = first[s];
+        }
+        first[n] = offs.size();
+
+        // each slot's offset, or NONE, from the end back
+        const int32_t NONE = -1;
+        std::vector<int32_t> st(n);
+        int32_t k = NONE;
+        double kv = prev_none;
+        for (size_t i=0;i < prev.size();i++) {
+            if (prev[i] < kv) {
+                kv = prev[i];
+                k = (int32_t)i;
+            }
+        }
+        for (size_t s=n;s-- > 0;) {
+            st[s] = k;
+            const int32_t f = k == NONE ? none_from[s] : from[first[s] + (size_t)k];
+            k = f >= 0 ? f : (f == FROM_BEST ? best_at[s] : NONE);
+        }
+
+        // the frame of the offset in each slot, as it was matched if it was, or as put there from the frames
+        // either side if it was not
+        for (size_t s=0;s < n;s++) {
+            std::vector<cand_t> &c = tl[s].c;
+            cand_t keep;
+            bool found = false;
+            if (st[s] != NONE) {
+                const int64_t fr = (int64_t)s + offs[first[s] + (size_t)st[s]];
+                for (const cand_t &x : c) {
+                    if (x.cap == cap && x.frame == fr && (!found || (x.matched && !keep.matched))) {
+                        keep = x;
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    keep.cap = cap;
+                    keep.frame = fr;
+                    keep.score = 0.5;
+                    keep.margin = 0;
+                    keep.matched = false;
+                    found = true;
+                }
+            }
+            c.erase(std::remove_if(c.begin(),c.end(),[cap](const cand_t &x) { return x.cap == cap; }),c.end());
+            if (found)
+                c.push_back(keep);
+        }
+    }
+
+    // a slot that no capture is in any more is not a frame of the timeline
+    tl.erase(std::remove_if(tl.begin(),tl.end(),[](const slot_t &x) { return x.c.empty(); }),tl.end());
 }
 
 void pick_best(std::vector<int> &choice,const std::vector<slot_t> &tl,const std::vector<capture_t> &caps,const pick_params_t &pp) {

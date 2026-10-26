@@ -39,12 +39,15 @@ struct timeline_params_t {
     int                         insert_min = 8;     // a run of a capture this many frames longer than what the timeline
                                                     // has between the frames either side of it is put in the timeline
     bool                        keep_blank = false; // keep the frames that are blank in every capture
+    double                      resync = 10;        // a capture is cut to go back in step with the timeline only where it
+                                                    // would be this many frames out of step, or more; <= 0 at each frame
     bool                        quiet = false;
 };
 
 // Line up the captures on one timeline of frames: the frames of the first capture, ref, and then the frames
 // of each of the others matched to it, and those that are not in it put in it where they go. A capture that
-// does not match at all is left out, and said so. False if no capture matches another.
+// does not match at all is left out, and said so. Each capture is then made runs of frames one after the
+// other, cut only where it has to be to stay in step with the timeline. False if no capture matches another.
 bool build_timeline(std::vector<slot_t> &tl,const std::vector<capture_t> &caps,unsigned int ref,const timeline_params_t &tp);
 
 struct pick_params_t {

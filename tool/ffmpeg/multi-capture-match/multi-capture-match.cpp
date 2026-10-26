@@ -19,7 +19,10 @@
  * another capture only where that is worth the cut. A frame that a capture card repeated for one it dropped
  * is not taken where another capture has the frame, and is cut out where none does. The frames are written
  * as clips: a clip for each run of frames of a capture, one after the other. The top track of the sequence
- * is that, and under it each capture lined up with it, all of it, for going to another by hand. */
+ * is that, and under it each capture lined up with it, all of it, video and audio, for going to another by
+ * hand. A capture is only cut where it has to be: to put it back in step where it dropped frames or the
+ * timeline has frames it does not, and where frames are cut out; not where a frame of it was matched a frame
+ * early or late, as frames are in slow pans and in damage. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -65,7 +68,7 @@ struct options_t {
     int                         ref = -1;           // the capture the timeline starts from, -1 the longest
     int                         width = 0,height = 0;
     bool                        all_tracks = true;  // each capture lined up on a track of its own as well
-    bool                        all_audio = false;  // and its audio
+    bool                        all_audio = true;   // and its audio
     bool                        nest = false;       // each capture in a sequence of its own, the clips clips of those
     bool                        overwrite = false;
     bool                        quiet = false;
@@ -94,12 +97,16 @@ static void help(void) {
     fprintf(stderr,"                 (default: never)\n");
     fprintf(stderr,"  -insert <n>    Put in the timeline a run of a capture this many frames longer than what the\n");
     fprintf(stderr,"                 timeline has there (default 8)\n");
+    fprintf(stderr,"  -resync <n>    Cut a capture to put it back in step only where it would be this many frames\n");
+    fprintf(stderr,"                 out of step or more (default 10): not where a frame or two of it was matched a\n");
+    fprintf(stderr,"                 frame early or late. 0 cuts it wherever its frames were matched out of step\n");
     fprintf(stderr,"  -keep-blank    Keep frames that are blank in every capture (no tape playing)\n");
     fprintf(stderr,"  -keep-repeats  Keep frames a capture card repeated for frames it dropped, where no capture\n");
     fprintf(stderr,"                 has the frame it dropped (they are cut out, as the frames they are not)\n");
     fprintf(stderr,"  -tracks <t>    best: only the best of the captures; all: and each capture lined up with it,\n");
     fprintf(stderr,"                 all of it, on the tracks under it (the default)\n");
-    fprintf(stderr,"  -audio <t>     best: only the audio of the best (the default); all: and of each capture\n");
+    fprintf(stderr,"  -audio <t>     best: only the audio of the best; all: and of each capture, lined up with its\n");
+    fprintf(stderr,"                 video (the default)\n");
     fprintf(stderr,"  -nest          Put each capture in a sequence of its own, as big as the sequence, all of it,\n");
     fprintf(stderr,"                 and make the clips of the sequence clips of those sequences: the position\n");
     fprintf(stderr,"                 or color of a capture changed in its sequence is changed in every clip of it\n");
@@ -312,7 +319,7 @@ int main(int argc,char **argv) {
 
         const std::string o = a + 1;
         const bool takes = (o == "o" || o == "match" || o == "ref" || o == "score" || o == "switch" || o == "cut" || o == "insert" ||
-                            o == "tracks" || o == "audio" || o == "name" || o == "size" || o == "path-map" || o == "log" ||
+                            o == "resync" || o == "tracks" || o == "audio" || o == "name" || o == "size" || o == "path-map" || o == "log" ||
                             o == "jobs" || o == "cache");
         const char *v = NULL;
         if (takes) {
@@ -393,6 +400,13 @@ int main(int argc,char **argv) {
                 return 1;
             }
             opt.tp.insert_min = (int)d;
+        }
+        else if (o == "resync") {
+            if (!parse_double(v,d) || d < 0) {
+                fprintf(stderr,"-resync %s: must be 0 or more frames\n",v);
+                return 1;
+            }
+            opt.tp.resync = d;
         }
         else if (o == "tracks" || o == "audio") {
             bool all;
