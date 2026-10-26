@@ -16,7 +16,7 @@ bin: linux-host $(BIN_OUT)
 linux-host:
 	mkdir -p linux-host
 
-$(DERUMBLE): linux-host/cassette-de-rumble.o linux-host/derumble.o
+$(DERUMBLE): linux-host/cassette-de-rumble.o linux-host/derumble.o linux-host/level.o
 	g++ -o $@ $^ $(FFMPEG_LIBS) -lm
 
 # -MMD -MP writes a .d file of the headers each object uses, so that changing a header rebuilds them.

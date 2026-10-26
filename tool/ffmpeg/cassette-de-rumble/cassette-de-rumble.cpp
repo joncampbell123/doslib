@@ -3,7 +3,11 @@
  * The input is read twice. The first time, the level of the rumble at each low frequency of each channel
  * is found over the whole recording; the second time, each channel is filtered and encoded (see derumble.h).
  * Only the frequencies below the cutoff (and less and less up to twice it) are changed. The output has the
- * same sample rate and channels as the input, and is as long, lined up with it sample for sample. */
+ * same sample rate and channels as the input, and is as long, lined up with it sample for sample.
+ *
+ * With -levels, the small rapid changes of level that go with the rumble are taken out as well (see level.h):
+ * how the level goes with the rumble is found the first time through too, and put right after the rumble
+ * is filtered out, the second time. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -32,6 +36,7 @@ extern "C" {
 }
 
 #include "derumble.h"
+#include "level.h"
 
 struct options_t {
     std::string                 input;
@@ -41,6 +46,8 @@ struct options_t {
     int64_t                     start_us = 0;       // -ss: how far into the input to start, in microseconds
     int64_t                     length_us = -1;     // -t: how much of it to do, -1 for all of it
     rumble_params_t             rumble;
+    level_params_t              level;
+    bool                        levels = false;     // -levels: take out the changes of level that go with the rumble
     bool                        report = false;     // -report: the rumble level found, each minute
     bool                        dither = false;
     bool                        overwrite = false;
@@ -69,6 +76,14 @@ static void help(void) {
     fprintf(stderr,"  -fft <n>         Samples to a transform, a power of 2: more for finer frequencies, less for finer\n");
     fprintf(stderr,"                   time (default about 85ms, 4096 at 48000Hz)\n");
     fprintf(stderr,"  -report          Print the level of the rumble found, each minute, of each channel\n");
+    fprintf(stderr,"\n");
+    fprintf(stderr,"  -levels          Also take out the small rapid changes of level that go with the rumble, where\n");
+    fprintf(stderr,"                   the recorder shaking pushed the tape against and away from the head. How the\n");
+    fprintf(stderr,"                   level of each band goes with the rumble is found from the recording; where it\n");
+    fprintf(stderr,"                   does not, nothing is changed\n");
+    fprintf(stderr,"  -levelwindow <s> How the level goes with the rumble is found from this many seconds around each\n");
+    fprintf(stderr,"                   part (default %g)\n",level_params_t().window);
+    fprintf(stderr,"  -levelmax <dB>   The most the level is changed by (default %g)\n",level_params_t().max);
     fprintf(stderr,"\n");
     fprintf(stderr,"  -c <codec>       Audio encoder (default: the same PCM as the input for WAV, else the format's own)\n");
     fprintf(stderr,"  -b <rate>        Bit rate, for encoders that take one, such as 192k\n");
@@ -537,6 +552,7 @@ static void progress(const options_t &opt,const char *what,const input_t &in,tim
 
 static bool run(const options_t &opt) {
     derumble_t dr;
+    leveler_t lev;
     time_t last = 0;
 
     // first pass: the level of the rumble
@@ -550,11 +566,17 @@ static bool run(const options_t &opt) {
             fprintf(stderr,"Cannot set up the filter\n");
             return false;
         }
+        if (opt.levels && !lev.init(opt.level,in.rate,in.channels)) {
+            fprintf(stderr,"Cannot set up the level filter\n");
+            return false;
+        }
 
         while (in.read(n)) {
             std::vector<const float*> x(in.channels);
             for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
             dr.analyze(x.data(),n);
+            if (opt.levels)
+                lev.analyze(x.data(),n);
             progress(opt,"Finding the rumble",in,last,false);
         }
         progress(opt,"Finding the rumble",in,last,true);
@@ -563,21 +585,34 @@ static bool run(const options_t &opt) {
             return false;
         }
         dr.end_analysis();
+        if (opt.levels)
+            lev.end_analysis();
 
         if (!opt.quiet) {
             fprintf(stderr,"%d samples to a transform, %.1fHz apart, %.1fms a hop\n",dr.fft,(double)in.rate / dr.fft,(1000.0 * dr.hop) / in.rate);
             for (int c=0;c < in.channels;c++)
                 fprintf(stderr,"Channel %d: rumble %.1fdB (the middle of it over time, %g to %gHz)\n",c,dr.rumble_db(c),opt.rumble.highpass,opt.rumble.cutoff);
+            if (opt.levels) {
+                for (int c=0;c < in.channels;c++)
+                    fprintf(stderr,"Channel %d: the level goes with the rumble in %.1f of %.1f minutes\n",c,lev.linked_seconds(c) / 60,(double)in.done / in.rate / 60);
+            }
         }
 
         if (opt.report) {
             const double len = (double)in.done / in.rate;
             fprintf(stdout,"time     ");
             for (int c=0;c < in.channels;c++) fprintf(stdout,"  ch%d dB",c);
+            if (opt.levels) {
+                // how much of the rapid change of level the rumble accounts for
+                for (int c=0;c < in.channels;c++) fprintf(stdout," ch%d lvl%%",c);
+            }
             fprintf(stdout,"\n");
             for (double t=0;t < len;t += 60) {
                 fprintf(stdout,"%02d:%02d:%02d ",(int)(t / 3600),(int)(t / 60) % 60,(int)t % 60);
                 for (int c=0;c < in.channels;c++) fprintf(stdout," %7.1f",dr.rumble_db_at(c,t + 30));
+                if (opt.levels) {
+                    for (int c=0;c < in.channels;c++) fprintf(stdout," %8.1f",100 * lev.explained_at(c,t + 30));
+                }
                 fprintf(stdout,"\n");
             }
         }
@@ -595,8 +630,24 @@ static bool run(const options_t &opt) {
 
     catch_interrupt();
 
-    std::vector<std::vector<float>> y(in.channels);
+    std::vector<std::vector<float>> y(in.channels),z(in.channels);
     bool ok = true;
+
+    // the de-rumbled samples in y, through the level filter if -levels, and written
+    auto write = [&](bool end) -> bool {
+        if (!opt.levels)
+            return out.write(y.data(),(int)y[0].size());
+
+        std::vector<const float*> yp(in.channels);
+        for (int c=0;c < in.channels;c++) {
+            yp[c] = y[c].data();
+            z[c].clear();
+        }
+        lev.filter(yp.data(),(int)y[0].size(),z.data());
+        if (end)
+            lev.end_filter(z.data());
+        return out.write(z.data(),(int)z[0].size());
+    };
 
     while (ok && in.read(n)) {
         std::vector<const float*> x(in.channels);
@@ -605,7 +656,7 @@ static bool run(const options_t &opt) {
             y[c].clear();
         }
         dr.filter(x.data(),n,y.data());
-        ok = out.write(y.data(),(int)y[0].size());
+        ok = write(false);
         progress(opt,"Filtering",in,last,false);
     }
     progress(opt,"Filtering",in,last,true);
@@ -613,7 +664,7 @@ static bool run(const options_t &opt) {
     if (ok) {
         for (auto &v : y) v.clear();
         dr.end_filter(y.data());
-        ok = out.write(y.data(),(int)y[0].size());
+        ok = write(true);
     }
     if (!out.finish())
         ok = false;
@@ -621,6 +672,10 @@ static bool run(const options_t &opt) {
     if (!opt.quiet && ok) {
         for (int c=0;c < in.channels;c++)
             fprintf(stderr,"Channel %d: %g to %gHz turned down by %.1fdB (the middle of it over time)\n",c,opt.rumble.highpass,opt.rumble.cutoff,dr.reduced_db(c));
+        if (opt.levels) {
+            for (int c=0;c < in.channels;c++)
+                fprintf(stderr,"Channel %d: level put right by %.2fdB rms, at most %.2fdB, where it went with the rumble\n",c,lev.change_rms_db(c),lev.change_max_db(c));
+        }
     }
 
     if (!ok)
@@ -666,7 +721,7 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "cutoff" || o == "highpass" || o == "reduce" || o == "over" || o == "window" || o == "percentile" ||
-                                o == "release" || o == "fft" || o == "c" || o == "b" || o == "ss" || o == "t");
+                                o == "release" || o == "fft" || o == "levelwindow" || o == "levelmax" || o == "c" || o == "b" || o == "ss" || o == "t");
             const char *v = NULL;
             double d;
 
@@ -754,6 +809,23 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"-t %s: not a time\n",v);
                     return 1;
                 }
+            }
+            else if (o == "levels") {
+                opt.levels = true;
+            }
+            else if (o == "levelwindow") {
+                if (!parse_double(v,d) || d < 30 || d > 36000) {
+                    fprintf(stderr,"-levelwindow %s: must be 30 to 36000\n",v);
+                    return 1;
+                }
+                opt.level.window = d;
+            }
+            else if (o == "levelmax") {
+                if (!parse_double(v,d) || d <= 0 || d > 40) {
+                    fprintf(stderr,"-levelmax %s: must be more than 0, up to 40\n",v);
+                    return 1;
+                }
+                opt.level.max = d;
             }
             else if (o == "report") {
                 opt.report = true;
