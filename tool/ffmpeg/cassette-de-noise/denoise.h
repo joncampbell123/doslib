@@ -25,6 +25,22 @@
  * Noise alone is then turned down by the same amount (-reduce) everywhere and all the time, which leaves it
  * sounding the same, only quieter, with nothing coming and going in it.
  *
+ * With -iterate, the input is gone through more times, to tell the sound from the noise better:
+ *
+ * - The level of the noise: where the sound goes on all the time, such as music with no quiet parts, the quiet
+ *   part of each minute is the music, not the noise, and the noise is taken to be louder than it is. Each time
+ *   through, each frequency of each moment where nothing was let through, and that is not louder than the noise
+ *   by more than chance, is taken as noise alone, and the level of the noise is found again from those (their
+ *   mean, made up for the ones left out by chance): each time the noise is found quieter, more of the quiet
+ *   sound is let through, and the noise is found from what is left. Where there are quiet parts, it is found
+ *   as it was, closer.
+ *
+ * - The gain of each frequency: once a tile is let through, all its frequencies are, and the noise between the
+ *   harmonics of a voice or an instrument with them. With -iterate, the sound let through is taken as the
+ *   sound, and each frequency is let through by as much of it as that is (a Wiener filter, of the power of the
+ *   sound let through less the noise let through with it, over the 3 frequencies and 3 frames around it), up to
+ *   as much as the tiles let through: up to twice, the second from the first.
+ *
  * Where nothing is turned down, the output is the input to the bit (only the change is transformed back). */
 
 #ifndef DENOISE_H
@@ -47,6 +63,7 @@ struct noise_params_t {
     double                      percentile = 10;    // the quiet part of each window taken as the noise level
     int                         fft = 0;            // samples to a transform, a power of 2, or 0 for about 43ms
     bool                        link = false;       // the same gain to all the channels, decided from all of them
+    int                         iterate = 0;        // times more through the input, to find the noise again; and the gain made finer up to twice
 };
 
 class denoise_t {
@@ -58,6 +75,11 @@ public:
     // first pass: the whole input, to find the level of the noise
     void                        analyze(const float *const *x,int n);
     void                        end_analysis(void);
+
+    // with -iterate, after the first pass and before the last, each time: the whole input again, to find the
+    // level of the noise again from what is not let through
+    void                        reestimate(const float *const *x,int n);
+    void                        end_reestimate(void);
 
     // second pass: the same input again, filtered; the samples out are added to the end of out[]
     void                        filter(const float *const *x,int n,std::vector<float> *out);
@@ -86,8 +108,11 @@ private:
         std::vector<double>     cum;                // prefix sums, for the tiles
         std::vector<float>      Pf,Nf;              // [scale][ring][bin]: power and noise over the frequencies of the tile
         std::vector<double>     Ps,Ns;              // [scale][bin]: and over the frames of the tile
+        std::vector<float>      Pr,Nr;              // [ring][bin]: power and noise of the last frames
         std::vector<float>      gr;                 // [ring][bin]: the gain, before smoothing
-        std::vector<float>      g;                  // this frame's gain, smoothed
+        std::vector<float>      G;                  // [step][ring][bin]: the gain smoothed, then made finer (-iterate)
+        std::vector<float>      h;                  // [step][ring][bin]: the gain made finer, before smoothing
+        std::vector<float>      g;                  // the gain put on the frame now
     };
 
     struct chan_t {
@@ -105,11 +130,18 @@ private:
         std::vector<double>     block;              // analysis: sum of the smoothed power, this block
         std::vector<float>      blocks;             // analysis: mean of it, each block, then the noise level
         std::vector<float>      reduced;            // dB the noise was turned down by, each frame where it was all at the floor
+        std::vector<float>      esum,ecnt;          // finding the noise again: power and count of the noise alone, each block
     };
 
-    void                        feed(const float *const *x,int n,bool filtering,std::vector<float> *out);
-    void                        frame(bool filtering,std::vector<float> *out);
+    enum pass_t { ANALYZE, REESTIMATE, FILTER };
+
+    void                        feed(const float *const *x,int n,pass_t pass,std::vector<float> *out);
+    void                        frame(pass_t pass,std::vector<float> *out);
+    void                        decide(decide_t &D,int di,int64_t f,pass_t pass);
+    void                        end_pass(pass_t pass);
+    void                        reset(void);
     void                        find_noise(void);
+    void                        find_noise_again(void);
     void                        box(const std::vector<float> &v,std::vector<double> &cum,const scale_t &s,float *out);
 
     noise_params_t              p;
@@ -129,6 +161,9 @@ private:
     int64_t                     samples_in = 0;
     int64_t                     samples_out = 0;
     float                       gmin = 1;
+    int                         refine = 0;         // times the gain is made finer
+    float                       clip = 0;           // noise alone over 3x3 frequencies and frames is under this, 99 times in 100
+    float                       clip_mean = 1;      // and its mean, under that, over its mean
 };
 
 #endif

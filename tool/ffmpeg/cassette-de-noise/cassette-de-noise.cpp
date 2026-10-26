@@ -2,7 +2,8 @@
  * burbling that noise reduction tends to leave.
  *
  * The input is read twice. The first time, the level of the noise at each frequency of each channel is found
- * over the whole recording; the second time, each channel is filtered and encoded (see denoise.h). The output
+ * over the whole recording; the second time, each channel is filtered and encoded (see denoise.h). With -iterate,
+ * it is read that many more times between the two, to find the level of the noise again. The output
  * has the same sample rate and channels as the input, and is as long, lined up with it sample for sample. */
 
 #include <sys/types.h>
@@ -91,6 +92,11 @@ static void help(void) {
     fprintf(stderr,"  -window <s>      The level of the noise is found from this many seconds around each moment\n");
     fprintf(stderr,"                   (default %g)\n",d.window);
     fprintf(stderr,"  -percentile <n>  The quiet part of each window that is taken as the noise (default %g)\n",d.percentile);
+    fprintf(stderr,"  -iterate <n>     Go through the input n more times to tell the sound from the noise better: the\n");
+    fprintf(stderr,"                   level of the noise is found again each time from what was not let through,\n");
+    fprintf(stderr,"                   which helps most where the sound goes on with no quiet parts (such as music),\n");
+    fprintf(stderr,"                   and the noise between the harmonics of a voice or an instrument is turned down\n");
+    fprintf(stderr,"                   as well. Slower: 2 to 4 is about right (default 0, off)\n");
     fprintf(stderr,"  -link            The same gain for all the channels, decided from all of them together:\n");
     fprintf(stderr,"                   better for a mono recording on both channels\n");
     fprintf(stderr,"  -fft <n>         Samples to a transform, a power of 2 (default about 43ms, 2048 at 48000Hz)\n");
@@ -565,6 +571,8 @@ static void progress(const options_t &opt,const char *what,const input_t &in,tim
 static bool run(const options_t &opt) {
     denoise_t dn;
     time_t last = 0;
+    double seconds = 0;                             // of the input, as decoded the first time
+    int nch = 0,rate = 0;
 
     // first pass: the level of the noise
     {
@@ -590,10 +598,38 @@ static bool run(const options_t &opt) {
             return false;
         }
         dn.end_analysis();
+        seconds = (double)in.done / in.rate;
+        nch = in.channels;
+        rate = in.rate;
+    }
 
+    // with -iterate: the level of the noise again, from what is not let through
+    for (int it=1;it <= opt.noise.iterate;it++) {
+        input_t in;
+        char what[64];
+        int n;
+
+        snprintf(what,sizeof(what),"Finding the noise again, %d of %d",it,opt.noise.iterate);
+        if (!in.open(opt))
+            return false;
+        while (in.read(n)) {
+            std::vector<const float*> x(in.channels);
+            for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
+            dn.reestimate(x.data(),n);
+            progress(opt,what,in,last,false);
+        }
+        progress(opt,what,in,last,true);
+        if (in.stopped) {
+            fprintf(stderr,"Stopped by CTRL+C\n");
+            return false;
+        }
+        dn.end_reestimate();
+    }
+
+    {
         if (!opt.quiet) {
-            fprintf(stderr,"%d samples to a transform, %.1fHz apart, %.1fms a hop\n",dn.fft,(double)in.rate / dn.fft,(1000.0 * dn.hop) / in.rate);
-            for (int c=0;c < in.channels;c++)
+            fprintf(stderr,"%d samples to a transform, %.1fHz apart, %.1fms a hop\n",dn.fft,(double)rate / dn.fft,(1000.0 * dn.hop) / rate);
+            for (int c=0;c < nch;c++)
             {
                 char where[64];
                 if (opt.noise.from > 0) snprintf(where,sizeof(where),"from %gHz up",opt.noise.from);
@@ -603,13 +639,12 @@ static bool run(const options_t &opt) {
         }
 
         if (opt.report) {
-            const double len = (double)in.done / in.rate;
             fprintf(stdout,"time     ");
-            for (int c=0;c < in.channels;c++) fprintf(stdout,"  ch%d dB",c);
+            for (int c=0;c < nch;c++) fprintf(stdout,"  ch%d dB",c);
             fprintf(stdout,"\n");
-            for (double t=0;t < len;t += 60) {
+            for (double t=0;t < seconds;t += 60) {
                 fprintf(stdout,"%02d:%02d:%02d ",(int)(t / 3600),(int)(t / 60) % 60,(int)t % 60);
-                for (int c=0;c < in.channels;c++) fprintf(stdout," %7.1f",dn.noise_db_at(c,t + 30));
+                for (int c=0;c < nch;c++) fprintf(stdout," %7.1f",dn.noise_db_at(c,t + 30));
                 fprintf(stdout,"\n");
             }
         }
@@ -703,7 +738,7 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "mode" || o == "reduce" || o == "from" || o == "threshold" || o == "margin" || o == "window" ||
-                                o == "percentile" || o == "fft" || o == "c" || o == "b" || o == "ss" || o == "t");
+                                o == "percentile" || o == "fft" || o == "iterate" || o == "c" || o == "b" || o == "ss" || o == "t");
             const char *v = NULL;
             double d;
 
@@ -776,6 +811,13 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 opt.noise.fft = (int)d;
+            }
+            else if (o == "iterate") {
+                if (!parse_double(v,d) || d < 0 || d > 100 || d != floor(d)) {
+                    fprintf(stderr,"-iterate %s: must be 0 to 100\n",v);
+                    return 1;
+                }
+                opt.noise.iterate = (int)d;
             }
             else if (o == "link") {
                 opt.noise.link = true;
