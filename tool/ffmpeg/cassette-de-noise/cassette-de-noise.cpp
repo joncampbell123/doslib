@@ -4,7 +4,8 @@
  * The input is read twice. The first time, the level of the noise at each frequency of each channel is found
  * over the whole recording; the second time, each channel is filtered and encoded (see denoise.h). With -iterate,
  * it is read that many more times between the two, to find the level of the noise again. With -noise, the parts
- * of the input given as noise alone are read first, and the level of the noise is taken from them. The output
+ * of the input given as noise alone are read first, and the level of the noise is taken from them. With -templates,
+ * it is read once more before the last time, to learn the templates of the sounds. The output
  * has the same sample rate and channels as the input, and is as long, lined up with it sample for sample. */
 
 #include <sys/types.h>
@@ -105,6 +106,10 @@ static void help(void) {
     fprintf(stderr,"                   which helps most where the sound goes on with no quiet parts (such as music),\n");
     fprintf(stderr,"                   and the noise between the harmonics of a voice or an instrument is turned down\n");
     fprintf(stderr,"                   as well. Slower: 2 to 4 is about right (default 0, off)\n");
+    fprintf(stderr,"  -templates <n>   Learn n templates of the sounds (such as 40) from where they are loud and clear,\n");
+    fprintf(stderr,"                   and use them to tell the quiet ones (a distant voice) from the noise better: the\n");
+    fprintf(stderr,"                   noise between the harmonics is turned down, and is steadier under the sound.\n");
+    fprintf(stderr,"                   Nothing is made up from them. Slower: one more pass, and more work each frame\n");
     fprintf(stderr,"  -attacks         Use a short transform (about 5ms, 256 at 48000Hz) around the attacks, where a sound starts\n");
     fprintf(stderr,"                   sharply (drums, consonants, clicks), and the longer one elsewhere: the noise is\n");
     fprintf(stderr,"                   not let through before the attack, which keeps it sharp. About twice as slow\n");
@@ -620,6 +625,7 @@ static bool run(const options_t &opt) {
             return false;
         }
         if (opt.attacks) {
+            np.templates = 0;
             // about 5ms, whatever the longer one is
             np.fft = 64;
             while (np.fft < (int)(in.rate * 0.0053)) np.fft *= 2;
@@ -694,6 +700,34 @@ static bool run(const options_t &opt) {
             return false;
         }
         dd.end_reestimate();
+    }
+
+    // -templates: the sounds, learned from where they are loud and clear (the longer transform only)
+    if (opt.noise.templates > 0) {
+        input_t in;
+        int n;
+
+        if (!in.open(opt))
+            return false;
+        while (in.read(n)) {
+            std::vector<const float*> x(in.channels);
+            for (int c=0;c < in.channels;c++) x[c] = in.conv[c].data();
+            dn.learn(x.data(),n);
+            progress(opt,"Learning the sounds",in,last,false);
+        }
+        progress(opt,"Learning the sounds",in,last,true);
+        if (in.stopped) {
+            fprintf(stderr,"Stopped by CTRL+C\n");
+            return false;
+        }
+        if (!dn.end_learn() && !opt.quiet)
+            fprintf(stderr,"-templates: too few loud and clear frames to learn from, for some channels: not used for them\n");
+        if (!opt.quiet) {
+            for (int c=0;c < (opt.noise.link ? 1 : nch);c++) {
+                if (dn.learned_from(c) > 0)
+                    fprintf(stderr,"%s%d: %d templates learned from %d loud and clear frames\n",opt.noise.link ? "Channels from " : "Channel ",c,opt.noise.templates,dn.learned_from(c));
+            }
+        }
     }
 
     if (!opt.noise_parts.empty() && opt.noise.iterate > 0 && !opt.quiet)
@@ -854,7 +888,7 @@ int main(int argc,char **argv) {
             const std::string o = a + 1;
             // options that take a value
             const bool takes = (o == "mode" || o == "reduce" || o == "from" || o == "threshold" || o == "margin" || o == "window" ||
-                                o == "percentile" || o == "fft" || o == "iterate" || o == "noise" || o == "noiseadjust" || o == "c" || o == "b" || o == "ss" || o == "t");
+                                o == "percentile" || o == "fft" || o == "iterate" || o == "noise" || o == "noiseadjust" || o == "templates" || o == "c" || o == "b" || o == "ss" || o == "t");
             const char *v = NULL;
             double d;
 
@@ -951,6 +985,13 @@ int main(int argc,char **argv) {
                     return 1;
                 }
                 opt.noise.adjust = d;
+            }
+            else if (o == "templates") {
+                if (!parse_double(v,d) || d < 0 || d > 400 || d != floor(d)) {
+                    fprintf(stderr,"-templates %s: must be 0 to 400\n",v);
+                    return 1;
+                }
+                opt.noise.templates = (int)d;
             }
             else if (o == "attacks") {
                 opt.attacks = true;

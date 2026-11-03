@@ -23,7 +23,13 @@ extern "C" {
 
 #include "denoise.h"
 
-static const int R = 16;                            // frames kept: more than the 9 to 13 from f-8 (f-12 with -iterate) to f that are used
+static const int R = 16;
+
+// -templates
+static const int template_frames = 3000;            // loud frames kept to learn the templates from, at most
+static const int template_learn_iterations = 150;
+static const int template_iterations = 10;          // each frame, from the frame before
+static const double template_sparsity = 10;         // of the templates of a frame, against the noise                            // frames kept: more than the 9 to 13 from f-8 (f-12 with -iterate) to f that are used
 
 // the tiles: octaves wide (0 for one frequency), frames either side
 static const struct { double octaves; int ht; } tile_sizes[] = {
@@ -261,6 +267,30 @@ void denoise_t::decide(decide_t &D,int di,int64_t f,pass_t pass) {
     D.P.assign(Pr,Pr + bins);
     D.N.assign(Nr,Nr + bins);
 
+    // -templates: a frame where the sounds are loud and clear, more than 15dB over the noise, to learn them from;
+    // a sample of them from all through the recording, the same every time
+    if (pass == LEARN) {
+        double sp = 0,sn = 0;
+        for (int j=0;j < bins;j++) { sp += Pr[j]; sn += Nr[j]; }
+        if (sn > 0 && sp > 30 * sn) {
+            const int64_t seen = ++tseen[di];
+            std::vector<std::vector<float>> &tr = ttrain[di];
+            size_t at = tr.size();
+            if (at >= (size_t)template_frames) {
+                uint64_t z = (uint64_t)seen * 0x9E3779B97F4A7C15ull + (uint64_t)di;
+                z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull; z = (z ^ (z >> 27)) * 0x94D049BB133111EBull; z ^= z >> 31;
+                at = (size_t)(z % (uint64_t)seen);
+            }
+            if (at < (size_t)template_frames) {
+                std::vector<float> v(bins);
+                for (int j=0;j < bins;j++) v[j] = std::max(Pr[j] - Nr[j],1e-3f * Nr[j]);
+                if (at == tr.size()) tr.push_back(v);
+                else tr[at].swap(v);
+            }
+        }
+        return;
+    }
+
     // over the frequencies of each tile, then over its frames: centered on frame c
     for (int s=0;s < nscales;s++) {
         const scale_t &S = scales[s];
@@ -315,6 +345,9 @@ void denoise_t::decide(decide_t &D,int di,int64_t f,pass_t pass) {
         }
         return (float)(sum / ((t + 1 - t0 + 1) * (j1 - j0 + 1)));
     };
+
+    if (pass == FILTER && !tW.empty() && !tW[di].empty())
+        solve_templates(D,di,c);
 
     if (pass == REESTIMATE) {
         // each frequency of frame c that nothing was let through at, and that is not louder than the noise by more
@@ -389,6 +422,18 @@ void denoise_t::decide(decide_t &D,int di,int64_t f,pass_t pass) {
     const int64_t d = f - 4 - 2 * refine;
     if (d >= 0) {
         const float *Gd = D.G.data() + ((size_t)refine * R + (d % R)) * bins;
+
+        // -templates: where the tiles let something through, between the two gains, the templates' smoothed
+        std::vector<float> gt;
+        if (!tW.empty() && !tW[di].empty()) {
+            gt.assign(Gd,Gd + bins);
+            for (int j=0;j < bins;j++) {
+                if (gt[j] > gmin * 1.001f)
+                    gt[j] = std::max(gmin,sqrtf(gt[j] * std::max(gmin,mean3(D.tm.data(),d,j))));
+            }
+            Gd = gt.data();
+        }
+
         if (amap != NULL) {
             std::vector<float> aw;
             attack_weights(di,d,aw);
@@ -565,6 +610,8 @@ void denoise_t::reset(void) {
         D.G.assign((size_t)(refine + 1) * R * bins,0);
         D.h.assign((size_t)(refine + 1) * R * bins,0);
         D.g.assign(bins,1);
+        D.th.assign(std::max(0,p.templates),0.0f);
+        D.tm.assign((size_t)R * bins,1.0f);
     }
     for (auto &c : ch) {
         std::fill(c.in.begin(),c.in.end(),0.0f);
@@ -641,6 +688,154 @@ void denoise_t::end_reestimate(void) {
     end_pass(REESTIMATE);
     find_noise_again();
     reset();
+}
+
+// -templates: how much of each template frame c is, with the noise as it is known, from the frame before (held
+// up, so that a template gone to nothing in a pause can come back), a few iterations; and from them the gain
+void denoise_t::solve_templates(decide_t &D,int di,int64_t c) {
+    const int K = p.templates;
+    const float *W = tW[di].data();
+    const float *P = D.Pr.data() + (size_t)(c % R) * bins,*N = D.Nr.data() + (size_t)(c % R) * bins;
+    float *tm = D.tm.data() + (size_t)(c % R) * bins;
+    double sn = 0;
+
+    for (int j=0;j < bins;j++) sn += N[j];
+    if (sn <= 0) {
+        std::fill(tm,tm + bins,1.0f);
+        return;
+    }
+
+    const float h0 = (float)(1e-3 * sn),pen = (float)(template_sparsity / sn);
+    std::vector<float> v(bins),a(bins),b(bins);
+    float *h = D.th.data();
+
+    for (int k=0;k < K;k++) h[k] = std::max(h[k],h0);
+    for (int it=0;it < template_iterations;it++) {
+        for (int j=0;j < bins;j++) v[j] = N[j];
+        for (int k=0;k < K;k++) {
+            const float *w = W + (size_t)k * bins,hk = h[k];
+            for (int j=0;j < bins;j++) v[j] += w[j] * hk;
+        }
+        for (int j=0;j < bins;j++) {
+            b[j] = 1.0f / std::max(v[j],1e-30f);
+            a[j] = P[j] * b[j] * b[j];
+        }
+        for (int k=0;k < K;k++) {
+            const float *w = W + (size_t)k * bins;
+            float num = 0,den = 0;
+            for (int j=0;j < bins;j++) { num += w[j] * a[j]; den += w[j] * b[j]; }
+            h[k] *= sqrtf(num / (den + pen));
+        }
+    }
+
+    for (int j=0;j < bins;j++) v[j] = 0;
+    for (int k=0;k < K;k++) {
+        const float *w = W + (size_t)k * bins,hk = h[k];
+        for (int j=0;j < bins;j++) v[j] += w[j] * hk;
+    }
+    for (int j=0;j < bins;j++)
+        tm[j] = (v[j] + N[j]) > 0 ? sqrtf(v[j] / (v[j] + N[j])) : 1.0f;
+}
+
+void denoise_t::learn(const float *const *x,int n) {
+    if (tseen.empty()) {
+        const int nd = p.link ? 1 : channels;
+        tseen.assign(nd,0);
+        ttrain.assign(nd,std::vector<std::vector<float>>());
+    }
+    samples_in += n;
+    feed(x,n,LEARN,NULL);
+}
+
+// the templates, of each channel the gain is decided for: IS-NMF of the frames kept, from a fixed start
+bool denoise_t::end_learn(void) {
+    const int K = p.templates;
+    bool all = true;
+
+    end_pass(LEARN);
+    tW.assign(ttrain.size(),std::vector<float>());
+    tlearned.assign(ttrain.size(),0);
+
+    for (size_t di=0;di < ttrain.size();di++) {
+        const std::vector<std::vector<float>> &Pt = ttrain[di];
+        const int T = (int)Pt.size();
+        if (T < std::max(4 * K,50)) {
+            all = false;
+            continue;
+        }
+
+        std::vector<float> W((size_t)K * bins),H((size_t)K * T),A((size_t)T * bins),B((size_t)T * bins);
+        uint32_t r = 12345;
+        auto rnd = [&r](void) -> float { r = r * 1664525u + 1013904223u; return 0.1f + (r >> 8) / 16777216.0f; };
+        for (auto &w : W) w = rnd();
+        for (auto &h : H) h = rnd();
+
+        for (int it=0;it < template_learn_iterations;it++) {
+            // A = P/V^2 and B = 1/V, V = WH; then H, then W, by the multiplicative rules of the IS divergence
+            for (int pass=0;pass < 2;pass++) {
+                #pragma omp parallel for
+                for (int t=0;t < T;t++) {
+                    float *a = A.data() + (size_t)t * bins,*b = B.data() + (size_t)t * bins;
+                    for (int j=0;j < bins;j++) b[j] = 0;
+                    for (int k=0;k < K;k++) {
+                        const float *w = W.data() + (size_t)k * bins,hk = H[(size_t)k * T + t];
+                        for (int j=0;j < bins;j++) b[j] += w[j] * hk;
+                    }
+                    for (int j=0;j < bins;j++) {
+                        const float iv = 1.0f / std::max(b[j],1e-30f);
+                        b[j] = iv;
+                        a[j] = Pt[t][j] * iv * iv;
+                    }
+                }
+
+                if (pass == 0) {
+                    #pragma omp parallel for
+                    for (int t=0;t < T;t++) {
+                        const float *a = A.data() + (size_t)t * bins,*b = B.data() + (size_t)t * bins;
+                        for (int k=0;k < K;k++) {
+                            const float *w = W.data() + (size_t)k * bins;
+                            double num = 0,den = 0;
+                            for (int j=0;j < bins;j++) { num += w[j] * a[j]; den += w[j] * b[j]; }
+                            H[(size_t)k * T + t] *= (float)(num / std::max(den,1e-30));
+                        }
+                    }
+                }
+                else {
+                    #pragma omp parallel for
+                    for (int k=0;k < K;k++) {
+                        std::vector<double> num(bins,0),den(bins,0);
+                        for (int t=0;t < T;t++) {
+                            const float *a = A.data() + (size_t)t * bins,*b = B.data() + (size_t)t * bins,hk = H[(size_t)k * T + t];
+                            for (int j=0;j < bins;j++) { num[j] += a[j] * hk; den[j] += b[j] * hk; }
+                        }
+                        float *w = W.data() + (size_t)k * bins;
+                        for (int j=0;j < bins;j++) w[j] *= (float)(num[j] / std::max(den[j],1e-30));
+                    }
+                }
+            }
+
+            // each template summing to 1, how much of it there is taking up the rest
+            for (int k=0;k < K;k++) {
+                float *w = W.data() + (size_t)k * bins;
+                double s = 0;
+                for (int j=0;j < bins;j++) s += w[j];
+                if (s <= 0) continue;
+                for (int j=0;j < bins;j++) w[j] = (float)(w[j] / s);
+                for (int t=0;t < T;t++) H[(size_t)k * T + t] = (float)(H[(size_t)k * T + t] * s);
+            }
+        }
+
+        tW[di].swap(W);
+        tlearned[di] = T;
+    }
+
+    std::vector<std::vector<std::vector<float>>>().swap(ttrain);
+    reset();
+    return all;
+}
+
+int denoise_t::learned_from(int di) const {
+    return di < (int)tlearned.size() ? tlearned[di] : 0;
 }
 
 void denoise_t::find_noise(void) {

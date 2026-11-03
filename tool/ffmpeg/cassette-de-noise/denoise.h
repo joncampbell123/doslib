@@ -48,6 +48,17 @@
  * noise and turned down with it; a part with only the noise takes only the noise out. -noiseadjust turns the level
  * of the noise, found or taken, up or down by so many dB.
  *
+ * With -templates, the sounds of the recording are learned from where they are loud and clear: the frames
+ * that are more than 15dB over the noise (up to 3000 of them, from all through the recording) are taken apart
+ * into so many templates, spectra that each frame of them is a sum of (non-negative matrix factorization, by
+ * the Itakura-Saito divergence, which is right for the power of sounds). Then each frame is taken as a sum of
+ * the templates and the noise as it is known (a few templates at most: sparse), and how much of each
+ * frequency is the templates is a second gain, from what the sounds are like, besides the tiles' from how
+ * loud they are. Where the tiles let something through, the gain is between the two (their geometric mean),
+ * which turns down the noise between the harmonics of a voice, and leaves it steadier under it; where the
+ * tiles let nothing through, it is as it was, so the noise alone is turned down evenly as before. The
+ * templates only help the quiet sounds be told from the noise: no sound is made up from them.
+ *
  * With -attacks, the frames are not all as long: a long transform is only as sharp in time as its frames, and
  * where a sound starts sharply (an attack: a drum, a consonant, a click), what is done to the frame is done to
  * all of it, so the noise is let through for up to a frame before the attack, which dulls it. A second, short
@@ -83,6 +94,7 @@ struct noise_params_t {
     double                      adjust = 0;         // dB: the level of the noise turned up or down by this much
     bool                        change_only = false;// put out only the change, not the input with it (-attacks, to add the two up)
     bool                        attacks = false;    // this is the shorter transform for -attacks: keep the power of the octave bands
+    int                         templates = 0;      // -templates: so many templates of the sounds, 0 for none
 };
 
 // with -attacks: where the sounds start sharply, of each channel and octave band, and how much the shorter
@@ -123,6 +135,12 @@ public:
     void                        reestimate(const float *const *x,int n);
     void                        end_reestimate(void);
 
+    // with -templates, after the level of the noise is final and before the last pass: the whole input again,
+    // to learn the templates from the frames where the sounds are loud and clear; false if there were too few
+    void                        learn(const float *const *x,int n);
+    bool                        end_learn(void);
+    int                         learned_from(int di) const;
+
     // second pass: the same input again, filtered; the samples out are added to the end of out[]
     void                        filter(const float *const *x,int n,std::vector<float> *out);
     void                        end_filter(std::vector<float> *out);
@@ -160,6 +178,8 @@ private:
         std::vector<float>      G;                  // [step][ring][bin]: the gain smoothed, then made finer (-iterate)
         std::vector<float>      h;                  // [step][ring][bin]: the gain made finer, before smoothing
         std::vector<float>      g;                  // the gain put on the frame now
+        std::vector<float>      th;                 // -templates: how much of each template there is, the last frame
+        std::vector<float>      tm;                 // -templates: [ring][bin]: the templates' gain, of each frame
     };
 
     struct chan_t {
@@ -183,7 +203,7 @@ private:
         int64_t                 pcount = 0;         // and the frames of it
     };
 
-    enum pass_t { PROFILE, ANALYZE, REESTIMATE, FILTER };
+    enum pass_t { PROFILE, ANALYZE, LEARN, REESTIMATE, FILTER };
 
     void                        feed(const float *const *x,int n,pass_t pass,std::vector<float> *out);
     void                        frame(pass_t pass,std::vector<float> *out);
@@ -214,6 +234,12 @@ private:
     float                       gmin = 1;
     float                       nadj = 1;           // -noiseadjust: the level of the noise is used times this
     int                         refine = 0;         // times the gain is made finer
+    // -templates, of each channel the gain is decided for: [template][bin], and the frames to learn them from
+    std::vector<std::vector<float>> tW;
+    std::vector<std::vector<std::vector<float>>> ttrain;    // [channel][frame][bin]: power less the noise
+    std::vector<int64_t>        tseen;              // loud frames seen, of which ttrain is a sample
+    std::vector<int>            tlearned;           // frames they were learned from
+    void                        solve_templates(decide_t &D,int di,int64_t c);
     float                       clip = 0;           // noise alone over 3x3 frequencies and frames is under this, 99 times in 100
     float                       clip_mean = 1;      // and its mean, under that, over its mean
     // -attacks
